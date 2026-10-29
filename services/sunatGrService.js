@@ -11,6 +11,41 @@ const tokenCache = {
 class SunatGrService {
 
     /**
+     * Ambiente de emisión de guías. Por defecto "produccion" (comportamiento actual).
+     * Las pantallas nuevas solo emiten si SUNAT_GRE_AMBIENTE=beta y están completas
+     * la URL y las credenciales de prueba (variables APISUNAT_PRUEBA_*). Solo se leen
+     * los nombres de las variables; nunca sus valores.
+     */
+    static configuracionEmision() {
+        const ambiente = String(process.env.SUNAT_GRE_AMBIENTE || 'produccion').trim().toLowerCase() === 'beta' ? 'beta' : 'produccion';
+        if (ambiente !== 'beta') {
+            return {
+                ambiente,
+                prueba_lista: false,
+                motivo: 'La emisión desde las pantallas nuevas solo va al ambiente de prueba (beta). Falta configurar SUNAT_GRE_AMBIENTE=beta.'
+            };
+        }
+        const faltan = ['APISUNAT_PRUEBA_URL', 'APISUNAT_PRUEBA_PERSONA_ID', 'APISUNAT_PRUEBA_PERSONA_TOKEN']
+            .filter(k => !String(process.env[k] || '').trim());
+        if (faltan.length) {
+            return {
+                ambiente,
+                prueba_lista: false,
+                motivo: `Faltan credenciales de prueba en el servidor: ${faltan.join(', ')}.`
+            };
+        }
+        return { ambiente, prueba_lista: true, motivo: null };
+    }
+
+    /**
+     * Devuelve el motivo por el que no se puede emitir (o null si la emisión de prueba está lista).
+     */
+    static bloqueoEmision() {
+        const cfg = this.configuracionEmision();
+        return cfg.prueba_lista ? null : cfg.motivo;
+    }
+
+    /**
      * Obtiene un token Bearer OAuth 2.0 con caché en memoria
      */
     static async getAccessToken(creds) {
@@ -179,7 +214,14 @@ class SunatGrService {
             };
         }
 
-        // MODO REAL (PRODUCCIÓN / BETA)
+        // MODO REAL DESHABILITADO: este envío llamaba directo a las URLs de producción de SUNAT
+        // (api-cpe.sunat.gob.pe). Las guías se emiten por APISUNAT, y solo al ambiente de prueba.
+        return {
+            ok: false,
+            modo: 'REAL',
+            error: 'Envío directo a SUNAT deshabilitado. Las guías se emiten vía APISUNAT, solo en el ambiente de prueba.'
+        };
+
         const tokenRes = await this.getAccessToken(creds);
         if (!tokenRes.ok) {
             return {

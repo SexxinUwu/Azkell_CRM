@@ -200,6 +200,12 @@ module.exports = function(db, tenantStorage) {
     });
 
     // 3. Listar Guías de Remisión Registradas
+    // Estado del ambiente de emisión para las pantallas nuevas (no expone credenciales ni URLs)
+    router.get('/ambiente-emision', (req, res) => {
+        const cfg = SunatGrService.configuracionEmision();
+        res.json({ ok: true, ambiente: cfg.ambiente, prueba_lista: cfg.prueba_lista, motivo: cfg.motivo });
+    });
+
     router.get('/', async (req, res) => {
         try {
             const dbConn = getDb(req);

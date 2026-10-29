@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const ApisunatService = require('../services/apisunatService');
+const SunatGrService = require('../services/sunatGrService');
 
 module.exports = function(db, broadcast, logAudit) {
 
@@ -609,6 +610,7 @@ module.exports = function(db, broadcast, logAudit) {
     // ═══════════════════════════════════════════════════════════════
     router.post('/:id/emitir', async (req, res) => {
         try {
+
             const dbConn = getDb(req);
             const { id } = req.params;
 
@@ -634,7 +636,7 @@ module.exports = function(db, broadcast, logAudit) {
 
             // Obtener credenciales APISUNAT
             const creds = await ApisunatService.getCredenciales(dbConn);
-            if (!creds || !creds.personaToken) {
+            if (!creds || !creds.persona_token) {
                 return res.status(400).json({
                     success: false,
                     error: 'Credenciales de APISUNAT no configuradas. Por favor revise el módulo de configuración.'
@@ -770,8 +772,8 @@ module.exports = function(db, broadcast, logAudit) {
 
             // Llamada al servicio APISUNAT
             const apiResult = await ApisunatService.sendBill({
-                personaId: creds.personaId,
-                personaToken: creds.personaToken,
+                personaId: creds.persona_id,
+                personaToken: creds.persona_token,
                 fileName,
                 documentBody: cleanDocumentBody
             });
@@ -865,18 +867,19 @@ module.exports = function(db, broadcast, logAudit) {
                 return res.status(400).json({ success: false, error: 'La guía aún no tiene ID de documento en APISUNAT' });
             }
 
-            const creds = await ApisunatService.getCredenciales(dbConn);
-            const syncResult = await ApisunatService.getStatus({
-                personaId: creds.personaId,
-                personaToken: creds.personaToken,
-                documentId: guia.apisunat_document_id
-            });
+            // Consulta de solo lectura al documento en APISUNAT (getStatus no existía en el servicio)
+            const syncResult = await ApisunatService.getById(guia.apisunat_document_id);
+            if (!syncResult.ok) {
+                return res.status(400).json({ success: false, error: syncResult.error || 'No se pudo consultar APISUNAT.' });
+            }
 
-            const status = syncResult.status || (syncResult.sunatResponse && syncResult.sunatResponse.success ? 'ACEPTADO' : guia.apisunat_status);
-            const xmlUrl = syncResult.xmlUrl || syncResult.xml || guia.xml_url;
-            const cdrUrl = syncResult.cdrUrl || syncResult.cdr || guia.cdr_url;
-            const pdfUrl = syncResult.pdfUrl || syncResult.pdf || guia.pdf_url;
-            const faults = syncResult.faults ? JSON.stringify(syncResult.faults) : guia.apisunat_faults;
+            const status = syncResult.status || guia.apisunat_status;
+            const xmlUrl = syncResult.xml || guia.xml_url;
+            const cdrUrl = syncResult.cdr || guia.cdr_url;
+            // Mismo nombre de archivo que usa la emisión
+            const fileName = `${guia.remitente_ruc || ''}-09-${guia.serie || 'T001'}-${parseInt(guia.correlativo) || 1}`;
+            const pdfUrl = ApisunatService.getPdfUrl(guia.apisunat_document_id, fileName, 'A4') || guia.pdf_url;
+            const faults = syncResult.faults && syncResult.faults.length ? JSON.stringify(syncResult.faults) : guia.apisunat_faults;
 
             await dbConn.query(`
                 UPDATE guias_remitente SET
@@ -1022,6 +1025,7 @@ module.exports = function(db, broadcast, logAudit) {
     // ═══════════════════════════════════════════════════════════════
     router.post('/emision-masiva', async (req, res) => {
         try {
+
             const dbConn = getDb(req);
             const { ids } = req.body;
 
@@ -1139,8 +1143,8 @@ module.exports = function(db, broadcast, logAudit) {
                     const cleanDocBody = ApisunatService.cleanObject(docBody);
 
                     const apiRes = await ApisunatService.sendBill({
-                        personaId: creds.personaId,
-                        personaToken: creds.personaToken,
+                        personaId: creds.persona_id,
+                        personaToken: creds.persona_token,
                         fileName,
                         documentBody: cleanDocBody
                     });

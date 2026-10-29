@@ -1,7 +1,7 @@
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Copy, FileSpreadsheet, FileText, RefreshCw, Send, SearchX, Trash2 } from 'lucide-react';
+import { ArrowUpRight, Copy, FileSpreadsheet, FileText, Pencil, Plus, RefreshCw, Send, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
@@ -13,8 +13,10 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { abrirClasico } from '../../core/layout/navigation';
+import { GuiaFormSheet, type TipoGuia } from './GuiaFormSheet';
 
-export type TipoGuia = 'remitente' | 'transportista';
+// Estado del ambiente de emisión (GET /api/guias-remision/ambiente-emision)
+interface AmbienteEmision { ambiente: string; prueba_lista: boolean; motivo: string | null }
 
 interface Guia {
   id: number; numero_guia: string; serie: string; correlativo: number; estado: string | null; apisunat_status: string | null;
@@ -44,8 +46,8 @@ const tono = (e: string) => ({ ACEPTADA: 'green', EMITIDA: 'accent', BORRADOR: '
 const n = (v: unknown) => Number(v) || 0;
 const dia = (s?: string | null) => (s ? String(s).slice(0, 10) : '');
 
-// Operaciones › Guías electrónicas (SUNAT). Consulta, emisión, sincronización, duplicado y eliminación de borradores.
-// La redacción de una guía nueva (partida, llegada, ítems, vehículo, conductor) sigue en la versión actual.
+// Operaciones › Guías electrónicas (SUNAT). Consulta, alta/edición de borradores, emisión (solo ambiente de prueba),
+// sincronización, duplicado y eliminación de borradores. La emisión masiva y la configuración siguen en la versión actual.
 export function GuiasElectronicas({ tipo }: { tipo: TipoGuia }) {
   const cfg = CFG[tipo];
   const { can } = useAuth();
@@ -57,6 +59,17 @@ export function GuiasElectronicas({ tipo }: { tipo: TipoGuia }) {
   const [abiertoId, setAbiertoId] = useState<number | null>(null);
   const [porEliminar, setPorEliminar] = useState<Guia | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [formAbierto, setFormAbierto] = useState(false);
+  const [formKey, setFormKey] = useState(0);
+  const [edicion, setEdicion] = useState<{ id: number; guia: Guia; items: Item[] } | null>(null);
+
+  // Si el servidor no tiene credenciales de prueba, la emisión queda deshabilitada aquí
+  const ambiente = useQuery<AmbienteEmision>({
+    queryKey: ['operaciones', 'guias-ambiente'],
+    queryFn: () => api<AmbienteEmision>('/guias-remision/ambiente-emision'),
+    staleTime: 60_000,
+  });
+  const emisionLista = ambiente.data?.prueba_lista === true;
 
   const lista = useQuery<Guia[]>({
     queryKey: ['operaciones', 'guias', tipo, q],
@@ -87,6 +100,15 @@ export function GuiasElectronicas({ tipo }: { tipo: TipoGuia }) {
   const puedeEditar = can('op_guias_remision.editar', 'op_guias_remision.crear', 'guias_remision.editar');
   const puedeEliminar = can('op_guias_remision.eliminar', 'guias_remision.eliminar');
   const refrescar = () => qc.invalidateQueries({ queryKey: ['operaciones'] });
+
+  function nuevaGuia() {
+    setEdicion(null); setFormKey(k => k + 1); setFormAbierto(true);
+  }
+  function editarBorrador() {
+    if (!g) return;
+    setEdicion({ id: g.id, guia: g, items: (det.data?.items ?? []) as Item[] });
+    setAbiertoId(null); setFormKey(k => k + 1); setFormAbierto(true);
+  }
 
   async function ejecutar(fn: () => Promise<{ success?: boolean; ok?: boolean; error?: string; message?: string }>, ok: string, cerrar = false) {
     setOcupado(true);
@@ -119,10 +141,13 @@ export function GuiasElectronicas({ tipo }: { tipo: TipoGuia }) {
         title={cfg.titulo}
         subtitle={lista.isLoading ? 'Cargando…' : `${datos.length} guías · ${conteo.BORRADOR ?? 0} borradores`}
         actions={
-          <MenuOtros opciones={[
-            { label: 'Exportar Excel', detalle: `${visibles.length} guías`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-            { label: 'Nueva guía, emisión masiva y configuración', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico(cfg.clasico) },
-          ]} />
+          <div style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center' }}>
+            {puedeEditar && <Button variant="primary" icon={<Plus size={16} />} onClick={nuevaGuia}>Nueva guía</Button>}
+            <MenuOtros opciones={[
+              { label: 'Exportar Excel', detalle: `${visibles.length} guías`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
+              { label: 'Emisión masiva y configuración', detalle: 'Versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico(cfg.clasico) },
+            ]} />
+          </div>
         }
       />
 
@@ -138,12 +163,16 @@ export function GuiasElectronicas({ tipo }: { tipo: TipoGuia }) {
             ))}
         </div>
 
+        {ambiente.data && (emisionLista
+          ? <Notice tone="accent">Emisión conectada al ambiente de prueba (beta). Lo que se emite aquí no llega a SUNAT producción.</Notice>
+          : <Notice tone="neutral">Emisión a SUNAT deshabilitada. {ambiente.data.motivo ?? ''}</Notice>)}
+
         <SearchField value={busqueda} placeholder="N° de guía, destinatario, placa u orden de viaje…"
           onChange={v => { setBusqueda(v); window.clearTimeout((window as unknown as { _gT?: number })._gT); (window as unknown as { _gT?: number })._gT = window.setTimeout(() => setQ(v.trim()), 350); }} />
 
         {lista.isLoading ? <PageLoader /> : lista.isError ? <Notice tone="error">{errorMessage(lista.error)}</Notice> : visibles.length === 0 ? (
           <EmptyState icon={busqueda || estado ? <SearchX size={22} /> : <FileText size={22} />} title={busqueda || estado ? 'Sin coincidencias' : 'Sin guías'}>
-            Las guías nuevas se redactan desde la versión actual.
+            {puedeEditar ? 'Crea un borrador con "Nueva guía".' : 'No hay guías registradas.'}
           </EmptyState>
         ) : (
           <div className="tarjeta__lista">
@@ -178,8 +207,12 @@ export function GuiasElectronicas({ tipo }: { tipo: TipoGuia }) {
                 <Button variant="secondary" icon={<RefreshCw size={16} />} loading={ocupado}
                   onClick={() => ejecutar(() => api(`${cfg.ruta}/${g.id}/sincronizar`), 'Estado sincronizado con SUNAT')}>Sincronizar</Button>
               )}
+              {e === 'BORRADOR' && (
+                <Button variant="secondary" icon={<Pencil size={16} />} disabled={ocupado} onClick={editarBorrador}>Editar</Button>
+              )}
               {(e === 'BORRADOR' || e === 'RECHAZADA') && (
-                <Button variant="primary" icon={<Send size={16} />} loading={ocupado}
+                <Button variant="primary" icon={<Send size={16} />} loading={ocupado} disabled={!emisionLista}
+                  title={emisionLista ? undefined : (ambiente.data?.motivo ?? 'Emisión deshabilitada')}
                   onClick={() => ejecutar(() => api(`${cfg.ruta}/${g.id}/emitir`, { method: 'POST' }), 'Guía enviada a SUNAT')}>Emitir a SUNAT</Button>
               )}
             </>
@@ -215,6 +248,8 @@ export function GuiasElectronicas({ tipo }: { tipo: TipoGuia }) {
           </div>
         )}
       </Sheet>
+
+      <GuiaFormSheet key={formKey} open={formAbierto} onClose={() => setFormAbierto(false)} tipo={tipo} edicion={edicion} />
 
       <ConfirmSheet open={!!porEliminar} onClose={() => !ocupado && setPorEliminar(null)} loading={ocupado}
         title={`¿Eliminar el borrador ${porEliminar?.numero_guia ?? ''}?`} message="Solo se pueden eliminar guías que aún no se emitieron a SUNAT." confirmLabel="Eliminar"

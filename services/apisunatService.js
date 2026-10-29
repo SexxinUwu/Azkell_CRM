@@ -3,7 +3,31 @@
  * Provee métodos para emisión, consulta, PDF y sincronización con https://back.apisunat.com
  */
 
-const BASE_URL = 'https://back.apisunat.com';
+const BASE_URL_PRODUCCION = 'https://back.apisunat.com';
+
+// Ambiente de prueba (beta): solo con SUNAT_GRE_AMBIENTE=beta. Sin esa variable todo va a producción, como antes.
+function ambienteBeta() {
+    return String(process.env.SUNAT_GRE_AMBIENTE || '').trim().toLowerCase() === 'beta';
+}
+
+// Host de APISUNAT según el ambiente. En beta, nunca cae a producción si falta la URL de prueba.
+function baseUrl() {
+    if (!ambienteBeta()) return BASE_URL_PRODUCCION;
+    const url = String(process.env.APISUNAT_PRUEBA_URL || '').trim().replace(/\/+$/, '');
+    if (!url) throw new Error('Falta APISUNAT_PRUEBA_URL para el ambiente de prueba.');
+    return url;
+}
+
+// En beta, las credenciales son solo las de prueba (nunca las de producción guardadas en la base).
+function conAmbiente(creds) {
+    if (!ambienteBeta()) return creds;
+    return {
+        ...creds,
+        persona_id: String(process.env.APISUNAT_PRUEBA_PERSONA_ID || '').trim(),
+        persona_token: String(process.env.APISUNAT_PRUEBA_PERSONA_TOKEN || '').trim(),
+        modo: 'prueba'
+    };
+}
 
 class ApisunatService {
 
@@ -19,7 +43,7 @@ class ApisunatService {
             modo: 'produccion'
         };
 
-        if (!dbConn) return defaults;
+        if (!dbConn) return conAmbiente(defaults);
 
         try {
             const [rows] = await dbConn.query(
@@ -29,16 +53,16 @@ class ApisunatService {
             const map = {};
             (rows || []).forEach(r => { map[r.clave] = r.valor; });
 
-            return {
+            return conAmbiente({
                 persona_id: (map.apisunat_persona_id || defaults.persona_id).trim(),
                 persona_token: (map.apisunat_persona_token || defaults.persona_token).trim(),
                 ruc_emisor: (map.apisunat_ruc_emisor || map.sunat_ruc_emisor || defaults.ruc_emisor).trim(),
                 razon_social: (map.apisunat_razon_social || defaults.razon_social).trim(),
                 modo: (map.apisunat_modo || defaults.modo).trim()
-            };
+            });
         } catch (e) {
             console.warn("[APISUNAT] Error leyendo integraciones_api, usando defaults:", e.message);
-            return defaults;
+            return conAmbiente(defaults);
         }
     }
 
@@ -73,7 +97,7 @@ class ApisunatService {
      */
     static async lastDocument({ personaId, personaToken, type, serie }) {
         try {
-            const resp = await fetch(`${BASE_URL}/personas/lastDocument`, {
+            const resp = await fetch(`${baseUrl()}/personas/lastDocument`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -126,7 +150,7 @@ class ApisunatService {
             }
 
             console.log(`[APISUNAT] Enviando sendBill: ${fileName}...`);
-            const resp = await fetch(`${BASE_URL}/personas/v1/sendBill`, {
+            const resp = await fetch(`${baseUrl()}/personas/v1/sendBill`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -162,7 +186,7 @@ class ApisunatService {
         try {
             if (!documentId) return { ok: false, error: "documentId requerido." };
 
-            const resp = await fetch(`${BASE_URL}/documents/${encodeURIComponent(documentId)}/getById`, {
+            const resp = await fetch(`${baseUrl()}/documents/${encodeURIComponent(documentId)}/getById`, {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' }
             });
@@ -201,7 +225,7 @@ class ApisunatService {
     static getPdfUrl(documentId, fileName, format = 'A4') {
         if (!documentId || !fileName) return null;
         const cleanFile = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
-        return `${BASE_URL}/documents/${encodeURIComponent(documentId)}/getPDF/${encodeURIComponent(format)}/${encodeURIComponent(cleanFile)}`;
+        return `${baseUrl()}/documents/${encodeURIComponent(documentId)}/getPDF/${encodeURIComponent(format)}/${encodeURIComponent(cleanFile)}`;
     }
 
     /**
@@ -209,7 +233,7 @@ class ApisunatService {
      */
     static async voidBill({ personaId, personaToken, documentId, reason }) {
         try {
-            const resp = await fetch(`${BASE_URL}/personas/v1/voidBill`, {
+            const resp = await fetch(`${baseUrl()}/personas/v1/voidBill`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
