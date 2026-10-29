@@ -1764,11 +1764,21 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         );
     });
 
-    router.put('/entradas/:id/estado', (req, res) => {
+    router.put('/entradas/:id/estado', async (req, res) => {
         const tdb = getDb(req);
         const { id } = req.params;
         const { estado, comentario, usuario } = req.body;
         if (!estado) return res.status(400).json({ error: 'Estado requerido' });
+
+        // Una OC anulada no deja llantas en Neumáticos: se quitan las de sus recepciones (solo si ninguna se movió)
+        if (String(estado).toLowerCase().startsWith('anul')) {
+            try {
+                const [recsAnul] = await tdb.query('SELECT id FROM recepciones_oc WHERE oc_id = ?', [id]);
+                for (const r of recsAnul) await borrarLlantasDeRecepcion(tdb, r.id);
+            } catch (errLl) {
+                return res.status(409).json({ error: errLl.message });
+            }
+        }
 
         const esAprob = (estado.toLowerCase().startsWith('aprob') || estado.toLowerCase().startsWith('autoriz'));
         const esRech = (estado.toLowerCase().startsWith('rechaz') || estado.toLowerCase().startsWith('anul'));
