@@ -1,9 +1,10 @@
 // Rutas de la app nueva (publicada en /app/). Cada módulo aporta sus páginas desde src/modules/<modulo>/.
 // Las pantallas que aún no se migran se abren en la versión actual (ver core/layout/navigation.ts).
-import { lazy } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { lazy, type ReactNode } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { RequirePermission, RequireSession } from './core/auth/guards';
 import { AppShell } from './core/layout/AppShell';
+import { ES_PANEL_SAAS } from './core/layout/navigation';
 import { LoginPage } from './modules/auth/LoginPage';
 import { LegalPage } from './modules/legal/LegalPage';
 import { WelcomeTransition } from './modules/auth/WelcomeTransition';
@@ -23,6 +24,13 @@ const CatalogoRuta = lazy(() => import('./modules/catalogos/CatalogoRuta').then(
 const ConductoresPage = lazy(() => import('./modules/conductores/ConductoresPage').then(m => ({ default: m.ConductoresPage })));
 const PersonalPage = lazy(() => import('./modules/personal/PersonalPage').then(m => ({ default: m.PersonalPage })));
 
+/** En admin.azkell.com solo se entra al panel de empresas; cualquier otra pantalla vuelve ahí */
+function SoloPanelSaas({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  if (ES_PANEL_SAAS && !pathname.startsWith('/sistema/superadmin')) return <Navigate to="/sistema/superadmin" replace />;
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <BrowserRouter basename="/app">
@@ -32,7 +40,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/legal/:pagina" element={<LegalPage />} />
-        <Route element={<RequireSession><AppShell /><Inactividad /></RequireSession>}>
+        <Route element={<RequireSession><SoloPanelSaas><AppShell /><Inactividad /></SoloPanelSaas></RequireSession>}>
           <Route index element={<InicioPage />} />
           <Route path="perfil" element={<PerfilPage />} />
           <Route path="perfil/editar" element={<EditarPerfilPage />} />

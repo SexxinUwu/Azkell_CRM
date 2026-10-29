@@ -248,7 +248,12 @@ function conModulos(base: NavSection[]): NavSection[] {
   return secciones;
 }
 
-export const NAV_SECTIONS: NavSection[] = conModulos(SECCIONES_BASE);
+// admin.azkell.com es solo el panel de empresas SaaS: en ese dominio no se muestra ningún otro módulo
+export const ES_PANEL_SAAS = typeof window !== 'undefined' && window.location.hostname.toLowerCase().startsWith('admin.');
+const TODAS_LAS_SECCIONES = conModulos(SECCIONES_BASE);
+export const NAV_SECTIONS: NavSection[] = ES_PANEL_SAAS
+  ? [{ title: 'SuperAdmin', items: aplanar(TODAS_LAS_SECCIONES.flatMap(s => s.items)).filter(i => i.key === 'superadmin') }]
+  : TODAS_LAS_SECCIONES;
 
 const empresaDelDominio = () => (typeof window === 'undefined' ? '' : window.location.hostname.split('.')[0].toLowerCase());
 
