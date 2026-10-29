@@ -166,23 +166,20 @@ const OPCIONES = { orientacion: 'portrait' as const, margen: 0, escala: 2.8 };
 
 /** Monta el acta fuera de la vista, la convierte a PDF y la desmonta */
 async function conElemento<T>(html: string, usar: (el: HTMLElement) => Promise<T>): Promise<T> {
-  // El acta se dibuja en coordenadas del documento (arriba, a tamaño A4) y una pantalla blanca tapa la app
-  // mientras se genera; así no se ve nada de fondo ni sale en blanco por estar fuera de lugar.
-  const yPrevio = window.scrollY;
-  window.scrollTo(0, 0);
+  // Medido en Chrome: html2canvas sale en blanco si el acta está en posición absoluta o fija. En el flujo normal
+  // de la página sí captura. Por eso el acta va en el flujo y una pantalla blanca la tapa mientras se genera.
+  const el = document.createElement('div');
+  el.innerHTML = html;
+  el.style.cssText = 'width:794px;background:#fff;';
   const tapa = document.createElement('div');
   tapa.style.cssText = 'position:fixed;inset:0;z-index:2147483600;background:#fff;display:flex;align-items:center;justify-content:center;font:600 14px system-ui,sans-serif;color:#64748b;';
   tapa.innerHTML = renderToStaticMarkup(createElement(CargaCamion, { texto: 'Generando PDF…' }));
-  const el = document.createElement('div');
-  el.innerHTML = html;
-  el.style.cssText = 'position:absolute;left:0;top:0;width:794px;background:#fff;z-index:2147483599;';
   document.body.append(el, tapa);
   try {
     return await usar(el);
   } finally {
     el.remove();
     tapa.remove();
-    window.scrollTo(0, yPrevio);
   }
 }
 
