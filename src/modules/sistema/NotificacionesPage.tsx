@@ -1,7 +1,7 @@
 import './configuracion.css';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Mail, MessageCircle, QrCode, RefreshCw, Send, Smartphone } from 'lucide-react';
+import { BellRing, Mail, MessageCircle, QrCode, RefreshCw, Send, Smartphone } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
@@ -14,7 +14,7 @@ import { formatFechaHoraPe } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
 
 type Pestana = 'canales' | 'eventos' | 'historial';
-type Canal = 'whatsapp' | 'email' | 'sms';
+type Canal = 'whatsapp' | 'email' | 'sms' | 'push';
 
 interface Canales {
   whatsapp: { configurado: boolean; instancia?: string; estado: string; detalle?: string };
@@ -24,7 +24,7 @@ interface Canales {
 interface Regla { evento: string; titulo: string; detalle: string; activo: boolean; canales: Canal[]; destinatarios: string }
 interface Envio { id: number; canal: Canal; destinatario: string; evento: string | null; asunto: string | null; estado: string; error: string | null; created_at: string }
 
-const NOMBRE_CANAL: Record<Canal, string> = { whatsapp: 'WhatsApp', email: 'Correo', sms: 'SMS' };
+const NOMBRE_CANAL: Record<Canal, string> = { whatsapp: 'WhatsApp', email: 'Correo', sms: 'SMS', push: 'Teléfono (app)' };
 const TONO_ESTADO: Record<string, 'green' | 'amber' | 'red' | 'gray'> = {
   conectado: 'green', ENVIADO: 'green', desconectado: 'amber', error: 'red', FALLIDO: 'red', sin_configurar: 'gray',
 };
@@ -36,6 +36,7 @@ const TEXTO_ESTADO: Record<string, string> = {
 function IconoCanal({ canal }: { canal: Canal }) {
   if (canal === 'whatsapp') return <MessageCircle size={16} aria-label="WhatsApp" />;
   if (canal === 'email') return <Mail size={16} aria-label="Correo" />;
+  if (canal === 'push') return <BellRing size={16} aria-label="Teléfono (app)" />;
   return <Smartphone size={16} aria-label="SMS" />;
 }
 
@@ -196,14 +197,14 @@ function TarjetaEvento({ regla }: { regla: Regla }) {
         <Switch id={`ev-${regla.evento}`} checked={activo} onChange={setActivo} label={`Activar ${regla.titulo}`} />
       </div>
       <div className="cfg-prueba" role="group" aria-label="Canales">
-        {(['whatsapp', 'email', 'sms'] as Canal[]).map(c => (
+        {(['whatsapp', 'email', 'sms', 'push'] as Canal[]).map(c => (
           <button key={c} type="button" aria-pressed={canales.includes(c)} onClick={() => alternar(c)}
             className={canales.includes(c) ? 'cfg-boton-secundario cfg-boton--on' : 'cfg-boton-secundario'}>
             <IconoCanal canal={c} /> {NOMBRE_CANAL[c]}
           </button>
         ))}
       </div>
-      <Field label="Destinatarios" hint="Teléfonos y correos separados por coma. Ej.: 999000111, gerencia@empresa.com">
+      <Field label="Destinatarios" hint="Teléfonos para WhatsApp o SMS, correos para Correo y Teléfono (app). Separados por coma. Ej.: 999000111, gerencia@empresa.com">
         {p => <TextInput {...p} value={destinatarios} onChange={e => setDestinatarios(e.target.value)} />}
       </Field>
       <Button variant="primary" loading={guardar.isPending}

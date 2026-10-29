@@ -2950,6 +2950,9 @@ const auditoriaRoutes = require('./routes/audit')(db);
 app.use('/api', auditoriaRoutes);
 const notificacionesRoutes = require('./routes/notificaciones')(db);
 app.use('/api', notificacionesRoutes);
+// Avisos en el teléfono (Web Push): cada usuario gestiona sus propios dispositivos
+const pushRoutes = require('./routes/push')(db);
+app.use('/api', pushRoutes);
 const documentosFlotaImport = require('./routes/documentos_flota_import')(db);
 app.use('/api', documentosFlotaImport);
 

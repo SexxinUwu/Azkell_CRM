@@ -1809,6 +1809,9 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 });
             });
 
+            // Aviso en el teléfono a Tesorería cuando la orden queda aprobada (monto y cuenta)
+            if (esAprob) eventosNotif.avisarOcPagar(tdb, id);
+
             // Sincronizar en ordenes_compra y notificar por WhatsApp
             (async () => {
                 try {
@@ -2147,6 +2150,8 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     tdb.query(updateSql, updateParams, async (err2) => {
                         if (err2) return res.status(500).json({ error: 'Update Error: ' + err2.message });
                         const presignedUrl = await getPresignedUrl(s3Key).catch(() => url);
+                        // Aviso en el teléfono a Almacén cuando Tesorería sube el comprobante de pago
+                        if (tipo === 'voucher') eventosNotif.avisarOcVoucher(tdb, req.params.id);
                         res.json({ ok: true, url, presignedUrl, estado: tipo === 'voucher' ? 'Procesado' : (rows[0] ? rows[0].estado : 'Registrado') });
                     });
                 } catch (innerError) {

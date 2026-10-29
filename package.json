@@ -60,6 +60,7 @@
     "speakeasy": "^2.0.0",
     "three": "^0.186.1",
     "vite": "8.3.0",
+    "web-push": "^3.6.7",
     "write-excel-file": "4.1.1",
     "xlsx": "^0.18.5"
   },

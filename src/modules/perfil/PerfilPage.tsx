@@ -7,6 +7,7 @@ import { AccentPicker } from '../../core/ui/AccentPicker';
 import { ThemeSelector } from '../../core/ui/ThemeToggle';
 import { CambiarPasswordSheet } from './CambiarPasswordSheet';
 import { SesionesSheet } from './SesionesSheet';
+import { AvisosTelefono } from './AvisosTelefono';
 import { useImagenPerfil, useMiPerfil } from './perfilApi';
 import { haptic } from '../../core/lib/haptics';
 
@@ -45,6 +46,8 @@ export function PerfilPage() {
 
       <div className="list__header" style={{ marginTop: 'var(--s-6)' }}>Color de la app</div>
       <div className="list"><AccentPicker /></div>
+
+      <AvisosTelefono />
 
       <div className="list" style={{ marginTop: 'var(--s-6)' }}>
         <button type="button" className="row pressable" onClick={() => { haptic('selection'); setClaveAbierta(true); }}>

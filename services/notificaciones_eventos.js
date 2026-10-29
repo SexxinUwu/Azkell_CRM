@@ -146,7 +146,43 @@ function programarVencimientos(listarEmpresas) {
   return t;
 }
 
+// ── Avisos en el teléfono (canal push) ───────────────────────────────────────
+// La cuenta se muestra enmascarada: el aviso puede verse en la pantalla de bloqueo.
+function cuentaEnmascarada(texto) {
+  const digitos = String(texto || '').replace(/\D/g, '');
+  return digitos.length >= 4 ? `terminada en ${digitos.slice(-4)}` : 'sin cuenta registrada';
+}
+
+/** Orden aprobada: aviso a Tesorería con el monto y la cuenta del proveedor. Nunca lanza. */
+async function avisarOcPagar(db, ocId) {
+  try {
+    const [filas] = await db.promise().query(
+      'SELECT id, proveedor_nombre, total_pen, cuenta_bancaria_proveedor FROM entradas_inv WHERE id = ? LIMIT 1', [ocId]);
+    const o = filas && filas[0];
+    if (!o) return;
+    const monto = Number(o.total_pen || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    await notificar(db, 'oc_pagar', {
+      asunto: `Pagar OC ${o.id}`,
+      texto: `${o.proveedor_nombre || 'Proveedor'} · S/ ${monto} · cuenta ${cuentaEnmascarada(o.cuenta_bancaria_proveedor)}`,
+    }, { dedupeMin: 5 });
+  } catch (e) { console.warn('[Notificaciones] oc_pagar:', e.message); }
+}
+
+/** Tesorería subió el voucher: aviso a Almacén. Nunca lanza. */
+async function avisarOcVoucher(db, ocId) {
+  try {
+    const [filas] = await db.promise().query('SELECT id, proveedor_nombre FROM entradas_inv WHERE id = ? LIMIT 1', [ocId]);
+    const o = filas && filas[0];
+    if (!o) return;
+    await notificar(db, 'oc_voucher', {
+      asunto: `Comprobante de pago ${o.id}`,
+      texto: `Tesorería subió el voucher del pago a ${o.proveedor_nombre || 'el proveedor'}. Revísalo en Almacén.`,
+    }, { dedupeMin: 5 });
+  } catch (e) { console.warn('[Notificaciones] oc_voucher:', e.message); }
+}
+
 module.exports = {
+  avisarOcPagar, avisarOcVoucher,
   notificar, avisoOrdenCompra, avisoSalidaTaller, avisoChecklistCritico,
   documentosPorVencer, resumenVencimientos, ejecutarVencimientos, programarVencimientos, fechaLima,
 };

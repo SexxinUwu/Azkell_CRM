@@ -12,11 +12,22 @@
 const { SESv2Client, SendEmailCommand } = require('@aws-sdk/client-sesv2');
 const nodemailer = require('nodemailer');
 
-const CANALES = ['whatsapp', 'email', 'sms'];
+const push = require('./push');
+
+const CANALES = ['whatsapp', 'email', 'sms', 'push'];
+
+/** Pantalla que abre el aviso al tocarlo en el teléfono (canal push) */
+const URL_EVENTO = {
+  oc_aprobacion: '/app/gerencia/aprobaciones-oc',
+  oc_pagar: '/app/tesoreria/pago-requerimientos',
+  oc_voucher: '/app/almacen/entradas',
+};
 
 /** Eventos del ERP que pueden disparar una notificación, con su canal por defecto */
 const EVENTOS = [
-  { evento: 'oc_aprobacion', titulo: 'Aprobación de orden de compra', detalle: 'Aviso adicional cuando hay una OC por aprobar (correo u otros números). Al aprobador ya le llega el WhatsApp con el enlace para aprobar, y no se le repite.', canales: ['whatsapp'], destinatarios: process.env.GERENCIA_WHATSAPP || '' },
+  { evento: 'oc_aprobacion', titulo: 'Aprobación de orden de compra', detalle: 'Aviso adicional cuando hay una OC por aprobar (correo, WhatsApp o avisos en el teléfono). Al aprobador ya le llega el WhatsApp con el enlace para aprobar, y no se le repite.', canales: ['whatsapp'], destinatarios: process.env.GERENCIA_WHATSAPP || '' },
+  { evento: 'oc_pagar', titulo: 'Orden de compra aprobada: pagar', detalle: 'Avisa a Tesorería cuando una OC queda aprobada, con el monto y la cuenta del proveedor. Destinatarios: correos de los usuarios de Tesorería.', canales: ['push'], destinatarios: '' },
+  { evento: 'oc_voucher', titulo: 'Comprobante de pago de OC', detalle: 'Avisa a Almacén cuando Tesorería sube el voucher de una OC. Destinatarios: correos de los usuarios de Almacén.', canales: ['push'], destinatarios: '' },
   { evento: 'flota_vencimiento', titulo: 'Vencimiento de documentos de flota', detalle: 'Avisa a operaciones de documentos por vencer.', canales: ['email', 'whatsapp'], destinatarios: '' },
   { evento: 'ot_fin_rampa', titulo: 'Fin de OT o salida de rampa', detalle: 'Avisa a operaciones cuando una unidad sale de taller.', canales: ['whatsapp'], destinatarios: '' },
   { evento: 'checklist_critico', titulo: 'Alerta crítica de checklist', detalle: 'Avisa de fallas críticas detectadas por un conductor.', canales: ['sms', 'whatsapp'], destinatarios: '' },
@@ -170,6 +181,12 @@ async function enviar(db, { canal, destino, asunto, texto, evento }) {
     if (canal === 'whatsapp') ref = await enviarWhatsapp(destino, texto);
     if (canal === 'email') ref = await enviarCorreo(db, destino, asunto || 'Notificación del ERP', texto);
     if (canal === 'sms') ref = await enviarSms(db, destino, texto);
+    if (canal === 'push') {
+      // En el canal push el destinatario es un correo: se envía a todos sus teléfonos con las notificaciones activadas
+      const enviados = await push.enviarA(db, destino, { titulo: asunto || 'Azkell Fleet', cuerpo: texto, url: URL_EVENTO[evento] || '/app', tag: `${evento}:${destino}` });
+      if (!enviados) throw new Error('Sin dispositivo con notificaciones activadas');
+      ref = `push:${enviados}`;
+    }
     await registrar(db, { canal, destino, evento, asunto, estado: 'ENVIADO', ref });
     return { ok: true, ref };
   } catch (e) {

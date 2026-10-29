@@ -5,7 +5,7 @@ module.exports = function globalRBAC(req, res, next) {
     const ignoredPaths = [
         '/login', '/ping', '/eventos', 
         '/cambiar-password', '/conductores', '/conductores-lista', '/placas-lista', '/config-metrica', 
-        '/clientes-placas', '/marcas-placas', '/proxy/documento', '/proxy/sunat', '/proxy/geocode', '/notificaciones',
+        '/clientes-placas', '/marcas-placas', '/proxy/documento', '/proxy/sunat', '/proxy/geocode', '/notificaciones', '/push',
         '/script/obtener', '/script/buscar', '/integraciones', '/catalogos_taller',
         '/documentos-flota/presign-read', '/mantenimiento/inspecciones/presign-read', '/mantenimiento/checklist/presign-read', '/mantenimiento/presign-read', '/checklist/presign-read',
         '/presign-read', '/operaciones/conductor-portal', '/tesoreria/liquidaciones-gastos', '/combustible/vales',

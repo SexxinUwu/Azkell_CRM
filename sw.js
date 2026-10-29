@@ -1,5 +1,5 @@
 // v55: sale /app del service worker y descarta lo que quedó guardado (archivos de compilación que ya no existen)
-const CACHE_NAME = 'azkell-fleet-v56';
+const CACHE_NAME = 'azkell-fleet-v57';
 const STATIC_CACHE = 'azkell-libs-v2';
 // Fotos de artículos (S3): la URL firmada cambia en cada consulta, por eso se guardan por su ruta sin la firma
 const IMG_CACHE = 'azkell-img-v1';
@@ -70,6 +70,35 @@ function fetchWithTimeout(request, timeoutMs = 2500) {
     });
   });
 }
+
+// Avisos en el teléfono (Web Push): muestra la notificación con el logo de la empresa
+self.addEventListener('push', event => {
+  let datos = {};
+  try { datos = event.data ? event.data.json() : {}; } catch (e) { datos = { cuerpo: event.data ? event.data.text() : '' }; }
+  event.waitUntil(self.registration.showNotification(datos.titulo || 'Azkell Fleet', {
+    body: datos.cuerpo || '',
+    icon: '/api/tenant-logo',
+    badge: '/api/tenant-logo',
+    tag: datos.tag || undefined,
+    renotify: !!datos.tag,
+    data: { url: datos.url || '/app' },
+  }));
+});
+
+// Al tocar el aviso se abre la pantalla de la orden (o se enfoca la app si ya está abierta)
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/app';
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ventanas => {
+    for (const v of ventanas) {
+      if (v.url.includes('/app') && 'focus' in v) {
+        if ('navigate' in v) v.navigate(url);
+        return v.focus();
+      }
+    }
+    return self.clients.openWindow(url);
+  }));
+});
 
 // Fetch: estrategia optimizada y blindada contra NetworkError
 self.addEventListener('fetch', event => {
