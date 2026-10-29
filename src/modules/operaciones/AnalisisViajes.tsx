@@ -6,7 +6,7 @@ import { AlertTriangle, ArrowUpRight, ChevronDown, ChevronRight, Droplets, FileS
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import '../../core/ui/acciones-iconos.css';
 import { Sheet } from '../../core/ui/Sheet';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
@@ -529,11 +529,24 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         title={urea ? 'Análisis de urea' : 'Análisis de combustible'}
         subtitle={datos.isLoading ? 'Cargando…' : `${visibles.length} viajes · ${resumen.pendientes} sin auditar`}
         actions={
-          <MenuOtros opciones={[
-            { label: 'Exportar Excel', detalle: `${visibles.length} viajes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-            ...(urea ? [] : [{ label: 'Matriz de rendimiento', icon: <Fuel size={17} />, separado: true, onSelect: () => navigate('/operaciones/matriz-combustible') }]),
-            ...(urea ? [{ label: 'Telemetría y auditoría avanzada', detalle: 'Se abre en la versión actual', icon: <ArrowUpRight size={17} />, separado: false, onSelect: () => abrirClasico('operaciones/urea-analisis') }] : []),
-          ]} />
+          <div className="acciones-iconos">
+            <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--verde"
+              data-tip="Exportar Excel" aria-label="Exportar Excel" onClick={() => exportar()}>
+              <FileSpreadsheet size={17} />
+            </button>
+            {!urea && (
+              <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--azul"
+                data-tip="Matriz de rendimiento" aria-label="Matriz de rendimiento" onClick={() => navigate('/operaciones/matriz-combustible')}>
+                <Fuel size={17} />
+              </button>
+            )}
+            {urea && (
+              <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--ambar"
+                data-tip="Telemetría y auditoría avanzada (versión actual)" aria-label="Telemetría y auditoría avanzada" onClick={() => abrirClasico('operaciones/urea-analisis')}>
+                <ArrowUpRight size={17} />
+              </button>
+            )}
+          </div>
         }
       />
 
