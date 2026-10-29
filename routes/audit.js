@@ -2,7 +2,8 @@
 const express = require('express');
 const { rangoLima } = require('../services/auditoria');
 
-const PAGINA = 40;
+const PAGINA = 40;          // tamaño por defecto (quien no envía pageSize)
+const PAGINA_MAX = 250;     // tope por petición: evita respuestas enormes
 
 function aObjeto(v) {
   if (v && typeof v === 'object') return v;
@@ -13,11 +14,13 @@ function aObjeto(v) {
 module.exports = (db) => {
   const router = express.Router();
 
-  // GET /api/audit?q=&entity=&action=&userId=&from=AAAA-MM-DD&to=AAAA-MM-DD&page=1
+  // GET /api/audit?q=&entity=&action=&userId=&from=AAAA-MM-DD&to=AAAA-MM-DD&page=1&pageSize=50&orden=desc|asc
   router.get('/audit', (req, res) => {
     const pool = req.db || db;
     const { q, entity, action, userId, from, to } = req.query;
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const tamano = Math.min(PAGINA_MAX, Math.max(1, parseInt(req.query.pageSize, 10) || PAGINA));
+    const sentido = req.query.orden === 'asc' ? 'ASC' : 'DESC';
     const condiciones = [];
     const params = [];
     if (entity) { condiciones.push('entity = ?'); params.push(String(entity)); }
@@ -38,8 +41,8 @@ module.exports = (db) => {
       const total = conteo ? conteo.total : 0;
       pool.query(
         `SELECT id, user_id, user_name, action, entity, entity_id, summary, changes, ip, created_at
-         FROM audit_logs${where} ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`,
-        [...params, PAGINA, (page - 1) * PAGINA],
+         FROM audit_logs${where} ORDER BY created_at ${sentido}, id ${sentido} LIMIT ? OFFSET ?`,
+        [...params, tamano, (page - 1) * tamano],
         (err2, filas) => {
           if (err2) return res.status(500).json({ error: err2.message });
           const items = (filas || []).map(f => ({
@@ -47,7 +50,7 @@ module.exports = (db) => {
             changes: aObjeto(f.changes),
             created_at: f.created_at instanceof Date ? f.created_at.toISOString() : f.created_at,
           }));
-          res.json({ items, total, page, pageSize: PAGINA, hasMore: page * PAGINA < total });
+          res.json({ items, total, page, pageSize: tamano, hasMore: page * tamano < total });
         }
       );
     });
