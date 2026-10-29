@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { CrudLista } from '../../core/ui/CrudLista';
 import { api } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
-import { useClientes, type Cliente } from './api';
+import { consultarRucSunat, useClientes, type Cliente } from './api';
 import { ImportarClientesSheet, descargarPlantillaClientes } from './ImportarClientesSheet';
 
 async function guardar(id: number | string | null, v: Record<string, unknown>) {
@@ -36,7 +36,25 @@ export function ClientesPage() {
       buscarEn={c => `${c.razon_social ?? ''} ${c.nombre ?? ''} ${c.ruc_dni ?? ''} ${c.email ?? ''} ${c.telefono ?? ''}`}
       campos={[
         { clave: 'razon_social', label: 'Razón social', requerido: true, wide: true, normalizar: v => v.toUpperCase() },
-        { clave: 'ruc_dni', label: 'RUC / DNI', validar: v => (/^(\d{8}|\d{11})$/.test(v) ? undefined : 'El RUC tiene 11 dígitos y el DNI 8.') },
+        {
+          clave: 'ruc_dni', label: 'RUC / DNI', validar: v => (/^(\d{8}|\d{11})$/.test(v) ? undefined : 'El RUC tiene 11 dígitos y el DNI 8.'),
+          // Al escribir un RUC de 11 dígitos se consulta SUNAT sola: razón social, dirección y estado (no pisa lo que ya escribiste)
+          consultaAlEscribir: {
+            valido: v => /^\d{11}$/.test(v),
+            consultar: async ruc => {
+              const d = await consultarRucSunat(ruc);
+              const condiciones = [d.estado, d.condicion].filter(Boolean);
+              return {
+                campos: {
+                  razon_social: d.razon_social.toUpperCase(),
+                  direccion: d.direccion.toUpperCase(),
+                  notas: [d.estado && `ESTADO SUNAT: ${d.estado.toUpperCase()}`, d.condicion && `CONDICIÓN: ${d.condicion.toUpperCase()}`].filter(Boolean).join(' | '),
+                },
+                resumen: condiciones.length ? `SUNAT: ${condiciones.join(' · ')}` : 'Datos consultados en SUNAT',
+              };
+            },
+          },
+        },
         { clave: 'telefono', label: 'Teléfono', validar: v => (/^\+?[\d\s-]{7,15}$/.test(v) ? undefined : 'Escribe un teléfono válido, solo números.') },
         { clave: 'email', label: 'Correo', validar: v => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? undefined : 'Revisa el correo: debe tener la forma usuario@empresa.com.') },
         { clave: 'estado', label: 'Estado', tipo: 'select', opciones: ['Activo', 'Inactivo'], requerido: true, inicial: 'Activo' },

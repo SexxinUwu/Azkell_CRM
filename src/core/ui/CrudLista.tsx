@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArrowUpRight, CircleAlert, FileSpreadsheet, Plus, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from './Button';
 import { EmptyState, Notice, Page, PageHeader } from './Display';
@@ -27,9 +27,21 @@ export interface CampoCrud {
   normalizar?: (v: string) => string;
   /** Regla de formato: devuelve el mensaje de error o undefined si el valor es correcto */
   validar?: (v: string) => string | undefined;
+  /**
+   * Consulta externa mientras se escribe este campo (p. ej. RUC en SUNAT).
+   * Espera 500 ms de pausa, rellena otros campos sin pisar lo que la persona ya escribió y muestra el estado.
+   */
+  consultaAlEscribir?: {
+    /** Si el valor (sin espacios) merece consultarse */
+    valido: (valor: string) => boolean;
+    /** Devuelve los valores a rellenar (vacíos se ignoran) y el texto de estado; lanza error si falla */
+    consultar: (valor: string) => Promise<{ campos: Record<string, string>; resumen: string }>;
+  };
 }
 
 type Valores = Record<string, string | number | boolean>;
+
+type EstadoConsulta = { clave: string; estado: 'cargando' | 'ok' | 'error'; texto: string } | null;
 
 export interface CrudListaProps<T> {
   eyebrow: string;
@@ -187,10 +199,27 @@ function FormularioCrud<T>({ abierto, singular, campos, onClose, onGuardar }: {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errs, setErrs] = useState<Record<string, string | undefined>>({});
+  const [consulta, setConsulta] = useState<EstadoConsulta>(null);
   const item = abierto?.item as Record<string, unknown> | null | undefined;
   const editando = !!item;
 
+  // Consulta automática (CampoCrud.consultaAlEscribir): temporizador, orden de respuestas y campos tocados por la persona
+  const valoresRef = useRef<Valores>(v);
+  const tocados = useRef(new Set<string>());
+  const autoRellenos = useRef<Record<string, string>>({});
+  const temporizador = useRef<number | undefined>(undefined);
+  const turno = useRef(0);
+
+  function cancelarConsulta() {
+    window.clearTimeout(temporizador.current);
+    turno.current += 1;
+  }
+
+  useEffect(() => { valoresRef.current = v; }, [v]);
+  useEffect(() => () => { window.clearTimeout(temporizador.current); turno.current += 1; }, []);
+
   useEffect(() => {
+    cancelarConsulta(); setConsulta(null);
     if (!abierto) return;
     const ini: Valores = {};
     for (const c of campos) {
@@ -199,7 +228,38 @@ function FormularioCrud<T>({ abierto, singular, campos, onClose, onGuardar }: {
       else ini[c.clave] = raw == null ? '' : c.tipo === 'date' ? String(raw).split('T')[0] : (raw as string | number);
     }
     setV(ini); setError(null); setErrs({});
+    tocados.current = new Set(); autoRellenos.current = {};
   }, [abierto]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function programarConsulta(clave: string, valor: string, cfg: NonNullable<CampoCrud['consultaAlEscribir']>) {
+    cancelarConsulta();
+    setConsulta(null);
+    const limpio = valor.trim();
+    if (!cfg.valido(limpio)) return;
+    const mio = turno.current;
+    temporizador.current = window.setTimeout(async () => {
+      setConsulta({ clave, estado: 'cargando', texto: 'Consultando…' });
+      try {
+        const r = await cfg.consultar(limpio);
+        if (mio !== turno.current) return; // se cambió el valor o se cerró el formulario
+        const previo = valoresRef.current;
+        const rellenos: Valores = {};
+        for (const [k, val] of Object.entries(r.campos)) {
+          if (!val) continue;
+          const actual = String(previo[k] ?? '');
+          // Solo rellena campos vacíos o con lo que ya se autocompletó antes; nunca lo que la persona escribió
+          if (!tocados.current.has(k) && (actual.trim() === '' || actual === autoRellenos.current[k])) {
+            rellenos[k] = val; autoRellenos.current[k] = val;
+          }
+        }
+        if (Object.keys(rellenos).length) setV(a => ({ ...a, ...rellenos }));
+        setConsulta({ clave, estado: 'ok', texto: r.resumen });
+      } catch (err) {
+        if (mio !== turno.current) return;
+        setConsulta({ clave, estado: 'error', texto: errorMessage(err) });
+      }
+    }, 500);
+  }
 
   async function guardar() {
     const faltan: Record<string, string> = {};
@@ -229,11 +289,21 @@ function FormularioCrud<T>({ abierto, singular, campos, onClose, onGuardar }: {
         <Button variant="primary" onClick={guardar} loading={enviando}>Guardar</Button></>}>
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
-        {campos.map(c => (
-          <Field key={c.clave} label={c.label + (c.requerido ? ' *' : '')} wide={c.wide || c.tipo === 'textarea'} hint={c.ayuda} error={errs[c.clave]}>
+        {campos.map(c => {
+          const enCurso = consulta?.clave === c.clave ? consulta : null;
+          const hint = enCurso?.estado === 'cargando'
+            ? <><span className="spinner spinner--xs" aria-hidden /> {enCurso.texto}</>
+            : enCurso?.estado === 'ok' ? enCurso.texto : c.ayuda;
+          const msgError = errs[c.clave] ?? (enCurso?.estado === 'error' ? enCurso.texto : undefined);
+          return (
+          <Field key={c.clave} label={c.label + (c.requerido ? ' *' : '')} wide={c.wide || c.tipo === 'textarea'} hint={hint} error={msgError}>
             {pp => {
               const val = v[c.clave];
-              const set = (x: string | number | boolean) => { setV(a => ({ ...a, [c.clave]: x })); setErrs(e => ({ ...e, [c.clave]: undefined })); };
+              const set = (x: string | number | boolean) => {
+                tocados.current.add(c.clave);
+                setV(a => ({ ...a, [c.clave]: x })); setErrs(e => ({ ...e, [c.clave]: undefined }));
+                if (c.consultaAlEscribir) programarConsulta(c.clave, String(x), c.consultaAlEscribir);
+              };
               const bloqueado = editando && c.soloCrear;
               if (c.tipo === 'select') {
                 return (
@@ -259,7 +329,8 @@ function FormularioCrud<T>({ abierto, singular, campos, onClose, onGuardar }: {
               );
             }}
           </Field>
-        ))}
+          );
+        })}
       </div>
     </Sheet>
   );
