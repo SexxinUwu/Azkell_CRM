@@ -439,6 +439,61 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
     return { viajes: visibles.length, gal, gasto, km: kmRazonables, validos: razonables.length, galConKm, kmGal: galConKm > 0 ? kmConGalones / galConKm : 0, razonables: conGalones.length, pendientes: visibles.filter(t => t.estadoAuditoria === 'PENDIENTE').length };
   }, [visibles, urea]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Fila TOTAL de la tabla, como el clásico: suma todos los viajes visibles (no solo la página)
+  const pie = useMemo(() => {
+    let km = 0, gal = 0, kmTeo = 0, galTeo = 0, gpsGal = 0, gpsCon = 0;
+    for (const t of visibles) {
+      gal += cifras(t).galones;
+      km += kmDelViaje(t);
+      const a = analisis.get(t.viaje);
+      if (a) { kmTeo += a.kmTeorico || 0; galTeo += a.galTeorico || 0; }
+      const gpsT = gps.data?.[t.viaje]?.data;
+      if (gpsT?.combustibleConsumidoGps != null && Number.isFinite(Number(gpsT.combustibleConsumidoGps))) {
+        gpsGal += Number(gpsT.combustibleConsumidoGps);
+        gpsCon++;
+      }
+    }
+    return { km, gal, kmTeo, galTeo, gpsGal, gpsCon };
+  }, [visibles, analisis, gps.data, urea]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pieCeldas: ReactNode[] = [
+    <Celda key="aud">—</Celda>,
+  ];
+  if (mostrarObs) pieCeldas.push(<Celda key="obs">—</Celda>);
+  pieCeldas.push(
+    <Celda key="viaje"><strong>TOTAL</strong></Celda>,
+    <Celda key="placa">—</Celda>,
+    <Celda key="carreta">—</Celda>,
+    <Celda key="estado">—</Celda>,
+    <Celda key="motor">—</Celda>,
+    <Celda key="ruta">—</Celda>,
+    <Celda key="conductor">—</Celda>,
+    <Celda key="peso">—</Celda>,
+    <Celda key="finicio">—</Celda>,
+    <Celda key="ffin">—</Celda>,
+    <Celda key="kmini">—</Celda>,
+    <Celda key="kmfin">—</Celda>,
+    <Celda key="recorrido" alinear="right" mono>{pie.km > 0 ? fmt(pie.km, 1) : '—'}</Celda>,
+    <Celda key="galones" alinear="right" mono><strong>{fmt(pie.gal, 2)}</strong></Celda>,
+    <Celda key="rendimiento" alinear="right" mono>{resumen.kmGal > 0 ? fmt(resumen.kmGal, 2) : '—'}</Celda>,
+    <Celda key="gasto" alinear="right" mono>—</Celda>,
+  );
+  if (!urea) {
+    pieCeldas.push(
+      <Celda key="kmteo" alinear="right" mono>{pie.kmTeo > 0 ? fmt(pie.kmTeo, 1) : '—'}</Celda>,
+      <Celda key="galteo" alinear="right" mono>{pie.galTeo > 0 ? fmt(pie.galTeo, 2) : '—'}</Celda>,
+      <Celda key="rendteo" alinear="right" mono>{pie.galTeo > 0 && pie.kmTeo > 0 ? fmt(pie.kmTeo / pie.galTeo, 2) : '—'}</Celda>,
+      <Celda key="dif" alinear="right" mono><Diferencia valor={pie.galTeo > 0 && pie.gal > 0 ? pie.gal - pie.galTeo : null} /></Celda>,
+      <Celda key="gps-rec" alinear="right" mono>—</Celda>,
+      <Celda key="gps-comb" alinear="right" mono>
+        {pie.gpsCon > 0 ? <span title={`${pie.gpsCon} de ${visibles.length} viajes con dato GPS`}>{fmt(pie.gpsGal, 2)}</span> : '—'}
+      </Celda>,
+      <Celda key="gps-rend" alinear="right" mono>—</Celda>,
+      <Celda key="gps-vel" alinear="right" mono>—</Celda>,
+      <Celda key="gps-ral" alinear="right" mono>—</Celda>,
+      <Celda key="gps-horas" alinear="right" mono>—</Celda>,
+    );
+  }
+
   const t = trips.find(x => x.viaje === abierto) ?? null;
   const Icono = urea ? Droplets : Fuel;
   const puedeAuditar = can('combustible_analisis.editar', 'combustible.editar', 'urea_analisis.editar', 'combustible_analisis.crear');
@@ -692,6 +747,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
                     ] : []} />
                 );
               })}
+              <tr className="tabla-redim__total" style={{ background: 'var(--fill-subtle)', fontWeight: 700, borderTop: '2px solid var(--separator)' }}>{pieCeldas}</tr>
             </TablaRedimensionable>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--s-3)', flexWrap: 'wrap' }}>
               <span className="t-footnote c-secondary">Mostrando {(pagActual - 1) * tamano + 1} a {Math.min(pagActual * tamano, visibles.length)} de {visibles.length} viajes</span>
