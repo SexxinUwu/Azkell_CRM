@@ -234,7 +234,7 @@ export function ChecklistPage() {
         </div>
       </header>
 
-      <div className="cep-kpis">
+      <div className="cep-kpis ck-kpis">
         {kpis.map(k => (
           <button key={k.id} type="button" aria-pressed={filtroEstado === k.filtro}
             className={`cep-kpi ck-kpi--boton${filtroEstado === k.filtro ? ' ck-kpi--activo' : ''}`}
@@ -248,11 +248,11 @@ export function ChecklistPage() {
         ))}
       </div>
 
-      <div className="cep-barra" style={{ flexWrap: 'wrap' }}>
+      <div className="cep-barra ck-barra">
         <div className="cep-barra__buscar">
           <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar folio, placa, conductor..." />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+        <div className="ck-fechas">
           <input type="date" className="input" aria-label="Desde" title="Desde" value={desde} max={hasta || undefined}
             onChange={e => setDesde(e.target.value)} />
           <span className="t-footnote c-secondary">a</span>

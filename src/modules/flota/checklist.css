@@ -134,3 +134,18 @@
   .ck-kpi--boton, .ck-empresas__op, .ck-menu__lista { transition: none; animation: none; }
   .ck-kpi--boton:active, .ck-empresas__op:active, .ck-menu__op:active { transform: none; }
 }
+
+/* ── Orden de la pantalla: 4 totales en una fila, barra de filtros alineada ── */
+.ck-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 900px) { .ck-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .ck-kpis { grid-template-columns: 1fr; } }
+
+.ck-barra { flex-wrap: nowrap; }
+.ck-barra .cep-barra__buscar { flex: 1 1 16rem; max-width: none; }
+.ck-barra .cep-barra__conteo { margin-left: auto; white-space: nowrap; }
+.ck-fechas { display: flex; align-items: center; gap: var(--s-2); flex-wrap: nowrap; }
+.ck-fechas .input { width: auto; min-width: 9.5rem; }
+@media (max-width: 900px) {
+  .ck-barra { flex-wrap: wrap; }
+  .ck-barra .cep-barra__buscar { flex-basis: 100%; }
+}
