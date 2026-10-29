@@ -1,5 +1,5 @@
 // v55: sale /app del service worker y descarta lo que quedó guardado (archivos de compilación que ya no existen)
-const CACHE_NAME = 'azkell-fleet-v55';
+const CACHE_NAME = 'azkell-fleet-v56';
 const STATIC_CACHE = 'azkell-libs-v2';
 // Fotos de artículos (S3): la URL firmada cambia en cada consulta, por eso se guardan por su ruta sin la firma
 const IMG_CACHE = 'azkell-img-v1';

@@ -2250,14 +2250,17 @@ window.poblarEmpresasChecklist = function(datos) {
     group.innerHTML = html;
 };
 
-// Rango de fechas del reporte de fallas (día de Lima). Vacío = hoy.
+// Rango de fechas del reporte de fallas (día de Lima). Por defecto: del inicio del mes en curso a hoy.
 window.ckHoyLima = function() {
     return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+};
+window.ckInicioMesLima = function() {
+    return window.ckHoyLima().slice(0, 7) + '-01';
 };
 window.ckRangoQuery = function() {
     const d = document.getElementById('ckFiltroDesde');
     const h = document.getElementById('ckFiltroHasta');
-    if (d && !d.value) d.value = window.ckHoyLima();
+    if (d && !d.value) d.value = window.ckInicioMesLima();
     if (h && !h.value) h.value = window.ckHoyLima();
     if (!d || !h) return '';
     return '?desde=' + encodeURIComponent(d.value) + '&hasta=' + encodeURIComponent(h.value);
@@ -2269,11 +2272,10 @@ window.ckCambiarRango = function() {
     window.cargarTablaChecklist(true);
 };
 window.ckHoy = function() {
-    const hoy = window.ckHoyLima();
     const d = document.getElementById('ckFiltroDesde');
     const h = document.getElementById('ckFiltroHasta');
-    if (d) d.value = hoy;
-    if (h) h.value = hoy;
+    if (d) d.value = window.ckInicioMesLima();
+    if (h) h.value = window.ckHoyLima();
     window.cargarTablaChecklist(true);
 };
 

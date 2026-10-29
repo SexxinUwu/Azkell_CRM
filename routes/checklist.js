@@ -225,10 +225,11 @@ module.exports = function (db, broadcast, logAudit) {
     // ── GET /api/checklist — Listar reportes de fallas ──────────────────
     router.get('/', (req, res) => {
         const tdb = getDb(req);
-        // Rango de fechas (día de Lima). Sin fechas, solo el día de hoy: la historia completa no se carga de entrada.
+        // Rango de fechas (día de Lima). Sin fechas: del inicio del mes en curso a hoy.
         const hoy = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
+        const inicioMes = `${hoy.slice(0, 7)}-01`;
         const fechaValida = f => /^\d{4}-\d{2}-\d{2}$/.test(f || '');
-        const desde = fechaValida(req.query.desde) ? req.query.desde : hoy;
+        const desde = fechaValida(req.query.desde) ? req.query.desde : inicioMes;
         const hasta = fechaValida(req.query.hasta) ? req.query.hasta : hoy;
         const sql = `
             SELECT rf.id, rf.folio, rf.orden_viaje, DATE_FORMAT(rf.fecha_reporte, '%Y-%m-%d %H:%i:%s') AS fecha_reporte, rf.placa_tracto, rf.placa_remolque, rf.km_inicial, rf.km_final, rf.horas_motor,
