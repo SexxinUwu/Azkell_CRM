@@ -816,6 +816,73 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
         }
     });
 
+    // ── PATCH /api/operaciones/ordenes-viaje/:viaje/asignacion (Asignar conductor, tracto, carreta y ruta) ───
+    // Solo toca esos cuatro campos; a diferencia del PUT no pone en blanco fechas, ubigeos ni observaciones.
+    // Avisos no bloqueantes: documentos vencidos y unidad o conductor ya en otro viaje activo del mismo día (o en ruta).
+    router.patch('/ordenes-viaje/:viaje/asignacion', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ ok: false, error: 'Base de datos no disponible' });
+
+            const codeViaje = req.params.viaje;
+            const { id_conductor, conductor, placa_tracto, placa_remolque, ruta } = req.body || {};
+            if (!placa_tracto || !conductor) {
+                return res.status(400).json({ ok: false, error: 'Conductor y Vehículo (Tracto) son obligatorios.' });
+            }
+
+            const [[actual]] = await tdb.query(
+                `SELECT estado, placa_tracto, placa_remolque, DATE_FORMAT(fecha_viaje, '%Y-%m-%d') AS dia
+                 FROM operaciones_ordenes_viaje WHERE viaje = ?`, [codeViaje]);
+            if (!actual) return res.status(404).json({ ok: false, error: 'Viaje no encontrado.' });
+            if (actual.estado !== 'ACTIVO' && actual.estado !== 'INICIADO') {
+                return res.status(409).json({ ok: false, error: `No se puede reasignar un viaje ${actual.estado}.` });
+            }
+
+            const tracto = String(placa_tracto).trim().toUpperCase();
+            const carreta = placa_remolque ? String(placa_remolque).trim().toUpperCase() : null;
+            const nombre = String(conductor).trim().toUpperCase();
+            const unidades = [tracto, carreta].filter(Boolean);
+
+            // Si cambia la unidad, la configuración guardada en el viaje era de la unidad anterior: se descarta
+            // para que el servidor vuelva a leer la configuración de la placa nueva.
+            const mismoTracto = String(actual.placa_tracto ?? '').trim().toUpperCase() === tracto;
+            const mismaCarreta = String(actual.placa_remolque ?? '').trim().toUpperCase() === String(carreta ?? '');
+
+            await tdb.query(`
+                UPDATE operaciones_ordenes_viaje
+                SET id_conductor = ?,
+                    conductor = ?,
+                    placa_tracto = ?,
+                    placa_remolque = ?,
+                    configuracion_tracto = ${mismoTracto ? 'configuracion_tracto' : 'NULL'},
+                    configuracion_remolque = ${mismaCarreta ? 'configuracion_remolque' : 'NULL'},
+                    ruta = ?
+                WHERE viaje = ?
+            `, [id_conductor || null, nombre, tracto, carreta, ruta ? String(ruta).trim() : null, codeViaje]);
+
+            const advertencias = (await documentosVencidosPara(tdb, unidades)).map(mensajeAdvertencia);
+
+            const [choques] = await tdb.query(`
+                SELECT viaje, estado, conductor, placa_tracto, placa_remolque
+                FROM operaciones_ordenes_viaje
+                WHERE viaje <> ?
+                  AND (estado = 'INICIADO' OR (estado = 'ACTIVO' AND DATE_FORMAT(fecha_viaje, '%Y-%m-%d') = ?))
+                  AND (UPPER(TRIM(placa_tracto)) IN (?) OR UPPER(TRIM(placa_remolque)) IN (?) OR UPPER(TRIM(conductor)) = ?)
+            `, [codeViaje, actual.dia ?? '', unidades, unidades, nombre]);
+            for (const c of choques) {
+                const motivos = [];
+                if (unidades.includes(String(c.placa_tracto ?? '').trim().toUpperCase()) || unidades.includes(String(c.placa_remolque ?? '').trim().toUpperCase())) motivos.push('la unidad');
+                if (String(c.conductor ?? '').trim().toUpperCase() === nombre) motivos.push('el conductor');
+                advertencias.push(`Advertencia: ${motivos.join(' y ')} ya ${motivos.length > 1 ? 'están' : 'está'} en el viaje ${c.viaje} (${c.estado}).`);
+            }
+
+            res.json({ ok: true, message: `Asignación del viaje ${codeViaje} actualizada.`, advertencias });
+        } catch (err) {
+            console.error('Error al asignar orden de viaje:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     // ── DELETE /api/operaciones/ordenes-viaje/:viaje (Eliminar Orden de Viaje) ───
     router.delete('/ordenes-viaje/:viaje', async (req, res) => {
         try {

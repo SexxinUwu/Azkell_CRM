@@ -1,16 +1,17 @@
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { CalendarDays, Plus, Truck } from 'lucide-react';
-import { PageLoader } from '../../core/ui/Button';
+import { CalendarDays, Plus, Route, Truck } from 'lucide-react';
+import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { api, errorMessage } from '../../core/api/client';
+import { AsignacionViajeSheet } from './AsignacionViajeSheet';
 
 interface Viaje {
-  viaje: string; fecha_viaje: string | null; conductor: string | null; placa_tracto: string | null; placa_remolque: string | null;
+  viaje: string; fecha_viaje: string | null; id_conductor?: number | null; conductor: string | null; placa_tracto: string | null; placa_remolque: string | null;
   ruta: string | null; estado: string; ordenes_list: string | null; peso_ida?: number | string; peso_retorno?: number | string;
 }
 
@@ -33,7 +34,9 @@ function etiquetaDia(k: string) {
 export function ProgramacionPage() {
   const [busqueda, setBusqueda] = useState('');
   const [verFinalizados, setVerFinalizados] = useState(false);
+  const [asignando, setAsignando] = useState<Viaje | null>(null);
   const navigate = useNavigate();
+  const qc = useQueryClient();
 
   const q = useQuery<Viaje[]>({
     queryKey: ['operaciones', 'programacion'],
@@ -77,7 +80,10 @@ export function ProgramacionPage() {
             <h2 style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--label-2)', margin: '0 var(--s-3) var(--s-2)' }}>{etiquetaDia(k)} · {viajes.length}</h2>
             <div className="tarjeta__lista">
               {viajes.map(v => (
-                <button key={v.viaje} type="button" className="mov-fila" onClick={() => navigate(`/operaciones/ordenes-viaje?viaje=${encodeURIComponent(v.viaje)}`)}>
+                // Div con rol de botón: dentro va el botón "Asignar" y un <button> anidado no es válido
+                <div key={v.viaje} className="mov-fila" role="button" tabIndex={0}
+                  onClick={() => navigate(`/operaciones/ordenes-viaje?viaje=${encodeURIComponent(v.viaje)}`)}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/operaciones/ordenes-viaje?viaje=${encodeURIComponent(v.viaje)}`); } }}>
                   <div className="mov-fila__icon" style={{ background: `var(--${color(v.estado)}-tint)`, color: `var(--${color(v.estado)}-ink)` }}><Truck size={16} /></div>
                   <div className="mov-fila__cuerpo">
                     <span className="mov-fila__titulo">{v.conductor || 'Sin conductor'} · {v.placa_tracto || '—'}{v.placa_remolque ? ` + ${v.placa_remolque}` : ''}</span>
@@ -86,12 +92,20 @@ export function ProgramacionPage() {
                   <div className="mov-fila__derecha">
                     <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: `var(--${color(v.estado)}-ink)` }}>{v.estado}</span>
                   </div>
-                </button>
+                  {(v.estado === 'ACTIVO' || v.estado === 'INICIADO') && (
+                    <span onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                      <Button variant="secondary" icon={<Route size={15} />} aria-label={`Asignar viaje ${v.viaje}`} onClick={() => setAsignando(v)}>{''}</Button>
+                    </span>
+                  )}
+                </div>
               ))}
             </div>
           </section>
         ))}
       </div>
+
+      <AsignacionViajeSheet viaje={asignando} onClose={() => setAsignando(null)}
+        onGuardado={() => qc.invalidateQueries({ queryKey: ['operaciones'] })} />
     </Page>
   );
 }
