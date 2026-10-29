@@ -109,6 +109,9 @@ module.exports = function globalRBAC(req, res, next) {
     // Sin esta regla, cualquier usuario que no fuera admin recibía "Ruta no mapeada" al escribir en el chat.
     if (path.startsWith('/asistente')) return next();
 
+    // PATCH no está en methodMap y caía en lectura ('l'): el cambio de estado de una cuenta por cobrar es una escritura de edición.
+    if (req.method === 'PATCH' && /^\/tesoreria\/cuentas\/[^/]+\/toggle-estado$/.test(path)) accion = 'e';
+
     // APROBACIONES DE GERENCIA: aprobar o anular lo revisa el permiso de Gerencia (no el de Almacén ni el de Tesorería).
     // O/C: solo Gerencia. Caja: Gerencia, y Tesorería como hasta ahora (su pantalla aprueba y anula caja).
     const esAprobacionOc = req.method === 'PUT' && /^\/almacen\/entradas\/[^/]+\/estado$/.test(path);

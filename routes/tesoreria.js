@@ -496,38 +496,6 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
-    // ── POST /api/tesoreria/cuentas/:id/revertir-pago (PAGADO → PENDIENTE, con auditoría) ──
-    // Solo cambia el estado: el depósito registrado (neto cobrado, fecha, constancia) se conserva.
-    router.post('/cuentas/:id/revertir-pago', async (req, res) => {
-        try {
-            const tdb = getDb(req);
-            if (!tdb) return res.status(500).json({ ok: false, error: 'Base de datos no disponible' });
-
-            const id = req.params.id;
-            const [rows] = await tdb.query('SELECT codigo_liquidacion, estado_servicio FROM tesoreria_cuentas WHERE id = ?', [id]);
-            if (!rows || !rows.length) return res.status(404).json({ ok: false, error: 'Registro no encontrado' });
-
-            const estadoAntes = String(rows[0].estado_servicio || '').toUpperCase().trim();
-            if (estadoAntes !== 'PAGADO') {
-                return res.status(400).json({ ok: false, error: `Solo se puede volver a PENDIENTE una cuenta PAGADA (ahora está ${estadoAntes || 'sin estado'}).` });
-            }
-
-            await tdb.query("UPDATE tesoreria_cuentas SET estado_servicio = 'PENDIENTE' WHERE id = ?", [id]);
-
-            auditar(tdb, actorDe(req), {
-                action: 'REVERT',
-                entity: 'receivable',
-                entityId: id,
-                summary: `Volvió a PENDIENTE la cuenta ${id}${rows[0].codigo_liquidacion ? ` (liquidación ${rows[0].codigo_liquidacion})` : ''}`,
-                changes: diff({ estado_servicio: estadoAntes }, { estado_servicio: 'PENDIENTE' }, ['estado_servicio']),
-            });
-            res.json({ ok: true, estado_servicio: 'PENDIENTE', message: 'Cuenta vuelta a PENDIENTE' });
-        } catch (err) {
-            console.error('Error al revertir pago de tesoreria:', err);
-            res.status(500).json({ ok: false, error: err.message });
-        }
-    });
-
     // ── DELETE /api/tesoreria/cuentas/:id (Eliminar registro) ───────────
     router.delete('/cuentas/:id', async (req, res) => {
         try {
@@ -1594,41 +1562,26 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
-    // Eliminar Motivo / Submotivo. Permiso: RBAC global (DELETE sobre tesorería exige el permiso 'd').
-    // No se borra un concepto que ya usan gastos de caja o liquidaciones: en ese caso se desactiva con Estado.
+    // Eliminar Motivo / Submotivo (igual que el clásico: sin control de dependencias).
+    // Permiso: RBAC global (DELETE sobre tesorería exige el permiso 'd'). Queda registrado en auditoría.
     router.delete('/motivos-gastos/:id', async (req, res) => {
         try {
             const tdb = getDb(req);
             const { id } = req.params;
             const [rows] = await tdb.query('SELECT motivo, sub_motivo FROM tesoreria_motivos_gastos WHERE id = ?', [id]);
-            if (!rows || !rows.length) return res.status(404).json({ ok: false, error: 'Concepto de gasto no encontrado.' });
-
-            const { motivo, sub_motivo } = rows[0];
-            const [[enCaja]] = await tdb.query(
-                'SELECT COUNT(*) AS n FROM tesoreria_caja WHERE UPPER(TRIM(motivo)) = UPPER(TRIM(?)) AND UPPER(TRIM(sub_motivo)) = UPPER(TRIM(?))',
-                [motivo, sub_motivo]
-            );
-            const [[enLiquidaciones]] = await tdb.query(
-                'SELECT COUNT(*) AS n FROM tesoreria_liquidaciones_gastos WHERE UPPER(TRIM(sub_motivo)) = UPPER(TRIM(?))',
-                [sub_motivo]
-            );
-            const usos = Number(enCaja.n || 0) + Number(enLiquidaciones.n || 0);
-            if (usos > 0) {
-                return res.status(409).json({ ok: false, error: `No se puede eliminar "${sub_motivo}": ya se usó en ${usos} registro(s) de caja o liquidación. Desactívalo con Estado Inactivo.` });
-            }
-
             await tdb.query('DELETE FROM tesoreria_motivos_gastos WHERE id = ?', [id]);
-            auditar(tdb, actorDe(req), {
-                action: 'DELETE',
-                entity: 'expense-concept',
-                entityId: id,
-                summary: `Eliminó el concepto de gasto ${motivo} · ${sub_motivo}`,
-                changes: diff({ motivo, sub_motivo }, {}, ['motivo', 'sub_motivo']),
-            });
+            if (rows.length) {
+                auditar(tdb, actorDe(req), {
+                    action: 'DELETE',
+                    entity: 'expense-concept',
+                    entityId: id,
+                    summary: `Eliminó el concepto de gasto ${rows[0].motivo} · ${rows[0].sub_motivo}`,
+                    changes: diff({ motivo: rows[0].motivo, sub_motivo: rows[0].sub_motivo }, {}, ['motivo', 'sub_motivo']),
+                });
+            }
             res.json({ ok: true, message: 'Concepto de gasto eliminado.' });
         } catch (err) {
-            console.error('Error al eliminar motivo de gasto:', err);
-            res.status(500).json({ ok: false, error: err.message });
+            res.status(500).json({ error: err.message });
         }
     });
 

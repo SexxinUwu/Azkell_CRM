@@ -15,14 +15,13 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { formatFechaPe } from '../../core/lib/format';
-import { useCuentas, type CuentaPorCobrar } from './api';
+import { cambiarEstadoCuenta, useCuentas, type CuentaPorCobrar } from './api';
 import { ImportarCuentasSheet } from './ImportarCuentasSheet';
 import { NotaCreditoSheet } from './NotaCreditoSheet';
 import { DetalleCuenta } from './cuentas-detalle';
 import { FormularioCuenta } from './cuentas-formulario';
 import { HistorialNC } from './cuentas-historial';
 import { PagoCuenta } from './cuentas-pago';
-import { RevertirPagoSheet } from './cuentas-revertir';
 import { descargarPlantillaCuentas } from './importarCuentas';
 import { MESES, diasHasta, estadoDe, fechaDeFiltro, isoDe, num, soles, tonoCuenta, textoVencimiento } from './cuentas-util';
 
@@ -62,7 +61,6 @@ export function CuentasPage() {
   const [abiertoId, setAbiertoId] = useState<number | null>(null);
   const [formulario, setFormulario] = useState<{ cuenta: CuentaPorCobrar | null } | null>(null);
   const [pagando, setPagando] = useState<CuentaPorCobrar | null>(null);
-  const [revirtiendo, setRevirtiendo] = useState<CuentaPorCobrar | null>(null);
   const [porEliminar, setPorEliminar] = useState<CuentaPorCobrar | null>(null);
   const [importando, setImportando] = useState(false);
   const [notaCredito, setNotaCredito] = useState<CuentaPorCobrar | null>(null);
@@ -118,6 +116,17 @@ export function CuentasPage() {
       await qc.invalidateQueries({ queryKey: ['tesoreria', 'cuentas'] });
     } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
     finally { setEliminando(false); }
+  }
+
+  // Igual que el clásico (toggleEstadoCuenta): sin confirmación; si falla, alert y el estado no cambia
+  async function volverAPendiente(c: CuentaPorCobrar) {
+    try {
+      await cambiarEstadoCuenta(c.id, 'PENDIENTE');
+      setAbiertoId(null);
+      await qc.invalidateQueries({ queryKey: ['tesoreria', 'cuentas'] });
+    } catch (err) {
+      alert(`No se pudo actualizar el estado: ${errorMessage(err)}`);
+    }
   }
 
   async function exportar() {
@@ -241,7 +250,7 @@ export function CuentasPage() {
         onClose={() => setAbiertoId(null)}
         onEditar={puedeEditar && abierta && estadoDe(abierta) !== 'PAGADO' ? () => setFormulario({ cuenta: abierta }) : undefined}
         onPagar={puedeEditar && abierta && estadoDe(abierta) !== 'ANULADO' ? () => { setPagando(abierta); setAbiertoId(null); } : undefined}
-        onRevertir={puedeEditar && abierta && estadoDe(abierta) === 'PAGADO' ? () => { setRevirtiendo(abierta); setAbiertoId(null); } : undefined}
+        onRevertir={puedeEditar && abierta && estadoDe(abierta) === 'PAGADO' ? () => volverAPendiente(abierta) : undefined}
         onNotaCredito={puedeEditar && abierta && abierta.serie && abierta.factura ? () => { setNotaCredito(abierta); setAbiertoId(null); } : undefined}
         onEliminar={puedeEliminar && abierta && estadoDe(abierta) !== 'PAGADO' ? () => setPorEliminar(abierta) : undefined}
         onHistorial={() => { if (abierta) setHistorialDe(abierta); }}
@@ -250,7 +259,6 @@ export function CuentasPage() {
       <ImportarCuentasSheet open={importando} onClose={() => setImportando(false)} existentes={lista} />
       <NotaCreditoSheet cuenta={notaCredito} onClose={() => setNotaCredito(null)} />
       <PagoCuenta cuenta={pagando} onClose={() => setPagando(null)} usuario={user?.name ?? ''} />
-      <RevertirPagoSheet cuenta={revirtiendo} onClose={() => setRevirtiendo(null)} />
       <HistorialNC cuenta={historialDe} onClose={() => setHistorialDe(null)} />
       <ConfirmSheet open={!!porEliminar} onClose={() => !eliminando && setPorEliminar(null)} onConfirm={eliminar} loading={eliminando}
         title="¿Eliminar este registro?"

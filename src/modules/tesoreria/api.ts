@@ -194,8 +194,9 @@ export function useCuentas() {
   });
 }
 
-/** PAGADO → PENDIENTE (el servidor valida el estado y audita el cambio) */
-export const revertirPagoCuenta = (id: number) => escribirTesoreria(`/tesoreria/cuentas/${id}/revertir-pago`, 'POST');
+/** Cambio rápido de estado, igual que el clásico (PATCH toggle-estado; el servidor lo registra en auditoría) */
+export const cambiarEstadoCuenta = (id: number, estado: 'PENDIENTE' | 'PAGADO') =>
+  api(`/tesoreria/cuentas/${id}/toggle-estado`, { method: 'PATCH', body: { estado_servicio: estado } });
 
 export interface Banco {
   id?: number | string;
