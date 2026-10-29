@@ -205,7 +205,7 @@ export function DisponibilidadPage() {
         }
       />
 
-      {isLoading ? <PageLoader /> : isError ? (
+      {isLoading ? <PageLoader variante="camion" /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : (
         <div className="disp-pagina" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>

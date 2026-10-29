@@ -3,6 +3,9 @@
 // _evGetPdfFilename, evCompartirWhatsApp). El clásico usa Tailwind; aquí los estilos van en línea para que el PDF
 // salga igual en cualquier pantalla. html2pdf se carga desde /libs/html2pdf.bundle.min.js (core/lib/pdf.ts).
 import { compartirPDF, generarPDFBlob } from '../../core/lib/pdf';
+import { CargaCamion } from '../../core/ui/CargaCamion';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { svgDiagramaEntrega, type EstiloCarroceria } from './ce-croquis';
 import { cargarPlantilla, calificacionDe, leerPartes, PLANTILLA_FABRICA, type Calificacion } from './ce-plantilla';
 import type { CategoriaPlantilla, EntregaVehiculo } from './ce-tipos';
@@ -169,7 +172,7 @@ async function conElemento<T>(html: string, usar: (el: HTMLElement) => Promise<T
   window.scrollTo(0, 0);
   const tapa = document.createElement('div');
   tapa.style.cssText = 'position:fixed;inset:0;z-index:2147483600;background:#fff;display:flex;align-items:center;justify-content:center;font:600 14px system-ui,sans-serif;color:#64748b;';
-  tapa.textContent = 'Generando PDF…';
+  tapa.innerHTML = renderToStaticMarkup(createElement(CargaCamion, { texto: 'Generando PDF…' }));
   const el = document.createElement('div');
   el.innerHTML = html;
   el.style.cssText = 'position:absolute;left:0;top:0;width:794px;background:#fff;z-index:2147483599;';

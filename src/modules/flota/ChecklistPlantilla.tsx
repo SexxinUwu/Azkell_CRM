@@ -44,7 +44,7 @@ export function ChecklistPlantilla({ puedeEditar, onVolver }: { puedeEditar: boo
   }, [cfg.data]);
 
   if (cfg.isError) return <Notice tone="error">No se pudo cargar la plantilla de fallas.</Notice>;
-  if (!b) return <PageLoader />;
+  if (!b) return <PageLoader variante="camion" />;
 
   const lista = b[unidad];
   const cambiar = (f: (l: Sistema[]) => Sistema[]) => setB(a => (a ? { ...a, [unidad]: f(a[unidad]) } : a));

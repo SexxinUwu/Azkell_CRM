@@ -1,3 +1,4 @@
+import { CargaCamion } from './CargaCamion';
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 
 type Variant = 'primary' | 'accent' | 'secondary' | 'plain' | 'danger' | 'destructive';
@@ -36,10 +37,10 @@ export function Spinner({ large, label = 'Cargando' }: { large?: boolean; label?
   return <span className={`spinner${large ? ' spinner--lg' : ''}`} role="status" aria-label={label} />;
 }
 
-export function PageLoader() {
+export function PageLoader({ variante = 'circulo' }: { variante?: 'circulo' | 'camion' }) {
   return (
     <div style={{ display: 'grid', placeItems: 'center', minHeight: '40vh' }}>
-      <Spinner large />
+      {variante === 'camion' ? <CargaCamion /> : <Spinner large />}
     </div>
   );
 }

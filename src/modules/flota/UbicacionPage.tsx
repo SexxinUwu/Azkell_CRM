@@ -258,7 +258,7 @@ export function UbicacionPage() {
         }
       />
 
-      {isLoading ? <PageLoader /> : isError ? (
+      {isLoading ? <PageLoader variante="camion" /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : (
         <div className="gps-cuerpo" data-vista={vistaMovil}>

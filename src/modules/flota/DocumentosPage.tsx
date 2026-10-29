@@ -143,7 +143,7 @@ export function DocumentosPage() {
         }
       />
 
-      {isLoading ? <PageLoader /> : isError ? (
+      {isLoading ? <PageLoader variante="camion" /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : (
         <div className="doc-pagina">

@@ -118,7 +118,7 @@ export function AlmacenFlotaPage() {
         ) : undefined}
       />
 
-      {articulos.isLoading ? <PageLoader /> : articulos.isError ? <Notice tone="error">{errorMessage(articulos.error)}</Notice> : (
+      {articulos.isLoading ? <PageLoader variante="camion" /> : articulos.isError ? <Notice tone="error">{errorMessage(articulos.error)}</Notice> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
           <div className="inv-metricas">
             <div className="inv-metrica"><span className="inv-metrica__num">{cant(totales.almacen)}</span><span className="inv-metrica__label">En almacén</span></div>
@@ -239,7 +239,7 @@ function UnidadesVista({ unidades, busqueda, onAbrir, cargando }: {
 }) {
   const q = busqueda.trim().toUpperCase();
   const visibles = q ? unidades.filter(u => u.placa.includes(q)) : unidades;
-  if (cargando) return <PageLoader />;
+  if (cargando) return <PageLoader variante="camion" />;
   if (visibles.length === 0) {
     return (
       <EmptyState icon={q ? <SearchX size={22} /> : <Warehouse size={22} />} title={q ? 'Sin coincidencias' : 'Ninguna unidad tiene artículos'}>
@@ -291,7 +291,7 @@ function HistorialVista({ onAbrirArticulo }: { onAbrirArticulo: (id: number) => 
       </div>
       <SearchField value={f.q} onChange={v => set({ q: v })} placeholder="Artículo…" />
 
-      {q.isLoading ? <PageLoader /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : (q.data ?? []).length === 0 ? (
+      {q.isLoading ? <PageLoader variante="camion" /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : (q.data ?? []).length === 0 ? (
         <EmptyState icon={<SearchX size={22} />} title="Sin operaciones">Cambia los filtros o registra un movimiento.</EmptyState>
       ) : (
         <div className="tarjeta__lista">
@@ -330,7 +330,7 @@ function ArticuloDetalle({ id, puedeEditar, onVolver, onEditar, onVerUnidad }: {
           )}
         </div>
 
-        {q.isLoading ? <PageLoader /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : f && (
+        {q.isLoading ? <PageLoader variante="camion" /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : f && (
           <>
             <div className="ot-ficha__hero">
               <span className="ot-estado ot-estado--neutral">{f.articulo.familia ?? 'Artículo'}</span>
@@ -420,7 +420,7 @@ function UnidadDetalle({ placa, puedeEditar, onVolver, onMovimiento, onVerArticu
           <span className="ot-ficha__id">{saldo.length} artículo(s) · {cant(piezas)} pieza(s) · S/ {money(valor)}</span>
         </div>
 
-        {q.isLoading ? <PageLoader /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : (
+        {q.isLoading ? <PageLoader variante="camion" /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : (
           <>
             <div>
               <p className="tarjeta__grupo-titulo">En la unidad ahora</p>

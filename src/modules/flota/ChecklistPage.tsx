@@ -273,7 +273,7 @@ export function ChecklistPage() {
         ))}
       </div>
 
-      {isError ? <Notice tone="error">{errorMessage(error)}</Notice> : cargando ? <PageLoader /> : visibles.length === 0 ? (
+      {isError ? <Notice tone="error">{errorMessage(error)}</Notice> : cargando ? <PageLoader variante="camion" /> : visibles.length === 0 ? (
         <EmptyState icon={busqueda ? <SearchX size={22} /> : <ClipboardCheck size={22} />} title={busqueda ? 'Sin coincidencias' : 'Sin reportes'}>
           {busqueda
             ? <Button variant="secondary" size="sm" onClick={() => setBusqueda('')}>Quitar búsqueda</Button>

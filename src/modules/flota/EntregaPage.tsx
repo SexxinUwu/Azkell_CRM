@@ -146,7 +146,7 @@ export function EntregaPage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
         <SearchField value={busqueda} onChange={setBusqueda} placeholder="Acta, placa, quien entrega o recibe…" />
-        {q.isLoading ? <PageLoader /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : visibles.length === 0 ? (
+        {q.isLoading ? <PageLoader variante="camion" /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : visibles.length === 0 ? (
           <EmptyState icon={busqueda ? <SearchX size={22} /> : <ClipboardList size={22} />} title={busqueda ? 'Sin coincidencias' : 'Sin actas de entrega'}>
             {puedeCrear ? <>Crea la primera con <strong>Nueva acta</strong>.</> : 'Aún no hay actas.'}
           </EmptyState>

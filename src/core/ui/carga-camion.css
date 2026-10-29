@@ -1,0 +1,34 @@
+/* Indicador de carga con camión (CargaCamion.tsx). Clases cc- para no chocar con otros estilos. */
+.cc-cargador { display: flex; flex-direction: column; align-items: center; gap: var(--s-3); padding: var(--s-4) 0; }
+.cc-camion { position: relative; width: 200px; height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; overflow: hidden; }
+.cc-camion__cuerpo { width: 130px; margin-bottom: 6px; animation: cc-suspension 1s linear infinite; }
+.cc-camion__svg { display: block; width: 100%; height: auto; }
+.cc-camion__llantas { position: absolute; bottom: 0; width: 130px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px 0 15px; }
+.cc-camion__llanta { width: 24px; height: auto; }
+.cc-carretera { position: relative; width: 100%; height: 1.5px; background-color: #282828; border-radius: 3px; overflow: visible; }
+.cc-carretera::before,
+.cc-carretera::after {
+  content: ""; position: absolute; top: 0; height: 100%; background-color: #282828; border-radius: 3px;
+  animation: cc-carretera 1.4s linear infinite;
+}
+.cc-carretera::before { width: 20px; right: -50%; border-left: 10px solid #fff; }
+.cc-carretera::after { width: 10px; right: -65%; border-left: 4px solid #fff; }
+.cc-poste { position: absolute; bottom: 0; right: -90%; height: 90px; width: auto; animation: cc-carretera 1.4s linear infinite; }
+.cc-texto { font-size: 0.8125rem; font-weight: 600; color: var(--label-2); }
+
+@keyframes cc-suspension {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+  100% { transform: translateY(0); }
+}
+@keyframes cc-carretera {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-350px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cc-camion__cuerpo,
+  .cc-carretera::before,
+  .cc-carretera::after,
+  .cc-poste { animation: none; }
+}
