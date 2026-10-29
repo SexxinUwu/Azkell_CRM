@@ -315,14 +315,8 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const guardar = (viaje: string, estado: string, obs: string) => guardarAud.mutateAsync({ viaje, estado, obs });
 
   const datos = useQuery<Resp>({
-    queryKey: ['operaciones', 'analisis', modulo, q, desde, hasta],
-    queryFn: () => {
-      const p = new URLSearchParams({ modulo });
-      if (q) p.set('search', q);
-      if (desde) p.set('fecha_desde', desde);
-      if (hasta) p.set('fecha_hasta', hasta);
-      return api<Resp>(`/combustible/analisis-viajes?${p}`);
-    },
+    queryKey: ['operaciones', 'analisis', modulo],
+    queryFn: () => api<Resp>(`/combustible/analisis-viajes?${new URLSearchParams({ modulo })}`),
     staleTime: 60_000,
   });
 
@@ -348,11 +342,26 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const matriz = matrizQ.data ?? [];
 
   // En urea solo cuentan los viajes con vales de urea, y las cifras son las de ese producto
+  // Como el clásico: un viaje entra si su fecha de inicio/fin se cruza con el rango; la búsqueda mira viaje, placa, ruta y conductor
   const trips = useMemo(() => {
     const todos = datos.data?.trips ?? [];
-    if (!urea) return todos.filter(t => { const ks = Object.keys(t.fuelStats ?? {}); return ks.length === 0 || ks.some(k => !esUrea(k)); });
-    return todos.filter(t => Object.keys(t.fuelStats ?? {}).some(esUrea));
-  }, [datos.data, urea]);
+    const producto = urea ? todos.filter(t => Object.keys(t.fuelStats ?? {}).some(esUrea))
+      : todos.filter(t => { const ks = Object.keys(t.fuelStats ?? {}); return ks.length === 0 || ks.some(k => !esUrea(k)); });
+    const buscado = q.toLowerCase();
+    return producto.filter(t => {
+      if (desde || hasta) {
+        const ini = t.fechaInicio && t.fechaInicio !== 'N/D' ? t.fechaInicio.slice(0, 10) : '';
+        const fin = t.fechaFin && t.fechaFin !== 'N/D' ? t.fechaFin.slice(0, 10) : '';
+        const min = ini || fin, max = fin || ini;
+        if (!min && !max) return false;
+        if (desde && hasta && (max < desde || min > hasta)) return false;
+        if (desde && !hasta && max < desde) return false;
+        if (!desde && hasta && min > hasta) return false;
+      }
+      if (!buscado) return true;
+      return [t.viaje, t.placa, t.ruta, t.conductor].some(x => String(x ?? '').toLowerCase().includes(buscado));
+    });
+  }, [datos.data, urea, desde, hasta, q]);
 
   // Como el clásico con el filtro D2: las cifras del viaje salen del bloque de diésel (fuelStats.D2) si lo tiene; tabla y Excel usan el mismo
   // Bloque de diésel del viaje, igual que el clásico: la clave puede ser D2 o el nombre del producto (p. ej. DIÉSEL B5)
