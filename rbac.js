@@ -109,6 +109,19 @@ module.exports = function globalRBAC(req, res, next) {
     // Sin esta regla, cualquier usuario que no fuera admin recibía "Ruta no mapeada" al escribir en el chat.
     if (path.startsWith('/asistente')) return next();
 
+    // APROBACIONES DE GERENCIA: aprobar o anular lo revisa el permiso de Gerencia (no el de Almacén ni el de Tesorería).
+    // O/C: solo Gerencia. Caja: Gerencia, y Tesorería como hasta ahora (su pantalla aprueba y anula caja).
+    const esAprobacionOc = req.method === 'PUT' && /^\/almacen\/entradas\/[^/]+\/estado$/.test(path);
+    const esAprobacionCaja = req.method === 'POST' && /^\/tesoreria\/caja\/[^/]+\/(aprobar|anular)$/.test(path);
+    if (esAprobacionOc || esAprobacionCaja) {
+        const reglas = esAprobacionOc
+            ? [['gerencia_aprobaciones_oc', ['e', 'c']]]
+            : [['gerencia_aprobaciones_caja', ['e', 'c']], ...['tesoreria', 'tes_motivos', 'liquidaciones_gastos', 'cond', 'conductores'].map(m => [m, ['c']])];
+        const tiene = reglas.some(([modulo, acciones]) => p[modulo] && acciones.some(a => p[modulo][a] === 1 || p[modulo][a] === true));
+        if (!tiene) return res.status(403).json({ error: 'RBAC: Permiso denegado para aprobar o anular (Gerencia)' });
+        return next();
+    }
+
     // FLOTA Y MÓDULOS
     if (path.startsWith('/disponibilidad-flota') || path.toLowerCase().includes('disponibilidad')) mod = ['disponibilidad', 'fleet', 'placas'];
     else if (path.startsWith('/roles')) mod = 'roles';

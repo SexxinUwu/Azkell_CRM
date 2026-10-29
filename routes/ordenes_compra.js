@@ -4,6 +4,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 
 const { uploadToS3, getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
 const { createApprovalToken } = require('../services/ocApprovalService');
 const { normalizarCondicion } = require('../services/condicion_oc');
+const { audit: auditar } = require('../services/auditoria');
 const { sendApprovalWhatsapp, sendDecisionConfirmationWhatsapp, sendTreasuryNotificationWhatsapp } = require('../services/whatsappService');
 
 module.exports = function (db, broadcast, logAudit) {
@@ -378,18 +379,12 @@ module.exports = function (db, broadcast, logAudit) {
                 [newOcStatus, aprobador, reason || null, tok.orden_compra_id]
             );
 
-            // Sincronizar actualización en entradas_inv del ERP (autoriza, aprobado_por y fecha_aprobacion)
-            try {
-                await tdb.query(
-                    `UPDATE entradas_inv 
-                     SET estado = ?, 
-                         autoriza = ?,
-                         aprobado_por = ?,
-                         fecha_aprobacion = NOW()
-                     WHERE id = ?`,
-                    [newOcStatus === 'APROBADA' ? 'Aprobado' : 'Rechazado', aprobador, aprobador, tok.codigo]
-                );
-            } catch(e) {}
+            // Almacén y Tesorería leen entradas_inv: si no se puede actualizar, se revierte todo (sin aprobación a medias)
+            const [entradaActualizada] = await tdb.query(
+                `UPDATE entradas_inv SET estado = ?, autoriza = ?, aprobado_por = ?, fecha_aprobacion = NOW() WHERE id = ?`,
+                [newOcStatus === 'APROBADA' ? 'Aprobado' : 'Rechazado', aprobador, aprobador, tok.codigo]
+            );
+            if (!entradaActualizada.affectedRows) throw new Error(`No se encontró la orden ${tok.codigo} en Almacén`);
 
             // Actualizar Token a consumido
             await tdb.query(
@@ -402,6 +397,7 @@ module.exports = function (db, broadcast, logAudit) {
             );
 
             await tdb.query('COMMIT');
+            auditar(tdb, { userName: aprobador }, { action: newOcStatus === 'APROBADA' ? 'APPROVE' : 'REJECT', entity: 'purchase-order', entityId: tok.codigo, summary: `${newOcStatus === 'APROBADA' ? 'Aprobó' : 'Rechazó'} la orden ${tok.codigo} por WhatsApp (${aprobador})` });
 
             const tenantSlug = req.tenantSlug || (req.headers.host ? req.headers.host.split('.')[0] : null);
 

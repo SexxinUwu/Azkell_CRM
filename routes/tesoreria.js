@@ -1224,6 +1224,7 @@ module.exports = function (db, broadcast, logAudit) {
                 WHERE id = ?
             `, [userName, id]);
 
+            auditar(tdb, actorDe(req), { action: 'APPROVE', entity: 'petty-cash', entityId: id, summary: `Aprobó la caja ${id} (${userName})` });
             res.json({ ok: true, message: 'Caja aprobada con éxito por ' + userName });
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -1237,7 +1238,8 @@ module.exports = function (db, broadcast, logAudit) {
             const { id } = req.params;
             const b = req.body || {};
             const userName = (req.user && req.user.nombre) ? req.user.nombre : (b.usuario_anulacion || 'Administrador');
-            const motivo = (b.motivo || 'Anulado por Gerencia').trim();
+            const motivo = String(b.motivo || '').trim();
+            if (!motivo) return res.status(400).json({ error: 'El motivo de anulación es obligatorio.' });
 
             const [rows] = await tdb.query('SELECT estado, observacion FROM tesoreria_caja WHERE id = ?', [id]);
             if (!rows.length) return res.status(404).json({ error: 'Registro no encontrado' });
@@ -1255,6 +1257,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             const [anulada] = await tdb.query('SELECT orden_viaje FROM tesoreria_caja WHERE id = ?', [id]);
             if (anulada.length) await recalcularLiquidacionViaje(tdb, anulada[0].orden_viaje).catch(() => {});
+            auditar(tdb, actorDe(req), { action: 'CANCEL', entity: 'petty-cash', entityId: id, summary: `Anuló la caja ${id}: ${motivo}` });
             res.json({ ok: true, message: 'Caja anulada correctamente' });
         } catch (err) {
             res.status(500).json({ error: err.message });
