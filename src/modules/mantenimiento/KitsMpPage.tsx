@@ -1,7 +1,7 @@
 import './mant.css';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, ChevronDown, ChevronRight, PackageCheck, SearchX, Trash2 } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, ChevronRight, Download, FileSpreadsheet, PackageCheck, SearchX, Trash2, Upload } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -9,7 +9,9 @@ import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
+import { exportarExcel } from '../../core/lib/excel';
 import { abrirClasico } from '../../core/layout/navigation';
+import { descargarPlantillaKits, importarKitsMasivo, leerKitsExcel } from './kitsExcel';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -90,6 +92,7 @@ export function KitsMpPage() {
   const [abiertos, setAbiertos]               = useState<Set<string>>(new Set());
   const [confirmEliminar, setConfirmEliminar] = useState<KitGrupo | null>(null);
   const [eliminando, setEliminando]           = useState(false);
+  const inputExcel                            = useRef<HTMLInputElement>(null);
 
   // Agrupar todos los kits
   const grupos = useMemo(() => agruparKits(items), [items]);
@@ -111,6 +114,43 @@ export function KitsMpPage() {
                         String(i.item_codigo ?? '').toUpperCase().includes(q))
     );
   }, [grupos, busqueda]);
+
+  // Ítems visibles (con la búsqueda aplicada), para exportar lo que se ve
+  const itemsVisibles = useMemo(() => gruposFiltrados.reduce((n, g) => n + g.items.length, 0), [gruposFiltrados]);
+
+  // Exporta lo que se ve (filtrado), con las mismas columnas del clásico (kitsExportarExcel)
+  async function exportar() {
+    if (!itemsVisibles) { toast('No hay datos para exportar.', 'error'); return; }
+    const filas = gruposFiltrados.flatMap(g => g.items.map(it => [
+      g.marca, g.modelo, g.tipo_mp, g.nombre_kit, it.item_nombre ?? '',
+      Number(it.cantidad) || 0, it.unidad_medida || 'UND', Number(it.costo_unitario) || 0, Number(it.costo_total) || 0, '',
+    ]));
+    try {
+      await exportarExcel('Kits_Mantenimiento', 'Kits_MP',
+        ['Marca', 'Modelo', 'Tipo MP', 'Alias Kit', 'Repuesto / Ítem', 'Cantidad', 'Unidad', 'Costo Unitario (S/)', 'Costo Total (S/)', 'Observaciones'], filas);
+    } catch (e) {
+      toast(errorMessage(e), 'error');
+    }
+  }
+
+  // Importación directa, como el clásico (kitsImportarExcel): sin vista previa
+  async function subirExcel(archivo: File | undefined) {
+    if (!archivo) return;
+    try {
+      const items = await leerKitsExcel(archivo);
+      try {
+        await importarKitsMasivo(items);
+        toast(`Se importaron ${items.length} registros exitosamente.`);
+        qc.invalidateQueries({ queryKey: ['mant', 'kits-mp'] });
+      } catch {
+        toast('Error al enviar la importación masiva.', 'error');
+      }
+    } catch (e) {
+      toast(errorMessage(e), 'error');
+    } finally {
+      if (inputExcel.current) inputExcel.current.value = '';
+    }
+  }
 
   // Agrupar por marca para la vista
   const porMarca = useMemo(() => {
@@ -168,7 +208,11 @@ export function KitsMpPage() {
               Crear / Editar kit
             </Button>
             <MenuOtros opciones={[
-              { label: 'Abrir versión completa', icon: <ArrowUpRight size={17} />,
+              { label: '1. Descargar Plantilla', icon: <FileSpreadsheet size={17} />,
+                onSelect: () => descargarPlantillaKits().catch(e => toast(errorMessage(e), 'error')) },
+              { label: '2. Subir Excel', icon: <Upload size={17} />, onSelect: () => inputExcel.current?.click() },
+              { label: 'Exportar Excel', icon: <Download size={17} />, onSelect: exportar },
+              { label: 'Abrir versión completa', icon: <ArrowUpRight size={17} />, separado: true,
                 onSelect: () => abrirClasico('mantenimiento/kits-mp') },
             ]} />
           </div>
@@ -301,6 +345,8 @@ export function KitsMpPage() {
           ))}
         </div>
       )}
+
+      <input ref={inputExcel} type="file" accept=".xlsx" hidden onChange={e => subirExcel(e.target.files?.[0])} />
 
       <ConfirmSheet
         open={!!confirmEliminar}

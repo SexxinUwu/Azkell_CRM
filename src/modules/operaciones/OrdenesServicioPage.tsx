@@ -1,7 +1,7 @@
 import '../mantenimiento/mant.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CheckCircle2, FileSpreadsheet, Pencil, Play, Plus, ScrollText, SearchX, XCircle } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, FileSpreadsheet, Pencil, Play, Plus, Printer, ScrollText, SearchX, XCircle } from 'lucide-react';
 import { OrdenServicioSheet, type OrdenParaEditar } from './OrdenServicioSheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -23,6 +23,8 @@ interface Orden {
   moneda: string | null; costo_flete: number | string | null; impuesto: number | string | null; puntos_carga: string | null; puntos_destino: string | null;
   destinatario: string | null; observaciones: string | null; carga_doc: number; peso_documentos: number | string; volumen_documentos: number | string;
   es_retorno: number | boolean | null; modalidad_ejecucion: string | null; tipo_contratacion: string | null;
+  remitente_generador?: string | null; proveedor_tercero_nombre?: string | null; costo_tercero?: number | string | null;
+  doc_tercero?: string | null; tipo_costo?: string | null;
 }
 interface Detalle extends Orden {
   documentos?: { id: number; numero_documento?: string; guia?: string; descripcion?: string; peso?: number | string; volumen?: number | string; fecha_carga_fmt?: string; fecha_entrega_fmt?: string }[];
@@ -42,6 +44,59 @@ function Pastilla({ tono, children }: { tono: string; children: ReactNode }) {
       {children}
     </span>
   );
+}
+
+// Columnas de la tabla del clásico (sin OBSERVACIONES, que el clásico tampoco exporta)
+const CABECERA_EXCEL = ['ACCIÓN', 'ORDEN DE SERVICIO', 'ESTADO', 'FECHA', 'ORDEN DE VIAJE', 'TRACTO', 'CARRETA', 'CLIENTE FACTURADO',
+  'TIPO CONTRATACIÓN', 'MODALIDAD', 'PROVEEDOR TERCERO', 'SENTIDO', 'TIPO SERVICIO', 'DESTINATARIO', '# CARGA', '# DESTINO',
+  'TIPO COSTO', 'IMPUESTO', 'MONEDA', 'COSTO FLETE', 'SUSTENTO'];
+
+const fechaClasica = (iso: string | null) => {
+  if (!iso) return '—';
+  const p = iso.split('-');
+  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : iso;
+};
+
+// Texto de la celda de estado (como el clásico agrupa los estados)
+const estadoClasico = (e: string) => {
+  if (e === 'INICIADO' || e === 'EN TRÁNSITO' || e === 'EN RUTA') return 'EN TRÁNSITO';
+  if (e === 'FINALIZADO' || e === 'COMPLETADO' || e === 'LIQUIDADO') return 'FINALIZADO';
+  if (e === 'ANULADO' || e === 'CANCELADO') return 'ANULADO';
+  return 'PENDIENTE';
+};
+
+function filaExcelClasica(x: Orden): string[] {
+  const tercerizado = x.modalidad_ejecucion === 'TERCERIZADO';
+  const flete = n(x.costo_flete);
+  const proveedor = tercerizado && x.proveedor_tercero_nombre
+    ? [x.proveedor_tercero_nombre,
+       n(x.costo_tercero) > 0 ? `Gasto: S/ ${n(x.costo_tercero).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '',
+       x.doc_tercero ? `Doc: ${x.doc_tercero}` : ''].join('')
+    : '';
+  const cliente = (x.cliente_nombre || '—') + (x.remitente_generador ? `Carga: ${x.remitente_generador}` : '');
+  return [
+    'ACCIÓN',
+    x.codigo_orden,
+    estadoClasico(estadoDe(x)),
+    fechaClasica(x.fecha_fmt),
+    x.viaje_asignado || '—',
+    x.placa_tracto || '—',
+    x.placa_carreta || '—',
+    cliente,
+    x.tipo_contratacion || 'CLIENTE DIRECTO',
+    tercerizado ? 'TERCERIZADO' : 'PROPIO',
+    proveedor,
+    (x.es_retorno === 1 || String(x.es_retorno) === '1' || x.es_retorno === true) ? 'RETORNO' : 'IDA',
+    x.tipo_servicio || 'CARGA GENERAL',
+    x.destinatario || '—',
+    String(x.puntos_carga || 1),
+    String(x.puntos_destino || 1),
+    x.tipo_costo || 'COSTO TARIFA',
+    String(x.impuesto || 'INCLUYE IGV'),
+    x.moneda || 'SOLES',
+    `${x.moneda === 'DÓLARES' ? '$' : 'S/'} ${flete.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    '—',
+  ];
 }
 
 const COLUMNAS: ColumnaTabla[] = [
@@ -108,14 +163,18 @@ export function OrdenesServicioPage() {
     } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
   }
 
+  // Excel igual que el clásico (osExportarExcel): el texto de cada celda de la tabla visible, sin la columna de Observaciones
   async function exportar() {
     try {
-      await exportarExcel('Ordenes-de-servicio', 'Órdenes',
-        ['Orden', 'Fecha', 'Cliente', 'Servicio', 'Estado', 'Viaje', 'Conductor', 'Tracto', 'Carreta', 'Moneda', 'Flete', 'Documentos', 'Peso (kg)', 'Origen', 'Destino'],
-        visibles.map(x => [x.codigo_orden, x.fecha_fmt, x.cliente_nombre, x.tipo_servicio, x.estado_servicio, x.viaje_asignado, x.conductor, x.placa_tracto, x.placa_carreta,
-          x.moneda, n(x.costo_flete), n(x.carga_doc), n(x.peso_documentos), x.puntos_carga, x.puntos_destino]));
+      await exportarExcel('Ordenes_de_Servicio_Azkell', 'Datos', CABECERA_EXCEL, visibles.map(filaExcelClasica));
       haptic('success');
     } catch (err) { toast(errorMessage(err), 'error'); }
+  }
+
+  // Igual que el clásico (osImprimirTabla): window.print() de la pantalla
+  function imprimirTabla() {
+    haptic('selection');
+    window.print();
   }
 
   const fila = (label: string, valor: unknown, mono = false) => (valor === null || valor === undefined || valor === '' ? null : (
@@ -132,7 +191,8 @@ export function OrdenesServicioPage() {
         actions={
           <>
             <MenuOtros opciones={[
-              { label: 'Exportar Excel', detalle: `${visibles.length} órdenes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
+              { label: 'Exportar Excel', icon: <FileSpreadsheet size={17} />, onSelect: exportar },
+              { label: 'Imprimir tabla', icon: <Printer size={17} />, onSelect: imprimirTabla },
               { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('operaciones/ordenes-servicio') },
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ orden: null })}>Nueva orden</Button>}
