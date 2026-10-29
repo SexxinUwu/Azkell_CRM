@@ -197,12 +197,6 @@ export async function eliminarPersona(id: number) {
   await api(`/rrhh/personal/${id}`, { method: 'DELETE' });
 }
 
-/** Quita la foto guardada (y su objeto en S3, si lo hay). Requiere rrhh_personal.editar. */
-export async function quitarFotoPersona(id: number) {
-  const r = await api<{ ok?: boolean; error?: string }>(`/rrhh/personal/${id}/quitar-foto`, { method: 'PUT' });
-  if (r.ok === false) throw new Error(r.error || 'No se pudo quitar la foto');
-}
-
 /** Nombres y apellidos desde RENIEC (null si no se encuentra) */
 export async function datosPorDni(dni: string) {
   const r = await api<{ nombres?: string; apellidoPaterno?: string; apellidoMaterno?: string; nombre?: string }>('/proxy/documento', { query: { tipo: 'DNI', numero: dni } });

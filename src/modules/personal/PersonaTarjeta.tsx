@@ -1,6 +1,6 @@
 import { Children, isValidElement, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ChevronDown, ChevronLeft, Contact, IdCard, ImageOff, Mail, MessageCircle, Pencil, Phone, Printer, Trash2, TriangleAlert } from 'lucide-react';
+import { ChevronDown, ChevronLeft, Contact, IdCard, Mail, MessageCircle, Pencil, Phone, Printer, Trash2, TriangleAlert } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
@@ -48,12 +48,10 @@ function Grupo({ titulo, children }: { titulo?: string; children: ReactNode }) {
 }
 
 // Tarjeta de contacto de una persona: foto, acciones rápidas y datos agrupados (estilo Contactos de Apple).
-export function PersonaTarjeta({ persona: p, onEditar, onEliminar, onQuitarFoto, onVolver, verPagos }: {
+export function PersonaTarjeta({ persona: p, onEditar, onEliminar, onVolver, verPagos }: {
   persona: Persona;
   onEditar?: () => void;
   onEliminar?: () => void;
-  /** Quita la foto guardada (con confirmación en la página) */
-  onQuitarFoto?: () => void;
   /** Solo en el celular: vuelve a la lista */
   onVolver?: () => void;
   /** Sueldo, cuentas y pensión: solo para quien puede editar al personal */
@@ -93,8 +91,7 @@ export function PersonaTarjeta({ persona: p, onEditar, onEliminar, onQuitarFoto,
             { label: 'Imprimir fotocheck', icon: <IdCard size={17} />, onSelect: seguro(() => imprimirFotocheck(p)) },
             { label: 'Imprimir ficha', icon: <Printer size={17} />, onSelect: seguro(() => imprimirFicha(p)) },
             { label: 'Compartir contacto', detalle: 'Tarjeta .vcf para el celular', icon: <Contact size={17} />, onSelect: () => descargarVCard(p) },
-            onQuitarFoto && !!p.foto_url && { label: 'Quitar Foto', icon: <ImageOff size={17} />, destructiva: true, onSelect: onQuitarFoto },
-            onEliminar &&{ label: 'Eliminar', icon: <Trash2 size={17} />, destructiva: true, separado: true, onSelect: onEliminar },
+            onEliminar && { label: 'Eliminar', icon: <Trash2 size={17} />, destructiva: true, separado: true, onSelect: onEliminar },
           ]} />
           {onEditar && <Button variant="plain" onClick={onEditar} icon={<Pencil size={15} />}>Editar</Button>}
         </div>

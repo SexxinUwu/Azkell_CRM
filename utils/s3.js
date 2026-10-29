@@ -70,8 +70,7 @@ async function getPresignedUploadUrl(key, contentType, expiresIn = 600) {
 }
 
 /**
- * Elimina un objeto de S3. Devuelve true si S3 confirmó el borrado y false si falló
- * (quien llama decide si limpia el registro o no).
+ * Elimina un objeto de S3.
  */
 async function deleteFromS3(key) {
     try {
@@ -79,10 +78,8 @@ async function deleteFromS3(key) {
             Bucket: BUCKET,
             Key:    key
         }));
-        return true;
     } catch (e) {
         console.warn('S3 delete error:', e.message);
-        return false;
     }
 }
 

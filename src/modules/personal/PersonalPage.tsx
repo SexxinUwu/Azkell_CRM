@@ -17,7 +17,7 @@ import { abrirClasico } from '../../core/layout/navigation';
 import { useMediaQuery } from '../../core/lib/useMediaQuery';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
-import { alertasDe, ALFABETO, coincide, eliminarPersona, etiqueta, letraDe, nombreCompleto, OPCIONES, quitarFotoPersona, usePersonal, type Persona } from './api';
+import { alertasDe, ALFABETO, coincide, eliminarPersona, etiqueta, letraDe, nombreCompleto, OPCIONES, usePersonal, type Persona } from './api';
 import { exportarExcel } from './documentos';
 import { FotoPersona } from './FotoPersona';
 import { PersonaTarjeta } from './PersonaTarjeta';
@@ -46,8 +46,6 @@ export function PersonalPage() {
   const [formulario, setFormulario] = useState<{ persona: Persona | null } | null>(null);
   const [porEliminar, setPorEliminar] = useState<Persona | null>(null);
   const [eliminando, setEliminando] = useState(false);
-  const [porQuitarFoto, setPorQuitarFoto] = useState<Persona | null>(null);
-  const [quitandoFoto, setQuitandoFoto] = useState(false);
   const [letraActiva, setLetraActiva] = useState<string | null>(null);
   const listaRef = useRef<HTMLDivElement>(null);
 
@@ -139,23 +137,6 @@ export function PersonalPage() {
     }
   }
 
-  async function quitarFoto() {
-    if (!porQuitarFoto) return;
-    setQuitandoFoto(true);
-    try {
-      await quitarFotoPersona(porQuitarFoto.id);
-      toast(`Se quitó la foto de ${nombreCompleto(porQuitarFoto)}`);
-      haptic('success');
-      setPorQuitarFoto(null);
-      await qc.invalidateQueries({ queryKey: ['personal'] });
-    } catch (err) {
-      toast(errorMessage(err), 'error');
-      haptic('warning');
-    } finally {
-      setQuitandoFoto(false);
-    }
-  }
-
   const otros = (
     <MenuOtros opciones={[
       { label: 'Exportar a Excel', detalle: `${visibles.length} personas de la lista`, icon: <FileSpreadsheet size={17} />, disabled: !visibles.length,
@@ -171,7 +152,6 @@ export function PersonalPage() {
       onVolver={dividido ? undefined : () => navigate(BASE)}
       onEditar={puedeEditar ? () => setFormulario({ persona: seleccionada }) : undefined}
       onEliminar={puedeEliminar ? () => setPorEliminar(seleccionada) : undefined}
-      onQuitarFoto={puedeEditar ? () => setPorQuitarFoto(seleccionada) : undefined}
     />
   );
 
@@ -289,15 +269,6 @@ export function PersonalPage() {
         title={`¿Eliminar a ${porEliminar ? nombreCompleto(porEliminar) : ''}?`}
         message="Se borra del directorio con su legajo, licencias y registros de seguridad. Si dejó de trabajar, mejor cámbialo a Cesado para conservar su historial. Esta acción no se puede deshacer."
         confirmLabel="Eliminar"
-      />
-      <ConfirmSheet
-        open={!!porQuitarFoto}
-        onClose={() => !quitandoFoto && setPorQuitarFoto(null)}
-        onConfirm={quitarFoto}
-        loading={quitandoFoto}
-        title={`¿Quitar la foto de ${porQuitarFoto ? nombreCompleto(porQuitarFoto) : ''}?`}
-        message="Se quita la fotografía del legajo y, si está guardada en S3, el archivo también se borra. Volverán a verse las iniciales. Para ponerla de nuevo, edita a la persona y sube otra."
-        confirmLabel="Quitar foto"
       />
     </Page>
   );

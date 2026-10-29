@@ -3,7 +3,6 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
 
 // Configuración de almacenamiento de archivos y fotos para RRHH
 const storage = multer.diskStorage({
@@ -342,31 +341,6 @@ router.put('/personal/:id', upload.single('foto'), async (req, res) => {
     } catch (err) {
         console.error('Error al actualizar personal:', err);
         res.status(500).json({ error: err.message });
-    }
-});
-
-// Quitar la fotografía guardada. Es una edición (RBAC: PUT = rrhh_personal.editar, igual que el formulario).
-// Si la foto está en S3 se borra el objeto primero; si S3 falla, el registro no se modifica.
-router.put('/personal/:id/quitar-foto', async (req, res) => {
-    try {
-        const tdb = getDb(req);
-        const id = req.params.id;
-        const [filas] = await tdb.query('SELECT foto_url FROM rrhh_personal WHERE id = ?', [id]);
-        if (!filas || !filas.length) return res.status(404).json({ ok: false, error: 'Colaborador no encontrado' });
-
-        const fotoActual = filas[0].foto_url || '';
-        const enS3 = /^https?:\/\/[^/]*amazonaws\.com\//i.test(fotoActual);
-        if (enS3) {
-            const key = s3KeyFromUrl(fotoActual);
-            const borrada = key ? await deleteFromS3(key) : false;
-            if (!borrada) return res.status(502).json({ ok: false, error: 'No se pudo borrar la foto en S3. Intenta de nuevo; el registro no se modificó.' });
-        }
-
-        await tdb.query('UPDATE rrhh_personal SET foto_url = NULL WHERE id = ?', [id]);
-        res.json({ ok: true, message: 'Fotografía eliminada', s3: enS3 });
-    } catch (err) {
-        console.error('Error al quitar foto de personal:', err);
-        res.status(500).json({ ok: false, error: err.message });
     }
 });
 

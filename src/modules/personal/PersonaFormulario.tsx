@@ -220,6 +220,7 @@ export function PersonaFormulario({ open, persona, existentes, onClose, onGuarda
           </button>
           <button type="button" className="persona-form__foto-txt" onClick={() => inputFoto.current?.click()}>{p.foto_url || fotoNueva ? 'Cambiar foto' : 'Agregar foto'}</button>
           {fotoNueva && <button type="button" className="placas-limpiar" onClick={() => setFotoNueva(undefined)}><X size={13} style={{ verticalAlign: '-2px' }} /> Quitar foto nueva</button>}
+          {!fotoNueva && p.foto_url && <button type="button" className="placas-limpiar" onClick={() => setFotoNueva('')}><X size={13} style={{ verticalAlign: '-2px' }} /> Quitar Foto</button>}
           <input ref={inputFoto} type="file" accept="image/*" hidden onChange={e => elegirFoto(e.target.files?.[0])} />
         </div>
 
