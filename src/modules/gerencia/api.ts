@@ -45,6 +45,9 @@ export interface OrdenCompra {
   url_cotizacion_presigned: string | null;
   url_factura_presigned: string | null;
   url_voucher_presigned: string | null;
+  /** Usuario que aprobó (columna aprobado_por) y su nombre resuelto por el servidor */
+  aprobado_por?: string | null;
+  aprobador_nombre?: string | null;
   items: ItemOc[];
 }
 

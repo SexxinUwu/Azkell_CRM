@@ -2,14 +2,14 @@ import '../mantenimiento/mant.css';
 import './gerencia.css';
 import './gerencia-oc.css';
 import { useMemo, useState } from 'react';
-import { ArrowUpRight, Building2, CalendarDays, CheckCircle, ClipboardCheck, Eye, LayoutGrid, List, RefreshCw, SearchX, ShieldCheck, User, XCircle } from 'lucide-react';
+import { Building2, CalendarDays, CheckCircle, ClipboardCheck, Eye, FileSpreadsheet, LayoutGrid, List, RefreshCw, SearchX, ShieldCheck, User, XCircle } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page } from '../../core/ui/Display';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
-import { abrirClasico } from '../../core/layout/navigation';
+import { exportarExcel } from '../../core/lib/excel';
 import { formatFechaPe, formatMoneda, formatSoles } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
 import { useMediaQuery } from '../../core/lib/useMediaQuery';
@@ -280,6 +280,35 @@ export function AprobacionesOCPage() {
     setPestana('todas');
   }
 
+  /** Excel de las órdenes aprobadas del periodo seleccionado, con las columnas de la pantalla */
+  async function exportarActa() {
+    const aprobadas = enRango.filter(o => categoriaOc(o.estado) === 'aprobada');
+    if (aprobadas.length === 0) {
+      setMsg({ tipo: 'error', texto: 'No hay órdenes aprobadas en el periodo seleccionado.' });
+      return;
+    }
+    try {
+      await exportarExcel(`Acta-OC-aprobadas_${desde}_al_${hasta}`, 'Aprobadas',
+        ['N° OC', 'Fecha', 'Proveedor', 'Monto', 'Moneda', 'Estado', 'Aprobador'],
+        aprobadas.map(o => {
+          const aprobador = o.aprobador_nombre || o.aprobado_por;
+          return [
+            o.id,
+            fechaDe(o),
+            o.proveedor_nombre || 'Sin proveedor',
+            Number(o.total_oc) || 0,
+            o.moneda,
+            o.estado || 'SIN ESTADO',
+            aprobador ? nombreLimpio(aprobador) : '',
+          ];
+        }));
+      haptic('success');
+    } catch (e) {
+      setMsg({ tipo: 'error', texto: `No se pudo generar el Excel: ${errorMessage(e)}` });
+      haptic('warning');
+    }
+  }
+
   function accionesCelda(o: OrdenCompra) {
     if (esAccionable(o) && puedeAccionar) {
       return (
@@ -321,7 +350,7 @@ export function AprobacionesOCPage() {
               <button type="button" aria-pressed={vista === 'tarjetas'} title="Tarjetas" aria-label="Ver como tarjetas" onClick={() => setVista('tarjetas')}><LayoutGrid size={16} /></button>
             </div>
             <MenuOtros opciones={[
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('gerencia/aprobaciones-oc') },
+              { label: 'Exportar acta', detalle: 'Excel de las OC aprobadas del periodo', icon: <FileSpreadsheet size={17} />, onSelect: exportarActa },
             ]} />
           </div>
         </header>
