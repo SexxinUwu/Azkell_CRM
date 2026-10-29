@@ -29,6 +29,7 @@ import { InspeccionFicha } from '../inspecciones/InspeccionFicha';
 import { clavePlaca } from '../inspecciones/api';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { motivoIngreso, nombrePersona } from './rampasFormato';
+import { abrirOrdenParabrisas } from './rampaParabrisas';
 
 const TABS = ['Activas', 'Historial'] as const;
 
@@ -404,6 +405,7 @@ export function StatusRampaPage() {
           entrada={seleccionada}
           puedeEditar={puedeEditar}
           usuario={user?.name ?? ''}
+          ultimasInsp={ultimasInsp}
           onEditar={() => setFormulario({ entrada: seleccionada })}
           onVolver={() => setSeleccionadaId(null)}
         />
@@ -665,11 +667,12 @@ interface RampaDetalleProps {
   entrada: RampaEntrada;
   puedeEditar: boolean;
   usuario: string;
+  ultimasInsp: Map<string, Inspeccion>;
   onEditar: () => void;
   onVolver: () => void;
 }
 
-function RampaDetalle({ entrada: e, puedeEditar, usuario, onEditar, onVolver }: RampaDetalleProps) {
+function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar, onVolver }: RampaDetalleProps) {
   const horas = horasEnRampa(e.fecha_ingreso);
   const qc = useQueryClient();
   const toast = useToast();
@@ -714,6 +717,12 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, onEditar, onVolver }: 
     finally { setOcupado(false); }
   }
 
+  // Orden en parabrisas (F-MAN-002): mismo HTML que el clásico, se imprime desde una ventana nueva
+  function imprimirParabrisas() {
+    toast('Generando Orden en Parabrisas...');
+    abrirOrdenParabrisas(e, ordenesData.data ?? [], ultimasInsp);
+  }
+
   // Borra la rampa y en cadena sus OTs, trabajos e inspecciones: por eso se pide confirmación aparte
   async function eliminarRampa() {
     setEliminando(true);
@@ -736,6 +745,7 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, onEditar, onVolver }: 
         </button>
         {puedeEditar && (
           <div className="tarjeta__barra-acciones">
+            <Button variant="secondary" icon={<FileText size={16} />} onClick={imprimirParabrisas}>OT Parabrisas (F-MAN-002)</Button>
             <Button variant="secondary" icon={<FileText size={16} />} onClick={imprimirRampa} loading={generandoPdf}>PDF de la rampa</Button>
             {!liberada && <Button variant="secondary" icon={<Pencil size={16} />} onClick={onEditar}>Editar</Button>}
             {!liberada

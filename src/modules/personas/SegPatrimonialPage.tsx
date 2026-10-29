@@ -1,14 +1,16 @@
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
-import { Shield, ShieldAlert, Truck } from 'lucide-react';
+import { FileText, Shield, ShieldAlert, Truck } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { PageLoader } from '../../core/ui/Button';
+import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
+import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { abrirClasico } from '../../core/layout/navigation';
 import { UnidadesBase } from './UnidadesBase';
+import { descargarStatusUnidadesBase } from './segPatrimonialPdf';
 
 interface UnidadBase {
   placa?: string;
@@ -57,6 +59,8 @@ function MiniDonut({ pct, color }: { pct: number; color: string }) {
 export function SegPatrimonialPage() {
   const [busqueda, setBusqueda] = useState('');
   const [vista, setVista] = useState<'panorama' | 'empresas' | 'base'>('panorama');
+  const [generando, setGenerando] = useState(false);
+  const toast = useToast();
 
   const panorama = useQuery<UnidadBase[]>({
     queryKey: ['seg-patrimonial', 'panorama'],
@@ -101,6 +105,15 @@ export function SegPatrimonialPage() {
 
   const pctRuta = lista.length > 0 ? Math.round((enRuta.length / lista.length) * 100) : 0;
 
+  // Igual que subExportarPDF del clásico: sin registros avisa; si hay, genera el F-SEG-0010 de lo que se ve
+  async function exportarPdf() {
+    if (!visibles.length) { toast('No hay registros para exportar en esta fecha'); return; }
+    setGenerando(true);
+    try { await descargarStatusUnidadesBase(visibles); }
+    catch (err) { toast(errorMessage(err), 'error'); }
+    finally { setGenerando(false); }
+  }
+
   return (
     <Page>
       <PageHeader
@@ -108,9 +121,13 @@ export function SegPatrimonialPage() {
         title="Panel patrimonial"
         subtitle={lista.length > 0 ? `${enRuta.length} en ruta · ${enBase.length} en base · ${lista.length} total` : 'Cargando unidades…'}
         actions={
-          <MenuOtros opciones={[
-            { label: 'Ver garita', icon: <Shield size={17} />, onSelect: () => abrirClasico('seguridad/unidades') },
-          ]} />
+          <>
+            <Button variant="plain" className="btn--icono btn--icono-pdf" icon={<FileText size={18} />} loading={generando}
+              aria-label="Exportar reporte PDF (F-SEG-0010)" title="Exportar reporte PDF (F-SEG-0010)" onClick={exportarPdf} />
+            <MenuOtros opciones={[
+              { label: 'Ver garita', icon: <Shield size={17} />, onSelect: () => abrirClasico('seguridad/unidades') },
+            ]} />
+          </>
         }
       />
 
