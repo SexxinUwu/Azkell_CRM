@@ -432,8 +432,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
     const kmDelViaje = (t: Trip) => (urea ? n(t.recorridoKm) : n(bloqueD2(t)?.recorridoKm ?? t.recorridoKm));
     const razonables = visibles.filter(t => !t.odometroInconsistente && kmDelViaje(t) > 0 && kmDelViaje(t) <= LIMITE_KM_VIAJE);
     const kmRazonables = razonables.reduce((s, t) => s + kmDelViaje(t), 0);
-    const galRazonables = razonables.reduce((s, t) => s + cifras(t).galones, 0);
-    return { viajes: visibles.length, gal, gasto, kmGal: galRazonables > 0 ? kmRazonables / galRazonables : 0, razonables: razonables.length, pendientes: visibles.filter(t => t.estadoAuditoria === 'PENDIENTE').length };
+    return { viajes: visibles.length, gal, gasto, km: kmRazonables, kmGal: gal > 0 ? kmRazonables / gal : 0, razonables: razonables.length, pendientes: visibles.filter(t => t.estadoAuditoria === 'PENDIENTE').length };
   }, [visibles, valesQ.data, urea]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const t = trips.find(x => x.viaje === abierto) ?? null;
@@ -553,8 +552,12 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
           <KpiCard titulo="Gasto" valor={soles(resumen.gasto)} color="var(--green-ink)"
             detalle={resumen.gal > 0 ? `S/ ${fmt(resumen.gasto / resumen.gal, 2)} por galón en promedio` : 'Sin galones'} />
           {!urea && (
+            <KpiCard titulo="Recorrido total" valor={`${fmt(resumen.km, 2)} km`} color="var(--amber-ink)"
+              detalle={`${resumen.razonables} de ${resumen.viajes} viajes con odómetro válido`} />
+          )}
+          {!urea && (
             <KpiCard titulo="Km por galón" valor={fmt(resumen.kmGal, 2)} color="var(--amber-ink)"
-              detalle={`Con ${resumen.razonables} de ${resumen.viajes} viajes de odómetro válido`} />
+              detalle={`Recorrido total entre ${fmt(resumen.gal, 2)} galones del rango`} />
           )}
         </div>
 

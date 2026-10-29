@@ -1028,7 +1028,6 @@
         const LIMITE_KM_VIAJE = 3000;
 
         let totalKmValido = 0;
-        let totalGalValido = 0;
         let viajesValidos = 0;
         let totalValesCount = 0;
 
@@ -1042,19 +1041,18 @@
             totalValesCount += vales;
             if (kmValido) {
                 totalKmValido += recKm;
-                totalGalValido += totGal;
                 viajesValidos++;
             }
         });
 
-        const promKmGal = totalGalValido > 0 ? (totalKmValido / totalGalValido) : 0;
+        // El km por galón se completa cuando llegan los galones totales de los vales (caRenderResumenVales)
+        window._caKmValido = totalKmValido;
 
         const elV = document.getElementById('ca-kpi-total-viajes');
         const elK = document.getElementById('ca-kpi-total-km');
         const elKG = document.getElementById('ca-kpi-kmgal');
         if (elV) elV.textContent = totalViajes.toLocaleString();
         if (elK) elK.textContent = totalKmValido.toLocaleString('es-PE', { minimumFractionDigits: 1 }) + ' Km';
-        if (elKG) elKG.textContent = promKmGal.toFixed(2);
 
         const subV = document.getElementById('ca-kpi-viajes-sub');
         const subK = document.getElementById('ca-kpi-km-sub');
@@ -1091,6 +1089,8 @@
             const subG = document.getElementById('ca-kpi-galones-sub');
             const subI = document.getElementById('ca-kpi-gasto-sub');
             if (elG) elG.textContent = galones.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const elKG = document.getElementById('ca-kpi-kmgal');
+            if (elKG) elKG.textContent = (galones > 0 ? (window._caKmValido || 0) / galones : 0).toFixed(2);
             if (elI) elI.textContent = 'S/ ' + gasto.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             if (subG) subG.textContent = `${(trips.length ? galones / trips.length : 0).toFixed(1)} Gal/viaje prom.`;
             if (subI) subI.textContent = `S/ ${(galones > 0 ? gasto / galones : 0).toFixed(2)} / Galón prom.`;
