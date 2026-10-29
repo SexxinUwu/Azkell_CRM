@@ -1,8 +1,7 @@
 // Croquis del Checklist de Entrega: dibujo técnico de la unidad (tracto, camión rígido, semirremolque, remolque)
-// con selector de configuración, cabina y carrocería. Dibujo idéntico al clásico (ver croquisEntrega.ts).
+// La configuración sale de la placa y del sistema; aquí solo se elige cabina y carrocería. Dibujo idéntico al clásico (ver croquisEntrega.ts).
 import './ce-croquis.css';
 import { useId } from 'react';
-import { ChoiceChips } from '../../core/ui/Chips';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { CONFIG_CROQUIS, normalizarConfig, svgCroquis, type ConfigCroquis, type EstiloCabina } from './croquisEntrega';
 
@@ -14,8 +13,6 @@ export interface CroquisValor {
   estiloCarroceria: EstiloCarroceria;
 }
 
-const OPCIONES_CONFIG: Array<{ value: ConfigCroquis; label: string }> = (Object.keys(CONFIG_CROQUIS) as ConfigCroquis[])
-  .map(value => ({ value, label: CONFIG_CROQUIS[value].nombre }));
 const OPCIONES_CABINA: Array<{ value: EstiloCabina; label: string }> = [
   { value: 'chata', label: 'Cabina Europea (Chata)' },
   { value: 'trompa', label: 'Cabina Americana (Trompuda)' },
@@ -61,10 +58,6 @@ export function CeCroquis({ configuracion, estiloCabina, estiloCarroceria, edita
           <p className="ce-croquis__desc">{spec.desc}</p>
 
           <div className="ce-croquis__controles">
-            <div className="ce-croquis__campo">
-              <span className="ce-croquis__lbl">Configuración</span>
-              <ChoiceChips label="Configuración de la unidad" value={config} onChange={c => cambiar({ configuracion: c })} options={OPCIONES_CONFIG} />
-            </div>
             {spec.esMotor && (
               <div className="ce-croquis__campo">
                 <span className="ce-croquis__lbl">Cabina</span>
