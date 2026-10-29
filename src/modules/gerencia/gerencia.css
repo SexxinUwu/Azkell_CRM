@@ -1,0 +1,391 @@
+/* Aprobaciones (O/C y caja): KPI bento, tarjetas móviles, chips de estado y ficha de detalle */
+
+/* ─── KPI bento: tocar filtra la lista ─── */
+.gerencia-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: var(--s-2);
+}
+
+.gerencia-kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 44px;
+  padding: var(--s-3) var(--s-4);
+  border: 2px solid transparent;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gerencia-kpi[aria-pressed='true'] {
+  border-color: var(--ink);
+}
+
+.gerencia-kpi__valor {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--kpi, var(--label-1));
+}
+
+.gerencia-kpi__etiqueta {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--label-2);
+}
+
+.gerencia-kpi__monto {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--label-2);
+}
+
+/* ─── Chips de estado ─── */
+.gerencia-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: var(--r-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--gray-tint);
+  color: var(--gray-ink);
+}
+
+.gerencia-chip--pendiente { background: var(--amber-tint); color: var(--amber-ink); }
+.gerencia-chip--observada { background: var(--blue-tint); color: var(--blue-ink); }
+.gerencia-chip--aprobada { background: var(--green-tint); color: var(--green-ink); }
+.gerencia-chip--rechazada { background: var(--red-tint); color: var(--red-ink); }
+.gerencia-chip--urgente { background: var(--red-tint); color: var(--red-ink); }
+
+/* ─── Tabla (escritorio) ─── */
+.gerencia-tabla-wrap {
+  overflow: auto;
+  background: var(--surface);
+  border-radius: var(--r-lg);
+}
+
+.gerencia-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 52rem;
+}
+
+.gerencia-tabla th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--label-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--separator);
+}
+
+.gerencia-tabla td {
+  padding: 8px 12px;
+  font-size: 0.84rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--separator);
+}
+
+.gerencia-tabla__num {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.gerencia-codigo {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  color: var(--accent-ink);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.gerencia-celda-recorte {
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Botones de decisión ─── */
+.gerencia-accion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.gerencia-accion:disabled { opacity: 0.45; cursor: default; }
+.gerencia-accion--aprobar { background: var(--green-tint); color: var(--green-ink); border-color: var(--green-ink); }
+.gerencia-accion--rechazar { background: var(--red-tint); color: var(--red-ink); border-color: var(--red-ink); }
+.gerencia-accion--observar { background: var(--blue-tint); color: var(--blue-ink); border-color: var(--blue-ink); }
+
+.gerencia-tabla .gerencia-accion { min-height: 32px; padding: 0 10px; font-size: 0.75rem; }
+
+.gerencia-acciones-fila {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ─── Tarjetas (celular) ─── */
+.gerencia-lista-tarjetas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.gerencia-tarjeta {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.gerencia-tarjeta__cuerpo {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--s-3) var(--s-4);
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Los hijos del botón son spans: se muestran como bloques o filas flex */
+.gerencia-tarjeta__fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.gerencia-tarjeta__proveedor {
+  display: block;
+  margin-top: 4px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--label-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gerencia-tarjeta__meta {
+  display: block;
+  margin-top: 2px;
+  min-width: 0;
+  font-size: 0.78rem;
+  color: var(--label-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gerencia-tarjeta__importe {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.gerencia-tarjeta__acciones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+  padding: 0 var(--s-4) var(--s-4);
+}
+
+.gerencia-tarjeta__acciones .gerencia-accion { width: 100%; }
+
+/* ─── Ficha de detalle (hoja) ─── */
+.gerencia-ficha {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+
+.gerencia-ficha__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.gerencia-ficha__seccion h3 {
+  margin: 0 0 var(--s-2);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--label-2);
+}
+
+.gerencia-datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--s-3) var(--s-5);
+  margin: 0;
+}
+
+.gerencia-datos dt {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--label-2);
+}
+
+.gerencia-datos dd {
+  margin: 2px 0 0;
+  font-size: 0.92rem;
+  color: var(--label-1);
+  overflow-wrap: anywhere;
+}
+
+.gerencia-items-wrap {
+  overflow-x: auto;
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+}
+
+.gerencia-items {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  min-width: 36rem;
+}
+
+.gerencia-items th,
+.gerencia-items td {
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--separator);
+}
+
+.gerencia-items th {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--label-2);
+}
+
+.gerencia-items .num {
+  text-align: right;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.gerencia-totales {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-left: auto;
+  min-width: 14rem;
+}
+
+.gerencia-totales div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  font-size: 0.9rem;
+  color: var(--label-2);
+}
+
+.gerencia-totales .gerencia-totales__total {
+  padding-top: 6px;
+  border-top: 1px solid var(--separator-strong);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--label-1);
+}
+
+.gerencia-adjuntos {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.gerencia-adjunto {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+}
+
+.gerencia-adjunto__texto {
+  flex: 1;
+  min-width: 0;
+}
+
+.gerencia-adjunto__titulo {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--label-1);
+}
+
+.gerencia-adjunto__ver {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--s-4);
+  border-radius: var(--r-full);
+  background: var(--fill-1);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* ─── Confirmación de aprobación ─── */
+.gerencia-confirmar {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  min-height: 44px;
+  font-size: 0.92rem;
+  color: var(--label-1);
+  cursor: pointer;
+}
+
+.gerencia-confirmar input {
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  flex-shrink: 0;
+  accent-color: var(--ink);
+}
