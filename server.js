@@ -520,11 +520,32 @@ app.use('/app/assets', express.static(path.join(DIST_APP, 'assets'), { maxAge: '
 // Un archivo de compilación que ya no existe (la página quedó de una versión anterior) debe dar 404,
 // no el index.html: si no, el navegador lo rechaza con "MIME type text/html" y la página se rompe.
 app.use('/app/assets', (req, res) => res.status(404).type('text/plain').send('Archivo no encontrado'));
-app.get(/^\/app(\/.*)?$/, (req, res, next) => {
+// Mismo título que el clásico: nombre de la empresa (quitando S.A.C.) + Azkell Fleet
+async function tituloDeAplicacion(req) {
+    if (_isSuperAdminReq(req)) return 'SuperAdmin SaaS Master — Azkell Fleet';
+    let nombreEmpresaRaw = '';
+    if (req.db) {
+        try {
+            const [rows] = await req.db.promise().query("SELECT valor FROM configuracion_erp WHERE clave = 'empresa_nombre' LIMIT 1");
+            if (rows && rows[0] && rows[0].valor) nombreEmpresaRaw = rows[0].valor;
+        } catch (e) { /* sin nombre: se usa el de la empresa */ }
+    }
+    if (!nombreEmpresaRaw && req.tenantInfo && req.tenantInfo.nombre_empresa) nombreEmpresaRaw = req.tenantInfo.nombre_empresa;
+    return `${_formatearNombreEmpresa(nombreEmpresaRaw || req.tenantSlug || 'Azkell Fleet')} - Azkell Fleet`;
+}
+
+app.get(/^\/app(\/.*)?$/, async (req, res, next) => {
     const indice = path.join(DIST_APP, 'index.html');
     if (!fs.existsSync(indice)) return next(); // sin compilar (p. ej. en desarrollo sin build)
+    let html = fs.readFileSync(indice, 'utf8');
+    try {
+        html = html.replace('<title>Azkell Fleet</title>', `<title>${await tituloDeAplicacion(req)}</title>`);
+    } catch (e) {
+        console.error('[/app] título de la empresa:', e.message);
+    }
     res.setHeader('Cache-Control', 'no-cache');
-    res.sendFile(indice);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
 });
 
 
