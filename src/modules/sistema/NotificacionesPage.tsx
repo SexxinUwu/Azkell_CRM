@@ -92,7 +92,8 @@ function SeccionWhatsappMultiTenant({ canales }: { canales: Canales }) {
   const waQuery = useQuery<WhatsappConfig>({
     queryKey: ['sistema', 'whatsapp-config'],
     queryFn: () => api<WhatsappConfig>('/whatsapp/qr'),
-    refetchInterval: 30_000,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const [gerenciaTel, setGerenciaTel] = useState('');

@@ -1,16 +1,15 @@
-/* Configuración: tarjetas tipo cristal líquido (mismo lenguaje que API y desarrolladores). */
+/* Configuración: tarjetas estilo Apple de alto rendimiento y bajo consumo GPU. */
 
 .cfg-grid { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start; }
 
 .cfg-tarjeta {
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
-  -webkit-backdrop-filter: blur(22px) saturate(170%);
-  backdrop-filter: blur(22px) saturate(170%);
-  border: 1px solid color-mix(in srgb, var(--surface) 60%, white);
-  border-radius: 18px;
-  box-shadow: 0 8px 28px -12px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  background: var(--surface);
+  border: 1px solid var(--separator);
+  border-radius: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
   padding: var(--s-4);
   display: flex; flex-direction: column; gap: var(--s-3);
+  contain: content;
 }
 
 .cfg-titulo { display: flex; align-items: center; gap: var(--s-2); font-size: 1rem; font-weight: 700; margin: 0; }
@@ -40,11 +39,6 @@
 .cfg-prueba { display: flex; align-items: flex-end; gap: var(--s-3); flex-wrap: wrap; }
 .cfg-prueba > :first-child { flex: 1; min-width: 220px; }
 
-/* Sin transparencia para quien reduce la transparencia del sistema */
-@media (prefers-reduced-transparency: reduce) {
-  .cfg-tarjeta { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
-}
-
 .cfg-boton--on { background: color-mix(in srgb, var(--accent) 18%, transparent); border-color: var(--accent); color: var(--accent-ink); }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -52,17 +46,16 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .wa-destacada {
-  background: color-mix(in srgb, var(--surface) 84%, transparent);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid color-mix(in srgb, var(--surface) 50%, white);
-  border-radius: 24px;
-  box-shadow: 0 12px 36px -12px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  background: var(--surface);
+  border: 1px solid var(--separator);
+  border-radius: 22px;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.05);
   padding: var(--s-5, 24px);
   margin-bottom: var(--s-4, 16px);
   display: flex;
   flex-direction: column;
   gap: var(--s-4, 16px);
+  contain: content;
 }
 
 .wa-header {
@@ -150,9 +143,9 @@
 }
 
 .wa-bot-card {
-  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  background: var(--surface-sunken, #fbfbfd);
   border: 1px solid var(--separator);
-  border-radius: 20px;
+  border-radius: 18px;
   padding: var(--s-4, 16px);
   display: flex;
   flex-direction: column;
@@ -165,26 +158,26 @@
 
 .wa-conectado-box {
   width: 100%;
-  padding: 28px 16px;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--green) 9%, transparent);
-  border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
+  padding: 24px 16px;
+  border-radius: 14px;
+  background: var(--green-tint, rgba(52, 199, 89, 0.1));
+  border: 1px solid color-mix(in srgb, var(--green) 35%, transparent);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .wa-conectado-icono {
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--green) 20%, white);
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--surface);
   color: var(--green-ink);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--green) 25%, transparent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .wa-conectado-titulo {
@@ -204,15 +197,15 @@
 
 .wa-qr-box {
   background: #ffffff;
-  padding: 14px;
-  border-radius: 16px;
+  padding: 12px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 220px;
   min-height: 220px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--separator);
 }
 
 .wa-qr-box img {
@@ -235,9 +228,9 @@
 .wa-instrucciones {
   width: 100%;
   text-align: left;
-  background: color-mix(in srgb, var(--fill) 50%, transparent);
+  background: var(--surface);
   border: 1px solid var(--separator);
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 12px 14px;
   font-size: 0.78125rem;
   color: var(--label);
@@ -264,9 +257,9 @@
 }
 
 .wa-receptor-card {
-  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  background: var(--surface-sunken, #fbfbfd);
   border: 1px solid var(--separator);
-  border-radius: 18px;
+  border-radius: 16px;
   padding: var(--s-3, 14px) var(--s-4, 16px);
   display: flex;
   flex-direction: column;
