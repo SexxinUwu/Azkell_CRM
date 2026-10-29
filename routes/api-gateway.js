@@ -1,6 +1,10 @@
 const express = require('express');
+// router: endpoints públicos con llave de API (/v1/...). Se monta antes de la sesión.
 const router = express.Router();
+// gestion: endpoints del panel Sistema › API y desarrolladores. Se monta DESPUÉS de verifyToken y globalRBAC (server.js).
+const gestion = express.Router();
 const { audit: auditar, actorFrom: actorDe } = require('../services/auditoria');
+const webhooks = require('../services/webhooks');
 const crypto = require('crypto');
 
 // ── En-memoria Rate Limiter por API Key ─────────────────────
@@ -230,7 +234,7 @@ router.get('/v1/operaciones/guias', validarApiKey('guias:read'), (req, res) => {
 // ============================================================
 
 // Listar todas las API Keys
-router.get('/sistema/api-keys', (req, res) => {
+gestion.get('/sistema/api-keys', (req, res) => {
     const targetDb = req.db || global.db;
     targetDb.query(
         "SELECT id, nombre, api_key, cliente_empresa, scopes, limite_rpm, estado, ultimo_uso, peticiones_total, creado_por, created_at FROM api_keys ORDER BY id DESC",
@@ -242,7 +246,7 @@ router.get('/sistema/api-keys', (req, res) => {
 });
 
 // Crear una nueva API Key
-router.post('/sistema/api-keys', (req, res) => {
+gestion.post('/sistema/api-keys', (req, res) => {
     const targetDb = req.db || global.db;
     const { nombre, cliente_empresa, scopes, limite_rpm } = req.body;
     
@@ -283,7 +287,7 @@ router.post('/sistema/api-keys', (req, res) => {
 });
 
 // Actualizar estado (Activar / Pausar / Revocar)
-router.put('/sistema/api-keys/:id/estado', (req, res) => {
+gestion.put('/sistema/api-keys/:id/estado', (req, res) => {
     const targetDb = req.db || global.db;
     const id = req.params.id;
     const { estado } = req.body;
@@ -309,7 +313,7 @@ router.put('/sistema/api-keys/:id/estado', (req, res) => {
 });
 
 // Eliminar API Key
-router.delete('/sistema/api-keys/:id', (req, res) => {
+gestion.delete('/sistema/api-keys/:id', (req, res) => {
     const targetDb = req.db || global.db;
     const id = req.params.id;
     targetDb.query(
@@ -324,7 +328,7 @@ router.delete('/sistema/api-keys/:id', (req, res) => {
 });
 
 // Métricas de uso y logs recientes
-router.get('/sistema/api-keys/metrics', (req, res) => {
+gestion.get('/sistema/api-keys/metrics', (req, res) => {
     const targetDb = req.db || global.db;
     targetDb.query(
         `SELECT 
@@ -349,4 +353,105 @@ router.get('/sistema/api-keys/metrics', (req, res) => {
     );
 });
 
-module.exports = router;
+// ============================================================
+// 🔔 WEBHOOKS SALIENTES (Sistema › API y desarrolladores) — ver docs/api-webhooks.md
+// ============================================================
+const idValido = id => /^\d+$/.test(String(id));
+const autorDe = req => (req.user ? (req.user.nombre || req.user.correo || 'Admin') : 'Admin');
+
+gestion.get('/sistema/webhooks/catalogo', (req, res) => {
+    res.json(webhooks.CATALOGO);
+});
+
+gestion.get('/sistema/webhooks', async (req, res) => {
+    try { res.json(await webhooks.listar(req.db || global.db)); }
+    catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+gestion.post('/sistema/webhooks', async (req, res) => {
+    const db = req.db || global.db;
+    const b = req.body || {};
+    const nombre = String(b.nombre || '').trim();
+    const url = String(b.url || '').trim();
+    if (!nombre) return res.status(400).json({ error: 'El nombre del webhook es requerido.' });
+    if (nombre.length > 120) return res.status(400).json({ error: 'El nombre no puede pasar de 120 caracteres.' });
+    const errUrl = webhooks.validarUrl(url);
+    if (errUrl) return res.status(400).json({ error: errUrl });
+    const { eventos, error } = webhooks.validarEventos(b.eventos);
+    if (error) return res.status(400).json({ error });
+    try {
+        const { id, secreto } = await webhooks.crear(db, { nombre, url, eventos }, autorDe(req));
+        auditar(db, actorDe(req), {
+            action: 'CREATE', entity: 'webhook', entityId: id,
+            summary: `Creó el webhook "${nombre}" (${eventos.length} evento${eventos.length === 1 ? '' : 's'})`,
+            changes: { nombre: { from: null, to: nombre }, url: { from: null, to: url }, eventos: { from: null, to: eventos } },
+        });
+        res.json({ ok: true, id, secreto, mensaje: 'Webhook creado. Guarda el secreto ahora: no se vuelve a mostrar completo.' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+gestion.put('/sistema/webhooks/:id', async (req, res) => {
+    const db = req.db || global.db;
+    const b = req.body || {};
+    if (!idValido(req.params.id)) return res.status(400).json({ error: 'Identificador no válido.' });
+    const cambios = {};
+    if (b.nombre !== undefined) {
+        const nombre = String(b.nombre).trim();
+        if (!nombre || nombre.length > 120) return res.status(400).json({ error: 'El nombre es requerido (máximo 120 caracteres).' });
+        cambios.nombre = nombre;
+    }
+    if (b.url !== undefined) {
+        const url = String(b.url).trim();
+        const errUrl = webhooks.validarUrl(url);
+        if (errUrl) return res.status(400).json({ error: errUrl });
+        cambios.url = url;
+    }
+    if (b.eventos !== undefined) {
+        const { eventos, error } = webhooks.validarEventos(b.eventos);
+        if (error) return res.status(400).json({ error });
+        cambios.eventos = eventos;
+    }
+    if (b.activo !== undefined) cambios.activo = !!b.activo;
+    if (!Object.keys(cambios).length) return res.status(400).json({ error: 'No hay cambios que guardar.' });
+    try {
+        const existe = await webhooks.actualizar(db, req.params.id, cambios);
+        if (!existe) return res.status(404).json({ error: 'Webhook no encontrado.' });
+        const etiqueta = cambios.activo === undefined ? 'Editó' : (cambios.activo ? 'Reactivó' : 'Pausó');
+        auditar(db, actorDe(req), {
+            action: 'UPDATE', entity: 'webhook', entityId: req.params.id,
+            summary: `${etiqueta} el webhook ${req.params.id}`,
+            changes: Object.fromEntries(Object.entries(cambios).map(([k, v]) => [k, { from: null, to: v }])),
+        });
+        res.json({ ok: true, mensaje: 'Webhook actualizado.' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+gestion.delete('/sistema/webhooks/:id', async (req, res) => {
+    const db = req.db || global.db;
+    if (!idValido(req.params.id)) return res.status(400).json({ error: 'Identificador no válido.' });
+    try {
+        const n = await webhooks.eliminar(db, req.params.id);
+        if (!n) return res.status(404).json({ error: 'Webhook no encontrado.' });
+        auditar(db, actorDe(req), { action: 'DELETE', entity: 'webhook', entityId: req.params.id, summary: 'Eliminó un webhook' });
+        res.json({ ok: true, mensaje: 'Webhook eliminado.' });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+gestion.post('/sistema/webhooks/:id/probar', async (req, res) => {
+    const db = req.db || global.db;
+    if (!idValido(req.params.id)) return res.status(400).json({ error: 'Identificador no válido.' });
+    try {
+        const estado = await webhooks.probar(db, req.params.id);
+        if (estado === null) return res.status(404).json({ error: 'Webhook no encontrado.' });
+        const [ultimo] = await webhooks.historial(db, req.params.id, 1);
+        res.json({ ok: estado === 'ENTREGADO', estado, codigo_http: ultimo ? ultimo.codigo_http : null, error: ultimo ? ultimo.error : null });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+gestion.get('/sistema/webhooks/:id/envios', async (req, res) => {
+    if (!idValido(req.params.id)) return res.status(400).json({ error: 'Identificador no válido.' });
+    try { res.json(await webhooks.historial(req.db || global.db, req.params.id, req.query.limit)); }
+    catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+module.exports = { router, gestionRouter: gestion };

@@ -61,6 +61,10 @@
 .apigw-bitacora { margin-top: var(--s-5); }
 .apigw-bitacora h2 { font-size: 1rem; font-weight: 700; margin-bottom: var(--s-2); }
 .apigw-vacio { color: var(--label-2); font-size: 0.875rem; }
+.apigw-webhooks { margin: var(--s-6) 0; }
+.apigw-webhooks__cab { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap; margin-bottom: var(--s-3); }
+.apigw-webhooks h2 { font-size: 1rem; font-weight: 700; margin-bottom: var(--s-1); }
+.apigw-webhooks .apigw-vacio { margin: 0; }
 
 .apigw-tabla-caja {
   overflow-x: auto; border-radius: 18px;

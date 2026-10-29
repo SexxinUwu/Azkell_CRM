@@ -11,6 +11,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { formatFechaHoraPe } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
+import { WebhooksSeccion } from './WebhooksSeccion';
 
 interface LlaveApi {
   id: number;
@@ -211,7 +212,7 @@ export function ApiDesarrolladoresPage() {
       <PageHeader
         eyebrow="Sistema"
         title="API y desarrolladores"
-        subtitle="Llaves de acceso para integraciones y uso de cada una."
+        subtitle="Llaves de acceso, webhooks firmados y uso de cada uno."
         actions={<Button variant="primary" icon={<Plus size={16} />} onClick={() => setNueva(true)}>Nueva llave</Button>}
       />
 
@@ -235,6 +236,8 @@ export function ApiDesarrolladoresPage() {
           ))}
         </div>
       )}
+
+      <WebhooksSeccion />
 
       <section className="apigw-bitacora">
         <h2>Últimas peticiones</h2>

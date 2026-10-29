@@ -9,6 +9,7 @@
  * Solo envía si la regla del evento está activa en la pantalla de Notificaciones y tiene destinatarios.
  */
 const notif = require('./notificaciones');
+const webhooks = require('./webhooks');
 
 const ZONA = 'America/Lima';
 const DOCUMENTOS = [
@@ -38,11 +39,15 @@ async function yaEnviado(db, evento, asunto, desde) {
   return !!(filas && filas.length);
 }
 
-/** Dispara un evento. Nunca lanza. `dedupeMin`: no repite el mismo asunto dentro de esos minutos. */
-async function notificar(db, evento, { asunto, texto, excluir }, { dedupeMin = 0 } = {}) {
+/**
+ * Dispara un evento. Nunca lanza. `dedupeMin`: no repite el mismo asunto dentro de esos minutos.
+ * `datos` (opcional): carga estructurada que también reciben los webhooks de la API (services/webhooks.js).
+ */
+async function notificar(db, evento, { asunto, texto, excluir, datos }, { dedupeMin = 0 } = {}) {
   try {
     if (!db) return { enviados: 0, motivo: 'sin base de datos' };
     if (dedupeMin > 0 && await yaEnviado(db, evento, asunto, new Date(Date.now() - dedupeMin * 60000))) return { enviados: 0, motivo: 'repetido' };
+    if (datos) await webhooks.emitir(db, evento, datos);
     return await notif.disparar(db, evento, { asunto, texto, excluir });
   } catch (e) {
     console.error(`[Notificaciones] ${evento}:`, e.message);
@@ -60,6 +65,11 @@ function avisoOrdenCompra({ id, proveedor, moneda, totalPen, tipoCambio, motivo,
     asunto: `Orden de compra ${id} por aprobar · ${monto}`,
     texto: [`🧾 Orden de compra por aprobar${empresa ? ` · ${empresa}` : ''}`, `Orden: ${id}`, `Proveedor: ${proveedor || '—'}`, `Monto: ${monto}`,
       motivo ? `Motivo: ${motivo}` : null, solicitante ? `Solicitó: ${solicitante}` : null, 'Ingresa al ERP › Gerencia › Aprobación de O/C para revisarla.'].filter(Boolean).join('\n'),
+    datos: {
+      orden_id: id, proveedor: proveedor || null, moneda: usd ? 'USD' : 'PEN',
+      monto: usd ? Math.round((Number(totalPen) / Number(tipoCambio)) * 100) / 100 : Number(totalPen) || 0,
+      total_pen: Number(totalPen) || 0, motivo: motivo || null, solicitante: solicitante || null, empresa: empresa || null,
+    },
   };
 }
 
@@ -68,6 +78,7 @@ function avisoSalidaTaller({ placa, ot, rampa, tecnicos, por, empresa }) {
     asunto: `Salida de taller · ${placa}`,
     texto: [`✅ Unidad ${placa} lista${empresa ? ` · ${empresa}` : ''}`, ot ? `La OT ${ot} se finalizó.` : 'La unidad salió de rampa.', rampa ? `Rampa / zona: ${rampa}` : null,
       tecnicos && tecnicos.length ? `Técnicos: ${tecnicos.join(', ')}` : null, por ? `Cerró: ${por}` : null].filter(Boolean).join('\n'),
+    datos: { placa, orden_trabajo: ot || null, rampa: rampa || null, tecnicos: tecnicos || [], cerrado_por: por || null, empresa: empresa || null },
   };
 }
 
@@ -76,6 +87,7 @@ function avisoChecklistCritico({ folio, placa, reportadoPor, detalle, backlogId,
     asunto: `Falla crítica en ${placa || 'unidad'} · reporte ${folio}`,
     texto: [`🚨 Falla crítica reportada${empresa ? ` · ${empresa}` : ''}`, `Unidad: ${placa || '—'}`, `Reporte: ${folio}`, reportadoPor ? `Reportó: ${reportadoPor}` : null,
       `Detalle: ${detalle || 'ver reporte de fallas'}`, 'La unidad NO debe salir hasta ser atendida.', backlogId ? `Se abrió el pendiente ${backlogId} en el backlog.` : null].filter(Boolean).join('\n'),
+    datos: { folio, placa: placa || null, reportado_por: reportadoPor || null, detalle: detalle || null, backlog_id: backlogId || null, empresa: empresa || null },
   };
 }
 
@@ -113,18 +125,39 @@ function resumenVencimientos(items, { empresa, hoy = fechaLima(), maxPorLista = 
   };
 }
 
-/** Arma y envía el resumen de vencimientos de una empresa. Una vez al día salvo `forzar`. */
+/** Carga del evento flota_vencimiento para los webhooks (máximo 200 documentos) */
+function datosVencimientos(items, hoy) {
+  return {
+    fecha: hoy,
+    vencidos: items.filter(i => i.dias < 0).length,
+    por_vencer: items.filter(i => i.dias >= 0).length,
+    documentos: items.slice(0, 200).map(i => ({ placa: i.placa, documento: i.documento, fecha: i.fecha, dias: i.dias })),
+  };
+}
+
+/**
+ * Arma y envía el resumen de vencimientos de una empresa. Una vez al día salvo `forzar`.
+ * El aviso del ERP (regla de Notificaciones) y el webhook (API) se revisan por separado:
+ * si solo hay webhook suscrito, el resumen igual se emite; si hay ninguno de los dos, no hace nada.
+ */
 async function ejecutarVencimientos(db, { empresa, forzar = false, soloVer = false } = {}) {
   const regla = (await notif.reglasDe(db)).find(r => r.evento === 'flota_vencimiento');
-  if (!soloVer && (!regla || !regla.activo)) return { enviados: 0, motivo: 'regla inactiva' };
+  const conAviso = !!(regla && regla.activo);
+  const conWebhook = !soloVer && await webhooks.haySuscriptores(db, 'flota_vencimiento');
+  if (!soloVer && !conAviso && !conWebhook) return { enviados: 0, motivo: 'regla inactiva' };
   const hoy = fechaLima();
-  if (!forzar && !soloVer && await yaEnviado(db, 'flota_vencimiento', null, new Date(`${hoy}T05:00:00Z`))) return { enviados: 0, motivo: 'ya enviado hoy' };
+  const desde = new Date(`${hoy}T05:00:00Z`);
+  const enviarAviso = !soloVer && conAviso && (forzar || !(await yaEnviado(db, 'flota_vencimiento', null, desde)));
+  const emitirWebhook = !soloVer && conWebhook && (forzar || !(await webhooks.hayEnvioDesde(db, 'flota_vencimiento', desde)));
+  if (!soloVer && !enviarAviso && !emitirWebhook) return { enviados: 0, motivo: 'ya enviado hoy' };
   const items = await documentosPorVencer(db, { hoy });
   if (!items.length) return { enviados: 0, motivo: 'nada que avisar', items: 0 };
   const aviso = resumenVencimientos(items, { empresa, hoy });
   if (soloVer) return { ...aviso, items: items.length, enviados: 0 };
-  const r = await notif.disparar(db, 'flota_vencimiento', { asunto: aviso.asunto, texto: aviso.texto });
-  return { ...r, vencidos: aviso.vencidos, porVencer: aviso.porVencer };
+  let r = { enviados: 0, motivo: conAviso ? 'ya enviado hoy' : 'regla inactiva' };
+  if (enviarAviso) r = await notif.disparar(db, 'flota_vencimiento', { asunto: aviso.asunto, texto: aviso.texto });
+  if (emitirWebhook) await webhooks.emitir(db, 'flota_vencimiento', datosVencimientos(items, hoy));
+  return { ...r, vencidos: aviso.vencidos, porVencer: aviso.porVencer, webhook: !!emitirWebhook };
 }
 
 /** Revisa cada 20 minutos; entre las 7:00 y las 7:59 (Lima) envía el resumen de cada empresa (la regla de una vez al día evita repetir) */
@@ -161,9 +194,11 @@ async function avisarOcPagar(db, ocId) {
     const o = filas && filas[0];
     if (!o) return;
     const monto = Number(o.total_pen || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const cuenta = cuentaEnmascarada(o.cuenta_bancaria_proveedor);
     await notificar(db, 'oc_pagar', {
       asunto: `Pagar OC ${o.id}`,
-      texto: `${o.proveedor_nombre || 'Proveedor'} · S/ ${monto} · cuenta ${cuentaEnmascarada(o.cuenta_bancaria_proveedor)}`,
+      texto: `${o.proveedor_nombre || 'Proveedor'} · S/ ${monto} · cuenta ${cuenta}`,
+      datos: { orden_id: o.id, proveedor: o.proveedor_nombre || null, total_pen: Number(o.total_pen || 0), cuenta },
     }, { dedupeMin: 5 });
   } catch (e) { console.warn('[Notificaciones] oc_pagar:', e.message); }
 }
@@ -177,6 +212,7 @@ async function avisarOcVoucher(db, ocId) {
     await notificar(db, 'oc_voucher', {
       asunto: `Comprobante de pago ${o.id}`,
       texto: `Tesorería subió el voucher del pago a ${o.proveedor_nombre || 'el proveedor'}. Revísalo en Almacén.`,
+      datos: { orden_id: o.id, proveedor: o.proveedor_nombre || null },
     }, { dedupeMin: 5 });
   } catch (e) { console.warn('[Notificaciones] oc_voucher:', e.message); }
 }

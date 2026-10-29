@@ -129,6 +129,8 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/integraciones')) mod = 'integraciones';
     else if (path.startsWith('/auditoria') || path.startsWith('/audit')) mod = 'mod_auditoria';
     else if (path.startsWith('/notificaciones')) mod = ['administracion', 'cfg_empresa'];
+    // Sistema › API y desarrolladores: llaves de API y webhooks (antes sin mapeo; ahora exigen administración)
+    else if (path.startsWith('/sistema/api-keys') || path.startsWith('/sistema/webhooks')) mod = ['administracion'];
     else if (path.startsWith('/seguridad/asistencia')) mod = ['asist', 'seguridad'];
     else if (path.startsWith('/seguridad/entrega-vehiculos') || path.startsWith('/flota/entrega-vehiculos')) mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas'];
     else if (path.startsWith('/seguridad')) mod = ['seguridad_unidades', 'seguridad', 'checklist', 'placas', 'unid'];

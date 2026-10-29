@@ -139,8 +139,9 @@ app.use((req, res, next) => {
     });
 });
 
-// ── Open API Gateway Router (APIs Públicas v1 y Gestión de API Keys) ──
-const apiGatewayRouter = require('./routes/api-gateway');
+// ── Open API Gateway Router (APIs Públicas v1 con llave de API) ──
+// La gestión de llaves y webhooks (/sistema/...) va más abajo, detrás de la sesión y el RBAC.
+const { router: apiGatewayRouter, gestionRouter: apiGatewayGestionRouter } = require('./routes/api-gateway');
 app.use('/api', apiGatewayRouter);
 
 // ── Helper para generar PNG cuadrado (1:1) centrado con padding automático ──
@@ -2533,6 +2534,8 @@ app.use('/api', verifyToken);
 // Panel SuperAdmin: después de la sesión (exige Fundador o clave maestra) y antes de los permisos por módulo
 app.use('/api/superadmin', require('./routes/superadmin')());
 app.use('/api', globalRBAC);
+// Sistema › API y desarrolladores (llaves y webhooks): exige sesión y permiso de administración (rbac.js)
+app.use('/api', apiGatewayGestionRouter);
 
 // Token de la sesión de la petición: cookie HttpOnly primero, luego Authorization: Bearer (apps nativas).
 function tokenDeSesion(req) {
