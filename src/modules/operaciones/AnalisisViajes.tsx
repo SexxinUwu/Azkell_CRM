@@ -2,7 +2,7 @@ import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ArrowUpRight, ChevronDown, ChevronRight, Droplets, FileSpreadsheet, Fuel, RefreshCw, SearchX } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, Droplets, FileSpreadsheet, Fuel, RefreshCw, SearchX } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -14,7 +14,6 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 import { analizarViaje, type AnalisisViaje, type MatrizCalc, type TramoCalc, type ViajeCalc } from './analisisCalculo';
 
 interface BloqueVales { vales: number; galones: number; importe: number }
@@ -538,12 +537,6 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
               <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--azul"
                 data-tip="Matriz de rendimiento" aria-label="Matriz de rendimiento" onClick={() => navigate('/operaciones/matriz-combustible')}>
                 <Fuel size={17} />
-              </button>
-            )}
-            {urea && (
-              <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--ambar"
-                data-tip="Telemetría y auditoría avanzada (versión actual)" aria-label="Telemetría y auditoría avanzada" onClick={() => abrirClasico('operaciones/urea-analisis')}>
-                <ArrowUpRight size={17} />
               </button>
             )}
           </div>
