@@ -263,10 +263,12 @@ export function ChecklistPage() {
         ))}
       </div>
 
-      <div className="oc-filtros" style={{ marginBottom: 'var(--s-4)' }}>
-        <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar folio, placa, conductor…" />
-        <div className="oc-filtros__fila">
-          <div className="oc-fechas">
+      <div className="ck-filtros" style={{ marginBottom: 'var(--s-4)' }}>
+        <div className="ck-filtros__buscar">
+          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar folio, placa, conductor…" />
+        </div>
+        <div className="ck-filtros__fila">
+          <div className="ck-rango">
             <TextInput type="date" aria-label="Desde" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} />
             <span className="t-footnote c-secondary">a</span>
             <TextInput type="date" aria-label="Hasta" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} />
