@@ -4,6 +4,7 @@ import { Check, ChevronDown, Plus, Search, X } from 'lucide-react';
 import { MOBILE_QUERY } from '../lib/useMediaQuery';
 import { spring } from '../lib/motion';
 import { haptic } from '../lib/haptics';
+import { Sheet } from './Sheet';
 
 export interface ComboboxOption {
   value: string;
@@ -30,6 +31,10 @@ interface ComboboxProps {
   disabled?: boolean;
   /** Cuántos resultados mostrar como máximo (el resto aparece al seguir escribiendo) */
   limit?: number;
+  /** Muestra un botón como el de placa y abre la búsqueda en una hoja (sin lista flotante que se corte) */
+  enHoja?: boolean;
+  /** Título de la hoja cuando `enHoja` (si no, el placeholder) */
+  tituloHoja?: string;
 }
 
 // Sin tildes ni mayúsculas, conservando el largo (para resaltar lo encontrado en el texto original)
@@ -66,7 +71,7 @@ function Highlight({ text, words }: { text: string; words: string[] }) {
  */
 export function Combobox({
   id, options, value, onChange, placeholder = 'Escribe para buscar', onCreate, createLabel = 'Registrar', loading, disabled, limit = 50,
-  ...aria
+  enHoja = false, tituloHoja, ...aria
 }: ComboboxProps) {
   const autoId = useId();
   const inputId = id ?? autoId;
@@ -111,7 +116,7 @@ export function Combobox({
     if (disabled) return;
     setOpen(true);
     // Escritorio: si la lista no cabe debajo de la casilla dentro de su hoja o contenedor, se sube el campo
-    if (!window.matchMedia(MOBILE_QUERY).matches) requestAnimationFrame(subirSiNoCabe);
+    if (!enHoja && !window.matchMedia(MOBILE_QUERY).matches) requestAnimationFrame(subirSiNoCabe);
     // En el celular el teclado tapa media pantalla: sube la casilla para ver los resultados
     if (window.matchMedia(MOBILE_QUERY).matches) {
       setTimeout(() => {
@@ -178,20 +183,21 @@ export function Combobox({
 
   const display = typing ? query : selected?.label ?? '';
 
-  return (
-    <div className={`combobox${open ? ' combobox--open' : ''}`}>
+  const buscador = (
+    <div className={`combobox${open ? ' combobox--open' : ''}${enHoja ? ' combobox--hoja' : ''}`}>
       <div className="combobox__field">
         <Search size={16} className="combobox__search" aria-hidden />
         <input
           ref={inputRef}
-          id={inputId}
+          id={enHoja ? `${inputId}-buscar` : inputId}
+          autoFocus={enHoja}
           className="input combobox__input"
           role="combobox"
           aria-expanded={open}
           aria-controls={listId}
           aria-autocomplete="list"
           aria-activedescendant={open && count ? `${listId}-${active}` : undefined}
-          {...aria}
+          {...(enHoja ? {} : aria)}
           value={display}
           placeholder={selected ? selected.label : placeholder}
           autoComplete="off"
@@ -274,5 +280,39 @@ export function Combobox({
         )}
       </AnimatePresence>
     </div>
+  );
+
+  if (!enHoja) return buscador;
+
+  // Modo hoja: el campo muestra lo elegido como el selector de placa; al tocarlo se abre la búsqueda a pantalla completa
+  return (
+    <>
+      <button
+        id={inputId}
+        type="button"
+        className="campo-picker"
+        disabled={disabled}
+        aria-haspopup="dialog"
+        aria-invalid={aria['aria-invalid']}
+        aria-describedby={aria['aria-describedby']}
+        onClick={openList}
+      >
+        {selected ? (
+          <>
+            {selected.icon}
+            <span className="campo-picker__detalle">{selected.label}{selected.description ? ` · ${selected.description}` : ''}</span>
+          </>
+        ) : (
+          <>
+            <Search size={16} aria-hidden />
+            <span className="campo-picker__vacio">{placeholder}</span>
+          </>
+        )}
+        <ChevronDown size={16} aria-hidden className="campo-picker__chevron" />
+      </button>
+      <Sheet open={open} onClose={close} title={tituloHoja ?? placeholder}>
+        {buscador}
+      </Sheet>
+    </>
   );
 }

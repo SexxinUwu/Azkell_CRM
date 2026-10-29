@@ -736,6 +736,8 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
                           value={l.inventario_id}
                           onChange={id => elegirArticulo(l.key, id)}
                           placeholder={servicio ? 'Busca un servicio…' : 'Busca por código o nombre…'}
+                          enHoja
+                          tituloHoja={servicio ? 'Buscar servicio' : 'Buscar artículo'}
                           loading={inventarioQ.isLoading}
                           onCreate={texto => setAltaArticulo({ key: l.key, texto: texto.trim(), servicio })}
                           createLabel={servicio ? 'Registrar servicio' : 'Registrar artículo'}

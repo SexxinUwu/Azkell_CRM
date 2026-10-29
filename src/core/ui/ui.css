@@ -895,6 +895,8 @@ label.row__main { cursor: pointer; }
 @media (max-width: 639px) {
   .combobox__list { position: relative; top: auto; margin-top: var(--s-2); max-height: 15rem; }
 }
+/* En hoja (enHoja): la búsqueda y la lista van en el flujo de la hoja, sin altura limitada ni sombra flotante */
+.combobox--hoja .combobox__list { position: relative; top: auto; left: auto; right: auto; max-height: none; margin: var(--s-3) 0 0; padding: 0; box-shadow: none; background: transparent; }
 .combobox__option {
   display: flex;
   align-items: center;
