@@ -194,6 +194,9 @@ export function useCuentas() {
   });
 }
 
+/** PAGADO → PENDIENTE (el servidor valida el estado y audita el cambio) */
+export const revertirPagoCuenta = (id: number) => escribirTesoreria(`/tesoreria/cuentas/${id}/revertir-pago`, 'POST');
+
 export interface Banco {
   id?: number | string;
   banco?: string | null;

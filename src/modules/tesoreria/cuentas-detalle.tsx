@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Banknote, Clock, FileText, Pencil, Trash2 } from 'lucide-react';
+import { Banknote, Clock, FileText, Pencil, RotateCcw, Trash2 } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Badge } from '../../core/ui/Display';
 import { Button } from '../../core/ui/Button';
@@ -13,6 +13,7 @@ interface Props {
   onClose: () => void;
   onEditar?: () => void;
   onPagar?: () => void;
+  onRevertir?: () => void;
   onEliminar?: () => void;
   onNotaCredito?: () => void;
   onHistorial: () => void;
@@ -28,7 +29,7 @@ function Fila({ label, valor, fuerte }: { label: string; valor: ReactNode; fuert
   );
 }
 
-export function DetalleCuenta({ cuenta: c, onClose, onEditar, onPagar, onEliminar, onNotaCredito, onHistorial }: Props) {
+export function DetalleCuenta({ cuenta: c, onClose, onEditar, onPagar, onRevertir, onEliminar, onNotaCredito, onHistorial }: Props) {
   const titulo = c ? `${c.serie ?? ''}${c.serie && c.factura ? '-' : ''}${c.factura || c.codigo_liquidacion || 'Sin factura'}` : '';
   const estado = c ? estadoDe(c) : '';
   const enlaces: Array<[string, CampoDocumento]> = [
@@ -44,6 +45,7 @@ export function DetalleCuenta({ cuenta: c, onClose, onEditar, onPagar, onElimina
           <Button variant="secondary" icon={<Clock size={16} />} onClick={onHistorial}>Historial</Button>
           {onNotaCredito && <Button variant="secondary" icon={<FileText size={16} />} onClick={onNotaCredito}>Cambiar factura (NC)</Button>}
           {onEditar && <Button variant="secondary" icon={<Pencil size={16} />} onClick={onEditar}>Editar</Button>}
+          {onRevertir && <Button variant="secondary" icon={<RotateCcw size={16} />} onClick={onRevertir}>Volver a pendiente</Button>}
           {onPagar && (
             <Button variant={estado === 'PAGADO' ? 'secondary' : 'primary'} icon={<Banknote size={16} />} onClick={onPagar}>
               {estado === 'PAGADO' ? 'Ver o subir constancia' : 'Registrar pago'}

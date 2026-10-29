@@ -35,7 +35,7 @@ interface CajaMov {
 }
 
 const QUERY_MOVIL = '(max-width: 767px)';
-type Filtro = 'pendientes' | 'aprobados' | 'todos';
+type Filtro = 'pendientes' | 'aprobados' | 'anulados' | 'todos';
 
 /** Estado de caja → chip (PENDIENTE/REGISTRADO por decidir, APROBADO, PROCESADO, ANULADO). */
 function chipCaja(estado: string | undefined) {
@@ -48,6 +48,12 @@ function chipCaja(estado: string | undefined) {
 function esPendiente(m: CajaMov): boolean {
   const s = (m.estado ?? '').toUpperCase();
   return s === 'PENDIENTE' || s === 'REGISTRADO' || s === '';
+}
+
+/** Como el clásico: ANULADO y RECHAZADO cuentan como anulados */
+function esAnulado(m: CajaMov): boolean {
+  const s = (m.estado ?? '').toUpperCase();
+  return s === 'ANULADO' || s === 'RECHAZADO';
 }
 
 const numero = (v: unknown) => {
@@ -98,9 +104,10 @@ export function AprobacionesCajaPage() {
   const lista = useMemo(() => data ?? [], [data]);
   const pendientes = useMemo(() => lista.filter(esPendiente), [lista]);
   const aprobados = useMemo(() => lista.filter(m => (m.estado ?? '').toUpperCase() === 'APROBADO'), [lista]);
+  const anulados = useMemo(() => lista.filter(esAnulado), [lista]);
 
   const visibles = useMemo(() => {
-    const base = filtro === 'pendientes' ? pendientes : filtro === 'aprobados' ? aprobados : lista;
+    const base = filtro === 'pendientes' ? pendientes : filtro === 'aprobados' ? aprobados : filtro === 'anulados' ? anulados : lista;
     const fuente = soloBusqueda || busqueda ? lista : base;
     if (!busqueda) return fuente;
     const q = busqueda.toUpperCase();
@@ -111,11 +118,12 @@ export function AprobacionesCajaPage() {
       String(m.orden_viaje ?? '').toUpperCase().includes(q) ||
       String(m.persona ?? '').toUpperCase().includes(q)
     );
-  }, [lista, pendientes, aprobados, busqueda, soloBusqueda, filtro]);
+  }, [lista, pendientes, aprobados, anulados, busqueda, soloBusqueda, filtro]);
 
   const kpis: Array<{ key: Filtro; etiqueta: string; items: CajaMov[]; color: string }> = [
     { key: 'pendientes', etiqueta: 'Pendientes', items: pendientes, color: 'var(--amber-ink)' },
     { key: 'aprobados', etiqueta: 'Aprobados', items: aprobados, color: 'var(--green-ink)' },
+    { key: 'anulados', etiqueta: 'Anulados', items: anulados, color: 'var(--red-ink)' },
     { key: 'todos', etiqueta: 'Total', items: lista, color: 'var(--label-1)' },
   ];
 

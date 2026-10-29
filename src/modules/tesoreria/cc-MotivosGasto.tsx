@@ -1,33 +1,36 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CircleAlert, FileSpreadsheet, Plus, SearchX, Tags } from 'lucide-react';
+import { CircleAlert, FileSpreadsheet, Plus, SearchX, Tags, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Combobox, type ComboboxOption } from '../../core/ui/Combobox';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
-import { Sheet } from '../../core/ui/Sheet';
+import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
-import { guardarMotivoGasto, useCentrosCostos, useMotivosGastos, type MotivoGasto } from './api';
+import { eliminarMotivoGasto, guardarMotivoGasto, useCentrosCostos, useMotivosGastos, type MotivoGasto } from './api';
 
 const clave = (s: string) => s.trim().toUpperCase();
 
 // Motivos de gasto agrupados por motivo principal, con su sub motivo y centro de costos sugerido.
-// Sin eliminación: el backend no tiene DELETE /tesoreria/motivos-gastos/:id; se desactiva con Estado.
+// Se elimina solo si ningún gasto de caja o liquidación lo usa (el servidor responde 409); si no, se desactiva con Estado.
 export function CcMotivosGasto({ arriba }: { arriba: ReactNode }) {
   const q = useMotivosGastos();
   const cc = useCentrosCostos();
+  const qc = useQueryClient();
   const { can } = useAuth();
   const toast = useToast();
   const [busqueda, setBusqueda] = useState('');
   const [editando, setEditando] = useState<{ item: MotivoGasto | null } | null>(null);
+  const [porEliminar, setPorEliminar] = useState<MotivoGasto | null>(null);
+  const [eliminando, setEliminando] = useState(false);
 
   const puedeEscribir = can('tesoreria_centros_costos.crear', 'tesoreria_caja.crear');
+  const puedeEliminar = can('tesoreria_centros_costos.eliminar', 'tesoreria_caja.eliminar');
   const lista: MotivoGasto[] = q.data ?? [];
   const centros = cc.data ?? [];
   const nombreCentro = useMemo(() => new Map(centros.map(c => [c.codigo, c.nombre])), [centros]);
@@ -58,6 +61,17 @@ export function CcMotivosGasto({ arriba }: { arriba: ReactNode }) {
     } catch (err) { toast(errorMessage(err), 'error'); }
   }
 
+  async function eliminar() {
+    if (!porEliminar) return;
+    setEliminando(true);
+    try {
+      await eliminarMotivoGasto(porEliminar.id);
+      haptic('success'); toast('Concepto eliminado'); setPorEliminar(null);
+      await qc.invalidateQueries({ queryKey: ['tesoreria', 'motivos-gastos'] });
+    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
+    finally { setEliminando(false); }
+  }
+
   return (
     <Page>
       <PageHeader
@@ -68,7 +82,6 @@ export function CcMotivosGasto({ arriba }: { arriba: ReactNode }) {
           <>
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${visibles.length} conceptos`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('tesoreria/centros-costos') },
             ]} />
             {puedeEscribir && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setEditando({ item: null })}>Nuevo concepto</Button>}
           </>
@@ -130,16 +143,22 @@ export function CcMotivosGasto({ arriba }: { arriba: ReactNode }) {
         lista={lista}
         centros={centros}
         onClose={() => setEditando(null)}
+        onEliminar={puedeEliminar ? item => { setEditando(null); setPorEliminar(item); } : undefined}
       />
+      <ConfirmSheet open={!!porEliminar} onClose={() => !eliminando && setPorEliminar(null)} onConfirm={eliminar} loading={eliminando}
+        title="Eliminar concepto"
+        message="¿Está seguro de eliminar este concepto de gasto?"
+        confirmLabel="Eliminar" />
     </Page>
   );
 }
 
-function CcMotivoSheet({ abierto, lista, centros, onClose }: {
+function CcMotivoSheet({ abierto, lista, centros, onClose, onEliminar }: {
   abierto: { item: MotivoGasto | null } | null;
   lista: MotivoGasto[];
   centros: Array<{ codigo: string; nombre: string; estado: string }>;
   onClose: () => void;
+  onEliminar?: (item: MotivoGasto) => void;
 }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -150,7 +169,8 @@ function CcMotivoSheet({ abierto, lista, centros, onClose }: {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errs, setErrs] = useState<Record<string, string | undefined>>({});
-  const editando = !!abierto?.item;
+  const itemEditado = abierto?.item ?? null;
+  const editando = !!itemEditado;
 
   useEffect(() => {
     if (!abierto) return;
@@ -235,6 +255,12 @@ function CcMotivoSheet({ abierto, lista, centros, onClose }: {
             </SelectInput>
           )}
         </Field>
+
+        {itemEditado && onEliminar && (
+          <div className="field field--wide">
+            <Button variant="destructive" icon={<Trash2 size={16} />} onClick={() => onEliminar(itemEditado)}>Eliminar Concepto</Button>
+          </div>
+        )}
       </div>
     </Sheet>
   );
