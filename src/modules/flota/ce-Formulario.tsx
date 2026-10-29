@@ -7,6 +7,8 @@ import { ArrowLeft, CheckCheck, ChevronDown, CircleAlert, FileText, ListChecks, 
 import { Button, Spinner } from '../../core/ui/Button';
 import { EmptyState, Notice } from '../../core/ui/Display';
 import { Field, TextInput } from '../../core/ui/Field';
+import { Combobox } from '../../core/ui/Combobox';
+import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -494,7 +496,21 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
             {p => <TextInput {...p} readOnly value={MOTIVO} />}
           </Field>
           {campo('quien_entrega', 'Quien entrega', { solo: true, hint: 'Usuario que realiza la entrega' })}
-          {campo('quien_recibe', 'Quien recibe (conductor)', { mayus: true, list: 'ce-dl-conductores', placeholder: 'Escribe o elige un conductor', hint: 'Se puede elegir de la lista o escribir' })}
+          <Field label="Quien recibe (conductor)" error={errores.quien_recibe} hint="Se puede elegir de la lista o escribir">
+            {p => (
+              <Combobox
+                id={p.id}
+                options={[...conductores, ...(campos.quien_recibe && !conductores.includes(campos.quien_recibe) ? [campos.quien_recibe] : [])].map(c => ({ value: c, label: c }))}
+                value={campos.quien_recibe || null}
+                onChange={v => cambiar('quien_recibe', v ?? '')}
+                onCreate={texto => cambiar('quien_recibe', texto.trim().toUpperCase())}
+                createLabel="Usar"
+                placeholder="Escribe o elige un conductor"
+                disabled={soloLectura}
+                aria-invalid={!!errores.quien_recibe}
+              />
+            )}
+          </Field>
         </div>
       </section>
 
@@ -513,16 +529,14 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
             hint={nuevo ? 'Al escribirla se completan los datos y el kilometraje GPS' : (!soloLectura ? 'La placa no cambia al editar el acta' : undefined)}
           >
             {p => (
-              <TextInput
-                {...p}
-                className="ce-f__mayus"
-                list="ce-dl-placas"
-                autoComplete="off"
-                placeholder="Ej. AEZ984"
-                readOnly={!nuevo}
+              <PlacaPicker
+                id={p.id}
                 value={campos.placa}
-                onChange={e => cambiarPlaca(e.target.value)}
-                onBlur={e => { window.clearTimeout(timerPlaca.current); void consultarPlaca(e.target.value); }}
+                onChange={v => cambiarPlaca(v)}
+                opciones={placasOpciones.map(placa => ({ placa }))}
+                placeholder="Elige la placa…"
+                disabled={!nuevo}
+                aria-invalid={!!errores.placa}
               />
             )}
           </Field>

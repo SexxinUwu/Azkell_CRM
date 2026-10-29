@@ -203,3 +203,23 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ─── Formulario compacto (como el clásico: campos juntos, sin espacio de sobra) ─── */
+.ce-f { gap: var(--s-3); padding-bottom: calc(var(--s-5) + 56px); }
+.ce-f__tarjeta { gap: var(--s-3); padding: var(--s-3) var(--s-4); }
+.ce-f__seccion-ayuda { display: none; }
+.ce-f .form-grid { gap: var(--s-2) var(--s-3); grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ce-f .form-grid > .field--wide { grid-column: span 3; }
+.ce-f .field { gap: 2px; }
+.ce-f .field__label { font-size: 0.75rem; padding-left: 2px; }
+.ce-f .field__hint { font-size: 0.7rem; padding-left: 2px; line-height: 1.3; }
+.ce-f .input, .ce-f .combobox__input { min-height: 36px; padding-top: 6px; padding-bottom: 6px; }
+.ce-f .combobox__input { padding-left: 36px; }
+@media (max-width: 900px) {
+  .ce-f .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ce-f .form-grid > .field--wide { grid-column: span 2; }
+}
+@media (max-width: 560px) {
+  .ce-f .form-grid { grid-template-columns: 1fr; }
+  .ce-f .form-grid > .field--wide { grid-column: auto; }
+}

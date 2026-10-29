@@ -65,8 +65,12 @@ export function htmlActaEntrega(r: EntregaVehiculo, grupos: CategoriaPlantilla[]
   const emision = fechaDMA(r.fecha) || new Date().toLocaleDateString('es-PE');
   const ahora = `${new Date().toLocaleDateString('es-PE')} ${new Date().toLocaleTimeString('es-PE')}`;
 
-  const tercio = Math.ceil(grupos.length / 3);
-  const columnas = [grupos.slice(0, tercio), grupos.slice(tercio, tercio * 2), grupos.slice(tercio * 2)];
+  // Solo se imprimen los ítems que se calificaron; las categorías sin ninguno no salen
+  const marcados = grupos
+    .map(g => ({ ...g, items: g.items.filter(it => calificacionDe(partes, g, it).estado) }))
+    .filter(g => g.items.length > 0);
+  const tercio = Math.ceil(marcados.length / 3);
+  const columnas = [marcados.slice(0, tercio), marcados.slice(tercio, tercio * 2), marcados.slice(tercio * 2)];
 
   const celdaMeta = (k: string, v: unknown, fondo = '#fff', mono = false, ultima = false) =>
     `<div style="padding:4px 10px;display:flex;justify-content:space-between;gap:6px;background:${fondo};${ultima ? '' : `border-bottom:1.5px solid ${NAVY};`}">`
@@ -88,7 +92,7 @@ export function htmlActaEntrega(r: EntregaVehiculo, grupos: CategoriaPlantilla[]
           const { estado, cantidad } = calificacionDe(partes, g, it);
           return `<tr style="border-bottom:1px solid #E2E8F0"><td style="padding:1px 4px;color:#334155;font-weight:500;font-size:7.8px">${esc(it)}</td>
           <td style="padding:1px 3px;text-align:center;font-family:monospace;font-weight:700;color:#64748B;font-size:7.8px">${cantidad}</td>
-          <td style="padding:1px 3px;text-align:center">${badge(estado)}</td></tr>`;
+          <td style="padding:1px 3px;text-align:center">${badge(estado as Calificacion)}</td></tr>`;
         }).join('')}`).join('')}
       </tbody></table></div>`;
 

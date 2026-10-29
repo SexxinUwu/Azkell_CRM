@@ -58,9 +58,10 @@ function filasInventario(r: EntregaVehiculo, grupos: CategoriaPlantilla[]): Celd
   const nro = texto(r.numero_inventario) || texto(r.id);
   const fecha = fechaCelda(r.fecha);
   const placa = texto(r.placa).toUpperCase();
-  return grupos.flatMap(g => g.items.map(item => {
+  return grupos.flatMap(g => g.items.flatMap(item => {
     const { estado, cantidad } = calificacionDe(partes, g, item);
-    return [nro, fecha, placa, g.titulo, item, ETIQUETA_CALIFICACION[estado], cantidad];
+    if (!estado) return []; // sin marcar: no va al Excel
+    return [[nro, fecha, placa, g.titulo, item, ETIQUETA_CALIFICACION[estado], cantidad]];
   }));
 }
 

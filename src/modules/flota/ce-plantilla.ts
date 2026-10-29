@@ -88,7 +88,7 @@ export function calificacionDe(
   partes: Record<string, unknown>,
   categoria: CategoriaPlantilla,
   item: string,
-): { estado: Calificacion; cantidad: number } {
+): { estado: Calificacion | null; cantidad: number } {
   const crudo = partes[claveItem(item)] ?? partes[`${categoria.id}|${item}`];
   let estado: unknown = crudo;
   let cantidad: unknown = 1;
@@ -100,7 +100,7 @@ export function calificacionDe(
   const letra = typeof estado === 'string' ? estado.toUpperCase().trim() : '';
   const n = Number(cantidad);
   return {
-    estado: letra === 'R' || letra === 'M' ? letra : 'B',
+    estado: letra === 'R' || letra === 'M' || letra === 'B' ? letra : null,
     cantidad: Number.isFinite(n) && n > 0 ? n : 1,
   };
 }

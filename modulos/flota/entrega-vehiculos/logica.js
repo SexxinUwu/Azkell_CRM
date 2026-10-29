@@ -1697,7 +1697,11 @@
         const kmFmt = parseFloat(r.kilometraje || 0).toLocaleString('es-PE');
         const pdfConfig = _evObtenerConfiguracion(r);
         const estiloCabina = r.estilo_cabina || 'chata';
-        const templateList = _evGlobalTemplate || GRUPOS_SISTEMAS_DEFAULT;
+        // Solo se imprimen los ítems que se calificaron; las categorías sin ninguno no salen
+        const claveItemPdf = (it) => { const lbl = typeof it === 'string' ? it : (it.label || it.texto || ''); return lbl.toLowerCase().replace(/[^a-z0-9]/g, '_'); };
+        const templateList = (_evGlobalTemplate || GRUPOS_SISTEMAS_DEFAULT)
+            .map(g => ({ ...g, items: (g.items || []).filter(it => partes[claveItemPdf(it)]) }))
+            .filter(g => g.items.length > 0);
 
         const diagramaHtml = diagramaDataUrl
             ? `<img src="${diagramaDataUrl}" style="width: 100%; max-width: 820px; height: 145px; object-fit: contain; display: block; margin: 0 auto;" alt="Diagrama Unidad">`
@@ -1814,7 +1818,7 @@
                                             ${(grp.items || []).map(it => {
                                                 const itemLabel = typeof it === 'string' ? it : (it.label || it.texto || '');
                                                 const k = itemLabel.toLowerCase().replace(/[^a-z0-9]/g, '_');
-                                                const est = partes[k] || 'B';
+                                                const est = partes[k];
                                                 let badgeHtml = '<span class="px-1.5 py-0.2 rounded font-extrabold text-[7.5px] bg-emerald-100 text-emerald-800 border border-emerald-300">OK</span>';
                                                 if (est === 'R') badgeHtml = '<span class="px-1.5 py-0.2 rounded font-extrabold text-[7.5px] bg-amber-100 text-amber-800 border border-amber-300">REG</span>';
                                                 if (est === 'M') badgeHtml = '<span class="px-1.5 py-0.2 rounded font-extrabold text-[7.5px] bg-rose-100 text-rose-800 border border-rose-300">MAL</span>';
