@@ -177,6 +177,7 @@ model TesoreriaLiquidacionGasto {
   estado           String    @default("APROBADO") @db.VarChar(50)
   usuario_registro String?   @db.VarChar(150)
   creado_en        DateTime? @default(now()) @db.Timestamp(0)
+  uuid_cliente     String?   @unique(map: "uq_liq_uuid_cliente") @db.VarChar(36)
 
   @@index([fecha], map: "idx_liq_fecha")
   @@index([orden_viaje], map: "idx_liq_viaje")

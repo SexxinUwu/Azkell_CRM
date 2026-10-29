@@ -15,6 +15,7 @@ import App from './App';
 import { iniciarAcento } from './core/lib/accent';
 import { iniciarTema } from './core/lib/theme';
 import { aplicarPreferencias } from './core/lib/preferencias';
+import { iniciarColaGastos } from './modules/personas/portalConductorCola';
 
 iniciarTema(); // claro / oscuro / automático, antes de pintar
 iniciarAcento(); // color elegido, antes de pintar
@@ -31,7 +32,13 @@ const queryClient = new QueryClient({
   },
 });
 
-// Sin service worker propio por ahora: el de la versión actual (/sw.js) controla todo el dominio.
+// El service worker de la versión actual (/sw.js) controla todo el dominio. Se registra también desde /app
+// (es la misma ruta: el navegador no duplica el registro) para que la pantalla nueva abra sin señal.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(err => console.error('Error en Service Worker', err));
+}
+// Gastos del portal del conductor guardados sin señal: se envían al volver la conexión.
+iniciarColaGastos();
 
 // Si se publicó una versión nueva mientras la pestaña estaba abierta, el archivo de un módulo ya no existe.
 // Se recarga la página una vez (sin bucles) en vez de mostrar el error de carga.

@@ -4,6 +4,10 @@ const STATIC_CACHE = 'azkell-libs-v2';
 // Fotos de artículos (S3): la URL firmada cambia en cada consulta, por eso se guardan por su ruta sin la firma
 const IMG_CACHE = 'azkell-img-v1';
 const IMG_MAX = 600;
+// Pantalla nueva (/app) para usarla sin señal: archivos con hash y una copia del HTML de la última carga
+const APP_CACHE = 'azkell-app-v1';
+const APP_ASSETS_MAX = 300;
+const APP_SHELL = '/app/__shell';
 
 // Archivos de la app
 const APP_ASSETS = [
@@ -49,7 +53,7 @@ self.addEventListener('install', event => {
 
 // Activar: tomar control inmediato y limpiar versiones viejas
 self.addEventListener('activate', event => {
-  const keep = [CACHE_NAME, STATIC_CACHE, IMG_CACHE];
+  const keep = [CACHE_NAME, STATIC_CACHE, IMG_CACHE, APP_CACHE];
   event.waitUntil(
     caches.keys().then(names =>
       Promise.all(names.map(n => keep.includes(n) ? undefined : caches.delete(n)))
@@ -69,6 +73,33 @@ function fetchWithTimeout(request, timeoutMs = 2500) {
       reject(err);
     });
   });
+}
+
+// Archivos de compilación de /app (el nombre lleva hash: su contenido nunca cambia)
+function appArchivo(request) {
+  return caches.open(APP_CACHE).then(cache => cache.match(request).then(guardado => {
+    if (guardado) return guardado;
+    return fetch(request).then(resp => {
+      if (resp.status === 200) {
+        cache.put(request, resp.clone()).then(() => cache.keys()).then(ks => {
+          if (ks.length > APP_ASSETS_MAX) return Promise.all(ks.slice(0, ks.length - APP_ASSETS_MAX).map(k => cache.delete(k)));
+        }).catch(() => {});
+      }
+      return resp;
+    });
+  }));
+}
+
+// HTML de /app: es el mismo para todas las rutas (React resuelve la pantalla), así que basta una copia
+function appPantalla(request) {
+  const clave = self.location.origin + APP_SHELL;
+  return fetchWithTimeout(request, 3000).then(resp => {
+    if (resp.status === 200) {
+      const copia = resp.clone(); // antes de que el navegador empiece a leer el cuerpo
+      caches.open(APP_CACHE).then(c => c.put(clave, copia)).catch(() => {});
+    }
+    return resp;
+  }).catch(() => caches.open(APP_CACHE).then(c => c.match(clave)).then(copia => copia || Response.error()));
 }
 
 // Avisos en el teléfono (Web Push): muestra la notificación con el logo de la empresa
@@ -106,8 +137,12 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
-  // La app nueva (/app) no pasa por el service worker: su HTML y sus archivos con hash siempre vienen de la red
-  if (url.pathname.startsWith('/app')) return;
+  // App nueva (/app): archivos con hash → Cache First; pantallas → red primero y, sin señal, la última copia
+  if (url.pathname.startsWith('/app')) {
+    if (url.pathname.startsWith('/app/assets/')) event.respondWith(appArchivo(event.request));
+    else if (event.request.mode === 'navigate') event.respondWith(appPantalla(event.request));
+    return;
+  }
 
   // 0. Fotos de artículos en S3 → Cache First con clave sin la firma (cada foto se descarga una sola vez)
   if (event.request.destination === 'image' && /.amazonaws.com$/.test(url.hostname)) {

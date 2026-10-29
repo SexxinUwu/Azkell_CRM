@@ -1746,6 +1746,21 @@ module.exports = function (db, broadcast, logAudit) {
                 return res.status(400).json({ error: 'orden_viaje e importe requeridos' });
             }
 
+            // Gasto del portal del conductor sin señal: el teléfono manda un UUID por gasto.
+            // Si ya quedó registrado (reenvío tras perder la señal), no se vuelve a crear.
+            const uuidCliente = b.uuid_cliente ? String(b.uuid_cliente).trim() : null;
+            if (uuidCliente && !/^[0-9a-fA-F-]{36}$/.test(uuidCliente)) {
+                return res.status(400).json({ error: 'uuid_cliente no válido' });
+            }
+            const yaRegistrado = async () => {
+                const [previo] = await tdb.query('SELECT id FROM tesoreria_liquidaciones_gastos WHERE uuid_cliente = ? LIMIT 1', [uuidCliente]);
+                return previo && previo.length ? previo[0].id : null;
+            };
+            if (uuidCliente) {
+                const idPrevio = await yaRegistrado();
+                if (idPrevio) return res.json({ ok: true, id: idPrevio, duplicado: true, message: 'Gasto ya registrado' });
+            }
+
             let sustentoUrl = null;
             if (req.file) {
                 const f = req.file;
@@ -1757,13 +1772,12 @@ module.exports = function (db, broadcast, logAudit) {
                 sustentoUrl = await uploadToS3(f.buffer, key, mime);
             }
 
-            const [result] = await tdb.query(`
-                INSERT INTO tesoreria_liquidaciones_gastos (
-                    orden_viaje, fecha, conductor, tipo_gasto, sub_motivo,
-                    tipo_comprobante, serie, numero, proveedor_ruc, proveedor_nombre,
-                    detalle, importe, sustento_url, estado, usuario_registro
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
+            const columnas = [
+                'orden_viaje', 'fecha', 'conductor', 'tipo_gasto', 'sub_motivo',
+                'tipo_comprobante', 'serie', 'numero', 'proveedor_ruc', 'proveedor_nombre',
+                'detalle', 'importe', 'sustento_url', 'estado', 'usuario_registro'
+            ];
+            const valores = [
                 (b.orden_viaje || '').trim(),
                 safeDate(b.fecha) || new Date(),
                 (b.conductor || '').trim(),
@@ -1779,7 +1793,29 @@ module.exports = function (db, broadcast, logAudit) {
                 sustentoUrl,
                 (b.estado || 'APROBADO').trim(),
                 (req.user && req.user.nombre) ? req.user.nombre : (b.usuario_creacion || 'SISTEMA')
-            ]);
+            ];
+            if (uuidCliente) {
+                columnas.push('uuid_cliente');
+                valores.push(uuidCliente);
+                // Momento real del gasto (se registró sin señal), no el de la sincronización
+                const momento = b.registrado_en ? new Date(b.registrado_en) : null;
+                if (momento && !isNaN(momento)) { columnas.push('creado_en'); valores.push(momento); }
+            }
+
+            let result;
+            try {
+                [result] = await tdb.query(
+                    `INSERT INTO tesoreria_liquidaciones_gastos (${columnas.join(', ')}) VALUES (${columnas.map(() => '?').join(', ')})`,
+                    valores
+                );
+            } catch (errInsert) {
+                // Dos envíos del mismo gasto a la vez: el segundo choca con el UUID único
+                if (uuidCliente && errInsert.code === 'ER_DUP_ENTRY') {
+                    const idPrevio = await yaRegistrado();
+                    if (idPrevio) return res.json({ ok: true, id: idPrevio, duplicado: true, message: 'Gasto ya registrado' });
+                }
+                throw errInsert;
+            }
 
             await recalcularLiquidacionViaje(tdb, b.orden_viaje).catch(() => {});
             res.json({ ok: true, id: result.insertId, message: 'Gasto registrado con éxito' });
