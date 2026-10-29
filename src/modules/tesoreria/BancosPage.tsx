@@ -1,7 +1,7 @@
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, FileSpreadsheet, Landmark, Plus, SearchX, Trash2 } from 'lucide-react';
+import { FileSpreadsheet, Landmark, Plus, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
@@ -13,7 +13,6 @@ import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 import { BancNuevaCuenta, TIPOS_CUENTA } from './banc-NuevaCuenta';
 import { escribirTesoreria, fmtMonto, useBancos, type Banco } from './api';
 
@@ -79,7 +78,6 @@ export function BancosPage() {
           <>
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${visibles.length} cuentas`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('tesoreria/bancos') },
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setNuevo(true)}>Nueva cuenta</Button>}
           </>

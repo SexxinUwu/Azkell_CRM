@@ -1,7 +1,7 @@
 import { haptic } from '../../core/lib/haptics';
 import './mant.css';
 import { useMemo, useState } from 'react';
-import { AlertTriangle, ArrowUpRight, CheckCircle, Plus, SearchX, Wrench } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Plus, SearchX, Wrench } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -10,7 +10,6 @@ import { MenuOtros } from '../../core/ui/MenuOtros';
 import { Sheet } from '../../core/ui/Sheet';
 import { api, errorMessage } from '../../core/api/client';
 import './fallas.css';
-import { abrirClasico } from '../../core/layout/navigation';
 
 interface Falla {
   id: string | number;
@@ -138,7 +137,6 @@ export function FallasPage() {
         actions={
           <MenuOtros opciones={[
             { label: 'Reportar falla', icon: <Plus size={17} />, onSelect: () => { setMostrarForm(true); setMsg(null); } },
-            { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('mantenimiento/fallas') },
           ]} />
         }
       />

@@ -1,7 +1,7 @@
 import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CalendarCheck, CalendarOff, CheckCheck, CircleAlert, FileSpreadsheet, RefreshCw } from 'lucide-react';
+import { CalendarCheck, CalendarOff, CheckCheck, CircleAlert, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -12,7 +12,6 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 import './asistencia.css';
 
 interface Persona { id: number; numero_documento: string; nombres: string; apellidos: string; categoria_rol: string; cargo: string | null }
@@ -131,7 +130,6 @@ export function AsistenciaPage() {
             puedeEditar ? { label: 'Sincronizar con viajes', detalle: 'Conductores en ruta hoy', icon: <RefreshCw size={17} />, onSelect: sincronizar } : null,
             puedeEditar ? { label: 'Registrar licencia o vacaciones', icon: <CalendarOff size={17} />, onSelect: () => setLicencia(true) } : null,
             { label: 'Exportar Excel', detalle: `${MESES[mes - 1]} ${anio}`, icon: <FileSpreadsheet size={17} />, separado: true, onSelect: exportar },
-            { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('rrhh/asistencia') },
           ]} />
         }
       />

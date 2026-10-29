@@ -1,6 +1,6 @@
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
-import { ArrowUpRight, Shield, ShieldAlert, Truck } from 'lucide-react';
+import { Shield, ShieldAlert, Truck } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -110,7 +110,6 @@ export function SegPatrimonialPage() {
         actions={
           <MenuOtros opciones={[
             { label: 'Ver garita', icon: <Shield size={17} />, onSelect: () => abrirClasico('seguridad/unidades') },
-            { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('seguridad/patrimonial') },
           ]} />
         }
       />
