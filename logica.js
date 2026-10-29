@@ -7364,6 +7364,8 @@ window.abrirModalEnviarReporte = async function(opts = {}) {
     _murCargarDestinatariosSugeridos();
 
     window._murSetModo('ahora');
+    const tabProgramarEl = document.getElementById('mur-tab-programar');
+    if (tabProgramarEl) tabProgramarEl.style.display = opts.sinProgramar ? 'none' : '';
 
     if (typeof bootstrap !== 'undefined') {
         bootstrap.Modal.getOrCreateInstance(modalEl).show();

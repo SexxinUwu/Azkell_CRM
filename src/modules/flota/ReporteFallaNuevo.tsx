@@ -312,7 +312,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
       } else {
         const r = await api<{ ok?: boolean; error?: string; folio?: string }>('/mantenimiento/checklist', {
           method: 'POST',
-          body: { ...cuerpo, fecha_reporte: `${v.fecha || hoyLima()} ${ahora.slice(11)}`, falla_critica: critica, creado_por: user?.name ?? 'Sistema' },
+          body: { ...cuerpo, falla_critica: critica, creado_por: user?.name ?? 'Sistema' },
         });
         if (r.ok === false) throw new Error(r.error || 'No se pudo guardar el reporte');
         haptic('success'); toast(`Reporte ${r.folio ?? ''} registrado`);
@@ -450,7 +450,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
         <section className="ck-bloque">
           <p className="ck-bloque__titulo">Datos del reporte</p>
           <div className="form-grid">
-            <Field label="Fecha *">{p => <TextInput {...p} type="date" required value={v.fecha ?? ''} onChange={e => set('fecha', e.target.value)} />}</Field>
+            <Field label="Fecha de registro">{p => <TextInput {...p} type="date" readOnly value={v.fecha ?? hoyLima()} />}</Field>
             <Field label="Placa principal (tracto) *">{p => <TextInput {...p} list="rf-tractos" value={v.placa_tracto ?? ''} onChange={e => set('placa_tracto', e.target.value.toUpperCase())} />}</Field>
             <Field label="Placa semirremolque / carreta" hint="Opcional. Si se elige, se genera una OT independiente para esta unidad.">{p => <TextInput {...p} list="rf-remolques" value={v.placa_remolque ?? ''} onChange={e => set('placa_remolque', e.target.value.toUpperCase())} />}</Field>
             <Field label="Conductor *">{p => <TextInput {...p} value={v.conductor ?? ''} onChange={e => set('conductor', e.target.value)} />}</Field>
