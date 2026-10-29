@@ -1,28 +1,33 @@
-import { useEffect, useRef, useState } from 'react';
+import './checklist.css';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Camera, CircleAlert, Plus, X } from 'lucide-react';
+import { Camera, ChevronDown, CircleAlert, Link2, Plus, SearchX, Unlink, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
-import { Field, SelectInput, TextInput } from '../../core/ui/Field';
+import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
 import { usePlacas } from '../placas/api';
 import { Firma, type FirmaHandle } from '../inspecciones/Firma';
-import { useConfigSistemas, type ReporteFalla } from './api';
+import { useConfigSistemas, useVehiculosFlota, type ReporteFalla, type VehiculoFlota } from './api';
+import { estadoDeFecha, type EstadoDoc } from './docsEstado';
 import { leerFallas, textoItem, type FallaGuardada, type SistemaCfg } from './fman';
 
 interface Marca { obs: string }
 interface Viaje { id?: number | string; viaje?: string | null; conductor?: string | null; placa_remolque?: string | null; ruta?: string | null; origen?: string | null; destino?: string | null; fecha_viaje_fmt?: string | null }
 interface IngresoSeg { conductor?: string | null; placa_carreta?: string | null; procedencia?: string | null; destino?: string | null; zona?: string | null }
 interface Backlog { id: number | string; backlog_id?: string | null; tarea?: string | null; tema?: string | null; ticket_ot?: string | null }
+type Registro = Record<string, unknown>;
 
 const MAX_FOTOS = 5;
+const PLACA_VALIDA = /^[A-Z0-9-]{5,8}$/;
+const normalizar = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+const hoyLima = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 
-/** Reduce la foto a 1280 px de lado mayor, JPEG al 80 %: el reporte viaja como JSON.
- *  createImageBitmap decodifica fuera del hilo principal, así una foto de 12 MP no congela la pantalla. */
+/** Reduce la foto a 1280 px de lado mayor, JPEG al 80 %: el reporte viaja como JSON. */
 async function reducir(file: File): Promise<string> {
   let fuente: ImageBitmap | HTMLImageElement;
   let url: string | null = null;
@@ -48,85 +53,151 @@ async function reducir(file: File): Promise<string> {
 function marcasDe(lista: FallaGuardada[]) {
   const marcas: Record<string, Marca> = {};
   const conservar: FallaGuardada[] = [];
-  let manual = '';
+  const manuales: string[] = [];
   for (const f of lista) {
     if (f.backlog_id) { conservar.push(f); continue; }
-    if (f.sistema === 'MANUAL') { manual ||= String(f.obs ?? f.observacion ?? ''); continue; }
+    if (f.sistema === 'MANUAL') { manuales.push(String(f.obs ?? f.observacion ?? '')); continue; }
     const obs = String(f.obs ?? '');
     marcas[`${f.sistema ?? ''}||${f.item ?? ''}`] = { obs: obs === String(f.item ?? '') ? '' : obs };
   }
-  return { marcas, conservar, manual };
+  return { marcas, conservar, manuales };
 }
 
-// Registrar o editar un reporte de fallas: unidad, sistemas con falla, backlog pendiente, fotos y firma del conductor.
+/** Registro de Wialon de una placa (la lista trae placa, km, horas y ubicación) */
+function registroWialon(lista: Registro[] | undefined, placa: string): Registro | undefined {
+  const limpia = placa.replace(/[^A-Z0-9]/g, '');
+  return lista?.find(x => String(x.placa ?? '').replace(/[^A-Za-z0-9]/g, '').toUpperCase() === limpia);
+}
+
+async function registrosWialon(): Promise<Registro[]> {
+  const r = await api<unknown>('/script/obtenerDatosWialon', { method: 'POST', body: { args: [] } });
+  const obj = r as { data?: unknown } | null;
+  const anidado = (obj?.data as { data?: unknown } | undefined)?.data;
+  return (Array.isArray(obj) ? obj : Array.isArray(obj?.data) ? obj?.data : Array.isArray(anidado) ? anidado : []) as Registro[];
+}
+
+/** Bloque de documentos de la unidad (SOAT, revisión técnica e inspección), como en el clásico */
+function DocsUnidad({ titulo, vehiculo }: { titulo: string; vehiculo: VehiculoFlota | undefined }) {
+  const docs: Array<{ etiqueta: string; estado: EstadoDoc; fecha: string | null }> = [
+    { etiqueta: 'SOAT / Seguro', fecha: vehiculo?.soat_vencimiento ?? null, estado: estadoDeFecha(vehiculo?.soat_vencimiento) },
+    { etiqueta: 'Revisión técnica', fecha: vehiculo?.rt_vencimiento ?? null, estado: estadoDeFecha(vehiculo?.rt_vencimiento) },
+    { etiqueta: 'Inspección general', fecha: (vehiculo?.insp_vencimiento ?? vehiculo?.inspeccion_vencimiento ?? vehiculo?.fum_vencimiento ?? null) as string | null,
+      estado: estadoDeFecha((vehiculo?.insp_vencimiento ?? vehiculo?.inspeccion_vencimiento ?? vehiculo?.fum_vencimiento ?? null) as string | null) },
+  ];
+  return (
+    <div className="ck-bloque">
+      <p className="ck-bloque__titulo">{titulo}</p>
+      {docs.map(d => (
+        <div key={d.etiqueta} className="ck-doc">
+          <span>
+            <b>{d.etiqueta}</b>
+            <span style={{ display: 'block', color: 'var(--label-2)', fontSize: '0.75rem' }}>{d.fecha ? `Vence el ${d.fecha}` : 'Sin fecha registrada'}</span>
+          </span>
+          <span className="ck-doc__estado" style={{ color: d.estado.color }}>{d.estado.texto}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Registrar o editar un reporte de fallas, con las mismas secciones que el formulario del clásico.
 export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
   open: boolean; reporte?: ReporteFalla | null; onClose: () => void; onHecho: () => Promise<unknown>;
 }) {
   const toast = useToast();
   const { user } = useAuth();
   const placas = usePlacas();
+  const vehiculos = useVehiculosFlota();
   const firma = useRef<FirmaHandle>(null);
   const editando = !!reporte;
   // Un reporte finalizado o anulado no se consulta: no hay nada que completar
   const cerrado = !!reporte && /final|anula/i.test(String(reporte.estado ?? ''));
   const consultar = open && !cerrado;
+
   const [v, setV] = useState<Record<string, string>>({});
   const [fallasT, setFallasT] = useState<Record<string, Marca>>({});
   const [fallasR, setFallasR] = useState<Record<string, Marca>>({});
   const [conservarT, setConservarT] = useState<FallaGuardada[]>([]);
   const [conservarR, setConservarR] = useState<FallaGuardada[]>([]);
-  const [abierto, setAbierto] = useState<string | null>(null);
-  const [manual, setManual] = useState('');
+  const [manuales, setManuales] = useState<string[]>([]);
+  const [busqueda, setBusqueda] = useState('');
+  const [abiertos, setAbiertos] = useState<Record<string, true>>({});
   const [critica, setCritica] = useState(false);
   const [fotos, setFotos] = useState<string[]>([]);
   const [backlogSel, setBacklogSel] = useState<Record<string, true>>({});
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Viaje asociado: sugerencias por placa y búsqueda libre
+  const [viajeAbierto, setViajeAbierto] = useState(false);
+  const [qViaje, setQViaje] = useState('');
+  const [qViajeDeb, setQViajeDeb] = useState('');
+  const [viajes, setViajes] = useState<Viaje[]>([]);
+  const [viajeSel, setViajeSel] = useState('');
   // Conductores que sugiere cada fuente; si difieren se avisa y la persona elige
   const [condViaje, setCondViaje] = useState('');
   const [condSeg, setCondSeg] = useState('');
-  // Últimos viajes de la unidad para vincular la falla al correcto
-  const [viajes, setViajes] = useState<Viaje[]>([]);
-  const [viajeSel, setViajeSel] = useState('');
 
   const cfg = useConfigSistemas(open);
   const placaT = (v.placa_tracto ?? '').trim().toUpperCase();
+  const placaR = (v.placa_remolque ?? '').trim().toUpperCase();
+
   // Backlog pendiente de la unidad: se importa al reporte marcando lo que aplica
   const backlogs = useQuery<Backlog[]>({
-    queryKey: ['flota', 'backlog', placaT], enabled: open && placaT.length >= 5,
+    queryKey: ['flota', 'backlog', placaT], enabled: open && PLACA_VALIDA.test(placaT),
     queryFn: () => api<Backlog[]>(`/taller/ot-backlog?placa=${encodeURIComponent(placaT)}&estado=Pendiente`),
+    staleTime: 30_000,
+  });
+
+  // Kilometraje y horas desde Wialon (mismo origen que el clásico): solo si el campo sigue vacío
+  const wialon = useQuery<Registro[]>({
+    queryKey: ['flota', 'wialon-checklist'],
+    enabled: consultar && (PLACA_VALIDA.test(placaT) || PLACA_VALIDA.test(placaR)),
+    queryFn: registrosWialon, staleTime: 30_000,
+  });
+
+  // Búsqueda de viajes con texto (código, placa, conductor o ruta)
+  useEffect(() => {
+    const t = setTimeout(() => setQViajeDeb(qViaje), 300);
+    return () => clearTimeout(t);
+  }, [qViaje]);
+  const busquedaViajes = useQuery<Viaje[]>({
+    queryKey: ['flota', 'viajes-buscar', qViajeDeb],
+    enabled: open && viajeAbierto && qViajeDeb.trim().length >= 2,
+    queryFn: () => api<{ data?: Viaje[] }>(`/checklist/buscar-viajes?q=${encodeURIComponent(qViajeDeb.trim())}&limit=20`).then(r => r.data ?? []),
     staleTime: 30_000,
   });
 
   useEffect(() => {
     if (!open) return;
-    setError(null); setAbierto(null); setCritica(false); setFotos([]); setBacklogSel({});
+    setError(null); setBusqueda(''); setAbiertos({}); setCritica(false); setFotos([]); setBacklogSel({});
+    setViajeAbierto(false); setQViaje(''); setQViajeDeb('');
     firma.current?.limpiar();
     if (reporte) {
       const t = marcasDe(leerFallas(reporte.fallas_tracto_json));
       const r = marcasDe(leerFallas(reporte.fallas_remolque_json));
       setFallasT(t.marcas); setConservarT(t.conservar);
       setFallasR(r.marcas); setConservarR(r.conservar);
-      setManual(t.manual || r.manual);
+      setManuales([...t.manuales, ...r.manuales].filter(Boolean));
       setV({
+        fecha: String(reporte.fecha_reporte ?? '').slice(0, 10) || hoyLima(),
         placa_tracto: reporte.placa_tracto ?? '', placa_remolque: reporte.placa_remolque ?? '', orden_viaje: reporte.orden_viaje ?? '',
         conductor: reporte.conductor ?? '', km_inicial: reporte.km_inicial != null ? String(reporte.km_inicial) : '',
+        horas_motor: reporte.horas_motor != null ? String(reporte.horas_motor) : '',
         procedencia: reporte.procedencia ?? '', ubicacion_gps: reporte.ubicacion_gps ?? '',
       });
     } else {
-      setFallasT({}); setFallasR({}); setConservarT([]); setConservarR([]); setManual('');
-      setV({ placa_tracto: '', placa_remolque: '', orden_viaje: '', conductor: '', km_inicial: '', procedencia: '', ubicacion_gps: '' });
+      setFallasT({}); setFallasR({}); setConservarT([]); setConservarR([]); setManuales([]);
+      setV({ fecha: hoyLima(), placa_tracto: '', placa_remolque: '', orden_viaje: '', conductor: '', km_inicial: '', horas_motor: '', procedencia: '', ubicacion_gps: '' });
     }
   }, [open, reporte]);
 
   const set = (k: string, val: string) => setV(a => ({ ...a, [k]: val }));
 
-  // Al escribir la placa del tracto (reporte nuevo o pendiente en edición): se completa con el último ingreso de seguridad y el último viaje
-  // (como la versión actual). La orden de viaje manda sobre seguridad en el conductor; lo ya escrito (o guardado) no se pisa.
-  // En edición no se preselecciona ningún viaje: los datos solo cambian si la persona elige uno explícitamente.
+  // Al escribir la placa del tracto (reporte nuevo o pendiente en edición): se completa con el último ingreso de seguridad y el último viaje.
+  // La orden de viaje manda sobre seguridad en el conductor; lo ya escrito (o guardado) no se pisa.
   useEffect(() => {
     setCondViaje(''); setCondSeg(''); setViajes([]); setViajeSel('');
-    if (!consultar || !/^[A-Z0-9-]{5,8}$/.test(placaT)) return;
+    if (!consultar || !PLACA_VALIDA.test(placaT)) return;
     let vigente = true;
     const t = setTimeout(async () => {
       const q = encodeURIComponent(placaT);
@@ -155,32 +226,28 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
     return () => { vigente = false; clearTimeout(t); };
   }, [consultar, editando, placaT]);
 
-  // Último kilometraje GPS (Wialon, mismo origen que el checklist clásico): solo si el campo sigue vacío (también en edición,
-  // donde un kilometraje ya guardado no se pisa) y la placa no cambió.
+  // Kilometraje del tracto y horas de la carreta, leídos de Wialon cuando la placa es válida
   useEffect(() => {
-    if (!consultar || !/^[A-Z0-9-]{5,8}$/.test(placaT)) return;
-    let vigente = true;
-    const t = setTimeout(async () => {
-      try {
-        const r = await api<unknown>('/script/obtenerDatosWialon', { method: 'POST', body: { args: [] } });
-        const obj = r as { data?: unknown } | null;
-        const anidado = (obj?.data as { data?: unknown } | undefined)?.data;
-        const lista = (Array.isArray(obj) ? obj : Array.isArray(obj?.data) ? obj?.data : Array.isArray(anidado) ? anidado : []) as Array<Record<string, unknown>>;
-        const limpia = placaT.replace(/[^A-Z0-9]/g, '');
-        const g = lista.find(x => String(x.placa ?? '').replace(/[^A-Za-z0-9]/g, '').toUpperCase() === limpia);
-        const km = Math.round(Number(g?.km));
-        if (!vigente || !g || !Number.isFinite(km) || km <= 0) return;
-        setV(a => (a.placa_tracto ?? '').trim().toUpperCase() !== placaT || a.km_inicial ? a
-          : { ...a, km_inicial: String(km), ubicacion_gps: a.ubicacion_gps || String(g.ubicacion ?? '') });
-      } catch { /* sin GPS: el kilometraje se escribe a mano */ }
-    }, 600);
-    return () => { vigente = false; clearTimeout(t); };
-  }, [consultar, placaT]);
+    if (!consultar || !wialon.data || !PLACA_VALIDA.test(placaT)) return;
+    const g = registroWialon(wialon.data, placaT);
+    const km = Math.round(Number(g?.km));
+    if (!g || !Number.isFinite(km) || km <= 0) return;
+    setV(a => (a.placa_tracto ?? '').trim().toUpperCase() !== placaT || a.km_inicial ? a
+      : { ...a, km_inicial: String(km), ubicacion_gps: a.ubicacion_gps || String(g.ubicacion ?? '') });
+  }, [consultar, placaT, wialon.data]);
+
+  useEffect(() => {
+    if (!consultar || !wialon.data || !PLACA_VALIDA.test(placaR)) return;
+    const g = registroWialon(wialon.data, placaR);
+    const h = Math.round(Number(g?.horas_motor ?? g?.horas_wialon ?? g?.horas));
+    if (!g || !Number.isFinite(h) || h <= 0) return;
+    setV(a => (a.placa_remolque ?? '').trim().toUpperCase() !== placaR || a.horas_motor ? a : { ...a, horas_motor: String(h) });
+  }, [consultar, placaR, wialon.data]);
 
   // Elegir explícitamente un viaje: sí reemplaza orden, conductor, remolque y procedencia
-  function vincular(id: string) {
+  function vincular(id: string, lista: Viaje[]) {
     setViajeSel(id);
-    const x = viajes.find(w => String(w.id ?? w.viaje ?? '') === id);
+    const x = lista.find(w => String(w.id ?? w.viaje ?? '') === id);
     if (!x) return;
     setCondViaje((x.conductor ?? '').trim());
     setV(a => ({
@@ -190,13 +257,20 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
       placa_remolque: (x.placa_remolque || a.placa_remolque || '').toUpperCase(),
       procedencia: x.ruta || x.origen || a.procedencia,
     }));
+    haptic('selection');
   }
-  const viajeActual = viajes.find(w => String(w.id ?? w.viaje ?? '') === viajeSel);
+  const candidatosViaje = qViajeDeb.trim().length >= 2 ? (busquedaViajes.data ?? []) : viajes;
+  const viajeActual = [...viajes, ...(busquedaViajes.data ?? [])].find(w => String(w.id ?? w.viaje ?? '') === viajeSel);
+
   const tractos = (placas.data ?? []).filter(p => p.motora).map(p => p.placa);
   const remolques = (placas.data ?? []).filter(p => !p.motora).map(p => p.placa);
+  const vehTracto = useMemo(() => (vehiculos.data ?? []).find(x => normalizar(x.placa).replace(/[^A-Z0-9]/g, '') === placaT.replace(/[^A-Z0-9]/g, '')), [vehiculos.data, placaT]);
+  const vehRemolque = useMemo(() => (vehiculos.data ?? []).find(x => normalizar(x.placa).replace(/[^A-Z0-9]/g, '') === placaR.replace(/[^A-Z0-9]/g, '')), [vehiculos.data, placaR]);
+
   const seleccionados = (backlogs.data ?? []).filter(b => backlogSel[String(b.id)]);
-  const total = Object.keys(fallasT).length + Object.keys(fallasR).length + (manual.trim() ? 1 : 0)
-    + conservarT.length + conservarR.length + seleccionados.length;
+  const manualesLlenos = manuales.map(x => x.trim()).filter(Boolean);
+  const marcadas = Object.keys(fallasT).length + Object.keys(fallasR).length + manualesLlenos.length;
+  const total = marcadas + conservarT.length + conservarR.length + seleccionados.length;
 
   async function agregarFotos(files: FileList | null) {
     if (!files) return;
@@ -207,8 +281,8 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
   }
 
   async function guardar() {
-    if (!v.placa_tracto.trim()) { setError('Indica la placa del tracto.'); return; }
-    if (!v.conductor.trim()) { setError('Indica el conductor.'); return; }
+    if (!placaT) { setError('Indica la placa del tracto.'); return; }
+    if (!v.conductor?.trim()) { setError('Indica el conductor.'); return; }
     if (total === 0) { setError('Marca al menos una falla, importa un backlog o escribe una falla manual.'); return; }
     const ahora = new Date().toISOString().slice(0, 16).replace('T', ' ');
     const armar = (m: Record<string, Marca>) => Object.entries(m).map(([k, x]) => {
@@ -220,31 +294,25 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
       estado: 'FALLA', fecha: ahora, backlog_id: String(b.backlog_id || b.id),
     }));
     const fT: FallaGuardada[] = [...armar(fallasT), ...conservarT, ...importados];
-    if (manual.trim()) fT.push({ sistema: 'MANUAL', item: 'Falla manual', obs: manual.trim(), observacion: manual.trim(), estado: 'FALLA', fecha: ahora });
+    for (const m of manualesLlenos) fT.push({ sistema: 'MANUAL', item: 'Falla manual', obs: m, observacion: m, estado: 'FALLA', fecha: ahora });
     const fR = [...armar(fallasR), ...conservarR];
     const firmaNueva = firma.current && !firma.current.vacia() ? firma.current.obtener() : null;
     setEnviando(true); setError(null);
+    const cuerpo = {
+      orden_viaje: (v.orden_viaje ?? '').trim(), placa_tracto: placaT, placa_remolque: placaR,
+      km_inicial: v.km_inicial, km_final: v.km_inicial, horas_motor: v.horas_motor ?? '',
+      conductor: v.conductor.trim(), procedencia: v.procedencia, ubicacion_gps: v.ubicacion_gps,
+      fallas_tracto: fT, fallas_remolque: fR, fallas_libres_text: '', fotos_base64: fotos, firma_conductor: firmaNueva,
+    };
     try {
       if (editando) {
-        const r = await api<{ ok?: boolean; error?: string }>(`/mantenimiento/checklist/${reporte!.id}`, {
-          method: 'PUT',
-          body: {
-            orden_viaje: v.orden_viaje.trim(), placa_tracto: placaT, placa_remolque: v.placa_remolque.trim().toUpperCase(),
-            km_inicial: v.km_inicial, km_final: v.km_inicial, conductor: v.conductor.trim(), procedencia: v.procedencia, ubicacion_gps: v.ubicacion_gps,
-            fallas_tracto: fT, fallas_remolque: fR, fallas_libres_text: '', fotos_base64: fotos, firma_conductor: firmaNueva,
-          },
-        });
+        const r = await api<{ ok?: boolean; error?: string }>(`/mantenimiento/checklist/${reporte!.id}`, { method: 'PUT', body: cuerpo });
         if (r.ok === false) throw new Error(r.error || 'No se pudo guardar los cambios');
         haptic('success'); toast(`Reporte ${reporte!.folio} actualizado`);
       } else {
         const r = await api<{ ok?: boolean; error?: string; folio?: string }>('/mantenimiento/checklist', {
           method: 'POST',
-          body: {
-            orden_viaje: v.orden_viaje.trim(), fecha_reporte: ahora, placa_tracto: placaT, placa_remolque: v.placa_remolque.trim().toUpperCase(),
-            km_inicial: v.km_inicial, km_final: v.km_inicial, conductor: v.conductor.trim(), procedencia: v.procedencia, ubicacion_gps: v.ubicacion_gps,
-            fallas_tracto: fT, fallas_remolque: fR, fallas_libres_text: '', fotos_base64: fotos, falla_critica: critica,
-            firma_conductor: firmaNueva, creado_por: user?.name ?? 'Sistema',
-          },
+          body: { ...cuerpo, fecha_reporte: `${v.fecha || hoyLima()} ${ahora.slice(11)}`, falla_critica: critica, creado_por: user?.name ?? 'Sistema' },
         });
         if (r.ok === false) throw new Error(r.error || 'No se pudo guardar el reporte');
         haptic('success'); toast(`Reporte ${r.folio ?? ''} registrado`);
@@ -254,51 +322,120 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
     finally { setEnviando(false); }
   }
 
-  const bloque = (titulo: string, sistemas: SistemaCfg[], marcas: Record<string, Marca>, setMarcas: (f: (m: Record<string, Marca>) => Record<string, Marca>) => void, prefijo: string) => (
-    <div>
-      <p className="tarjeta__grupo-titulo">{titulo}</p>
-      <div className="tarjeta__lista">
-        {sistemas.map(s => {
-          const idg = `${prefijo}-${s.key}`;
-          const cuantas = s.items.filter(it => marcas[`${s.title}||${textoItem(it)}`]).length;
-          return (
-            <div key={idg}>
-              <button type="button" className="dato" style={{ flexDirection: 'row', width: '100%', textAlign: 'left', cursor: 'pointer', background: 'transparent', border: 0, alignItems: 'center' }}
-                onClick={() => setAbierto(abierto === idg ? null : idg)}>
-                <span className="dato__label" style={{ flex: 1, fontWeight: 600 }}>{s.title}</span>
-                {cuantas > 0 && <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--red-ink)' }}>{cuantas} con falla</span>}
-              </button>
-              {abierto === idg && s.items.map(it => {
-                const nombreItem = textoItem(it);
-                const k = `${s.title}||${nombreItem}`;
-                const m = marcas[k];
-                return (
-                  <div key={k} className="dato" style={{ gap: 'var(--s-1)' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', minHeight: 44, fontSize: '0.875rem', cursor: 'pointer' }}>
-                      <input type="checkbox" style={{ width: 22, height: 22, flexShrink: 0 }} checked={!!m} onChange={e => setMarcas(a => { const n2 = { ...a }; if (e.target.checked) n2[k] = { obs: '' }; else delete n2[k]; return n2; })} />
-                      <span style={{ color: m ? 'var(--red-ink)' : undefined, fontWeight: m ? 600 : 400 }}>{nombreItem}</span>
-                    </label>
-                    {m && <TextInput value={m.obs} placeholder="Describe la falla (opcional)" onChange={e => setMarcas(a => ({ ...a, [k]: { obs: e.target.value } }))} />}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+  const q = normalizar(busqueda.trim());
+  const coincide = (texto: string) => !q || normalizar(texto).includes(q);
 
+  // Sistemas de una unidad con sus ítems; con búsqueda activa solo se ven los que coinciden
+  function bloqueFallas(titulo: string, placa: string, sistemas: SistemaCfg[], marcas: Record<string, Marca>,
+    setMarcas: (f: (m: Record<string, Marca>) => Record<string, Marca>) => void, prefijo: string, tono: 'tracto' | 'remolque') {
+    const visibles = sistemas.map(s => {
+      const items = s.items.map(it => textoItem(it)).filter(n => coincide(`${s.title} ${n}`));
+      return { s, items };
+    }).filter(x => x.items.length > 0);
+    return (
+      <div className="ck-bloque">
+        <div className={`ck-bloque__cabeza ${tono}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--s-2)', padding: 'var(--s-3)', borderRadius: 'var(--r-md, 10px)', background: tono === 'tracto' ? 'var(--accent-tint, var(--fill))' : 'var(--amber-tint)', color: tono === 'tracto' ? 'var(--accent)' : 'var(--amber-ink)', fontWeight: 700 }}>
+          <span>{titulo}</span>
+          <span style={{ fontFamily: 'var(--font-mono)' }}>{placa || '—'}</span>
+        </div>
+        {visibles.length === 0 && <p className="t-footnote c-secondary">Sin coincidencias para la búsqueda en sistemas de {tono === 'tracto' ? 'Camión' : 'Carreta'}.</p>}
+        <div className="tarjeta__lista">
+          {visibles.map(({ s, items }) => {
+            const idg = `${prefijo}-${s.key}`;
+            const abierto = !!q || !!abiertos[idg];
+            const cuantas = s.items.filter(it => marcas[`${s.title}||${textoItem(it)}`]).length;
+            return (
+              <div key={idg}>
+                <button type="button" className="dato" style={{ flexDirection: 'row', width: '100%', textAlign: 'left', cursor: 'pointer', background: 'transparent', border: 0, alignItems: 'center' }}
+                  aria-expanded={abierto} onClick={() => { haptic('selection'); setAbiertos(a => { const n2 = { ...a }; if (n2[idg]) delete n2[idg]; else n2[idg] = true; return n2; }); }}>
+                  <span className="dato__label" style={{ flex: 1, fontWeight: 600 }}>{s.title}</span>
+                  {cuantas > 0 && <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--red-ink)' }}>{cuantas} con falla</span>}
+                  <ChevronDown size={16} style={{ transform: abierto ? 'rotate(180deg)' : undefined, transition: 'transform 160ms ease' }} />
+                </button>
+                {abierto && items.map(nombreItem => {
+                  const k = `${s.title}||${nombreItem}`;
+                  const m = marcas[k];
+                  return (
+                    <div key={k} className="dato" style={{ gap: 'var(--s-1)' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', minHeight: 44, fontSize: '0.875rem', cursor: 'pointer' }}>
+                        <input type="checkbox" style={{ width: 22, height: 22, flexShrink: 0 }} checked={!!m}
+                          onChange={e => { haptic('selection'); setMarcas(a => { const n2 = { ...a }; if (e.target.checked) n2[k] = { obs: '' }; else delete n2[k]; return n2; }); }} />
+                        <span style={{ color: m ? 'var(--red-ink)' : undefined, fontWeight: m ? 600 : 400 }}>{nombreItem}</span>
+                      </label>
+                      {m && <TextInput value={m.obs} placeholder="Describe la falla" aria-label={`Descripción de ${nombreItem}`}
+                        onChange={e => setMarcas(a => ({ ...a, [k]: { obs: e.target.value } }))} />}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  const chipsMarcadas = [
+    ...Object.keys(fallasT).map(k => ({ k, txt: k.replace('||', ': '), quitar: () => setFallasT(a => { const n2 = { ...a }; delete n2[k]; return n2; }) })),
+    ...Object.keys(fallasR).map(k => ({ k: `R${k}`, txt: `Carreta · ${k.replace('||', ': ')}`, quitar: () => setFallasR(a => { const n2 = { ...a }; delete n2[k]; return n2; }) })),
+  ];
   const pendientes = backlogs.data ?? [];
 
   return (
-    <Sheet open={open} onClose={() => !enviando && onClose()} title={editando ? `Editar reporte ${reporte!.folio}` : 'Nuevo reporte de fallas'}
+    <Sheet open={open} ancho onClose={() => !enviando && onClose()} title={editando ? `Editar reporte ${reporte!.folio}` : 'Nuevo Reporte de Fallas'}
       footer={<><Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
-        <Button variant="primary" onClick={guardar} loading={enviando}>{editando ? 'Guardar cambios' : 'Guardar reporte'}{total ? ` (${total})` : ''}</Button></>}>
+        <Button variant="primary" onClick={guardar} loading={enviando}>{editando ? 'Guardar cambios' : 'Guardar Reporte de Fallas'}{total ? ` (${total})` : ''}</Button></>}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
         {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
         <datalist id="rf-tractos">{tractos.map(x => <option key={x} value={x} />)}</datalist>
         <datalist id="rf-remolques">{remolques.map(x => <option key={x} value={x} />)}</datalist>
+
+        {/* 1. Viaje asociado (opcional) */}
+        <section className="ck-bloque">
+          <button type="button" className="dato" style={{ flexDirection: 'row', width: '100%', textAlign: 'left', cursor: 'pointer', background: 'transparent', border: 0, alignItems: 'center' }}
+            aria-expanded={viajeAbierto} onClick={() => setViajeAbierto(a => !a)}>
+            <span style={{ flex: 1 }}>
+              <span className="dato__label" style={{ fontWeight: 700 }}>Viaje asociado <span style={{ fontWeight: 400, color: 'var(--label-2)' }}>(opcional)</span></span>
+              <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--label-2)' }}>Vincula una orden de viaje para completar placas, conductor y procedencia</span>
+            </span>
+            <span className="chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Link2 size={14} /> {viajeAbierto ? 'Cerrar' : 'Vincular viaje'}</span>
+          </button>
+          {viajeAbierto && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+              <SearchField value={qViaje} onChange={setQViaje} placeholder="Código, placa, conductor o ruta" />
+              {candidatosViaje.length > 0 ? (
+                <div className="tarjeta__lista">
+                  {candidatosViaje.map(w => {
+                    const id = String(w.id ?? w.viaje ?? '');
+                    const activo = viajeSel === id;
+                    return (
+                      <button key={id} type="button" className="dato" aria-pressed={activo}
+                        style={{ flexDirection: 'row', width: '100%', textAlign: 'left', cursor: 'pointer', background: activo ? 'var(--accent-tint, var(--fill))' : 'transparent', border: 0, alignItems: 'center', gap: 'var(--s-2)' }}
+                        onClick={() => vincular(id, candidatosViaje)}>
+                        <span className="dato__valor" style={{ flex: 1, fontSize: '0.875rem' }}>
+                          <b>{w.viaje}</b>{' · '}{w.ruta || [w.origen, w.destino].filter(Boolean).join(' - ') || 'Sin ruta'}
+                          <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--label-2)' }}>{[w.conductor, w.placa_remolque, w.fecha_viaje_fmt].filter(Boolean).join(' · ')}</span>
+                        </span>
+                        {activo && <Link2 size={16} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="t-footnote c-secondary">{qViajeDeb.trim().length >= 2 ? 'Sin viajes para esa búsqueda.' : 'Escribe al menos 2 letras, o elige primero la placa del tracto para ver sus últimos viajes.'}</p>
+              )}
+              {viajeActual && (
+                <Notice tone="accent">
+                  Vinculado al viaje <b>{viajeActual.viaje}</b>{viajeActual.ruta ? ` · ${viajeActual.ruta}` : ''}
+                  <span style={{ display: 'block', marginTop: 'var(--s-2)' }}>
+                    <Button variant="secondary" icon={<Unlink size={16} />} onClick={() => { setViajeSel(''); set('orden_viaje', ''); }}>Quitar vinculación</Button>
+                  </span>
+                </Notice>
+              )}
+            </div>
+          )}
+        </section>
+
         {condViaje && condSeg && condViaje.toUpperCase() !== condSeg.toUpperCase() && (
           <Notice tone="accent">
             La orden de viaje indica <b>{condViaje}</b> y seguridad registra <b>{condSeg}</b> como último ingreso.
@@ -308,63 +445,98 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
             </span>
           </Notice>
         )}
-        {viajes.length > 0 && (
-          <Field label={`Viaje de la unidad (${viajes.length} más recientes)`} wide>
-            {p => (
-              <SelectInput {...p} value={viajeSel} onChange={e => vincular(e.target.value)}>
-                {!viajeSel && <option value="">Elegir un viaje para vincular…</option>}
-                {viajes.map(w => {
-                  const id = String(w.id ?? w.viaje ?? '');
-                  return <option key={id} value={id}>{[w.viaje, w.ruta || [w.origen, w.destino].filter(Boolean).join(' - '), w.conductor, w.placa_remolque, w.fecha_viaje_fmt].filter(Boolean).join(' · ')}</option>;
-                })}
-              </SelectInput>
-            )}
-          </Field>
-        )}
-        {viajeActual && v.orden_viaje === viajeActual.viaje && (
-          <Notice tone="accent">
-            Vinculado al viaje <b>{viajeActual.viaje}</b>{viajeActual.ruta ? ` · ${viajeActual.ruta}` : ''}{viajeActual.conductor ? ` · ${viajeActual.conductor}` : ''}{viajeActual.fecha_viaje_fmt ? ` · ${viajeActual.fecha_viaje_fmt}` : ''}
-          </Notice>
-        )}
-        <div className="form-grid">
-          <Field label="Tracto">{p => <TextInput {...p} list="rf-tractos" value={v.placa_tracto ?? ''} onChange={e => set('placa_tracto', e.target.value.toUpperCase())} />}</Field>
-          <Field label="Remolque">{p => <TextInput {...p} list="rf-remolques" value={v.placa_remolque ?? ''} onChange={e => set('placa_remolque', e.target.value.toUpperCase())} />}</Field>
-          <Field label="Conductor" wide>{p => <TextInput {...p} value={v.conductor ?? ''} onChange={e => set('conductor', e.target.value)} />}</Field>
-          <Field label="Orden de viaje">{p => <TextInput {...p} value={v.orden_viaje ?? ''} onChange={e => set('orden_viaje', e.target.value)} />}</Field>
-          <Field label="Kilometraje">{p => <TextInput {...p} inputMode="numeric" value={v.km_inicial ?? ''} onChange={e => set('km_inicial', e.target.value.replace(/\D/g, ''))} />}</Field>
-          <Field label="Procedencia">{p => <TextInput {...p} value={v.procedencia ?? ''} onChange={e => set('procedencia', e.target.value)} />}</Field>
-          <Field label="Ubicación">{p => <TextInput {...p} value={v.ubicacion_gps ?? ''} onChange={e => set('ubicacion_gps', e.target.value)} />}</Field>
-        </div>
 
-        {pendientes.length > 0 && (
-          <div>
-            <p className="tarjeta__grupo-titulo">Backlog pendiente de la unidad ({pendientes.length})</p>
-            <div className="tarjeta__lista">
-              {pendientes.map(b => (
-                <label key={String(b.id)} className="dato" style={{ flexDirection: 'row', alignItems: 'center', gap: 'var(--s-2)', minHeight: 44, cursor: 'pointer' }}>
-                  <input type="checkbox" style={{ width: 22, height: 22, flexShrink: 0 }} checked={!!backlogSel[String(b.id)]}
-                    onChange={e => setBacklogSel(a => { const n2 = { ...a }; if (e.target.checked) n2[String(b.id)] = true; else delete n2[String(b.id)]; return n2; })} />
-                  <span className="dato__valor" style={{ flex: 1, fontSize: '0.875rem' }}>
-                    {b.tarea || b.tema || 'Sin descripción'}
-                    <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--label-2)' }}>{b.backlog_id || `Backlog ${b.id}`}{b.ticket_ot ? ` · ${b.ticket_ot}` : ''}</span>
-                  </span>
-                </label>
+        {/* 2. Datos del reporte */}
+        <section className="ck-bloque">
+          <p className="ck-bloque__titulo">Datos del reporte</p>
+          <div className="form-grid">
+            <Field label="Fecha *">{p => <TextInput {...p} type="date" required value={v.fecha ?? ''} onChange={e => set('fecha', e.target.value)} />}</Field>
+            <Field label="Placa principal (tracto) *">{p => <TextInput {...p} list="rf-tractos" value={v.placa_tracto ?? ''} onChange={e => set('placa_tracto', e.target.value.toUpperCase())} />}</Field>
+            <Field label="Placa semirremolque / carreta" hint="Opcional. Si se elige, se genera una OT independiente para esta unidad.">{p => <TextInput {...p} list="rf-remolques" value={v.placa_remolque ?? ''} onChange={e => set('placa_remolque', e.target.value.toUpperCase())} />}</Field>
+            <Field label="Conductor *">{p => <TextInput {...p} value={v.conductor ?? ''} onChange={e => set('conductor', e.target.value)} />}</Field>
+            <Field label="Procedencia" wide>{p => <TextInput {...p} value={v.procedencia ?? ''} onChange={e => set('procedencia', e.target.value)} />}</Field>
+          </div>
+          {PLACA_VALIDA.test(placaT) && <DocsUnidad titulo={`Documentos e inspección · Camión (${placaT})`} vehiculo={vehTracto} />}
+          {PLACA_VALIDA.test(placaR) && <DocsUnidad titulo={`Documentos e inspección · Carreta (${placaR})`} vehiculo={vehRemolque} />}
+        </section>
+
+        {/* 3. GPS / kilometraje / horas de motor */}
+        <section className="ck-bloque">
+          <p className="ck-bloque__titulo">GPS / kilometraje / horas de motor</p>
+          <p className="t-footnote c-secondary">Se intenta leer desde el GPS (Wialon) al elegir la placa. Si no hay dato, completa a mano.</p>
+          <div className="form-grid">
+            <Field label="Kilometraje (camión)">{p => <TextInput {...p} inputMode="numeric" value={v.km_inicial ?? ''} onChange={e => set('km_inicial', e.target.value.replace(/\D/g, ''))} />}</Field>
+            <Field label="Horas de motor (carreta / termoking)">{p => <TextInput {...p} inputMode="numeric" value={v.horas_motor ?? ''} onChange={e => set('horas_motor', e.target.value.replace(/\D/g, ''))} />}</Field>
+          </div>
+        </section>
+
+        {/* 4. Fallas encontradas */}
+        <section className="ck-bloque">
+          <p className="ck-bloque__titulo">Fallas encontradas</p>
+          <p className="t-footnote c-secondary">Marca solo lo que está fallando: al marcarlo se abre el espacio para describirlo.</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 14rem' }}>
+              <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar por sistema o ítem" />
+            </div>
+            <span className="chip" aria-live="polite">{marcadas} {marcadas === 1 ? 'falla marcada' : 'fallas marcadas'}</span>
+          </div>
+          {chipsMarcadas.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)' }}>
+              {chipsMarcadas.map(c => (
+                <span key={c.k} className="chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  {c.txt}
+                  <button type="button" aria-label={`Quitar ${c.txt}`} onClick={c.quitar} style={{ border: 0, background: 'transparent', padding: 0, cursor: 'pointer', color: 'inherit', display: 'grid', placeItems: 'center' }}><X size={14} /></button>
+                </span>
               ))}
             </div>
+          )}
+          {cfg.isLoading ? <p className="t-footnote c-secondary">Cargando sistemas…</p> : cfg.isError ? <Notice tone="error">No se pudo cargar la configuración de sistemas.</Notice> : (
+            <>
+              {bloqueFallas('TRACTO (Placa principal)', placaT, cfg.data?.tracto ?? [], fallasT, setFallasT, 'T', 'tracto')}
+              {placaR && bloqueFallas('SEMIRREMOLQUE / CARRETA (Placa secundaria)', placaR, cfg.data?.remolque ?? [], fallasR, setFallasR, 'R', 'remolque')}
+            </>
+          )}
+          {q && <span className="t-footnote c-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><SearchX size={14} /> Mostrando solo coincidencias</span>}
+
+          {pendientes.length > 0 && (
+            <div className="ck-bloque">
+              <p className="ck-bloque__titulo">Backlog pendiente en taller ({pendientes.length})</p>
+              <div className="tarjeta__lista">
+                {pendientes.map(b => (
+                  <label key={String(b.id)} className="dato" style={{ flexDirection: 'row', alignItems: 'center', gap: 'var(--s-2)', minHeight: 44, cursor: 'pointer' }}>
+                    <input type="checkbox" style={{ width: 22, height: 22, flexShrink: 0 }} checked={!!backlogSel[String(b.id)]}
+                      onChange={e => setBacklogSel(a => { const n2 = { ...a }; if (e.target.checked) n2[String(b.id)] = true; else delete n2[String(b.id)]; return n2; })} />
+                    <span className="dato__valor" style={{ flex: 1, fontSize: '0.875rem' }}>
+                      {b.tarea || b.tema || 'Sin descripción'}
+                      <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--label-2)' }}>{b.backlog_id || `Backlog ${b.id}`}{b.ticket_ot ? ` · ${b.ticket_ot}` : ''}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="ck-bloque">
+            <p className="ck-bloque__titulo">¿No encuentras el ítem? Agrégalo aquí manualmente</p>
+            {manuales.map((m, i) => (
+              <div key={i} style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center' }}>
+                <div style={{ flex: 1 }}>
+                  <TextInput value={m} placeholder="Describe la falla" aria-label={`Falla manual ${i + 1}`}
+                    onChange={e => setManuales(a => a.map((x, j) => (j === i ? e.target.value : x)))} />
+                </div>
+                <Button variant="secondary" iconOnly aria-label="Quitar falla manual" icon={<X size={16} />}
+                  onClick={() => setManuales(a => a.filter((_, j) => j !== i))} />
+              </div>
+            ))}
+            <div>
+              <Button variant="secondary" icon={<Plus size={16} />} onClick={() => setManuales(a => [...a, ''])}>Agregar otra falla</Button>
+            </div>
           </div>
-        )}
+        </section>
 
-        {cfg.isLoading ? <p className="t-footnote c-secondary">Cargando sistemas…</p> : cfg.isError ? <Notice tone="error">No se pudo cargar la configuración de sistemas.</Notice> : (
-          <>
-            {bloque('Fallas del tracto', cfg.data?.tracto ?? [], fallasT, setFallasT, 'T')}
-            {v.placa_remolque && bloque('Fallas del remolque', cfg.data?.remolque ?? [], fallasR, setFallasR, 'R')}
-          </>
-        )}
-
-        <Field label="Otra falla (texto libre)" wide>{p => <TextInput {...p} value={manual} onChange={e => setManual(e.target.value)} placeholder="Algo que no está en las listas" />}</Field>
-
-        <div>
-          <p className="tarjeta__grupo-titulo">Fotos ({fotos.length}/{MAX_FOTOS}){editando ? ' · las anteriores se conservan' : ''}</p>
+        {/* 5. Evidencia fotográfica y firma */}
+        <section className="ck-bloque">
+          <p className="ck-bloque__titulo">Evidencia fotográfica{editando ? ' · las anteriores se conservan' : ''} ({fotos.length}/{MAX_FOTOS})</p>
           <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
             {fotos.map((f, i) => (
               <div key={i} style={{ position: 'relative' }}>
@@ -382,12 +554,13 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
               </label>
             )}
           </div>
-        </div>
+        </section>
 
-        <div>
-          <p className="tarjeta__grupo-titulo">Firma del conductor{editando && reporte?.firma_conductor ? ' · dibuja una nueva para reemplazarla' : ''}</p>
+        <section className="ck-bloque">
+          <p className="ck-bloque__titulo">Firma digital del conductor{editando && reporte?.firma_conductor ? ' · dibuja una nueva para reemplazarla' : ''}</p>
           <Firma ref={firma} />
-        </div>
+        </section>
+
         {!editando && (
           <label style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--s-3)', minHeight: 44, padding: 'var(--s-3)', borderRadius: 'var(--r-lg)', cursor: 'pointer', background: critica ? 'var(--red-tint)' : 'var(--fill-subtle)' }}>
             <input type="checkbox" checked={critica} onChange={e => setCritica(e.target.checked)} style={{ width: 22, height: 22, flexShrink: 0, marginTop: 2 }} />
