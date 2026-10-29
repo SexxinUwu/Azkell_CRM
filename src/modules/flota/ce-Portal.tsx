@@ -5,6 +5,7 @@ import { Badge, Notice } from '../../core/ui/Display';
 import { errorMessage } from '../../core/api/client';
 import { formatQuantity, initials } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
+import { TarjetaVolteable } from '../../core/ui/TarjetaVolteable';
 
 /** Cifras de una empresa tal como las devuelve GET /seguridad/entrega-vehiculos/stats */
 export interface EmpresaEntrega {
@@ -74,34 +75,62 @@ export function CePortal({ usuario, stats, cargando, error, actualizando, onEleg
           {empresas.map((e, i) => {
             const pal = PALETAS[i % PALETAS.length];
             return (
-              <button key={e.empresa} type="button" className="cep-emp pressable" onClick={() => { haptic('selection'); onElegir(e.empresa); }}>
-                <div className="cep-emp__top">
-                  <span className="cep-emp__icono" style={{ background: pal.bg, color: pal.color }}><pal.Icono size={20} /></span>
-                  <Badge>{formatQuantity(e.total_flota || 0)} motoras</Badge>
-                </div>
-                <div>
-                  <h3 className="cep-emp__nombre">{e.empresa}</h3>
-                  <p className="cep-emp__sub">Gestión de entrega de unidades {e.empresa}</p>
-                </div>
-                <CifrasEmpresa actas={e.total_actas} hoy={e.hoy} flota={e.total_flota} />
-                <span className="cep-emp__accion"><ClipboardCheck size={17} /> Gestionar CheckList →</span>
-              </button>
+              <TarjetaVolteable
+                key={e.empresa}
+                frente={
+                  <>
+                    <div className="cep-emp__top">
+                      <span className="cep-emp__icono" style={{ background: pal.bg, color: pal.color }}><pal.Icono size={20} /></span>
+                      <Badge>{formatQuantity(e.total_flota || 0)} motoras</Badge>
+                    </div>
+                    <div>
+                      <h3 className="cep-emp__nombre">{e.empresa}</h3>
+                      <p className="cep-emp__sub">Gestión de entrega de unidades {e.empresa}</p>
+                    </div>
+                    <CifrasEmpresa actas={e.total_actas} hoy={e.hoy} flota={e.total_flota} />
+                  </>
+                }
+                dorso={
+                  <>
+                    <span className="cep-emp__icono" style={{ background: pal.bg, color: pal.color }}><pal.Icono size={22} /></span>
+                    <h3 className="cep-emp__nombre">{e.empresa}</h3>
+                    <Button variant="primary" className="tv-dorso__boton" icon={<ClipboardCheck size={16} />}
+                      onClick={() => { haptic('selection'); onElegir(e.empresa); }}>
+                      Gestionar CheckList →
+                    </Button>
+                  </>
+                }
+              />
             );
           })}
 
           {global && (
-            <button type="button" className="cep-emp cep-emp--global pressable" onClick={() => { haptic('selection'); onElegir('TODAS'); }}>
-              <div className="cep-emp__top">
-                <span className="cep-emp__icono" style={{ background: '#334155', color: '#fff' }}><Globe2 size={20} /></span>
-                <Badge tone="ink">Consolidado</Badge>
-              </div>
-              <div>
-                <h3 className="cep-emp__nombre">Todas las empresas</h3>
-                <p className="cep-emp__sub">Vista general combinada de todas las empresas de la flota</p>
-              </div>
-              <CifrasEmpresa actas={global.total_actas} hoy={global.hoy} flota={global.total_flota} etiquetaFlota="Total motoras" />
-              <span className="cep-emp__accion"><Eye size={17} /> Ver flota global →</span>
-            </button>
+            <TarjetaVolteable
+              tono="global"
+              frente={
+                <>
+                  <div className="cep-emp__top">
+                    <span className="cep-emp__icono" style={{ background: '#334155', color: '#fff' }}><Globe2 size={20} /></span>
+                    <Badge tone="ink">Consolidado</Badge>
+                  </div>
+                  <div>
+                    <h3 className="cep-emp__nombre">Todas las empresas</h3>
+                    <p className="cep-emp__sub">Vista general combinada de todas las empresas de la flota</p>
+                  </div>
+                  <CifrasEmpresa actas={global.total_actas} hoy={global.hoy} flota={global.total_flota} etiquetaFlota="Total motoras" />
+                </>
+              }
+              dorso={
+                <>
+                  <span className="cep-emp__icono" style={{ background: '#334155', color: '#fff' }}><Globe2 size={22} /></span>
+                  <h3 className="cep-emp__nombre">Todas las empresas</h3>
+                  <Button variant="secondary" className="tv-dorso__boton" icon={<Eye size={16} />}
+                    onClick={() => { haptic('selection'); onElegir('TODAS'); }}>
+                    Ver flota global →
+                  </Button>
+                </>
+              }
+            />
           )}
         </div>
       )}
