@@ -173,20 +173,82 @@ module.exports = (db) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  // QR para vincular el WhatsApp de la empresa (la instancia se conecta desde el teléfono)
+  // QR y contactos para vincular el WhatsApp de la empresa y roles de aprobación
   router.get('/notificaciones/whatsapp/qr', async (req, res) => {
+    const pool = req.db || db;
     const base = (process.env.EVOLUTION_API_URL || 'http://82.39.109.226:8085').replace(/\/$/, '');
     const key = process.env.EVOLUTION_API_KEY || 'AZKELL_ERP_WA_SECRET_2026';
     const inst = (req.tenantSlug && !['admin', 'master', 'localhost'].includes(req.tenantSlug))
       ? `${req.tenantSlug}_bot`
       : (process.env.EVOLUTION_INSTANCE || 'marsisa_bot');
+
+    let extraInfo = {
+      instance: inst,
+      empresa_nombre: (req.tenantInfo && req.tenantInfo.nombre_empresa) || 'MARSISA S.A.C.',
+      receptor_telefono: process.env.GERENCIA_WHATSAPP || '',
+      receptor_nombre: 'Gerencia General',
+      tesoreria_telefono: process.env.TESORERIA_WHATSAPP || '',
+      tesoreria_nombre: 'Tesorería / Pagos',
+      almacen_telefono: process.env.ALMACEN_WHATSAPP || '',
+      almacen_nombre: 'Almacén / Logística',
+    };
+
+    try {
+      const cfg = await leerClaves(pool, [
+        'empresa_nombre', 'gerencia_whatsapp', 'aprobador_whatsapp', 'gerencia_nombre',
+        'tesoreria_whatsapp', 'tesoreria_nombre', 'almacen_whatsapp', 'almacen_nombre'
+      ]);
+      if (cfg.empresa_nombre) extraInfo.empresa_nombre = cfg.empresa_nombre;
+      if (cfg.gerencia_whatsapp || cfg.aprobador_whatsapp) extraInfo.receptor_telefono = cfg.gerencia_whatsapp || cfg.aprobador_whatsapp;
+      if (cfg.gerencia_nombre) extraInfo.receptor_nombre = cfg.gerencia_nombre;
+      if (cfg.tesoreria_whatsapp) extraInfo.tesoreria_telefono = cfg.tesoreria_whatsapp;
+      if (cfg.tesoreria_nombre) extraInfo.tesoreria_nombre = cfg.tesoreria_nombre;
+      if (cfg.almacen_whatsapp) extraInfo.almacen_telefono = cfg.almacen_whatsapp;
+      if (cfg.almacen_nombre) extraInfo.almacen_nombre = cfg.almacen_nombre;
+    } catch {}
+
     try {
       const r = await fetch(`${base}/instance/connect/${encodeURIComponent(inst)}`, { headers: { apikey: key } });
       const j = await r.json().catch(() => ({}));
-      if (j?.instance?.state === 'open') return res.json({ conectado: true, instancia: inst });
-      res.json({ conectado: false, instancia: inst, qr: j.base64 || null, codigo: j.code || j.pairingCode || null });
+      if (j?.instance?.state === 'open') {
+        return res.json({ status: 'CONNECTED', conectado: true, instancia: inst, ...extraInfo });
+      }
+      res.json({
+        status: 'DISCONNECTED',
+        conectado: false,
+        instancia: inst,
+        qr: j.base64 || null,
+        base64: j.base64 || null,
+        codigo: j.code || j.pairingCode || null,
+        ...extraInfo
+      });
     } catch (e) {
-      res.status(502).json({ error: e.message });
+      res.status(502).json({ error: e.message, ...extraInfo });
+    }
+  });
+
+  router.post('/notificaciones/whatsapp/config-receptor', async (req, res) => {
+    const pool = req.db || db;
+    const { telefono, nombre, tesoreria_telefono, tesoreria_nombre, almacen_telefono, almacen_nombre } = req.body || {};
+    try {
+      if (telefono !== undefined) await guardarClave(pool, 'gerencia_whatsapp', String(telefono || '').trim());
+      if (nombre !== undefined) await guardarClave(pool, 'gerencia_nombre', String(nombre || '').trim());
+      if (tesoreria_telefono !== undefined) await guardarClave(pool, 'tesoreria_whatsapp', String(tesoreria_telefono || '').trim());
+      if (tesoreria_nombre !== undefined) await guardarClave(pool, 'tesoreria_nombre', String(tesoreria_nombre || '').trim());
+      if (almacen_telefono !== undefined) await guardarClave(pool, 'almacen_whatsapp', String(almacen_telefono || '').trim());
+      if (almacen_nombre !== undefined) await guardarClave(pool, 'almacen_nombre', String(almacen_nombre || '').trim());
+
+      audit(pool, actorFrom(req), {
+        action: 'UPDATE',
+        entity: 'whatsapp-config',
+        entityId: 'receptores',
+        summary: `Actualizados contactos WhatsApp: Gerencia (${nombre || telefono || '—'}), Tesorería (${tesoreria_nombre || tesoreria_telefono || '—'}), Almacén (${almacen_nombre || almacen_telefono || '—'})`,
+        changes: null
+      });
+
+      res.json({ success: true, message: 'Contactos de WhatsApp guardados exitosamente.' });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
     }
   });
 
