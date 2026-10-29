@@ -364,8 +364,9 @@ app.get(['/manifest.json', '/manifest.webmanifest'], async (req, res) => {
             description: `Sistema ERP de Gestión de Flota y Mantenimiento — ${cleanName}`,
             start_url: '/',
             display: 'standalone',
-            background_color: '#0f172a',
-            theme_color: '#0f172a',
+            // Claro: la pantalla de inicio y la barra de la app se ven como el logo, no oscuras
+            background_color: '#ffffff',
+            theme_color: '#ffffff',
             orientation: 'any',
             icons: [
                 {
@@ -5075,14 +5076,14 @@ app.get('/qr-whatsapp', (req, res) => {
 app.get('/api/whatsapp/qr', async (req, res) => {
     try {
         const { ensureInstanceExists } = require('./services/whatsappService');
-        const evoUrl = process.env.EVOLUTION_API_URL || 'http://82.39.109.226:8085';
-        const evoKey = process.env.EVOLUTION_API_KEY;
+        const evoUrl = (process.env.EVOLUTION_API_URL || 'http://82.39.109.226:8085').replace(/\/$/, '');
+        const evoKey = process.env.EVOLUTION_API_KEY || 'AZKELL_ERP_WA_SECRET_2026';
         
         // Modelo A: Instancia por cada empresa / tenant (ej: marsisa_bot)
         const tenantSlug = req.tenantSlug || (req.headers.host ? req.headers.host.split('.')[0] : null);
-        const evoInstance = (tenantSlug && !['admin', 'master', 'localhost', '82'].includes(tenantSlug)) 
+        const evoInstance = (tenantSlug && !['admin', 'master', 'localhost', '82', 'app', 'azkell'].includes(tenantSlug)) 
             ? `${tenantSlug}_bot` 
-            : (process.env.EVOLUTION_INSTANCE || 'azkell_erp_bot');
+            : (process.env.EVOLUTION_INSTANCE || 'marsisa_bot');
 
         // Asegurar que la instancia de esta empresa esté creada en Evolution API
         await ensureInstanceExists(evoInstance);
