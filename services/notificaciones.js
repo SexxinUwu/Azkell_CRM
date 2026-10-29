@@ -26,8 +26,8 @@ const URL_EVENTO = {
 /** Eventos del ERP que pueden disparar una notificación, con su canal por defecto */
 const EVENTOS = [
   { evento: 'oc_aprobacion', titulo: 'Aprobación de orden de compra', detalle: 'Aviso adicional cuando hay una OC por aprobar (correo, WhatsApp o avisos en el teléfono). Al aprobador ya le llega el WhatsApp con el enlace para aprobar, y no se le repite.', canales: ['whatsapp'], destinatarios: process.env.GERENCIA_WHATSAPP || '' },
-  { evento: 'oc_pagar', titulo: 'Orden de compra aprobada: pagar', detalle: 'Avisa a Tesorería cuando una OC queda aprobada, con el monto y la cuenta del proveedor. Destinatarios: correos de los usuarios de Tesorería.', canales: ['push'], destinatarios: '' },
-  { evento: 'oc_voucher', titulo: 'Comprobante de pago de OC', detalle: 'Avisa a Almacén cuando Tesorería sube el voucher de una OC. Destinatarios: correos de los usuarios de Almacén.', canales: ['push'], destinatarios: '' },
+  { evento: 'oc_pagar', titulo: 'Orden de compra aprobada: pagar', detalle: 'Avisa a Tesorería cuando una OC queda aprobada, con el monto y la cuenta del proveedor. Llega a todos los usuarios con permiso de Tesorería; los destinatarios adicionales son opcionales.', canales: ['push'], destinatarios: '' },
+  { evento: 'oc_voucher', titulo: 'Comprobante de pago de OC', detalle: 'Avisa a Almacén cuando Tesorería registra el pago de una OC. Llega a todos los usuarios con permiso de Almacén; los destinatarios adicionales son opcionales.', canales: ['push'], destinatarios: '' },
   { evento: 'flota_vencimiento', titulo: 'Vencimiento de documentos de flota', detalle: 'Avisa a operaciones de documentos por vencer.', canales: ['email', 'whatsapp'], destinatarios: '' },
   { evento: 'ot_fin_rampa', titulo: 'Fin de OT o salida de rampa', detalle: 'Avisa a operaciones cuando una unidad sale de taller.', canales: ['whatsapp'], destinatarios: '' },
   { evento: 'checklist_critico', titulo: 'Alerta crítica de checklist', detalle: 'Avisa de fallas críticas detectadas por un conductor.', canales: ['sms', 'whatsapp'], destinatarios: '' },
@@ -221,6 +221,50 @@ async function smsConfigurado(db) {
   return false;
 }
 
+// ── Destinatarios automáticos del canal «Teléfono (app)» ─────────────────────
+// Quién recibe cada aviso lo decide el permiso del usuario (rol + permisos propios), igual que el inicio de sesión.
+const PERMISO_AVISO = {
+  oc_aprobacion: { modulos: ['gerencia_aprobaciones_oc'], accion: 'e' },   // aprobadores (Gerencia)
+  oc_pagar: { modulos: ['tesoreria_pagos', 'tesoreria_caja'], accion: 'l' }, // Tesorería
+  oc_voucher: { modulos: ['ent_inv', 'rec_compras'], accion: 'l' },          // Almacén / logística
+};
+
+function permisosDe(u) {
+  const aJson = (v) => { try { return typeof v === 'string' ? JSON.parse(v || '{}') : (v || {}); } catch (_) { return {}; } };
+  const rol = aJson(u.rol_permisos);
+  const propios = aJson(u.permisos_json);
+  const merged = { ...rol };
+  for (const k of Object.keys(propios)) {
+    if (!merged[k]) merged[k] = propios[k];
+    else if (typeof propios[k] === 'object' && typeof merged[k] === 'object') merged[k] = { ...merged[k], ...propios[k] };
+  }
+  return merged;
+}
+
+function tienePermiso(permisos, modulo, accion) {
+  const v = permisos[modulo];
+  if (v === true) return true;
+  return !!(v && typeof v === 'object' && v[accion]);
+}
+
+/** Correos (en minúsculas) de los usuarios activos con el permiso del evento. El administrador cuenta con todos. */
+async function correosConPermiso(db, evento) {
+  const cfg = PERMISO_AVISO[evento];
+  if (!cfg) return [];
+  const filas = await new Promise((resolve, reject) => db.query(
+    `SELECT u.correo, u.estado, u.permisos_json, u.rol_id, r.permisos_json AS rol_permisos, r.es_admin
+       FROM usuarios u LEFT JOIN roles r ON u.rol_id = r.id`,
+    (err, rows) => (err ? reject(err) : resolve(rows || []))));
+  const correos = new Set();
+  for (const u of filas) {
+    if (!u.correo || String(u.estado || '').toLowerCase() === 'inactivo') continue;
+    const permisos = permisosDe(u);
+    const admin = String(u.correo).toLowerCase() === 'admin@azkell.com' || !!u.es_admin || permisos.admin === true;
+    if (admin || cfg.modulos.some(m => tienePermiso(permisos, m, cfg.accion))) correos.add(String(u.correo).toLowerCase());
+  }
+  return [...correos];
+}
+
 /**
  * Dispara un evento según su regla (canales y destinatarios de la pantalla).
  * `excluir`: destinatarios que ya recibieron este aviso por otra vía (evita mensajes dobles).
@@ -232,13 +276,19 @@ async function disparar(db, evento, { asunto, texto, excluir = [] }) {
   const fuera = new Set(excluir.filter(Boolean).map(x => (esEmail(String(x)) ? String(x).toLowerCase() : aPeru(x))));
   const destinos = regla.destinatarios.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean)
     .filter(d => !fuera.has(esEmail(d) ? d.toLowerCase() : aPeru(d)));
+  // Teléfono (app): los destinatarios salen de los permisos de cada usuario; lo escrito en la regla son extras
+  const extras = regla.destinatarios.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean)
+    .filter(d => !fuera.has(d.toLowerCase()));
+  const automaticos = regla.canales.includes('push') ? await correosConPermiso(db, evento).catch(() => []) : [];
   const resultados = [];
   for (const canal of regla.canales) {
     if (canal === 'sms' && !(await smsConfigurado(db))) continue;
-    const para = destinos.filter(d => (canal === 'email' ? esEmail(d) : !esEmail(d)));
+    const para = canal === 'push'
+      ? [...new Set([...automaticos, ...extras.map(d => d.toLowerCase())])]
+      : destinos.filter(d => (canal === 'email' ? esEmail(d) : !esEmail(d)));
     for (const destino of para) resultados.push(await enviar(db, { canal, destino, asunto, texto, evento }));
   }
   return { enviados: resultados.filter(r => r.ok).length, fallidos: resultados.filter(r => !r.ok).length };
 }
 
-module.exports = { CANALES, EVENTOS, estadoWhatsapp, enviar, disparar, reglasDe, proveedorSms, proveedorCorreo, smsConfigurado, aPeru };
+module.exports = { CANALES, EVENTOS, estadoWhatsapp, enviar, disparar, reglasDe, proveedorSms, proveedorCorreo, smsConfigurado, aPeru, correosConPermiso };

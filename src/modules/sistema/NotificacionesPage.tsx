@@ -556,7 +556,7 @@ function TarjetaEvento({ regla }: { regla: Regla }) {
           </button>
         ))}
       </div>
-      <Field label="Destinatarios" hint="Teléfonos para WhatsApp o SMS, correos para Correo y Teléfono (app). Separados por coma. Ej.: 999000111, gerencia@empresa.com">
+      <Field label="Destinatarios adicionales (opcional)" hint="Teléfonos para WhatsApp o SMS, correos para Correo. Teléfono (app) llega solo a quien tiene el permiso del evento; aquí solo agregas extras. Separados por coma.">
         {p => <TextInput {...p} value={destinatarios} onChange={e => setDestinatarios(e.target.value)} />}
       </Field>
       <Button variant="primary" loading={guardar.isPending}
