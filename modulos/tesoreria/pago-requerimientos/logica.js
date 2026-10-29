@@ -933,7 +933,10 @@
     window.imprimirPDFDesdeDetalleOC = function () {
         if (!window._ocSeleccionadaDetalle) return;
         if (typeof window.generarComprobanteEntrada === 'function') {
-            window.generarComprobanteEntrada(window._ocSeleccionadaDetalle);
+            // La orden sale de la lista que ya tiene esta pantalla, no de window._entData (que solo existe si se abrió Entradas)
+            const id = window._ocSeleccionadaDetalle;
+            const oc = prDataCache.find(x => x.id === id || String(x.id) === String(id));
+            window.generarComprobanteEntrada(id, oc);
         } else {
             // Intentar invocar comprobante o abrir ventana
             window.print();

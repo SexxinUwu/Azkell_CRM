@@ -12,7 +12,7 @@ import type { ArticuloInv, EmpresaDocumentos } from '../almacen/api';
 import {
   codigoOC, esCredito, esPendiente, esPagada, esUSD, importeOC, numeroALetras, renglonLimpio, vencimiento, type OrdenPago,
 } from './pago-datos';
-import { pdfOrdenPago } from './pago-pdf';
+import { generarPdfOrdenCompra, ordenDesdeOrdenPago } from '../almacen/ordenCompraPdf';
 
 const COLUMNAS_ITEMS: ColumnaTabla[] = [
   { id: 'n', titulo: '#', ancho: 44, alinear: 'center' },
@@ -96,7 +96,7 @@ export function PagoDetalleSheet({ oc, open, onClose, onProcesar }: {
           .catch(() => null),
       ]);
       const unidades = new Map(inventario.map(a => [a.id, a.unidad ?? undefined]));
-      const blob = await pdfOrdenPago(o, empresa, id => (id ? unidades.get(id) : undefined));
+      const blob = await generarPdfOrdenCompra(ordenDesdeOrdenPago({ oc: o, empresa, unidadDe: id => (id ? unidades.get(id) : undefined) }));
       const url = URL.createObjectURL(blob);
       if (ventana) ventana.location.href = url;
       else toast('Permite las ventanas emergentes para ver el PDF.', 'error');

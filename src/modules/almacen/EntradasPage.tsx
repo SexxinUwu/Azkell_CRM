@@ -19,7 +19,7 @@ import { haptic } from '../../core/lib/haptics';
 import { useMediaQuery } from '../../core/lib/useMediaQuery';
 import { formatFechaPe, formatMoneda, formatSoles } from '../../core/lib/format';
 import {
-  anularEntrada, eliminarEntrada, useEmpresaDocumentos, useEntradas, useInventario, useProveedores,
+  anularEntrada, eliminarEntrada, useEmpresaDocumentos, useEntradas, useInventario,
   type EntradaInv, type ItemEntrada,
 } from './api';
 import {
@@ -31,7 +31,7 @@ import { EntradaDetalle } from './EntradaDetalle';
 import { AdjuntosEntradaSheet } from './AdjuntosEntradaSheet';
 import { ConfirmarPagoSheet } from './ConfirmarPagoSheet';
 import { ImportarEntradasSheet } from './ImportarEntradasSheet';
-import { pdfEntrada } from './entradaPdf';
+import { generarPdfOrdenCompra, ordenDesdeEntrada } from './ordenCompraPdf';
 import './entradas.css';
 import './almacen.css';
 
@@ -187,9 +187,8 @@ function FilaOC({ orden: o, item, vista, ...acciones }: FilaProps) {
 export function EntradasPage() {
   const { data, isLoading, isError, error } = useEntradas();
   const inventarioQ = useInventario();
-  const proveedoresQ = useProveedores();
   const empresaQ = useEmpresaDocumentos();
-  const { can, user } = useAuth();
+  const { can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
   const reduce = useReducedMotion();
@@ -248,7 +247,6 @@ export function EntradasPage() {
   const seleccionada = seleccionadaId ? (entradas.find(x => x.id === seleccionadaId) ?? null) : null;
   const adjuntos = adjuntosId ? (entradas.find(x => x.id === adjuntosId) ?? null) : null;
 
-  const proveedores = proveedoresQ.data ?? [];
   const unidadDe = (id: string | null) => (id ? (inventario.find(a => a.id === id)?.unidad ?? '') : '');
 
   /** Filas de la tabla: por orden, o por artículo (con la búsqueda aplicada a los artículos) */
@@ -282,9 +280,8 @@ export function EntradasPage() {
     setGenerandoPdf(true);
     try {
       const unidades = new Map(inventario.map(a => [a.id, a.unidad ?? undefined]));
-      const proveedor = proveedores.find(p => p.id === o.proveedor_id) ?? null;
       const conUnidad = { ...o, items: (o.items ?? []).map(i => ({ ...i, item_unidad: i.item_unidad ?? unidades.get(i.inventario_id ?? '') })) };
-      const blob = await pdfEntrada({ entrada: conUnidad, proveedor, empresa: empresaQ.data ?? null, usuario: user?.name ?? '' });
+      const blob = await generarPdfOrdenCompra(ordenDesdeEntrada({ entrada: conUnidad, empresa: empresaQ.data ?? null }));
       if (vistaPrevia) {
         const url = URL.createObjectURL(blob);
         if (ventana) ventana.location.href = url;

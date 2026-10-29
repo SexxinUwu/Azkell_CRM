@@ -2520,9 +2520,10 @@ window._entGenerarHtmlPDF = function(d) {
     '</div>';
 };
 
-window.generarComprobanteEntrada = async function(id) {
+window.generarComprobanteEntrada = async function(id, ordenDirecta) {
     if (typeof window._entCerrarDropdowns === 'function') window._entCerrarDropdowns();
-    var d = (window._entData || []).find(function(e) { return e.id === id; });
+    // ordenDirecta: la orden que ya tiene la pantalla que llama (Pago de requerimientos); si no, se busca en la lista de entradas
+    var d = ordenDirecta || (window._entData || []).find(function(e) { return e.id === id; });
     if (!d) { alert('No se encontró la entrada ' + id); return; }
 
     // Sincronizar datos de empresa si no están en localStorage
