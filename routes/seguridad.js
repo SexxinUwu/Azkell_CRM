@@ -1587,14 +1587,13 @@ module.exports = (db, logAudit) => {
         const year = new Date().getFullYear();
         const prefix = `ENT-${year}-`;
         getDb(req).query(
-            `SELECT id, numero_inventario FROM seg_entrega_vehiculos WHERE id LIKE ? OR numero_inventario LIKE ? ORDER BY id DESC LIMIT 1`,
-            [prefix + '%', prefix + '%'],
+            // Orden numérico del correlativo (el texto ordenado daría 0009 después de 0010)
+            `SELECT id FROM seg_entrega_vehiculos WHERE id LIKE ? ORDER BY CAST(SUBSTRING_INDEX(id, '-', -1) AS UNSIGNED) DESC LIMIT 1`,
+            [prefix + '%'],
             (err, rows) => {
                 let nextNum = 1;
                 if (!err && rows && rows.length) {
-                    const lastId = rows[0].numero_inventario || rows[0].id || '';
-                    const parts = lastId.split('-');
-                    const lastNum = parseInt(parts[parts.length - 1], 10);
+                    const lastNum = parseInt(String(rows[0].id).split('-').pop(), 10);
                     if (!isNaN(lastNum)) nextNum = lastNum + 1;
                 }
                 const folio = prefix + String(nextNum).padStart(4, '0');
@@ -1797,7 +1796,7 @@ module.exports = (db, logAudit) => {
         const year = new Date().getFullYear();
         const prefix = `ENT-${year}-`;
         getDb(req).query(
-            `SELECT id FROM seg_entrega_vehiculos WHERE id LIKE ? ORDER BY id DESC LIMIT 1`,
+            `SELECT id FROM seg_entrega_vehiculos WHERE id LIKE ? ORDER BY CAST(SUBSTRING_INDEX(id, '-', -1) AS UNSIGNED) DESC LIMIT 1`,
             [prefix + '%'],
             (errSeq, seqRows) => {
                 let nextNum = 1;
@@ -1828,7 +1827,7 @@ module.exports = (db, logAudit) => {
 
                 const values = [
                     regId,
-                    numero_inventario || regId,
+                    regId,
                     fecha || new Date().toISOString().slice(0, 10),
                     motivo || 'ENTREGA DE UNIDAD',
                     String(quien_entrega).trim().toUpperCase(),
