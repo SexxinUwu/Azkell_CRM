@@ -5,7 +5,7 @@ import { ArrowUpRight, CheckCircle, Coins, SearchX, XCircle } from 'lucide-react
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { Field, SearchField } from '../../core/ui/Field';
+import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { Sheet } from '../../core/ui/Sheet';
 import { api, errorMessage } from '../../core/api/client';
@@ -83,6 +83,9 @@ export function AprobacionesCajaPage() {
   const movil = useMediaQuery(QUERY_MOVIL);
 
   const [busqueda, setBusqueda] = useState('');
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+  const [motivo, setMotivo] = useState('');
   const [soloBusqueda, setSoloBusqueda] = useState(false);
   const [accion, setAccion] = useState<{ id: string | number; tipo: 'aprobar' | 'anular'; resumen: string } | null>(null);
   const [motivoAnulacion, setMotivoAnulacion] = useState('');
@@ -106,10 +109,21 @@ export function AprobacionesCajaPage() {
   const aprobados = useMemo(() => lista.filter(m => (m.estado ?? '').toUpperCase() === 'APROBADO'), [lista]);
   const anulados = useMemo(() => lista.filter(esAnulado), [lista]);
 
+  // Motivos del filtro: los que existen en la lista, sin repetir y ordenados (como el clásico)
+  const motivos = useMemo(() => Array.from(new Set(lista.map(m => (m.motivo || '').trim()).filter(Boolean))).sort(), [lista]);
+
   const visibles = useMemo(() => {
+    // Fechas y motivo se aplican igual que en el clásico (obtenerCajasFiltradas)
+    const pasaFechaMotivo = (m: CajaMov) => {
+      const f = (m.fecha || '').slice(0, 10);
+      if (desde && f && f < desde) return false;
+      if (hasta && f && f > hasta) return false;
+      if (motivo && (m.motivo || '').trim() !== motivo) return false;
+      return true;
+    };
     const base = filtro === 'pendientes' ? pendientes : filtro === 'aprobados' ? aprobados : filtro === 'anulados' ? anulados : lista;
     const fuente = soloBusqueda || busqueda ? lista : base;
-    if (!busqueda) return fuente;
+    if (!busqueda) return fuente.filter(pasaFechaMotivo);
     const q = busqueda.toUpperCase();
     return lista.filter(m =>
       String(m.conductor ?? '').toUpperCase().includes(q) ||
@@ -117,8 +131,8 @@ export function AprobacionesCajaPage() {
       String(m.motivo ?? '').toUpperCase().includes(q) ||
       String(m.orden_viaje ?? '').toUpperCase().includes(q) ||
       String(m.persona ?? '').toUpperCase().includes(q)
-    );
-  }, [lista, pendientes, aprobados, anulados, busqueda, soloBusqueda, filtro]);
+    ).filter(pasaFechaMotivo);
+  }, [lista, pendientes, aprobados, anulados, busqueda, soloBusqueda, filtro, desde, hasta, motivo]);
 
   const kpis: Array<{ key: Filtro; etiqueta: string; items: CajaMov[]; color: string }> = [
     { key: 'pendientes', etiqueta: 'Pendientes', items: pendientes, color: 'var(--amber-ink)' },
@@ -222,6 +236,18 @@ export function AprobacionesCajaPage() {
             <Notice tone="success">No hay movimientos pendientes de aprobación.</Notice>
           )}
 
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(10rem, 1fr))', gap: 'var(--s-2)' }}>
+            <Field label="Fecha desde">{p => <TextInput {...p} type="date" value={desde} onChange={e => setDesde(e.target.value)} />}</Field>
+            <Field label="Fecha hasta">{p => <TextInput {...p} type="date" value={hasta} onChange={e => setHasta(e.target.value)} />}</Field>
+            <Field label="Motivo">
+              {p => (
+                <SelectInput {...p} value={motivo} onChange={e => setMotivo(e.target.value)}>
+                  <option value="">Todos los Motivos</option>
+                  {motivos.map(m => <option key={m} value={m}>{m}</option>)}
+                </SelectInput>
+              )}
+            </Field>
+          </div>
           <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar por conductor, placa, motivo u OV…" />
 
           {visibles.length === 0 ? (
