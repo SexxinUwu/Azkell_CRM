@@ -16,6 +16,9 @@ export interface EventoAudit {
   created_at: string;
 }
 
+/** Tarjetas del clásico: Creaciones, Modificaciones y Eliminaciones ('' = todas) */
+export type CategoriaAudit = '' | 'creo' | 'modifico' | 'elimino';
+
 export interface FiltrosAudit {
   q: string;
   entity: string;
@@ -23,9 +26,13 @@ export interface FiltrosAudit {
   userId: string;
   from: string;
   to: string;
+  categoria: CategoriaAudit;
 }
 
 export interface PaginaAudit { items: EventoAudit[]; total: number; page: number; pageSize: number; hasMore: boolean }
+
+/** Conteos de las tarjetas con los filtros actuales (sin la categoría) */
+export interface ResumenAudit { total: number; creo: number; modifico: number; elimino: number }
 
 /** Orden por fecha/ID: del más reciente al más antiguo (desc) o al revés (asc), como la columna # ID del clásico */
 export type OrdenAudit = 'desc' | 'asc';
@@ -34,15 +41,25 @@ export type OrdenAudit = 'desc' | 'asc';
 export const TAMANOS_AUDIT = [25, 50, 100, 250] as const;
 export const TAMANO_AUDIT_DEFAULT = 50;
 
-/** Query string de GET /api/audit con los filtros, la página, el tamaño y el orden */
-function qsAudit(f: FiltrosAudit, page: number, pageSize: number, orden: OrdenAudit): string {
-  const qs = new URLSearchParams({ page: String(page), pageSize: String(pageSize), orden });
+/** Parámetros de los filtros (sin página ni orden) */
+function qsFiltros(f: FiltrosAudit): URLSearchParams {
+  const qs = new URLSearchParams();
   if (f.q.trim()) qs.set('q', f.q.trim());
   if (f.entity) qs.set('entity', f.entity);
   if (f.action) qs.set('action', f.action);
   if (f.userId) qs.set('userId', f.userId);
   if (f.from) qs.set('from', f.from);
   if (f.to) qs.set('to', f.to);
+  if (f.categoria) qs.set('categoria', f.categoria);
+  return qs;
+}
+
+/** Query string de GET /api/audit con los filtros, la página, el tamaño y el orden */
+function qsAudit(f: FiltrosAudit, page: number, pageSize: number, orden: OrdenAudit): string {
+  const qs = qsFiltros(f);
+  qs.set('page', String(page));
+  qs.set('pageSize', String(pageSize));
+  qs.set('orden', orden);
   return qs.toString();
 }
 
@@ -145,6 +162,16 @@ export function useTotalAuditSinFiltros() {
   return useQuery<PaginaAudit>({
     queryKey: ['sistema', 'audit', 'total'],
     queryFn: () => api<PaginaAudit>('/audit?page=1&pageSize=1'),
+  });
+}
+
+/** Tarjetas de resumen (GET /api/audit/resumen): los conteos no se afectan por la categoría elegida */
+export function useResumenAudit(f: FiltrosAudit) {
+  const qs = qsFiltros({ ...f, categoria: '' }).toString();
+  return useQuery<ResumenAudit>({
+    queryKey: ['sistema', 'audit', 'resumen', qs],
+    queryFn: () => api<ResumenAudit>(`/audit/resumen${qs ? `?${qs}` : ''}`),
+    placeholderData: keepPreviousData,
   });
 }
 

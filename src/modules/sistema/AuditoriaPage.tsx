@@ -2,28 +2,34 @@ import '../mantenimiento/mant.css';
 import './auditoria.css';
 import './auditoria-clasico.css';
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import { ArrowUpRight, Eye, LogIn, ShieldCheck } from 'lucide-react';
+import { Eye, LogIn, ShieldCheck } from 'lucide-react';
 import { PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput } from '../../core/ui/Field';
-import { MenuOtros } from '../../core/ui/MenuOtros';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { SlideUpModal } from '../../core/ui/SlideUpModal';
 import { errorMessage } from '../../core/api/client';
-import { abrirClasico } from '../../core/layout/navigation';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { useToast } from '../../core/ui/Toast';
 import { formatFechaHoraPe } from '../../core/lib/format';
 import { useLogFirmado, type LogFirmado } from './api';
 import {
-  etiquetaAccion, etiquetaCampo, useActividadAudit, useAuditoriaEnVivo, usePersonasAudit, useTotalAuditSinFiltros, todosLosEventosAudit,
-  ENTIDAD_LABELS, ACCION_LABELS, TAMANOS_AUDIT, TAMANO_AUDIT_DEFAULT, type EventoAudit, type FiltrosAudit, type OrdenAudit,
+  etiquetaAccion, etiquetaCampo, useActividadAudit, useAuditoriaEnVivo, usePersonasAudit, useResumenAudit, useTotalAuditSinFiltros, todosLosEventosAudit,
+  ENTIDAD_LABELS, ACCION_LABELS, TAMANOS_AUDIT, TAMANO_AUDIT_DEFAULT, type CategoriaAudit, type EventoAudit, type FiltrosAudit, type OrdenAudit, type ResumenAudit,
 } from './auditoriaActividad';
 
 type Vista = 'actividad' | 'firmado';
 
-const FILTROS_VACIOS: FiltrosAudit = { q: '', entity: '', action: '', userId: '', from: '', to: '' };
+const FILTROS_VACIOS: FiltrosAudit = { q: '', entity: '', action: '', userId: '', from: '', to: '', categoria: '' };
+
+// Tarjetas de resumen del clásico (mismos colores, íconos y textos)
+const TARJETAS_AUDIT: { categoria: CategoriaAudit; clave: keyof ResumenAudit; etiqueta: string; icono: string; color: string; fondo: string }[] = [
+  { categoria: '', clave: 'total', etiqueta: 'Total eventos', icono: 'bi-layers-fill', color: '#6366f1', fondo: 'rgba(99,102,241,0.12)' },
+  { categoria: 'creo', clave: 'creo', etiqueta: 'Creaciones', icono: 'bi-plus-circle-fill', color: '#16a34a', fondo: 'rgba(34,197,94,0.12)' },
+  { categoria: 'modifico', clave: 'modifico', etiqueta: 'Modificaciones', icono: 'bi-pencil-square', color: '#d97706', fondo: 'rgba(245,158,11,0.12)' },
+  { categoria: 'elimino', clave: 'elimino', etiqueta: 'Eliminaciones', icono: 'bi-trash3-fill', color: '#dc2626', fondo: 'rgba(239,68,68,0.12)' },
+];
 
 // ── Helpers copiados del clásico (modulos/sistema/auditoria/logica.js) ──
 
@@ -176,6 +182,7 @@ function ActividadAuditoria() {
   const orden: OrdenAudit = ascOrden ? 'asc' : 'desc';
   const actividad = useActividadAudit(filtros, pagina, tamano, orden);
   const sinFiltros = useTotalAuditSinFiltros();
+  const resumen = useResumenAudit(filtros);
   const personas = usePersonasAudit();
   const eventos = actividad.data?.items ?? [];
   const total = actividad.data?.total ?? 0;
@@ -252,13 +259,31 @@ function ActividadAuditoria() {
           <button type="button" style={BTN_EXCEL} onClick={exportar} disabled={total === 0} title="Descargar reporte en formato Excel (.xlsx)">
             <i className="bi bi-file-earmark-excel-fill" /> Exportar Excel
           </button>
-          <button type="button" style={BTN_ACTUALIZAR} onClick={() => { actividad.refetch(); sinFiltros.refetch(); }} title="Recargar eventos">
+          <button type="button" style={BTN_ACTUALIZAR} onClick={() => { actividad.refetch(); sinFiltros.refetch(); resumen.refetch(); }} title="Recargar eventos">
             <i className={`bi bi-arrow-clockwise${actividad.isFetching ? ' bi-spin' : ''}`} /> Actualizar
           </button>
-          <MenuOtros opciones={[
-            { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('sistema/auditoria') },
-          ]} />
         </div>
+      </div>
+
+      {/* Tarjetas de resumen (clásico): cada una filtra por su categoría; «Total» quita el filtro */}
+      <div className="audit-kpi-grid">
+        {TARJETAS_AUDIT.map(t => {
+          const activa = filtros.categoria === t.categoria;
+          const valor = resumen.data?.[t.clave];
+          return (
+            <button key={t.categoria || 'todas'} type="button" className={`audit-kpi-card${activa ? ' active' : ''}`} aria-pressed={activa}
+              onClick={() => { setFiltros(f => ({ ...f, categoria: t.categoria })); setPagina(1); }}
+              style={{ cursor: 'pointer', textAlign: 'left', font: 'inherit', color: 'inherit', width: '100%' }}>
+              <div className="audit-kpi-icon" style={{ background: t.fondo, color: t.color }}><i className={`bi ${t.icono}`} /></div>
+              <div>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--subtext)', textTransform: 'uppercase' }}>{t.etiqueta}</div>
+                <div className="fw-bold" style={{ fontSize: '1.25rem', color: t.categoria ? t.color : 'var(--text)' }}>
+                  {valor === undefined ? '…' : valor.toLocaleString('es-PE')}
+                </div>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       {/* Barra de herramientas y filtros (clásico) + filtros que ya existían en React */}
@@ -445,11 +470,6 @@ export function AuditoriaPage() {
         eyebrow="Sistema"
         title="Auditoría"
         subtitle="Quién hizo qué y cuándo. Los registros no se pueden editar ni borrar."
-        actions={
-          <MenuOtros opciones={[
-            { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('sistema/auditoria') },
-          ]} />
-        }
       />
       {selector}
       <div className="aud-filtros"><SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar en el registro firmado" /></div>
