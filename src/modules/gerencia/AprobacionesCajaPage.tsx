@@ -1,7 +1,7 @@
 import '../mantenimiento/mant.css';
 import './gerencia.css';
 import { useMemo, useState, type CSSProperties } from 'react';
-import { ArrowUpRight, CheckCircle, Coins, SearchX, XCircle } from 'lucide-react';
+import { CheckCircle, Coins, Eye, SearchX, XCircle } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -10,7 +10,6 @@ import { MenuOtros } from '../../core/ui/MenuOtros';
 import { Sheet } from '../../core/ui/Sheet';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
-import { abrirClasico } from '../../core/layout/navigation';
 import { formatDolares, formatFechaPe, formatSoles } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
 import { useMediaQuery } from '../../core/lib/useMediaQuery';
@@ -31,6 +30,22 @@ interface CajaMov {
   orden_viaje?: string;
   usuario_creacion?: string;
   usuario_aprobacion?: string;
+  serie?: string;
+  numero?: string;
+  hora?: string;
+  tipo_persona?: string;
+  cuenta_bancaria_persona?: string;
+  ruta_viaje?: string;
+  centro_costo?: string;
+  descripcion?: string;
+  observacion?: string;
+  modalidad_pago?: string;
+  tipo_cambio?: number | string;
+  tipo_comprobante?: string;
+  cuenta_bancaria_empresa?: string;
+  voucher_url?: string;
+  sustento_url?: string;
+  fecha_aprobacion?: string;
   [key: string]: unknown;
 }
 
@@ -93,6 +108,8 @@ export function AprobacionesCajaPage() {
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
   const [filtro, setFiltro] = useState<Filtro>('pendientes');
   const [errMotivo, setErrMotivo] = useState<string | undefined>();
+  const [detalle, setDetalle] = useState<CajaMov | null>(null);
+  const [detalleAbierto, setDetalleAbierto] = useState(false);
 
   const { data, isLoading, isError, error } = useQuery<CajaMov[]>({
     queryKey: ['gerencia', 'aprobaciones-caja'],
@@ -156,6 +173,19 @@ export function AprobacionesCajaPage() {
     setErrMotivo(undefined);
   }
 
+  function abrirDetalle(m: CajaMov) {
+    haptic('selection');
+    setDetalle(m);
+    setDetalleAbierto(true);
+  }
+
+  // Aprobar o anular desde la ficha: cierra la ficha y abre la confirmación (una hoja a la vez)
+  function accionDesdeDetalle(tipo: 'aprobar' | 'anular') {
+    if (!detalle) return;
+    setDetalleAbierto(false);
+    abrirAccion(detalle.id, tipo, detalle);
+  }
+
   async function ejecutarAccion() {
     if (!accion || procesando) return;
     if (accion.tipo === 'anular' && !motivoAnulacion.trim()) {
@@ -196,7 +226,6 @@ export function AprobacionesCajaPage() {
         actions={
           <MenuOtros opciones={[
             { label: 'Ver todos los registros', icon: <Coins size={17} />, onSelect: () => setSoloBusqueda(s => !s) },
-            { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('gerencia/aprobaciones-caja') },
           ]} />
         }
       />
@@ -260,7 +289,9 @@ export function AprobacionesCajaPage() {
                 const pend = esPendiente(m);
                 return (
                   <article key={String(m.id || i)} className="gerencia-tarjeta">
-                    <div className="gerencia-tarjeta__cuerpo" style={{ cursor: 'default' }}>
+                    <div className="gerencia-tarjeta__cuerpo" role="button" tabIndex={0} style={{ cursor: 'pointer' }}
+                      onClick={() => abrirDetalle(m)}
+                      onKeyDown={e => { if (e.key === 'Enter') abrirDetalle(m); }}>
                       <span className="gerencia-tarjeta__fila">
                         <span className="gerencia-tarjeta__meta" style={{ marginTop: 0 }}>{formatFechaPe(m.fecha)}</span>
                         {chipCaja(m.estado)}
@@ -317,16 +348,21 @@ export function AprobacionesCajaPage() {
                         <td className="gerencia-tabla__num">{importeMov(m)}</td>
                         <td>{chipCaja(m.estado)}</td>
                         <td>
-                          {pend && puedeAccionar && (
-                            <div className="gerencia-acciones-fila">
-                              <button type="button" className="gerencia-accion gerencia-accion--aprobar pressable" onClick={() => abrirAccion(m.id, 'aprobar', m)}>
-                                <CheckCircle size={14} aria-hidden /> Aprobar
-                              </button>
-                              <button type="button" className="gerencia-accion gerencia-accion--rechazar pressable" onClick={() => abrirAccion(m.id, 'anular', m)}>
-                                <XCircle size={14} aria-hidden /> Anular
-                              </button>
-                            </div>
-                          )}
+                          <div className="gerencia-acciones-fila">
+                            <button type="button" className="gerencia-accion gerencia-accion--ver pressable" onClick={() => abrirDetalle(m)}>
+                              <Eye size={14} aria-hidden /> Ver detalle
+                            </button>
+                            {pend && puedeAccionar && (
+                              <>
+                                <button type="button" className="gerencia-accion gerencia-accion--aprobar pressable" onClick={() => abrirAccion(m.id, 'aprobar', m)}>
+                                  <CheckCircle size={14} aria-hidden /> Aprobar
+                                </button>
+                                <button type="button" className="gerencia-accion gerencia-accion--rechazar pressable" onClick={() => abrirAccion(m.id, 'anular', m)}>
+                                  <XCircle size={14} aria-hidden /> Anular
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -369,6 +405,125 @@ export function AprobacionesCajaPage() {
           </div>
         ))}
       </Sheet>
+
+      <CajaDetalleSheet
+        caja={detalle}
+        abierto={detalleAbierto}
+        puedeAccionar={puedeAccionar}
+        onClose={() => setDetalleAbierto(false)}
+        onAccion={accionDesdeDetalle}
+      />
     </Page>
+  );
+}
+
+/** Ficha de una caja, como el clásico (verDetalleCaja): datos, concepto, adjuntos, financiero y auditoría. */
+function CajaDetalleSheet({ caja, abierto, puedeAccionar, onClose, onAccion }: {
+  caja: CajaMov | null;
+  abierto: boolean;
+  puedeAccionar: boolean;
+  onClose: () => void;
+  onAccion: (tipo: 'aprobar' | 'anular') => void;
+}) {
+  if (!caja) return null;
+
+  const estado = (caja.estado ?? 'REGISTRADO').toUpperCase();
+  const anulada = estado === 'ANULADO' || estado === 'RECHAZADO';
+  const aprobada = estado === 'APROBADO' || estado === 'PAGADO';
+  const tono = aprobada ? 'aprobada' : anulada ? 'rechazada' : 'pendiente';
+  const textoEstado = aprobada || anulada ? estado : 'POR APROBAR';
+  const moneda = (caja.moneda ?? 'SOLES').toUpperCase();
+  const monedaTc = moneda === 'SOLES' || moneda === 'PEN' ? 'SOLES' : `${moneda} (TC: ${caja.tipo_cambio || '1.000'})`;
+  const tieneAdjuntos = !!(caja.voucher_url || caja.sustento_url);
+
+  return (
+    <Sheet
+      open={abierto}
+      onClose={onClose}
+      title={`CAJA-${caja.serie ?? ''}-${caja.numero ?? ''}`}
+      ancho
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>Cerrar</Button>
+          {puedeAccionar && !anulada && (
+            <>
+              <Button variant="danger" onClick={() => onAccion('anular')}>Anular caja</Button>
+              <Button variant="primary" onClick={() => onAccion('aprobar')}>Aprobar caja</Button>
+            </>
+          )}
+        </>
+      }
+    >
+      <div className="gerencia-ficha">
+        <div className="gerencia-ficha__cabecera">
+          <span className={`gerencia-chip gerencia-chip--${tono}`}>{textoEstado}</span>
+          <span className="t-footnote c-secondary">Registrado el {formatFechaPe(caja.fecha)} {caja.hora ?? ''}</span>
+        </div>
+
+        <section className="gerencia-ficha__seccion">
+          <h3>Beneficiario / persona</h3>
+          <dl className="gerencia-datos">
+            <div><dt>Persona</dt><dd>{caja.persona || caja.conductor || 'No especificado'}</dd></div>
+            <div><dt>Tipo</dt><dd>{caja.tipo_persona || 'PERSONA'}</dd></div>
+            <div><dt>Cuenta destino</dt><dd>{caja.cuenta_bancaria_persona || 'No registrada'}</dd></div>
+          </dl>
+        </section>
+
+        <section className="gerencia-ficha__seccion">
+          <h3>Asignación operativa</h3>
+          <dl className="gerencia-datos">
+            <div><dt>Placa</dt><dd>{`${caja.placa || 'No asignada'}${caja.orden_viaje ? ` | Viaje: ${caja.orden_viaje}` : ''}`}</dd></div>
+            <div><dt>Ruta</dt><dd>{caja.ruta_viaje || 'No especificada'}</dd></div>
+            <div><dt>Centro de costos</dt><dd>{caja.centro_costo || 'General'}</dd></div>
+          </dl>
+        </section>
+
+        <section className="gerencia-ficha__seccion">
+          <h3>Concepto del egreso</h3>
+          <dl className="gerencia-datos">
+            <div><dt>Motivo</dt><dd>{caja.motivo || '—'}</dd></div>
+            <div><dt>Submotivo</dt><dd>{caja.sub_motivo || '—'}</dd></div>
+            <div><dt>Descripción</dt><dd>{caja.descripcion || 'Sin descripción adicional'}</dd></div>
+            <div><dt>Observaciones</dt><dd>{caja.observacion || 'Ninguna'}</dd></div>
+          </dl>
+        </section>
+
+        <section className="gerencia-ficha__seccion">
+          <h3>Comprobante y documentos adjuntos</h3>
+          {tieneAdjuntos ? (
+            <dl className="gerencia-datos">
+              {caja.voucher_url && (
+                <div><dt>Voucher de pago</dt><dd><a className="gerencia-accion gerencia-accion--observar" href={caja.voucher_url} target="_blank" rel="noreferrer">Ver voucher completo</a></dd></div>
+              )}
+              {caja.sustento_url && (
+                <div><dt>Documento de sustento</dt><dd><a className="gerencia-accion gerencia-accion--observar" href={caja.sustento_url} target="_blank" rel="noreferrer">Ver sustento adjunto</a></dd></div>
+              )}
+            </dl>
+          ) : (
+            <p className="t-footnote c-secondary" style={{ margin: 0 }}>No se adjuntaron comprobantes ni vouchers en este registro.</p>
+          )}
+        </section>
+
+        <section className="gerencia-ficha__seccion">
+          <h3>Detalle financiero</h3>
+          <dl className="gerencia-datos">
+            <div><dt>Modalidad de pago</dt><dd>{caja.modalidad_pago || 'TRANSFERENCIA BANCARIA'}</dd></div>
+            <div><dt>Moneda / TC</dt><dd>{monedaTc}</dd></div>
+            <div><dt>Tipo de comprobante</dt><dd>{caja.tipo_comprobante || 'SIN COMPROBANTE'}</dd></div>
+            <div><dt>Cuenta origen empresa</dt><dd>{caja.cuenta_bancaria_empresa || 'Caja Efectivo / Por definir'}</dd></div>
+            <div><dt>Total egreso</dt><dd>{importeMov(caja)}</dd></div>
+          </dl>
+        </section>
+
+        <section className="gerencia-ficha__seccion">
+          <h3>Auditoría del movimiento</h3>
+          <dl className="gerencia-datos">
+            <div><dt>Registrado por</dt><dd>{caja.usuario_creacion || 'Sistema'}</dd></div>
+            <div><dt>Aprobado por</dt><dd>{caja.usuario_aprobacion || 'En espera'}</dd></div>
+            <div><dt>Fecha de aprobación</dt><dd>{caja.fecha_aprobacion ? formatFechaPe(caja.fecha_aprobacion) : 'Pendiente'}</dd></div>
+          </dl>
+        </section>
+      </div>
+    </Sheet>
   );
 }

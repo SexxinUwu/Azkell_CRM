@@ -148,6 +148,7 @@
 .gerencia-accion--aprobar { background: var(--green-tint); color: var(--green-ink); border-color: var(--green-ink); }
 .gerencia-accion--rechazar { background: var(--red-tint); color: var(--red-ink); border-color: var(--red-ink); }
 .gerencia-accion--observar { background: var(--blue-tint); color: var(--blue-ink); border-color: var(--blue-ink); }
+.gerencia-accion--ver { background: var(--fill-1); color: var(--label-1); border-color: var(--separator); }
 
 .gerencia-tabla .gerencia-accion { min-height: 32px; padding: 0 10px; font-size: 0.75rem; }
 
