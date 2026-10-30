@@ -35,6 +35,7 @@ module.exports = function globalRBAC(req, res, next) {
     // Datos de referencia globales ampliados: Listas desplegables permitidas para cualquier usuario autenticado
     const globalReferenceGets = [
         '/configuracion-clave',
+        '/nav/indicadores', // cifras del menú (solo lectura, sin datos sensibles)
         '/disponibilidad-flota',
         '/config-metrica',
         '/km-historico',
