@@ -24,7 +24,12 @@ export async function estadoAvisos(): Promise<EstadoAvisos> {
   if (Notification.permission !== 'granted') return 'pendiente';
   const reg = await navigator.serviceWorker.ready;
   const sub = await reg.pushManager.getSubscription();
-  return sub ? 'activo' : 'inactivo';
+  if (sub) {
+    // Asegurar en segundo plano que el servidor tenga guardada la suscripción
+    void api('/push/suscribir', { method: 'POST', body: { suscripcion: sub.toJSON() } }).catch(() => undefined);
+    return 'activo';
+  }
+  return 'inactivo';
 }
 
 /** Pide el permiso (solo si aún no se decidió) y registra este dispositivo en el servidor. Debe llamarse desde un toque. */
@@ -35,10 +40,18 @@ export async function activarAvisos(): Promise<EstadoAvisos> {
   const reg = await navigator.serviceWorker.ready;
   const { clave } = await api<{ ok: boolean; clave: string | null }>('/push/clave');
   if (!clave) throw new Error('Las notificaciones todavía no están configuradas en el servidor.');
-  const sub = (await reg.pushManager.getSubscription())
-    ?? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: claveABytes(clave) });
-  await api('/push/suscribir', { method: 'POST', body: { suscripcion: sub.toJSON() } });
-  return 'activo';
+  try {
+    const sub = (await reg.pushManager.getSubscription())
+      ?? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: claveABytes(clave) });
+    await api('/push/suscribir', { method: 'POST', body: { suscripcion: sub.toJSON() } });
+    return 'activo';
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/push service error/i.test(msg)) {
+      throw new Error('En Brave debes activar «Usar los servicios de Google para la mensajería push» en brave://settings/privacy y reiniciar el navegador.');
+    }
+    throw err;
+  }
 }
 
 /** Quita este dispositivo: el servidor deja de enviarle avisos y el navegador cancela la suscripción */
@@ -54,6 +67,16 @@ export async function desactivarAvisos(): Promise<EstadoAvisos> {
 }
 
 /** Envía un aviso de prueba a los dispositivos activos del usuario */
-export function probarAvisos() {
-  return api<{ ok: boolean; enviados: number }>('/push/prueba', { method: 'POST' });
+export async function probarAvisos() {
+  const reg = await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.getSubscription();
+  if (sub) {
+    // Asegurar que el servidor tenga la suscripción registrada antes de probar
+    await api('/push/suscribir', { method: 'POST', body: { suscripcion: sub.toJSON() } }).catch(() => undefined);
+  }
+  const r = await api<{ ok: boolean; enviados: number }>('/push/prueba', { method: 'POST' });
+  if (!r.ok || r.enviados === 0) {
+    throw new Error('El servidor no encontró este dispositivo registrado. Toca «Desactivar en este teléfono» y vuelve a activarlo.');
+  }
+  return r;
 }
