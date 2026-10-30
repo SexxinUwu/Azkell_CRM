@@ -291,6 +291,9 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
+    // Regla de tiempos de la OT: el ingreso nunca es posterior al inicio, y la salida nunca es anterior al inicio.
+    const AJUSTE_INGRESO_OT = 'UPDATE ordenes_trabajo SET fecha_ingreso = fecha_inicio_ot WHERE ticket_entrada = ? AND fecha_inicio_ot IS NOT NULL AND fecha_ingreso > fecha_inicio_ot';
+
     router.put('/ordenes-trabajo/:id/fechas', (req, res) => {
         const ticketId = req.params.id;
         const { fecha_inicio_ot, fecha_hora_salida } = req.body;
@@ -300,11 +303,15 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         const fSalida = fecha_hora_salida ? fecha_hora_salida : null;
         const targetDb = req.db || db;
 
+        if (fInicio && fSalida && new Date(String(fSalida).replace(' ', 'T')) < new Date(String(fInicio).replace(' ', 'T'))) {
+            return res.status(400).json({ error: 'La hora de salida no puede ser anterior al inicio de la OT.' });
+        }
         targetDb.query(
             "UPDATE ordenes_trabajo SET fecha_inicio_ot=?, fecha_hora_salida=? WHERE ticket_entrada=?",
             [fInicio, fSalida, ticketId],
             (err) => {
                 if (err) return res.status(500).json({ error: err.message });
+                targetDb.query(AJUSTE_INGRESO_OT, [ticketId], () => {});
                 if (typeof logAudit === 'function') {
                     logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'MODIFICÓ', `Editó fechas de OT ${ticketId}`);
                 }
@@ -333,6 +340,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 params,
                 (err) => {
                     if (err) return res.status(500).json({ error: err.message });
+                    targetDb.query(AJUSTE_INGRESO_OT, [ticketId], () => {});
                     if (typeof logAudit === 'function') {
                         logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'INICIÓ', `Inició trabajos de OT ${ticketId}`);
                     }
@@ -505,6 +513,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                         comentario_cierre || (detalles_cierre || {}).obs_cierre || null,
                         cerrado_por || null, ticketId],
                     (err2) => {
+                        targetDb.query(AJUSTE_INGRESO_OT, [ticketId], () => {});
                         if (err2) return res.status(500).json({ error: err2.message });
                         if (typeof logAudit === 'function') {
                             logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'FINALIZÓ', `Finalizó y cerró OT ${ticketId} para unidad ${placaOT}`);
