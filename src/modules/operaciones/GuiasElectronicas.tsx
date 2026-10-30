@@ -12,7 +12,6 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 import { GuiaFormSheet, type TipoGuia } from './GuiaFormSheet';
 
 // Estado del ambiente de emisión (GET /api/guias-remision/ambiente-emision)
@@ -165,13 +164,6 @@ export function GuiasElectronicas({ tipo }: { tipo: TipoGuia }) {
         {ambiente.data && (emisionLista
           ? <Notice tone="accent">Emisión conectada al ambiente de prueba (beta). Lo que se emite aquí no llega a SUNAT producción.</Notice>
           : <Notice tone="neutral">Emisión a SUNAT deshabilitada. {ambiente.data.motivo ?? ''}</Notice>)}
-
-        <Notice tone="neutral">
-          La emisión masiva y la configuración de SUNAT siguen en la versión actual.{' '}
-          <a href={`/clasico#${cfg.clasico}`} onClick={e => { e.preventDefault(); abrirClasico(cfg.clasico); }} style={{ color: 'var(--accent)', fontWeight: 600 }}>
-            Emitir en la versión actual (SUNAT)
-          </a>
-        </Notice>
 
         <SearchField value={busqueda} placeholder="N° de guía, destinatario, placa u orden de viaje…"
           onChange={v => { setBusqueda(v); window.clearTimeout((window as unknown as { _gT?: number })._gT); (window as unknown as { _gT?: number })._gT = window.setTimeout(() => setQ(v.trim()), 350); }} />
