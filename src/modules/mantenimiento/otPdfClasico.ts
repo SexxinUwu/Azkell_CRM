@@ -44,7 +44,13 @@ export function rotCleanObsText(text) {
     return cleanedLines.join('\n');
 }
 
+// Una falla repetida (mismo texto) se muestra una sola vez, también en las OT ya guardadas con duplicados
 export function rotGetCleanMotivoDisplay(det, ot) {
+    const texto = String(rotMotivoConRepetidos(det, ot));
+    return [...new Set(texto.split('\n').filter(Boolean))].join('\n');
+}
+
+function rotMotivoConRepetidos(det, ot) {
     if (!det) det = {};
     if (!ot) ot = {};
 

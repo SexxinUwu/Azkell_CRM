@@ -336,7 +336,10 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
     const todos = datos.data?.trips ?? [];
     const producto = urea ? todos.filter(t => Object.keys(t.fuelStats ?? {}).some(esUrea))
       : todos.filter(t => { const ks = Object.keys(t.fuelStats ?? {}); return ks.length === 0 || ks.some(esD2); });
-    const buscado = q.toLowerCase();
+    // La búsqueda ignora mayúsculas, espacios, guiones y puntos: "cfc-770" encuentra "CFC770"
+    const normalizar = (s: unknown) => String(s ?? '').toLowerCase().replace(/[\s\-_.]/g, '');
+    const buscado = normalizar(q);
+    const vistos = new Set<string>();
     return producto.filter(t => {
       if (desde || hasta) {
         const ini = t.fechaInicio && t.fechaInicio !== 'N/D' ? t.fechaInicio.slice(0, 10) : '';
@@ -347,8 +350,12 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         if (desde && !hasta && max < desde) return false;
         if (!desde && hasta && min > hasta) return false;
       }
+      // Un mismo viaje llega repetido desde el servidor: se muestra una sola vez
+      const clave = [t.viaje, t.placa, t.fechaInicio, t.fechaFin, t.totalGalones].join('|');
+      if (vistos.has(clave)) return false;
+      vistos.add(clave);
       if (!buscado) return true;
-      return [t.viaje, t.placa, t.ruta, t.conductor].some(x => String(x ?? '').toLowerCase().includes(buscado));
+      return [t.viaje, t.placa, t.carreta, t.ruta, t.conductor].some(x => normalizar(x).includes(buscado));
     });
   }, [datos.data, urea, desde, hasta, q]);
 
@@ -668,7 +675,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
             {gps.isError && <Notice tone="error">{errorMessage(gps.error)}</Notice>}
             {canActivo && !gps.isFetching && gps.data && Object.values(gps.data).every(f => !f.data) && <Notice>No se encontraron registros CAN para los viajes de esta página (revisa que la unidad exista en Wialon con esa placa).</Notice>}
             <TablaRedimensionable id={urea ? 'analisis-urea' : 'analisis-combustible'} columnas={columnas} ariaLabel={urea ? 'Análisis de urea por viaje' : 'Análisis de combustible por viaje'}>
-              {pagina_.map(x => {
+              {pagina_.map((x, i) => {
                 const c = cifras(x);
                 const s2 = bloqueD2(x);
                 const fIni = s2?.fechaInicio || x.fechaInicio, fFin = s2?.fechaFin || x.fechaFin;
@@ -742,7 +749,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
                   );
                 }
                 return (
-                  <FilaViaje key={x.viaje} seleccionada={abierto === x.viaje} onAbrir={() => { haptic('selection'); setAbierto(x.viaje); }}
+                  <FilaViaje key={`${x.viaje}|${x.placa}|${i}`} seleccionada={abierto === x.viaje} onAbrir={() => { haptic('selection'); setAbierto(x.viaje); }}
                     abierta={abiertoFila} celdas={celdas}
                     tramos={abiertoFila && a ? [
                       { etiqueta: 'IDA', tramo: a.ida, x, obs: mostrarObs, orden: x.ordenIda },

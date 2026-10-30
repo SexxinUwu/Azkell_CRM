@@ -1385,11 +1385,24 @@ module.exports = function (db, broadcast, logAudit) {
                 }
             });
 
+            // Carreta de cada viaje (la orden de viaje) y el camión que lo jala según sus vales. Los vales que la carreta
+            // registra a su nombre son del mismo viaje: se suman al camión, no crean un viaje aparte (antes se contaban dos veces)
+            const remolquePorViaje = new Map();
+            ovRows.forEach(o => { if (o.viaje && o.placa_remolque) remolquePorViaje.set(String(o.viaje).trim(), String(o.placa_remolque).trim().toUpperCase()); });
+            const tractoPorViaje = new Map();
+            rows.forEach(v => {
+                const k = String(v.viaje || '').trim();
+                const veh = String(v.vehiculo || '').toUpperCase().trim();
+                if (k && veh && veh !== remolquePorViaje.get(k) && !tractoPorViaje.has(k)) tractoPorViaje.set(k, veh);
+            });
+
             // 1. Agrupar vales por Vehículo y luego por Viaje
             const vehiculoMap = {};
 
             rows.forEach(v => {
-                const vehKey = String(v.vehiculo || 'SIN-PLACA').toUpperCase().trim();
+                let vehKey = String(v.vehiculo || 'SIN-PLACA').toUpperCase().trim();
+                const viajeK = String(v.viaje || '').trim();
+                if (viajeK && vehKey === remolquePorViaje.get(viajeK) && tractoPorViaje.has(viajeK)) vehKey = tractoPorViaje.get(viajeK);
                 let rawTrip = String(v.viaje || '').trim();
                 let tripKey = rawTrip;
                 if (!tripKey || tripKey === '0' || tripKey.toUpperCase() === 'SIN-VIAJE' || tripKey === '-') {
@@ -1553,6 +1566,11 @@ module.exports = function (db, broadcast, logAudit) {
                         pesoRetornoCalculado = 0;
                     }
 
+                    // Peso total del viaje = ida + retorno (el mismo que muestra el detalle de tramos)
+                    const pesoTotalTn = (pesoIdaCalculado + pesoRetornoCalculado) > 0
+                        ? parseFloat((pesoIdaCalculado + pesoRetornoCalculado).toFixed(2))
+                        : pesoCalculadoTn;
+
                     // Último vale del viaje actual (Cierre General)
                     const kmFin = lastVCurrent.odometro || 0;
                     const fechaFin = lastVCurrent.fecha || 'N/D';
@@ -1686,7 +1704,7 @@ module.exports = function (db, broadcast, logAudit) {
                         kmFin,
                         recorridoKm,
                         odometroInconsistente: (kmInicio > 0 && kmFin > 0 && kmFin < kmInicio),
-                        pesoMaxTn: pesoCalculadoTn,
+                        pesoMaxTn: pesoTotalTn,
                         pesoMaxKg: maxPesoRaw,
                         galonesIda: parseFloat(galonesIda.toFixed(2)),
                         galonesRetorno: parseFloat(galonesRetorno.toFixed(2)),

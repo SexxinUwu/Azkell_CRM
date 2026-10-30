@@ -1017,8 +1017,11 @@ module.exports = function (db, broadcast, logAudit) {
                     descFallasClean += (descFallasClean ? '\n' : '') + `• ${rep.fallas_libres_text}`;
                 }
 
-                const motivoLimpio = descFallasClean 
-                    ? `[Reporte ${rep.folio}]\n${descFallasClean}` 
+                // Una misma falla aparece una sola vez (tracto y remolque pueden traer el mismo ítem)
+                descFallasClean = [...new Set(descFallasClean.split('\n').filter(Boolean))].join('\n');
+
+                const motivoLimpio = descFallasClean
+                    ? `[Reporte ${rep.folio}]\n${descFallasClean}`
                     : `[Reporte ${rep.folio}] ${item.subtipo_ot || 'Falla reportada'}`;
 
                 const supervisorStr = (item.supervisor || '').trim() || (Array.isArray(item.tecnicos) && item.tecnicos.length ? item.tecnicos[0] : 'Por Asignar');

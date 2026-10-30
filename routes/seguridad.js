@@ -321,6 +321,19 @@ module.exports = (db, logAudit) => {
                 });
             }
 
+            // 2b. Validar que el conductor no tenga otra salida EN RUTA, aunque sea con otra placa
+            const cleanCond = (conductor || '').trim().toUpperCase();
+            const [condRows] = await pDb.query(
+                "SELECT id, placa_tracto, salida_fecha, salida_hora FROM seg_unidades_registros WHERE estado = 'en_ruta' AND UPPER(TRIM(conductor)) = ? LIMIT 1",
+                [cleanCond]
+            );
+            if (condRows && condRows.length > 0) {
+                const dupC = condRows[0];
+                return res.status(400).json({
+                    error: `El conductor ${cleanCond} ya tiene una salida EN RUTA con el tracto ${dupC.placa_tracto} (Folio: ${dupC.id}, Salida: ${dupC.salida_fecha || ''} ${dupC.salida_hora || ''}). Debe registrarse su retorno antes de iniciar una nueva salida.`
+                });
+            }
+
             // 3. Generar ID secuencial: CHECK-YYYY-NNNN
             const year = new Date().getFullYear();
             const prefix = `CHECK-${year}-`;

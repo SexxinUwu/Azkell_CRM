@@ -203,6 +203,8 @@ module.exports = function globalRBAC(req, res, next) {
     }
     else if (path.startsWith('/ot-materiales') || path.startsWith('/taller/ot-materiales') || path.startsWith('/taller/ot-servicios') || path.startsWith('/taller/repuestos')) mod = ['ot', 'trabajos_ot', 'status_rampa', 'sal_inv', 'inv'];
     else if (path.startsWith('/taller/historial')) mod = ['ot'];
+    // PDF de la OT: el POST solo convierte el documento, no guarda nada; quien ve la OT puede imprimirla
+    else if (path === '/ot-pdf') { mod = ['ot', 'trabajos_ot', 'status_rampa', 'reportes_ot']; accion = 'l'; }
     else if (path.startsWith('/checklist') || path.startsWith('/mantenimiento/checklist')) {
         if (req.user && req.user.rol && req.user.rol.toLowerCase().includes('conductor')) {
             return next();
