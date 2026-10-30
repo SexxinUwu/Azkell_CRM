@@ -37,7 +37,7 @@ export function PlacaPicker({ id, value, onChange, opciones, placeholder = 'Elig
         id={id}
         type="button"
         className="campo-picker"
-        style={{ width: '100%', paddingRight: value && !disabled ? 72 : undefined }}
+        style={{ width: '100%', paddingRight: value && !disabled ? 44 : undefined }}
         disabled={disabled}
         aria-invalid={ariaInvalid}
         aria-describedby={ariaDescribedBy}
@@ -58,7 +58,7 @@ export function PlacaPicker({ id, value, onChange, opciones, placeholder = 'Elig
         <ChevronDown size={16} aria-hidden className="campo-picker__chevron" />
       </button>
       {value && !disabled && (
-        <button type="button" className="combobox__action" aria-label="Quitar placa" title="Quitar placa" style={{ position: 'absolute', right: 40, top: '50%', transform: 'translateY(-50%)' }}
+        <button type="button" className="combobox__action" aria-label="Quitar placa" title="Quitar placa" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}
           onClick={() => { haptic('selection'); onChange(''); }}>
           <X size={16} aria-hidden />
         </button>
