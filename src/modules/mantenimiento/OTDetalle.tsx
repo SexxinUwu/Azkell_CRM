@@ -346,7 +346,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
       .filter(a => !['iniciar', 'reanudar', 'pausar', 'cerrar'].includes(a))
       .map(a => ({ label: ETIQUETA_ACCION[a], destructiva: a === 'anular', separado: a === 'anular', onSelect: () => onAccion(a) })),
     puedeEditar && ot.estado === 'Pausada' && { label: 'Cerrar OT', onSelect: () => setCerrando(true) },
-    puedeEliminar && ot.estado === 'Anulado' && { label: 'Eliminar', destructiva: true, separado: true, onSelect: onEliminar },
+    puedeEliminar && { label: 'Eliminar OT', destructiva: true, separado: true, onSelect: onEliminar },
     { label: 'Descargar plantilla', onSelect: descargarPlantilla },
   ].filter(Boolean) as Parameters<typeof MenuOtros>[0]['opciones'];
 
