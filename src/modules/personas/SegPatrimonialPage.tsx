@@ -1,14 +1,14 @@
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileText, Shield, ShieldAlert, Truck } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
-import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
-import { abrirClasico } from '../../core/layout/navigation';
+import { useAuth } from '../../core/auth/AuthProvider';
 import { UnidadesBase } from './UnidadesBase';
 import { abrirStatusUnidadesBase } from './segPatrimonialPdf';
 
@@ -59,6 +59,10 @@ function MiniDonut({ pct, color }: { pct: number; color: string }) {
 export function SegPatrimonialPage() {
   const [busqueda, setBusqueda] = useState('');
   const [vista, setVista] = useState<'panorama' | 'empresas' | 'base'>('panorama');
+  const nav = useNavigate();
+  const { can } = useAuth();
+  // La garita (Personas > Garita: unidades) alimenta este panorama: sus registros de salida y retorno
+  const puedeVerGarita = can('seguridad_unidades.ver', 'seg_unidades.ver', 'seg_checklist.ver');
   const toast = useToast();
 
   const panorama = useQuery<UnidadBase[]>({
@@ -120,9 +124,7 @@ export function SegPatrimonialPage() {
           <>
             <Button variant="plain" className="btn--icono btn--icono-pdf" icon={<FileText size={18} />}
               aria-label="Exportar reporte PDF (F-SEG-0010)" title="Exportar reporte PDF (F-SEG-0010)" onClick={exportarPdf} />
-            <MenuOtros opciones={[
-              { label: 'Ver garita', icon: <Shield size={17} />, onSelect: () => abrirClasico('seguridad/unidades') },
-            ]} />
+            {puedeVerGarita && <Button variant="secondary" icon={<Shield size={16} />} onClick={() => nav('/personas/seg-unidades')}>Ver garita</Button>}
           </>
         }
       />
@@ -170,7 +172,7 @@ export function SegPatrimonialPage() {
           {vista === 'panorama' && (
             lista.length === 0 ? (
               <EmptyState icon={<ShieldAlert size={28} />} title="Sin datos de panorama">
-                Usa la versión actual para ingresar unidades al sistema de control patrimonial.
+                Las salidas y retornos que se registran en la garita aparecen aquí en vivo.
               </EmptyState>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
