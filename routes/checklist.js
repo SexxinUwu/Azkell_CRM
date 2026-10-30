@@ -1200,11 +1200,10 @@ module.exports = function (db, broadcast, logAudit) {
                                 const oldObs = (existingRampa[0].obs || '').trim();
                                 let newObs = obsRampa;
                                 if (oldObs && oldObs.toUpperCase() !== 'FALLA' && oldObs.toUpperCase() !== 'MECÁNICA GENERAL') {
-                                    if (!oldObs.includes(obsRampa)) {
-                                        newObs = oldObs + '\n' + obsRampa;
-                                    } else {
-                                        newObs = oldObs;
-                                    }
+                                    // Solo se agregan las líneas que la rampa todavía no tiene (cada reporte trae un conjunto distinto de fallas)
+                                    const yaEsta = new Set(oldObs.split('\n').map(l => l.trim().toLowerCase()).filter(Boolean));
+                                    const nuevas = obsRampa.split('\n').map(l => l.trim()).filter(l => l && !yaEsta.has(l.toLowerCase()));
+                                    newObs = nuevas.length ? [oldObs, ...nuevas].join('\n') : oldObs;
                                 }
                                 await tdb.promise().query(
                                     `UPDATE taller_rampas SET rampa=?, placa=?, km=?, fecha_ingreso=?, hora_ingreso=?, fecha_salida=?, hora_salida=?, situacion=?, obs=?, creado_por=?, estado='Activo' WHERE id=?`,
