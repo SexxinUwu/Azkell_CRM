@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ArrowUpRight, CircleAlert, FileSpreadsheet, Plus, SearchX, Trash2 } from 'lucide-react';
+import { CircleAlert, FileSpreadsheet, Plus, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from './Button';
 import { EmptyState, Notice, Page, PageHeader } from './Display';
 import { Field, SearchField, SelectInput, TextInput } from './Field';
@@ -9,7 +9,6 @@ import { useToast } from './Toast';
 import { errorMessage } from '../api/client';
 import { exportarExcel } from '../lib/excel';
 import { haptic } from '../lib/haptics';
-import { abrirClasico } from '../layout/navigation';
 
 export interface CampoCrud {
   clave: string;
@@ -63,7 +62,6 @@ export interface CrudListaProps<T> {
   editar?: (t: T, v: Valores) => Promise<unknown>;
   eliminar?: (t: T) => Promise<unknown>;
   exportar?: { nombre: string; encabezados: string[]; fila: (t: T) => Array<string | number | null | undefined> };
-  clasico?: string;
   /** Extras en el menú Otros */
   extras?: Array<{ label: string; icon?: ReactNode; onSelect: () => void }>;
   /** Contenido arriba de la lista (filtros, KPIs) */
@@ -116,7 +114,6 @@ export function CrudLista<T>(p: CrudListaProps<T>) {
             <MenuOtros opciones={[
               p.exportar ? { label: 'Exportar Excel', detalle: `${visibles.length} registros`, icon: <FileSpreadsheet size={17} />, onSelect: exportar } : null,
               ...(p.extras ?? []),
-              p.clasico ? { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico(p.clasico!) } : null,
             ]} />
             {p.crear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setEditando({ item: null })}>Nuevo</Button>}
           </>
