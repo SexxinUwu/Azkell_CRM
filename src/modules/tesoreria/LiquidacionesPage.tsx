@@ -2,7 +2,7 @@ import '../mantenimiento/mant.css';
 import './liq.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, FileSpreadsheet, RefreshCw, ScrollText, SearchX } from 'lucide-react';
+import { FileSpreadsheet, RefreshCw, ScrollText, SearchX } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
@@ -14,7 +14,6 @@ import { api, errorMessage } from '../../core/api/client';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
-import { abrirClasico } from '../../core/layout/navigation';
 import { LiquidacionDetalle } from './liq-DetalleSheet';
 import { etiquetaBalance, fechaPe, num, soles, solesConSigno, tonoBalance, type Viaje } from './liq-utils';
 
@@ -98,7 +97,6 @@ export function LiquidacionesPage() {
             <Button variant="plain" iconOnly icon={<RefreshCw size={17} />} aria-label="Actualizar" onClick={() => { haptic('selection'); void qc.invalidateQueries({ queryKey: ['tesoreria'] }); }} />
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${lista.length} viajes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('tesoreria/liquidaciones') },
             ]} />
           </>
         }
