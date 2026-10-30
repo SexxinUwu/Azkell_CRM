@@ -265,6 +265,7 @@ export function OrdenesViajePage() {
         onFinalizar={puedeEditar && abierto?.estado === 'INICIADO' ? () => setAccion({ tipo: 'finalizar', viaje: abierto }) : undefined}
         onEliminar={puedeEliminar && abierto ? () => setPorEliminar(abierto) : undefined}
         onNuevaOS={puedeEditar && abierto ? () => { setNuevaOS(abierto.viaje); setAbiertoId(null); } : undefined}
+        puedeEditarViaje={puedeEditar}
       />
       <MonitoreoViajeSheet viaje={monitoreo} onClose={() => setMonitoreo(null)} />
       <OrdenServicioSheet open={!!nuevaOS} orden={null} viajeInicial={nuevaOS ?? ''} onClose={() => { setNuevaOS(null); refrescar(); }} />
@@ -318,8 +319,8 @@ function ResumenFinanciero({ viaje }: { viaje: Viaje }) {
   );
 }
 
-function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onEliminar, onNuevaOS }: {
-  viaje: Viaje | null; onClose: () => void; onEditar?: () => void; onIniciar?: () => void; onFinalizar?: () => void; onEliminar?: () => void; onNuevaOS?: () => void;
+function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onEliminar, onNuevaOS, puedeEditarViaje }: {
+  viaje: Viaje | null; onClose: () => void; onEditar?: () => void; onIniciar?: () => void; onFinalizar?: () => void; onEliminar?: () => void; onNuevaOS?: () => void; puedeEditarViaje: boolean;
 }) {
   const fila = (label: string, valor: unknown, mono = false) => (valor === null || valor === undefined || valor === '' ? null : (
     <div className="dato"><span className="dato__label">{label}</span><span className={`dato__valor${mono ? ' dato__valor--mono' : ''}`}>{String(valor)}</span></div>
@@ -354,7 +355,7 @@ function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onE
           </div>
           <SeccionOrdenesServicioViaje codigo={v.viaje} onNueva={onNuevaOS ?? (() => undefined)} puedeCrear={!!onNuevaOS} />
           <ResumenFinanciero viaje={v} />
-          <SeccionGastosViaje codigo={v.viaje} />
+          <SeccionGastosViaje codigo={v.viaje} conductor={v.conductor} placa={v.placa_tracto} puedeEditar={puedeEditarViaje} />
           <SeccionValesViaje codigo={v.viaje} placa={v.placa_tracto} />
           <SeccionGpsViaje placa={v.placa_tracto} inicio={v.fecha_inicio ?? v.fecha_viaje} fin={v.fecha_fin} />
           <SeccionDocumentosViaje codigo={v.viaje} />
