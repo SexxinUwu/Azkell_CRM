@@ -32,6 +32,8 @@ interface Props {
   entrada: EntradaInv | null;
   onClose: () => void;
   onGuardado: () => void;
+  /** Orden de servicio nueva desde una OT (clásico: rotAbrirNuevaOrdenServicio) */
+  otPreset?: { ot: string; placa: string } | null;
 }
 
 const r2 = (v: number) => Math.round(v * 100) / 100;
@@ -89,7 +91,7 @@ function Seccion({ tono, icono, titulo, badge, accion, children }: {
   );
 }
 
-export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Props) {
+export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPreset = null }: Props) {
   const toast = useToast();
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -193,9 +195,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
           })
         : [nuevaLinea()]);
     } else {
-      setTipoOrden('Orden de compra');
+      setTipoOrden(otPreset ? 'Orden de servicio' : 'Orden de compra');
       setMoneda('PEN'); setTipoCambio('');
-      setPlaca(''); setOtId(null); setOtPlaca('');
+      setPlaca(''); setOtId(otPreset?.ot ?? null); setOtPlaca(otPreset?.placa ?? '');
       setMotivo(''); setObservaciones(''); setAutoriza('');
       setCentroCosto('CC-100'); setMotivoGasto('Gastos Administrativos / Oficina');
       setSubMotivo(SUB_MOTIVOS['Gastos Administrativos / Oficina'][0]);
@@ -205,7 +207,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado }: Pro
       setModoIgv('incluido');
       setLineas([nuevaLinea()]);
     }
-  }, [open, e]);
+  }, [open, e, otPreset]);
 
   // Tipo de cambio: en dólares se llena con el de la SUNAT del día; si no responde, con el de respaldo
   useEffect(() => {

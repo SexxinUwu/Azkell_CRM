@@ -3,7 +3,7 @@ import './mant.css';
 import './StatusRampa.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, ChevronRight, Clock, FileSpreadsheet, FileText, LayoutDashboard, LogOut, MessageCircle, Pencil, Plus, RefreshCw, RotateCcw, SearchX, Settings2, Trash2, Wrench } from 'lucide-react';
+import { ChevronRight, Clock, FileSpreadsheet, FileText, LayoutDashboard, LogOut, MessageCircle, Pencil, Plus, RefreshCw, RotateCcw, SearchX, Settings2, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
@@ -17,8 +17,8 @@ import { pdfRampa, type MaterialOT } from './rampaPdf';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
-import { eliminarRampaRegistro, reactivarRampa, rampaConductor, rampaId, useCatalogosTaller, useOrdenesTrabajoData, useOTsHijas, useTrabajosOT, useStatusRampa, tecnicosDeOT, type OrdenTrabajo, type RampaEntrada, type TrabajoOT } from './api';
+import { eliminarRampaRegistro, otId, reactivarRampa, rampaConductor, rampaId, useCatalogosTaller, useOrdenesTrabajoData, useOTsHijas, useTrabajosOT, useStatusRampa, tecnicosDeOT, type OrdenTrabajo, type RampaEntrada, type TrabajoOT } from './api';
+import { OTFichaSheet } from './OTFichaSheet';
 import { ConfigurarRampasSheet, abrirPdfRampas, compartirRampasPdf, textoReporteRampas, type CatRampa, type DatosPdfRampa, type FilaPdfRampa } from './RampasHerramientas';
 import { enReporte, rampasDelReporte } from './rampasReporte';
 import type { ReactNode } from 'react';
@@ -390,7 +390,6 @@ export function StatusRampaPage() {
               <BotonAccion titulo="Enviar reporte por WhatsApp" color="#16a34a" icono={<MessageCircle size={19} />} onClick={enviarWa} />
               <MenuOtros opciones={[
                 { label: 'Configurar rampas', detalle: 'Orden, color y si sale en el reporte', icon: <Settings2 size={17} />, onSelect: () => setConfigurando(true) },
-                { label: 'OT, trabajos y catálogos de rampas', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('mantenimiento/status-rampa') },
               ]} />
               {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => { setRampaInicial(undefined); setFormulario({ entrada: null }); }}>Ingresar</Button>}
             </>
@@ -685,6 +684,11 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
   const ordenesData = useOrdenesTrabajoData();
   const trabajosData = useTrabajosOT();
   const [generandoPdf, setGenerandoPdf] = useState(false);
+  // OT de la visita abierta en su ficha completa (trabajos, materiales, editar, acciones: como en Reportes OT)
+  const [otSel, setOtSel] = useState<string | null>(null);
+  const { can } = useAuth();
+  const puedeEditarOT = can('ot.e') || can('reportes_ot.e');
+  const puedeEliminarOT = can('ot.d') || can('reportes_ot.d');
 
   // PDF de la rampa: OT de la visita, trabajos, materiales y evidencia firmada desde S3
   async function imprimirRampa() {
@@ -830,15 +834,23 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
               <div className="dato"><span className="dato__valor" style={{ color: 'var(--label-2)' }}>Aún no hay órdenes de trabajo en esta visita.</span></div>
             )}
             {(otsHijas.data ?? []).map(ot => (
-              <div key={ot.id_ot} className="dato">
+              <button key={ot.id_ot} type="button" className="dato" style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 0, cursor: 'pointer', font: 'inherit', color: 'inherit' }}
+                onClick={() => { haptic('selection'); setOtSel(ot.id_ot); }}>
                 <span className="dato__label">{ot.id_ot}</span>
                 <span className="dato__valor">{[ot.tipo_ot, ot.sub_tipo].filter(Boolean).join(' · ')} · {ot.estado ?? '—'}</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
       )}
 
+      <OTFichaSheet
+        ot={(ordenesData.data ?? []).find(o => otId(o) === otSel) ?? null}
+        open={!!otSel && !!(ordenesData.data ?? []).find(o => otId(o) === otSel)}
+        onClose={() => setOtSel(null)}
+        puedeEditar={puedeEditarOT}
+        puedeEliminar={puedeEliminarOT}
+      />
       <LiberarRampa entrada={e} usuario={usuario} open={liberando} onClose={() => setLiberando(false)} />
       <ConfirmSheet open={eliminar} onClose={() => !eliminando && setEliminar(false)} onConfirm={eliminarRampa} loading={eliminando}
         title={`¿Eliminar el registro de ${e.placa ?? 'la rampa'}?`}

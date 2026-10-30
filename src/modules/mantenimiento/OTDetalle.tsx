@@ -11,7 +11,6 @@ import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
-import { abrirClasico } from '../../core/layout/navigation';
 import { compartirPDF } from '../../core/lib/pdf';
 import { InspeccionFicha } from '../inspecciones/InspeccionFicha';
 import { useInspecciones, type Inspeccion } from '../inspecciones/api';
@@ -24,6 +23,7 @@ import { CerrarOTSheet, PausarOTSheet } from './OTAcciones';
 import { TrabajoOTSheet } from './TrabajoOTSheet';
 import { OTServiciosTerceros } from './OTServiciosTerceros';
 import { OTNeumaticos } from './OTNeumaticos';
+import { EntradaFormulario } from '../almacen/EntradaFormulario';
 import { EditarFechasSheet, EditarKmSheet, EditarOTSheet, EditarSolicitudSheet } from './OTEditar';
 import { SalidaFormulario } from '../almacen/SalidaFormulario';
 import { pdfOt, pdfPlantillaInspeccion, pdfPlantillaLlantas, pdfPlantillaOt } from './otPdf';
@@ -120,6 +120,9 @@ function partesItem(d: string | null | undefined): { codigo: string; nombre: str
   return { codigo: cod ? cod[0] : '', nombre: m[2].trim() || t };
 }
 
+/** Palabras que marcan un ítem de vale como servicio tercerizado (lista del clásico) */
+const PALABRAS_SERVICIO = ['SERVICIO', 'TORNO', 'SOLDADURA', 'RECTIFICAC', 'MANTENIMIENTO EXTERNO', 'REPARACION DE TANQUE', 'REPARACIÓN DE TANQUE', 'ALINEAMIENTO', 'BALANCEO', 'VULCANIZADO', 'LABORATORIO DIESEL'];
+
 /** Pastilla de estado de una salida: Despachado en verde, Pendiente en ámbar, lo demás en gris */
 function pastillaEstado(e: string | null | undefined): React.CSSProperties {
   const l = String(e ?? '').toLowerCase();
@@ -198,6 +201,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   const [solicitudEdit, setSolicitudEdit] = useState<MaterialSalida | null>(null);
   const [solicitudBorrar, setSolicitudBorrar] = useState<MaterialSalida | null>(null);
   const [borrando, setBorrando] = useState(false);
+  const [nuevaOS, setNuevaOS] = useState(false);
+  const presetOS = useMemo(() => ({ ot: idOt, placa: ot.placa }), [idOt, ot.placa]);
   // Formulario de trabajo: abierto para agregar (trabajoSel null) o para editar uno existente
   const [trabajoAbierto, setTrabajoAbierto] = useState(false);
   const [trabajoSel, setTrabajoSel] = useState<TrabajoOT | null>(null);
@@ -214,6 +219,27 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   const trabajos = trabajosDeOT(ot, trabajosTodos ?? []);
   const totalTrabajos = trabajos.reduce((sum, t) => sum + trabajoCosto(t), 0);
   const mats = (materiales ?? []).filter(m => m.estado !== 'Anulado');
+  // Servicios que llegaron como ítems de vale (clásico: rotEsItemServicio): salen de Repuestos y van a Terceros
+  const esServicioItem = (d: string) => {
+    const u = d.toUpperCase();
+    return u.includes('SERV-') || u.includes('SRV-') || PALABRAS_SERVICIO.some(p => u.includes(p));
+  };
+  const partesSalida = (s: MaterialSalida) => s.items.filter(it => !esServicioItem(it.descripcion));
+  const serviciosSalida = (s: MaterialSalida) => s.items.filter(it => esServicioItem(it.descripcion));
+  const repuestosVista = mats
+    .filter(s => partesSalida(s).length > 0 || serviciosSalida(s).length === 0)
+    .map(s => {
+      const partes = partesSalida(s);
+      return partes.length && partes.length !== s.items.length
+        ? { ...s, items: partes, total_pen: partes.reduce((n, it) => n + (Number(it.importe) || 0), 0) }
+        : s;
+    });
+  const valesServicio = mats
+    .filter(s => serviciosSalida(s).length > 0)
+    .map(s => {
+      const items = serviciosSalida(s);
+      return { id: s.id, fecha: s.fecha, items, total: items.reduce((n, it) => n + (Number(it.importe) || 0), 0) };
+    });
   const costos = costosOT(ot, trabajosTodos ?? [], materiales ?? []);
   const pausas = pausasDe(ot);
   const pausaActiva = pausas.find(p => !p.fin) ?? null;
@@ -322,7 +348,6 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     puedeEditar && ot.estado === 'Pausada' && { label: 'Cerrar OT', onSelect: () => setCerrando(true) },
     puedeEliminar && ot.estado === 'Anulado' && { label: 'Eliminar', destructiva: true, separado: true, onSelect: onEliminar },
     { label: 'Descargar plantilla', onSelect: descargarPlantilla },
-    { label: 'Abrir en versión actual', icon: <ArrowUpRight size={15} />, onSelect: () => abrirClasico('mantenimiento/reportes-ot') },
   ].filter(Boolean) as Parameters<typeof MenuOtros>[0]['opciones'];
 
   return (
@@ -590,7 +615,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
 
           {loadMat ? <PageLoader /> : mats.length === 0 ? (
             <p className="t-footnote c-secondary" style={{ textAlign: 'center', padding: '12px 0' }}>Sin repuestos despachados a esta OT. Las salidas de almacén aparecen aquí valorizadas.</p>
-          ) : mats.map(sal => (
+          ) : repuestosVista.map(sal => (
             <div key={sal.id} style={{ borderRadius: 16, border: '1px solid var(--separator)', background: 'var(--surface)', overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 14px', background: 'var(--fill-1)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -630,7 +655,34 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
         </div>
       )}
 
-      {seccion === 'terceros' && <OTServiciosTerceros ot={ot.ticket_entrada || ot.id_ot} puedeEditar={puedeEditar} />}
+      {seccion === 'terceros' && (
+        <>
+          {puedeEditar && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => setNuevaOS(true)}>Nueva OS</Button>
+            </div>
+          )}
+          <OTServiciosTerceros ot={ot.ticket_entrada || ot.id_ot} puedeEditar={puedeEditar} />
+          {valesServicio.length > 0 && (
+            <div>
+              <p className="tarjeta__grupo-titulo">Servicios registrados en vales ({valesServicio.length})</p>
+              <div className="tarjeta__lista">
+                {valesServicio.map(v => (
+                  <div key={v.id} className="dato" style={{ alignItems: 'center' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.875rem' }}>Servicio (Vale) · {v.id}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>
+                        {diaPe(v.fecha)} · {v.items.map(it => partesItem(it.descripcion).nombre).join(', ')}
+                      </div>
+                    </div>
+                    <span className="t-numeric" style={{ fontWeight: 700 }}>{soles(v.total)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {seccion === 'neumaticos' && <OTNeumaticos idOt={idOt} puedeEditar={puedeEditar} />}
 
@@ -659,6 +711,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
 
       {exportando && <span className="t-footnote c-secondary">Preparando el PDF…</span>}
 
+      <EntradaFormulario open={nuevaOS} entrada={null} otPreset={presetOS} onClose={() => setNuevaOS(false)}
+        onGuardado={() => { setNuevaOS(false); qc.invalidateQueries({ queryKey: ['mant', 'ot-servicios'] }); qc.invalidateQueries({ queryKey: ['mant', 'ots'] }); }} />
       <EditarOTSheet ot={ot} open={editandoOT} onClose={() => setEditandoOT(false)} />
       <EditarFechasSheet ot={ot} open={editandoFechas} onClose={() => setEditandoFechas(false)} />
       <EditarKmSheet ot={ot} open={editandoKm} onClose={() => setEditandoKm(false)} />
