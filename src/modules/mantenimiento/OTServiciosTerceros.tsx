@@ -1,3 +1,4 @@
+import './otServicios.css';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Plus, ScrollText, Trash2 } from 'lucide-react';
@@ -75,25 +76,37 @@ export function OTServiciosTerceros({ ot, puedeEditar }: { ot: string; puedeEdit
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--s-2)' }}>
-        <p className="tarjeta__grupo-titulo" style={{ margin: 0 }}>Servicios de terceros ({lista.length}) · S/ {total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        <p className="tarjeta__grupo-titulo" style={{ margin: 0 }}>Servicios ({lista.length}) · S/ {total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
         {puedeEditar && <Button variant="primary" icon={<Plus size={15} />} onClick={() => { setSeleccion([]); setAgregando(true); }}>Agregar servicio</Button>}
       </div>
       <p className="t-footnote c-secondary" style={{ margin: 0 }}>Solo suman al costo los servicios agregados aquí. Una OC de servicio procesada no entra a la OT hasta que la agregas.</p>
 
       {agregados.isLoading ? <PageLoader /> : agregados.isError ? <Notice tone="error">{errorMessage(agregados.error)}</Notice> : lista.length === 0 ? (
-        <EmptyState icon={<ScrollText size={22} />} title="Sin servicios de terceros">Agrega las OC de servicio ya procesadas que correspondan a esta OT.</EmptyState>
+        <EmptyState icon={<ScrollText size={22} />} title="Sin servicios">Agrega las OC de servicio ya procesadas que correspondan a esta OT.</EmptyState>
       ) : (
-        <div className="tarjeta__lista">
-          {lista.map(s => (
-            <div key={s.id} className="dato" style={{ alignItems: 'center' }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '0.875rem' }}>{s.proveedor_nombre || 'Sin proveedor'}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>OC {s.id} · {dia(s.fecha)} · {s.estado}{s.numero_operacion ? ` · Op. ${s.numero_operacion}` : ''}</div>
-              </div>
-              <span className="t-numeric" style={{ fontWeight: 700 }}>{monto(s)}</span>
-              {puedeEditar && <Button variant="secondary" icon={<Trash2 size={14} />} aria-label={`Quitar ${s.id}`} onClick={() => setQuitar(s)}>{''}</Button>}
-            </div>
-          ))}
+        <div className="ots-tabla-wrap">
+          <table className="ots-tabla">
+            <thead>
+              <tr>
+                <th>Proveedor</th><th>OC</th><th>Fecha</th><th>Estado</th><th>Operación</th><th className="ots-num">Monto</th><th><span className="ots-sr">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map(s => (
+                <tr key={s.id}>
+                  <td>{s.proveedor_nombre || 'Sin proveedor'}</td>
+                  <td className="ots-mono">{s.id}</td>
+                  <td className="ots-mono">{dia(s.fecha)}</td>
+                  <td>{s.estado}</td>
+                  <td className="ots-mono">{s.numero_operacion || '—'}</td>
+                  <td className="ots-num ots-mono">{monto(s)}</td>
+                  <td>
+                    {puedeEditar && <Button variant="plain" iconOnly icon={<Trash2 size={14} />} aria-label={`Quitar ${s.id}`} title="Quitar de la OT" onClick={() => setQuitar(s)} />}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

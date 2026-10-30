@@ -1,0 +1,8 @@
+/* Tabla de servicios de la OT (pestaña Servicios) */
+.ots-tabla-wrap { overflow-x: auto; border: 1px solid var(--separator); border-radius: var(--r-md); background: var(--surface); }
+.ots-tabla { width: 100%; min-width: 620px; border-collapse: collapse; font-size: 0.8125rem; }
+.ots-tabla th { text-align: left; padding: var(--s-2) var(--s-3); font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--label-2); background: var(--fill-subtle); white-space: nowrap; }
+.ots-tabla td { padding: var(--s-2) var(--s-3); border-top: 1px solid var(--separator); vertical-align: middle; }
+.ots-mono { font-family: var(--font-mono); white-space: nowrap; }
+.ots-num { text-align: right; font-weight: 700; white-space: nowrap; }
+.ots-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

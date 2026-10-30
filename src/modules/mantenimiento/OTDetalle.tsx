@@ -24,7 +24,6 @@ import { CerrarOTSheet, PausarOTSheet } from './OTAcciones';
 import { TrabajoOTSheet } from './TrabajoOTSheet';
 import { OTServiciosTerceros } from './OTServiciosTerceros';
 import { OTNeumaticos } from './OTNeumaticos';
-import { EntradaFormulario } from '../almacen/EntradaFormulario';
 import { EditarFechasSheet, EditarKmSheet, EditarOTSheet, EditarSolicitudSheet } from './OTEditar';
 import { SalidaFormulario } from '../almacen/SalidaFormulario';
 import { pdfOt, pdfPlantillaInspeccion, pdfPlantillaLlantas, pdfPlantillaOt } from './otPdf';
@@ -204,8 +203,6 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   const [solicitudEdit, setSolicitudEdit] = useState<MaterialSalida | null>(null);
   const [solicitudBorrar, setSolicitudBorrar] = useState<MaterialSalida | null>(null);
   const [borrando, setBorrando] = useState(false);
-  const [nuevaOS, setNuevaOS] = useState(false);
-  const presetOS = useMemo(() => ({ ot: idOt, placa: ot.placa }), [idOt, ot.placa]);
   // Formulario de trabajo: abierto para agregar (trabajoSel null) o para editar uno existente
   const [trabajoAbierto, setTrabajoAbierto] = useState(false);
   const [trabajoSel, setTrabajoSel] = useState<TrabajoOT | null>(null);
@@ -409,7 +406,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
         { value: 'tareas', label: 'Tareas' },
         { value: 'tiempos', label: 'Tiempos' },
         { value: 'repuestos', label: 'Repuestos' },
-        { value: 'terceros', label: 'Terceros' },
+        { value: 'terceros', label: 'Servicios' },
         { value: 'neumaticos', label: 'Neumáticos' },
         { value: 'costos', label: 'Costos' },
       ]} />
@@ -660,11 +657,6 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
 
       {seccion === 'terceros' && (
         <>
-          {puedeEditar && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => setNuevaOS(true)}>Nueva OS</Button>
-            </div>
-          )}
           <OTServiciosTerceros ot={ot.ticket_entrada || ot.id_ot} puedeEditar={puedeEditar} />
           {valesServicio.length > 0 && (
             <div>
@@ -714,8 +706,6 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
 
       {exportando && <span className="t-footnote c-secondary">Preparando el PDF…</span>}
 
-      <EntradaFormulario open={nuevaOS} entrada={null} otPreset={presetOS} onClose={() => setNuevaOS(false)}
-        onGuardado={() => { setNuevaOS(false); qc.invalidateQueries({ queryKey: ['mant', 'ot-servicios'] }); qc.invalidateQueries({ queryKey: ['mant', 'ots'] }); }} />
       <EditarOTSheet ot={ot} open={editandoOT} onClose={() => setEditandoOT(false)} />
       <EditarFechasSheet ot={ot} open={editandoFechas} onClose={() => setEditandoFechas(false)} />
       <EditarKmSheet ot={ot} open={editandoKm} onClose={() => setEditandoKm(false)} />
