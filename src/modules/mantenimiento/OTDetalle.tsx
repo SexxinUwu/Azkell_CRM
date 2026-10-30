@@ -180,7 +180,9 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     };
   };
   const toast = useToast();
-  const { user } = useAuth();
+  const { user, can } = useAuth();
+  // Mismo criterio que el servidor (rbac.js): pedir repuestos exige crear en estos módulos
+  const puedeSolicitarRepuesto = puedeEditar || ['ot', 'trabajos_ot', 'status_rampa', 'sal_inv', 'inv'].some(m => can(`${m}.c`));
   const usuario = user?.name ?? '';
   const idOt = otId(ot);
   const acciones = accionesDisponibles(ot.estado);
@@ -609,7 +611,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
             </div>
           </div>
 
-          <Button variant="primary" block icon={<Package size={15} />} onClick={() => setSolicitando(true)} disabled={!puedeEditar}>
+          <Button variant="primary" block icon={<Package size={15} />} onClick={() => setSolicitando(true)} disabled={!puedeSolicitarRepuesto}>
             Solicitar repuesto a almacén
           </Button>
 

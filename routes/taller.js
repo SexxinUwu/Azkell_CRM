@@ -131,7 +131,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                                         estado = 'Liberado', 
                                         situacion = 'Liberado', 
                                         fecha_salida_real = COALESCE(fecha_salida_real, CURDATE()), 
-                                        hora_salida_real = COALESCE(hora_salida_real, CURTIME()), 
+                                        hora_salida_real = COALESCE(hora_salida_real, CAST(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00') AS TIME)), 
                                         fecha_liberado = COALESCE(fecha_liberado, NOW()) 
                                      WHERE id = ?`,
                                     [rId],
@@ -320,7 +320,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
 
         if (accion === 'iniciar') {
             const { iniciado_por, fecha_inicio } = req.body;
-            let q = "UPDATE ordenes_trabajo SET estado='En Proceso', fecha_inicio_ot=NOW(), iniciado_por=? WHERE ticket_entrada=?";
+            let q = "UPDATE ordenes_trabajo SET estado='En Proceso', fecha_inicio_ot=CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'), iniciado_por=? WHERE ticket_entrada=?";
             let params = [iniciado_por || null, ticketId];
 
             if (fecha_inicio) {
