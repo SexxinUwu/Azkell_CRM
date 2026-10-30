@@ -203,18 +203,7 @@
 .inv-tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 0.6875rem; font-weight: 600; background: var(--fill); color: var(--label-2); white-space: nowrap; }
 .inv-tag--accent { background: var(--accent); color: #fff; }
 
-.inv-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-3); }
-@media (max-width: 700px) { .inv-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.inv-kpi { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); padding: var(--s-3) var(--s-4); border-radius: var(--r-lg); background: var(--fill-subtle); border: 0.5px solid var(--separator); }
-.inv-kpi__etiqueta { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--label-2); }
-.inv-kpi__valor { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; }
-.inv-kpi__valor--ok { color: var(--green-ink); }
-.inv-kpi__valor--warning { color: var(--amber-ink); }
-.inv-kpi__valor--critical { color: var(--red-ink); }
-.inv-kpi__icono { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; background: var(--fill); color: var(--label-2); }
-.inv-kpi__icono--ok { background: var(--green-tint); color: var(--green-ink); }
-.inv-kpi__icono--warning { background: var(--amber-tint); color: var(--amber-ink); }
-.inv-kpi__icono--critical { background: var(--red-tint); color: var(--red-ink); }
+/* .inv-kpis / .inv-kpi (tarjetas de indicador) están en src/core/ui/ui.css */
 
 .inv-barra { display: flex; gap: var(--s-2); flex-wrap: wrap; align-items: center; }
 .inv-barra__buscar { flex: 1; min-width: 220px; }
@@ -419,9 +408,6 @@
 
 /* ─── Inventario: página, indicadores y pastillas ─── */
 .inv-pagina { display: flex; flex-direction: column; gap: var(--s-4); }
-.inv-kpi__cuerpo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.inv-kpi__valor--valor { color: var(--ink); font-size: 1.375rem; }
-.inv-kpi__sub { font-size: 0.75rem; color: var(--label-2); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .inv-kpi__enlace { border: none; background: none; padding: 0; font: inherit; font-weight: 600; color: var(--accent-ink); text-decoration: underline; cursor: pointer; }
 .inv-barra--fila { justify-content: space-between; }
 .inv-pastillas { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }

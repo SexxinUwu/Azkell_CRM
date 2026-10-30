@@ -1187,3 +1187,20 @@ label.row__main { cursor: pointer; }
     border-radius: var(--r-2xl);
   }
 }
+
+/* ─── Tarjetas de indicador (KpiTarjeta): usadas por Almacén y Personal ─── */
+.inv-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-3); }
+@media (max-width: 700px) { .inv-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.inv-kpi { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); padding: var(--s-3) var(--s-4); border-radius: var(--r-lg); background: var(--fill-subtle); border: 0.5px solid var(--separator); }
+.inv-kpi__cuerpo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.inv-kpi__etiqueta { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--label-2); }
+.inv-kpi__valor { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; }
+.inv-kpi__valor--valor { color: var(--ink); font-size: 1.375rem; }
+.inv-kpi__valor--ok { color: var(--green-ink); }
+.inv-kpi__valor--warning { color: var(--amber-ink); }
+.inv-kpi__valor--critical { color: var(--red-ink); }
+.inv-kpi__sub { font-size: 0.75rem; color: var(--label-2); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.inv-kpi__icono { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; background: var(--fill); color: var(--label-2); }
+.inv-kpi__icono--ok { background: var(--green-tint); color: var(--green-ink); }
+.inv-kpi__icono--warning { background: var(--amber-tint); color: var(--amber-ink); }
+.inv-kpi__icono--critical { background: var(--red-tint); color: var(--red-ink); }

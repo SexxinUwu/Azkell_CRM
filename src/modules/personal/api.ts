@@ -163,6 +163,32 @@ export function usePersonal() {
   });
 }
 
+export interface KpisPersonal {
+  total: number;
+  activos: number;
+  conductores: number;
+  conductores_en_ruta: number;
+  contratos_por_vencer: number;
+  sctr_alertas: number;
+  brevetes_por_vencer: number;
+}
+
+/** Indicadores de arriba (GET /api/rrhh/kpis, igual que la versión actual). Se invalida junto con ['personal'] */
+export function useKpisPersonal() {
+  return useQuery({
+    queryKey: ['personal', 'kpis'],
+    queryFn: async (): Promise<KpisPersonal> => {
+      const r = await api<{ data?: Record<string, unknown> }>('/rrhh/kpis');
+      const d = r.data ?? {};
+      const n = (v: unknown) => Number(v) || 0;
+      return {
+        total: n(d.total), activos: n(d.activos), conductores: n(d.conductores), conductores_en_ruta: n(d.conductores_en_ruta),
+        contratos_por_vencer: n(d.contratos_por_vencer), sctr_alertas: n(d.sctr_alertas), brevetes_por_vencer: n(d.brevetes_por_vencer),
+      };
+    },
+  });
+}
+
 /** Lo que el servidor espera (todos los campos: el PUT reescribe la fila completa) */
 function cuerpo(p: Persona, fotoNueva?: string) {
   const { id: _id, foto_url, ...resto } = p;

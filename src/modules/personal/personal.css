@@ -17,6 +17,8 @@
 }
 
 /* ─── Distribución: lista + tarjeta ─── */
+.personal-kpis { margin-bottom: var(--s-4); }
+.personal-kpis + .contactos--dividido { height: calc(100dvh - var(--topbar-h, 3.5rem) - 18rem); }
 .contactos { display: flex; flex-direction: column; }
 .contactos--dividido {
   display: grid;

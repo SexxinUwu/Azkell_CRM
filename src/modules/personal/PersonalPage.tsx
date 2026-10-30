@@ -2,22 +2,22 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Contact, FileSpreadsheet, Plus, SearchX, TriangleAlert, UserPlus } from 'lucide-react';
+import { Contact, FileSpreadsheet, FileText, Plus, SearchX, ShieldAlert, Truck, TriangleAlert, UserPlus } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ToggleChips } from '../../core/ui/Chips';
+import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
-import { abrirClasico } from '../../core/layout/navigation';
 import { useMediaQuery } from '../../core/lib/useMediaQuery';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
-import { alertasDe, ALFABETO, coincide, eliminarPersona, etiqueta, letraDe, nombreCompleto, OPCIONES, usePersonal, type Persona } from './api';
+import { alertasDe, ALFABETO, coincide, eliminarPersona, etiqueta, letraDe, nombreCompleto, OPCIONES, usePersonal, useKpisPersonal, type Persona } from './api';
 import { exportarExcel } from './documentos';
 import { FotoPersona } from './FotoPersona';
 import { PersonaTarjeta } from './PersonaTarjeta';
@@ -61,6 +61,7 @@ export function PersonalPage() {
     return OPCIONES.rol.filter(o => s.has(o.value));
   }, [personas]);
   const conAlertas = useMemo(() => personas.filter(p => alertasDe(p).length).length, [personas]);
+  const { data: kpis } = useKpisPersonal();
 
   const visibles = useMemo(() => personas.filter(p =>
     (estado === 'todos' || (estado === 'cesados' ? p.estado === 'CESADO' : p.estado !== 'CESADO'))
@@ -141,7 +142,6 @@ export function PersonalPage() {
     <MenuOtros opciones={[
       { label: 'Exportar a Excel', detalle: `${visibles.length} personas de la lista`, icon: <FileSpreadsheet size={17} />, disabled: !visibles.length,
         onSelect: async () => { try { await exportarExcel(visibles); toast('Excel descargado'); } catch (err) { toast(errorMessage(err), 'error'); } } },
-      { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('rrhh/personal') },
     ]} />
   );
 
@@ -174,6 +174,15 @@ export function PersonalPage() {
           {puedeCrear ? <>Agrega a la primera persona con <strong>Nuevo</strong>. Con el DNI, el nombre se completa solo.</> : 'Cuando RR. HH. registre al personal, aparecerá aquí.'}
         </EmptyState>
       ) : soloTarjeta ? tarjeta : (
+        <>
+        {kpis && (
+          <div className="inv-kpis personal-kpis">
+            <KpiTarjeta etiqueta="Total colaboradores" valor={String(kpis.total)} sub={`${kpis.activos} activos`} icono={<Contact size={18} />} />
+            <KpiTarjeta etiqueta="Conductores flota" valor={String(kpis.conductores)} sub={`${kpis.conductores_en_ruta} en ruta`} icono={<Truck size={18} />} tono="valor" />
+            <KpiTarjeta etiqueta="Contratos por vencer" valor={String(kpis.contratos_por_vencer)} sub="Próximos 30 días" icono={<FileText size={18} />} tono="warning" />
+            <KpiTarjeta etiqueta="Alertas SST / brevetes" valor={String(kpis.sctr_alertas + kpis.brevetes_por_vencer)} sub="SCTR / EMO / licencias" icono={<ShieldAlert size={18} />} />
+          </div>
+        )}
         <div className={`contactos${dividido ? ' contactos--dividido' : ''}`}>
           <div className="contactos__lista" ref={listaRef}>
             <div className="contactos__filtros">
@@ -252,6 +261,7 @@ export function PersonalPage() {
             </div>
           )}
         </div>
+        </>
       )}
 
       <PersonaFormulario
