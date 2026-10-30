@@ -1244,6 +1244,18 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     // );
     // ============================================================
 
+    // Las columnas DATE llegan como Date a medianoche local; en un servidor UTC el JSON las corre un día.
+    // Se devuelven como "AAAA-MM-DD" tal cual está en la base.
+    const fechaDia = v => (v instanceof Date && !isNaN(v)
+        ? `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`
+        : (v ?? null));
+    const rampaSinCorrimiento = r => ({
+        ...r,
+        fecha_ingreso: fechaDia(r.fecha_ingreso),
+        fecha_salida: fechaDia(r.fecha_salida),
+        fecha_salida_real: fechaDia(r.fecha_salida_real),
+    });
+
     router.get(['/taller-rampas', '/rampas'], (req, res) => {
         const targetDb = req.db || db;
         const historial = req.query.historial === '1';
@@ -1254,10 +1266,10 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             if (err) {
                 return targetDb.query('SELECT * FROM taller_rampas ORDER BY id ASC', (err2, rows2) => {
                     if (err2) return res.json([]);
-                    return res.json(rows2 || []);
+                    return res.json((rows2 || []).map(rampaSinCorrimiento));
                 });
             }
-            res.json(rows || []);
+            res.json((rows || []).map(rampaSinCorrimiento));
         });
     });
 
