@@ -8,6 +8,8 @@ import { Button } from './Button';
 
 // Hojas abiertas a la vez, de abajo hacia arriba (una puede abrirse encima de otra:
 // confirmar, o registrar un proveedor sin salir de la carga). Escape cierra solo la de arriba.
+import { bloquearPagina } from './bloqueoPagina';
+
 const openSheets: symbol[] = [];
 
 interface SheetProps {
@@ -49,13 +51,10 @@ export function Sheet({ open, onClose, title, children, footer, anclaAbajo = fal
     if (!open) return;
     openedAt.current = performance.now();
     returnFocusTo.current = document.activeElement as HTMLElement | null;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    // La pantalla de atrás queda inerte: ni el teclado ni el lector de pantalla salen de la hoja.
-    const root = document.getElementById('root');
+    // La página queda bloqueada (scroll e inerte) mientras la hoja esté abierta; ver bloqueoPagina.ts
+    const liberarBloqueo = bloquearPagina();
     const me = Symbol('sheet');
     openSheets.push(me);
-    root?.setAttribute('inert', '');
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !e.defaultPrevented && openSheets[openSheets.length - 1] === me) onCloseRef.current();
     };
@@ -67,10 +66,9 @@ export function Sheet({ open, onClose, title, children, footer, anclaAbajo = fal
       (first ?? panelRef.current)?.focus({ preventScroll: true });
     });
     return () => {
-      document.body.style.overflow = prevOverflow;
+      liberarBloqueo();
       window.removeEventListener('keydown', onKey);
       openSheets.splice(openSheets.indexOf(me), 1);
-      if (openSheets.length === 0) root?.removeAttribute('inert');
       returnFocusTo.current?.focus?.({ preventScroll: true });
     };
   }, [open]);

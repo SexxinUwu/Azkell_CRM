@@ -1,3 +1,4 @@
+import { bloquearPagina } from '../../../core/ui/bloqueoPagina';
 import { useEffect, useRef, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useDragControls, useReducedMotion, type PanInfo } from 'motion/react';
@@ -42,11 +43,10 @@ function Panel({ onClose, turns, busy, text, onText, onSend, onReset, onRetry, s
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onCloseRef.current();
     window.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    if (isMobile) document.body.style.overflow = 'hidden';
+    const liberar = isMobile ? bloquearPagina() : () => {};
     return () => {
       window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
+      liberar();
     };
   }, [isMobile]);
 

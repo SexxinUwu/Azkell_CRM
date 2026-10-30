@@ -84,13 +84,16 @@ async function registrosWialon(): Promise<Registro[]> {
 }
 
 /** Bloque de documentos de la unidad (SOAT, revisión técnica e inspección), como en el clásico */
-// Mismos documentos y estados que el módulo de Documentos de flota (DOCS y metaDeVehiculo)
+// Solo estos documentos en el reporte, en este orden. Mismos estados que el módulo de Documentos de flota
+const DOCS_REPORTE = ['rt', 'soat', 'tc'];
+
 function DocsUnidad({ titulo, vehiculo }: { titulo: string; vehiculo: VehiculoFlota | undefined }) {
   const meta = vehiculo ? metaDeVehiculo(vehiculo) : null;
   return (
     <div className="ck-bloque">
       <p className="ck-bloque__titulo">{titulo}</p>
-      {DOCS.map(d => {
+      {DOCS_REPORTE.map(clave => DOCS.find(x => x.clave === clave)).filter(Boolean).map(d => {
+        if (!d) return null;
         const item = meta?.docs.find(x => x.config.clave === d.clave);
         const registrado = !!item?.registrado;
         const fecha = fechaDDMMAAAA(vehiculo ? String(vehiculo[d.vencimiento] ?? '') : '');

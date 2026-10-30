@@ -1,3 +1,4 @@
+import { reiniciarBloqueos } from '../ui/bloqueoPagina';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { VolverOtros } from './VolverOtros';
@@ -48,6 +49,8 @@ function contadorDe(item: NavItem, contador: Record<string, number>): number {
 export function AppShell() {
   const { user, can, logout } = useAuth();
   const location = useLocation();
+  // Al cambiar de módulo no debe quedar la página bloqueada por una hoja que no llegó a cerrarse
+  useEffect(() => { reiniciarBloqueos(); }, [location.pathname]);
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false); // hoja de Ajustes
   const [moduloAbierto, setModuloAbierto] = useState<string | null>(null);

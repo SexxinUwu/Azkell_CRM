@@ -1,5 +1,5 @@
 import { useDeferredValue, useMemo, useState, type ReactNode } from 'react';
-import { ChevronDown, Search } from 'lucide-react';
+import { ChevronDown, Search, X } from 'lucide-react';
 import { Sheet } from './Sheet';
 import { SearchField } from './Field';
 import { Notice } from './Display';
@@ -32,10 +32,12 @@ export function PlacaPicker({ id, value, onChange, opciones, placeholder = 'Elig
   const detalle = opciones.find(o => o.placa === value)?.detalle;
   return (
     <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
       <button
         id={id}
         type="button"
         className="campo-picker"
+        style={{ flex: 1, minWidth: 0 }}
         disabled={disabled}
         aria-invalid={ariaInvalid}
         aria-describedby={ariaDescribedBy}
@@ -55,6 +57,12 @@ export function PlacaPicker({ id, value, onChange, opciones, placeholder = 'Elig
         )}
         <ChevronDown size={16} aria-hidden className="campo-picker__chevron" />
       </button>
+      {value && !disabled && (
+        <button type="button" className="combobox__action" aria-label="Quitar placa" title="Quitar placa" onClick={() => { haptic('selection'); onChange(''); }}>
+          <X size={16} aria-hidden />
+        </button>
+      )}
+      </div>
       <PlacaSearchSheet
         open={abierto}
         onClose={() => setAbierto(false)}

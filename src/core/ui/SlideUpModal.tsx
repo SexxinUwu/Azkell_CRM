@@ -1,3 +1,4 @@
+import { bloquearPagina } from './bloqueoPagina';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 
@@ -25,12 +26,8 @@ export function SlideUpModal({ open, onClose, title, subtitle, children, width =
 
   // Bloquear scroll del body
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
+    if (!open) return;
+    return bloquearPagina();
   }, [open]);
 
   if (!open) return null;
