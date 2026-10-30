@@ -1,11 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { Page, PageHeader } from '../../core/ui/Display';
-import { OTROS_MANTENIMIENTO, abrirClasico, type NavItem } from '../../core/layout/navigation';
+import { OTROS_MANTENIMIENTO, type NavItem } from '../../core/layout/navigation';
 import '../../core/ui/otros-tarjetas.css';
 
 // Otros de Mantenimiento: las herramientas avanzadas del taller en casillas agrupadas (no en una lista).
-// Cada casilla abre su pantalla; las que todavía están en la versión actual se abren allí.
+// Cada casilla abre su pantalla de la app nueva.
 
 const SECCIONES: Array<{ titulo: string; claves: string[] }> = [
   { titulo: 'Programación operativa', claves: ['planificacion', 'backlog'] },
@@ -21,7 +21,6 @@ export function OtrosMantenimientoPage() {
 
   function abrir(i: NavItem) {
     if (i.to) navigate(i.to);
-    else if (i.clasico) abrirClasico(i.clasico);
   }
 
   return (
@@ -48,7 +47,6 @@ export function OtrosMantenimientoPage() {
                       <span className="otros-tile__icono" aria-hidden><Icono size={20} /></span>
                       <span className="otros-tile__texto">
                         <span className="otros-tile__titulo">{i.label}</span>
-                        {i.clasico && <span className="otros-tile__detalle">Se abre en la versión actual</span>}
                       </span>
                     </button>
                   );
