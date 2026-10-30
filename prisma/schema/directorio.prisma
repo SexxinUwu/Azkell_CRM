@@ -23,6 +23,8 @@ model Conductor {
   licencia    String  @default("") @db.VarChar(50)
   estado      String  @default("Activo") @db.VarChar(20)
   foto        String? @db.Text
+  banco         String? @db.VarChar(50)
+  numero_cuenta String? @db.VarChar(50)
 
   @@map("conductores")
 }

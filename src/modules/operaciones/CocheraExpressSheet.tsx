@@ -10,6 +10,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
 import { dayKey } from '../../core/lib/format';
+import { useConductores, type Conductor } from '../conductores/api';
 import { siguienteNumeroCaja, useBancos, type Banco } from '../tesoreria/api';
 
 // Datos de la orden de servicio que el clásico pasa al formulario express de cochera
@@ -49,6 +50,14 @@ function Dato({ label, valor }: { label: string; valor: string }) {
   );
 }
 
+/** Cuenta del conductor desde el directorio, con el mismo formato del clásico («BANCO: número») */
+function cuentaDeConductor(lista: Conductor[] | undefined, nombre: string): string {
+  const buscado = nombre.trim().toUpperCase();
+  const c = (lista ?? []).find(x => x.nombre.trim().toUpperCase() === buscado);
+  if (!c || !c.numero_cuenta) return '';
+  return `${c.banco || 'BANCO'}: ${c.numero_cuenta}`;
+}
+
 // Caja de cochera del conductor: se ofrece al crear una orden de servicio y al iniciarla.
 // Mismo contrato que el clásico: caja de Tesorería con concepto "Gastos de Viaje y Ruta" / "Cochera / Parqueo de ruta".
 export function CocheraExpressSheet({ open, datos, onClose }: { open: boolean; datos: CocheraDatos | null; onClose: () => void }) {
@@ -56,6 +65,7 @@ export function CocheraExpressSheet({ open, datos, onClose }: { open: boolean; d
   const qc = useQueryClient();
   const toast = useToast();
   const bancos = useBancos();
+  const conductores = useConductores();
   const [monto, setMonto] = useState('30.00');
   const [modalidad, setModalidad] = useState(MODALIDADES[0].valor);
   const [cuentaEmpresa, setCuentaEmpresa] = useState('');
@@ -68,8 +78,13 @@ export function CocheraExpressSheet({ open, datos, onClose }: { open: boolean; d
   // Cada apertura empieza con los valores por defecto
   useEffect(() => {
     if (!open) return;
-    setMonto('30.00'); setModalidad(MODALIDADES[0].valor); setCuentaConductor(''); setError(null); setEnviando(false);
+    setMonto('30.00'); setModalidad(MODALIDADES[0].valor); setError(null); setEnviando(false);
   }, [open, datos]);
+
+  // Cuenta del conductor: se autollena al elegirlo (cuando llega el directorio)
+  useEffect(() => {
+    if (open && datos) setCuentaConductor(cuentaDeConductor(conductores.data, datos.conductor));
+  }, [open, datos, conductores.data]);
 
   // Cuenta de empresa por defecto cuando llegan las cuentas
   useEffect(() => {

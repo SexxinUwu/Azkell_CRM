@@ -17,6 +17,8 @@ export interface Conductor {
   licencia: string;
   estado: string;
   foto: string;
+  banco: string;
+  numero_cuenta: string;
 }
 
 const txt = (v: unknown) => (v == null ? '' : String(v).trim());
@@ -35,6 +37,8 @@ export function useConductores() {
         licencia: txt(f.licencia),
         estado: txt(f.estado) || 'Activo',
         foto: txt(f.foto),
+        banco: txt(f.banco),
+        numero_cuenta: txt(f.numero_cuenta),
       })).sort((a, b) => a.nombre.localeCompare(b.nombre));
     },
   });
@@ -57,6 +61,7 @@ export async function guardarConductor(c: Conductor, fotoNueva?: string) {
         idConductor: c.id || '',
         c_nombre: c.nombre, c_empresa: c.empresa, c_telefono: c.telefono, c_dni: c.dni,
         c_licencia: c.licencia, c_estado: c.estado,
+        c_banco: c.banco, c_numero_cuenta: c.numero_cuenta,
         // Solo si hay foto nueva: el servidor conserva la anterior cuando llega vacía
         c_foto_base64: fotoNueva ?? '',
       }],

@@ -15,7 +15,7 @@ import { haptic } from '../../core/lib/haptics';
 import { comprimirFoto, guardarConductor, nombrePorDni, useEmpresas, type Conductor } from './api';
 import { FotoConductor } from './FotoConductor';
 
-const VACIO: Conductor = { id: 0, nombre: '', empresa: '', telefono: '', dni: '', licencia: '', estado: 'Activo', foto: '' };
+const VACIO: Conductor = { id: 0, nombre: '', empresa: '', telefono: '', dni: '', licencia: '', estado: 'Activo', foto: '', banco: '', numero_cuenta: '' };
 type Campo = 'nombre' | 'dni' | 'telefono' | 'licencia';
 
 // Crear o editar un conductor (POST /api/script/guardarConductor, mismas reglas que la versión actual).
@@ -160,6 +160,12 @@ export function ConductorFormulario({ conductor, existentes, open, onClose, onGu
             </Field>
             <Field label="Licencia de conducir" error={error('licencia')}>
               {props => <TextInput {...props} {...campo('licencia', v => v.toUpperCase().replace(/\s/g, '').slice(0, 20))} placeholder="Q12345678" className="input--mono" />}
+            </Field>
+            <Field label="Banco" hint="Para autollenar la cuenta al elegir al conductor">
+              {props => <TextInput {...props} value={c.banco} onChange={e => setC(x => ({ ...x, banco: e.target.value.toUpperCase().slice(0, 50) }))} placeholder="BCP" />}
+            </Field>
+            <Field label="Número de cuenta">
+              {props => <TextInput {...props} value={c.numero_cuenta} onChange={e => setC(x => ({ ...x, numero_cuenta: e.target.value.slice(0, 50) }))} placeholder="191-XXXXXXXX-X-XX o celular" className="input--mono" />}
             </Field>
             <Field label="Nombre completo" error={error('nombre')} wide
               hint={deReniec ? <span className="conductor-form__reniec"><Sparkles size={12} /> Obtenido de RENIEC</span> : undefined}>

@@ -1267,11 +1267,16 @@ router.post('/:metodo', async (req, res) => {
         const licencia = form.c_licencia || "";
         const estado = form.c_estado || "Activo";
         const foto = form.c_foto_base64 || "";
+        // Cuenta bancaria: solo si la pantalla la envía (el formulario clásico no la manda y no debe borrarla)
+        const cuenta = form.c_banco !== undefined || form.c_numero_cuenta !== undefined
+            ? { banco: String(form.c_banco || "").slice(0, 50), numero_cuenta: String(form.c_numero_cuenta || "").slice(0, 50) }
+            : null;
 
         if (isEdit) {
             let sql = 'UPDATE conductores SET nombre=?, empresa=?, telefono=?, dni=?, licencia=?, estado=?';
             let params = [nombre, empresa, telefono, dni, licencia, estado];
             if (foto) { sql += ', foto=?'; params.push(foto); }
+            if (cuenta) { sql += ', banco=?, numero_cuenta=?'; params.push(cuenta.banco, cuenta.numero_cuenta); }
             sql += ' WHERE idConductor=?'; params.push(form.idConductor);
             reqDb.query(sql, params, (err) => {
                 if (err) return res.json({ data: "Error BD: " + err.message });
@@ -1282,8 +1287,10 @@ router.post('/:metodo', async (req, res) => {
                 return res.json({ data: "Éxito" });
             });
         } else {
-            reqDb.query('INSERT INTO conductores (nombre, empresa, telefono, dni, licencia, estado, foto) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [nombre, empresa, telefono, dni, licencia, estado, foto], (err) => {
+            const columnasNuevas = cuenta ? ', banco, numero_cuenta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)' : ') VALUES (?, ?, ?, ?, ?, ?, ?)';
+            const valoresNuevos = cuenta ? [nombre, empresa, telefono, dni, licencia, estado, foto, cuenta.banco, cuenta.numero_cuenta] : [nombre, empresa, telefono, dni, licencia, estado, foto];
+            reqDb.query('INSERT INTO conductores (nombre, empresa, telefono, dni, licencia, estado, foto' + columnasNuevas,
+            valoresNuevos, (err) => {
                 if (err) return res.json({ data: "Error BD: " + err.message });
                 broadcast('conductores', 'guardar');
                 if (typeof logAudit === 'function') {
