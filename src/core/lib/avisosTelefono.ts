@@ -40,15 +40,29 @@ export async function activarAvisos(): Promise<EstadoAvisos> {
   const reg = await navigator.serviceWorker.ready;
   const { clave } = await api<{ ok: boolean; clave: string | null }>('/push/clave');
   if (!clave) throw new Error('Las notificaciones todavía no están configuradas en el servidor.');
+
   try {
-    const sub = (await reg.pushManager.getSubscription())
-      ?? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: claveABytes(clave) });
+    // Si había una suscripción residual desincronizada, la desuscribimos para forzar un registro limpio
+    const previa = await reg.pushManager.getSubscription().catch(() => null);
+    if (previa) {
+      await previa.unsubscribe().catch(() => undefined);
+    }
+
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: claveABytes(clave),
+    });
     await api('/push/suscribir', { method: 'POST', body: { suscripcion: sub.toJSON() } });
     return 'activo';
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     if (/push service error/i.test(msg)) {
-      throw new Error('En Brave debes activar «Usar los servicios de Google para la mensajería push» en brave://settings/privacy y reiniciar el navegador.');
+      const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+      const esBrave = /Brave/i.test(ua) || Boolean((navigator as unknown as { brave?: unknown }).brave);
+      if (esBrave) {
+        throw new Error('En Brave debes activar «Usar los servicios de Google para la mensajería push» en brave://settings/privacy y reiniciar el navegador.');
+      }
+      throw new Error('El servicio de notificaciones no pudo conectar con Google Play Services. Comprueba tu conexión a internet o desactiva el ahorro de batería / DNS privado.');
     }
     throw err;
   }
