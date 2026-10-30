@@ -10,7 +10,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { useCatalogosTaller } from '../mantenimiento/api';
 import { SUBTIPOS_OT as SUBTIPOS, TIPOS_OT } from '../mantenimiento/tipos-ot';
-import type { ReporteFalla } from './api';
+import { useUnidadesGps, type ReporteFalla, type UnidadMapa } from './api';
 
 type Unidad = 'Tracto' | 'Remolque';
 
@@ -86,6 +86,17 @@ function usePersonalNombres() {
   });
 }
 
+// Unidad de telemetría Wialon por placa (sin guiones), igual que el clásico: km del tracto y horas del remolque
+function telemetriaDe(unidades: UnidadMapa[] | undefined, placa: string): UnidadMapa | null {
+  const p = placa.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  if (!p || !unidades) return null;
+  return unidades.find(u => {
+    const up = u.placa.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    const nom = u.nombre.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    return (up && (up.includes(p) || p.includes(up))) || (nom && (nom.includes(p) || p.includes(nom)));
+  }) ?? null;
+}
+
 const ahoraLocal = (suma = 0) => {
   const d = new Date(Date.now() + suma * 3600_000);
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
@@ -97,6 +108,7 @@ export function GenerarOTsSheet({ falla, open, onClose }: { falla: ReporteFalla;
   const toast = useToast();
   const cat = useCatalogosTaller();
   const personal = usePersonalNombres();
+  const gps = useUnidadesGps(60_000);
   const [rampa, setRampa] = useState('');
   const [fIngreso, setFIngreso] = useState('');
   const [fSalida, setFSalida] = useState('');
@@ -166,6 +178,15 @@ export function GenerarOTsSheet({ falla, open, onClose }: { falla: ReporteFalla;
     }
     if (!tarjetas.length) { setError('Agrega al menos una orden de trabajo.'); return; }
 
+    // Telemetría en vivo (como el clásico): KM del tracto desde GPS, con respaldo del reporte; horas del remolque
+    const teleTracto = telemetriaDe(gps.data, placaT);
+    const teleRemolque = telemetriaDe(gps.data, placaR);
+    const kmGps = teleTracto && teleTracto.km > 0 ? Math.round(teleTracto.km) : 0;
+    const kmReporte = falla.km_inicial ? Number(falla.km_inicial) : 0;
+    const kmTablero = kmReporte || kmGps || 0;
+    const kmGpsOt = kmGps || kmReporte || 0;
+    const horasLive = teleRemolque && teleRemolque.horas > 0 ? Math.round(teleRemolque.horas) : (falla.horas_motor ? Number(falla.horas_motor) : null);
+
     const payload = [];
     for (let i = 0; i < tarjetas.length; i++) {
       const t = tarjetas[i];
@@ -174,7 +195,8 @@ export function GenerarOTsSheet({ falla, open, onClose }: { falla: ReporteFalla;
       if (!personas.includes(t.supervisor)) { setError(`El supervisor de la ${n} no existe en el directorio de personal.`); return; }
       if (!t.subtipo) { setError(`Elige el subtipo de la ${n}.`); return; }
 
-      const seleccion = fallas.filter(f => t.fallas.includes(f.id));
+      // Sin fallas marcadas, el clásico toma las de la unidad
+      const seleccion = t.fallas.length ? fallas.filter(f => t.fallas.includes(f.id)) : fallas.filter(f => f.unidad === t.unidad);
       const motivos = [];
       for (const f of seleccion) {
         const tec = (t.tecnicos[f.id] ?? '').trim();
@@ -182,11 +204,12 @@ export function GenerarOTsSheet({ falla, open, onClose }: { falla: ReporteFalla;
         motivos.push({ motivo: f.principal, descripcion: f.principal, sistema: f.sistema, item: f.item, obs: f.obs, tecnico: tec, tecnico_nombre: tec });
       }
       const tecnicos = Array.from(new Set(motivos.map(m => m.tecnico).filter(Boolean)));
-      const km = t.unidad === 'Tracto' ? Number(falla.km_inicial ?? 0) : 0;
+      const esTracto = t.unidad === 'Tracto';
 
       payload.push({
-        unidad: t.unidad, placa: t.placa, km, km_tablero: km, km_gps: 0,
-        horas_motor: t.unidad === 'Remolque' ? (falla.horas_motor ?? null) : null,
+        unidad: t.unidad, placa: t.placa,
+        km: esTracto ? kmTablero : 0, km_tablero: esTracto ? kmTablero : 0, km_gps: esTracto ? kmGpsOt : 0,
+        horas_motor: t.unidad === 'Remolque' ? horasLive : null,
         tipo_ot: t.tipo, subtipo_ot: t.subtipo, supervisor: t.supervisor, situacion: t.situacion || 'En atención',
         fallas_seleccionadas: seleccion.map(f => f.principal), motivos_array: motivos,
         tecnicos: tecnicos.length ? tecnicos : [t.supervisor],
