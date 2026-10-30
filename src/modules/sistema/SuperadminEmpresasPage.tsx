@@ -268,7 +268,7 @@ function EmpresaSheet({ abierto, empresa, onClose, onGuardado }: {
   const txt = (k: 'slug' | 'nombre_empresa' | 'ruc' | 'admin_email' | 'admin_password' | 'max_unidades', label: string, opts?: { wide?: boolean; disabled?: boolean; type?: string; hint?: string }) => (
     <Field label={label} wide={opts?.wide}>
       {p => (
-        <TextInput {...p} type={opts?.type ?? 'text'} value={v[k]} disabled={opts?.disabled || guardando}
+        <TextInput {...p} type={opts?.type ?? 'text'} autoComplete={opts?.type === 'password' ? 'new-password' : undefined} value={v[k]} disabled={opts?.disabled || guardando}
           onChange={e => setV({ ...v, [k]: k === 'slug' ? e.target.value.toLowerCase() : k === 'ruc' ? e.target.value.replace(/\D/g, '').slice(0, 11) : e.target.value })} />
       )}
     </Field>
@@ -277,8 +277,8 @@ function EmpresaSheet({ abierto, empresa, onClose, onGuardado }: {
   return (
     <Sheet open={abierto} onClose={() => !guardando && onClose()} title={alta ? 'Nueva empresa SaaS' : `Editar ${empresa?.nombre_empresa ?? ''}`}
       footer={<><Button variant="secondary" onClick={onClose} disabled={guardando}>Cancelar</Button>
-        <Button variant="primary" onClick={guardar} loading={guardando}>{alta ? 'Crear empresa' : 'Guardar'}</Button></>}>
-      <div className="form-grid">
+        <Button variant="primary" type="submit" form="form-empresa" loading={guardando}>{alta ? 'Crear empresa' : 'Guardar'}</Button></>}>
+      <form id="form-empresa" className="form-grid" onSubmit={e => { e.preventDefault(); guardar(); }}>
         {error && <div className="field field--wide"><Notice tone="error">{error}</Notice></div>}
         {txt('nombre_empresa', 'Nombre de la empresa', { wide: true })}
         {alta ? txt('slug', 'Subdominio (sin .azkell.com)', { wide: true }) : (
@@ -313,7 +313,7 @@ function EmpresaSheet({ abierto, empresa, onClose, onGuardado }: {
         {txt('admin_email', 'Correo del administrador', { wide: true })}
         {alta && txt('admin_password', 'Contraseña del administrador (mín. 10)', { wide: true, type: 'password' })}
         {alta && <div className="field field--wide"><span style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>Se crea la base azkell_tenant_{v.slug || '<subdominio>'} con su estructura y datos iniciales.</span></div>}
-      </div>
+      </form>
     </Sheet>
   );
 }

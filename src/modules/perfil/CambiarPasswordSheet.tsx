@@ -53,8 +53,8 @@ export function CambiarPasswordSheet({ open, onClose }: { open: boolean; onClose
   return (
     <Sheet open={open} onClose={() => !enviando && onClose()} title="Cambiar contraseña"
       footer={<><Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
-        <Button variant="primary" onClick={guardar} loading={enviando}>Cambiar</Button></>}>
-      <div className="form-grid">
+        <Button variant="primary" type="submit" form="form-cambiar-clave" loading={enviando}>Cambiar</Button></>}>
+      <form id="form-cambiar-clave" className="form-grid" onSubmit={e => { e.preventDefault(); guardar(); }}>
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
         <Field label="Contraseña actual" wide error={errs.actual}>
           {p => <PasswordInput {...p} autoComplete="current-password" value={actual}
@@ -68,7 +68,7 @@ export function CambiarPasswordSheet({ open, onClose }: { open: boolean; onClose
           {p => <PasswordInput {...p} autoComplete="new-password" value={confirmar}
             onChange={e => { setConfirmar(e.target.value); quitar('confirmar'); }} />}
         </Field>
-      </div>
+      </form>
     </Sheet>
   );
 }

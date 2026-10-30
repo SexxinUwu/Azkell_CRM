@@ -77,8 +77,9 @@ function useGuardar() {
   };
 }
 
-function Tarjeta({ icono, titulo, estado, meta, children }: {
-  icono: React.ReactNode; titulo: string; estado: 'ok' | 'pendiente' | 'error'; meta?: string; children: React.ReactNode;
+// El formulario va con display: contents para que el diseño de la tarjeta no cambie.
+function Tarjeta({ icono, titulo, estado, meta, onGuardar, children }: {
+  icono: React.ReactNode; titulo: string; estado: 'ok' | 'pendiente' | 'error'; meta?: string; onGuardar: () => void; children: React.ReactNode;
 }) {
   return (
     <section className="tarjeta__lista" style={{ padding: 'var(--s-4)', display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
@@ -92,7 +93,7 @@ function Tarjeta({ icono, titulo, estado, meta, children }: {
           {estado === 'ok' ? 'Configurado' : estado === 'error' ? 'Con error' : 'Sin configurar'}
         </span>
       </div>
-      {children}
+      <form style={{ display: 'contents' }} onSubmit={e => { e.preventDefault(); onGuardar(); }}>{children}</form>
     </section>
   );
 }
@@ -160,7 +161,7 @@ function Wialon({ filas }: { filas: Fila[] }) {
   }
 
   return (
-    <Tarjeta icono={<MapPin size={22} />} titulo="Wialon · GPS" estado={res && !res.ok ? 'error' : token ? 'ok' : 'pendiente'} meta={metaDe(filas, 'wialon_token')}>
+    <Tarjeta icono={<MapPin size={22} />} titulo="Wialon · GPS" estado={res && !res.ok ? 'error' : token ? 'ok' : 'pendiente'} meta={metaDe(filas, 'wialon_token')} onGuardar={() => guardarYProbar(false)}>
       <Field label="Token de acceso" hint="Se obtiene en Wialon › Mi cuenta › Tokens">{p => <PasswordInput {...p} value={token} onChange={e => setToken(e.target.value)} autoComplete="off" />}</Field>
       <Field label="URL del servidor" hint="Déjalo vacío para usar el predeterminado">{p => <TextInput {...p} value={url} onChange={e => setUrl(e.target.value)} placeholder="https://hst-api.wialon.com" />}</Field>
       {conectando && <Notice>Esperando la autorización en la ventana de Wialon…</Notice>}
@@ -208,7 +209,7 @@ function Sunat({ filas }: { filas: Fila[] }) {
   const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setV(a => ({ ...a, [k]: e.target.value }));
 
   return (
-    <Tarjeta icono={<ShieldCheck size={22} />} titulo="SUNAT · Guías de remisión electrónicas" estado={res && !res.ok ? 'error' : v.id ? 'ok' : 'pendiente'} meta={metaDe(filas, 'sunat_client_id')}>
+    <Tarjeta icono={<ShieldCheck size={22} />} titulo="SUNAT · Guías de remisión electrónicas" estado={res && !res.ok ? 'error' : v.id ? 'ok' : 'pendiente'} meta={metaDe(filas, 'sunat_client_id')} onGuardar={() => guardarYProbar(false)}>
       <Field label="RUC del emisor">{p => <TextInput {...p} inputMode="numeric" value={v.ruc} onChange={set('ruc')} />}</Field>
       <Field label="Usuario SOL">{p => <TextInput {...p} value={v.usuario} onChange={set('usuario')} autoComplete="off" />}</Field>
       <Field label="Clave SOL">{p => <PasswordInput {...p} value={v.clave} onChange={set('clave')} autoComplete="off" />}</Field>

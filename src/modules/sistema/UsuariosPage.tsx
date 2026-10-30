@@ -332,13 +332,13 @@ export function UsuariosPage() {
         footer={
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <Button variant="plain" onClick={() => setModal(false)} disabled={guardando}>Cancelar</Button>
-            <Button variant="primary" onClick={guardar} loading={guardando}>
+            <Button variant="primary" type="submit" form="form-usuario" loading={guardando}>
               {editando ? 'Guardar cambios' : 'Crear usuario'}
             </Button>
           </div>
         }
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+        <form id="form-usuario" onSubmit={e => { e.preventDefault(); guardar(); }} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
           <Field label="Nombre completo" error={errs.nombre}>
             {props => (
               <TextInput {...props} value={form.nombre}
@@ -371,7 +371,7 @@ export function UsuariosPage() {
           </div>
           <Field label={editando ? 'Nueva contraseña (dejar en blanco para no cambiar)' : 'Contraseña'} error={errs.password}>
             {props => (
-              <PasswordInput {...props} value={form.password}
+              <PasswordInput {...props} autoComplete="new-password" value={form.password}
                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                 placeholder={editando ? 'Sin cambios' : 'Mínimo 6 caracteres'} />
             )}
@@ -398,7 +398,7 @@ export function UsuariosPage() {
               )}
             </Field>
           </div>
-        </div>
+        </form>
       </Sheet>
 
       <ConfirmSheet

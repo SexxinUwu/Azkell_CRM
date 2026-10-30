@@ -75,7 +75,7 @@ function TOTPSetup({ onDone }: { onDone: () => void }) {
           <input
             type="text"
             inputMode="numeric"
-            placeholder="Código de 6 dígitos"
+            placeholder="Código de 6 dígitos" aria-label="Código de 6 dígitos"
             maxLength={6}
             value={codigo}
             onChange={e => setCodigo(e.target.value.replace(/\D/g, ''))}
@@ -119,7 +119,7 @@ function TOTPDisable({ onDone }: { onDone: () => void }) {
       <input
         type="text"
         inputMode="numeric"
-        placeholder="Código de 6 dígitos"
+        placeholder="Código de 6 dígitos" aria-label="Código de 6 dígitos"
         maxLength={6}
         value={codigo}
         onChange={e => setCodigo(e.target.value.replace(/\D/g, ''))}
@@ -217,7 +217,7 @@ function WebAuthnRegister({ onDone }: { onDone: () => void }) {
       </p>
       <input
         type="text"
-        placeholder="Nombre de esta clave (ej: MacBook, iPhone)"
+        placeholder="Nombre de esta clave (ej: MacBook, iPhone)" aria-label="Nombre de esta clave"
         value={nombre}
         onChange={e => setNombre(e.target.value)}
         style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', fontSize: '0.875rem', maxWidth: '22rem' }}

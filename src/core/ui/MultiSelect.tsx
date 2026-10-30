@@ -62,7 +62,7 @@ export function MultiSelect({ label, options, value, onChange, placeholder = 'To
             {options.length > 8 && (
               <label className="msel__buscar">
                 <Search size={14} />
-                <input value={q} onChange={e => setQ(e.target.value)} placeholder={`Buscar ${label.toLowerCase()}`} autoFocus />
+                <input value={q} onChange={e => setQ(e.target.value)} placeholder={`Buscar ${label.toLowerCase()}`} aria-label={`Buscar ${label.toLowerCase()}`} autoFocus />
               </label>
             )}
             <div className="msel__lista" role="listbox" aria-multiselectable="true" aria-label={label}>
