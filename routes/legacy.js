@@ -123,7 +123,7 @@ async function procesarHallazgosInspeccion(tdb, req, nextId, datos) {
                 const descTrabajo = `[${f.sistema}] ${f.item}: ${f.obs}`;
                 await tdb.promise().query(
                     `INSERT INTO trabajos_ot (ticket_visita, tipo_trabajo, sistema_vehiculo, detalle_trabajo, trabajo_realizado, tecnico, costo, placa, fecha_trabajo)
-                     VALUES (?, 'Correctivo', ?, ?, ?, ?, 0, ?, NOW())`,
+                     VALUES (?, 'Correctivo', ?, ?, ?, ?, 0, ?, CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))`,
                     [otId, f.sistema, descTrabajo, descTrabajo, datos.tecnico || '', placa]
                 );
             }

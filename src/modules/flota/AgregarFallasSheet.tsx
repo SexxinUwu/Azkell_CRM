@@ -1,6 +1,6 @@
 import './checklist.css';
 import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, Plus, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
@@ -11,6 +11,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import type { ReporteFalla } from './api';
 import { leerFallas } from './fman';
+import { VisorFotos } from '../../core/ui/VisorFotos';
 
 type Unidad = 'tracto' | 'remolque';
 
@@ -22,6 +23,22 @@ export function AgregarFallasSheet({ falla, open, onClose }: { falla: ReporteFal
     ...leerFallas(falla.fallas_tracto_json).map(f => ({ ...f, unidad: falla.placa_tracto || 'Camión' })),
     ...leerFallas(falla.fallas_remolque_json).map(f => ({ ...f, unidad: falla.placa_remolque || 'Carreta' })),
   ];
+  // Evidencias ya cargadas: se piden con URL firmada y se ven en el mismo visor que seguridad
+  const fotosGuardadas = (() => {
+    try {
+      const v = typeof falla.fotos_json === 'string' ? JSON.parse(falla.fotos_json) : falla.fotos_json;
+      return Array.isArray(v) ? v.filter((u: unknown): u is string => typeof u === 'string' && u.startsWith('http')) : [];
+    } catch { return []; }
+  })();
+  const firmadas = useQuery<Record<string, string>>({
+    queryKey: ['flota', 'checklist-fotos-agregar', String(falla.id), fotosGuardadas.join('|')],
+    enabled: open && fotosGuardadas.length > 0,
+    queryFn: async () => (await api<{ signed?: Record<string, string> }>('/mantenimiento/checklist/presign-read', { method: 'POST', body: { urls: fotosGuardadas } })).signed ?? {},
+    staleTime: 10 * 60_000,
+  });
+  const srcFoto = (u: string) => firmadas.data?.[u] || u;
+  const esVideo = (u: string) => /\.(mp4|mov|webm|m4v|ogv)(\?|$)/i.test(u);
+  const [visor, setVisor] = useState<number | null>(null);
   const [unidad, setUnidad] = useState<Unidad>(falla.placa_tracto ? 'tracto' : 'remolque');
   const [filas, setFilas] = useState<string[]>(['']);
   const [enviando, setEnviando] = useState(false);
@@ -72,6 +89,19 @@ export function AgregarFallasSheet({ falla, open, onClose }: { falla: ReporteFal
             </div>
           )}
         </div>
+        {fotosGuardadas.length > 0 && (
+          <div style={{ gridColumn: '1 / -1' }}>
+            <p className="ck-bloque__titulo">Evidencias ({fotosGuardadas.length})</p>
+            <div className="ckd-galeria">
+              {fotosGuardadas.map((u, i) => (
+                <button key={i} type="button" onClick={() => setVisor(i)} aria-label={`Ver evidencia ${i + 1}`}>
+                  {esVideo(u) ? <video src={srcFoto(u)} muted preload="metadata" /> : <img src={srcFoto(u)} alt="" loading="lazy" />}
+                  {esVideo(u) && <span className="ckd-galeria__play" aria-hidden>▶</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <Field label="¿A qué unidad pertenece la falla?" wide>
           {p => (
             <SelectInput {...p} value={unidad} onChange={e => setUnidad(e.target.value as Unidad)}>
@@ -95,6 +125,9 @@ export function AgregarFallasSheet({ falla, open, onClose }: { falla: ReporteFal
           <Button variant="secondary" icon={<Plus size={16} />} onClick={() => setFilas(a => [...a, ''])}>Agregar otra falla</Button>
         </div>
       </div>
+      <VisorFotos open={visor !== null} indiceInicial={visor ?? 0} onClose={() => setVisor(null)}
+        titulo={`Evidencias · ${falla.folio}`}
+        fotos={fotosGuardadas.map((u, i) => ({ url: srcFoto(u), titulo: `Evidencia ${i + 1}`, tipo: esVideo(u) ? 'video' as const : 'foto' as const }))} />
     </Sheet>
   );
 }
