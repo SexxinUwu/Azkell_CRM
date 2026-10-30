@@ -220,7 +220,7 @@ export function EntradasPage() {
   const puedeEditar = can('ent_inv.editar');
   const puedeEliminar = can('ent_inv.eliminar');
   // Pagar es un acto de Tesorería: mismos permisos que Pago de requerimientos
-  const puedePagar = can('tesoreria_caja.ver', 'tesoreria_pagos.ver');
+  const puedePagar = can('tesoreria_caja.ver', 'tesoreria_pago_req.ver');
 
   useEffect(() => { setPagina(1); }, [busqueda, desde, hasta, estado]);
 

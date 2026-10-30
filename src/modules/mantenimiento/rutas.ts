@@ -40,9 +40,9 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'mantenimiento/reportes-ot/*',
-    permisos: ['reportes_ot.ver', 'ot.ver', 'admin'],
+    permisos: ['reportes_ot.ver', 'admin'],
     Page: lazy(() => import('./OrdenesTrabajoPage').then(m => ({ default: m.OrdenesTrabajoPage }))),
-    nav: { key: 'reportes-ot', label: 'Órdenes de trabajo', to: '/mantenimiento/reportes-ot', icon: 'ScrollText', permisos: ['reportes_ot.ver', 'ot.ver'] },
+    nav: { key: 'reportes-ot', label: 'Órdenes de trabajo', to: '/mantenimiento/reportes-ot', icon: 'ScrollText', permisos: ['reportes_ot.ver', 'reportes_ot.ver'] },
   },
   {
     path: 'mantenimiento/trabajos-ot/*',
@@ -58,9 +58,9 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'mantenimiento/fleetrun/*',
-    permisos: ['fleetrun.ver', 'fleet.ver', 'admin'],
+    permisos: ['fleet.ver', 'admin'],
     Page: lazy(() => import('./FleetrunPage').then(m => ({ default: m.FleetrunPage }))),
-    nav: { key: 'fleetrun', label: 'Fleetrun', to: '/mantenimiento/fleetrun', icon: 'Gauge', permisos: ['fleetrun.ver', 'fleet.ver'] },
+    nav: { key: 'fleetrun', label: 'Fleetrun', to: '/mantenimiento/fleetrun', icon: 'Gauge', permisos: ['fleet.ver', 'fleet.ver'] },
   },
   {
     path: 'mantenimiento/fleetrun-config/*',
@@ -127,9 +127,9 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'mantenimiento/fallas/*',
-    permisos: ['fallas.ver', 'admin'],
+    permisos: ['checklist.ver', 'admin'],
     Page: lazy(() => import('./FallasPage').then(m => ({ default: m.FallasPage }))),
-    nav: { key: 'fallas', label: 'Fallas en ruta', to: '/mantenimiento/fallas', icon: 'AlertTriangle', permisos: ['fallas.ver', 'admin'] },
+    nav: { key: 'fallas', label: 'Fallas en ruta', to: '/mantenimiento/fallas', icon: 'AlertTriangle', permisos: ['checklist.ver', 'admin'] },
   },
   {
     path: 'mantenimiento/kits-mp/*',

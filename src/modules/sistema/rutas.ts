@@ -22,9 +22,9 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'sistema/empresa/*',
-    permisos: ['administracion.ver', 'cfg_empresa.ver', 'admin'],
+    permisos: ['administracion.ver', 'admin'],
     Page: lazy(() => import('./ConfiguracionEmpresaPage').then(m => ({ default: m.ConfiguracionEmpresaPage }))),
-    nav: { key: 'empresa', label: 'Empresa', to: '/sistema/empresa', icon: 'Building2', permisos: ['administracion.ver', 'cfg_empresa.ver', 'admin'] },
+    nav: { key: 'empresa', label: 'Empresa', to: '/sistema/empresa', icon: 'Building2', permisos: ['administracion.ver', 'administracion.ver', 'admin'] },
   },
   {
     path: 'sistema/notificaciones/*',

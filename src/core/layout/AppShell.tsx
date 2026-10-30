@@ -58,7 +58,7 @@ export function AppShell() {
   const app = useInstallApp();
   const live = useLiveUpdates(); // cambios de otros dispositivos, al instante
   const sections = visibleSections(can, esFundadorSaaS(user));
-  const contador = useNavBadges(can('gerencia.ver'));
+  const contador = useNavBadges(can('gerencia_aprobaciones_oc.ver'));
   // Menú en acordeón: solo una sección abierta a la vez. Al entrar a una pantalla, se abre la sección que la contiene.
   const [seccionAbierta, setSeccionAbierta] = useState<string | null>(null);
   useEffect(() => {

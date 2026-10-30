@@ -687,8 +687,8 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
   // OT de la visita abierta en su ficha completa (trabajos, materiales, editar, acciones: como en Reportes OT)
   const [otSel, setOtSel] = useState<string | null>(null);
   const { can } = useAuth();
-  const puedeEditarOT = can('ot.editar') || can('reportes_ot.editar');
-  const puedeEliminarOT = can('ot.eliminar') || can('reportes_ot.eliminar');
+  const puedeEditarOT = can('reportes_ot.editar') || can('reportes_ot.editar');
+  const puedeEliminarOT = can('reportes_ot.eliminar') || can('reportes_ot.eliminar');
 
   // PDF de la rampa: OT de la visita, trabajos, materiales y evidencia firmada desde S3
   async function imprimirRampa() {

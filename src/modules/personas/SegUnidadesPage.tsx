@@ -34,8 +34,8 @@ export function SegUnidadesPage() {
 
   const lista = useRegistros(empresa);
   const recursos = useRecursos(empresa);
-  const puedeCrear = can('seg_unidades.crear', 'seguridad_unidades.crear');
-  const puedeEliminar = can('seg_unidades.eliminar', 'seguridad_unidades.eliminar');
+  const puedeCrear = can('seguridad_unidades.crear', 'seguridad_unidades.crear');
+  const puedeEliminar = can('seguridad_unidades.eliminar', 'seguridad_unidades.eliminar');
   const refrescar = () => qc.invalidateQueries({ queryKey: ['personas'] });
   const abierto = (lista.data ?? []).find(r => r.id === abiertoId) ?? null;
   // Cifras reales del servidor (la lista solo descarga los registros más recientes)

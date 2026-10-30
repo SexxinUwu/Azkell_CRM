@@ -40,7 +40,7 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'tesoreria/pago-requerimientos/*',
-    permisos: ['tesoreria_caja.ver', 'tesoreria_pagos.ver', 'admin'],
+    permisos: ['tesoreria_caja.ver', 'tesoreria_pago_req.ver', 'admin'],
     Page: lazy(() => import('./PagoRequerimientosPage').then(m => ({ default: m.PagoRequerimientosPage }))),
     nav: { key: 'pago-requerimientos', label: 'Pago de requerimientos', to: '/tesoreria/pago-requerimientos', icon: 'CreditCard', permisos: ['tesoreria_caja.ver'] },
   },

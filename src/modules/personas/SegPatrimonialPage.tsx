@@ -62,7 +62,7 @@ export function SegPatrimonialPage() {
   const nav = useNavigate();
   const { can } = useAuth();
   // La garita (Personas > Garita: unidades) alimenta este panorama: sus registros de salida y retorno
-  const puedeVerGarita = can('seguridad_unidades.ver', 'seg_unidades.ver', 'seg_checklist.ver');
+  const puedeVerGarita = can('seguridad_unidades.ver', 'seguridad_unidades.ver', 'seguridad_unidades.ver');
   const toast = useToast();
 
   const panorama = useQuery<UnidadBase[]>({

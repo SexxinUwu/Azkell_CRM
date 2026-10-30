@@ -69,25 +69,25 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Operaciones',
     items: [
-      { key: 'programacion', label: 'Programación', to: '/operaciones/programacion', icon: CalendarDays, permissions: ver('op_programacion', 'op_guias_remision', 'guias_remision') },
-      { key: 'ordenes-viaje', noEmpresa: 'marsisa', label: 'Órdenes de viaje', to: '/operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'guias_remision', 'op_guias_remision') },
-      { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: ScrollText, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'guias_remision') },
+      { key: 'programacion', label: 'Programación', to: '/operaciones/programacion', icon: CalendarDays, permissions: ver('op_programacion', 'op_guias_remision') },
+      { key: 'ordenes-viaje', noEmpresa: 'marsisa', label: 'Órdenes de viaje', to: '/operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'op_guias_remision', 'op_guias_remision') },
+      { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: ScrollText, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision') },
       { key: 'reporte-viajes', label: 'Reporte de viajes', to: '/operaciones/reporte-viajes', icon: BarChart3, permissions: ver('op_reporte_viajes') },
       {
         key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [],
         children: [
-          { key: 'guias-remitente', label: 'Guía de remisión electrónica (remitente)', to: '/operaciones/guias-remitente', icon: FileText, permissions: ver('op_guias_remision', 'guias_remision') },
-          { key: 'guias-transportista', label: 'Guía de remisión de transportista', to: '/operaciones/guias-transportista', icon: FileText, permissions: ver('op_guias_remision', 'guias_remision') },
+          { key: 'guias-remitente', label: 'Guía de remisión electrónica (remitente)', to: '/operaciones/guias-remitente', icon: FileText, permissions: ver('op_guias_remision') },
+          { key: 'guias-transportista', label: 'Guía de remisión de transportista', to: '/operaciones/guias-transportista', icon: FileText, permissions: ver('op_guias_remision') },
         ],
       },
       {
         key: 'combustible-grupo', label: 'Combustible', icon: Fuel, permissions: [],
         children: [
-          { key: 'vales', noEmpresa: 'marsisa', label: 'Vales de combustible', to: '/operaciones/vales', icon: Fuel, permissions: ver('combustible_vales', 'combustible') },
-          { key: 'matriz-combustible', noEmpresa: 'marsisa', label: 'Matriz de combustible (D2)', to: '/operaciones/matriz-combustible', icon: Target, permissions: ver('combustible_analisis', 'combustible') },
-          { key: 'analisis-combustible', noEmpresa: 'marsisa', label: 'Análisis de combustible (D2)', to: '/operaciones/analisis-combustible', icon: Gauge, permissions: ver('combustible_analisis', 'combustible') },
-          { key: 'urea', noEmpresa: 'marsisa', label: 'Análisis de urea', to: '/operaciones/urea', icon: Droplet, permissions: ver('urea_analisis', 'combustible_analisis', 'combustible') },
-          { key: 'estaciones', label: 'Estaciones de proveedores', to: '/operaciones/combustible-estaciones', icon: MapPin, permissions: ver('combustible_vales', 'combustible') },
+          { key: 'vales', noEmpresa: 'marsisa', label: 'Vales de combustible', to: '/operaciones/vales', icon: Fuel, permissions: ver('combustible_vales') },
+          { key: 'matriz-combustible', noEmpresa: 'marsisa', label: 'Matriz de combustible (D2)', to: '/operaciones/matriz-combustible', icon: Target, permissions: ver('combustible_analisis') },
+          { key: 'analisis-combustible', noEmpresa: 'marsisa', label: 'Análisis de combustible (D2)', to: '/operaciones/analisis-combustible', icon: Gauge, permissions: ver('combustible_analisis') },
+          { key: 'urea', noEmpresa: 'marsisa', label: 'Análisis de urea', to: '/operaciones/urea', icon: Droplet, permissions: ver('urea_analisis', 'combustible_analisis') },
+          { key: 'estaciones', label: 'Estaciones de proveedores', to: '/operaciones/combustible-estaciones', icon: MapPin, permissions: ver('combustible_vales') },
         ],
       },
     ],
@@ -95,14 +95,14 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Operaciones Marsisa',
     items: [
-      { key: 'marsisa-ordenes-viaje', label: 'Órdenes de viaje (Marsisa)', to: '/operaciones/marsisa-ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'guias_remision', 'op_guias_remision'), soloEmpresa: 'marsisa' },
+      { key: 'marsisa-ordenes-viaje', label: 'Órdenes de viaje (Marsisa)', to: '/operaciones/marsisa-ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'op_guias_remision', 'op_guias_remision'), soloEmpresa: 'marsisa' },
       {
         key: 'marsisa-combustible-grupo', label: 'Combustible Marsisa', icon: Fuel, permissions: [], soloEmpresa: 'marsisa',
         children: [
-          { key: 'marsisa-vales', label: 'Vales de combustible', to: '/operaciones/marsisa-vales', icon: Fuel, permissions: ver('combustible_vales', 'combustible'), soloEmpresa: 'marsisa' },
-          { key: 'marsisa-matriz', label: 'Matriz de combustible (D2)', to: '/operaciones/matriz-combustible', icon: Target, permissions: ver('combustible_analisis', 'combustible'), soloEmpresa: 'marsisa' },
-          { key: 'marsisa-analisis', label: 'Análisis de combustible (D2)', to: '/operaciones/analisis-combustible', icon: Gauge, permissions: ver('combustible_analisis', 'combustible'), soloEmpresa: 'marsisa' },
-          { key: 'marsisa-urea', label: 'Análisis de urea', to: '/operaciones/urea', icon: Droplet, permissions: ver('urea_analisis', 'combustible_analisis', 'combustible'), soloEmpresa: 'marsisa' },
+          { key: 'marsisa-vales', label: 'Vales de combustible', to: '/operaciones/marsisa-vales', icon: Fuel, permissions: ver('combustible_vales'), soloEmpresa: 'marsisa' },
+          { key: 'marsisa-matriz', label: 'Matriz de combustible (D2)', to: '/operaciones/matriz-combustible', icon: Target, permissions: ver('combustible_analisis'), soloEmpresa: 'marsisa' },
+          { key: 'marsisa-analisis', label: 'Análisis de combustible (D2)', to: '/operaciones/analisis-combustible', icon: Gauge, permissions: ver('combustible_analisis'), soloEmpresa: 'marsisa' },
+          { key: 'marsisa-urea', label: 'Análisis de urea', to: '/operaciones/urea', icon: Droplet, permissions: ver('urea_analisis', 'combustible_analisis'), soloEmpresa: 'marsisa' },
         ],
       },
     ],
@@ -114,7 +114,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'disponibilidad', label: 'Disponibilidad', to: '/flota/disponibilidad', icon: Gauge, permissions: ver('disponibilidad') },
       { key: 'ubicacion', label: 'GPS', to: '/flota/ubicacion', icon: MapPin, permissions: ver('gps') },
       { key: 'documentos', label: 'Documentos', to: '/flota/documentos', icon: FileText, permissions: ver('docs_flota') },
-      { key: 'entrega', label: 'Entrega de vehículos', to: '/flota/checklist-entrega', icon: ClipboardList, permissions: ver('entrega_vehiculos', 'seg_unidades', 'placas') },
+      { key: 'entrega', label: 'Entrega de vehículos', to: '/flota/checklist-entrega', icon: ClipboardList, permissions: ver('entrega_vehiculos', 'seguridad_unidades', 'placas') },
       { key: 'almacen-flota', label: 'Almacén de flota', to: '/flota/almacen-flota', icon: Warehouse, permissions: ver('inv', 'sal_inv', 'ent_inv') },
       { key: 'checklist', label: 'Reporte de fallas', to: '/flota/checklist', icon: ClipboardCheck, permissions: ver('checklist') },
     ],
@@ -125,8 +125,8 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'mant-dashboard', label: 'Dashboard mantenimiento', to: '/mantenimiento/dashboard', icon: LayoutDashboard, permissions: ver('mant_dashboard', 'dashboard', 'status_rampa', 'checklist') },
       { key: 'status-rampa', label: 'Status de rampa', to: '/mantenimiento/status-rampa', icon: Wrench, permissions: ver('status_rampa') },
       { key: 'inspecciones', label: 'Análisis de inspecciones', to: '/inspecciones', icon: ClipboardList, permissions: ver('insp') },
-      { key: 'fleetrun', label: 'Mantenimiento preventivo (Fleetrun)', to: '/mantenimiento/fleetrun', icon: Gauge, permissions: ver('fleetrun', 'fleet') },
-      { key: 'reportes-ot', label: 'Reportes OT', to: '/mantenimiento/reportes-ot', icon: ScrollText, permissions: ver('reportes_ot', 'ot') },
+      { key: 'fleetrun', label: 'Mantenimiento preventivo (Fleetrun)', to: '/mantenimiento/fleetrun', icon: Gauge, permissions: ver('fleet', 'fleet') },
+      { key: 'reportes-ot', label: 'Reportes OT', to: '/mantenimiento/reportes-ot', icon: ScrollText, permissions: ver('reportes_ot') },
       { key: 'trabajos-ot', label: 'Historial de trabajos', to: '/mantenimiento/trabajos-ot', icon: History, permissions: ver('trabajos_ot') },
       {
         key: 'neumaticos-grupo', label: 'Neumáticos', icon: Disc3, permissions: [],
@@ -173,7 +173,7 @@ const SECCIONES_BASE: NavSection[] = [
     title: 'Tesorería',
     items: [
       { key: 'caja', label: 'Caja', to: '/tesoreria/caja', icon: Banknote, permissions: ver('tesoreria_caja') },
-      { key: 'pago-requerimientos', label: 'Pago de requerimientos', to: '/tesoreria/pago-requerimientos', icon: Wallet, permissions: ver('tesoreria_caja', 'tesoreria_pagos') },
+      { key: 'pago-requerimientos', label: 'Pago de requerimientos', to: '/tesoreria/pago-requerimientos', icon: Wallet, permissions: ver('tesoreria_caja', 'tesoreria_pago_req') },
       { key: 'movimientos', label: 'Movimientos', to: '/tesoreria/movimientos', icon: ArrowLeftRight, permissions: ver('tesoreria_caja', 'tesoreria_movimientos') },
       { key: 'liquidaciones', label: 'Liquidación de gastos', to: '/tesoreria/liquidaciones', icon: ScrollText, permissions: ver('tesoreria_liquidaciones') },
       { key: 'cuentas', label: 'Cuentas por cobrar y pagar', to: '/tesoreria/cuentas', icon: FileText, permissions: ver('tesoreria_cuentas') },
@@ -191,8 +191,8 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Seguridad',
     items: [
-      { key: 'seg-unidades', label: 'Checklist "Unidades"', to: '/personas/seg-unidades', icon: ShieldCheck, permissions: ver('seguridad_unidades', 'seg_unidades', 'seg_checklist') },
-      { key: 'seg-status', label: 'Status "Unidades en Base"', to: '/seguridad/unidades-base', icon: MapPin, permissions: ver('seguridad_unidades', 'seg_unidades') },
+      { key: 'seg-unidades', label: 'Checklist "Unidades"', to: '/personas/seg-unidades', icon: ShieldCheck, permissions: ver('seguridad_unidades') },
+      { key: 'seg-status', label: 'Status "Unidades en Base"', to: '/seguridad/unidades-base', icon: MapPin, permissions: ver('seguridad_unidades') },
     ],
   },
   {
@@ -209,7 +209,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'superadmin', label: 'Empresas SaaS (SuperAdmin)', to: '/sistema/superadmin', icon: Building2, permissions: [], soloFundador: true },
       { key: 'auditoria', label: 'Auditoría', to: '/sistema/auditoria', icon: History, permissions: ver('mod_auditoria') },
       { key: 'api-gateway', label: 'API y desarrolladores', to: '/sistema/api', icon: Code, permissions: ver('administracion') },
-      { key: 'empresa', label: 'Empresa', to: '/sistema/empresa', icon: Building2, permissions: ver('administracion', 'cfg_empresa') },
+      { key: 'empresa', label: 'Empresa', to: '/sistema/empresa', icon: Building2, permissions: ver('administracion') },
       { key: 'notificaciones', label: 'Notificaciones', to: '/sistema/notificaciones', icon: Bell, permissions: ver('administracion') },
       { key: 'apariencia', label: 'Apariencia', to: '/perfil', icon: Palette, permissions: [] },
       { key: 'accesibilidad', label: 'Accesibilidad e idioma', to: '/sistema/accesibilidad', icon: Accessibility, permissions: [] },
@@ -237,7 +237,7 @@ function conModulos(base: NavSection[]): NavSection[] {
     const existente = todos.find(i => i.key === n.key && !i.children);
     if (!existente) continue;
     existente.to = n.to;
-    existente.permissions = n.permisos;
+    // El permiso lo define el menú (navigation.ts), no la guarda de la ruta: así el menú y el acceso coinciden
     existente.soloEmpresa = n.soloEmpresa ?? existente.soloEmpresa;
   }
   return secciones;

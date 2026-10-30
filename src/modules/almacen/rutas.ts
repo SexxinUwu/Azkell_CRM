@@ -52,7 +52,7 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'almacen/configuracion/*',
-    permisos: ['cfg_almacen.ver', 'inv.ver'],
+    permisos: ['almacen_otros.ver', 'inv.ver'],
     Page: lazy(() => import('./AlmacenConfiguracionPage').then(m => ({ default: m.AlmacenConfiguracionPage }))),
   },
 ];

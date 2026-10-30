@@ -23,7 +23,7 @@ export const RUTAS: RutaModulo[] = [
   {
     // Lista de actas simple (pantalla anterior). Ya no está en el menú: el menú abre el checklist completo.
     path: 'flota/entrega-vehiculos/*',
-    permisos: ['entrega_vehiculos.ver', 'seg_unidades.ver', 'placas.ver'],
+    permisos: ['entrega_vehiculos.ver', 'seguridad_unidades.ver', 'placas.ver'],
     Page: lazy(() => import('./EntregaPage').then(m => ({ default: m.EntregaPage }))),
   },
   {
@@ -41,8 +41,8 @@ export const RUTAS: RutaModulo[] = [
   {
     // Entrega de vehículos (CheckList por empresa): el menú "Entrega de vehículos" abre esta pantalla
     path: 'flota/checklist-entrega/*',
-    permisos: ['entrega_vehiculos.ver', 'seg_unidades.ver', 'placas.ver', 'admin'],
+    permisos: ['entrega_vehiculos.ver', 'seguridad_unidades.ver', 'placas.ver', 'admin'],
     Page: lazy(() => import('./ChecklistEntregaPage').then(m => ({ default: m.ChecklistEntregaPage }))),
-    nav: { key: 'entrega', label: 'Entrega de vehículos', to: '/flota/checklist-entrega', icon: 'ClipboardList', permisos: ['entrega_vehiculos.ver', 'seg_unidades.ver', 'placas.ver'] },
+    nav: { key: 'entrega', label: 'Entrega de vehículos', to: '/flota/checklist-entrega', icon: 'ClipboardList', permisos: ['entrega_vehiculos.ver', 'seguridad_unidades.ver', 'placas.ver'] },
   },
 ];

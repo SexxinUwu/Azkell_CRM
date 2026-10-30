@@ -99,11 +99,11 @@ export function DetalleCaja({ mov: m, onClose, onEditar, onCambio }: Props) {
         footer={
           <>
             {can('tesoreria_caja.eliminar') && editable && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={() => setBorrando(true)}>Eliminar</Button>}
-            {can('gerencia.editar', 'tesoreria_caja.editar') && estado !== 'ANULADO' && estado !== 'PAGADO' &&
+            {can('gerencia_aprobaciones_caja.editar', 'tesoreria_caja.editar') && estado !== 'ANULADO' && estado !== 'PAGADO' &&
               <Button variant="secondary" icon={<Ban size={16} />} onClick={() => setAnulando(true)}>Anular</Button>}
             {can('tesoreria_caja.editar', 'tesoreria_caja.crear') && editable &&
               <Button variant="secondary" icon={<Pencil size={16} />} onClick={() => { onClose(); onEditar(m); }}>Editar</Button>}
-            {can('gerencia.editar', 'tesoreria_caja.editar') && editable &&
+            {can('gerencia_aprobaciones_caja.editar', 'tesoreria_caja.editar') && editable &&
               <Button variant="primary" icon={<CheckCircle2 size={16} />} loading={ocupado}
                 onClick={() => ejecutar(async () => comprobar(await api('/tesoreria/caja/' + m.id + '/aprobar', { method: 'POST', body: { usuario_aprobacion: user?.name } })), 'Caja aprobada')}>Aprobar</Button>}
             {(estado === 'APROBADO' || estado === 'PROCESADO' || estado === 'PAGADO') && can('tesoreria_caja.editar', 'tesoreria_caja.crear') &&

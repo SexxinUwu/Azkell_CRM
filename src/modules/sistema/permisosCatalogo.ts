@@ -68,6 +68,7 @@ export const MODULOS_PERMISO: ModuloPermiso[] = [
   { grupo: 'SEGURIDAD', key: 'unidades_base', nombre: 'Unidades en Base', desc: 'Status y control de unidades en base', lcad: true },
   { grupo: 'CONFIGURACIÓN', key: 'usuarios', nombre: 'Usuarios y Roles', desc: 'Gestión de accesos y seguridad', lcad: true },
   { grupo: 'CONFIGURACIÓN', key: 'cfg_situacion', nombre: 'Situaciones', desc: 'Catálogo de situaciones de unidades y rampa', lcad: true },
+  { grupo: 'CONFIGURACIÓN', key: 'administracion', nombre: 'Administración de empresa', desc: 'Datos de empresa, notificaciones y API para desarrolladores', lcad: true },
   { grupo: 'CONFIGURACIÓN', key: 'mod_auditoria', nombre: 'Auditoría', desc: 'Bitácora de actividad global', lcad: true },
   { grupo: 'CONFIGURACIÓN', key: 'integraciones', nombre: 'Integraciones', desc: 'Wialon, Fleetrun, WhatsApp y Webhooks', lcad: true },
 ];

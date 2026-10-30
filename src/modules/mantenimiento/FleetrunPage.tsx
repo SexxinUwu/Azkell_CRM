@@ -401,9 +401,9 @@ export function FleetrunPage() {
   const qc = useQueryClient();
   const toast = useToast();
   const { can, user } = useAuth();
-  const puedeCrear = can('fleet.crear', 'fleetrun.crear');
-  const puedeEditar = can('fleet.editar', 'fleetrun.editar');
-  const puedeEliminar = can('fleet.eliminar', 'fleetrun.eliminar');
+  const puedeCrear = can('fleet.crear', 'fleet.crear');
+  const puedeEditar = can('fleet.editar', 'fleet.editar');
+  const puedeEliminar = can('fleet.eliminar', 'fleet.eliminar');
   const movil = useMediaQuery(MOBILE_QUERY);
   const { data, isLoading, isError, error } = useFleetrun();
   const { data: placasData } = usePlacas();

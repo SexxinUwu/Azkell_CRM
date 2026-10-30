@@ -47,7 +47,7 @@ export function UnidadesBasePage() {
   const qc = useQueryClient();
   const toast = useToast();
   const { can } = useAuth();
-  const puedeEditar = can('seguridad_unidades.editar', 'seg_unidades.editar', 'seguridad_unidades.crear');
+  const puedeEditar = can('seguridad_unidades.editar', 'seguridad_unidades.editar', 'seguridad_unidades.crear');
   const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 
   const panorama = useQuery<Panorama>({

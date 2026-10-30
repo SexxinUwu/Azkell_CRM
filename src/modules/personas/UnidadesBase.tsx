@@ -53,7 +53,7 @@ export function UnidadesBase() {
 
   const t = busqueda.trim().toUpperCase();
   const lista = (q.data ?? []).filter(r => !t || [r.placa_camion, r.placa_carreta, r.conductor, r.zona, r.observacion].some(x => String(x ?? '').toUpperCase().includes(t)));
-  const puedeEditar = can('seg_unidades.crear', 'seguridad_unidades.crear', 'seg_unidades.editar');
+  const puedeEditar = can('seguridad_unidades.crear', 'seguridad_unidades.crear', 'seguridad_unidades.editar');
   const refrescar = () => qc.invalidateQueries({ queryKey: ['personas', 'unidades-base'] });
 
   async function sincronizar() {

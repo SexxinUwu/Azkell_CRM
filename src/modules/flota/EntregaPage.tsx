@@ -68,8 +68,8 @@ export function EntregaPage() {
     return t ? lista.filter(a => [a.id, a.placa, a.quien_entrega, a.quien_recibe, a.empresa, a.marca].some(x => String(x ?? '').toUpperCase().includes(t))) : lista;
   }, [lista, busqueda]);
   const abierta = lista.find(a => a.id === abiertoId) ?? null;
-  const puedeCrear = can('entrega_vehiculos.crear', 'seg_unidades.crear', 'placas.crear');
-  const puedeEliminar = can('entrega_vehiculos.eliminar', 'seg_unidades.eliminar');
+  const puedeCrear = can('entrega_vehiculos.crear', 'seguridad_unidades.crear', 'placas.crear');
+  const puedeEliminar = can('entrega_vehiculos.eliminar', 'seguridad_unidades.eliminar');
   const refrescar = () => qc.invalidateQueries({ queryKey: ['flota', 'entrega-vehiculos'] });
 
   async function eliminar() {

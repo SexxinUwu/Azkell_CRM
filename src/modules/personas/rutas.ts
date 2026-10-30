@@ -16,9 +16,9 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'personas/seg-unidades/*',
-    permisos: ['seguridad_unidades.ver', 'seg_unidades.ver', 'seg_checklist.ver', 'admin'],
+    permisos: ['seguridad_unidades.ver', 'admin'],
     Page: lazy(() => import('./SegUnidadesPage').then(m => ({ default: m.SegUnidadesPage }))),
-    nav: { key: 'seg-unidades', label: 'Garita: unidades', to: '/personas/seg-unidades', icon: 'ShieldCheck', permisos: ['seguridad_unidades.ver', 'seg_unidades.ver', 'seg_checklist.ver'] },
+    nav: { key: 'seg-unidades', label: 'Garita: unidades', to: '/personas/seg-unidades', icon: 'ShieldCheck', permisos: ['seguridad_unidades.ver', 'seguridad_unidades.ver', 'seguridad_unidades.ver'] },
   },
   {
     path: 'personas/portal-conductor/*',
@@ -28,8 +28,8 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'personas/seg-patrimonial/*',
-    permisos: ['seg_patrimonial.ver', 'seguridad_unidades.ver', 'admin'],
+    permisos: ['seguridad_unidades.ver', 'seguridad_unidades.ver', 'admin'],
     Page: lazy(() => import('./SegPatrimonialPage').then(m => ({ default: m.SegPatrimonialPage }))),
-    nav: { key: 'seg-patrimonial', label: 'Panel patrimonial', to: '/personas/seg-patrimonial', icon: 'ShieldAlert', permisos: ['seg_patrimonial.ver', 'seguridad_unidades.ver', 'admin'] },
+    nav: { key: 'seg-patrimonial', label: 'Panel patrimonial', to: '/personas/seg-patrimonial', icon: 'ShieldAlert', permisos: ['seguridad_unidades.ver', 'seguridad_unidades.ver', 'admin'] },
   },
 ];
