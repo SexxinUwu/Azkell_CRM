@@ -4,21 +4,19 @@ import '../almacen/almacen.css'; // estilos de tabla (.inv-kardex) que usa la li
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, ArrowUpRight, BookOpen, CheckCircle2, Eye, Filter, Lock, Pause, Play, Plus, ScrollText, SearchX, Trash2, XCircle } from 'lucide-react';
+import { AlertCircle, BookOpen, CheckCircle2, Eye, Filter, Lock, Pause, Play, Plus, ScrollText, SearchX, Trash2, XCircle } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
 import { ChoiceChips } from '../../core/ui/Chips';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
-import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
 import { CerrarOTSheet, PausarOTSheet } from './OTAcciones';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 import { ejecutarAccionOT, eliminarOT, otDetalles, otFecha, otId, otTipo, useOrdenesTrabajoData, type AccionOT, type DetallesOT, type OrdenTrabajo } from './api';
 import { ETIQUETA_ACCION, OTDetalle } from './OTDetalle';
 import { exportarReportesOT } from './exportarOT';
@@ -308,10 +306,6 @@ export function OrdenesTrabajoPage() {
               <Button variant="secondary" iconOnly icon={<LogoArchivo tipo="pdf" />} disabled={visibles.length === 0}
                 aria-label="Abrir PDF" title="Abrir PDF" style={{ minHeight: 44, minWidth: 44 }}
                 onClick={() => abrirPdfReportesOT(visibles, textoFiltros()).catch(err => toast(errorMessage(err), 'error'))} />
-              <MenuOtros opciones={[
-                { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />,
-                  onSelect: () => abrirClasico('mantenimiento/reportes-ot') },
-              ]} />
             </div>
           }
         />
