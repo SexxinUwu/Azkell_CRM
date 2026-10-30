@@ -2,7 +2,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { VolverOtros } from './VolverOtros';
 import {
-  Banknote, Boxes, ChevronDown, ChevronRight, Contact, IdCard, House, LogOut, Palette, PanelLeftClose, PanelLeftOpen, Route, Settings, Share, ShieldCheck, Truck,
+  Banknote, Boxes, ChevronDown, ChevronRight, Contact, Download, IdCard, House, LogOut, Palette, PanelLeftClose, PanelLeftOpen, Route, Settings, Share, ShieldCheck, Truck,
   SquarePlus, Smartphone, Users, Wrench, Search, EyeOff, Star, type LucideIcon,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -53,6 +53,7 @@ export function AppShell() {
   const [moduloAbierto, setModuloAbierto] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [iosHelp, setIosHelp] = useState(false);
+  const [androidHelp, setAndroidHelp] = useState(false);
   // Barra lateral fijada abierta (escritorio). Se recuerda en este navegador.
   const [menuFijo, setMenuFijo] = useState(() => { try { return localStorage.getItem('fleet_nav_fijo') === '1'; } catch { return false; } });
   const alternarMenuFijo = () => setMenuFijo(v => { const nv = !v; try { localStorage.setItem('fleet_nav_fijo', nv ? '1' : '0'); } catch { /* nada */ } return nv; });
@@ -236,6 +237,12 @@ export function AppShell() {
             </div>
           </NavLink>
           <div className="sidebar__acciones">
+            {!app.standalone && app.canPrompt && (
+              <button type="button" className="nav-item" onClick={() => void app.install()}>
+                <Download size={18} strokeWidth={1.9} />
+                <span className="sidebar__texto">Instalar aplicación</span>
+              </button>
+            )}
             <button type="button" className="nav-item" onClick={() => setPaletaAbierta(true)}>
               <Search size={18} strokeWidth={1.9} />
               <span className="sidebar__texto">Buscar pantalla (Ctrl+K)</span>
@@ -329,8 +336,8 @@ export function AppShell() {
 
         <div className="more-section">
           <div className="list">
-            {!app.standalone && (app.canPrompt || app.needsIosSteps) && (
-              <button type="button" className="row" onClick={() => (app.canPrompt ? app.install() : setIosHelp(true))}>
+            {!app.standalone && (
+              <button type="button" className="row" onClick={() => { if (app.canPrompt) { void app.install(); } else if (app.needsIosSteps) { setIosHelp(true); } else { setAndroidHelp(true); } }}>
                 <Smartphone size={20} strokeWidth={1.8} />
                 <span className="row__main row__title">Instalar app en este teléfono</span>
               </button>
@@ -351,6 +358,14 @@ export function AppShell() {
           <li><span className="install-steps__n">1</span><span>Abre Azkell Fleet en <strong>Safari</strong> (no funciona desde otros navegadores).</span></li>
           <li><span className="install-steps__n">2</span><span>Toca el botón <strong>Compartir</strong> <Share size={16} style={{ display: 'inline', verticalAlign: '-2px' }} /> de la barra inferior.</span></li>
           <li><span className="install-steps__n">3</span><span>Elige <strong>Añadir a pantalla de inicio</strong> <SquarePlus size={16} style={{ display: 'inline', verticalAlign: '-2px' }} /> y toca <strong>Añadir</strong>.</span></li>
+        </ol>
+      </Sheet>
+
+      <Sheet open={androidHelp} onClose={() => setAndroidHelp(false)} title="Instalar en tu teléfono" footer={<Button variant="primary" onClick={() => setAndroidHelp(false)}>Entendido</Button>}>
+        <ol className="install-steps">
+          <li><span className="install-steps__n">1</span><span>Toca los <strong>tres puntos (⋮)</strong> en la esquina superior derecha del navegador.</span></li>
+          <li><span className="install-steps__n">2</span><span>Elige <strong>Instalar aplicación</strong> (o «Añadir a pantalla de inicio»).</span></li>
+          <li><span className="install-steps__n">3</span><span>Toca <strong>Instalar</strong>. Se creará la app con el logo a color de tu empresa en tu pantalla de inicio.</span></li>
         </ol>
       </Sheet>
     </div>

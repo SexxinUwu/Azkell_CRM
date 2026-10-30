@@ -359,11 +359,12 @@ app.get(['/manifest.json', '/manifest.webmanifest'], async (req, res) => {
         const iconSrc = hasCustomLogo ? '/api/tenant-logo' : '/app-icon-2002.png';
 
         const manifestData = {
-            id: '/',
+            id: '/app',
+            scope: '/',
             name: pwaName,
             short_name: pwaShortName,
             description: `Sistema ERP de Gestión de Flota y Mantenimiento — ${cleanName}`,
-            start_url: '/',
+            start_url: '/app',
             display: 'standalone',
             // Claro: la pantalla de inicio y la barra de la app se ven como el logo, no oscuras
             background_color: '#ffffff',
@@ -375,6 +376,12 @@ app.get(['/manifest.json', '/manifest.webmanifest'], async (req, res) => {
                     sizes: '192x192',
                     type: 'image/png',
                     purpose: 'any'
+                },
+                {
+                    src: iconSrc,
+                    sizes: '192x192',
+                    type: 'image/png',
+                    purpose: 'maskable'
                 },
                 {
                     src: iconSrc,
