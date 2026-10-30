@@ -4,7 +4,7 @@ import { useAuth } from './AuthProvider';
 import { Sheet } from '../ui/Sheet';
 import { Button } from '../ui/Button';
 import { haptic } from '../lib/haptics';
-import { UNAUTHORIZED_EVENT } from '../api/client';
+import { avisarSesionVencida } from '../api/client';
 import './inactividad.css';
 
 // Control de inactividad, con los mismos tiempos y la misma clave que la versión actual (logica.js):
@@ -50,7 +50,7 @@ export function Inactividad() {
         try { sessionStorage.setItem(MOTIVO_SALIDA, 'inactividad'); } catch { /* nada */ }
         avisando.current = false;
         setRestante(null);
-        window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+        avisarSesionVencida();
       } else if (pasado >= ALERTA_MS) {
         if (!avisando.current) haptic('warning');
         avisando.current = true;

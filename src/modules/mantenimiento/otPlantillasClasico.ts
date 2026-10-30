@@ -2,11 +2,11 @@
 // Copias del clásico (modulos/mantenimiento/reportes-ot/logica.js): plantilla de inspecciones y plantilla de llantas.
 // El diseño y el contenido no cambian. Solo cambia el final: devuelven el HTML y el servidor lo convierte a PDF.
 import { rotEscHtml } from './otPdfClasico';
+import { api } from '../../core/api/client';
 
 export function htmlPlantillaInspeccion(idOt, placa, fechaIng, km, rampa) {
     if (typeof window.rotToast === 'function') window.rotToast('Generando plantilla...', 'bg-info');
-    return fetch('/api/mantenimiento/inspecciones/config')
-        .then(function(r) { return r.json(); })
+    return api('/mantenimiento/inspecciones/config')
         .then(function(res) {
             var schema = res.data ? res.data.map(function(d) {
                 var parsed = [];

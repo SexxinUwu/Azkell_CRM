@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { api, ApiError, tokenStore, UNAUTHORIZED_EVENT } from '../api/client';
+import { api, ApiError, reanudarSesion, tokenStore, UNAUTHORIZED_EVENT } from '../api/client';
 import { firstName } from '../lib/format';
 import { playFarewell } from './farewell';
 import { ADMIN, permisosDesdeMatriz } from './permisos';
@@ -110,7 +110,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (tokenStore.get()) refresh();
   }, [refresh]);
 
-  // Cualquier 401 de la API cierra la sesión local
+  // Cualquier 401 de la API (api, apiFetch, inactividad) cierra la sesión local y lleva al login.
+  // clear() vacía la caché de React Query: las consultas dejan de pedir datos y no muestran errores.
   useEffect(() => {
     window.addEventListener(UNAUTHORIZED_EVENT, clear);
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, clear);
@@ -121,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // La API actual responde 200 con exito:false ante datos incorrectos
     if (res.requiere2fa) throw new Requiere2FA(res.mensaje);
     if (!res.exito || !res.token) throw new ApiError(401, res.mensaje || 'Correo o contraseña incorrectos.');
+    reanudarSesion();
     tokenStore.set(res.token);
     try {
       // Mismas claves que modulos/login/logica.js: la versión actual reconoce la sesión

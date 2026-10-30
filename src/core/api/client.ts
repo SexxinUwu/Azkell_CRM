@@ -17,6 +17,33 @@ const esNativo = () => {
 const PROFILE_KEY = 'fleet_app_perfil'; // usuario y permisos de la última sesión: abrir la app sin señal
 export const UNAUTHORIZED_EVENT = 'azkell:unauthorized';
 
+// Sesión vencida: el primer 401 avisa a AuthProvider (cierra la sesión y lleva al login).
+// Mientras no se inicie sesión otra vez, las llamadas a la API no salen de la app.
+let sesionVencida = false;
+let ultimoVencimiento = 0;
+
+/** Un 401 de la API: avisa una sola vez a AuthProvider */
+export function avisarSesionVencida() {
+  ultimoVencimiento = Date.now();
+  if (sesionVencida) return;
+  sesionVencida = true;
+  window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+}
+
+/** Rutas que sí pueden salir aunque la sesión esté vencida (login y datos públicos de la pantalla de ingreso) */
+const RUTAS_SIN_SESION = new Set(['/login', '/configuracion']);
+function comprobarSesion(path: string) {
+  if (sesionVencida && !RUTAS_SIN_SESION.has(path)) throw new ApiError(401, 'Tu sesión venció. Vuelve a ingresar.');
+}
+
+/** Errores de llamadas que quedaron en vuelo justo al vencer la sesión: no deben mostrarse como aviso */
+export const errorPorSesionReciente = () => Date.now() - ultimoVencimiento < 5000;
+
+/** Tras iniciar sesión otra vez, la API vuelve a funcionar normal */
+export function reanudarSesion() {
+  sesionVencida = false;
+}
+
 // Identifica esta pestaña (para avisos en vivo que no deben volver a quien hizo el cambio)
 export const TAB_ID = (() => {
   try { return crypto.randomUUID(); } catch { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
@@ -83,6 +110,7 @@ interface RequestOptions {
 }
 
 export async function api<T>(path: string, { method = 'GET', body, query, headers: extra }: RequestOptions = {}): Promise<T> {
+  comprobarSesion(path);
   const qs = query
     ? '?' + new URLSearchParams(
         Object.entries(query).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => [k, String(v)]),
@@ -113,10 +141,29 @@ export async function api<T>(path: string, { method = 'GET', body, query, header
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     // Sesión vencida o revocada: se avisa a AuthProvider para volver al login.
-    if (res.status === 401 && path !== '/login') window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    if (res.status === 401 && path !== '/login') avisarSesionVencida();
     throw new ApiError(res.status, data?.error ?? data?.mensaje ?? `Error ${res.status}`, data);
   }
   return data as T;
+}
+
+/**
+ * fetch a la API para respuestas que no son JSON (PDF, imágenes, blobs). Igual que api(): misma sesión
+ * (cookie), mismo aviso de sesión vencida ante un 401 y mismo bloqueo de llamadas. `path` va relativo a /api.
+ * Devuelve la respuesta sin lanzar por código de error: quien llama revisa `res.ok`.
+ */
+export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  comprobarSesion(path);
+  const headers = new Headers(init.headers);
+  headers.set('x-azkell-tab', TAB_ID);
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, { credentials: 'include', ...init, headers });
+  } catch {
+    throw new ApiError(0, 'No hay conexión con el servidor. Revisa tu conexión a internet.');
+  }
+  if (res.status === 401) avisarSesionVencida();
+  return res;
 }
 
 export function errorMessage(err: unknown) {

@@ -196,7 +196,13 @@ export function useAuditoriaEnVivo() {
         if (d.modulo === 'auditoria') qc.invalidateQueries({ queryKey: ['sistema', 'audit'] });
       } catch { /* mensaje que no es nuestro */ }
     };
+    // EventSource no muestra el código HTTP. Si la conexión se cerró (p. ej. 401 por sesión vencida),
+    // una consulta común confirma la sesión: si venció, api() avisa y la app lleva al login.
+    const alFallar = () => {
+      if (sse.readyState === EventSource.CLOSED) api('/perfil/me').catch(() => {});
+    };
     sse.addEventListener('datos-actualizados', alLlegar);
-    return () => { sse.removeEventListener('datos-actualizados', alLlegar); sse.close(); };
+    sse.addEventListener('error', alFallar);
+    return () => { sse.removeEventListener('datos-actualizados', alLlegar); sse.removeEventListener('error', alFallar); sse.close(); };
   }, [qc]);
 }

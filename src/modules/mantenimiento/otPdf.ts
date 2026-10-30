@@ -2,7 +2,7 @@
 // y el servidor lo convierte a PDF con Chromium (texto real, vectorial, igual de nítido que el clásico).
 import { generarPDF_OT } from './otPdfClasico';
 import { htmlPlantillaInspeccion, htmlPlantillaLlantas } from './otPlantillasClasico';
-import { TAB_ID } from '../../core/api/client';
+import { apiFetch } from '../../core/api/client';
 import { aObjeto, type MaterialSalida, type OrdenTrabajo, type TrabajoOT } from './api';
 
 /** Datos que el PDF toma de otras tablas: marca (placas), rampa (catálogo) y kilometraje */
@@ -35,10 +35,9 @@ function otConExtras(ot: OrdenTrabajo, extras: ExtrasPdf = {}): OrdenTrabajo {
 export async function pdfDeHtml(html: string, titulo: string, horizontal = false): Promise<Blob> {
   // La falla se muestra sin "• Falla Manual :" (el resto del documento queda como en el clásico)
   const limpio = html.replace(/•\s*Falla Manual\s*:\s*/gi, '');
-  const res = await fetch('/api/ot-pdf', {
+  const res = await apiFetch('/ot-pdf', {
     method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', 'x-azkell-tab': TAB_ID },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ html: limpio, titulo, horizontal }),
   });
   if (!res.ok) throw new Error(`No se pudo generar el PDF (HTTP ${res.status})`);

@@ -1,5 +1,6 @@
 // Reporte F-MAN-006 de mantenimientos preventivos: la pantalla arma las filas visibles y el servidor (services/fleetrun_reporte.js)
 // lo convierte a PDF con Chromium, con el mismo formato del clásico. También sirve para mandarlo por WhatsApp.
+import { apiFetch } from '../../core/api/client';
 
 /** Fila del reporte, tal como la espera el servidor */
 export interface FilaReporte {
@@ -36,7 +37,7 @@ export function tipoOracion(t: string): string {
 /** Logo de la empresa como data URL (el servidor lo incrusta en el PDF); null si no hay logo */
 async function logoComoDataUrl(): Promise<string | null> {
   try {
-    const res = await fetch('/api/tenant-logo', { credentials: 'include' });
+    const res = await apiFetch('/tenant-logo');
     if (!res.ok) return null;
     const blob = await res.blob();
     if (!blob.type.startsWith('image/')) return null;
@@ -54,9 +55,8 @@ async function logoComoDataUrl(): Promise<string | null> {
 /** Pide el PDF del reporte al servidor (Chromium) */
 export async function pedirReportePreventivo(filas: FilaReporte[], empresa: string, emisor: string): Promise<Blob> {
   const logo = await logoComoDataUrl();
-  const res = await fetch('/api/taller/fleetrun-pdf', {
+  const res = await apiFetch('/taller/fleetrun-pdf', {
     method: 'POST',
-    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ filas, empresa, emisor, logo }),
   });

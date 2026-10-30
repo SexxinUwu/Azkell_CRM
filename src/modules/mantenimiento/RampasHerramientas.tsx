@@ -8,10 +8,9 @@ import { Notice } from '../../core/ui/Display';
 import { TextInput } from '../../core/ui/Field';
 import { Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
-import { api, errorMessage } from '../../core/api/client';
+import { api, apiFetch, errorMessage } from '../../core/api/client';
 import { compartirPDF } from '../../core/lib/pdf';
 import { pdfDeHtml } from './otPdf';
-import { LOGO_RAMPA } from './rampaPdf';
 import type { CatalogosTaller } from './api';
 import { type CatRampa, enReporte } from './rampasReporte';
 
@@ -95,7 +94,7 @@ async function nombreEmpresa(): Promise<string> {
 /** El logo va incrustado en el documento: el servidor no descarga imágenes del sitio */
 async function logoEmbebido(): Promise<string> {
   try {
-    const res = await fetch(LOGO_RAMPA, { credentials: 'include' });
+    const res = await apiFetch('/tenant-logo');
     if (!res.ok) return '';
     const blob = await res.blob();
     return await new Promise<string>((ok, no) => {

@@ -9,6 +9,7 @@ import { haptic } from '../../core/lib/haptics';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { useToast } from '../../core/ui/Toast';
+import { apiFetch } from '../../core/api/client';
 import { useHistorial, type Placa } from './api';
 import { formatRelative } from '../../core/lib/format';
 import { NeumaticosPlacaTab } from '../mantenimiento/NeumaticosPlacaTab';
@@ -60,7 +61,7 @@ export function PlacaFicha({ placa, onClose, onEditar, onEliminar }: { placa: Pl
     try {
       let res: Response;
       try {
-        res = await fetch(`/api/neumaticos/mapa-pdf/${encodeURIComponent(placaNombre)}`, { credentials: 'include' });
+        res = await apiFetch(`/neumaticos/mapa-pdf/${encodeURIComponent(placaNombre)}`);
       } catch {
         throw new Error('No hay conexión con el servidor.');
       }

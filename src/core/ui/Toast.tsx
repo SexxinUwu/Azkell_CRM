@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { CircleAlert, CircleCheck } from 'lucide-react';
 import { spring } from '../lib/motion';
+import { errorPorSesionReciente } from '../api/client';
 
 type Tone = 'success' | 'error';
 interface ToastItem { id: number; message: string; tone: Tone }
@@ -15,6 +16,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const nextId = useRef(1);
 
   const show = useCallback((message: string, tone: Tone = 'success') => {
+    // Una operación que falló porque la sesión venció no muestra aviso: la app ya lleva al login
+    if (tone === 'error' && errorPorSesionReciente()) return;
     const id = nextId.current++;
     setItems(list => [...list.slice(-2), { id, message, tone }]);
     setTimeout(() => setItems(list => list.filter(t => t.id !== id)), tone === 'error' ? 4500 : 2600);
