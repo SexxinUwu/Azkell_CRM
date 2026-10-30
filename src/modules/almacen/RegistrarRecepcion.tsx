@@ -68,12 +68,12 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
 
   const items = oc?.items ?? [];
   const pendientes = items.map((it, i) => ({ it, i })).filter(x => x.it.pendiente > 0);
+  // Solo los almacenes registrados; por defecto Principal (el de la orden si es uno de ellos)
   const nombresAlm = useMemo(() => {
-    const n = new Set((almacenes ?? []).map(a => a.nombre));
-    if (oc?.almacen) n.add(oc.almacen);
-    if (!n.size) n.add('ALM CENTRAL');
-    return [...n];
-  }, [almacenes, oc?.almacen]);
+    const n = (almacenes ?? []).map(a => a.nombre);
+    return n.length ? n : ['Principal'];
+  }, [almacenes]);
+  const almacenDefecto = nombresAlm.includes(oc?.almacen ?? '') ? (oc?.almacen as string) : (nombresAlm.includes('Principal') ? 'Principal' : nombresAlm[0]);
 
   const total = pendientes.reduce((s, { i }) => s + num(cant[i]), 0);
   // Valor que entra al inventario, siempre en soles (igual que el servidor: costo × TC en líneas USD)
@@ -94,7 +94,7 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
       .filter(({ i }) => num(cant[i]) > 0)
       .map(({ it, i }) => ({
         inventario_id: it.inventario_id, descripcion: it.descripcion, cantidad_recibida: num(cant[i]),
-        costo_unitario: it.costo_unitario, moneda: it.moneda, almacen: alm[i] || oc.almacen || 'ALM CENTRAL',
+        costo_unitario: it.costo_unitario, moneda: it.moneda, almacen: alm[i] || almacenDefecto,
       }));
     if (!envio.length) { setError('Escribe una cantidad mayor a 0 en al menos un ítem.'); return; }
     if (usd && !(tcNum > 0)) { setErrTc('Indica el tipo de cambio del día.'); haptic('warning'); return; }
@@ -156,7 +156,7 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
                     onClick={() => { haptic('selection'); setCant(c => ({ ...c, [i]: String(it.pendiente) })); }}>
                     Todo ({fmt(it.pendiente)})
                   </button>
-                  <SelectInput value={alm[i] ?? oc.almacen} aria-label="Almacén de destino"
+                  <SelectInput value={alm[i] ?? almacenDefecto} aria-label="Almacén de destino"
                     onChange={e => setAlm(a => ({ ...a, [i]: e.target.value }))}>
                     {nombresAlm.map(n => <option key={n} value={n}>{n}</option>)}
                   </SelectInput>

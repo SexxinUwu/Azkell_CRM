@@ -2623,7 +2623,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             FROM detalle_entradas_inv d JOIN entradas_inv e ON e.id=d.entrada_id
             WHERE d.inventario_id=? AND (e.estado IS NULL OR e.estado != 'Anulado') AND (e.tipo_orden = 'Entrada directa' OR e.tipo_orden = 'Ajuste')
             UNION ALL
-            SELECT 'Recepción OC' AS tipo, DATE(r.fecha_recepcion) AS fecha, r.fecha_recepcion AS created_at, r.oc_id AS doc_id, CONCAT('Recepción OC / ', COALESCE(r.almacen,'ALM CENTRAL'), ' - ', COALESCE(r.usuario,'')) AS contraparte, dr.cantidad_recibida AS cantidad, dr.costo_unitario, dr.moneda, (dr.cantidad_recibida * dr.costo_unitario) AS importe, e.tipo_cambio, ((? IS NULL) OR COALESCE(r.created_at, r.fecha_recepcion) > ?) AS posterior
+            SELECT 'Recepción OC' AS tipo, DATE(r.fecha_recepcion) AS fecha, r.fecha_recepcion AS created_at, r.oc_id AS doc_id, CONCAT('Recepción OC / ', COALESCE(r.almacen,'Principal'), ' - ', COALESCE(r.usuario,'')) AS contraparte, dr.cantidad_recibida AS cantidad, dr.costo_unitario, dr.moneda, (dr.cantidad_recibida * dr.costo_unitario) AS importe, e.tipo_cambio, ((? IS NULL) OR COALESCE(r.created_at, r.fecha_recepcion) > ?) AS posterior
             FROM detalle_recepciones_oc dr 
             JOIN recepciones_oc r ON r.id=dr.recepcion_id
             JOIN entradas_inv e ON e.id=r.oc_id
@@ -2820,7 +2820,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                                 solicitante: oc.solicitante || oc.autoriza || 'ALMACÉN / MANTENIMIENTO',
                                 usuario_creacion: oc.creado_por || 'SISTEMA',
                                 autoriza: oc.autoriza || oc.solicitante || '-',
-                                almacen: oc.almacen || 'ALM CENTRAL',
+                                almacen: oc.almacen || 'Principal',
                                 moneda: oc.moneda || 'PEN',
                                 // TC de la compra (si es en dólares): la recepción valoriza con este mismo TC
                                 tipo_cambio: parseFloat(oc.tipo_cambio) || null,
@@ -2949,7 +2949,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 const [cab] = await conn.query(
                     `INSERT INTO recepciones_oc (oc_id, fecha_recepcion, usuario, almacen, sustento_url, observacion, tipo_recepcion)
                      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                    [oc_id, fechaHoraSQL, usuario || 'Almacén Central', almacen || 'ALM CENTRAL', sustentoUrl, observacion || null, tipoRecepcion]
+                    [oc_id, fechaHoraSQL, usuario || 'Almacén Central', almacen || 'Principal', sustentoUrl, observacion || null, tipoRecepcion]
                 );
                 recepcionId = cab.insertId;
 
@@ -2962,7 +2962,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     parseFloat(it.cantidad_recibida) || 0,
                     parseFloat(it.costo_unitario) || 0,
                     it.moneda || 'PEN',
-                    it.almacen || almacen || 'ALM CENTRAL'
+                    it.almacen || almacen || 'Principal'
                 ]);
                 await conn.query(
                     `INSERT INTO detalle_recepciones_oc (recepcion_id, oc_id, inventario_id, descripcion, cantidad_recibida, costo_unitario, moneda, almacen)
