@@ -168,7 +168,7 @@ export function GuiasElectronicas({ tipo }: { tipo: TipoGuia }) {
 
         <Notice tone="neutral">
           La emisión masiva y la configuración de SUNAT siguen en la versión actual.{' '}
-          <a href={`/#${cfg.clasico}`} onClick={e => { e.preventDefault(); abrirClasico(cfg.clasico); }} style={{ color: 'var(--accent)', fontWeight: 600 }}>
+          <a href={`/clasico#${cfg.clasico}`} onClick={e => { e.preventDefault(); abrirClasico(cfg.clasico); }} style={{ color: 'var(--accent)', fontWeight: 600 }}>
             Emitir en la versión actual (SUNAT)
           </a>
         </Notice>
