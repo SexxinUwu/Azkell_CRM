@@ -385,6 +385,6 @@ export function InspeccionesPage() {
 // Tipo de la visita: mecánica, neumática o ambas
 function TipoVisita({ mecanica, neumatica }: { mecanica: boolean; neumatica: boolean }) {
   const texto = mecanica && neumatica ? 'Mecánica + Neumática' : neumatica ? 'Neumática' : 'Mecánica';
-  const clase = mecanica && neumatica ? 'insp-tipo--ambas' : neumatica ? 'insp-tipo--neumatica' : 'insp-tipo--mecanica';
-  return <span className={`insp-tipo ${clase}`}>{texto}</span>;
+  const clase = mecanica && neumatica ? 'insp-visita--ambas' : neumatica ? 'insp-visita--neumatica' : 'insp-visita--mecanica';
+  return <span className={`insp-visita ${clase}`}>{texto}</span>;
 }
