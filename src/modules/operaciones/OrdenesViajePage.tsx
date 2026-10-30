@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowUpRight, CheckCircle2, CircleAlert, Eye, FileSpreadsheet, MapPin, Pencil, Play, Plus, RefreshCw, SearchX, Trash2, Truck,
+  CheckCircle2, CircleAlert, Eye, FileSpreadsheet, MapPin, Pencil, Play, Plus, RefreshCw, SearchX, Trash2, Truck,
 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -19,10 +19,9 @@ import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import type { ReactNode } from 'react';
 import { OrdenServicioSheet } from './OrdenServicioSheet';
-import { SeccionGastosViaje, SeccionOrdenesServicioViaje } from './ViajeExtras';
+import { SeccionDocumentosViaje, SeccionGastosViaje, SeccionOrdenesServicioViaje, SeccionSinRegistros } from './ViajeExtras';
 import { SeccionGpsViaje, SeccionValesViaje } from './ViajeCombustibleGps';
 import { MonitoreoViajeSheet, type ViajeMonitoreo } from './ViajeMonitoreo';
-import { abrirClasico } from '../../core/layout/navigation';
 import { usePlacas } from '../placas/api';
 
 interface Viaje {
@@ -183,7 +182,6 @@ export function OrdenesViajePage() {
               { label: 'Exportar Excel', detalle: `${visibles.length} viajes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
               // Solo la empresa Marsisa tiene base externa; el servidor responde syncSkipped en las demás (mismo criterio que la navegación)
               ...(puedeCrear && esMarsisa ? [{ label: 'Sincronizar con MarsisaSoft', icon: <RefreshCw size={17} />, separado: true, onSelect: () => setSincronizar(true) }] : []),
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: !puedeCrear, onSelect: () => abrirClasico('operaciones/ordenes-viaje') },
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ viaje: null })}>Nuevo viaje</Button>}
           </>
@@ -357,8 +355,13 @@ function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onE
           <SeccionOrdenesServicioViaje codigo={v.viaje} onNueva={onNuevaOS ?? (() => undefined)} puedeCrear={!!onNuevaOS} />
           <ResumenFinanciero viaje={v} />
           <SeccionGastosViaje codigo={v.viaje} />
-          <SeccionValesViaje codigo={v.viaje} />
+          <SeccionValesViaje codigo={v.viaje} placa={v.placa_tracto} />
           <SeccionGpsViaje placa={v.placa_tracto} inicio={v.fecha_inicio ?? v.fecha_viaje} fin={v.fecha_fin} />
+          <SeccionDocumentosViaje codigo={v.viaje} />
+          <SeccionSinRegistros titulo="Archivos adjuntos" mensaje="No se registran archivos adjuntos para este viaje." />
+          <SeccionSinRegistros titulo="Eventos operativos" mensaje="No se registran eventos operativos para este viaje." />
+          <SeccionSinRegistros titulo="Cambios de conductor y remolque" mensaje="No se registran cambios de conductor ni de remolque para este viaje." />
+          <SeccionSinRegistros titulo="Peajes" mensaje="No se registran peajes asociados a este viaje." />
         </div>
       )}
     </Sheet>

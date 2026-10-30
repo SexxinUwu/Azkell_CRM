@@ -5,6 +5,7 @@ import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { api, errorMessage } from '../../core/api/client';
 import { MapaRecorridoViaje } from './ViajeMapaGps';
+import { usePlacas } from '../placas/api';
 
 const num = (v: unknown) => Number(v) || 0;
 const fmt = (v: unknown, d = 2) => num(v).toLocaleString('es-PE', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -17,16 +18,21 @@ interface Telemetria {
 }
 interface UnidadGps { placa?: string | null; km?: number | string | null; kilometraje?: number | string | null; km_wialon?: number | string | null; horas_motor?: number | string | null; horas_wialon?: number | string | null; horas?: number | string | null }
 
-// Vales de combustible del viaje (mismo filtro del clásico: /combustible/vales?viaje=)
-export function SeccionValesViaje({ codigo }: { codigo: string }) {
+// Vales de combustible del viaje (mismo filtro del clásico: /combustible/vales?viaje=).
+// Con la placa del tracto muestra la capacidad real del tanque (catálogo de placas) y la autonomía estimada del clásico (6,5 km/gal).
+export function SeccionValesViaje({ codigo, placa }: { codigo: string; placa?: string | null }) {
   const q = useQuery({
     queryKey: ['operaciones', 'vales-viaje', codigo],
     queryFn: () => api<{ data?: Vale[] }>(`/combustible/vales?viaje=${encodeURIComponent(codigo)}&limit=20`).then(r => r.data ?? []),
     staleTime: 15_000,
   });
+  const placas = usePlacas();
   const lista = q.data ?? [];
   const galones = lista.reduce((s, v) => s + num(v.galones), 0);
   const importe = lista.reduce((s, v) => s + num(v.importe), 0);
+  const p = (placa ?? '').trim().toUpperCase();
+  const tracto = (placas.data ?? []).find(x => x.placa === p);
+  const capacidad = tracto ? (parseFloat(tracto.capacidadTanque) || [tracto.tanque1, tracto.tanque2, tracto.tanque3].reduce((s, x) => s + (parseFloat(x) || 0), 0)) : 0;
   return (
     <div>
       <p className="tarjeta__grupo-titulo">Vales de combustible ({lista.length})</p>
@@ -35,6 +41,12 @@ export function SeccionValesViaje({ codigo }: { codigo: string }) {
         <div className="inv-metricas">
           <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1rem' }}>{fmt(galones)} GL</span><span className="inv-metrica__label">Galones</span></div>
           <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1rem' }}>{soles(importe)}</span><span className="inv-metrica__label">Importe</span></div>
+        </div>
+      )}
+      {capacidad > 0 && (
+        <div className="tarjeta__lista" style={{ marginTop: 'var(--s-2)' }}>
+          <div className="dato"><span className="dato__label">Capacidad del tanque</span><span className="dato__valor dato__valor--mono">{fmt(capacidad, capacidad % 1 === 0 ? 0 : 1)} GL</span></div>
+          <div className="dato"><span className="dato__label">Autonomía estimada</span><span className="dato__valor dato__valor--mono">~{fmt(Math.round(capacidad * 6.5), 0)} km</span></div>
         </div>
       )}
       <div className="tarjeta__lista" style={{ marginTop: lista.length ? 'var(--s-2)' : undefined }}>

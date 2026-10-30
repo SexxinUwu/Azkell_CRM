@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { Plus, ScrollText } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
@@ -46,6 +46,69 @@ export function SeccionOrdenesServicioViaje({ codigo, onNueva, puedeCrear }: { c
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+interface DocOSViaje { numero_documento?: string | null; guia?: string | null; descripcion?: string | null; remitente?: string | null; destinatario?: string | null; peso?: number | string | null; volumen?: number | string | null; cantidad?: number | string | null; fecha_carga_fmt?: string | null; fecha_entrega_fmt?: string | null }
+
+// Documentos de transporte (GRE) de las órdenes de servicio del viaje, igual que la pestaña del clásico
+export function SeccionDocumentosViaje({ codigo }: { codigo: string }) {
+  const os = useQuery({
+    queryKey: ['operaciones', 'os-viaje', codigo],
+    queryFn: () => api<{ data?: OSViaje[] }>(`/operaciones/ordenes-servicio?viaje=${encodeURIComponent(codigo)}`).then(r => r.data ?? []),
+    staleTime: 15_000,
+  });
+  const lista = os.data ?? [];
+  // Clave propia: la ficha de la orden guarda el objeto completo bajo ['operaciones','orden-servicio',id]
+  const detalles = useQueries({
+    queries: lista.map(o => ({
+      queryKey: ['operaciones', 'os-documentos', o.id],
+      queryFn: () => api<{ data?: { documentos?: DocOSViaje[] } }>(`/operaciones/ordenes-servicio/${o.id}`)
+        .then(r => (r.data?.documentos ?? []).map(d => ({ ...d, codigo_orden: o.codigo_orden }))),
+      staleTime: 15_000,
+    })),
+  });
+  const docs = detalles.flatMap(d => d.data ?? []);
+  const cargando = os.isLoading || detalles.some(d => d.isLoading);
+  const error = os.error ?? detalles.find(d => d.error)?.error ?? null;
+  const pesoTotal = docs.reduce((s, d) => s + num(d.peso), 0);
+
+  return (
+    <div>
+      <p className="tarjeta__grupo-titulo">Documentos de transporte ({docs.length})</p>
+      {error && <Notice tone="error">{errorMessage(error)}</Notice>}
+      {docs.length > 0 && (
+        <div className="inv-metricas">
+          <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1rem' }}>{money(pesoTotal)} kg</span><span className="inv-metrica__label">Peso total</span></div>
+        </div>
+      )}
+      <div className="tarjeta__lista" style={{ marginTop: docs.length ? 'var(--s-2)' : undefined }}>
+        {docs.map((d, i) => (
+          <div key={`${d.codigo_orden}-${d.numero_documento ?? d.guia ?? i}-${i}`} className="dato" style={{ alignItems: 'center' }}>
+            <span className="dato__label" style={{ fontFamily: 'var(--font-mono)' }}>{d.codigo_orden} · {d.numero_documento || d.guia || d.descripcion || `Documento ${i + 1}`}</span>
+            <span className="dato__valor" style={{ textAlign: 'right' }}>
+              {num(d.peso).toLocaleString('es-PE')} kg · {num(d.volumen).toFixed(3)} m³ · {num(d.cantidad) || 1} bulto(s)
+              <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--label-2)' }}>{[d.remitente, d.destinatario].filter(Boolean).join(' → ') || '—'}</span>
+            </span>
+          </div>
+        ))}
+        {!cargando && !error && docs.length === 0 && (
+          <div className="dato"><span className="dato__valor" style={{ color: 'var(--label-2)' }}>No se registran documentos de transporte para este viaje.</span></div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Pestañas que la versión actual deja siempre vacías (no tiene de dónde cargar esos registros): mismo mensaje
+export function SeccionSinRegistros({ titulo, mensaje }: { titulo: string; mensaje: string }) {
+  return (
+    <div>
+      <p className="tarjeta__grupo-titulo">{titulo}</p>
+      <div className="tarjeta__lista">
+        <div className="dato"><span className="dato__valor" style={{ color: 'var(--label-2)' }}>{mensaje}</span></div>
+      </div>
     </div>
   );
 }
