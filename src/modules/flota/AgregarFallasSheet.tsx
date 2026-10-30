@@ -1,3 +1,4 @@
+import './checklist.css';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, Plus, X } from 'lucide-react';
@@ -9,6 +10,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import type { ReporteFalla } from './api';
+import { leerFallas } from './fman';
 
 type Unidad = 'tracto' | 'remolque';
 
@@ -16,6 +18,10 @@ type Unidad = 'tracto' | 'remolque';
 export function AgregarFallasSheet({ falla, open, onClose }: { falla: ReporteFalla; open: boolean; onClose: () => void }) {
   const toast = useToast();
   const qc = useQueryClient();
+  const yaRegistradas = [
+    ...leerFallas(falla.fallas_tracto_json).map(f => ({ ...f, unidad: falla.placa_tracto || 'Camión' })),
+    ...leerFallas(falla.fallas_remolque_json).map(f => ({ ...f, unidad: falla.placa_remolque || 'Carreta' })),
+  ];
   const [unidad, setUnidad] = useState<Unidad>(falla.placa_tracto ? 'tracto' : 'remolque');
   const [filas, setFilas] = useState<string[]>(['']);
   const [enviando, setEnviando] = useState(false);
@@ -45,6 +51,26 @@ export function AgregarFallasSheet({ falla, open, onClose }: { falla: ReporteFal
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
         <div className="field field--wide">
           <Notice>Las fallas se suman al detalle. Las que ya tiene el reporte no se modifican.</Notice>
+        </div>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <p className="ck-bloque__titulo">Fallas ya registradas ({yaRegistradas.length})</p>
+          {yaRegistradas.length === 0 ? <p className="t-footnote c-secondary">Este reporte aún no tiene fallas.</p> : (
+            <div className="ckd-tabla">
+              <table>
+                <thead><tr><th>Unidad</th><th>Sistema</th><th>Ítem</th><th>Descripción de la falla</th></tr></thead>
+                <tbody>
+                  {yaRegistradas.map((f, i) => (
+                    <tr key={i}>
+                      <td><span className="ckd-placa">{f.unidad}</span></td>
+                      <td><span className="ckd-sistema-tag">{(f.sistema || 'MANUAL').toUpperCase()}</span></td>
+                      <td className="ckd-falla">{f.item || '—'}</td>
+                      <td>{f.obs || f.observacion || 'Sin descripción'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
         <Field label="¿A qué unidad pertenece la falla?" wide>
           {p => (
