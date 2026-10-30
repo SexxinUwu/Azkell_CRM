@@ -49,14 +49,17 @@ async function reducir(file: File): Promise<string> {
   }
 }
 
+/** Falla escrita a mano: a qué unidad pertenece (camión o carreta) */
+interface FallaManual { texto: string; unidad: 'tracto' | 'remolque' }
+
 /** Marcas de un reporte guardado. Lo que viene de backlog y lo de otra versión se conserva tal cual. */
-function marcasDe(lista: FallaGuardada[]) {
+function marcasDe(lista: FallaGuardada[], unidad: FallaManual['unidad']) {
   const marcas: Record<string, Marca> = {};
   const conservar: FallaGuardada[] = [];
-  const manuales: string[] = [];
+  const manuales: FallaManual[] = [];
   for (const f of lista) {
     if (f.backlog_id) { conservar.push(f); continue; }
-    if (f.sistema === 'MANUAL') { manuales.push(String(f.obs ?? f.observacion ?? '')); continue; }
+    if (f.sistema === 'MANUAL') { manuales.push({ texto: String(f.obs ?? f.observacion ?? ''), unidad }); continue; }
     const obs = String(f.obs ?? '');
     marcas[`${f.sistema ?? ''}||${f.item ?? ''}`] = { obs: obs === String(f.item ?? '') ? '' : obs };
   }
@@ -119,7 +122,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
   const [fallasR, setFallasR] = useState<Record<string, Marca>>({});
   const [conservarT, setConservarT] = useState<FallaGuardada[]>([]);
   const [conservarR, setConservarR] = useState<FallaGuardada[]>([]);
-  const [manuales, setManuales] = useState<string[]>([]);
+  const [manuales, setManuales] = useState<FallaManual[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [abiertos, setAbiertos] = useState<Record<string, true>>({});
   const [critica, setCritica] = useState(false);
@@ -173,11 +176,11 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
     setViajeAbierto(false); setQViaje(''); setQViajeDeb('');
     firma.current?.limpiar();
     if (reporte) {
-      const t = marcasDe(leerFallas(reporte.fallas_tracto_json));
-      const r = marcasDe(leerFallas(reporte.fallas_remolque_json));
+      const t = marcasDe(leerFallas(reporte.fallas_tracto_json), 'tracto');
+      const r = marcasDe(leerFallas(reporte.fallas_remolque_json), 'remolque');
       setFallasT(t.marcas); setConservarT(t.conservar);
       setFallasR(r.marcas); setConservarR(r.conservar);
-      setManuales([...t.manuales, ...r.manuales].filter(Boolean));
+      setManuales([...t.manuales, ...r.manuales].filter(m => m.texto));
       setV({
         fecha: String(reporte.fecha_reporte ?? '').slice(0, 10) || hoyLima(),
         placa_tracto: reporte.placa_tracto ?? '', placa_remolque: reporte.placa_remolque ?? '', orden_viaje: reporte.orden_viaje ?? '',
@@ -268,7 +271,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
   const vehRemolque = useMemo(() => (vehiculos.data ?? []).find(x => normalizar(x.placa).replace(/[^A-Z0-9]/g, '') === placaR.replace(/[^A-Z0-9]/g, '')), [vehiculos.data, placaR]);
 
   const seleccionados = (backlogs.data ?? []).filter(b => backlogSel[String(b.id)]);
-  const manualesLlenos = manuales.map(x => x.trim()).filter(Boolean);
+  const manualesLlenos = manuales.map(m => ({ ...m, texto: m.texto.trim() })).filter(m => m.texto);
   const marcadas = Object.keys(fallasT).length + Object.keys(fallasR).length + manualesLlenos.length;
   const total = marcadas + conservarT.length + conservarR.length + seleccionados.length;
 
@@ -284,6 +287,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
     if (!placaT) { setError('Indica la placa del tracto.'); return; }
     if (!v.conductor?.trim()) { setError('Indica el conductor.'); return; }
     if (total === 0) { setError('Marca al menos una falla, importa un backlog o escribe una falla manual.'); return; }
+    if (!placaR && manualesLlenos.some(m => m.unidad === 'remolque')) { setError('Una falla manual es de la carreta, pero no hay placa de carreta. Indícala o cambia la falla a camión.'); return; }
     const ahora = new Date().toISOString().slice(0, 16).replace('T', ' ');
     const armar = (m: Record<string, Marca>) => Object.entries(m).map(([k, x]) => {
       const [sistema, ...resto] = k.split('||');
@@ -294,8 +298,11 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
       estado: 'FALLA', fecha: ahora, backlog_id: String(b.backlog_id || b.id),
     }));
     const fT: FallaGuardada[] = [...armar(fallasT), ...conservarT, ...importados];
-    for (const m of manualesLlenos) fT.push({ sistema: 'MANUAL', item: 'Falla manual', obs: m, observacion: m, estado: 'FALLA', fecha: ahora });
     const fR = [...armar(fallasR), ...conservarR];
+    // Cada falla manual va a la lista de la unidad que se eligió (camión o carreta)
+    for (const m of manualesLlenos) {
+      (m.unidad === 'remolque' ? fR : fT).push({ sistema: 'MANUAL', item: 'Falla manual', obs: m.texto, observacion: m.texto, estado: 'FALLA', fecha: ahora });
+    }
     const firmaNueva = firma.current && !firma.current.vacia() ? firma.current.obtener() : null;
     setEnviando(true); setError(null);
     const cuerpo = {
@@ -519,17 +526,22 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
           <div className="ck-bloque">
             <p className="ck-bloque__titulo">¿No encuentras el ítem? Agrégalo aquí manualmente</p>
             {manuales.map((m, i) => (
-              <div key={i} style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center' }}>
-                <div style={{ flex: 1 }}>
-                  <TextInput value={m} placeholder="Describe la falla" aria-label={`Falla manual ${i + 1}`}
-                    onChange={e => setManuales(a => a.map((x, j) => (j === i ? e.target.value : x)))} />
+              <div key={i} style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                <SelectInput value={m.unidad} aria-label={`Unidad de la falla manual ${i + 1}`} style={{ width: 'auto' }}
+                  onChange={e => setManuales(a => a.map((x, j) => (j === i ? { ...x, unidad: e.target.value as FallaManual['unidad'] } : x)))}>
+                  <option value="tracto">Camión {placaT ? `(${placaT})` : ''}</option>
+                  {placaR && <option value="remolque">Carreta ({placaR})</option>}
+                </SelectInput>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <TextInput value={m.texto} placeholder="Describe la falla" aria-label={`Falla manual ${i + 1}`}
+                    onChange={e => setManuales(a => a.map((x, j) => (j === i ? { ...x, texto: e.target.value } : x)))} />
                 </div>
                 <Button variant="secondary" iconOnly aria-label="Quitar falla manual" icon={<X size={16} />}
                   onClick={() => setManuales(a => a.filter((_, j) => j !== i))} />
               </div>
             ))}
             <div>
-              <Button variant="secondary" icon={<Plus size={16} />} onClick={() => setManuales(a => [...a, ''])}>Agregar otra falla</Button>
+              <Button variant="secondary" icon={<Plus size={16} />} onClick={() => setManuales(a => [...a, { texto: '', unidad: 'tracto' }])}>Agregar otra falla</Button>
             </div>
           </div>
         </section>
