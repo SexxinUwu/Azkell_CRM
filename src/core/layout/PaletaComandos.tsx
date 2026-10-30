@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowUpRight, Search, Star, type LucideIcon } from 'lucide-react';
+import { Search, Star, type LucideIcon } from 'lucide-react';
 
 // Ctrl+K: busca cualquier pantalla del menú y la abre sin recorrer las secciones.
 export interface OpcionPaleta { key: string; label: string; seccion: string; to?: string; clasico?: string; icon?: LucideIcon }
@@ -54,9 +54,8 @@ export function PaletaComandos({ opciones, favoritos, onToggleFavorito, onElegir
               onClick={() => onElegir(o)}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, color: 'var(--label)' }}>{o.label}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{o.seccion}{!o.to && o.clasico ? ' · se abre en la versión actual' : ''}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{o.seccion}</div>
               </div>
-              {!o.to && o.clasico && <ArrowUpRight size={14} aria-hidden style={{ color: 'var(--label-2)' }} />}
               <button type="button" aria-label={favoritos.includes(o.key) ? `Quitar ${o.label} de favoritos` : `Agregar ${o.label} a favoritos`}
                 onClick={e => { e.stopPropagation(); onToggleFavorito(o.key); }}
                 style={{ background: 'none', border: 0, padding: 4, cursor: 'pointer', color: favoritos.includes(o.key) ? 'var(--amber-ink)' : 'var(--label-3)' }}>
