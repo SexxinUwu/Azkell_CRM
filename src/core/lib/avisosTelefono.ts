@@ -23,9 +23,9 @@ export async function estadoAvisos(): Promise<EstadoAvisos> {
   if (Notification.permission === 'denied') return 'bloqueado';
   if (Notification.permission !== 'granted') return 'pendiente';
   const reg = await navigator.serviceWorker.ready;
-  const sub = await reg.pushManager.getSubscription();
+  const sub = await reg.pushManager.getSubscription().catch(() => null);
   if (sub) {
-    // Asegurar en segundo plano que el servidor tenga guardada la suscripción
+    // Si la suscripción ya existe en el dispositivo, asegurar que esté guardada en el servidor para este usuario
     void api('/push/suscribir', { method: 'POST', body: { suscripcion: sub.toJSON() } }).catch(() => undefined);
     return 'activo';
   }
@@ -38,44 +38,58 @@ export async function activarAvisos(): Promise<EstadoAvisos> {
   const permiso = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
   if (permiso !== 'granted') return estadoAvisos();
   const reg = await navigator.serviceWorker.ready;
-  const { clave } = await api<{ ok: boolean; clave: string | null }>('/push/clave');
-  if (!clave) throw new Error('Las notificaciones todavía no están configuradas en el servidor.');
 
-  try {
-    // Si había una suscripción residual desincronizada, la desuscribimos para forzar un registro limpio
-    const previa = await reg.pushManager.getSubscription().catch(() => null);
-    if (previa) {
-      await previa.unsubscribe().catch(() => undefined);
-    }
+  // 1. Si ya existe una suscripción en el navegador, la reutilizamos vinculándola a este usuario
+  let sub = await reg.pushManager.getSubscription().catch(() => null);
 
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: claveABytes(clave),
-    });
-    await api('/push/suscribir', { method: 'POST', body: { suscripcion: sub.toJSON() } });
-    return 'activo';
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (/push service error/i.test(msg)) {
-      const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-      const esBrave = /Brave/i.test(ua) || Boolean((navigator as unknown as { brave?: unknown }).brave);
-      if (esBrave) {
-        throw new Error('En Brave debes activar «Usar los servicios de Google para la mensajería push» en brave://settings/privacy y reiniciar el navegador.');
+  // 2. Si no existe, creamos una nueva suscripción
+  if (!sub) {
+    const { clave } = await api<{ ok: boolean; clave: string | null }>('/push/clave');
+    if (!clave) throw new Error('Las notificaciones todavía no están configuradas en el servidor.');
+
+    try {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: claveABytes(clave),
+      });
+    } catch (err: unknown) {
+      // Si falló por conflicto previo, intentar desuscribir y reintentar con pequeña espera
+      try {
+        const vieja = await reg.pushManager.getSubscription().catch(() => null);
+        if (vieja) await vieja.unsubscribe().catch(() => undefined);
+        await new Promise(r => setTimeout(r, 400));
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: claveABytes(clave),
+        });
+      } catch (retryErr: unknown) {
+        const msg = retryErr instanceof Error ? retryErr.message : String(retryErr);
+        if (/push service error/i.test(msg)) {
+          const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+          const esBrave = /Brave/i.test(ua) || Boolean((navigator as unknown as { brave?: unknown }).brave);
+          if (esBrave) {
+            throw new Error('En Brave debes activar «Usar los servicios de Google para la mensajería push» en brave://settings/privacy y reiniciar el navegador.');
+          }
+          throw new Error('No se pudo conectar con el servicio de notificaciones de Google. Comprueba tu conexión a internet y vuelve a intentar.');
+        }
+        throw retryErr;
       }
-      throw new Error('El servicio de notificaciones no pudo conectar con Google Play Services. Comprueba tu conexión a internet o desactiva el ahorro de batería / DNS privado.');
     }
-    throw err;
   }
+
+  // 3. Guardar la suscripción en el servidor para el usuario actual
+  await api('/push/suscribir', { method: 'POST', body: { suscripcion: sub.toJSON() } });
+  return 'activo';
 }
 
 /** Quita este dispositivo: el servidor deja de enviarle avisos y el navegador cancela la suscripción */
 export async function desactivarAvisos(): Promise<EstadoAvisos> {
   if (!soportado()) return 'no-soportado';
   const reg = await navigator.serviceWorker.ready;
-  const sub = await reg.pushManager.getSubscription();
+  const sub = await reg.pushManager.getSubscription().catch(() => null);
   if (sub) {
     await api('/push/quitar', { method: 'POST', body: { endpoint: sub.endpoint } }).catch(() => undefined);
-    await sub.unsubscribe();
+    await sub.unsubscribe().catch(() => undefined);
   }
   return estadoAvisos();
 }
@@ -83,14 +97,13 @@ export async function desactivarAvisos(): Promise<EstadoAvisos> {
 /** Envía un aviso de prueba a los dispositivos activos del usuario */
 export async function probarAvisos() {
   const reg = await navigator.serviceWorker.ready;
-  const sub = await reg.pushManager.getSubscription();
+  const sub = await reg.pushManager.getSubscription().catch(() => null);
   if (sub) {
-    // Asegurar que el servidor tenga la suscripción registrada antes de probar
     await api('/push/suscribir', { method: 'POST', body: { suscripcion: sub.toJSON() } }).catch(() => undefined);
   }
   const r = await api<{ ok: boolean; enviados: number }>('/push/prueba', { method: 'POST' });
   if (!r.ok || r.enviados === 0) {
-    throw new Error('El servidor no encontró este dispositivo registrado. Toca «Desactivar en este teléfono» y vuelve a activarlo.');
+    throw new Error('El servidor no encontró este dispositivo registrado. Toca «Activar avisos» para vincularlo.');
   }
   return r;
 }
