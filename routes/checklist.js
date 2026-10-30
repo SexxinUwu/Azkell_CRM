@@ -6,6 +6,10 @@ module.exports = function (db, broadcast, logAudit) {
     const router = express.Router();
 
     function getDb(req) { return req.db || db; }
+    // Lista de fallas guardada (texto JSON o ya convertida); si no es una lista, vacía
+    function aLista(v) {
+        try { const p = typeof v === 'string' ? JSON.parse(v) : v; return Array.isArray(p) ? p : []; } catch (e) { return []; }
+    }
 
     // ── POST /api/checklist/evidencia-upload-url — Subida directa a S3 de fotos y videos del reporte (el archivo no pasa por el servidor) ──
     router.post('/evidencia-upload-url', async (req, res) => {
@@ -1504,9 +1508,155 @@ module.exports = function (db, broadcast, logAudit) {
         });
     });
 
-    // Los reportes de fallas ya no se editan completos: solo se suman fallas (POST /:id/agregar-fallas)
-    router.put('/:id', (req, res) => {
-        res.status(403).json({ error: 'Los reportes de fallas no se editan. Usa "Agregar fallas" para sumar fallas nuevas.' });
+    // ── PUT /:id — Edita los datos del reporte (cabecera, fotos y firma). Las fallas no cambian aquí:
+    // se suman con POST /:id/agregar-fallas y se quitan una a una con POST /:id/quitar-falla ──
+    router.put('/:id', async (req, res) => {
+        const tdb = getDb(req);
+        const id = req.params.id;
+        const {
+            orden_viaje, placa_tracto, placa_remolque, km_inicial, km_final, horas_motor,
+            conductor, procedencia, ubicacion_gps, fotos_base64, firma_conductor
+        } = req.body;
+
+        tdb.query('SELECT * FROM reportes_fallas WHERE id = ?', [id], async (errSel, rows) => {
+            if (errSel) return res.status(500).json({ error: errSel.message });
+            if (!rows.length) return res.status(404).json({ error: 'Reporte no encontrado' });
+
+            const rep = rows[0];
+            const folio = rep.folio;
+
+            if (rep.estado === 'Finalizado') {
+                return res.status(400).json({ error: 'Este reporte de fallas ya se encuentra FINALIZADO y no puede ser modificado.' });
+            }
+
+            // Fotos existentes y nuevas (base64 o URL ya subida)
+            let fotosUrls = [];
+            try {
+                if (rep.fotos_json) {
+                    const parsed = JSON.parse(rep.fotos_json);
+                    if (Array.isArray(parsed)) fotosUrls = parsed;
+                }
+            } catch (e) {}
+
+            if (Array.isArray(fotos_base64) && fotos_base64.length > 0) {
+                for (let i = 0; i < fotos_base64.length; i++) {
+                    const item = fotos_base64[i];
+                    if (typeof item === 'string' && item.startsWith('data:image')) {
+                        try {
+                            const matches = item.match(/^data:(image\/\w+);base64,(.+)$/);
+                            if (matches) {
+                                const buffer = Buffer.from(matches[2], 'base64');
+                                const ext = matches[1].split('/')[1] || 'jpg';
+                                const key = `checklist/${folio}_foto_${Date.now()}_${i}.${ext}`;
+                                const s3Url = await uploadToS3(buffer, key, matches[1]);
+                                fotosUrls.push(s3Url);
+                            }
+                        } catch (eS3) {
+                            console.error('⚠️ Error subiendo foto S3 en edición:', eS3.message);
+                        }
+                    } else if (typeof item === 'string' && item.startsWith('http') && !fotosUrls.includes(item)) {
+                        fotosUrls.push(item);
+                    }
+                }
+            }
+
+            const sql = `
+                UPDATE reportes_fallas SET
+                    orden_viaje = ?,
+                    placa_tracto = ?,
+                    placa_remolque = ?,
+                    km_inicial = ?,
+                    km_final = ?,
+                    horas_motor = ?,
+                    conductor = ?,
+                    procedencia = ?,
+                    ubicacion_gps = ?,
+                    fotos_json = ?,
+                    firma_conductor = COALESCE(?, firma_conductor)
+                WHERE id = ?
+            `;
+
+            const values = [
+                (orden_viaje !== undefined ? (String(orden_viaje).trim() || null) : rep.orden_viaje),
+                (placa_tracto || '').trim().toUpperCase(),
+                (placa_remolque || '').trim().toUpperCase(),
+                parseInt(km_inicial, 10) || 0,
+                parseInt(km_final, 10) || 0,
+                (horas_motor || '').trim() || null,
+                (conductor || '').trim(),
+                (procedencia || '').trim(),
+                (ubicacion_gps || '').trim(),
+                JSON.stringify(fotosUrls),
+                firma_conductor || null,
+                id
+            ];
+
+            tdb.query(sql, values, async (errUpd) => {
+                if (errUpd) return res.status(500).json({ error: errUpd.message });
+
+                // Las fallas siguen siendo las que tiene el reporte: se sincroniza con ellas tal como están
+                await syncReporteConOTsYRampas(
+                    tdb, id, folio,
+                    (placa_tracto || rep.placa_tracto),
+                    (placa_remolque || rep.placa_remolque),
+                    aLista(rep.fallas_tracto_json),
+                    aLista(rep.fallas_remolque_json),
+                    rep.fallas_libres_text,
+                    broadcast
+                );
+
+                if (typeof logAudit === 'function') {
+                    logAudit(req, 'MANTENIMIENTO', 'Checklist', 'MODIFICÓ', `Modificó Reporte de Fallas ${folio || id}`);
+                }
+
+                res.json({ ok: true, id, folio, fotos: fotosUrls });
+            });
+        });
+    });
+
+    // ── POST /:id/quitar-falla — Quita una sola falla del reporte. Verifica que sea la que se muestra en pantalla ──
+    router.post('/:id/quitar-falla', (req, res) => {
+        const tdb = getDb(req);
+        const { unidad, indice, item, obs } = req.body || {};
+        if (!['tracto', 'remolque'].includes(unidad)) return res.status(400).json({ error: 'Indica la unidad de la falla' });
+        const usuario = (req.user && (req.user.nombre || req.user.correo)) || 'Sistema';
+
+        tdb.query('SELECT * FROM reportes_fallas WHERE id = ?', [req.params.id], async (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!rows.length) return res.status(404).json({ error: 'Reporte no encontrado' });
+            const rep = rows[0];
+            if (/final|anula/i.test(String(rep.estado || ''))) {
+                return res.status(400).json({ error: 'Este reporte ya está finalizado o anulado: no se pueden quitar fallas.' });
+            }
+
+            const campo = unidad === 'tracto' ? 'fallas_tracto_json' : 'fallas_remolque_json';
+            const lista = aLista(rep[campo]);
+            const i = Number(indice);
+            const falla = Number.isInteger(i) ? lista[i] : undefined;
+            if (!falla) return res.status(409).json({ error: 'Esa falla ya no está en el reporte. Actualiza la pantalla.' });
+
+            const textoFalla = String(falla.obs ?? falla.observacion ?? '').trim();
+            const itemFalla = String(falla.item ?? '').trim();
+            if (textoFalla !== String(obs ?? '').trim() || itemFalla !== String(item ?? '').trim()) {
+                return res.status(409).json({ error: 'El reporte cambió mientras lo mirabas. Actualiza la pantalla e intenta de nuevo.' });
+            }
+
+            const nuevaLista = lista.filter((_, k) => k !== i);
+            const fallasT = unidad === 'tracto' ? nuevaLista : aLista(rep.fallas_tracto_json);
+            const fallasR = unidad === 'remolque' ? nuevaLista : aLista(rep.fallas_remolque_json);
+
+            tdb.query(`UPDATE reportes_fallas SET ${campo} = ? WHERE id = ?`, [JSON.stringify(nuevaLista), req.params.id], async (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                await syncReporteConOTsYRampas(
+                    tdb, req.params.id, rep.folio, rep.placa_tracto, rep.placa_remolque,
+                    fallasT, fallasR, rep.fallas_libres_text, broadcast
+                );
+                if (typeof logAudit === 'function') {
+                    logAudit(req, 'MANTENIMIENTO', 'Checklist', 'QUITÓ', `Quitó la falla "${itemFalla || textoFalla}" de ${rep.folio} (${unidad}) · ${usuario}`);
+                }
+                res.json({ ok: true });
+            });
+        });
     });
 
     router.delete('/:id', async (req, res) => {

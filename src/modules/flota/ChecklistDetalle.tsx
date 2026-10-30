@@ -1,7 +1,7 @@
 import './checklist.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Check, FileText, Mail, MessageCircle, Plus, Trash2, Wrench, X } from 'lucide-react';
+import { Check, FileText, MessageCircle, Pencil, Plus, Trash2, Wrench, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { VisorFotos } from '../../core/ui/VisorFotos';
@@ -36,10 +36,10 @@ const sinDato = (v: unknown) => (v == null || String(v).trim() === '' ? '—' : 
  * (✓ sin falla, ✕ con falla) de tracto y carreta, detalle de falla en tabla, evidencias y OTs con su estado.
  */
 export function ChecklistDetalle({ falla, open, puedeEditar, puedeOTs, puedeEliminar, pdfListo, onClose,
-  onAgregarFallas, onGenerarOTs, onPdf, onWhatsApp, onCorreo, onEliminar }: {
+  onAgregarFallas, onEditar, onGenerarOTs, onPdf, onWhatsApp, onEliminar }: {
   falla: ReporteFalla; open: boolean; puedeEditar: boolean; puedeOTs: boolean; puedeEliminar: boolean; pdfListo: boolean;
-  onClose: () => void; onAgregarFallas?: () => void; onGenerarOTs?: () => void; onPdf: () => void; onWhatsApp: () => void;
-  onCorreo: () => void; onEliminar?: () => void;
+  onClose: () => void; onAgregarFallas?: () => void; onEditar?: () => void; onGenerarOTs?: () => void; onPdf: () => void; onWhatsApp: () => void;
+  onEliminar?: () => void;
 }) {
   const estadoFinal = /final|anula/i.test(falla.estado);
   const cfg = useConfigSistemas(open);
@@ -120,14 +120,14 @@ export function ChecklistDetalle({ falla, open, puedeEditar, puedeOTs, puedeElim
 
   return (
     <Sheet open={open} onClose={onClose} title={`Reporte de fallas ${falla.folio}`}
-      footer={<>
+      footer={<div className="ckd-acciones">
+        {onEditar && puedeEditar && !estadoFinal && <Button variant="secondary" icon={<Pencil size={16} />} onClick={onEditar}>Editar reporte</Button>}
         <Button variant="secondary" icon={<FileText size={16} />} onClick={onPdf} disabled={!pdfListo}>PDF F-MAN-001</Button>
         <Button variant="secondary" icon={<MessageCircle size={16} />} onClick={onWhatsApp} disabled={!pdfListo}>WhatsApp</Button>
-        <Button variant="secondary" icon={<Mail size={16} />} onClick={onCorreo} disabled={!pdfListo}>Enviar por correo</Button>
         {onAgregarFallas && puedeEditar && !estadoFinal && <Button variant="secondary" icon={<Plus size={16} />} onClick={onAgregarFallas}>Agregar fallas</Button>}
         {onGenerarOTs && puedeOTs && !estadoFinal && <Button variant="primary" icon={<Wrench size={16} />} onClick={onGenerarOTs}>Generar OTs</Button>}
         {onEliminar && puedeEliminar && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={onEliminar}>Eliminar</Button>}
-      </>}>
+      </div>}>
       <div className="ckd">
         {/* 1. Datos del reporte */}
         <section className="ckd-card">

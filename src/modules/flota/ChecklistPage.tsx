@@ -5,7 +5,7 @@ import '../almacen/almacen.css';
 import '../almacen/entradas.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckCheck, ClipboardCheck, ClipboardList, Clock, Eye, FileDown, FileSpreadsheet, Mail, MapPin, Plus, RefreshCw, SearchX, SlidersHorizontal, Trash2, Wrench } from 'lucide-react';
+import { CheckCheck, ClipboardCheck, ClipboardList, Clock, Eye, FileDown, FileSpreadsheet, MapPin, Pencil, Plus, RefreshCw, SearchX, SlidersHorizontal, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, TextInput } from '../../core/ui/Field';
@@ -28,10 +28,9 @@ import { GenerarOTsSheet } from './GenerarOTsSheet';
 import { ChecklistDetalle, leerOts } from './ChecklistDetalle';
 import { AgregarFallasSheet } from './AgregarFallasSheet';
 import { ChecklistPlantilla } from './ChecklistPlantilla';
-import { EnviarFallaSheet } from './EnviarFallaSheet';
 import { leerFallas, pdfFman, textoFman } from './fman';
 
-type AccionFila = 'detalle' | 'pdf' | 'agregar' | 'ots' | 'correo' | 'eliminar';
+type AccionFila = 'detalle' | 'pdf' | 'agregar' | 'editar' | 'ots' | 'eliminar';
 type Vista = 'lista' | 'plantilla';
 type FiltroEstado = 'TODOS' | 'Pendiente' | 'En Proceso' | 'Finalizado';
 interface Permisos { editar: boolean; ots: boolean; eliminar: boolean }
@@ -85,8 +84,8 @@ export function ChecklistPage() {
   const [detalleId, setDetalleId] = useState<string | number | null>(null);
   const [nuevo, setNuevo] = useState(false);
   const [agregando, setAgregando] = useState<ReporteFalla | null>(null);
+  const [editando, setEditando] = useState<ReporteFalla | null>(null);
   const [generando, setGenerando] = useState<ReporteFalla | null>(null);
-  const [correo, setCorreo] = useState<ReporteFalla | null>(null);
   const [porEliminar, setPorEliminar] = useState<ReporteFalla | null>(null);
   const [eliminando, setEliminando] = useState(false);
   const [generandoPdf, setGenerandoPdf] = useState(false);
@@ -133,7 +132,7 @@ export function ChecklistPage() {
 
   const detalle = items.find(f => String(f.id) === String(detalleId)) ?? null;
   const formulario = (
-    <ReporteFallaNuevo open={nuevo} reporte={null} onClose={() => setNuevo(false)}
+    <ReporteFallaNuevo open={nuevo || !!editando} reporte={editando} onClose={() => { setNuevo(false); setEditando(null); }}
       onHecho={() => qc.invalidateQueries({ queryKey: ['flota', 'checklist'] })} />
   );
 
@@ -195,8 +194,8 @@ export function ChecklistPage() {
     if (a === 'detalle') setDetalleId(f.id);
     else if (a === 'pdf') pdf(f, 'descargar');
     else if (a === 'agregar') setAgregando(f);
+    else if (a === 'editar') setEditando(f);
     else if (a === 'ots') setGenerando(f);
-    else if (a === 'correo') setCorreo(f);
     else if (a === 'eliminar') setPorEliminar(f);
   }
 
@@ -206,9 +205,9 @@ export function ChecklistPage() {
     return [
       { label: 'Ver detalle', icon: <Eye size={17} />, onSelect: () => accion('detalle', f) },
       { label: 'Imprimir PDF F-MAN-001', icon: <FileDown size={17} />, disabled: !cfg.data || generandoPdf, onSelect: () => accion('pdf', f) },
+      permisos.editar && !final && { label: 'Editar reporte', icon: <Pencil size={17} />, onSelect: () => accion('editar', f) },
       permisos.editar && !final && { label: 'Agregar fallas', icon: <Plus size={17} />, onSelect: () => accion('agregar', f) },
       permisos.ots && { label: 'Generar / ver OTs', icon: <Wrench size={17} />, onSelect: () => accion('ots', f) },
-      { label: 'Enviar por correo', icon: <Mail size={17} />, onSelect: () => accion('correo', f) },
       permisos.eliminar && { label: 'Eliminar', icon: <Trash2 size={17} />, destructiva: true, separado: true, onSelect: () => accion('eliminar', f) },
     ];
   }
@@ -334,15 +333,14 @@ export function ChecklistPage() {
           pdfListo={!!cfg.data && !generandoPdf}
           onClose={() => setDetalleId(null)}
           onAgregarFallas={() => { setDetalleId(null); setAgregando(detalle); }}
+          onEditar={() => { setDetalleId(null); setEditando(detalle); }}
           onGenerarOTs={() => { setDetalleId(null); setGenerando(detalle); }}
           onPdf={() => pdf(detalle, 'descargar')}
           onWhatsApp={() => pdf(detalle, 'whatsapp')}
-          onCorreo={() => { setDetalleId(null); setCorreo(detalle); }}
           onEliminar={() => setPorEliminar(detalle)} />
       )}
       {agregando && <AgregarFallasSheet falla={agregando} open onClose={() => setAgregando(null)} />}
       {generando && <GenerarOTsSheet falla={generando} open onClose={() => setGenerando(null)} />}
-      {correo && cfg.data && <EnviarFallaSheet falla={correo} cfg={cfg.data} open onClose={() => setCorreo(null)} />}
       <ConfirmSheet open={!!porEliminar} onClose={() => !eliminando && setPorEliminar(null)} onConfirm={eliminar} loading={eliminando}
         title={`¿Eliminar ${porEliminar?.folio ?? 'el reporte'}?`} message="Esta acción no se puede deshacer. El reporte se elimina del sistema." confirmLabel="Eliminar" />
     </Page>

@@ -1,8 +1,8 @@
 import './checklist.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Camera, ChevronDown, CircleAlert, Link2, Plus, SearchX, Unlink, X } from 'lucide-react';
-import { Sheet } from '../../core/ui/Sheet';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Camera, ChevronDown, CircleAlert, Link2, Plus, SearchX, Trash2, Unlink, X } from 'lucide-react';
+import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -109,6 +109,69 @@ function DocsUnidad({ titulo, vehiculo }: { titulo: string; vehiculo: VehiculoFl
         );
       })}
     </div>
+  );
+}
+
+// Fallas que ya tiene el reporte, en modo edición: se quitan una a una, con confirmación.
+// Las fallas nuevas se suman desde «Agregar fallas» en el detalle.
+type FallaEnLista = { unidad: 'tracto' | 'remolque'; indice: number; f: FallaGuardada; placa: string };
+
+function FallasDelReporte({ reporte }: { reporte: ReporteFalla }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [lista, setLista] = useState<FallaEnLista[]>([]);
+  const [aQuitar, setAQuitar] = useState<FallaEnLista | null>(null);
+  const [quitando, setQuitando] = useState(false);
+
+  useEffect(() => {
+    setLista([
+      ...leerFallas(reporte.fallas_tracto_json).map((f, indice) => ({ unidad: 'tracto' as const, indice, f, placa: reporte.placa_tracto || 'Camión' })),
+      ...leerFallas(reporte.fallas_remolque_json).map((f, indice) => ({ unidad: 'remolque' as const, indice, f, placa: reporte.placa_remolque || 'Carreta' })),
+    ]);
+  }, [reporte]);
+
+  async function quitar() {
+    if (!aQuitar) return;
+    setQuitando(true);
+    try {
+      await api(`/mantenimiento/checklist/${encodeURIComponent(String(reporte.id))}/quitar-falla`, {
+        method: 'POST',
+        body: { unidad: aQuitar.unidad, indice: aQuitar.indice, item: aQuitar.f.item ?? '', obs: String(aQuitar.f.obs ?? aQuitar.f.observacion ?? '') },
+      });
+      // Igual que en el servidor: las fallas siguientes de la misma unidad se corren un lugar
+      setLista(prev => prev.filter(x => x !== aQuitar).map(x => (x.unidad === aQuitar.unidad && x.indice > aQuitar.indice ? { ...x, indice: x.indice - 1 } : x)));
+      toast('Falla quitada del reporte');
+      setAQuitar(null);
+      await qc.invalidateQueries({ queryKey: ['flota', 'checklist'] });
+    } catch (err) { toast(errorMessage(err), 'error'); }
+    finally { setQuitando(false); }
+  }
+
+  return (
+    <section className="ck-bloque">
+      <p className="ck-bloque__titulo">Fallas del reporte ({lista.length})</p>
+      <p className="t-footnote c-secondary">Puedes quitar una falla con «Quitar». Para sumar fallas nuevas usa «Agregar fallas» en el detalle.</p>
+      {lista.length === 0 ? <p className="t-footnote c-secondary">Este reporte no tiene fallas.</p> : (
+        <div className="ckd-tabla">
+          <table>
+            <thead><tr><th>Unidad</th><th>Sistema</th><th>Ítem</th><th>Descripción de la falla</th><th>Acción</th></tr></thead>
+            <tbody>
+              {lista.map((x, k) => (
+                <tr key={`${x.unidad}-${x.indice}-${k}`}>
+                  <td><span className="ckd-placa">{x.placa}</span></td>
+                  <td><span className="ckd-sistema-tag">{(x.f.sistema || 'MANUAL').toUpperCase()}</span></td>
+                  <td className="ckd-falla">{x.f.item || '—'}</td>
+                  <td>{x.f.obs || x.f.observacion || 'Sin descripción'}</td>
+                  <td><Button variant="plain" iconOnly icon={<Trash2 size={15} />} aria-label={`Quitar falla ${x.f.item || ''}`} title="Quitar falla" onClick={() => setAQuitar(x)} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <ConfirmSheet open={!!aQuitar} onClose={() => !quitando && setAQuitar(null)} loading={quitando} onConfirm={quitar}
+        title="¿Quitar esta falla del reporte?" message="Se quita solo esta falla. Las demás no cambian." confirmLabel="Quitar" />
+    </section>
   );
 }
 
@@ -325,7 +388,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
   async function guardar() {
     if (!placaT) { setError('Indica la placa del tracto.'); return; }
     if (!v.conductor?.trim()) { setError('Indica el conductor.'); return; }
-    if (total === 0) { setError('Marca al menos una falla, importa un backlog o escribe una falla manual.'); return; }
+    if (!editando && total === 0) { setError('Marca al menos una falla, importa un backlog o escribe una falla manual.'); return; }
     if (!placaR && manualesLlenos.some(m => m.unidad === 'remolque')) { setError('Una falla manual es de la carreta, pero no hay placa de carreta. Indícala o cambia la falla a camión.'); return; }
     const ahora = new Date().toISOString().slice(0, 16).replace('T', ' ');
     const armar = (m: Record<string, Marca>) => Object.entries(m).map(([k, x]) => {
@@ -516,7 +579,8 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
           </div>
         </section>
 
-        {/* 4. Fallas encontradas */}
+        {editando && reporte && <FallasDelReporte reporte={reporte} />}
+        {!editando && (
         <section className="ck-bloque">
           <p className="ck-bloque__titulo">Fallas encontradas</p>
           <p className="t-footnote c-secondary">Marca solo lo que está fallando: al marcarlo se abre el espacio para describirlo.</p>
@@ -584,6 +648,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
             </div>
           </div>
         </section>
+        )}
 
         {/* 5. Evidencia fotográfica y firma */}
         <section className="ck-bloque">
