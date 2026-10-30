@@ -1,9 +1,12 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
-import { AlertTriangle, Check, Disc3, Download, Minus, Pencil, Share2, Wrench, X } from 'lucide-react';
-import { Sheet } from '../../core/ui/Sheet';
+import { AlertTriangle, Check, Disc3, Download, Minus, Pencil, Share2, Trash2, Wrench, X } from 'lucide-react';
+import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
+import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '../../core/ui/Toast';
+import { api, errorMessage } from '../../core/api/client';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { spring } from '../../core/lib/motion';
@@ -38,6 +41,11 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
   const [otAbierta, setOtAbierta] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<{ tono: 'error' | 'neutral'; texto: string } | null>(null);
+  // Eliminar (clásico: "Eliminar Insp. Mecánica" / "Eliminar Insp. Neumáticos" con confirmación)
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [confirmar, setConfirmar] = useState<'mecanica' | 'neumaticos' | null>(null);
+  const [eliminando, setEliminando] = useState(false);
 
   const fotos = useMemo(() => [...(i?.puntos.map(p => p.foto).filter(Boolean) ?? []), i?.firma ?? ''].filter(Boolean), [i]);
   const firmadas = useFotosFirmadas(fotos);
@@ -111,6 +119,33 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
     setOtAbierta(true);
   };
 
+  // Eliminar la inspección mecánica (eliminarInspeccion del clásico) o la de neumáticos (neuEliminarInspeccion)
+  const confirmarEliminar = async () => {
+    if (!confirmar || !i) return;
+    const neuId = neuAsociada?.id ?? '';
+    setEliminando(true);
+    try {
+      if (confirmar === 'mecanica') {
+        const r = await api<{ ok?: boolean; data?: unknown }>('/script/eliminarRegistro', { method: 'POST', body: { id: i.id, coleccion: 'Inspecciones' } });
+        if (r.ok === false) throw new Error(String(r.data ?? 'No se pudo eliminar la inspección'));
+        toast(`Inspección ${i.id} eliminada`);
+        setConfirmar(null);
+        onClose();
+        await qc.invalidateQueries({ queryKey: ['inspecciones'] });
+      } else {
+        await api(`/neumaticos/inspecciones/${encodeURIComponent(neuId)}`, { method: 'DELETE' });
+        toast(`Inspección ${neuId} eliminada`);
+        setConfirmar(null);
+        setNeuDetalle(null);
+        await qc.invalidateQueries({ queryKey: ['inspecciones'] });
+      }
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+    } finally {
+      setEliminando(false);
+    }
+  };
+
   return (
     <>
       <Sheet
@@ -120,6 +155,10 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
         title={i ? `Inspección ${i.id}` : 'Inspección'}
         footer={
           <>
+            {i && can('insp.eliminar') && (
+              <Button variant="danger" icon={<Trash2 size={16} />} onClick={() => setConfirmar('mecanica')}>Eliminar</Button>
+            )}
+            <span style={{ flex: 1 }} />
             <Button variant="secondary" onClick={onClose}>Cerrar</Button>
             {i && (can('insp.editar') || can('insp.crear')) && (
               <Button variant="primary" icon={<Pencil size={16} />} onClick={() => { onClose(); navigate(`/inspecciones/${i.id}/editar`); }}>Editar</Button>
@@ -155,6 +194,9 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
                   <small>{neuAsociada.fecha ? neuAsociada.fecha.toLocaleDateString('es-PE') : 'Sin fecha'} · Llantas críticas: {neuAsociada.llantasCriticas}</small>
                 </div>
                 <Button variant="secondary" icon={<Disc3 size={16} />} onClick={() => setNeuDetalle(neuAsociada.id)}>Ver detalle de neumáticos</Button>
+                {can('insp.eliminar') && (
+                  <Button variant="danger" icon={<Trash2 size={16} />} onClick={() => setConfirmar('neumaticos')}>Eliminar neumáticos</Button>
+                )}
               </div>
             )}
             {aviso && <Notice tone={aviso.tono}>{aviso.texto}</Notice>}
@@ -223,6 +265,17 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
       </Sheet>
 
       {reporte && <GenerarOTsSheet falla={reporte} open={otAbierta} onClose={() => setOtAbierta(false)} />}
+      <ConfirmSheet
+        open={confirmar !== null}
+        onClose={() => !eliminando && setConfirmar(null)}
+        onConfirm={confirmarEliminar}
+        loading={eliminando}
+        title={confirmar === 'neumaticos' ? '¿Eliminar Inspección de Neumáticos?' : '¿Eliminar Inspección?'}
+        message={confirmar === 'neumaticos'
+          ? <>Se eliminará permanentemente la inspección <strong>{neuAsociada?.id}</strong> y todos sus registros de llantas y presiones.</>
+          : 'Esta acción eliminará el registro de inspección de forma permanente del sistema. ¿Deseas continuar?'}
+        confirmLabel="Sí, eliminar"
+      />
       <InspeccionDetalleSheet id={neuDetalle} onClose={() => setNeuDetalle(null)} />
 
       {/* Visor de fotos: el mismo de Seguridad (galería con zoom y miniaturas) */}

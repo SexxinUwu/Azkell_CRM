@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ArrowUpRight, ClipboardCheck, Disc3, Download, ListChecks, Plus, SearchX, Upload, Wrench } from 'lucide-react';
+import { ClipboardCheck, Disc3, Download, ListChecks, Plus, SearchX, Upload, Wrench } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { LicensePlate } from '../../core/ui/LicensePlate';
@@ -15,7 +15,6 @@ import { ToggleChips } from '../../core/ui/Chips';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { errorMessage } from '../../core/api/client';
 import { spring } from '../../core/lib/motion';
-import { abrirClasico } from '../../core/layout/navigation';
 import { usePlacas, type Placa } from '../placas/api';
 import { useDisponibilidad } from '../flota/api';
 import { clavePlaca, useInspecciones, useInspeccionesNeumaticos, type Inspeccion } from './api';
@@ -153,7 +152,6 @@ export function InspeccionesPage() {
               can('insp.crear') && { label: 'Importar Excel', detalle: 'Con revisión antes de guardar', icon: <Upload size={17} />, onSelect: () => setImportando(true) },
               can('insp.crear') && { label: 'Descargar plantilla', icon: <Download size={17} />, onSelect: () => { descargarPlantillaInspecciones(esquema.data ?? []).catch(err => toast(errorMessage(err), 'error')); } },
               (can('insp.crear') || can('insp.editar')) && { label: 'Plantilla de inspección', detalle: 'Sistemas e ítems que se revisan', icon: <ListChecks size={17} />, onSelect: () => setEditandoPlantilla(true) },
-              { label: 'Abrir en la versión actual', detalle: 'Editar y PDF', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('mantenimiento/inspecciones') },
             ]} />
             {can('insp.crear') && <Button variant="primary" icon={<Plus size={16} />} onClick={() => navigate('/inspecciones/nueva')}>Nueva inspección</Button>}
           </>
