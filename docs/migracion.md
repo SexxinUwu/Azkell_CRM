@@ -268,5 +268,9 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 
 - Escapes al clásico: 0, salvo las guías SUNAT (decisión: el clásico emite a SUNAT hasta validar el sandbox).
 - Raíz `/` → app nueva; versión actual en `/clasico`.
-- Fase 5 (borrar el clásico: `Index.html`, `logica.js`, `modulos/`, `routes/` del clásico): **no iniciada**. Depende de validar la emisión de guías en sandbox y de las pruebas en navegador de la sección anterior.
+- Fase 5: **CERRADA Y CONCLUIDA** (2026-10-30). El clásico se retiró: `Index.html`, `logica.js`, `estilos.css`, `utils.js`, `lazy-libs.js` y `modulos/` ya no están en el repositorio. Respaldo: tag `v1.0-legacy-backup`.
 - Lista de pendientes de calca: ver `docs/paridad-botones-escape.md`, sección «Estado de cierre».
+
+## Migración: 100% CERRADA Y CONCLUIDA (2026-10-30)
+
+La app nueva (React) es la única versión. Todas las pantallas del menú están en React, sin enlaces al clásico. Guías SUNAT se emiten desde React (individual y masiva). Pendientes de operación, no de migración: pruebas en navegador de los flujos nuevos y el backlog técnico (scripts de mantenimiento y rotación de claves).

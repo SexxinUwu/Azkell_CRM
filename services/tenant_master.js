@@ -282,7 +282,7 @@ async function resolveTenantMiddleware(req, res, next) {
         if (req.path.startsWith('/api')) {
             return res.status(400).json({ error: 'Subdominio de empresa requerido. Ingrese con la dirección de su empresa (tu-empresa.azkell.com).' });
         }
-        if (req.path === '/' || req.path === '/Index.html' || (req.headers.accept || '').includes('text/html')) {
+        if (req.path === '/' || (req.headers.accept || '').includes('text/html')) {
             return res.status(200).send(PORTAL_CORPORATIVO_HTML);
         }
         return res.status(404).end();

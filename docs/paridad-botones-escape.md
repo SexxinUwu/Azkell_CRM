@@ -103,3 +103,7 @@ Fecha de revisión: 2026-10-29. Tarea solo de lectura: no se modificó `src/` ni
 - **Auditoría, Módulo:** la columna y el filtro «Módulo» muestran el campo `entity` de `audit_logs`. Hoy casi todos los eventos son de sesión: el campo se llena solo en las acciones que lo pasan al registrar.
 - **Auditoría, Sub-Módulo:** sin campo equivalente en `audit_logs`; no se muestra.
 - **Cuenta bancaria del conductor:** pendiente. El clásico la lee de `/api/seguridad/recursos`, pero la tabla `conductores` no tiene columnas bancarias y la ruta devuelve solo nombres. Requiere agregar columnas a `conductores` (migración aditiva) y capturarlas en el formulario de conductores.
+
+## Cierre total (2026-10-30)
+
+No quedan escapes ni enlaces al clásico. La versión anterior fue eliminada del repositorio (respaldo: tag `v1.0-legacy-backup`). Guías SUNAT se emiten desde React.
