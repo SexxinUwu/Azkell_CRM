@@ -35,6 +35,15 @@ const lugar = (s?: string | null) => String(s ?? '').normalize('NFD').replace(/[
 const codigoMotor = (s?: string | null) => String(s ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 const numero = (v: unknown) => Number(v) || 0;
 
+// Clasificación de producto igual que _caIsFuelMatch del clásico (combustible-analisis y urea-analisis):
+// UREA = contiene UREA, ADBLUE o DEF; D2 = D2, DIESEL, DIÉSEL o B5, o cualquier producto que no sea de urea.
+export function coincideCombustible(producto: string | null | undefined, objetivo: 'D2' | 'UREA'): boolean {
+  const prod = String(producto ?? '').toUpperCase().trim();
+  if (objetivo === 'UREA') return prod === 'UREA' || prod.includes('UREA') || prod.includes('ADBLUE') || prod.includes('DEF');
+  return prod === 'D2' || prod.includes('DIESEL') || prod.includes('DIÉSEL') || prod.includes('B5')
+    || (!prod.includes('UREA') && !prod.includes('ADBLUE') && !prod.includes('DEF'));
+}
+
 // Retorno = ida invertida: "LIMA - AREQUIPA" -> "AREQUIPA - LIMA"
 export function invertirRuta(r?: string | null): string {
   if (!r) return '';

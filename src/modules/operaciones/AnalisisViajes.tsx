@@ -14,7 +14,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { analizarViaje, type AnalisisViaje, type MatrizCalc, type TramoCalc, type ViajeCalc } from './analisisCalculo';
+import { analizarViaje, coincideCombustible, type AnalisisViaje, type MatrizCalc, type TramoCalc, type ViajeCalc } from './analisisCalculo';
 
 interface Stats { fechaInicio?: string; fechaFin?: string; vouchers?: Voucher[]; kmInicio: number; kmFin: number; recorridoKm: number; totalGalones: number; totalGasto: number; rendimiento: number }
 interface Voucher { conductor?: string; id: number | string; fecha?: string; producto?: string; galones?: number; importe?: number; odometro?: number; estacion?: string; esPuntoPartida?: boolean; tipo?: string; peso?: number }
@@ -120,7 +120,9 @@ const fmt = (v: unknown, d = 1) => n(v).toLocaleString('es-PE', { minimumFractio
 const soles = (v: unknown) => 'S/ ' + n(v).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const AUDIT = ['PENDIENTE', 'CONFORME', 'OBSERVADO'];
 const colorAudit = (e: string) => ({ CONFORME: 'green', OBSERVADO: 'amber', PENDIENTE: 'gray' }[e] ?? 'gray');
-const esUrea = (k: string) => /UREA|ADBLUE|DEF/.test(k.toUpperCase());
+// Mismas reglas que _caIsFuelMatch del clásico (ver coincideCombustible)
+const esUrea = (k: string) => coincideCombustible(k, 'UREA');
+const esD2 = (k: string) => coincideCombustible(k, 'D2');
 const TAMANOS = [25, 50, 100];
 // Un viaje de más de este recorrido se considera odómetro mal digitado (ningún viaje real llega a eso)
 const LIMITE_KM_VIAJE = 3000;
@@ -333,7 +335,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const trips = useMemo(() => {
     const todos = datos.data?.trips ?? [];
     const producto = urea ? todos.filter(t => Object.keys(t.fuelStats ?? {}).some(esUrea))
-      : todos.filter(t => { const ks = Object.keys(t.fuelStats ?? {}); return ks.length === 0 || ks.some(k => !esUrea(k)); });
+      : todos.filter(t => { const ks = Object.keys(t.fuelStats ?? {}); return ks.length === 0 || ks.some(esD2); });
     const buscado = q.toLowerCase();
     return producto.filter(t => {
       if (desde || hasta) {
@@ -354,15 +356,16 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   // Bloque de diésel del viaje, igual que el clásico: la clave puede ser D2 o el nombre del producto (p. ej. DIÉSEL B5)
   const bloqueD2 = (t: Trip): Stats | undefined => {
     if (urea) return undefined;
-    return t.fuelStats?.D2 ?? Object.entries(t.fuelStats ?? {}).find(([k]) => !esUrea(k))?.[1];
+    // Orden del clásico: D2, luego DIÉSEL B5, luego cualquier clave de diésel
+    return t.fuelStats?.D2 ?? t.fuelStats?.['DIÉSEL B5'] ?? Object.entries(t.fuelStats ?? {}).find(([k]) => esD2(k))?.[1];
   };
   const cifras = (t: Trip) => {
     if (!urea) {
       const d2 = bloqueD2(t);
       if (d2) return { galones: n(d2.totalGalones), gasto: n(d2.totalGasto), rendimiento: n(d2.rendimiento) };
-      const gal = Object.entries(t.fuelStats ?? {}).filter(([k]) => !esUrea(k)).reduce((s, [, v]) => s + n(v.totalGalones), 0) || t.totalGalones;
+      const gal = Object.entries(t.fuelStats ?? {}).filter(([k]) => esD2(k)).reduce((s, [, v]) => s + n(v.totalGalones), 0) || t.totalGalones;
       // Gasto solo de diésel (D2), igual que los galones: el de urea se ve en su propia pantalla
-      const gasto = Object.entries(t.fuelStats ?? {}).filter(([k]) => !esUrea(k)).reduce((s, [, v]) => s + n(v.totalGasto), 0) || t.totalGasto;
+      const gasto = Object.entries(t.fuelStats ?? {}).filter(([k]) => esD2(k)).reduce((s, [, v]) => s + n(v.totalGasto), 0) || t.totalGasto;
       return { galones: gal, gasto, rendimiento: t.rendimiento };
     }
     const u = Object.entries(t.fuelStats ?? {}).filter(([k]) => esUrea(k)).map(([, v]) => v);
@@ -400,7 +403,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
       const viaje: ViajeCalc = {
         ruta: x.ruta, rutaIda: x.rutaIda, rutaRetorno: x.rutaRetorno, motor: x.motor, configuracion: x.configuracion, carreta: x.carreta,
         pesoIda: x.pesoIda, pesoRetorno: x.pesoRetorno, pesoMaxTn: x.pesoMaxTn, kmInicio: x.kmInicio, kmFin: x.kmFin,
-        vouchers: (x.vouchers ?? []).filter(v => !esUrea(String(v.producto ?? ''))),
+        vouchers: (x.vouchers ?? []).filter(v => esD2(String(v.producto ?? ''))),
       };
       mapa.set(x.viaje, analizarViaje(viaje, matriz));
     }
@@ -556,7 +559,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         const dif = a && a.galTeorico > 0 && c.galones > 0 ? c.galones - a.galTeorico : null;
         const g = gps.data?.[x.viaje]?.data ?? null;
         const gv = (v: number | null | undefined, d = 2) => (v == null ? '—' : ptoDecimal(Number(v), d));
-        const vales = (s?.vouchers ?? x.vouchers ?? []).filter(v => !v.esPuntoPartida && !esUrea(String(v.producto ?? ''))).length;
+        const vales = (s?.vouchers ?? x.vouchers ?? []).filter(v => !v.esPuntoPartida && esD2(String(v.producto ?? ''))).length;
         return [
           x.estadoAuditoria, x.observacionAuditoria, x.viaje, x.placa || '---', x.carreta || '---', String(x.estado || 'INICIADO').toUpperCase(),
           x.motor || '---', x.ruta || '---', x.conductor || '---', ptoDecimal(n(x.pesoMaxTn), 2), fechaExcel(s?.fechaInicio || x.fechaInicio), fechaExcel(s?.fechaFin || x.fechaFin),
@@ -831,7 +834,7 @@ function DetalleViaje({ trip: t, urea, puedeAuditar, guardar, analisis: a, gpsLo
 
   if (!t) return <Sheet open={false} onClose={onClose} title=""><span /></Sheet>;
   const c = cifras(t);
-  const vales = (t.vouchers ?? []).filter(v => !v.esPuntoPartida && (urea ? esUrea(String(v.producto ?? '')) : !esUrea(String(v.producto ?? ''))));
+  const vales = (t.vouchers ?? []).filter(v => !v.esPuntoPartida && (urea ? esUrea(String(v.producto ?? '')) : esD2(String(v.producto ?? ''))));
   const fila = (label: string, valor: unknown, mono = false) => (valor === null || valor === undefined || valor === '' ? null : (
     <div className="dato"><span className="dato__label">{label}</span><span className={`dato__valor${mono ? ' dato__valor--mono' : ''}`}>{String(valor)}</span></div>
   ));
