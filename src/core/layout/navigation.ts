@@ -283,7 +283,7 @@ export function visibleSections(can: (...p: string[]) => boolean, esFundador = f
 export function abrirClasico(ruta: string) {
   try { sessionStorage.setItem('fleet_rutaActual', ruta); } catch { /* sin almacenamiento */ }
   // La ruta va en el hash con barra (#sistema/perfil): la versión actual la abre directo, sin depender de sessionStorage
-  window.location.assign(`/#${ruta}`);
+  window.location.assign(`/clasico#${ruta}`);
 }
 
 // Pestañas inferiores en el celular: solo pantallas de la app nueva (el resto, en "Más").

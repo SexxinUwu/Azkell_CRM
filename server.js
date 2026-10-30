@@ -863,7 +863,16 @@ app.get('/api/proxy/placa', verifyToken, async (req, res) => {
     });
 });
 
-app.get('/', async (req, res) => {
+// La raíz entra a la app nueva (React). La versión actual queda en /clasico, solo para emergencias y para
+// la emisión de guías SUNAT (ver «Guías» en la app nueva: enlace a /clasico#operaciones/guia-remitente).
+app.get('/', (req, res) => {
+    if (_isSuperAdminReq(req) && fs.existsSync(path.join(DIST_APP, 'index.html'))) {
+        return res.redirect(302, '/app/sistema/superadmin');
+    }
+    return res.redirect(302, '/app/');
+});
+
+app.get('/clasico', async (req, res) => {
     try {
         // SuperAdmin (admin.*): entra directo al panel de empresas de la app nueva
         if (_isSuperAdminReq(req) && fs.existsSync(path.join(DIST_APP, 'index.html'))) {
