@@ -96,3 +96,10 @@ Fecha de revisión: 2026-10-29. Tarea solo de lectura: no se modificó `src/` ni
 - Mantenimiento: «Confirmar y Generar OTs» del clásico asumido cubierto por «Nueva OT»; sin verificar en código.
 - Vales: la separación de vales usa palabras clave (aproximación).
 - Todos los flujos nuevos: pendientes de prueba en navegador con datos reales.
+
+## Decisiones de seguimiento (2026-10-29)
+
+- **Torre de alertas (Centro de Comando):** fuera de la app nueva. Las alertas de documentos vencidos, llantas y mantenimiento se ven en el Centro de Notificaciones y en Documentos.
+- **Auditoría, Módulo:** la columna y el filtro «Módulo» muestran el campo `entity` de `audit_logs`. Hoy casi todos los eventos son de sesión: el campo se llena solo en las acciones que lo pasan al registrar.
+- **Auditoría, Sub-Módulo:** sin campo equivalente en `audit_logs`; no se muestra.
+- **Cuenta bancaria del conductor:** pendiente. El clásico la lee de `/api/seguridad/recursos`, pero la tabla `conductores` no tiene columnas bancarias y la ruta devuelve solo nombres. Requiere agregar columnas a `conductores` (migración aditiva) y capturarlas en el formulario de conductores.

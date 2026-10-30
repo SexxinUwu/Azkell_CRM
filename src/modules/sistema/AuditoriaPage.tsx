@@ -15,7 +15,7 @@ import { useToast } from '../../core/ui/Toast';
 import { formatFechaHoraPe } from '../../core/lib/format';
 import { useLogFirmado, type LogFirmado } from './api';
 import {
-  etiquetaAccion, etiquetaCampo, useActividadAudit, useAuditoriaEnVivo, usePersonasAudit, useResumenAudit, useTotalAuditSinFiltros, todosLosEventosAudit,
+  etiquetaAccion, etiquetaCampo, etiquetaEntidad, useActividadAudit, useAuditoriaEnVivo, usePersonasAudit, useResumenAudit, useTotalAuditSinFiltros, todosLosEventosAudit,
   ENTIDAD_LABELS, ACCION_LABELS, TAMANOS_AUDIT, TAMANO_AUDIT_DEFAULT, type CategoriaAudit, type EventoAudit, type FiltrosAudit, type OrdenAudit, type ResumenAudit,
 } from './auditoriaActividad';
 
@@ -314,8 +314,8 @@ function ActividadAuditoria() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <SelectInput value={filtros.entity} onChange={e => set('entity')(e.target.value)} aria-label="Tipo de registro" style={CAMPO_CLASICO}>
-              <option value="">Todos los registros</option>
+            <SelectInput value={filtros.entity} onChange={e => set('entity')(e.target.value)} aria-label="Módulo" style={CAMPO_CLASICO}>
+              <option value="">Todos los módulos</option>
               {Object.keys(ENTIDAD_LABELS).map(k => <option key={k} value={k}>{ENTIDAD_LABELS[k]}</option>)}
             </SelectInput>
             <SelectInput value={filtros.action} onChange={e => set('action')(e.target.value)} aria-label="Acción" style={CAMPO_CLASICO}>
@@ -344,20 +344,21 @@ function ActividadAuditoria() {
                 <th style={{ width: 165 }}>Fecha y Hora</th>
                 <th style={{ width: 210 }}>Usuario</th>
                 <th style={{ width: 130 }}>Acción</th>
+                <th style={{ width: 150 }}>Módulo</th>
                 <th>Detalle de la Operación</th>
                 <th style={{ width: 70, textAlign: 'center' }}>Ver</th>
               </tr>
             </thead>
             <tbody id="auditTableBody">
               {actividad.isLoading ? (
-                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--subtext)' }}>Cargando historial de auditoría...</td></tr>
+                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--subtext)' }}>Cargando historial de auditoría...</td></tr>
               ) : actividad.isError ? (
-                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '3rem 0', color: '#dc3545' }}>
+                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '3rem 0', color: '#dc3545' }}>
                   <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: '1.75rem', display: 'block', marginBottom: 8 }} />
                   Error al cargar registros: {errorMessage(actividad.error)}
                 </td></tr>
               ) : eventos.length === 0 ? (
-                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--subtext)' }}>
+                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--subtext)' }}>
                   <i className="bi bi-inbox" style={{ fontSize: '2rem', opacity: 0.25, display: 'block', marginBottom: 8 }} />
                   No se encontraron eventos con los filtros seleccionados.
                 </td></tr>
@@ -379,6 +380,7 @@ function ActividadAuditoria() {
                       </div>
                     </td>
                     <td><span className={badge.clase} style={badge.estilo}><i className={`bi ${badge.icono}`} /> {badge.texto}</span></td>
+                    <td>{etiquetaEntidad(r.entity)}</td>
                     <td><div className="audit-detail-cell">{r.summary || '—'}</div></td>
                     <td style={{ textAlign: 'center' }}>
                       <button type="button" title="Ver detalle completo" onClick={() => setDetalle(r)}
