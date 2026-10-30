@@ -1,7 +1,8 @@
 import { formatFechaHoraPe, formatSoles } from '../../core/lib/format';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, ClipboardCheck, Disc, Download, FileText, Package, Play, Plus, Share2, Timer } from 'lucide-react';
+import { ArrowUpRight, CalendarDays, ClipboardCheck, Disc, Download, FileText, Gauge, Package, Pencil, Play, Plus, Share2, Timer, Trash2 } from 'lucide-react';
+import { ConfirmSheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, Notice } from '../../core/ui/Display';
 import { LicensePlate } from '../../core/ui/LicensePlate';
@@ -17,11 +18,13 @@ import { useInspecciones, type Inspeccion } from '../inspecciones/api';
 import {
   aObjeto, trabajoId, accionesDisponibles, costosOT, duracionPausa, etiquetaEstado, formatoDuracion, otDetalles, otId,
   pausasDe, tiempoNetoOT, trabajoCosto, trabajosDeOT, useInspeccionesDeOT, useMateriales, useTrabajosOT,
-  type AccionOT, type OrdenTrabajo, type PausaOT, type TrabajoOT,
+  type AccionOT, type MaterialSalida, type OrdenTrabajo, type PausaOT, type TrabajoOT,
 } from './api';
 import { CerrarOTSheet, PausarOTSheet } from './OTAcciones';
 import { TrabajoOTSheet } from './TrabajoOTSheet';
 import { OTServiciosTerceros } from './OTServiciosTerceros';
+import { OTNeumaticos } from './OTNeumaticos';
+import { EditarFechasSheet, EditarKmSheet, EditarOTSheet, EditarSolicitudSheet } from './OTEditar';
 import { SalidaFormulario } from '../almacen/SalidaFormulario';
 import { pdfOt, pdfPlantillaInspeccion, pdfPlantillaLlantas, pdfPlantillaOt } from './otPdf';
 import { usePlacas } from '../placas/api';
@@ -83,7 +86,7 @@ function useBacklogDeOT(ticket: string) {
   });
 }
 
-type Seccion = 'tareas' | 'tiempos' | 'repuestos' | 'terceros' | 'costos';
+type Seccion = 'tareas' | 'tiempos' | 'repuestos' | 'terceros' | 'neumaticos' | 'costos';
 
 interface OTDetalleProps {
   ot: OrdenTrabajo;
@@ -188,6 +191,13 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   const [inspeccionAbierta, setInspeccionAbierta] = useState<string | null>(null);
   const [marcando, setMarcando] = useState<string | null>(null);
   const [solicitando, setSolicitando] = useState(false);
+  // Edición de la OT (encabezado, fechas, kilometraje) y de solicitudes de material (clásico: rot-drawer-editar-ot, fechas, km)
+  const [editandoOT, setEditandoOT] = useState(false);
+  const [editandoFechas, setEditandoFechas] = useState(false);
+  const [editandoKm, setEditandoKm] = useState(false);
+  const [solicitudEdit, setSolicitudEdit] = useState<MaterialSalida | null>(null);
+  const [solicitudBorrar, setSolicitudBorrar] = useState<MaterialSalida | null>(null);
+  const [borrando, setBorrando] = useState(false);
   // Formulario de trabajo: abierto para agregar (trabajoSel null) o para editar uno existente
   const [trabajoAbierto, setTrabajoAbierto] = useState(false);
   const [trabajoSel, setTrabajoSel] = useState<TrabajoOT | null>(null);
@@ -214,6 +224,23 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     [inspeccionAbierta, inspecciones],
   );
 
+
+  /** Elimina una solicitud de material (rotEliminarMaterial del clásico: DELETE /ot-materiales/:id) */
+  async function eliminarSolicitud() {
+    if (!solicitudBorrar) return;
+    setBorrando(true);
+    try {
+      await api(`/ot-materiales/${encodeURIComponent(solicitudBorrar.id)}`, { method: 'DELETE' });
+      toast('Solicitud eliminada');
+      setSolicitudBorrar(null);
+      await qc.invalidateQueries({ queryKey: ['mant', 'ot-materiales', idOt] });
+      await qc.invalidateQueries({ queryKey: ['mant', 'ots'] });
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+    } finally {
+      setBorrando(false);
+    }
+  }
 
   /** Marca o desmarca un ítem del backlog enlazado (Completado / Pendiente) */
   async function alternarBacklog(b: BacklogOT, completado: boolean) {
@@ -319,6 +346,13 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
       <div className="ot-acciones">
         {principal}
         {botonesEstado}
+        {puedeEditar && (
+          <>
+            <Button variant="secondary" icon={<Pencil size={15} />} onClick={() => setEditandoOT(true)}>Editar OT</Button>
+            <Button variant="secondary" icon={<CalendarDays size={15} />} onClick={() => setEditandoFechas(true)}>Fechas</Button>
+            <Button variant="secondary" icon={<Gauge size={15} />} onClick={() => setEditandoKm(true)}>Kilometraje</Button>
+          </>
+        )}
         <Button variant="secondary" icon={<Download size={15} />} onClick={() => exportar('descargar')} disabled={exportando || loadMat || loadTra}>
           PDF
         </Button>
@@ -348,6 +382,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
         { value: 'tiempos', label: 'Tiempos' },
         { value: 'repuestos', label: 'Repuestos' },
         { value: 'terceros', label: 'Terceros' },
+        { value: 'neumaticos', label: 'Neumáticos' },
         { value: 'costos', label: 'Costos' },
       ]} />
 
@@ -565,6 +600,14 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={pastillaEstado(sal.estado)}>{sal.estado}</span>
                   <span className="t-numeric" style={{ fontWeight: 800, fontSize: '0.95rem' }}>{soles(Number(sal.total_pen))}</span>
+                  {puedeEditar && (
+                    <>
+                      <Button size="sm" variant="plain" iconOnly icon={<Pencil size={14} />} aria-label={`Editar cantidades de ${sal.id}`} title="Editar cantidades"
+                        onClick={() => setSolicitudEdit(sal)} />
+                      <Button size="sm" variant="plain" iconOnly icon={<Trash2 size={14} />} aria-label={`Eliminar solicitud ${sal.id}`} title="Eliminar solicitud"
+                        onClick={() => setSolicitudBorrar(sal)} />
+                    </>
+                  )}
                 </div>
               </div>
               {sal.items.map((it, idx) => {
@@ -588,6 +631,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
       )}
 
       {seccion === 'terceros' && <OTServiciosTerceros ot={ot.ticket_entrada || ot.id_ot} puedeEditar={puedeEditar} />}
+
+      {seccion === 'neumaticos' && <OTNeumaticos idOt={idOt} puedeEditar={puedeEditar} />}
 
       {seccion === 'costos' && (
         <div className="ot-bento">
@@ -614,6 +659,13 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
 
       {exportando && <span className="t-footnote c-secondary">Preparando el PDF…</span>}
 
+      <EditarOTSheet ot={ot} open={editandoOT} onClose={() => setEditandoOT(false)} />
+      <EditarFechasSheet ot={ot} open={editandoFechas} onClose={() => setEditandoFechas(false)} />
+      <EditarKmSheet ot={ot} open={editandoKm} onClose={() => setEditandoKm(false)} />
+      <EditarSolicitudSheet idOt={idOt} solicitud={solicitudEdit} onClose={() => setSolicitudEdit(null)} />
+      <ConfirmSheet open={!!solicitudBorrar} onClose={() => !borrando && setSolicitudBorrar(null)} loading={borrando}
+        onConfirm={eliminarSolicitud} title="Eliminar solicitud"
+        message="¿Eliminar esta solicitud de material?" confirmLabel="Eliminar" />
       <PausarOTSheet ot={ot} open={pausando} onClose={() => setPausando(false)} usuario={usuario} />
       <CerrarOTSheet ot={ot} open={cerrando} onClose={() => setCerrando(false)} usuario={usuario} />
       <TrabajoOTSheet ot={ot} trabajo={trabajoSel} open={trabajoAbierto} onClose={() => setTrabajoAbierto(false)} usuario={usuario} />
