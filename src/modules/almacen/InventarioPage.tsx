@@ -188,7 +188,11 @@ export function InventarioPage() {
       articulo={seleccionado}
       onEditar={puedeEditar ? () => { setAbierto(false); setFormulario({ articulo: seleccionado }); } : undefined}
       onEliminar={puedeEliminar ? () => { setAbierto(false); setPorEliminar(seleccionado); } : undefined}
-      onActualizado={() => qc.invalidateQueries({ queryKey: ['almacen', 'inventario'] })}
+      onActualizado={() => {
+        qc.invalidateQueries({ queryKey: ['almacen', 'inventario'] });
+        // Los movimientos del kardex se cachean por artículo: si no se invalidan, siguen mostrando la regularización anterior
+        qc.invalidateQueries({ queryKey: ['almacen', 'kardex'] });
+      }}
     />
   );
 
