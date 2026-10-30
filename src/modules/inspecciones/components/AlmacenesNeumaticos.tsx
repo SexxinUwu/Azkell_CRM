@@ -34,7 +34,7 @@ export interface LlantaAlmacen {
 
 /** Llanta nueva o reparada que espera en la repisa (fila de GET /neumaticos/llantas) */
 export interface LlantaDisponible {
-  codigo: string; marca?: string | null; medida?: string | null; modelo?: string | null; almacen_id?: number | null;
+  codigo: string; codigo_fuego?: string | null; marca?: string | null; medida?: string | null; modelo?: string | null; almacen_id?: number | null;
 }
 
 /** Zona de retiro sobre la que está el puntero durante un arrastre (o ninguna) */
@@ -134,7 +134,8 @@ export const AlmacenesNeumaticos = forwardRef<AlmacenesHandle, AlmacenesProps>(f
     queryFn: () => api<{ ok?: boolean; data?: LlantaDisponible[] }>('/neumaticos/llantas'),
     staleTime: 0,
   });
-  const lista = (disponibles.data?.data ?? []).filter(l => l.almacen_id === ALMACEN_NUEVAS || l.almacen_id === ALMACEN_REPARADAS);
+  // Solo las llantas con código de fuego: las que no lo tienen no se montan
+  const lista = (disponibles.data?.data ?? []).filter(l => (l.almacen_id === ALMACEN_NUEVAS || l.almacen_id === ALMACEN_REPARADAS) && !!l.codigo_fuego);
   // Los cuatro grupos de almacén: siempre se muestran, con su conteo (0 si no hay llantas)
   const grupos = useQuery<RespGrupos>({
     queryKey: ['neumaticos', 'almacenes'],

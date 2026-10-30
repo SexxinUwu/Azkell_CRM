@@ -97,7 +97,7 @@ function tienePermiso(req, clave, accion = 'c') {
 
 // Consulta de llantas: la fila abierta de instalación da la placa y posición actuales
 const SQL_LLANTAS = `
-    SELECT COALESCE(h.codigo_llanta, h.id_neumatico) AS codigo, h.id_neumatico, h.marca, h.modelo, h.medida,
+    SELECT COALESCE(h.codigo_llanta, h.id_neumatico) AS codigo, h.codigo_llanta AS codigo_fuego, h.id_neumatico, h.marca, h.modelo, h.medida,
            h.estado_ciclo, h.vida, h.contador_reencauches, h.costo_compra, h.costo_reencauches,
            h.km_acumulado, h.almacen_id, h.placa_actual, h.posicion_actual,
            i.placa AS placa_montada, i.posicion AS posicion_montada,
@@ -111,6 +111,7 @@ function filaLlanta(r) {
     const reencauches = Number(r.costo_reencauches) || 0;
     return {
         codigo: r.codigo,
+        codigo_fuego: r.codigo_fuego ? String(r.codigo_fuego).trim() || null : null,
         id_neumatico: r.id_neumatico,
         marca: r.marca,
         modelo: r.modelo,
