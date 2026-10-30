@@ -11,7 +11,7 @@ import './modules/sistema/accesibilidad.css';
 import { AuthProvider } from './core/auth/AuthProvider';
 import { ToastProvider } from './core/ui/Toast';
 import { ApiError } from './core/api/client';
-import { LimiteDeError, esFalloDeModulo, recargarVersionNueva } from './core/ui/LimiteDeError';
+import { LimiteDeError, esFalloDeModulo, reintentarVersionNueva } from './core/ui/LimiteDeError';
 import App from './App';
 import { iniciarAcento } from './core/lib/accent';
 import { iniciarTema } from './core/lib/theme';
@@ -42,15 +42,15 @@ if ('serviceWorker' in navigator) {
 iniciarColaGastos();
 
 // Si se publicó una versión nueva mientras la pestaña estaba abierta, el archivo de un módulo ya no existe.
-// Se recarga la página una vez (sin bucles) en vez de mostrar el error de carga.
+// Se reintenta con la versión nueva, con esperas crecientes (ver LimiteDeError), en vez de mostrar el error.
 window.addEventListener('vite:preloadError', (e) => {
-  if (!recargarVersionNueva()) return; // ya se recargó hace poco: el límite de errores muestra el aviso
+  if (!reintentarVersionNueva()) return; // se agotaron los reintentos: el límite de errores muestra el aviso
   e.preventDefault();
 });
 // Los imports diferidos (lazy) no siempre pasan por vite:preloadError: llegan como error de módulo. Mismo criterio.
-window.addEventListener('error', (e) => { if (esFalloDeModulo(String(e.message || e.error?.message || ''))) recargarVersionNueva(); });
+window.addEventListener('error', (e) => { if (esFalloDeModulo(String(e.message || e.error?.message || ''))) reintentarVersionNueva(); });
 window.addEventListener('unhandledrejection', (e) => {
-  if (esFalloDeModulo(String((e.reason as Error | undefined)?.message ?? e.reason ?? ''))) recargarVersionNueva();
+  if (esFalloDeModulo(String((e.reason as Error | undefined)?.message ?? e.reason ?? ''))) reintentarVersionNueva();
 });
 
 createRoot(document.getElementById('root')!).render(
