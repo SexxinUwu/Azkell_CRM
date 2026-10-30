@@ -8,7 +8,8 @@ ROUND(
   + COALESCE(ent.total_entradas, 0)
   + COALESCE(rec.total_recepciones, 0)
   - COALESCE(sal.total_salidas, 0)
-, 4) AS stock_actual
+, 4) AS stock_actual,
+tcu.tc_ultima_oc
 FROM inventario i
 LEFT JOIN (
   SELECT 
@@ -56,6 +57,18 @@ LEFT JOIN (
     AND (inv.fecha_regularizacion IS NULL OR COALESCE(s.created_at, s.fecha) > inv.fecha_regularizacion)
   GROUP BY inv.id
 ) sal ON sal.mapped_id = i.id
+LEFT JOIN (
+  SELECT x.inventario_id, e.tipo_cambio AS tc_ultima_oc
+  FROM (
+    SELECT d.inventario_id, d.entrada_id,
+      ROW_NUMBER() OVER (PARTITION BY d.inventario_id ORDER BY COALESCE(e.fecha, e.created_at) DESC, d.id DESC) AS rn
+    FROM detalle_entradas_inv d
+    JOIN entradas_inv e ON e.id = d.entrada_id
+    WHERE (e.estado IS NULL OR e.estado != 'Anulado')
+  ) x
+  JOIN entradas_inv e ON e.id = x.entrada_id
+  WHERE x.rn = 1
+) tcu ON tcu.inventario_id = i.id
 WHERE i.activo=1
 ORDER BY i.id`;
 

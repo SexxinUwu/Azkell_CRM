@@ -936,17 +936,10 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             const stockVirtual = parseFloat(rows[0]?.stock_virtual || 0);
             const stockAnt = parseFloat(rows[0]?.stock_ant || 0);
 
-            const obsAudit = `Regularización: virtual=${stockVirtual.toFixed(2)} → físico=${stockVal.toFixed(2)}` +
-                (motivo ? ` | Motivo: ${motivo}` : '') +
-                ` | Usuario: ${usuario || 'sistema'} | Fecha: ${fechaHoy}`;
 
             getDb(req).query(`UPDATE inventario SET stock_regularizado=?, fecha_regularizacion=? WHERE id=?`,
                 [stockVal, fechaHoy, id], (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
-                    // Registrar en observaciones de auditoría (append)
-                    getDb(req).query(`UPDATE inventario SET observaciones = CONCAT(COALESCE(observaciones,''), ?)
-                      WHERE id=?`,
-                        ['\n[REG ' + fechaHoy + '] ' + obsAudit, id], () => { });
                     if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true, fecha_regularizacion: fechaHoy, stock_anterior: stockAnt, stock_nuevo: stockVal });
                 });
         });

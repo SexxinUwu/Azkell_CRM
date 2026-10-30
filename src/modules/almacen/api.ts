@@ -17,6 +17,7 @@ export interface ArticuloInv {
   costo_referencial: number;
   costo_soles: number;
   tipo_cambio: number | null;
+  tc_ultima_oc?: number | null; // TC con la que entró en su última OC (no anulada)
   tipo: string | null;     // 'Servicio' | 'Repuesto' | etc.
   sub_tipo: string | null;
   sistema: string | null;
