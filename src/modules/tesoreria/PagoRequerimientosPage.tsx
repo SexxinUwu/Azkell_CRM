@@ -1,7 +1,7 @@
 import './pago.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CreditCard, FileSpreadsheet, RefreshCw, SearchX, Wallet } from 'lucide-react';
+import { CreditCard, FileSpreadsheet, RefreshCw, SearchX, Wallet } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
@@ -10,7 +10,6 @@ import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
-import { abrirClasico } from '../../core/layout/navigation';
 import { exportarExcel } from '../../core/lib/excel';
 import { formatDolares, formatFechaHoraPe, formatFechaPe, formatMoneda, formatSoles } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
@@ -195,8 +194,6 @@ export function PagoRequerimientosPage() {
             { label: 'Actualizar', icon: <RefreshCw size={17} />,
               onSelect: () => { qc.invalidateQueries({ queryKey: ['tesoreria', 'pago-req'] }); } },
             { label: 'Exportar Excel', icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-            { label: 'Abrir en versión actual', icon: <ArrowUpRight size={17} />,
-              onSelect: () => abrirClasico('tesoreria/pago-requerimientos') },
           ]} />
         }
       />
