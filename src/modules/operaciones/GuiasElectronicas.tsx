@@ -1,7 +1,7 @@
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Copy, FileSpreadsheet, FileText, Pencil, Plus, RefreshCw, Send, SearchX, Trash2 } from 'lucide-react';
+import { Copy, FileSpreadsheet, FileText, Pencil, Plus, RefreshCw, Send, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
@@ -145,7 +145,6 @@ export function GuiasElectronicas({ tipo }: { tipo: TipoGuia }) {
             {puedeEditar && <Button variant="primary" icon={<Plus size={16} />} onClick={nuevaGuia}>Nueva guía</Button>}
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${visibles.length} guías`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Emisión masiva y configuración', detalle: 'Versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico(cfg.clasico) },
             ]} />
           </div>
         }
@@ -166,6 +165,13 @@ export function GuiasElectronicas({ tipo }: { tipo: TipoGuia }) {
         {ambiente.data && (emisionLista
           ? <Notice tone="accent">Emisión conectada al ambiente de prueba (beta). Lo que se emite aquí no llega a SUNAT producción.</Notice>
           : <Notice tone="neutral">Emisión a SUNAT deshabilitada. {ambiente.data.motivo ?? ''}</Notice>)}
+
+        <Notice tone="neutral">
+          La emisión masiva y la configuración de SUNAT siguen en la versión actual.{' '}
+          <a href={`/#${cfg.clasico}`} onClick={e => { e.preventDefault(); abrirClasico(cfg.clasico); }} style={{ color: 'var(--accent)', fontWeight: 600 }}>
+            Emitir en la versión actual (SUNAT)
+          </a>
+        </Notice>
 
         <SearchField value={busqueda} placeholder="N° de guía, destinatario, placa u orden de viaje…"
           onChange={v => { setBusqueda(v); window.clearTimeout((window as unknown as { _gT?: number })._gT); (window as unknown as { _gT?: number })._gT = window.setTimeout(() => setQ(v.trim()), 350); }} />
