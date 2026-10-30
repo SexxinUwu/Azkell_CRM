@@ -149,8 +149,8 @@ module.exports = function (db) {
             const [result] = await tdb.promise().query(
                 `INSERT INTO reportes_fallas
                     (folio, orden_viaje, placa_tracto, km_inicial, km_final, conductor,
-                     fallas_tracto_json, fallas_libres_text, critica, estado, creado_por)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+                     fallas_tracto_json, fallas_libres_text, critica, estado, creado_por, fecha_reporte, creado_en)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?, CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'), CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))`,
                 [folio, b.orden_viaje || null, placa, km, km, b.conductor || null,
                  JSON.stringify([item]), b.descripcion, severidad === 'critica' ? 1 : 0, 'REPORTADA', usuario]
             );

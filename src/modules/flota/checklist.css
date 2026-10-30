@@ -148,8 +148,10 @@ table[aria-label="Reportes de fallas"] tbody tr:hover td { background: color-mix
   text-align: left; padding: var(--s-2) var(--s-3); background: var(--fill-subtle); white-space: nowrap;
   font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--label-2);
 }
-.ckd-tabla td { padding: var(--s-2) var(--s-3); border-top: 1px solid var(--separator); white-space: nowrap; vertical-align: top; }
-.ckd-tabla td:last-child { white-space: normal; min-width: 220px; }
+.ckd-tabla td { padding: var(--s-2) var(--s-3); border-top: 1px solid var(--separator); white-space: normal; vertical-align: top; }
+.ckd-tabla td.ckd-mono { white-space: nowrap; }
+.ckd-tabla td:last-child { min-width: 280px; max-width: 520px; overflow-wrap: anywhere; line-height: 1.4; }
+.ckd-tabla td.ckd-falla { min-width: 180px; }
 .ckd-falla { color: var(--red-ink); font-weight: 700; }
 .ckd-sistema-tag {
   display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--fill-subtle);

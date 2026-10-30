@@ -848,8 +848,8 @@ module.exports = function (db, broadcast, logAudit) {
                     folio, orden_viaje, placa_tracto, placa_remolque, km_inicial, km_final, horas_motor,
                     conductor, procedencia, ubicacion_gps,
                     fallas_tracto_json, fallas_remolque_json, fallas_libres_text,
-                    fotos_json, firma_conductor, critica, estado, creado_por
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?);
+                    fotos_json, firma_conductor, critica, estado, creado_por, fecha_reporte, creado_en
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?, CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'), CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'));
                 `;
 
                 const values = [
@@ -1464,6 +1464,47 @@ module.exports = function (db, broadcast, logAudit) {
     }
 
     // ── PUT /api/checklist/:id — Actualizar/Editar reporte de fallas ────────
+    // ── POST /:id/agregar-fallas — Solo suma fallas a un reporte: no cambia ni borra las que ya tiene ──
+    router.post('/:id/agregar-fallas', (req, res) => {
+        const tdb = getDb(req);
+        const { unidad, fallas } = req.body || {};
+        const textos = (Array.isArray(fallas) ? fallas : []).map(t => String(t ?? '').trim()).filter(Boolean);
+        if (!['tracto', 'remolque'].includes(unidad)) return res.status(400).json({ error: 'Indica si la falla es del camión o de la carreta' });
+        if (!textos.length) return res.status(400).json({ error: 'Escribe al menos una falla' });
+        const usuario = (req.user && (req.user.nombre || req.user.correo)) || 'Sistema';
+
+        tdb.query('SELECT id, folio, estado, fallas_tracto_json, fallas_remolque_json FROM reportes_fallas WHERE id = ?', [req.params.id], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!rows.length) return res.status(404).json({ error: 'Reporte no encontrado' });
+            const rep = rows[0];
+            if (/final|anula/i.test(String(rep.estado || ''))) {
+                return res.status(400).json({ error: 'Este reporte ya está finalizado o anulado: no se pueden agregar fallas.' });
+            }
+
+            const campo = unidad === 'tracto' ? 'fallas_tracto_json' : 'fallas_remolque_json';
+            let lista = [];
+            try { const p = JSON.parse(rep[campo] || '[]'); if (Array.isArray(p)) lista = p; } catch (e) { lista = []; }
+
+            // Las fallas que ya están en el reporte se conservan tal cual; aquí solo se agregan las nuevas
+            const ahora = new Date().toISOString().slice(0, 16).replace('T', ' ');
+            const existentes = new Set(lista.map(f => String(f.obs ?? f.observacion ?? '').trim().toLowerCase()));
+            const nuevas = [];
+            for (const t of textos) {
+                const clave = t.toLowerCase();
+                if (existentes.has(clave)) continue;
+                existentes.add(clave);
+                nuevas.push({ sistema: 'MANUAL', item: 'Falla agregada', obs: t, observacion: t, estado: 'FALLA', fecha: ahora, agregada_por: usuario });
+            }
+            if (!nuevas.length) return res.status(400).json({ error: 'Esas fallas ya están en el reporte' });
+
+            tdb.query(`UPDATE reportes_fallas SET ${campo} = ? WHERE id = ?`, [JSON.stringify([...lista, ...nuevas]), req.params.id], (err2) => {
+                if (err2) return res.status(500).json({ error: err2.message });
+                if (typeof logAudit === 'function') logAudit(req, 'MANTENIMIENTO', 'Checklist', 'AGREGÓ', `Agregó ${nuevas.length} falla(s) a ${rep.folio} (${unidad})`);
+                res.json({ ok: true, agregadas: nuevas.length });
+            });
+        });
+    });
+
     router.put('/:id', async (req, res) => {
         const tdb = getDb(req);
         const id = req.params.id;

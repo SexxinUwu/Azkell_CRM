@@ -13,7 +13,10 @@ import { haptic } from '../../core/lib/haptics';
 import { usePlacas } from '../placas/api';
 import { Firma, type FirmaHandle } from '../inspecciones/Firma';
 import { useConfigSistemas, useVehiculosFlota, type ReporteFalla, type VehiculoFlota } from './api';
-import { estadoDeFecha, type EstadoDoc } from './docsEstado';
+import { DOCS, fechaDDMMAAAA, metaDeVehiculo } from './docsEstado';
+import { Combobox } from '../../core/ui/Combobox';
+import { PlacaPicker } from '../../core/ui/PlacaPicker';
+import { usePersonalNombres } from '../mantenimiento/OTEditar';
 import { leerFallas, textoItem, type FallaGuardada, type SistemaCfg } from './fman';
 
 interface Marca { obs: string }
@@ -81,25 +84,30 @@ async function registrosWialon(): Promise<Registro[]> {
 }
 
 /** Bloque de documentos de la unidad (SOAT, revisión técnica e inspección), como en el clásico */
+// Mismos documentos y estados que el módulo de Documentos de flota (DOCS y metaDeVehiculo)
 function DocsUnidad({ titulo, vehiculo }: { titulo: string; vehiculo: VehiculoFlota | undefined }) {
-  const docs: Array<{ etiqueta: string; estado: EstadoDoc; fecha: string | null }> = [
-    { etiqueta: 'SOAT / Seguro', fecha: vehiculo?.soat_vencimiento ?? null, estado: estadoDeFecha(vehiculo?.soat_vencimiento) },
-    { etiqueta: 'Revisión técnica', fecha: vehiculo?.rt_vencimiento ?? null, estado: estadoDeFecha(vehiculo?.rt_vencimiento) },
-    { etiqueta: 'Inspección general', fecha: (vehiculo?.insp_vencimiento ?? vehiculo?.inspeccion_vencimiento ?? vehiculo?.fum_vencimiento ?? null) as string | null,
-      estado: estadoDeFecha((vehiculo?.insp_vencimiento ?? vehiculo?.inspeccion_vencimiento ?? vehiculo?.fum_vencimiento ?? null) as string | null) },
-  ];
+  const meta = vehiculo ? metaDeVehiculo(vehiculo) : null;
   return (
     <div className="ck-bloque">
       <p className="ck-bloque__titulo">{titulo}</p>
-      {docs.map(d => (
-        <div key={d.etiqueta} className="ck-doc">
-          <span>
-            <b>{d.etiqueta}</b>
-            <span style={{ display: 'block', color: 'var(--label-2)', fontSize: '0.75rem' }}>{d.fecha ? `Vence el ${d.fecha}` : 'Sin fecha registrada'}</span>
-          </span>
-          <span className="ck-doc__estado" style={{ color: d.estado.color }}>{d.estado.texto}</span>
-        </div>
-      ))}
+      {DOCS.map(d => {
+        const item = meta?.docs.find(x => x.config.clave === d.clave);
+        const registrado = !!item?.registrado;
+        const fecha = fechaDDMMAAAA(vehiculo ? String(vehiculo[d.vencimiento] ?? '') : '');
+        return (
+          <div key={d.clave} className="ck-doc">
+            <span>
+              <b>{d.titulo}</b>
+              <span style={{ display: 'block', color: 'var(--label-2)', fontSize: '0.75rem' }}>
+                {!registrado ? 'No hay datos' : fecha ? `Vence el ${fecha}` : 'Sin fecha de vencimiento'}
+              </span>
+            </span>
+            <span className="ck-doc__estado" style={{ color: registrado && item ? item.estado.color : 'var(--label-3)' }}>
+              {registrado && item ? item.estado.texto : 'No hay datos'}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -269,8 +277,14 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
   const candidatosViaje = qViajeDeb.trim().length >= 2 ? (busquedaViajes.data ?? []) : viajes;
   const viajeActual = [...viajes, ...(busquedaViajes.data ?? [])].find(w => String(w.id ?? w.viaje ?? '') === viajeSel);
 
-  const tractos = (placas.data ?? []).filter(p => p.motora).map(p => p.placa);
-  const remolques = (placas.data ?? []).filter(p => !p.motora).map(p => p.placa);
+  // Mismo selector de placas que el resto del ERP (PlacaPicker), con las motoras y las carretas
+  const opcionesTracto = (placas.data ?? []).filter(p => p.motora).map(p => ({ placa: p.placa, detalle: p.cliente }));
+  const opcionesRemolque = (placas.data ?? []).filter(p => !p.motora).map(p => ({ placa: p.placa, detalle: p.cliente }));
+  // Mismo listado de personal que los técnicos de la OT (Combobox); si el conductor viene de la orden o de seguridad, también aparece
+  const personal = usePersonalNombres();
+  const nombresPersonal = personal.data ?? [];
+  const opcionesPersonal = [...nombresPersonal, ...(v.conductor && !nombresPersonal.includes(v.conductor) ? [v.conductor] : [])]
+    .map(n => ({ value: n, label: n }));
   const vehTracto = useMemo(() => (vehiculos.data ?? []).find(x => normalizar(x.placa).replace(/[^A-Z0-9]/g, '') === placaT.replace(/[^A-Z0-9]/g, '')), [vehiculos.data, placaT]);
   const vehRemolque = useMemo(() => (vehiculos.data ?? []).find(x => normalizar(x.placa).replace(/[^A-Z0-9]/g, '') === placaR.replace(/[^A-Z0-9]/g, '')), [vehiculos.data, placaR]);
 
@@ -421,8 +435,6 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
         <Button variant="primary" onClick={guardar} loading={enviando}>{editando ? 'Guardar cambios' : 'Guardar Reporte de Fallas'}{total ? ` (${total})` : ''}</Button></>}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
         {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
-        <datalist id="rf-tractos">{tractos.map(x => <option key={x} value={x} />)}</datalist>
-        <datalist id="rf-remolques">{remolques.map(x => <option key={x} value={x} />)}</datalist>
 
         {/* 1. Viaje asociado (opcional) */}
         <section className="ck-bloque">
@@ -485,9 +497,9 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
           <p className="ck-bloque__titulo">Datos del reporte</p>
           <div className="form-grid">
             <Field label="Fecha de registro">{p => <TextInput {...p} type="date" readOnly value={v.fecha ?? hoyLima()} />}</Field>
-            <Field label="Placa principal (tracto) *">{p => <TextInput {...p} list="rf-tractos" value={v.placa_tracto ?? ''} onChange={e => set('placa_tracto', e.target.value.toUpperCase())} />}</Field>
-            <Field label="Placa semirremolque / carreta" hint="Opcional. Si se elige, se genera una OT independiente para esta unidad.">{p => <TextInput {...p} list="rf-remolques" value={v.placa_remolque ?? ''} onChange={e => set('placa_remolque', e.target.value.toUpperCase())} />}</Field>
-            <Field label="Conductor *">{p => <TextInput {...p} value={v.conductor ?? ''} onChange={e => set('conductor', e.target.value)} />}</Field>
+            <Field label="Placa principal (tracto) *">{p => <PlacaPicker {...p} value={v.placa_tracto ?? ''} onChange={pl => set('placa_tracto', pl)} opciones={opcionesTracto} />}</Field>
+            <Field label="Placa semirremolque / carreta" hint="Opcional. Si se elige, se genera una OT independiente para esta unidad.">{p => <PlacaPicker {...p} value={v.placa_remolque ?? ''} onChange={pl => set('placa_remolque', pl)} opciones={opcionesRemolque} />}</Field>
+            <Field label="Conductor *">{p => <Combobox {...p} options={opcionesPersonal} value={v.conductor || null} onChange={c => set('conductor', c ?? '')} placeholder="Seleccione conductor…" />}</Field>
             <Field label="Procedencia" wide>{p => <TextInput {...p} value={v.procedencia ?? ''} onChange={e => set('procedencia', e.target.value)} />}</Field>
           </div>
           {PLACA_VALIDA.test(placaT) && <DocsUnidad titulo={`Documentos e inspección · Camión (${placaT})`} vehiculo={vehTracto} />}

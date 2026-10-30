@@ -182,7 +182,7 @@ async function procesarHallazgosInspeccion(tdb, req, nextId, datos) {
                 folio, orden_viaje, fecha_reporte, placa_tracto, placa_remolque, km_inicial, km_final,
                 conductor, procedencia, fallas_tracto_json, fallas_remolque_json, fallas_libres_text,
                 fotos_json, estado, creado_por, creado_en
-            ) VALUES (?, NULL, NOW(), ?, ?, ?, ?, ?, 'Inspección Técnica en Patio', ?, ?, ?, ?, 'Pendiente', ?, NOW())
+            ) VALUES (?, NULL, CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'), ?, ?, ?, ?, ?, 'Inspección Técnica en Patio', ?, ?, ?, ?, 'Pendiente', ?, CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'))
         `;
 
         const [resIns] = await tdb.promise().query(sqlInsert, [
@@ -196,7 +196,8 @@ async function procesarHallazgosInspeccion(tdb, req, nextId, datos) {
             isRemolque ? JSON.stringify(fallasParaRF) : '[]',
             '',
             JSON.stringify(fotosUrls),
-            datos.tecnico || 'Sistema'
+            // Quien registró la inspección (la sesión); si no hay sesión, el técnico que se indicó
+            (req && req.user && req.user.nombre) || datos.tecnico || 'Sistema'
         ]);
 
         console.log(`✅ Auto-Sync Inspección: Creado nuevo RF ${nuevoFolio} (ID ${resIns.insertId}) para placa ${placa}`);

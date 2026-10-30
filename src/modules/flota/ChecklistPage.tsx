@@ -26,6 +26,7 @@ import { useChecklist, useConfigSistemas, type ReporteFalla } from './api';
 import { ReporteFallaNuevo } from './ReporteFallaNuevo';
 import { GenerarOTsSheet } from './GenerarOTsSheet';
 import { ChecklistDetalle, leerOts } from './ChecklistDetalle';
+import { AgregarFallasSheet } from './AgregarFallasSheet';
 import { ChecklistPlantilla } from './ChecklistPlantilla';
 import { EnviarFallaSheet } from './EnviarFallaSheet';
 import { leerFallas, pdfFman, textoFman } from './fman';
@@ -84,6 +85,7 @@ export function ChecklistPage() {
   const [detalleId, setDetalleId] = useState<string | number | null>(null);
   const [nuevo, setNuevo] = useState(false);
   const [editando, setEditando] = useState<ReporteFalla | null>(null);
+  const [agregando, setAgregando] = useState<ReporteFalla | null>(null);
   const [generando, setGenerando] = useState<ReporteFalla | null>(null);
   const [correo, setCorreo] = useState<ReporteFalla | null>(null);
   const [porEliminar, setPorEliminar] = useState<ReporteFalla | null>(null);
@@ -332,13 +334,14 @@ export function ChecklistPage() {
           puedeEditar={permisos.editar} puedeOTs={permisos.ots} puedeEliminar={permisos.eliminar}
           pdfListo={!!cfg.data && !generandoPdf}
           onClose={() => setDetalleId(null)}
-          onEditar={() => { setDetalleId(null); setEditando(detalle); }}
+          onAgregarFallas={() => { setDetalleId(null); setAgregando(detalle); }}
           onGenerarOTs={() => { setDetalleId(null); setGenerando(detalle); }}
           onPdf={() => pdf(detalle, 'descargar')}
           onWhatsApp={() => pdf(detalle, 'whatsapp')}
           onCorreo={() => { setDetalleId(null); setCorreo(detalle); }}
           onEliminar={() => setPorEliminar(detalle)} />
       )}
+      {agregando && <AgregarFallasSheet falla={agregando} open onClose={() => setAgregando(null)} />}
       {generando && <GenerarOTsSheet falla={generando} open onClose={() => setGenerando(null)} />}
       {correo && cfg.data && <EnviarFallaSheet falla={correo} cfg={cfg.data} open onClose={() => setCorreo(null)} />}
       <ConfirmSheet open={!!porEliminar} onClose={() => !eliminando && setPorEliminar(null)} onConfirm={eliminar} loading={eliminando}

@@ -158,3 +158,9 @@ const PALETA_DOC = ['#3b82f6', '#8b5cf6', '#ec4899', '#0ea5e9', '#14b8a6', '#636
 export const colorDoc = (num: number) => PALETA_DOC[(num - 1) % PALETA_DOC.length];
 /** Documentos personalizados: gris neutro, para distinguirlos de los estándar */
 export const COLOR_PERSONALIZADO = '#64748b';
+
+/** Fecha de vencimiento como DD-MM-AAAA (la base la guarda como AAAA-MM-DD o con hora); vacío si no hay fecha */
+export function fechaDDMMAAAA(fecha: string | null | undefined): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(fecha ?? '').trim());
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
+}

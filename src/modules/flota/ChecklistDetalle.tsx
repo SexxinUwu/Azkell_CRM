@@ -1,7 +1,7 @@
 import './checklist.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Check, FileText, Mail, MessageCircle, Pencil, Trash2, Wrench, X } from 'lucide-react';
+import { Check, FileText, Mail, MessageCircle, Plus, Trash2, Wrench, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { VisorFotos } from '../../core/ui/VisorFotos';
@@ -36,9 +36,9 @@ const sinDato = (v: unknown) => (v == null || String(v).trim() === '' ? '—' : 
  * (✓ sin falla, ✕ con falla) de tracto y carreta, detalle de falla en tabla, evidencias y OTs con su estado.
  */
 export function ChecklistDetalle({ falla, open, puedeEditar, puedeOTs, puedeEliminar, pdfListo, onClose,
-  onEditar, onGenerarOTs, onPdf, onWhatsApp, onCorreo, onEliminar }: {
+  onAgregarFallas, onGenerarOTs, onPdf, onWhatsApp, onCorreo, onEliminar }: {
   falla: ReporteFalla; open: boolean; puedeEditar: boolean; puedeOTs: boolean; puedeEliminar: boolean; pdfListo: boolean;
-  onClose: () => void; onEditar?: () => void; onGenerarOTs?: () => void; onPdf: () => void; onWhatsApp: () => void;
+  onClose: () => void; onAgregarFallas?: () => void; onGenerarOTs?: () => void; onPdf: () => void; onWhatsApp: () => void;
   onCorreo: () => void; onEliminar?: () => void;
 }) {
   const estadoFinal = /final|anula/i.test(falla.estado);
@@ -112,10 +112,10 @@ export function ChecklistDetalle({ falla, open, puedeEditar, puedeOTs, puedeElim
     ['Registrado el', falla.creado_en ? formatFechaHoraPe(String(falla.creado_en)) : '—'],
   ];
 
-  // Cada falla muestra a qué unidad pertenece: camión o carreta (las manuales también)
+  // Cada falla muestra la placa de su unidad (camión o carreta)
   const filasFalla = [
-    ...tracto.map(f => ({ ...f, unidad: falla.placa_tracto || 'TRACTO', tipoUnidad: 'Camión' })),
-    ...remolque.map(f => ({ ...f, unidad: falla.placa_remolque || 'REMOLQUE', tipoUnidad: 'Carreta' })),
+    ...tracto.map(f => ({ ...f, unidad: falla.placa_tracto || 'TRACTO' })),
+    ...remolque.map(f => ({ ...f, unidad: falla.placa_remolque || 'REMOLQUE' })),
   ];
 
   return (
@@ -124,7 +124,7 @@ export function ChecklistDetalle({ falla, open, puedeEditar, puedeOTs, puedeElim
         <Button variant="secondary" icon={<FileText size={16} />} onClick={onPdf} disabled={!pdfListo}>PDF F-MAN-001</Button>
         <Button variant="secondary" icon={<MessageCircle size={16} />} onClick={onWhatsApp} disabled={!pdfListo}>WhatsApp</Button>
         <Button variant="secondary" icon={<Mail size={16} />} onClick={onCorreo} disabled={!pdfListo}>Enviar por correo</Button>
-        {onEditar && puedeEditar && !estadoFinal && <Button variant="secondary" icon={<Pencil size={16} />} onClick={onEditar}>Editar</Button>}
+        {onAgregarFallas && puedeEditar && !estadoFinal && <Button variant="secondary" icon={<Plus size={16} />} onClick={onAgregarFallas}>Agregar fallas</Button>}
         {onGenerarOTs && puedeOTs && !estadoFinal && <Button variant="primary" icon={<Wrench size={16} />} onClick={onGenerarOTs}>Generar OTs</Button>}
         {onEliminar && puedeEliminar && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={onEliminar}>Eliminar</Button>}
       </>}>
@@ -180,7 +180,7 @@ export function ChecklistDetalle({ falla, open, puedeEditar, puedeOTs, puedeElim
                 {filasFalla.map((f, i) => (
                   <tr key={i}>
                     <td className="ckd-mono">{f.fecha || (falla.fecha_reporte ? formatFechaHoraPe(falla.fecha_reporte) : '—')}</td>
-                    <td><span className="ckd-placa">{f.unidad}</span><div className="t-footnote c-secondary">{f.tipoUnidad}</div></td>
+                    <td><span className="ckd-placa">{f.unidad}</span></td>
                     <td><span className="ckd-sistema-tag">{(f.sistema && f.sistema !== 'GENERAL' ? f.sistema : 'MANUAL').toUpperCase()}</span></td>
                     <td className="ckd-falla">{f.item || '—'}</td>
                     <td>{f.obs || f.observacion || 'Sin descripción'}</td>
