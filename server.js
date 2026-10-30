@@ -2418,7 +2418,10 @@ function verifyTokenBase(req, res, next) {
         if (String(decoded.tenant_slug || '') !== String(req.tenantSlug || '')) {
             return res.status(401).json({ error: 'Sesión no válida para esta empresa. Inicie sesión de nuevo.' });
         }
+        // Los permisos no van en el token (la cookie pasaría de 4096 caracteres y el navegador la descartaría).
+        // Se recalculan desde la base en cada petición; el Fundador conserva acceso total aunque no tenga fila.
         req.user = decoded;
+        req.user.permisos = String(decoded.correo || '').toLowerCase() === 'admin@azkell.com' ? JSON.stringify({ admin: true }) : JSON.stringify({});
 
         const dbConn = req.db || db;
         const sqlUser = `
@@ -2781,7 +2784,7 @@ app.post('/api/login', limiterLoginCuenta, (req, res) => {
                 );
 
                 const token = jwt.sign(
-                    { id: usuario.idUsuario, correo: usuario.correo, nombre: usuario.nombre, rol: rolFinal, permisos: permisosFinales, tenant_slug: String(req.tenantSlug || '') },
+                    { id: usuario.idUsuario, correo: usuario.correo, nombre: usuario.nombre, rol: rolFinal, tenant_slug: String(req.tenantSlug || '') },
                     process.env.JWT_SECRET,
                     { expiresIn: '12h' }
                 );
@@ -2879,7 +2882,7 @@ app.post('/api/login', limiterLoginCuenta, (req, res) => {
                             );
 
                             const token = jwt.sign(
-                                { id: usuario.idUsuario, correo: usuario.correo, nombre: usuario.nombre, rol: rolFinal, permisos: permisosFinales, tenant_slug: String(req.tenantSlug || '') },
+                                { id: usuario.idUsuario, correo: usuario.correo, nombre: usuario.nombre, rol: rolFinal, tenant_slug: String(req.tenantSlug || '') },
                                 process.env.JWT_SECRET,
                                 { expiresIn: '12h' }
                             );
