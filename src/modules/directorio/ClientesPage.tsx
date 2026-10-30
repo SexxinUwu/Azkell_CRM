@@ -77,7 +77,6 @@ export function ClientesPage() {
         { label: 'Importar Excel', icon: <Upload size={17} />, onSelect: () => setImportando(true) },
         { label: 'Descargar plantilla', icon: <Download size={17} />, onSelect: () => { descargarPlantillaClientes().catch(() => undefined); } },
       ] : undefined}
-      clasico="directorio/clientes"
     />
     <ImportarClientesSheet open={importando} onClose={() => setImportando(false)} existentes={lista} />
     </>
