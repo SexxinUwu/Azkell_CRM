@@ -1,7 +1,7 @@
 import './mant.css';
 import { useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, ChevronDown, ChevronRight, Download, FileSpreadsheet, PackageCheck, SearchX, Trash2, Upload } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, FileSpreadsheet, PackageCheck, Pencil, Plus, SearchX, Trash2, Upload } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -9,35 +9,9 @@ import { SearchField } from '../../core/ui/Field';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
-import { abrirClasico } from '../../core/layout/navigation';
 import { descargarPlantillaKits, exportarKitsExcel, importarKitsExcel } from './kitsExcel';
-
-// ─── Tipos ───────────────────────────────────────────────────────────────────
-
-interface KitItem {
-  id: number | string;
-  marca_vehiculo: string;
-  modelo_vehiculo: string;
-  tipo_mp: string;
-  nombre_kit?: string;
-  item_codigo?: string;
-  item_nombre?: string;
-  cantidad: number;
-  unidad_medida?: string;
-  costo_unitario: number;
-  costo_total: number;
-  orden?: number;
-}
-
-interface KitGrupo {
-  key: string;        // marca__modelo__tipo_mp
-  marca: string;
-  modelo: string;
-  tipo_mp: string;
-  nombre_kit: string;
-  items: KitItem[];
-  costoTotal: number;
-}
+import { KitFormulario } from './KitFormulario';
+import type { KitGrupo, KitItem } from './kitsFormulario';
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
@@ -67,6 +41,7 @@ function agruparKits(items: KitItem[]): KitGrupo[] {
         modelo:     it.modelo_vehiculo,
         tipo_mp:    it.tipo_mp,
         nombre_kit: it.nombre_kit || it.tipo_mp,
+        alias:      it.nombre_kit || '',
         items:      [],
         costoTotal: 0,
       });
@@ -91,6 +66,8 @@ export function KitsMpPage() {
   const [abiertos, setAbiertos]               = useState<Set<string>>(new Set());
   const [confirmEliminar, setConfirmEliminar] = useState<KitGrupo | null>(null);
   const [eliminando, setEliminando]           = useState(false);
+  const [formAbierto, setFormAbierto]         = useState(false);
+  const [kitEditando, setKitEditando]         = useState<KitGrupo | null>(null);
   const inputExcel                            = useRef<HTMLInputElement>(null);
 
   // Agrupar todos los kits
@@ -200,17 +177,15 @@ export function KitsMpPage() {
         subtitle={isLoading ? 'Cargando…' : `${grupos.length} kits · ${marcasUnicas} marcas · ${modelosUnicos} modelos`}
         actions={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <Button variant="primary" size="sm" icon={<ArrowUpRight size={15} />}
-              onClick={() => abrirClasico('mantenimiento/kits-mp')}>
-              Crear / Editar kit
+            <Button variant="primary" size="sm" icon={<Plus size={15} />}
+              onClick={() => { setKitEditando(null); setFormAbierto(true); }}>
+              Nuevo kit
             </Button>
             <MenuOtros opciones={[
               { label: '1. Descargar Plantilla', icon: <FileSpreadsheet size={17} />,
                 onSelect: () => descargarPlantillaKits() },
               { label: '2. Subir Excel', icon: <Upload size={17} />, onSelect: () => inputExcel.current?.click() },
               { label: 'Exportar Excel', icon: <Download size={17} />, onSelect: exportar },
-              { label: 'Abrir versión completa', icon: <ArrowUpRight size={17} />, separado: true,
-                onSelect: () => abrirClasico('mantenimiento/kits-mp') },
             ]} />
           </div>
         }
@@ -274,6 +249,13 @@ export function KitsMpPage() {
                       }}>
                         {g.tipo_mp}
                       </span>
+                      {/* Editar (formulario del kit, como el chevron del clásico) */}
+                      <button type="button" title="Editar kit" aria-label={`Editar kit ${g.nombre_kit}`}
+                        onClick={e => { e.stopPropagation(); setKitEditando(g); setFormAbierto(true); }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px',
+                          color: 'var(--label-3)', flexShrink: 0, lineHeight: 1 }}>
+                        <Pencil size={15} />
+                      </button>
                       {/* Eliminar */}
                       <button type="button" title="Eliminar kit"
                         onClick={e => { e.stopPropagation(); setConfirmEliminar(g); }}
@@ -344,6 +326,14 @@ export function KitsMpPage() {
       )}
 
       <input ref={inputExcel} type="file" accept=".xlsx,.xls" hidden onChange={e => subirExcel(e.target.files?.[0])} />
+
+      <KitFormulario
+        kit={kitEditando}
+        kitsExistentes={items}
+        open={formAbierto}
+        onClose={() => setFormAbierto(false)}
+        onPedirEliminar={g => { setFormAbierto(false); setConfirmEliminar(g); }}
+      />
 
       <ConfirmSheet
         open={!!confirmEliminar}
