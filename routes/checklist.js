@@ -1,11 +1,28 @@
 const express = require('express');
-const { uploadToS3, getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
+const { uploadToS3, getPresignedUrl, getPresignedUploadUrl, s3KeyFromUrl, urlPublicaDeKey } = require('../utils/s3');
 const eventosNotif = require('../services/notificaciones_eventos');
 
 module.exports = function (db, broadcast, logAudit) {
     const router = express.Router();
 
     function getDb(req) { return req.db || db; }
+
+    // ── POST /api/checklist/evidencia-upload-url — Subida directa a S3 de fotos y videos del reporte (el archivo no pasa por el servidor) ──
+    router.post('/evidencia-upload-url', async (req, res) => {
+        try {
+            const { fileName, fileType } = req.body || {};
+            if (!fileName) return res.status(400).json({ error: 'fileName requerido' });
+            const tipo = String(fileType || '');
+            if (!/^(image|video)\//.test(tipo)) return res.status(400).json({ error: 'Solo se admiten fotos o videos' });
+            const ext = (String(fileName).split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
+            const key = `checklist/evidencia_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+            const uploadUrl = await getPresignedUploadUrl(key, tipo, 900);
+            res.json({ uploadUrl, finalUrl: urlPublicaDeKey(key) });
+        } catch (err) {
+            console.error('Error generando URL de subida de evidencia:', err.message);
+            res.status(500).json({ error: 'No se pudo generar la URL de subida' });
+        }
+    });
 
     // ── POST /api/checklist/presign-read — Firmar URLs de fotos y firma S3 ────
     router.post('/presign-read', async (req, res) => {

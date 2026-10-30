@@ -105,4 +105,9 @@ function s3KeyFromUrl(url) {
     return null;
 }
 
-module.exports = { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl, getPresignedUploadUrl };
+/** URL pública de un objeto, con el mismo formato que devuelve uploadToS3 */
+function urlPublicaDeKey(key) {
+    return `https://${BUCKET}.s3.${(process.env.AWS_REGION || 'us-east-2').trim()}.amazonaws.com/${key}`;
+}
+
+module.exports = { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl, getPresignedUploadUrl, urlPublicaDeKey };

@@ -22,7 +22,8 @@ interface IngresoSeg { conductor?: string | null; placa_carreta?: string | null;
 interface Backlog { id: number | string; backlog_id?: string | null; tarea?: string | null; tema?: string | null; ticket_ot?: string | null }
 type Registro = Record<string, unknown>;
 
-const MAX_FOTOS = 5;
+// Sin límite de fotos. Los videos se suben directo a S3 (el archivo no pasa por el servidor): tope por video
+const MAX_VIDEO_MB = 150;
 const PLACA_VALIDA = /^[A-Z0-9-]{5,8}$/;
 const normalizar = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
 const hoyLima = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
@@ -127,6 +128,9 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
   const [abiertos, setAbiertos] = useState<Record<string, true>>({});
   const [critica, setCritica] = useState(false);
   const [fotos, setFotos] = useState<string[]>([]);
+  const [videos, setVideos] = useState<File[]>([]);
+  const previewsVideo = useMemo(() => videos.map(v => URL.createObjectURL(v)), [videos]);
+  useEffect(() => () => previewsVideo.forEach(u => URL.revokeObjectURL(u)), [previewsVideo]);
   const [backlogSel, setBacklogSel] = useState<Record<string, true>>({});
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -172,7 +176,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
 
   useEffect(() => {
     if (!open) return;
-    setError(null); setBusqueda(''); setAbiertos({}); setCritica(false); setFotos([]); setBacklogSel({});
+    setError(null); setBusqueda(''); setAbiertos({}); setCritica(false); setFotos([]); setVideos([]); setBacklogSel({});
     setViajeAbierto(false); setQViaje(''); setQViajeDeb('');
     firma.current?.limpiar();
     if (reporte) {
@@ -277,10 +281,31 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
 
   async function agregarFotos(files: FileList | null) {
     if (!files) return;
-    // Varias fotos a la vez: se reducen en paralelo; una imagen no válida se omite
-    const lote = Array.from(files).slice(0, MAX_FOTOS - fotos.length);
-    const nuevas = await Promise.all(lote.map(f => reducir(f).catch(() => null)));
-    setFotos(a => [...a, ...nuevas.filter((x): x is string => x !== null)].slice(0, MAX_FOTOS));
+    const tope = MAX_VIDEO_MB * 1024 * 1024;
+    const todos = Array.from(files);
+    // Videos: se suben al guardar. Fotos: se reducen en paralelo; un archivo no válido se omite
+    const videosNuevos = todos.filter(f => f.type.startsWith('video/'));
+    const grandes = videosNuevos.filter(f => f.size > tope);
+    if (grandes.length) setError(`Cada video puede pesar hasta ${MAX_VIDEO_MB} MB. Se omitió: ${grandes.map(f => f.name).join(', ')}.`);
+    setVideos(a => [...a, ...videosNuevos.filter(f => f.size <= tope)]);
+    const imagenes = todos.filter(f => f.type.startsWith('image/'));
+    const nuevas = await Promise.all(imagenes.map(f => reducir(f).catch(() => null)));
+    setFotos(a => [...a, ...nuevas.filter((x): x is string => x !== null)]);
+  }
+
+  // Sube los videos a S3 con URL firmada y devuelve sus direcciones
+  async function subirVideos(): Promise<string[]> {
+    const urls: string[] = [];
+    for (const [i, vid] of videos.entries()) {
+      toast(`Subiendo video ${i + 1} de ${videos.length}…`);
+      const up = await api<{ uploadUrl: string; finalUrl: string }>('/mantenimiento/checklist/evidencia-upload-url', {
+        method: 'POST', body: { fileName: vid.name, fileType: vid.type },
+      });
+      const put = await fetch(up.uploadUrl, { method: 'PUT', body: vid, headers: { 'Content-Type': vid.type } });
+      if (!put.ok) throw new Error(`No se pudo subir el video ${i + 1}.`);
+      urls.push(up.finalUrl);
+    }
+    return urls;
   }
 
   async function guardar() {
@@ -305,11 +330,13 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
     }
     const firmaNueva = firma.current && !firma.current.vacia() ? firma.current.obtener() : null;
     setEnviando(true); setError(null);
+    let urlsVideo: string[] = [];
+    try { urlsVideo = await subirVideos(); } catch (err) { setError(errorMessage(err)); haptic('warning'); setEnviando(false); return; }
     const cuerpo = {
       orden_viaje: (v.orden_viaje ?? '').trim(), placa_tracto: placaT, placa_remolque: placaR,
       km_inicial: v.km_inicial, km_final: v.km_inicial, horas_motor: v.horas_motor ?? '',
       conductor: v.conductor.trim(), procedencia: v.procedencia, ubicacion_gps: v.ubicacion_gps,
-      fallas_tracto: fT, fallas_remolque: fR, fallas_libres_text: '', fotos_base64: fotos, firma_conductor: firmaNueva,
+      fallas_tracto: fT, fallas_remolque: fR, fallas_libres_text: '', fotos_base64: [...fotos, ...urlsVideo], firma_conductor: firmaNueva,
     };
     try {
       if (editando) {
@@ -548,7 +575,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
 
         {/* 5. Evidencia fotográfica y firma */}
         <section className="ck-bloque">
-          <p className="ck-bloque__titulo">Evidencia fotográfica{editando ? ' · las anteriores se conservan' : ''} ({fotos.length}/{MAX_FOTOS})</p>
+          <p className="ck-bloque__titulo">Evidencia fotográfica{editando ? ' · las anteriores se conservan' : ''} ({fotos.length + videos.length})</p>
           <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
             {fotos.map((f, i) => (
               <div key={i} style={{ position: 'relative' }}>
@@ -559,10 +586,19 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
                 </button>
               </div>
             ))}
-            {fotos.length < MAX_FOTOS && (
+            {videos.map((vid, i) => (
+              <div key={`v${i}`} style={{ position: 'relative' }}>
+                <video src={previewsVideo[i]} muted preload="metadata" aria-label={`Video ${i + 1}: ${vid.name}`} style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 10, background: '#000' }} />
+                <button type="button" aria-label="Quitar video" onClick={() => setVideos(a => a.filter((_, j) => j !== i))}
+                  style={{ position: 'absolute', top: -12, right: -12, width: 44, height: 44, border: 0, padding: 0, background: 'transparent', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+                  <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--ink)', color: 'var(--label-inverse)', display: 'grid', placeItems: 'center' }}><X size={12} /></span>
+                </button>
+              </div>
+            ))}
+            {(
               <label style={{ width: 84, height: 84, borderRadius: 10, background: 'var(--fill)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--label-2)' }}>
                 <span style={{ display: 'grid', placeItems: 'center', gap: 2, fontSize: '0.6875rem', fontWeight: 600 }}><Camera size={20} /><Plus size={10} /></span>
-                <input type="file" accept="image/*" multiple hidden onChange={e => { agregarFotos(e.target.files); e.target.value = ''; }} />
+                <input type="file" accept="image/*,video/*" multiple hidden onChange={e => { agregarFotos(e.target.files); e.target.value = ''; }} />
               </label>
             )}
           </div>

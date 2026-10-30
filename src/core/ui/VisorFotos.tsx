@@ -5,7 +5,8 @@ import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { haptic } from '../lib/haptics';
 import './visor.css';
 
-export interface FotoVisor { url: string; titulo?: string }
+/** Foto o video (el video se reproduce en el mismo visor, con sus controles) */
+export interface FotoVisor { url: string; titulo?: string; tipo?: 'foto' | 'video' }
 
 interface VisorFotosProps {
   open: boolean;
@@ -176,7 +177,7 @@ export function VisorFotos({ open, onClose, fotos, indiceInicial = 0, titulo, ca
                 animate="centro"
                 exit="sale"
                 transition={{ type: 'spring', bounce: 0, duration: 0.35 }}
-                drag={n > 1 && !ampliada ? 'x' : false}
+                drag={n > 1 && !ampliada && actual?.tipo !== 'video' ? 'x' : false}
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={0.5}
                 onDragEnd={(_, info) => {
@@ -186,13 +187,18 @@ export function VisorFotos({ open, onClose, fotos, indiceInicial = 0, titulo, ca
                   else if (proyectado > 80) ir(i - 1);
                 }}
               >
-                <img
-                  src={actual.url}
-                  alt={actual.titulo || `Foto ${i + 1}`}
-                  className="visor__foto"
-                  draggable={false}
-                  style={{ transform: `translate(${desp.x}px, ${desp.y}px) scale(${escala})`, transition: tocando ? 'none' : 'transform 0.18s ease-out', cursor: ampliada ? 'move' : 'zoom-in' }}
-                />
+                {actual.tipo === 'video' ? (
+                  <video src={actual.url} controls playsInline preload="metadata" className="visor__foto"
+                    style={{ background: '#000' }} aria-label={actual.titulo || `Video ${i + 1}`} />
+                ) : (
+                  <img
+                    src={actual.url}
+                    alt={actual.titulo || `Foto ${i + 1}`}
+                    className="visor__foto"
+                    draggable={false}
+                    style={{ transform: `translate(${desp.x}px, ${desp.y}px) scale(${escala})`, transition: tocando ? 'none' : 'transform 0.18s ease-out', cursor: ampliada ? 'move' : 'zoom-in' }}
+                  />
+                )}
               </motion.div>
             </AnimatePresence>
             {n > 1 && i > 0 && !ampliada && <button type="button" className="visor__flecha visor__flecha--izq" onClick={() => ir(i - 1)} aria-label="Foto anterior"><ChevronLeft size={26} /></button>}
@@ -206,7 +212,9 @@ export function VisorFotos({ open, onClose, fotos, indiceInicial = 0, titulo, ca
           {fotos.map((f, k) => (
             <button key={`${f.url}-${k}`} type="button" className={`visor__mini${k === i ? ' visor__mini--activa' : ''}`}
               onClick={() => ir(k)} aria-label={`Ver foto ${k + 1}`} aria-current={k === i}>
-              <img src={f.url} alt="" loading="lazy" draggable={false} />
+              {f.tipo === 'video'
+                ? <video src={f.url} muted preload="metadata" />
+                : <img src={f.url} alt="" loading="lazy" draggable={false} />}
             </button>
           ))}
         </div>

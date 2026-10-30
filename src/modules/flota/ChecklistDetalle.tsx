@@ -1,9 +1,10 @@
 import './checklist.css';
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, FileText, Mail, MessageCircle, Pencil, Trash2, Wrench, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
+import { VisorFotos } from '../../core/ui/VisorFotos';
 import { Notice } from '../../core/ui/Display';
 import { api, errorMessage } from '../../core/api/client';
 import { formatFechaHoraPe } from '../../core/lib/format';
@@ -46,6 +47,9 @@ export function ChecklistDetalle({ falla, open, puedeEditar, puedeOTs, puedeElim
   const remolque = leerFallas(falla.fallas_remolque_json);
   const ots = useMemo(() => leerOts(falla.ots_generadas_json), [falla.ots_generadas_json]);
   const fotos = useMemo(() => leerLista(falla.fotos_json), [falla.fotos_json]);
+  // Evidencia: fotos y videos; se abren en el mismo visor que la galería de seguridad
+  const [visor, setVisor] = useState<number | null>(null);
+  const esVideo = (u: string) => /\.(mp4|mov|webm|m4v|ogv)(\?|$)/i.test(u);
   // Firma y fotos pueden venir de S3 (URL, se firma al abrir) o guardadas como imagen en base64 (se muestran tal cual)
   const firmaRaw = typeof falla.firma_conductor === 'string' && /^(https?:|data:)/.test(falla.firma_conductor) ? falla.firma_conductor : null;
   const urls = [...fotos, ...(firmaRaw ? [firmaRaw] : [])].filter(u => u.startsWith('http'));
@@ -108,9 +112,10 @@ export function ChecklistDetalle({ falla, open, puedeEditar, puedeOTs, puedeElim
     ['Registrado el', falla.creado_en ? formatFechaHoraPe(String(falla.creado_en)) : '—'],
   ];
 
+  // Cada falla muestra a qué unidad pertenece: camión o carreta (las manuales también)
   const filasFalla = [
-    ...tracto.map(f => ({ ...f, unidad: falla.placa_tracto || 'TRACTO' })),
-    ...remolque.map(f => ({ ...f, unidad: falla.placa_remolque || 'REMOLQUE' })),
+    ...tracto.map(f => ({ ...f, unidad: falla.placa_tracto || 'TRACTO', tipoUnidad: 'Camión' })),
+    ...remolque.map(f => ({ ...f, unidad: falla.placa_remolque || 'REMOLQUE', tipoUnidad: 'Carreta' })),
   ];
 
   return (
@@ -175,7 +180,7 @@ export function ChecklistDetalle({ falla, open, puedeEditar, puedeOTs, puedeElim
                 {filasFalla.map((f, i) => (
                   <tr key={i}>
                     <td className="ckd-mono">{f.fecha || (falla.fecha_reporte ? formatFechaHoraPe(falla.fecha_reporte) : '—')}</td>
-                    <td><span className="ckd-placa">{f.unidad}</span></td>
+                    <td><span className="ckd-placa">{f.unidad}</span><div className="t-footnote c-secondary">{f.tipoUnidad}</div></td>
                     <td><span className="ckd-sistema-tag">{(f.sistema && f.sistema !== 'GENERAL' ? f.sistema : 'MANUAL').toUpperCase()}</span></td>
                     <td className="ckd-falla">{f.item || '—'}</td>
                     <td>{f.obs || f.observacion || 'Sin descripción'}</td>
@@ -191,7 +196,19 @@ export function ChecklistDetalle({ falla, open, puedeEditar, puedeOTs, puedeElim
           <h3 className="ckd-titulo">Evidencias</h3>
           {fotos.length === 0
             ? <p className="t-footnote c-secondary">Sin evidencias adjuntas.</p>
-            : <div className="ck-evidencias">{fotos.map((u, i) => <img key={i} src={src(u)} alt={`Evidencia ${i + 1}`} loading="lazy" />)}</div>}
+            : <>
+              <div className="ckd-galeria">
+                {fotos.map((u, i) => (
+                  <button key={i} type="button" onClick={() => setVisor(i)} aria-label={`Ver evidencia ${i + 1}`}>
+                    {esVideo(u) ? <video src={src(u)} muted preload="metadata" /> : <img src={src(u)} alt="" loading="lazy" />}
+                    {esVideo(u) && <span className="ckd-galeria__play" aria-hidden>▶</span>}
+                  </button>
+                ))}
+              </div>
+              <VisorFotos open={visor !== null} indiceInicial={visor ?? 0} onClose={() => setVisor(null)}
+                titulo={`Evidencias Fotográficas — ${falla.folio}`}
+                fotos={fotos.map((u, i) => ({ url: src(u), titulo: `Evidencia ${i + 1}`, tipo: esVideo(u) ? 'video' as const : 'foto' as const }))} />
+            </>}
         </section>
 
         {/* 5. Órdenes de trabajo generadas, con su estado actual */}
