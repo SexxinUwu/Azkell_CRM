@@ -1,23 +1,59 @@
 import '../mantenimiento/mant.css';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUpRight, Boxes, Clock, Fuel, Package, Truck, Wrench } from 'lucide-react';
-import { useMemo } from 'react';
+import {
+  Boxes, CalendarDays, ChevronRight, Clock, FileText, Fuel, Gauge, LayoutDashboard, Package, PackagePlus, RefreshCw,
+  Route, ScrollText, Target, Truck, Wallet, Wrench,
+} from 'lucide-react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { PageLoader } from '../../core/ui/Button';
+import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
 import { BarrasGrafico, DonaGrafico } from '../../core/ui/Graficos';
 import { clavePlaca, useInspecciones, useInspeccionesNeumaticos } from '../inspecciones/api';
 import { evaluarCiclo } from '../inspecciones/vigencia';
 import { usePlacas } from '../placas/api';
-import { MenuOtros } from '../../core/ui/MenuOtros';
 import { api } from '../../core/api/client';
-import { abrirClasico } from '../../core/layout/navigation';
+import { ALL_NAV_ITEMS } from '../../core/layout/navigation';
+import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
 
 function arr<T>(r: unknown): T[] {
   if (Array.isArray(r)) return r as T[];
   return ((r as { data?: T[] })?.data) ?? [];
 }
+
+// Tablero de accesos (como el clásico): solo pantallas de la app nueva; cada una se muestra si el usuario la puede ver.
+const GRUPOS_ACCESO: Array<{ titulo: string; icono: ReactNode; enlaces: Array<{ to: string; label: string; icono: ReactNode }> }> = [
+  { titulo: 'Flota', icono: <Truck size={13} />, enlaces: [
+    { to: '/flota/disponibilidad', label: 'Disponibilidad 360°', icono: <Gauge size={17} /> },
+  ] },
+  { titulo: 'Operaciones y rutas', icono: <Route size={13} />, enlaces: [
+    { to: '/operaciones/programacion', label: 'Programación', icono: <CalendarDays size={17} /> },
+    { to: '/operaciones/ordenes-viaje', label: 'Órdenes de viaje y fletes', icono: <Truck size={17} /> },
+    { to: '/operaciones/matriz-combustible', label: 'Matriz de rendimiento D2', icono: <Target size={17} /> },
+    { to: '/operaciones/vales', label: 'Vales de combustible', icono: <Fuel size={17} /> },
+  ] },
+  { titulo: 'Taller y OTs', icono: <Wrench size={13} />, enlaces: [
+    { to: '/mantenimiento/reportes-ot', label: 'Órdenes de trabajo', icono: <ScrollText size={17} /> },
+    { to: '/mantenimiento/dashboard', label: 'Dashboard de mantenimiento', icono: <LayoutDashboard size={17} /> },
+    { to: '/mantenimiento/status-rampa', label: 'Status de rampa', icono: <Wrench size={17} /> },
+  ] },
+  { titulo: 'Almacén y stock', icono: <Boxes size={13} />, enlaces: [
+    { to: '/almacen/inventario', label: 'Inventario', icono: <Boxes size={17} /> },
+    { to: '/almacen/entradas', label: 'Órdenes de compra', icono: <PackagePlus size={17} /> },
+  ] },
+  { titulo: 'Tesorería', icono: <Wallet size={13} />, enlaces: [
+    { to: '/tesoreria/pago-requerimientos', label: 'Pago de requerimientos', icono: <Wallet size={17} /> },
+    { to: '/tesoreria/cuentas', label: 'Cuentas por cobrar y pagar', icono: <FileText size={17} /> },
+  ] },
+];
+
+// Fecha y hora de la última actualización, con el formato del clásico (es-PE, hora de 12 h)
+const fechaTexto = (d: Date) => {
+  const s = d.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+const horaTexto = (d: Date) => d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true });
 
 function KpiCard({ icon, label, valor, sub, color, to }: {
   icon: React.ReactNode; label: string; valor: number | string; sub?: string; color?: string; to?: string;
@@ -43,6 +79,9 @@ function KpiCard({ icon, label, valor, sub, color, to }: {
 
 export function DashboardPage() {
   const navigate = useNavigate();
+  const { can } = useAuth();
+  const [actualizado, setActualizado] = useState(() => new Date());
+  const [recargando, setRecargando] = useState(false);
 
   const flota = useQuery({
     queryKey: ['dashboard', 'flota'],
@@ -156,6 +195,32 @@ export function DashboardPage() {
     return s.includes('pendiente') || s.includes('enviado') || s.includes('proceso');
   }).length;
 
+  // Recarga ejecutiva (como el clásico): vuelve a pedir todas las fuentes y actualiza la fecha y la hora
+  async function recargar() {
+    if (recargando) return;
+    haptic('selection');
+    setRecargando(true);
+    try {
+      await Promise.all([
+        flota.refetch(), ots.refetch(), inventario.refetch(), vales.refetch(), rampas.refetch(), reqs.refetch(),
+        insp.refetch(), neu.refetch(), placasQ.refetch(),
+      ]);
+    } finally {
+      setActualizado(new Date());
+      setRecargando(false);
+    }
+  }
+
+  const gruposAcceso = GRUPOS_ACCESO
+    .map(g => ({
+      ...g,
+      enlaces: g.enlaces.filter(e => {
+        const item = ALL_NAV_ITEMS.find(i => i.to === e.to);
+        return !!item && can(...item.permissions);
+      }),
+    }))
+    .filter(g => g.enlaces.length > 0);
+
   return (
     <Page>
       <PageHeader
@@ -163,11 +228,36 @@ export function DashboardPage() {
         title="Centro de Comando"
         subtitle="Resumen operativo"
         actions={
-          <MenuOtros opciones={[
-            { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('dashboard') },
-          ]} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--label-2)', textTransform: 'uppercase' }}>{horaTexto(actualizado)}</div>
+              <div style={{ fontSize: '0.88rem', fontWeight: 700 }}>{fechaTexto(actualizado)}</div>
+            </div>
+            <Button variant="plain" iconOnly icon={<RefreshCw size={17} />} aria-label="Actualizar datos" title="Actualizar datos"
+              loading={recargando} onClick={recargar} />
+          </div>
         }
       />
+
+      {gruposAcceso.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(16rem, 1fr))', gap: 'var(--s-3)', marginBottom: 'var(--s-4)' }}>
+          {gruposAcceso.map(g => (
+            <div key={g.titulo} className="tarjeta__lista">
+              <p className="tarjeta__grupo-titulo" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: 'var(--s-3) var(--s-4) var(--s-2)' }}>
+                {g.icono} {g.titulo}
+              </p>
+              {g.enlaces.map(e => (
+                <button key={e.to} type="button" className="mov-fila pressable"
+                  onClick={() => { haptic('selection'); navigate(e.to); }}>
+                  <div className="mov-fila__icon" style={{ background: 'var(--fill)', color: 'var(--label-2)' }}>{e.icono}</div>
+                  <div className="mov-fila__cuerpo"><span className="mov-fila__titulo">{e.label}</span></div>
+                  <div className="mov-fila__derecha"><ChevronRight size={16} style={{ color: 'var(--label-3)' }} /></div>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
 
       {isLoading ? <PageLoader /> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
