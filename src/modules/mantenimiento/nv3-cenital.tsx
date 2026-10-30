@@ -4,7 +4,7 @@ import { Component, lazy, Suspense, useState, type ReactNode } from 'react';
 import { CONFIGURACIONES, posicionesDeConfig } from '../inspecciones/components/ChasisEsquemaVisual';
 import { EsquemaNeumaticos, type LlantaDato } from './NeumaticosEsquema';
 import type { SondaPosicion } from './ntb-arrastre';
-import type { ModoVista } from './nv3-motor';
+import type { ArrastreLlanta, ModoVista } from './nv3-motor';
 import './nv3.css';
 
 // Three.js solo se descarga al abrir una pantalla con neumáticos; mientras tanto se ve el SVG
@@ -21,6 +21,8 @@ export interface NeumaticosCenitalProps {
   onSelect: (l: LlantaDato) => void;
   /** Recibe la función que dice qué posición hay bajo un punto de la pantalla (para soltar llantas) */
   sondaRef?: { current: SondaPosicion | null };
+  /** Recibe el control de arrastre de una llanta (levantar, mover, soltar); solo lo usa la hoja de inspección */
+  arrastreRef?: { current: ArrastreLlanta | null };
   /** Marca del tracto para el letrero del capó (opcional; sin marca no se dibuja texto) */
   marca?: string | null;
   /** Camión (no tracto): solo estos usan el modelo de la marca */
@@ -48,7 +50,7 @@ class RespaldoSeguro extends Component<{ respaldo: ReactNode; children: ReactNod
   render() { return this.state.fallo ? this.props.respaldo : this.props.children; }
 }
 
-export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null, onSelect, sondaRef, marca = null, camion = false, modo, onModo }: NeumaticosCenitalProps) {
+export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null, onSelect, sondaRef, arrastreRef, marca = null, camion = false, modo, onModo }: NeumaticosCenitalProps) {
   const [soportaWebgl] = useState(webglDisponible);
   const [perdido, setPerdido] = useState(false);
 
@@ -64,7 +66,7 @@ export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null
       <Suspense fallback={respaldo}>
         <Nv3Vista
           configuracion={configuracion} llantas={llantas} activa={activa} sobre={sobre} onSelect={onSelect}
-          sondaRef={sondaRef} marca={marca} camion={camion} onPerdida={() => setPerdido(true)} modo={modo} onModo={onModo}
+          sondaRef={sondaRef} arrastreRef={arrastreRef} marca={marca} camion={camion} onPerdida={() => setPerdido(true)} modo={modo} onModo={onModo}
         />
       </Suspense>
     </RespaldoSeguro>

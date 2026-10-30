@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Camera, CircleAlert, Cloud, FileText, Minus, Plus, RefreshCw, Trash2, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
@@ -8,9 +9,14 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { clavePlaca, useInspeccionesNeumaticos } from './api';
-import { ChasisEsquemaVisual, CONFIGURACIONES, normalizarConfiguracion, posicionesPorDefecto, type PosicionBajo } from './components/ChasisEsquemaVisual';
-import { AlmacenesNeumaticos, type AlmacenesHandle, type LlantaDisponible } from './components/AlmacenesNeumaticos';
+import { CONFIGURACIONES, normalizarConfiguracion, posicionesPorDefecto, type PosicionBajo } from './components/ChasisEsquemaVisual';
+import { AlmacenesNeumaticos, type AlmacenesHandle, type LlantaDisponible, type ZonaRetiro } from './components/AlmacenesNeumaticos';
 import { tonoMm, TINTA_TONO } from '../mantenimiento/neumaticosSemaforo';
+import { LeyendaSemaforo, type LlantaDato } from '../mantenimiento/NeumaticosEsquema';
+import { NeumaticosCenital } from '../mantenimiento/nv3-cenital';
+import type { ArrastreLlanta, ModoVista } from '../mantenimiento/nv3-motor';
+import { posicionDeEvento, useArrastre, type SondaPosicion } from '../mantenimiento/ntb-arrastre';
+import { usePlacasLista } from '../mantenimiento/ntb-api';
 import { corregirMarca } from './neumaticosAlias';
 import { NeumaticoHojaVida } from '../mantenimiento/NeumaticoHojaVida';
 import './inspecciones.css';
@@ -20,8 +26,9 @@ import './inspecciones.css';
 //   GET  /neumaticos/km-gps/:placa?fecha  → odómetro GPS (Wialon) en la fecha de la inspección
 //   GET  /neumaticos/catalogos            → marcas, medidas y modelos sugeridos
 //   POST /neumaticos/inspecciones         → items con medidas, ROT, estado, acción y fotos (base64; el servidor las sube a S3)
-// Diferencia con el clásico: el esquema del chasis es un SVG (ChasisEsquemaVisual) con perspectivas
-// 2D, isométrica, lateral y rayos X; las rotaciones son entre dos posiciones con un botón.
+// Diferencia con el clásico: el diagrama de la unidad es el de movimientos (NeumaticosCenital: 3D con respaldo SVG).
+// Arrastrar una llanta sobre otra la intercambia (rotación); soltarla fuera la retira en papelera o reencauche;
+// desde la repisa se monta en una posición vacía. El botón Rotar sigue como alternativa.
 
 const ESTADOS = ['NUEVA', 'BUENA', 'REENCAUCHADA', 'REGULAR', 'MALA', 'CRÍTICA'] as const;
 const ACCIONES = ['Inspección', 'Rotación', 'Instalación', 'Cambio', 'Reparación', 'Reencauche', 'Baja'] as const;
@@ -162,6 +169,9 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
   const [activa, setActiva] = useState('1');
   const [nuevaPos, setNuevaPos] = useState('');
   const [destinoRot, setDestinoRot] = useState('');
+  // Vista del diagrama (Plano o Isometría) y zona de retiro (papelera o reencauche) sobre la que está una llanta arrastrada
+  const [modo, setModo] = useState<ModoVista>('plano');
+  const [zonaSobre, setZonaSobre] = useState<ZonaRetiro>(null);
   // Código de la llanta cuya hoja de vida está abierta encima de esta hoja (null = cerrada)
   const [hojaCodigo, setHojaCodigo] = useState<string | null>(null);
   const [errores, setErrores] = useState<Errores>({});
@@ -237,6 +247,16 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
   }, [ultimaFecha]);
   const inspectorUltimo = ultima.data?.inspector || neu.data?.find(n => placa && clavePlaca(n.placa) === clavePlaca(placa))?.tecnico || '';
 
+  // Llantas con la forma del diagrama de movimientos (LlantaDato); el remanente es el promedio de R1 a R3
+  const llantasDato = useMemo<LlantaDato[]>(() => llantas.map(l => ({
+    posicion: l.posicion, marca: l.marca || null, modelo: l.modelo || null, medida: l.medida || null,
+    r1: numero(l.r1) || null, r2: numero(l.r2) || null, r3: numero(l.r3) || null, r4: numero(l.r4) || null,
+    remanente_promedio: promedio(l), presion_actual: numero(l.presion_actual) || null, estado: l.estado,
+  })), [llantas]);
+  // Marca de la unidad para el letrero del capó (la ficha de placas)
+  const placasLista = usePlacasLista();
+  const marcaUnidad = placasLista.data?.find(p => placa && clavePlaca(p.placa) === clavePlaca(placa))?.marca ?? null;
+
   const actual = llantas.find(l => l.posicion === activa) ?? null;
   const set = (pos: string, cambio: Partial<Llanta>) => setLlantas(ls => ls.map(l => (l.posicion === pos ? { ...l, ...cambio } : l)));
   const quitar = (pos: string) => {
@@ -283,6 +303,9 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
   // Almacenes (papelera, reencauche y repisa): retiro desde el modelo y montaje desde la repisa
   const modeloPosRef = useRef<PosicionBajo | null>(null);
   const almacenRef = useRef<AlmacenesHandle>(null);
+  // Sonda del lienzo 3D (qué posición hay bajo un punto) y control del arrastre que maneja el lienzo
+  const sondaRef = useRef<SondaPosicion | null>(null);
+  const arrastreLlanta = useRef<ArrastreLlanta | null>(null);
   const vaciarPosicion = (pos: string) => { setLlantas(ls => ls.map(l => (l.posicion === pos ? vacia(pos) : l))); setActiva(pos); };
   const montarPosicion = (pos: string, item: LlantaDisponible) => {
     // La llanta de la repisa trae su código y su ficha; las mediciones las toma el inspector
@@ -292,6 +315,49 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
     } : l)));
     setActiva(pos);
   };
+
+  // Posición del modelo bajo un punto de la pantalla: el lienzo 3D (sonda) o el nodo del esquema SVG (respaldo)
+  modeloPosRef.current = (x, y) => posicionDeEvento({ target: document.elementFromPoint(x, y), clientX: x, clientY: y }, sondaRef.current);
+
+  // Arrastre entre llantas, igual que en movimientos: se levanta, sigue el puntero y, al soltar, se intercambia
+  // (rotación), se retira (papelera o reencauche) o vuelve a su eje. En esta hoja el código del ítem es la posición.
+  const arrastre = useArrastre({
+    sondaRef,
+    onTap: item => setActiva(item.codigo),
+    onInicio: item => { setActiva(item.codigo); arrastreLlanta.current?.levantar(item.codigo); },
+    onMover: (_item, x, y) => { arrastreLlanta.current?.mover(x, y); setZonaSobre(almacenRef.current?.zonaBajo(x, y) ?? null); },
+    onSoltar: (item, destino) => {
+      setZonaSobre(null);
+      if (destino.tipo !== 'posicion') { arrastreLlanta.current?.soltar(null); return; }
+      const intercambiar = () => rotarPosiciones(item.codigo, destino.posicion);
+      // Con lienzo 3D la llanta se acomoda en su nuevo eje y luego se intercambian los datos; en el SVG, directo
+      if (arrastreLlanta.current) arrastreLlanta.current.soltar(destino.posicion, intercambiar);
+      else intercambiar();
+    },
+    onSoltarAire: (item, x, y) => {
+      setZonaSobre(null);
+      arrastreLlanta.current?.soltar(null);
+      almacenRef.current?.soltarDesdeModelo(item.codigo, x, y);
+    },
+    onCancelar: () => { setZonaSobre(null); arrastreLlanta.current?.soltar(null); },
+  });
+
+  // Solo en Plano se arrastra: en Isometría el dedo gira la cámara (igual que en movimientos)
+  function alPresionarDiagrama(e: ReactPointerEvent<HTMLDivElement>) {
+    if (modo !== 'plano') return;
+    const pos = posicionDeEvento(e, sondaRef.current);
+    if (!pos || !llantas.some(l => l.posicion === pos)) return;
+    arrastre.iniciar(e, { codigo: pos, origen: 'unidad' });
+  }
+  const sobrePos = arrastre.sobre?.tipo === 'posicion' ? arrastre.sobre.posicion : null;
+  const origenArrastre = arrastre.fantasma?.codigo ?? '';
+  const bandaTexto = arrastre.fantasma
+    ? sobrePos
+      ? `Suelta para intercambiar #${origenArrastre} ⇄ #${sobrePos}`
+      : zonaSobre === 'papelera' ? 'Suelta para dar de baja la llanta (papelera)'
+        : zonaSobre === 'reencauche' ? 'Suelta para enviarla a reencauche'
+          : `Arrastrando #${origenArrastre}: suéltala sobre otra posición, la papelera o el reencauche`
+    : null;
 
   const medidas = (l: Llanta) => [l.r1, l.r2, l.r3, l.r4].some(v => numero(v) > 0);
   const opciones = (clave: string) => {
@@ -407,11 +473,27 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
               </div>
             </section>
 
-            {/* Bento 2: esquema del chasis, debajo de los datos generales y encima del editor */}
-            <ChasisEsquemaVisual configuracion={config} llantas={llantas} activa={activa} onSelect={setActiva} onRotar={rotarPosiciones}
-              onSoltarAire={(pos, x, y) => almacenRef.current?.soltarDesdeModelo(pos, x, y)} posicionRef={modeloPosRef} />
+            {/* Bento 2: diagrama de la unidad (el de movimientos), debajo de los datos generales y encima del editor */}
+            {config && (
+              <section className="insp-neu__diagrama" aria-label="Diagrama de la unidad">
+                <div className="insp-neu__lienzo" onPointerDown={alPresionarDiagrama}>
+                  <NeumaticosCenital
+                    llantas={llantasDato} configuracion={config} activa={activa} sobre={sobrePos}
+                    sondaRef={sondaRef} arrastreRef={arrastreLlanta} onSelect={l => setActiva(l.posicion)}
+                    marca={marcaUnidad} modo={modo} onModo={setModo}
+                  />
+                  {bandaTexto && <div className="insp-neu__banda" role="status">{bandaTexto}</div>}
+                </div>
+                <p className="t-footnote c-secondary">
+                  {modo === 'plano'
+                    ? 'Arrastra una llanta sobre otra para intercambiarlas, o suéltala en la papelera o el reencauche. Toca una llanta para editarla.'
+                    : 'En Isometría solo se ve la unidad. Cambia a Plano para arrastrar llantas.'}
+                </p>
+                <LeyendaSemaforo />
+              </section>
+            )}
             <AlmacenesNeumaticos ref={almacenRef} placa={placa ?? ''} km={km} llantas={llantas} modeloPosRef={modeloPosRef}
-              onRetirada={vaciarPosicion} onMontada={montarPosicion} />
+              onRetirada={vaciarPosicion} onMontada={montarPosicion} zonaSobre={zonaSobre} />
 
             {/* Posiciones: chips y editor de la llanta activa */}
             <section className="insp-neu__bloque">
@@ -553,6 +635,13 @@ export function NeumaticosInspeccionSheet({ placa, usuario, onClose }: { placa: 
           </div>
         )}
       </Sheet>
+      {/* Llanta que se arrastra: el rótulo sigue al puntero (fuera del panel, para que no lo recorte la hoja) */}
+      {arrastre.fantasma && createPortal(
+        <div className="insp-neu__fantasma" style={{ left: arrastre.fantasma.x, top: arrastre.fantasma.y }} aria-hidden>
+          #{arrastre.fantasma.codigo}
+        </div>,
+        document.body,
+      )}
       {/* Hoja de vida de la llanta: se monta solo con código y va encima; su cierre no cierra esta hoja */}
       {hojaCodigo !== null && <NeumaticoHojaVida codigo={hojaCodigo} onClose={() => setHojaCodigo(null)} />}
     </>

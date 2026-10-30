@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { posicionesDeConfig } from '../inspecciones/components/ChasisEsquemaVisual';
 import { remanenteDe, type LlantaDato } from './NeumaticosEsquema';
 import type { SondaPosicion } from './ntb-arrastre';
-import { MotorNeumaticos, type ModoVista } from './nv3-motor';
+import { MotorNeumaticos, type ArrastreLlanta, type ModoVista } from './nv3-motor';
 import { cargarFotoBanda } from './nv3-texturas';
 
 export interface Nv3VistaProps {
@@ -19,6 +19,8 @@ export interface Nv3VistaProps {
   onSelect: (l: LlantaDato) => void;
   /** Se rellena con la función que dice qué posición hay bajo un punto de la pantalla */
   sondaRef?: { current: SondaPosicion | null };
+  /** Recibe el control de arrastre de una llanta (solo la hoja de inspección lo pide) */
+  arrastreRef?: { current: ArrastreLlanta | null };
   /** Se llama si el contexto WebGL no se puede crear o se pierde */
   onPerdida: () => void;
   /** Marca del tracto para el letrero del capó; sin marca no se dibuja texto */
@@ -40,7 +42,7 @@ const OPCIONES_VISTA: Array<{ valor: ModoVista; etiqueta: string }> = [
 /** Los controles sobre el lienzo no deben llegar al arrastre ni al toque de la unidad */
 const detener = (e: SyntheticEvent) => e.stopPropagation();
 
-export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSelect, sondaRef, onPerdida, marca, camion = false, modo: modoPadre, onModo }: Nv3VistaProps) {
+export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSelect, sondaRef, arrastreRef, onPerdida, marca, camion = false, modo: modoPadre, onModo }: Nv3VistaProps) {
   const lienzo = useRef<HTMLDivElement>(null);
   const motor = useRef<MotorNeumaticos | null>(null);
   // Últimos valores de las props para los oyentes que se montan una sola vez
@@ -64,6 +66,7 @@ export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSele
       nuevo = new MotorNeumaticos({
         contenedor: cont,
         sondaRef,
+        arrastreRef,
         onSelect: posicion => {
           const llanta = vivo.current.llantas.find(l => normal(l.posicion) === posicion);
           if (llanta) vivo.current.onSelect(llanta);

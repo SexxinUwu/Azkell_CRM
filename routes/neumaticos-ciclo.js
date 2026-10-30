@@ -234,6 +234,43 @@ module.exports = function (db) {
     });
 
     // ============================================================
+    // 1b. CUATRO ALMACENES (solo lectura): la hoja de inspección muestra siempre sus conteos.
+    // Grupos disjuntos: cada llanta cae en uno solo.
+    //   disponibles    → en_almacen, almacén 100 (Nuevas) o 1142 (Reencauche), con código de fuego
+    //   reencauchadas  → en_almacen, almacén 1144 (Reparadas): regresaron del reencauche
+    //   enviar_reforma → en_reencauche, almacén 1142 (en la reformadora no entra)
+    //   desechadas     → desechado (almacén 1148 Scrap)
+    // ============================================================
+    router.get('/almacenes', async (req, res) => {
+        try {
+            const [filas] = await pool(req).query(`
+                SELECT h.id_neumatico, h.codigo_llanta, h.marca, h.modelo, h.medida, h.estado_ciclo, h.almacen_id
+                FROM neumaticos_hoja_vida h
+                WHERE h.estado_ciclo IN ('en_almacen', 'en_reencauche', 'desechado')
+                ORDER BY h.codigo_llanta, h.id_neumatico`);
+            const almacen = f => Number(f.almacen_id);
+            const fila = f => ({
+                codigo: txt(f.codigo_llanta) || txt(f.id_neumatico),
+                marca: f.marca || null,
+                modelo: f.modelo || null,
+                medida: f.medida || null,
+                estado_ciclo: f.estado_ciclo,
+                almacen_id: f.almacen_id == null ? null : almacen(f),
+            });
+            const grupos = {
+                disponibles: filas.filter(f => f.estado_ciclo === 'en_almacen' && [ALMACEN.NUEVAS, ALMACEN.REENCAUCHE].includes(almacen(f)) && txt(f.codigo_llanta)).map(fila),
+                reencauchadas: filas.filter(f => f.estado_ciclo === 'en_almacen' && almacen(f) === ALMACEN.REPARADAS).map(fila),
+                enviar_reforma: filas.filter(f => f.estado_ciclo === 'en_reencauche' && almacen(f) === ALMACEN.REENCAUCHE).map(fila),
+                desechadas: filas.filter(f => f.estado_ciclo === 'desechado').map(fila),
+            };
+            const conteos = Object.fromEntries(Object.entries(grupos).map(([k, v]) => [k, v.length]));
+            res.json({ ok: true, grupos, conteos });
+        } catch (err) {
+            responder(res, err);
+        }
+    });
+
+    // ============================================================
     // 2. FICHA DE UNA LLANTA: instalaciones, movimientos y mediciones
     // ============================================================
     router.get('/llantas/:codigo', async (req, res) => {
@@ -619,7 +656,7 @@ module.exports = function (db) {
             [placa]);
 
         const [enStock] = await p.query(
-            `SELECT h.id_neumatico, COALESCE(h.codigo_llanta, h.id_neumatico) AS codigo,
+            `SELECT h.id_neumatico, COALESCE(h.codigo_llanta, h.id_neumatico) AS codigo, h.codigo_llanta AS codigo_fuego,
                     h.marca, h.modelo, h.medida, h.vida, h.estado_ciclo, h.almacen_id
              FROM neumaticos_hoja_vida h
              WHERE h.estado_ciclo IN ('en_almacen', 'en_reencauche', 'desechado')
@@ -725,7 +762,7 @@ module.exports = function (db) {
             posiciones: detalleMontadas.map(({ posicion, llanta }) => ({ posicion, llanta })),
             disponibles: enStock
                 // Solo las llantas con código de fuego pueden ir a una unidad; sin código están en su propia situación
-                .filter(f => f.estado_ciclo === 'en_almacen' && ALMACENES_INSTALAR.includes(Number(f.almacen_id)) && txt(f.codigo))
+                .filter(f => f.estado_ciclo === 'en_almacen' && ALMACENES_INSTALAR.includes(Number(f.almacen_id)) && txt(f.codigo_fuego))
                 .map(aLlanta),
             reforma: enStock.filter(f => f.estado_ciclo === 'en_reencauche').map(aLlanta),
             descarte: enStock.filter(f => f.estado_ciclo === 'desechado').map(aLlanta),

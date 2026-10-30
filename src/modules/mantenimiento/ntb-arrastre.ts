@@ -48,6 +48,15 @@ interface Opciones {
   onSoltar: (item: ItemArrastre, destino: Destino) => void;
   /** Sonda del lienzo 3D, si la vista de la unidad es 3D */
   sondaRef?: { current: SondaPosicion | null };
+  // Opcionales (la hoja de inspección los usa para levantar la llanta y soltarla en el aire)
+  /** Al pasar el umbral: empieza el arrastre */
+  onInicio?: (item: ItemArrastre) => void;
+  /** En cada movimiento del arrastre, con las coordenadas de pantalla */
+  onMover?: (item: ItemArrastre, x: number, y: number) => void;
+  /** Se soltó después de arrastrar, fuera de cualquier destino */
+  onSoltarAire?: (item: ItemArrastre, x: number, y: number) => void;
+  /** El gesto se canceló a mitad del arrastre (el navegador lo interrumpió) */
+  onCancelar?: (item: ItemArrastre) => void;
 }
 
 export interface Fantasma extends ItemArrastre { x: number; y: number }
@@ -87,9 +96,11 @@ export function useArrastre(opciones: Opciones) {
       if (!movido) {
         if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < UMBRAL_PX) return;
         movido = true;
+        opcionesRef.current.onInicio?.(item);
       }
       setFantasma({ ...item, x: ev.clientX, y: ev.clientY });
       setSobre(destinoBajo(ev.clientX, ev.clientY, opcionesRef.current.sondaRef?.current));
+      opcionesRef.current.onMover?.(item, ev.clientX, ev.clientY);
     }
 
     function soltar(ev: PointerEvent) {
@@ -100,9 +111,14 @@ export function useArrastre(opciones: Opciones) {
       }
       const destino = destinoBajo(ev.clientX, ev.clientY, opcionesRef.current.sondaRef?.current);
       if (destino) opcionesRef.current.onSoltar(item, destino);
+      else opcionesRef.current.onSoltarAire?.(item, ev.clientX, ev.clientY);
     }
 
-    function cancelar() { cortar(); }
+    function cancelar() {
+      const habiaArrastre = movido;
+      cortar();
+      if (habiaArrastre) opcionesRef.current.onCancelar?.(item);
+    }
 
     window.addEventListener('pointermove', mover);
     window.addEventListener('pointerup', soltar);

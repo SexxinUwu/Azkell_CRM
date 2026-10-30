@@ -569,3 +569,23 @@
 .insp-visita--mecanica { background: rgba(0, 122, 255, 0.14); color: #0a64d6; }
 .insp-visita--neumatica { background: rgba(124, 58, 237, 0.14); color: #6d28d9; }
 .insp-visita--ambas { background: rgba(52, 199, 89, 0.16); color: #15803d; }
+
+/* Diagrama de la unidad en la hoja de inspección (NeumaticosCenital, el de movimientos).
+   El lienzo no deja que el navegador tome el gesto: así el dedo arrastra la llanta y no desplaza la hoja. */
+.insp-neu__diagrama { display: flex; flex-direction: column; gap: var(--s-3); }
+.insp-neu__lienzo { position: relative; touch-action: none; }
+.insp-neu__banda { position: absolute; top: var(--s-2); left: 50%; transform: translateX(-50%); z-index: 2; max-width: 92%; padding: 6px 14px; border-radius: var(--r-full); background: #2563eb; color: #ffffff; font-size: 0.8125rem; font-weight: 600; text-align: center; box-shadow: 0 8px 20px -8px rgba(37, 99, 235, 0.6); pointer-events: none; }
+.insp-neu__fantasma { position: fixed; z-index: 1000; pointer-events: none; transform: translate(-50%, -130%); padding: 4px 12px; border-radius: var(--r-full); background: #2563eb; color: #ffffff; font-size: 0.8125rem; font-weight: 700; box-shadow: 0 8px 20px -8px rgba(37, 99, 235, 0.6); white-space: nowrap; }
+
+/* Zona de retiro señalada durante un arrastre: se agranda y se marca */
+.insp-alm__caja { transition: transform 0.18s ease, box-shadow 0.18s ease; }
+.insp-alm__caja--papelera.insp-alm__caja--sobre { transform: scale(1.02); box-shadow: inset 0 0 0 2px var(--red-ink), 0 0 0 3px var(--red-tint); }
+.insp-alm__caja--reencauche.insp-alm__caja--sobre { transform: scale(1.02); box-shadow: inset 0 0 0 2px var(--amber-ink), 0 0 0 3px var(--amber-tint); }
+@media (prefers-reduced-motion: reduce) { .insp-alm__caja { transition: none; } }
+
+/* Los cuatro grupos de almacén: conteo y lista de solo lectura */
+.insp-alm__conteo { display: inline-flex; align-items: center; justify-content: center; min-width: 1.5rem; height: 1.25rem; padding: 0 6px; margin-left: 4px; border-radius: var(--r-full); background: var(--fill); color: var(--label); font-size: 0.6875rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.insp-alm__lista { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; max-height: 150px; overflow-y: auto; }
+.insp-alm__item { display: flex; flex-direction: column; gap: 1px; padding: 4px 8px; border-radius: var(--r-md); background: var(--fill); font-size: 0.75rem; }
+.insp-alm__item strong { font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
+.insp-alm__item span { color: var(--label-2); }

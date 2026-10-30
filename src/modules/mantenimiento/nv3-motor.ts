@@ -8,11 +8,24 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import type { LlantaDato } from './NeumaticosEsquema';
 import type { SondaPosicion } from './ntb-arrastre';
 import {
-  ANCHO_LLANTA, CAMPO_VISION, COLOR_NEON, RADIO_LLANTA, Recursos, anilloLlanta, construirCamion, giroLetreroIsometria,
+  ALTURA_EJE, ANCHO_LLANTA, CAMPO_VISION, COLOR_NEON, RADIO_LLANTA, Recursos, anilloLlanta, construirCamion, giroLetreroIsometria,
   liberarCamion, limitesCamion, marcoLlanta, poseCenital, poseIsometrica, poseLateral, type Camion3D, type Llanta3D,
 } from './nv3-escena';
 
 export type ModoVista = 'plano' | 'isometria';
+
+/**
+ * Arrastre de una llanta desde la hoja de inspección: se levanta, sigue el puntero y, al soltar, vuelve a su eje
+ * o se acomoda en la posición de destino. Solo funciona en Plano (en Isometría la cámara gira con el dedo).
+ */
+export interface ArrastreLlanta {
+  /** Levanta la llanta de esa posición; false si no se puede */
+  levantar: (posicion: string) => boolean;
+  /** Lleva la llanta levantada bajo el puntero (coordenadas de pantalla) */
+  mover: (x: number, y: number) => void;
+  /** Suelta: con destino (otra posición) se acomoda en su eje y luego llama a alTerminar; sin destino vuelve a su eje */
+  soltar: (destino: string | null, alTerminar?: () => void) => void;
+}
 
 export interface OpcionesMotor {
   contenedor: HTMLElement;
@@ -22,6 +35,8 @@ export interface OpcionesMotor {
   onPerdida: () => void;
   /** Recibe la sonda que dice qué posición hay bajo un punto de la pantalla (para soltar llantas) */
   sondaRef?: { current: SondaPosicion | null };
+  /** Recibe el control de arrastre (levantar, mover, soltar) para la hoja que lo pida */
+  arrastreRef?: { current: ArrastreLlanta | null };
 }
 
 interface Pose { pos: THREE.Vector3; objetivo: THREE.Vector3; fov: number }
@@ -32,6 +47,11 @@ const DURACION_ANIM_MS = 800;
 const UMBRAL_CLIC_PX = 6;
 /** Pulsos por segundo del neón de la llanta seleccionada */
 const PULSOS_POR_SEG = 1.6;
+/** Arrastre: escala y altura de la llanta levantada, y duración de la subida y de la vuelta (ms) */
+const ESCALA_LEVANTADA = 1.15;
+const ELEVACION_LEVANTADA = 0.5;
+const DURACION_LEVANTAR_MS = 160;
+const DURACION_SOLTAR_MS = 200;
 
 const normal = (p: string) => String(p).trim().toUpperCase();
 
@@ -75,6 +95,15 @@ export class MotorNeumaticos {
   private inicioClic: { x: number; y: number } | null = null;
   private raf = 0;
   private destruido = false;
+  /** Llanta que se arrastra (levantada) y su posición de origen */
+  private levantada: { llanta: Llanta3D; origen: THREE.Vector3; t0: number } | null = null;
+  /** Llantas que vuelven a su eje o van al destino tras soltarlas */
+  private vueltas: Array<{ llanta: Llanta3D; desde: THREE.Vector3; hasta: THREE.Vector3; escala: number; t0: number; alTerminar?: () => void }> = [];
+  /** Plano del piso de la llanta levantada: por ahí se sigue el puntero */
+  private readonly planoArrastre = new THREE.Plane(new THREE.Vector3(0, 1, 0), -ALTURA_EJE);
+  private readonly punto = new THREE.Vector3();
+  /** Control del arrastre que se entrega a la hoja (si la pidió) */
+  private readonly arrastre: ArrastreLlanta;
 
   /** Qué posición hay bajo un punto de la pantalla (o null) */
   readonly sonda: SondaPosicion = (x, y) => this.posicionBajo(x, y);
@@ -165,6 +194,12 @@ export class MotorNeumaticos {
     this.controles.addEventListener('change', this.arrancar);
 
     if (opciones.sondaRef) opciones.sondaRef.current = this.sonda;
+    this.arrastre = {
+      levantar: posicion => this.levantar(posicion),
+      mover: (x, y) => this.moverLevantada(x, y),
+      soltar: (destino, alTerminar) => this.soltarLevantada(destino, alTerminar),
+    };
+    if (opciones.arrastreRef) opciones.arrastreRef.current = this.arrastre;
 
     this.observador = new ResizeObserver(this.ajustar);
     this.observador.observe(this.contenedor);
@@ -174,6 +209,9 @@ export class MotorNeumaticos {
   /** Reconstruye el camión (configuración, llantas, marca). La cámara solo se encuadra al cambiar la configuración. */
   setDatos(configuracion: string, llantas: LlantaDato[], marca: string | null, _esCamion = false) {
     if (this.destruido) return;
+    // Si se reconstruye el camión, las llantas en movimiento dejan de existir: se acomodan antes
+    this.terminarVueltas();
+    this.levantada = null;
     if (this.camion) {
       liberarCamion(this.camion);
       this.camion = null;
@@ -243,6 +281,9 @@ export class MotorNeumaticos {
     this.controles.removeEventListener('change', this.arrancar);
     this.controles.dispose();
     if (this.opciones.sondaRef && this.opciones.sondaRef.current === this.sonda) this.opciones.sondaRef.current = null;
+    if (this.opciones.arrastreRef && this.opciones.arrastreRef.current === this.arrastre) this.opciones.arrastreRef.current = null;
+    this.levantada = null;
+    this.vueltas = [];
     if (this.camion) liberarCamion(this.camion);
     this.recursos.dispose();
     this.geometriaMarco.dispose();
@@ -369,6 +410,31 @@ export class MotorNeumaticos {
       if (this.controles.update()) seguir = true;
       this.limitarObjetivo();
     }
+    // Arrastre: la llanta levantada crece y sube; las que vuelven a su eje o van al destino se acomodan
+    if (this.levantada) {
+      const l = this.levantada;
+      const k = Math.min(1, (performance.now() - l.t0) / DURACION_LEVANTAR_MS);
+      const e = 1 - Math.pow(1 - k, 3);
+      l.llanta.grupo.scale.setScalar(1 + (ESCALA_LEVANTADA - 1) * e);
+      l.llanta.grupo.position.y = ALTURA_EJE + ELEVACION_LEVANTADA * e;
+      if (k < 1) seguir = true;
+    }
+    if (this.vueltas.length) {
+      const ahora = performance.now();
+      this.vueltas = this.vueltas.filter(v => {
+        const k = Math.min(1, (ahora - v.t0) / DURACION_SOLTAR_MS);
+        const e = suavizar(k);
+        v.llanta.grupo.position.lerpVectors(v.desde, v.hasta, e);
+        v.llanta.grupo.scale.setScalar(v.escala + (1 - v.escala) * e);
+        if (k < 1) {
+          seguir = true;
+          return true;
+        }
+        v.llanta.grupo.scale.setScalar(1);
+        v.alTerminar?.();
+        return false;
+      });
+    }
     if (this.parpadeo) {
       this.pulsar(performance.now());
       seguir = true;
@@ -439,8 +505,74 @@ export class MotorNeumaticos {
     if (!r.width || x < r.left || x > r.right || y < r.top || y > r.bottom) return null;
     this.ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
     this.rayo.setFromCamera(this.ndc, this.camara);
-    const golpe = this.rayo.intersectObjects(this.camion.cauchos, false)[0];
+    // La llanta levantada no cuenta: si no, tapa la posición que hay debajo del puntero
+    const alzada = this.levantada?.llanta.posicion;
+    const cauchos = alzada ? this.camion.cauchos.filter(c => c.userData.posicion !== alzada) : this.camion.cauchos;
+    const golpe = this.rayo.intersectObjects(cauchos, false)[0];
     return golpe ? String(golpe.object.userData.posicion) : null;
+  }
+
+  // ── Arrastre de una llanta (hoja de inspección) ─────────────────────────
+
+  /** Termina de golpe las vueltas en curso (acomoda las llantas y avisa a quien esperaba) */
+  private terminarVueltas() {
+    const pendientes = this.vueltas;
+    this.vueltas = [];
+    for (const v of pendientes) {
+      v.llanta.grupo.position.copy(v.hasta);
+      v.llanta.grupo.scale.setScalar(1);
+      v.alTerminar?.();
+    }
+  }
+
+  private levantar(posicion: string): boolean {
+    if (this.destruido || this.modo !== 'plano' || !this.camion) return false;
+    const llanta = this.llantaDe(posicion);
+    if (!llanta) return false;
+    // Si otra llanta seguía levantada o volviendo, se termina antes de levantar esta
+    if (this.levantada) this.soltarLevantada(null);
+    this.terminarVueltas();
+    this.levantada = { llanta, origen: llanta.grupo.position.clone(), t0: performance.now() };
+    this.aplicarMarcas();
+    this.arrancar();
+    return true;
+  }
+
+  /** La llanta levantada sigue el puntero sobre el plano del piso */
+  private moverLevantada(x: number, y: number) {
+    const l = this.levantada;
+    if (!l || this.destruido) return;
+    const r = this.canvas.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    this.ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+    this.rayo.setFromCamera(this.ndc, this.camara);
+    if (this.rayo.ray.intersectPlane(this.planoArrastre, this.punto)) {
+      l.llanta.grupo.position.x = this.punto.x;
+      l.llanta.grupo.position.z = this.punto.z;
+    }
+    this.aplicarMarcas();
+    this.arrancar();
+  }
+
+  /** Suelta la llanta: con destino se acomoda en su eje; sin destino (o igual al origen) vuelve al suyo */
+  private soltarLevantada(destino: string | null, alTerminar?: () => void) {
+    const l = this.levantada;
+    this.levantada = null;
+    if (!l || this.destruido) {
+      alTerminar?.();
+      return;
+    }
+    const otra = destino && normal(destino) !== normal(l.llanta.posicion) ? this.llantaDe(destino) : undefined;
+    const eje = otra ? otra.grupo.position : l.origen;
+    this.vueltas.push({
+      llanta: l.llanta,
+      desde: l.llanta.grupo.position.clone(),
+      hasta: new THREE.Vector3(eje.x, ALTURA_EJE, eje.z),
+      escala: l.llanta.grupo.scale.x,
+      t0: performance.now(),
+      alTerminar,
+    });
+    this.arrancar();
   }
 
   // ── Puntero ─────────────────────────────────────────────────────────────
