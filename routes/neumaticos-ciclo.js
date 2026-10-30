@@ -895,7 +895,16 @@ module.exports = function (db) {
             FROM neumaticos_hoja_vida h
             LEFT JOIN neumaticos_instalaciones i ON i.id_neumatico = h.id_neumatico AND i.fecha_out IS NULL
             ORDER BY COALESCE(h.codigo_llanta, h.id_neumatico)`);
+        // OC de cada llanta de recepción: el código SFC-R{recepción}-L… apunta a la recepción y esta a su orden de compra
+        const recepciones = [...new Set(filas.map(r => { const m = /^SFC-R(\d+)-L/.exec(String(r.id_neumatico)); return m ? Number(m[1]) : null; }).filter(Boolean))];
+        const ocPorRecepcion = new Map();
+        if (recepciones.length) {
+            const [rs] = await p.query('SELECT id, oc_id FROM recepciones_oc WHERE id IN (?)', [recepciones]);
+            rs.forEach(r => ocPorRecepcion.set(Number(r.id), r.oc_id));
+        }
         return filas.map(r => {
+            const mRec = /^SFC-R(\d+)-L/.exec(String(r.id_neumatico));
+            const ordenCompra = mRec ? (ocPorRecepcion.get(Number(mRec[1])) || null) : null;
             const almacenId = r.almacen_id == null ? null : Number(r.almacen_id);
             const compra = Number(r.costo_compra) || 0;
             const clave = situacionLlanta(r.codigo_llanta, r.estado_ciclo, almacenId, r.id_neumatico);
@@ -912,6 +921,7 @@ module.exports = function (db) {
                     almacen: NOMBRE_ALMACEN[almacenId] || null,
                     placa_actual: r.placa_montada || r.placa_actual || null,
                     gastos_compra: compra > 0 ? compra : '',
+                    orden_compra: ordenCompra,
                     situacion: SITUACION[clave],
                 },
             };

@@ -33,6 +33,7 @@ export interface LlantaListado {
   almacen: string | null;
   placa_actual: string | null;
   gastos_compra: number | '';     // '' = sin dato de compra
+  orden_compra?: string | null;   // OC de la recepción que dio de alta la llanta (si es de recepción)
   situacion: string;              // texto legible (ver TONO_SITUACION)
 }
 
@@ -71,7 +72,7 @@ const TONO_SITUACION: Record<string, Tono> = {
   'Código provisional': 'gris',
 };
 
-const ENCABEZADOS_EXCEL = ['Neumático', 'Vida actual', 'Medida', 'Vehículo actual', 'Gastos de compra', 'Situación'];
+const ENCABEZADOS_EXCEL = ['Neumático', 'Vida actual', 'Medida', 'Vehículo actual', 'Gastos de compra', 'Orden de compra', 'Situación'];
 
 const COLUMNAS: ColumnaTabla[] = [
   { id: 'sel', titulo: '', ancho: 48, minimo: 44, alinear: 'center' },
@@ -80,6 +81,7 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'medida', titulo: 'Medida', ancho: 160 },
   { id: 'vehiculo', titulo: 'Vehículo actual', ancho: 150 },
   { id: 'gastos', titulo: 'Gastos de compra', ancho: 160, alinear: 'right' },
+  { id: 'orden', titulo: 'Orden de compra', ancho: 150 },
   { id: 'situacion', titulo: 'Situación', ancho: 200 },
   { id: 'acciones', titulo: 'Acciones', ancho: 96, minimo: 80, alinear: 'center' },
 ];
@@ -337,7 +339,7 @@ export function NeumaticosListado() {
     try {
       // Exporta lo que se ve: las filas actuales del listado (con el filtro y la búsqueda aplicados)
       await exportarExcel('Neumaticos', 'Neumáticos', ENCABEZADOS_EXCEL, filas.map(l => [
-        l.codigo, vidaTexto(l.vida), l.medida ?? '', l.placa_actual ?? '', l.gastos_compra, l.situacion,
+        l.codigo, vidaTexto(l.vida), l.medida ?? '', l.placa_actual ?? '', l.gastos_compra, l.orden_compra ?? '', l.situacion,
       ]));
     } catch (e) {
       setErrorExcel(`No se pudo exportar: ${String(e)}`);
@@ -443,6 +445,7 @@ export function NeumaticosListado() {
               <Celda mono>{l.medida || '—'}</Celda>
               <Celda mono>{l.placa_actual || '—'}</Celda>
               <Celda alinear="right" mono>{gastosTexto(l.gastos_compra)}</Celda>
+              <Celda mono>{l.orden_compra || '—'}</Celda>
               <Celda><SituacionChip texto={l.situacion} /></Celda>
               <Celda alinear="center">
                 <Button variant="plain" size="sm" iconOnly icon={<ChevronRight size={16} />}
