@@ -5,10 +5,9 @@ import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { BarChart3, LayoutGrid } from 'lucide-react';
-import { ArrowUpRight, Briefcase, FileSpreadsheet, FileText, Gauge, MapPin, MessageCircle, Navigation, Pencil, Plus, RefreshCw, SearchX, Trash2, Wrench } from 'lucide-react';
+import { Briefcase, FileSpreadsheet, FileText, Gauge, MapPin, MessageCircle, Navigation, Pencil, Plus, RefreshCw, SearchX, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { MenuOtros } from '../../core/ui/MenuOtros';
 import { ChoiceChips } from '../../core/ui/Chips';
 import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
@@ -20,7 +19,7 @@ import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
 import { spring } from '../../core/lib/motion';
-import { abrirClasico } from '../../core/layout/navigation';
+import { DisponibilidadGraficos } from './DisponibilidadGraficos';
 import { estadoDispColor, useDisponibilidad, useUbicacionesGps, type UbicacionGps, type VehiculoDisponibilidad } from './api';
 import { DisponibilidadFormulario } from './DisponibilidadFormulario';
 import { compartirDisponibilidadPDF, descargarDisponibilidadPDF } from './disponibilidadReporte';
@@ -64,6 +63,7 @@ export function DisponibilidadPage() {
   const [filtro, setFiltro] = useState<Filtro>('Todos');
   const [empresa, setEmpresa] = useState('TODAS');
   const [vista, setVista] = useState<'tablero' | 'graficos'>('tablero');
+  const [subtipo, setSubtipo] = useState<string | null>(null);
   const [filtrando, setFiltrando] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [seleccionado, setSeleccionado] = useState<VehiculoDisponibilidad | null>(null);
@@ -197,9 +197,6 @@ export function DisponibilidadPage() {
               disabled={!visibles.length} onClick={pdf} />
             <Button variant="plain" className="btn--icono btn--icono-excel" icon={<FileSpreadsheet size={18} />} aria-label="Exportar Excel" title="Exportar Excel"
               disabled={!visibles.length} onClick={excel} />
-            <MenuOtros opciones={[
-              { label: 'GPS, conductores y reportes', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('flota/disponibilidad') },
-            ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ veh: null })}>Registrar unidad</Button>}
           </div>
         }
@@ -250,18 +247,7 @@ export function DisponibilidadPage() {
                 : 'No hay vehículos para los filtros actuales.'}
             </EmptyState>
           ) : vista === 'graficos' ? (
-            <div className="disp-tabla-wrap">
-              <table className="disp-matriz">
-                <thead>
-                  <tr><th>Sub tipo de unidad</th><th>Total</th><th>En base</th><th>En ruta</th><th>En mantenimiento</th></tr>
-                </thead>
-                <tbody>
-                  {matriz.map(([nombre, f]) => (
-                    <tr key={nombre}><td>{nombre}</td><td>{f.total}</td><td>{f.base}</td><td>{f.ruta}</td><td>{f.mantenimiento}</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DisponibilidadGraficos filas={matriz} titulo={nombreDeEmpresa || 'TOTAL FLOTA'} subtipo={subtipo} onElegirSubtipo={setSubtipo} />
           ) : (
             <>
               {/* Escritorio: tabla */}

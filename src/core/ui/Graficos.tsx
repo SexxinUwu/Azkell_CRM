@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Bar, BarChart, Cell, LabelList, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, Cell, LabelList, Legend, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 export interface Porcion { nombre: string; valor: number; color: string }
 
@@ -94,6 +94,32 @@ export function HorasEficienciaGrafico({ tecnicos, proyectadas }: {
           <Bar dataKey="reales" name="Horas reales" fill={color} radius={6} isAnimationActive={false} barSize={18}>
             <LabelList dataKey="etiqueta" position="right" fill={texto} style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12 }} />
           </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+export interface SerieAgrupada { clave: string; nombre: string; color: string; valores: number[] }
+
+/** Barras agrupadas: una categoría por grupo (p. ej. subtipo) y una barra por serie (p. ej. estado). Cifras encima de cada barra. */
+export function BarrasAgrupadasGrafico({ categorias, series, altura = 300 }: { categorias: string[]; series: SerieAgrupada[]; altura?: number }) {
+  const colores = useColores(series.map(s => s.color));
+  const [texto, secundario, fondo] = useColores(['var(--label-1)', 'var(--label-2)', 'var(--fill-2)']);
+  const datos = categorias.map((c, i) => Object.fromEntries([['categoria', c], ...series.map(s => [s.clave, s.valores[i] ?? 0])]));
+  return (
+    <div style={{ width: '100%', height: altura }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={datos} margin={{ top: 18, right: 8, bottom: 0, left: 0 }}>
+          <XAxis dataKey="categoria" tickLine={false} axisLine={false} interval={0} tick={{ fill: secundario, fontSize: 12, fontWeight: 600 }} />
+          <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={32} tick={{ fill: secundario, fontSize: 11 }} />
+          <Tooltip cursor={{ fill: fondo }} />
+          <Legend wrapperStyle={{ fontSize: 12, fontWeight: 700 }} />
+          {series.map((s, i) => (
+            <Bar key={s.clave} dataKey={s.clave} name={s.nombre} fill={colores[i]} radius={[5, 5, 0, 0]} isAnimationActive={false}>
+              <LabelList dataKey={s.clave} position="top" fill={texto} style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 11 }} />
+            </Bar>
+          ))}
         </BarChart>
       </ResponsiveContainer>
     </div>
