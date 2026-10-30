@@ -62,7 +62,8 @@ export function RegistrarInspeccionPage({ editar = null }: { editar?: Inspeccion
   // Fotos guardadas en S3: se firman para verlas; al guardar se conserva la URL original
   const urlsFotos = Object.values(resp).map(r => r.foto).filter(f => f.startsWith('https://') && f.includes('.s3.'));
   const firmadas = useFotosFirmadas(urlsFotos).data ?? {};
-  const fotoSrc = (f: string) => firmadas[f] ?? f;
+  // Igual que la ficha: una foto de S3 solo se pide con su enlace firmado
+  const fotoSrc = (f: string) => (f.includes('.s3.') ? (firmadas[f] ?? '') : f);
 
   const secciones = esquema.data ?? [];
   const totalPasos = secciones.length + 2; // unidad + sistemas + firma
@@ -299,7 +300,7 @@ export function RegistrarInspeccionPage({ editar = null }: { editar?: Inspeccion
                               <div className="wiz-foto">
                                 {r.foto ? (
                                   <>
-                                    <img src={fotoSrc(r.foto)} alt="Foto de la falla" />
+                                    {fotoSrc(r.foto) && <img src={fotoSrc(r.foto)} alt="Foto de la falla" />}
                                     <button type="button" className="placas-limpiar" onClick={() => set(k, { foto: '' })}><Trash2 size={13} style={{ verticalAlign: '-2px' }} /> Quitar foto</button>
                                   </>
                                 ) : (
@@ -341,7 +342,7 @@ export function RegistrarInspeccionPage({ editar = null }: { editar?: Inspeccion
                           <div className="row__title">{it.label}</div>
                           <div className="row__subtitle row__subtitle--wrap">{[s.titulo, r?.observacion].filter(Boolean).join(' · ') || s.titulo}</div>
                         </div>
-                        {r?.foto && <span className="insp-foto"><img src={fotoSrc(r.foto)} alt="" /></span>}
+                        {r?.foto && fotoSrc(r.foto) && <span className="insp-foto"><img src={fotoSrc(r.foto)} alt="" /></span>}
                       </div>
                     ))}
                   </div>

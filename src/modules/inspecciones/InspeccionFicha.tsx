@@ -49,10 +49,11 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
 
   const fotos = useMemo(() => [...(i?.puntos.map(p => p.foto).filter(Boolean) ?? []), i?.firma ?? ''].filter(Boolean), [i]);
   const firmadas = useFotosFirmadas(fotos);
-  const ver = (url: string) => firmadas.data?.[url] ?? url;
+  // Las fotos de S3 solo se muestran con su enlace firmado: sin firma todavía, no se pide la dirección pública (daría 403)
+  const ver = (url: string) => (url.includes('.s3.') ? (firmadas.data?.[url] ?? '') : url);
   // Abre el visor con todas las fotos de la inspección, empezando por la tocada
   const abrirFoto = (foto: string) => {
-    const lista: FotoVisor[] = (i?.puntos ?? []).filter(p => p.foto).map(p => ({ url: ver(p.foto), titulo: p.item }));
+    const lista: FotoVisor[] = (i?.puntos ?? []).filter(p => p.foto).map(p => ({ url: ver(p.foto), titulo: p.item })).filter(f => f.url);
     setVisor({ lista, i: Math.max(0, lista.findIndex(f => f.url === ver(foto))) });
   };
   // El PDF necesita las fotos ya firmadas: si todavía se están firmando, los botones esperan
@@ -245,7 +246,7 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
                       </div>
                       {p.foto && (
                         <button type="button" className="insp-foto pressable" onClick={() => abrirFoto(p.foto)} aria-label={`Ver foto de ${p.item}`}>
-                          <img src={ver(p.foto)} alt="" loading="lazy" />
+                          {ver(p.foto) && <img src={ver(p.foto)} alt="" loading="lazy" />}
                         </button>
                       )}
                     </div>
@@ -257,7 +258,7 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
             {i.firma && (
               <section className="ficha__grupo">
                 <div className="list__header">Firma</div>
-                <div className="insp-firma"><img src={ver(i.firma)} alt="Firma del técnico" /></div>
+                <div className="insp-firma">{ver(i.firma) && <img src={ver(i.firma)} alt="Firma del técnico" />}</div>
               </section>
             )}
           </div>
