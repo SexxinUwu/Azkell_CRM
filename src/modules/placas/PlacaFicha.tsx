@@ -1,12 +1,11 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { ArrowUpRight, History, Pencil, Printer, Trash2 } from 'lucide-react';
+import { History, Pencil, Printer, Trash2 } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { useToast } from '../../core/ui/Toast';
@@ -99,10 +98,8 @@ export function PlacaFicha({ placa, onClose, onEditar, onEliminar }: { placa: Pl
           ) : (
             <Button variant="secondary" onClick={onClose}>Cerrar</Button>
           )}
-          {onEditar && p ? (
+          {onEditar && p && (
             <Button variant="primary" icon={<Pencil size={16} />} onClick={() => onEditar(p)}>Editar</Button>
-          ) : (
-            <Button variant="secondary" icon={<ArrowUpRight size={16} />} onClick={() => abrirClasico('flota/placas')}>Versión actual</Button>
           )}
         </>
       }

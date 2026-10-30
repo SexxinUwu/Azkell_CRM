@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Check, CheckSquare, Container, Download, FileSpreadsheet, FileText, LayoutGrid, List, MessageCircle, Plus, SearchX, SlidersHorizontal, Trash2, Truck, X } from 'lucide-react';
+import { Check, CheckSquare, Container, Download, FileSpreadsheet, FileText, LayoutGrid, List, MessageCircle, Plus, SearchX, SlidersHorizontal, Trash2, Truck, X } from 'lucide-react';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { MenuOtros } from '../../core/ui/MenuOtros';
@@ -15,7 +15,6 @@ import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 import { eliminarPlacas, usePlacas, type Placa } from './api';
 import { FILTROS_VACIOS, cuentaFiltros, describirFiltros, filtrarPlacas, type Clase, type FiltrosPlacas } from './filtros';
 import { compartirReportePDF, descargarReportePDF, exportarPlacasExcel } from './reporte';
@@ -142,7 +141,6 @@ export function PlacasPage() {
               { label: 'Exportar a Excel', detalle: 'Las unidades que ves con los filtros', icon: <FileSpreadsheet size={17} />, separado: true, disabled: !visibles.length, onSelect: excel },
               { label: 'Reporte en PDF', detalle: 'Descarga el reporte de lo filtrado', icon: <FileText size={17} />, disabled: !visibles.length, onSelect: pdf },
               { label: 'Enviar por WhatsApp', detalle: 'Comparte el PDF del reporte', icon: <MessageCircle size={17} />, disabled: !visibles.length, onSelect: whatsapp },
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('flota/placas') },
             ]} />
             {puedeCrear && (
               <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ modo: 'crear', placa: null })}>Nueva placa</Button>
