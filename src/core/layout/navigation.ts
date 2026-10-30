@@ -2,10 +2,8 @@
 // Dashboard, Operaciones, Operaciones Marsisa, Flota, Mantenimiento, Almacén, Gerencia, RRHH,
 // Tesorería, Conductor, Seguridad, Directorio y Configuración.
 //
-// Mientras dure la migración, cada pantalla es de uno de dos tipos:
-//   - nueva   (`to`):     ruta de la app nueva, registrada en src/App.tsx
-//   - actual  (`clasico`): ruta de la versión actual (cargarModuloAislado). Se abre en la app
-//                         actual con la misma sesión. Al migrar una pantalla, se cambia `clasico` por `to`.
+// Cada pantalla del menú es una ruta de la app nueva (`to`), registrada en src/App.tsx o en el rutas.ts de su módulo.
+// Las guías SUNAT abren su pantalla React; la emisión masiva y la configuración siguen en la versión actual (enlace dentro de esa pantalla).
 //
 // Un elemento con `children` es un grupo desplegable (submenú). Un elemento con `pronto` todavía no
 // existe en la app: se muestra deshabilitado con "Pronto" y solo lo ven los administradores.
@@ -22,8 +20,6 @@ export interface NavItem {
   icon: LucideIcon;
   /** Ruta de la app nueva */
   to?: string;
-  /** Ruta de la versión actual (se abre allí) */
-  clasico?: string;
   /** Visible si tiene al menos uno (vacío = cualquiera con sesión) */
   permissions: string[];
   /** Solo en el subdominio de esa empresa (pantallas propias de una empresa) */
@@ -74,14 +70,14 @@ const SECCIONES_BASE: NavSection[] = [
     title: 'Operaciones',
     items: [
       { key: 'programacion', label: 'Programación', to: '/operaciones/programacion', icon: CalendarDays, permissions: ver('op_programacion', 'op_guias_remision', 'guias_remision') },
-      { key: 'ordenes-viaje', noEmpresa: 'marsisa', label: 'Órdenes de viaje', clasico: 'operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'guias_remision', 'op_guias_remision') },
+      { key: 'ordenes-viaje', noEmpresa: 'marsisa', label: 'Órdenes de viaje', to: '/operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'guias_remision', 'op_guias_remision') },
       { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: ScrollText, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'guias_remision') },
       { key: 'reporte-viajes', label: 'Reporte de viajes', to: '/operaciones/reporte-viajes', icon: BarChart3, permissions: ver('op_reporte_viajes') },
       {
         key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [],
         children: [
-          { key: 'guias-remitente', label: 'Guía de remisión electrónica (remitente)', clasico: 'operaciones/guia-remitente', icon: FileText, permissions: ver('op_guias_remision', 'guias_remision') },
-          { key: 'guias-transportista', label: 'Guía de remisión de transportista', clasico: 'operaciones/guia-transportista', icon: FileText, permissions: ver('op_guias_remision', 'guias_remision') },
+          { key: 'guias-remitente', label: 'Guía de remisión electrónica (remitente)', to: '/operaciones/guias-remitente', icon: FileText, permissions: ver('op_guias_remision', 'guias_remision') },
+          { key: 'guias-transportista', label: 'Guía de remisión de transportista', to: '/operaciones/guias-transportista', icon: FileText, permissions: ver('op_guias_remision', 'guias_remision') },
         ],
       },
       {
@@ -91,7 +87,7 @@ const SECCIONES_BASE: NavSection[] = [
           { key: 'matriz-combustible', noEmpresa: 'marsisa', label: 'Matriz de combustible (D2)', to: '/operaciones/matriz-combustible', icon: Target, permissions: ver('combustible_analisis', 'combustible') },
           { key: 'analisis-combustible', noEmpresa: 'marsisa', label: 'Análisis de combustible (D2)', to: '/operaciones/analisis-combustible', icon: Gauge, permissions: ver('combustible_analisis', 'combustible') },
           { key: 'urea', noEmpresa: 'marsisa', label: 'Análisis de urea', to: '/operaciones/urea', icon: Droplet, permissions: ver('urea_analisis', 'combustible_analisis', 'combustible') },
-          { key: 'estaciones', label: 'Estaciones de proveedores', clasico: 'operaciones/combustible-estaciones', icon: MapPin, permissions: ver('combustible_vales', 'combustible') },
+          { key: 'estaciones', label: 'Estaciones de proveedores', to: '/operaciones/combustible-estaciones', icon: MapPin, permissions: ver('combustible_vales', 'combustible') },
         ],
       },
     ],
@@ -99,7 +95,7 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Operaciones Marsisa',
     items: [
-      { key: 'marsisa-ordenes-viaje', label: 'Órdenes de viaje (Marsisa)', clasico: 'operaciones/marsisa-ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'guias_remision', 'op_guias_remision'), soloEmpresa: 'marsisa' },
+      { key: 'marsisa-ordenes-viaje', label: 'Órdenes de viaje (Marsisa)', to: '/operaciones/marsisa-ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'guias_remision', 'op_guias_remision'), soloEmpresa: 'marsisa' },
       {
         key: 'marsisa-combustible-grupo', label: 'Combustible Marsisa', icon: Fuel, permissions: [], soloEmpresa: 'marsisa',
         children: [
@@ -127,10 +123,10 @@ const SECCIONES_BASE: NavSection[] = [
     title: 'Mantenimiento',
     items: [
       { key: 'mant-dashboard', label: 'Dashboard mantenimiento', to: '/mantenimiento/dashboard', icon: LayoutDashboard, permissions: ver('mant_dashboard', 'dashboard', 'status_rampa', 'checklist') },
-      { key: 'status-rampa', label: 'Status de rampa', clasico: 'mantenimiento/status-rampa', icon: Wrench, permissions: ver('status_rampa') },
+      { key: 'status-rampa', label: 'Status de rampa', to: '/mantenimiento/status-rampa', icon: Wrench, permissions: ver('status_rampa') },
       { key: 'inspecciones', label: 'Análisis de inspecciones', to: '/inspecciones', icon: ClipboardList, permissions: ver('insp') },
       { key: 'fleetrun', label: 'Mantenimiento preventivo (Fleetrun)', to: '/mantenimiento/fleetrun', icon: Gauge, permissions: ver('fleetrun', 'fleet') },
-      { key: 'reportes-ot', label: 'Reportes OT', clasico: 'mantenimiento/reportes-ot', icon: ScrollText, permissions: ver('reportes_ot', 'ot') },
+      { key: 'reportes-ot', label: 'Reportes OT', to: '/mantenimiento/reportes-ot', icon: ScrollText, permissions: ver('reportes_ot', 'ot') },
       { key: 'trabajos-ot', label: 'Historial de trabajos', to: '/mantenimiento/trabajos-ot', icon: History, permissions: ver('trabajos_ot') },
       {
         key: 'neumaticos-grupo', label: 'Neumáticos', icon: Disc3, permissions: [],
@@ -149,75 +145,75 @@ const SECCIONES_BASE: NavSection[] = [
     title: 'Almacén',
     items: [
       { key: 'almacen-dashboard', label: 'Dashboard', to: '/almacen/dashboard', icon: BarChart3, permissions: ver('inv') },
-      { key: 'inventario', label: 'Inventario', clasico: 'almacen/inventario', icon: Boxes, permissions: ver('inv') },
-      { key: 'entradas', label: 'Órdenes de compra', clasico: 'almacen/entradas', icon: PackagePlus, permissions: ver('ent_inv') },
-      { key: 'recepcion', label: 'Recepción de compras', clasico: 'almacen/recepcion-compras', icon: PackagePlus, permissions: ver('rec_compras', 'ent_inv', 'inv') },
+      { key: 'inventario', label: 'Inventario', to: '/almacen/inventario', icon: Boxes, permissions: ver('inv') },
+      { key: 'entradas', label: 'Órdenes de compra', to: '/almacen/entradas', icon: PackagePlus, permissions: ver('ent_inv') },
+      { key: 'recepcion', label: 'Recepción de compras', to: '/almacen/recepcion-compras', icon: PackagePlus, permissions: ver('rec_compras', 'ent_inv', 'inv') },
       { key: 'salidas', label: 'Órdenes de salida', to: '/almacen/salidas', icon: PackageMinus, permissions: ver('sal_inv') },
-      { key: 'kardex', label: 'Kardex', clasico: 'almacen/kardex', icon: History, permissions: ver('kardex') },
-      { key: 'proveedores', label: 'Proveedores', clasico: 'almacen/proveedores', icon: Warehouse, permissions: ver('prov_inv') },
+      { key: 'kardex', label: 'Kardex', to: '/almacen/kardex', icon: History, permissions: ver('kardex') },
+      { key: 'proveedores', label: 'Proveedores', to: '/almacen/proveedores', icon: Warehouse, permissions: ver('prov_inv') },
       { key: 'almacen-otros', label: 'Otros', to: '/almacen/otros', icon: Layers, permissions: [] },
     ],
   },
   {
     title: 'Gerencia',
     items: [
-      { key: 'aprobaciones-oc', label: 'Aprobación de O/C', clasico: 'gerencia/aprobaciones-oc', icon: ClipboardCheck, permissions: ver('gerencia'), badge: 'aprob-oc' },
-      { key: 'aprobaciones-caja', label: 'Aprobación de caja', clasico: 'gerencia/aprobaciones-caja', icon: ClipboardCheck, permissions: ver('gerencia'), badge: 'aprob-caja' },
+      { key: 'aprobaciones-oc', label: 'Aprobación de O/C', to: '/gerencia/aprobaciones-oc', icon: ClipboardCheck, permissions: ver('gerencia'), badge: 'aprob-oc' },
+      { key: 'aprobaciones-caja', label: 'Aprobación de caja', to: '/gerencia/aprobaciones-caja', icon: ClipboardCheck, permissions: ver('gerencia'), badge: 'aprob-caja' },
     ],
   },
   {
     title: 'RRHH',
     items: [
       { key: 'personal', label: 'Gestión de personal', to: '/directorio/personal', icon: Contact, permissions: ver('rrhh_personal') },
-      { key: 'asistencia', label: 'Asistencia y turnos', clasico: 'rrhh/asistencia', icon: ClipboardCheck, permissions: ver('rrhh_asistencia') },
-      { key: 'nomina', label: 'Nómina y pagos', clasico: 'rrhh/nomina', icon: Banknote, permissions: ver('rrhh_nomina') },
+      { key: 'asistencia', label: 'Asistencia y turnos', to: '/personas/asistencia', icon: ClipboardCheck, permissions: ver('rrhh_asistencia') },
+      { key: 'nomina', label: 'Nómina y pagos', to: '/personas/nomina', icon: Banknote, permissions: ver('rrhh_nomina') },
     ],
   },
   {
     title: 'Tesorería',
     items: [
-      { key: 'caja', label: 'Caja', clasico: 'tesoreria/caja', icon: Banknote, permissions: ver('tesoreria_caja') },
+      { key: 'caja', label: 'Caja', to: '/tesoreria/caja', icon: Banknote, permissions: ver('tesoreria_caja') },
       { key: 'pago-requerimientos', label: 'Pago de requerimientos', to: '/tesoreria/pago-requerimientos', icon: Wallet, permissions: ver('tesoreria_caja', 'tesoreria_pagos') },
       { key: 'movimientos', label: 'Movimientos', to: '/tesoreria/movimientos', icon: ArrowLeftRight, permissions: ver('tesoreria_caja', 'tesoreria_movimientos') },
       { key: 'liquidaciones', label: 'Liquidación de gastos', to: '/tesoreria/liquidaciones', icon: ScrollText, permissions: ver('tesoreria_liquidaciones') },
-      { key: 'cuentas', label: 'Cuentas por cobrar y pagar', clasico: 'tesoreria/cuentas', icon: FileText, permissions: ver('tesoreria_cuentas') },
-      { key: 'bancos', label: 'Bancos', clasico: 'tesoreria/bancos', icon: Landmark, permissions: ver('tesoreria_bancos', 'tesoreria_caja') },
-      { key: 'centros-costos', label: 'Centros de costos', clasico: 'tesoreria/centros-costos', icon: Boxes, permissions: ver('tesoreria_centros_costos', 'tesoreria_caja') },
-      { key: 'flujo-caja', label: 'Flujo de caja', clasico: 'tesoreria/flujo-caja', icon: BarChart3, permissions: ver('tesoreria_caja') },
+      { key: 'cuentas', label: 'Cuentas por cobrar y pagar', to: '/tesoreria/cuentas', icon: FileText, permissions: ver('tesoreria_cuentas') },
+      { key: 'bancos', label: 'Bancos', to: '/tesoreria/bancos', icon: Landmark, permissions: ver('tesoreria_bancos', 'tesoreria_caja') },
+      { key: 'centros-costos', label: 'Centros de costos', to: '/tesoreria/centros-costos', icon: Boxes, permissions: ver('tesoreria_centros_costos', 'tesoreria_caja') },
+      { key: 'flujo-caja', label: 'Flujo de caja', to: '/tesoreria/flujo-caja', icon: BarChart3, permissions: ver('tesoreria_caja') },
     ],
   },
   {
     title: 'Conductor',
     items: [
-      { key: 'conductor-portal', label: 'Mi viaje y rendición', clasico: 'operaciones/conductor-portal', icon: IdCard, permissions: ver('conductor_portal') },
+      { key: 'conductor-portal', label: 'Mi viaje y rendición', to: '/personas/portal-conductor', icon: IdCard, permissions: ver('conductor_portal') },
     ],
   },
   {
     title: 'Seguridad',
     items: [
-      { key: 'seg-unidades', label: 'Checklist "Unidades"', clasico: 'seguridad/unidades', icon: ShieldCheck, permissions: ver('seguridad_unidades', 'seg_unidades', 'seg_checklist') },
-      { key: 'seg-status', label: 'Status "Unidades en Base"', clasico: 'seguridad/unidades-base', icon: MapPin, permissions: ver('seguridad_unidades', 'seg_unidades') },
+      { key: 'seg-unidades', label: 'Checklist "Unidades"', to: '/personas/seg-unidades', icon: ShieldCheck, permissions: ver('seguridad_unidades', 'seg_unidades', 'seg_checklist') },
+      { key: 'seg-status', label: 'Status "Unidades en Base"', to: '/seguridad/unidades-base', icon: MapPin, permissions: ver('seguridad_unidades', 'seg_unidades') },
     ],
   },
   {
     title: 'Directorio',
     items: [
       { key: 'conductores', label: 'Personal (conductores)', to: '/conductores', icon: IdCard, permissions: ver('cond') },
-      { key: 'clientes', label: 'Clientes', clasico: 'directorio/clientes', icon: Users, permissions: ver('clientes') },
+      { key: 'clientes', label: 'Clientes', to: '/directorio/clientes', icon: Users, permissions: ver('clientes') },
     ],
   },
   {
     title: 'Configuración',
     items: [
-      { key: 'usuarios', label: 'Usuarios', clasico: 'sistema/usuarios', icon: UserCog, permissions: ver('usuarios') },
-      { key: 'superadmin', label: 'Empresas SaaS (SuperAdmin)', clasico: 'sistema/superadmin', icon: Building2, permissions: [], soloFundador: true },
-      { key: 'auditoria', label: 'Auditoría', clasico: 'sistema/auditoria', icon: History, permissions: ver('mod_auditoria') },
+      { key: 'usuarios', label: 'Usuarios', to: '/sistema/usuarios', icon: UserCog, permissions: ver('usuarios') },
+      { key: 'superadmin', label: 'Empresas SaaS (SuperAdmin)', to: '/sistema/superadmin', icon: Building2, permissions: [], soloFundador: true },
+      { key: 'auditoria', label: 'Auditoría', to: '/sistema/auditoria', icon: History, permissions: ver('mod_auditoria') },
       { key: 'api-gateway', label: 'API y desarrolladores', to: '/sistema/api', icon: Code, permissions: ver('administracion') },
       { key: 'empresa', label: 'Empresa', to: '/sistema/empresa', icon: Building2, permissions: ver('administracion', 'cfg_empresa') },
       { key: 'notificaciones', label: 'Notificaciones', to: '/sistema/notificaciones', icon: Bell, permissions: ver('administracion') },
       { key: 'apariencia', label: 'Apariencia', to: '/perfil', icon: Palette, permissions: [] },
       { key: 'accesibilidad', label: 'Accesibilidad e idioma', to: '/sistema/accesibilidad', icon: Accessibility, permissions: [] },
-      { key: 'integraciones', label: 'Integraciones', clasico: 'sistema/integraciones', icon: Cog, permissions: ver('integraciones', 'administracion') },
+      { key: 'integraciones', label: 'Integraciones', to: '/sistema/integraciones', icon: Cog, permissions: ver('integraciones', 'administracion') },
     ],
   },
 ];
@@ -241,7 +237,6 @@ function conModulos(base: NavSection[]): NavSection[] {
     const existente = todos.find(i => i.key === n.key && !i.children);
     if (!existente) continue;
     existente.to = n.to;
-    existente.clasico = undefined;
     existente.permissions = n.permisos;
     existente.soloEmpresa = n.soloEmpresa ?? existente.soloEmpresa;
   }
