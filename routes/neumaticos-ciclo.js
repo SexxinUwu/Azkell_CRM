@@ -724,7 +724,8 @@ module.exports = function (db) {
             configuracion,
             posiciones: detalleMontadas.map(({ posicion, llanta }) => ({ posicion, llanta })),
             disponibles: enStock
-                .filter(f => f.estado_ciclo === 'en_almacen' && ALMACENES_INSTALAR.includes(Number(f.almacen_id)))
+                // Solo las llantas con código de fuego pueden ir a una unidad; sin código están en su propia situación
+                .filter(f => f.estado_ciclo === 'en_almacen' && ALMACENES_INSTALAR.includes(Number(f.almacen_id)) && txt(f.codigo))
                 .map(aLlanta),
             reforma: enStock.filter(f => f.estado_ciclo === 'en_reencauche').map(aLlanta),
             descarte: enStock.filter(f => f.estado_ciclo === 'desechado').map(aLlanta),
