@@ -2,7 +2,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { VolverOtros } from './VolverOtros';
 import {
-  ArrowUpRight, Banknote, Boxes, ChevronDown, ChevronRight, Contact, IdCard, House, LogOut, Palette, PanelLeftClose, PanelLeftOpen, Route, Settings, Share, ShieldCheck, Truck,
+  Banknote, Boxes, ChevronDown, ChevronRight, Contact, IdCard, House, LogOut, Palette, PanelLeftClose, PanelLeftOpen, Route, Settings, Share, ShieldCheck, Truck,
   SquarePlus, Smartphone, Users, Wrench, Search, EyeOff, Star, type LucideIcon,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -22,7 +22,7 @@ import { ConnectionBanner } from './ConnectionBanner';
 import { AsistenteFab } from '../../modules/asistente/components/AsistenteFab';
 import { useLiveUpdates } from '../api/live';
 import { useNavBadges } from './useNavBadges';
-import { abrirClasico, findNavItem, homePath, visibleSections, type NavItem, type NavSection } from './navigation';
+import { findNavItem, homePath, visibleSections, type NavItem, type NavSection } from './navigation';
 import './layout.css';
 import './menu-secciones.css';
 
@@ -36,7 +36,7 @@ const COLOR_SECCION: Record<string, string> = {
 function aplanarOpciones(items: NavItem[], seccion: string): OpcionPaleta[] {
   return items.flatMap(i => (i.children
     ? aplanarOpciones(i.children, seccion)
-    : (i.to || i.clasico) ? [{ key: i.key, label: i.label, seccion, to: i.to, clasico: i.clasico, icon: i.icon }] : []));
+    : i.to ? [{ key: i.key, label: i.label, seccion, to: i.to, icon: i.icon }] : []));
 }
 
 // Pendientes de una sección: los contadores de sus opciones (y de sus submenús)
@@ -104,7 +104,6 @@ export function AppShell() {
   function elegirOpcion(o: OpcionPaleta) {
     setPaletaAbierta(false);
     if (o.to) navigate(o.to);
-    else if (o.clasico) abrirClasico(o.clasico);
   }
   const current = findNavItem(location.pathname);
   const pageTitle = location.pathname === '/perfil' ? 'Mi cuenta'
@@ -413,12 +412,11 @@ function NavEscritorio({ item, pathname, contador, nivel = 0 }: { item: NavItem;
       <span className="sidebar__texto">{item.label}</span>
       <Insignia item={item} contador={contador} className="nav-item__contador sidebar__texto" />
       {item.pronto && <span className="nav-item__tag sidebar__texto">Pronto</span>}
-      {!item.pronto && !item.to && <ArrowUpRight size={14} className="nav-item__ext sidebar__texto" aria-label="Se abre en la versión actual" />}
     </>
   );
   if (item.pronto) return <span className={`nav-item nav-item--soon nav-item--n${Math.min(nivel, 2)}`} aria-disabled="true">{contenido}</span>;
-  if (item.to) return <NavLink to={item.to} end={item.to === '/'} className={`nav-item nav-item--n${Math.min(nivel, 2)}`}>{contenido}</NavLink>;
-  return <a href="/" className={`nav-item nav-item--n${Math.min(nivel, 2)}`} onClick={e => { e.preventDefault(); abrirClasico(item.clasico!); }}>{contenido}</a>;
+  if (!item.to) return null;
+  return <NavLink to={item.to} end={item.to === '/'} className={`nav-item nav-item--n${Math.min(nivel, 2)}`}>{contenido}</NavLink>;
 }
 
 // Celular: la lista de pantallas de un módulo (los submenús salen como encabezado con sus opciones)
@@ -447,18 +445,13 @@ function FilaModulo({ item, activa, contador, onNavegar }: { item: NavItem; acti
       <Insignia item={item} contador={contador} className="nav-item__contador" />
       {item.pronto
         ? <span className="nav-item__tag">Pronto</span>
-        : item.to
-          ? <ChevronRight size={18} className="modulo-fila__flecha" />
-          : <ArrowUpRight size={16} className="modulo-fila__flecha" aria-label="Se abre en la versión actual" />}
+        : <ChevronRight size={18} className="modulo-fila__flecha" />}
     </>
   );
   if (item.pronto) return <span className="modulo-fila modulo-fila--pronto" aria-disabled="true">{contenido}</span>;
+  if (!item.to) return null;
   const clase = `modulo-fila${activa ? ' modulo-fila--activa' : ''}`;
-  return item.to ? (
-    <NavLink to={item.to} end={item.to === '/'} className={clase} onClick={onNavegar}>{contenido}</NavLink>
-  ) : (
-    <button type="button" className={clase} onClick={() => abrirClasico(item.clasico!)}>{contenido}</button>
-  );
+  return <NavLink to={item.to} end={item.to === '/'} className={clase} onClick={onNavegar}>{contenido}</NavLink>;
 }
 
 function AjusteSeccion({ section, activa, contador }: { section: NavSection; activa: string; contador: Contador }) {
@@ -466,26 +459,20 @@ function AjusteSeccion({ section, activa, contador }: { section: NavSection; act
     <div className="more-section">
       <div className="list__header">{section.title}</div>
       <div className="list">
-        {section.items.flatMap(i => i.children ?? [i]).map(item => (
+        {section.items.flatMap(i => i.children ?? [i]).filter(item => item.pronto || item.to).map(item => (
           item.pronto ? (
             <div key={item.key} className="row" aria-disabled="true" style={{ color: 'var(--label-2)' }}>
               <item.icon size={20} strokeWidth={1.8} />
               <span className="row__main row__title">{item.label}</span>
               <span className="nav-item__tag">Pronto</span>
             </div>
-          ) : item.to ? (
-            <NavLink key={item.key} to={item.to} className="row" style={{ color: 'var(--label)', textDecoration: 'none' }}
+          ) : (
+            <NavLink key={item.key} to={item.to!} className="row" style={{ color: 'var(--label)', textDecoration: 'none' }}
               aria-current={isActive(item, activa) ? 'page' : undefined}>
               <item.icon size={20} strokeWidth={1.8} />
               <span className="row__main row__title">{item.label}</span>
               <Insignia item={item} contador={contador} className="nav-item__contador" />
             </NavLink>
-          ) : (
-            <button key={item.key} type="button" className="row" onClick={() => abrirClasico(item.clasico!)}>
-              <item.icon size={20} strokeWidth={1.8} />
-              <span className="row__main row__title">{item.label}</span>
-              <ArrowUpRight size={16} className="c-tertiary" aria-label="Se abre en la versión actual" />
-            </button>
           )
         ))}
       </div>
