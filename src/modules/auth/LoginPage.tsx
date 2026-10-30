@@ -16,6 +16,9 @@ import { MOTIVO_SALIDA } from '../../core/auth/Inactividad';
 import './login.css';
 
 // "Recuérdame" guarda en este dispositivo quién ingresó (nunca la contraseña)
+// Términos, privacidad, cookies y reembolsos: pendientes de terminar, se muestran cuando esté listo
+const MOSTRAR_LEGAL = false;
+
 const REMEMBERED_KEY = 'azkell.recordado';
 interface Remembered { email: string; name: string }
 const readRemembered = (): Remembered | null => {
@@ -249,18 +252,18 @@ export function LoginPage() {
           </form>
 
           <p className="login__help">¿Olvidaste tu contraseña? Pide a Sistemas que la restablezca.</p>
-          <p className="login__legal-aviso">Al iniciar sesión aceptas los <Link to="/legal/terminos">Términos</Link> y la <Link to="/legal/privacidad">Política de privacidad</Link>.</p>
+          {MOSTRAR_LEGAL && <p className="login__legal-aviso">Al iniciar sesión aceptas los <Link to="/legal/terminos">Términos</Link> y la <Link to="/legal/privacidad">Política de privacidad</Link>.</p>}
 
         </motion.div>
       </motion.div>
 
       <footer className="login__footer">
-        <nav aria-label="Documentos legales" className="login__legal-nav">
+        {MOSTRAR_LEGAL && <nav aria-label="Documentos legales" className="login__legal-nav">
           <Link to="/legal/privacidad">Privacidad</Link>
           <Link to="/legal/terminos">Términos</Link>
           <Link to="/legal/cookies">Cookies</Link>
           <Link to="/legal/reembolsos">Reembolsos</Link>
-        </nav>
+        </nav>}
         <span>Azkell Fleet · Perú</span>
       </footer>
     </div>
