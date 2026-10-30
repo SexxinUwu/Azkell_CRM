@@ -8,6 +8,7 @@ import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field'
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
+import { CocheraExpressSheet, type CocheraDatos } from './CocheraExpressSheet';
 
 // Forma de una guía (GRE) adjunta a la orden, tal como la guarda el servidor
 export interface DocOS {
@@ -104,6 +105,20 @@ function formInicial(o: OrdenParaEditar | null, correlativo: { serie: string; nu
   };
 }
 
+// Datos de la caja de cochera de una orden recién creada: el conductor y la ruta salen de la orden de viaje vinculada
+async function datosCocheraNueva(id: number | string, codigo: string, viaje: string, tracto: string): Promise<CocheraDatos> {
+  let conductor = '';
+  let ruta = '';
+  if (viaje) {
+    try {
+      const r = await api<{ ok?: boolean; data?: { viaje?: string; conductor?: string | null; ruta?: string | null }[] }>('/operaciones/ordenes-viaje', { query: { q: viaje } });
+      const v = (r.data ?? []).find(x => x.viaje === viaje);
+      if (v) { conductor = v.conductor ?? ''; ruta = v.ruta ?? ''; }
+    } catch { /* sin datos de la orden de viaje: la caja se completa a mano, como en el clásico */ }
+  }
+  return { id, codigo_orden: codigo, viaje_asignado: viaje, placa_tracto: tracto, conductor, ruta };
+}
+
 // Crear o editar una orden de servicio con sus rutas y guías (GRE). Mismo contrato que el clásico:
 // POST/PUT /api/operaciones/ordenes-servicio. Las guías se toman de las ya emitidas y sin servicio.
 export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '' }: { open: boolean; orden: OrdenParaEditar | null; onClose: () => void; viajeInicial?: string }) {
@@ -115,6 +130,7 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '' }: 
   const [filtroGre, setFiltroGre] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cochera, setCochera] = useState<CocheraDatos | null>(null);
 
   const correlativo = useQuery({
     queryKey: ['operaciones', 'os-correlativo'],
@@ -214,15 +230,20 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '' }: 
 
     setEnviando(true);
     try {
-      const r = await api<{ ok?: boolean; error?: string; codigo_orden?: string }>(
+      const r = await api<{ ok?: boolean; error?: string; codigo_orden?: string; id?: number }>(
         editando ? `/operaciones/ordenes-servicio/${orden!.id}` : '/operaciones/ordenes-servicio',
         { method: editando ? 'PUT' : 'POST', body: payload },
       );
       if (r.ok === false) throw new Error(r.error || 'No se pudo guardar la orden');
       haptic('success');
-      toast(`Orden ${r.codigo_orden ?? f!.serie + '-' + f!.numero} ${editando ? 'actualizada' : 'creada'}`);
+      const codigo = r.codigo_orden ?? f!.serie + '-' + f!.numero;
+      toast(`Orden ${codigo} ${editando ? 'actualizada' : 'creada'}`);
       await qc.invalidateQueries({ queryKey: ['operaciones'] });
+      const viaje = f!.viaje.trim();
+      const tracto = f!.tracto.trim();
       onClose();
+      // Igual que el clásico: una orden nueva ofrece de inmediato la caja de cochera del conductor
+      if (!editando && r.id != null) setCochera(await datosCocheraNueva(r.id, codigo, viaje, tracto));
     } catch (err) { setError(errorMessage(err)); haptic('warning'); }
     finally { setEnviando(false); }
   }
@@ -230,6 +251,8 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '' }: 
   const titulo = editando ? `Editar ${orden!.codigo_orden}` : 'Nueva orden de servicio';
 
   return (
+    <>
+    <CocheraExpressSheet open={!!cochera} datos={cochera} onClose={() => setCochera(null)} />
     <Sheet open={open} onClose={() => !enviando && onClose()} title={titulo}
       footer={<><Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
         <Button variant="primary" onClick={guardar} loading={enviando}>{editando ? 'Guardar cambios' : 'Crear orden'}</Button></>}>
@@ -363,5 +386,6 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '' }: 
         </div>
       </div>
     </Sheet>
+    </>
   );
 }

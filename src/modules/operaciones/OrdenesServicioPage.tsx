@@ -1,11 +1,12 @@
 import '../mantenimiento/mant.css';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CheckCircle2, FileSpreadsheet, Pencil, Play, Plus, ScrollText, SearchX, XCircle } from 'lucide-react';
+import { CheckCircle2, CircleAlert, FileSpreadsheet, Pencil, Play, Plus, ScrollText, SearchX, XCircle } from 'lucide-react';
 import { OrdenServicioSheet, type OrdenParaEditar } from './OrdenServicioSheet';
+import { CocheraExpressSheet, type CocheraDatos } from './CocheraExpressSheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField } from '../../core/ui/Field';
+import { Field, SearchField, TextInput } from '../../core/ui/Field';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { Sheet } from '../../core/ui/Sheet';
@@ -14,8 +15,59 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
+import { dayKey } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
+
+// Confirmación para iniciar el servicio (igual que el clásico): fecha de inicio y confirmación explícita.
+// Al iniciar, el servidor devuelve los datos de la caja de cochera si la orden tiene viaje.
+function IniciarServicioSheet({ orden, onClose, onIniciado }: { orden: Orden | null; onClose: () => void; onIniciado: (cochera: CocheraDatos | null) => void }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [fecha, setFecha] = useState('');
+  const [confirmado, setConfirmado] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (orden) { setFecha(dayKey(new Date())); setConfirmado(false); setError(null); }
+  }, [orden]);
+
+  async function iniciar() {
+    if (!orden) return;
+    if (!fecha) { setError('Indica la fecha de inicio.'); return; }
+    if (!confirmado) { setError('Debes confirmar que deseas realizar esta operación.'); return; }
+    setError(null);
+    setEnviando(true);
+    try {
+      const r = await api<{ ok?: boolean; error?: string; cochera?: CocheraDatos | null }>(`/operaciones/ordenes-servicio/${orden.id}/estado`,
+        { method: 'PUT', body: { estado_servicio: 'INICIADO', fecha_inicio: fecha } });
+      if (r.ok === false) throw new Error(r.error || 'No se pudo iniciar el servicio');
+      haptic('success'); toast(`Orden ${orden.codigo_orden}: iniciada`);
+      await qc.invalidateQueries({ queryKey: ['operaciones'] });
+      onIniciado(r.cochera ?? null);
+    } catch (err) { setError(errorMessage(err)); haptic('warning'); }
+    finally { setEnviando(false); }
+  }
+
+  return (
+    <Sheet open={!!orden} onClose={() => !enviando && onClose()} title="Iniciar servicio"
+      footer={<>
+        <Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
+        <Button variant="primary" icon={<Play size={16} />} onClick={iniciar} loading={enviando}>Iniciar ahora</Button>
+      </>}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
+        <p className="t-callout c-secondary" style={{ margin: 0 }}>Orden <strong className="c-primary">{orden?.codigo_orden ?? '—'}</strong></p>
+        {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
+        <Field label="Fecha de inicio *">{p => <TextInput {...p} type="date" value={fecha} onChange={e => setFecha(e.target.value)} />}</Field>
+        <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+          <input type="checkbox" checked={confirmado} onChange={e => { setConfirmado(e.target.checked); setError(null); }} />
+          <span>Confirmo realizar esta operación</span>
+        </label>
+        <p className="t-footnote c-secondary" style={{ margin: 0 }}>Esta acción no se podrá revertir.</p>
+      </div>
+    </Sheet>
+  );
+}
 
 interface Orden {
   id: number; codigo_orden: string; fecha_fmt: string | null; fecha_fin_fmt: string | null; cliente_nombre: string | null; tipo_servicio: string | null;
@@ -69,6 +121,8 @@ export function OrdenesServicioPage() {
   const [abiertoId, setAbiertoId] = useState<number | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [formulario, setFormulario] = useState<{ orden: OrdenParaEditar | null } | null>(null);
+  const [iniciar, setIniciar] = useState<Orden | null>(null);
+  const [cocheraDatos, setCocheraDatos] = useState<CocheraDatos | null>(null);
 
   const lista = useQuery<Orden[]>({
     queryKey: ['operaciones', 'ordenes-servicio', q],
@@ -108,6 +162,12 @@ export function OrdenesServicioPage() {
     } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
   }
 
+  // Tras iniciar: se cierra la confirmación y, si el servidor trae datos de cochera, se abre la caja express (como el clásico)
+  function alIniciar(cochera: CocheraDatos | null) {
+    setIniciar(null);
+    if (cochera) window.setTimeout(() => setCocheraDatos(cochera), 350);
+  }
+
   async function exportar() {
     try {
       await exportarExcel('Ordenes-de-servicio', 'Órdenes',
@@ -133,7 +193,6 @@ export function OrdenesServicioPage() {
           <>
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${visibles.length} órdenes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('operaciones/ordenes-servicio') },
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ orden: null })}>Nueva orden</Button>}
           </>
@@ -141,6 +200,8 @@ export function OrdenesServicioPage() {
       />
 
       <OrdenServicioSheet open={!!formulario} orden={formulario?.orden ?? null} onClose={() => setFormulario(null)} />
+      <IniciarServicioSheet orden={iniciar} onClose={() => setIniciar(null)} onIniciado={alIniciar} />
+      <CocheraExpressSheet open={!!cocheraDatos} datos={cocheraDatos} onClose={() => setCocheraDatos(null)} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
         <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
@@ -182,7 +243,7 @@ export function OrdenesServicioPage() {
                         <Button variant="secondary" icon={<Pencil size={15} />} aria-label={`Editar orden ${x.codigo_orden}`} onClick={() => editarFila(x.id)}>{''}</Button>
                       )}
                       {puedeEditar && e === 'PENDIENTE' && (
-                        <Button variant="secondary" icon={<Play size={15} />} aria-label={`Iniciar orden ${x.codigo_orden}`} loading={ocupado} onClick={() => cambiarEstado(x, 'INICIADO')}>{''}</Button>
+                        <Button variant="secondary" icon={<Play size={15} />} aria-label={`Iniciar orden ${x.codigo_orden}`} onClick={() => setIniciar(x)}>{''}</Button>
                       )}
                       {puedeEditar && e === 'INICIADO' && (
                         <Button variant="secondary" icon={<CheckCircle2 size={15} />} aria-label={`Finalizar orden ${x.codigo_orden}`} loading={ocupado} onClick={() => cambiarEstado(x, 'FINALIZADO')}>{''}</Button>
@@ -202,7 +263,7 @@ export function OrdenesServicioPage() {
             <>
               <Button variant="secondary" icon={<Pencil size={16} />} onClick={() => { if (det.data) { setFormulario({ orden: det.data as unknown as OrdenParaEditar }); setAbiertoId(null); } }} disabled={!det.data}>Editar</Button>
               <Button variant="secondary" icon={<XCircle size={16} />} onClick={() => cambiarEstado(abierta, 'ANULADO')} loading={ocupado}>Anular</Button>
-              {est === 'PENDIENTE' && <Button variant="primary" icon={<Play size={16} />} onClick={() => cambiarEstado(abierta, 'INICIADO')} loading={ocupado}>Iniciar</Button>}
+              {est === 'PENDIENTE' && <Button variant="primary" icon={<Play size={16} />} onClick={() => setIniciar(abierta)} loading={ocupado}>Iniciar</Button>}
               {est === 'INICIADO' && <Button variant="primary" icon={<CheckCircle2 size={16} />} onClick={() => cambiarEstado(abierta, 'FINALIZADO')} loading={ocupado}>Finalizar</Button>}
             </>
           ) : <Button variant="secondary" onClick={() => setAbiertoId(null)}>Cerrar</Button>
