@@ -1,12 +1,11 @@
 import { formatFechaHoraPe, formatSoles } from '../../core/lib/format';
-import { createElement, useEffect, useMemo, useState } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowUpRight, CalendarDays, ClipboardCheck, Disc, Download, FileText, Gauge, Package, Pencil, Play, Plus, Share2, Timer, Trash2 } from 'lucide-react';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, Notice } from '../../core/ui/Display';
-import { CargaCamion } from '../../core/ui/CargaCamion';
+import { pestanaConCamion } from '../../core/ui/CargaCamion';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { MenuOtros } from '../../core/ui/MenuOtros';
@@ -291,11 +290,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   /** PDF en otra pestaña (visor de PDF): la pestaña se abre al tocar el botón y muestra el camión mientras se genera, como en el acta de entrega */
   async function abrirPdf(generar: () => Promise<Blob>, nombre: string) {
     const win = window.open('', '_blank');
-    if (win) {
-      win.document.head.innerHTML = document.head.innerHTML;
-      win.document.body.style.cssText = 'margin:0;background:#fff;';
-      win.document.body.innerHTML = renderToStaticMarkup(createElement(CargaCamion, { texto: 'Generando PDF…' }));
-    }
+    pestanaConCamion(win);
     try {
       const url = URL.createObjectURL(await generar());
       if (win) win.location.href = url;

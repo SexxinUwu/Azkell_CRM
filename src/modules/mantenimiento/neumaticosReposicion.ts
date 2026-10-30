@@ -2,6 +2,7 @@
 // (por defecto 3 mm, igual que el clásico). El semáforo global (crítica < 3 mm) no cambia: esto es solo el pedido de compra.
 import { exportarExcel, exportarExcelHojas } from '../../core/lib/excel';
 import { generarPDFBlob } from '../../core/lib/pdf';
+import { pestanaConCamion } from '../../core/ui/CargaCamion';
 import { api } from '../../core/api/client';
 import { esRequerimientoMm } from './neumaticosSemaforo';
 
@@ -195,7 +196,7 @@ async function nombreEmpresaPdf(): Promise<string> {
 export async function abrirResumenPdf(filas: FilaResumen[], umbral: number) {
   const win = window.open('', '_blank');
   // La pestaña ya muestra un aviso mientras se genera el PDF (no parece colgada)
-  try { win?.document.write('<!doctype html><meta charset="utf-8"><title>Generando PDF…</title><body style="margin:0;height:100vh;display:grid;place-items:center;font:16px system-ui,sans-serif;color:#475569">Generando PDF…</body>'); win?.document.close(); } catch { /* sin acceso a la pestaña */ }
+  pestanaConCamion(win);
   const el = document.createElement('div');
   el.style.cssText = 'position:absolute;left:-9999px;top:0;background:#fff;width:1040px;';
   try {

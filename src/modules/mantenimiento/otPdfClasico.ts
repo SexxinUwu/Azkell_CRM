@@ -16,6 +16,9 @@ export function rotCleanObsText(text) {
     var raw = String(text)
         .replace(/^\[Reporte\s+[^\]]+\]\s*/gim, '')
         .replace(/^OT\s+OT-[^:]+:\s*/gim, '')
+        // El aviso del sistema al cerrar una inspección no se imprime (en la línea o pegado con un •)
+        .replace(/^[•\-*]?\s*Generado automáticamente[^\n]*$/gim, '')
+        .replace(/•\s*Generado automáticamente[^•\n]*/gi, '')
         .trim();
 
     var lines = raw.split('\n');
@@ -248,7 +251,7 @@ export function generarPDF_OT(ot, trabajos, materiales, isPlantilla, _onHtmlRead
                     rowTec = det.supervisor || ot.supervisor || '—';
                 }
             }
-            itemsMotivos.push({ texto: cleanText, tecnico: rowTec });
+            if (!itemsMotivos.some(it => it.texto.toLowerCase() === cleanText.toLowerCase())) itemsMotivos.push({ texto: cleanText, tecnico: rowTec });
         });
     }
 
@@ -261,7 +264,7 @@ export function generarPDF_OT(ot, trabajos, materiales, isPlantilla, _onHtmlRead
             if (!rowTec) {
                 rowTec = otTecsGeneral || det.supervisor || ot.supervisor || '—';
             }
-            itemsMotivos.push({ texto: descClean, tecnico: rowTec });
+            if (!itemsMotivos.some(it => it.texto.toLowerCase() === descClean.toLowerCase())) itemsMotivos.push({ texto: descClean, tecnico: rowTec });
         });
     }
 

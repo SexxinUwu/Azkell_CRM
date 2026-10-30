@@ -194,7 +194,7 @@ async function procesarHallazgosInspeccion(tdb, req, nextId, datos) {
             datos.tecnico || 'Inspector Técnico',
             isRemolque ? '[]' : JSON.stringify(fallasParaRF),
             isRemolque ? JSON.stringify(fallasParaRF) : '[]',
-            `Generado automáticamente desde Inspección ${nextId}`,
+            '',
             JSON.stringify(fotosUrls),
             datos.tecnico || 'Sistema'
         ]);

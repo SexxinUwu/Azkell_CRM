@@ -37,7 +37,8 @@ export function Spinner({ large, label = 'Cargando' }: { large?: boolean; label?
   return <span className={`spinner${large ? ' spinner--lg' : ''}`} role="status" aria-label={label} />;
 }
 
-export function PageLoader({ variante = 'circulo' }: { variante?: 'circulo' | 'camion' }) {
+// Cualquier carga de pantalla muestra el camión (el círculo queda solo para botones)
+export function PageLoader({ variante = 'camion' }: { variante?: 'circulo' | 'camion' }) {
   return (
     <div style={{ display: 'grid', placeItems: 'center', minHeight: '40vh' }}>
       {variante === 'camion' ? <CargaCamion /> : <Spinner large />}

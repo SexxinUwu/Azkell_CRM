@@ -1,6 +1,7 @@
 // Reporte F-MAN-006 de mantenimientos preventivos: la pantalla arma las filas visibles y el servidor (services/fleetrun_reporte.js)
 // lo convierte a PDF con Chromium, con el mismo formato del clásico. También sirve para mandarlo por WhatsApp.
 import { apiFetch } from '../../core/api/client';
+import { pestanaConCamion } from '../../core/ui/CargaCamion';
 
 /** Fila del reporte, tal como la espera el servidor */
 export interface FilaReporte {
@@ -70,10 +71,7 @@ export async function pedirReportePreventivo(filas: FilaReporte[], empresa: stri
  */
 export async function abrirPdfEnVisor(generar: () => Promise<Blob>, nombre: string): Promise<void> {
   const win = window.open('', '_blank');
-  try {
-    win?.document.write('<!doctype html><meta charset="utf-8"><title>Generando PDF…</title><body style="margin:0;height:100vh;display:grid;place-items:center;font:16px system-ui,sans-serif;color:#475569">Generando PDF…</body>');
-    win?.document.close();
-  } catch { /* sin acceso a la pestaña */ }
+  pestanaConCamion(win);
   try {
     const url = URL.createObjectURL(await generar());
     if (win) win.location.href = url;

@@ -13,6 +13,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { esFundadorSaaS } from '../auth/permisos';
 import { AvatarPropio } from '../../modules/perfil/AvatarPropio';
 import { Button, PageLoader } from '../ui/Button';
+import { LimiteDeError } from '../ui/LimiteDeError';
 import { Sheet } from '../ui/Sheet';
 import { BrandMark, Wordmark } from './BrandMark';
 import { ModuleDock, type DockItem } from './ModuleDock';
@@ -273,10 +274,12 @@ export function AppShell() {
           {/* Pantallas que se descargan aparte: el marco (barras) no se mueve mientras llegan */}
           <VolverOtros />
           <Suspense fallback={<PageLoader />}>
-            {/* Cada módulo entra con su propia transición; la clave cambia con la ruta */}
-            <div key={location.pathname} className="vista-transicion">
-              <Outlet />
-            </div>
+            {/* Cada módulo entra con su propia transición; la clave cambia con la ruta. Si una pantalla falla, el menú sigue arriba */}
+            <LimiteDeError key={location.pathname}>
+              <div key={location.pathname} className="vista-transicion">
+                <Outlet />
+              </div>
+            </LimiteDeError>
           </Suspense>
         </main>
       </div>

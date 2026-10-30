@@ -4,7 +4,8 @@ import './ce-formulario.css';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, CheckCheck, ChevronDown, CircleAlert, FileText, ListChecks, NotebookPen, PenLine, Search, Truck } from 'lucide-react';
-import { Button, Spinner } from '../../core/ui/Button';
+import { Button } from '../../core/ui/Button';
+import { CargaCamion } from '../../core/ui/CargaCamion';
 import { EmptyState, Notice } from '../../core/ui/Display';
 import { Field, TextInput } from '../../core/ui/Field';
 import { Combobox } from '../../core/ui/Combobox';
@@ -462,7 +463,7 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
         {cabecera}
         {detalle.isError
           ? <Notice tone="error" icon={<CircleAlert size={16} />}>{errorMessage(detalle.error)}</Notice>
-          : <div style={{ display: 'grid', placeItems: 'center', minHeight: '30vh' }}><Spinner large label="Cargando acta" /></div>}
+          : <div style={{ display: 'grid', placeItems: 'center', minHeight: '30vh' }}><CargaCamion texto="Cargando acta" /></div>}
       </div>
     );
   }

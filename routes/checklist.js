@@ -956,6 +956,17 @@ module.exports = function (db, broadcast, logAudit) {
                         || up === 'OBSERVACIÓN' || up === 'OBSERVACION';
                 };
 
+                // Una misma falla (mismo ítem y observación) entra una sola vez: el reporte puede traerla repetida
+                if (Array.isArray(item.motivos_array)) {
+                    const vistosMotivo = new Set();
+                    item.motivos_array = item.motivos_array.filter(m => {
+                        const clave = `${m.item || ''}|${m.obs || m.descripcion || m.motivo || ''}`.trim().toLowerCase();
+                        if (vistosMotivo.has(clave)) return false;
+                        vistosMotivo.add(clave);
+                        return true;
+                    });
+                }
+
                 if (Array.isArray(item.motivos_array) && item.motivos_array.length > 0) {
                     descFallasClean = item.motivos_array.map(m => {
                         const rawItem = String(m.item || '').replace(/^\[[^\]]+\]\s*/, '').replace(/^[A-Z0-9\s]+—\s*/i, '').replace(/^[•\-\*]\s*/, '').trim();
@@ -1060,6 +1071,13 @@ module.exports = function (db, broadcast, logAudit) {
 
                 const motivosArray = Array.isArray(item.motivos_array) ? item.motivos_array : [];
 
+                // Un trabajo por falla, con el técnico asignado a esa falla (si no tiene, el de la OT)
+                const tecnicoOT = (Array.isArray(item.tecnicos) && item.tecnicos[0]) || item.supervisor || '';
+                const trabajosDet = descFallasClean.split('\n').filter(Boolean).map((linea, idx) => ({
+                    desc: linea.replace(/^•\s*/, ''),
+                    tecnico: (motivosArray[idx] && (motivosArray[idx].tecnico || motivosArray[idx].tecnico_nombre)) || tecnicoOT,
+                }));
+
                 const situacionVal = item.situacion || 'En atención';
 
                 let fIngDate = fecha_ingreso ? fecha_ingreso.split('T')[0] : new Date().toISOString().split('T')[0];
@@ -1082,6 +1100,7 @@ module.exports = function (db, broadcast, logAudit) {
                     reportado_por: rep.conductor || '',
                     motivo: motivoLimpio,
                     motivos_array: motivosArray,
+                    trabajos_det: trabajosDet,
                     observaciones: motivoLimpio,
                     descripcion_falla: descFallasClean || (item.subtipo_ot || 'Falla'),
                     tipo_ot: item.tipo_ot || 'Correctivo',
@@ -1125,6 +1144,12 @@ module.exports = function (db, broadcast, logAudit) {
                         dtIngreso,
                         dtSalida
                     ]);
+
+                    // Los trabajos de la OT (uno por falla) quedan registrados desde el inicio, con su técnico
+                    if (trabajosDet.length) {
+                        const filasTrabajo = trabajosDet.map((td, idx) => [`${idOt}-${idx + 1}`, idOt, placa, td.desc, td.tecnico || '', 'En Proceso']);
+                        await tdb.promise().query('INSERT INTO trabajos_ot (id_ot, ticket_visita, placa, trabajo_realizado, tecnico, estado) VALUES ?', [filasTrabajo]);
+                    }
 
                     otsCreadas.push({ idOt, placa, unidad: item.unidad, tipo_ot: item.tipo_ot, subtipo_ot: item.subtipo_ot, supervisor: supervisorStr, tecnicos: tecnicosStr, id: resOt.insertId });
 

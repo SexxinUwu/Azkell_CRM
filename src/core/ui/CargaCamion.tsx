@@ -1,4 +1,16 @@
 import './carga-camion.css';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+
+/** Pestaña nueva que muestra el camión mientras se genera un PDF (copia los estilos de la app). */
+export function pestanaConCamion(win: Window | null, texto = 'Generando PDF…') {
+  if (!win) return;
+  try {
+    win.document.head.innerHTML = document.head.innerHTML;
+    win.document.body.style.cssText = 'margin:0;background:#fff;';
+    win.document.body.innerHTML = renderToStaticMarkup(createElement(CargaCamion, { texto }));
+  } catch { /* sin acceso a la pestaña: se queda sin aviso */ }
+}
 
 // Indicador de carga con un camión que avanza por la carretera (para los módulos de flota y los PDF).
 // Puro SVG y CSS: no agrega dependencias. Con «reducir movimiento» activado, el camión queda quieto.

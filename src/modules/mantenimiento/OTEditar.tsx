@@ -64,8 +64,13 @@ export function EditarOTSheet({ ot, open, onClose }: { ot: OrdenTrabajo; open: b
     const trabajosDet = Array.isArray(det.trabajos_det) ? (det.trabajos_det as { tecnico?: string }[]) : [];
     const motivo = String(det.motivo ?? ot.observaciones ?? '');
     const lineas = motivo.split('\n').map(l => l.trim()).filter(Boolean);
-    const tareas = lineas.filter(numerado).map(sinNumero);
-    const notasTxt = lineas.filter(l => !numerado(l)).map(l => l.replace(/^Nota:\s*/i, '')).join('\n');
+    // Las OT viejas guardan las fallas sin número: también son trabajos. Se quitan repetidos y el encabezado del reporte
+    const hayNumeradas = lineas.some(numerado);
+    const esEncabezado = (l: string) => /^\[Reporte\b/i.test(l) || /^Generado automáticamente/i.test(l) || /^Nota:/i.test(l);
+    const fallas = hayNumeradas ? lineas.filter(numerado).map(sinNumero) : lineas.filter(l => !esEncabezado(l)).map(l => l.replace(/^•\s*/, ''));
+    const tareas = Array.from(new Map(fallas.map(t => [t.toLowerCase(), t])).values());
+    const notasTxt = hayNumeradas ? lineas.filter(l => !numerado(l)).map(l => l.replace(/^Nota:\s*/i, '')).join('\n')
+      : lineas.filter(l => /^Nota:/i.test(l)).map(l => l.replace(/^Nota:\s*/i, '')).join('\n');
     const tipoOT = String(det.tipo_ot ?? 'Correctivo');
     const subs = SUBTIPOS_OT[tipoOT] ?? [];
     const contador = { n: 0 };

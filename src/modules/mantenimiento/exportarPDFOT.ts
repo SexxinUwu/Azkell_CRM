@@ -1,5 +1,6 @@
 import { otDetalles, otFecha, otId, type OrdenTrabajo } from './api';
 import { costoOT } from './tiemposTaller';
+import { pestanaConCamion } from '../../core/ui/CargaCamion';
 
 // PDF de Reportes OT con el mismo diseño del clásico (modulos/mantenimiento/reportes-ot, rotExportarPDF):
 // encabezado azul, filtros, totales, tabla y franja verde con el costo total. Usa las mismas librerías locales
@@ -37,10 +38,7 @@ const esPreventivo = (o: OrdenTrabajo) => String(otDetalles(o).tipo_ot ?? '').to
 export async function abrirPdfReportesOT(lista: OrdenTrabajo[], filtros: string[]) {
   // La pestaña se abre en el gesto del usuario y muestra un aviso mientras se genera el PDF
   const win = window.open('', '_blank');
-  try {
-    win?.document.write('<!doctype html><meta charset="utf-8"><title>Generando PDF…</title><body style="margin:0;height:100vh;display:grid;place-items:center;font:16px system-ui,sans-serif;color:#475569">Generando PDF…</body>');
-    win?.document.close();
-  } catch { /* sin acceso a la pestaña */ }
+  pestanaConCamion(win);
 
   try {
     const w = window as JsPdfWindow;

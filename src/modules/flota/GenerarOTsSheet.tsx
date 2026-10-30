@@ -10,7 +10,8 @@ import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { useCatalogosTaller } from '../mantenimiento/api';
 import { SUBTIPOS_OT as SUBTIPOS, TIPOS_OT } from '../mantenimiento/tipos-ot';
-import { useUnidadesGps, type ReporteFalla, type UnidadMapa } from './api';
+import { useUnidadesGps, type ReporteFalla } from './api';
+import { telemetriaDe } from './telemetriaPlaca';
 
 type Unidad = 'Tracto' | 'Remolque';
 
@@ -84,17 +85,6 @@ function usePersonalNombres() {
     }),
     staleTime: 300_000,
   });
-}
-
-// Unidad de telemetría Wialon por placa (sin guiones), igual que el clásico: km del tracto y horas del remolque
-function telemetriaDe(unidades: UnidadMapa[] | undefined, placa: string): UnidadMapa | null {
-  const p = placa.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-  if (!p || !unidades) return null;
-  return unidades.find(u => {
-    const up = u.placa.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-    const nom = u.nombre.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-    return (up && (up.includes(p) || p.includes(up))) || (nom && (nom.includes(p) || p.includes(nom)));
-  }) ?? null;
 }
 
 const ahoraLocal = (suma = 0) => {
@@ -196,7 +186,15 @@ export function GenerarOTsSheet({ falla, open, onClose }: { falla: ReporteFalla;
       if (!t.subtipo) { setError(`Elige el subtipo de la ${n}.`); return; }
 
       // Sin fallas marcadas, el clásico toma las de la unidad
-      const seleccion = t.fallas.length ? fallas.filter(f => t.fallas.includes(f.id)) : fallas.filter(f => f.unidad === t.unidad);
+      // Una misma falla (mismo ítem y observación) entra una sola vez: el reporte puede traerla repetida
+      const vistas = new Set<string>();
+      const seleccion = (t.fallas.length ? fallas.filter(f => t.fallas.includes(f.id)) : fallas.filter(f => f.unidad === t.unidad))
+        .filter(f => {
+          const clave = `${f.item}|${f.obs}|${f.principal}`.trim().toLowerCase();
+          if (vistas.has(clave)) return false;
+          vistas.add(clave);
+          return true;
+        });
       const motivos = [];
       for (const f of seleccion) {
         const tec = (t.tecnicos[f.id] ?? '').trim();

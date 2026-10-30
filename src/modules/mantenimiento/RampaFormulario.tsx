@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleAlert } from 'lucide-react';
+import { CircleAlert, Plus, Trash2 } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
+import { Combobox } from '../../core/ui/Combobox';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { useToast } from '../../core/ui/Toast';
@@ -12,6 +13,10 @@ import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { api } from '../../core/api/client';
 import { usePlacas } from '../placas/api';
+import { useUnidadesGps } from '../flota/api';
+import { telemetriaDe } from '../flota/telemetriaPlaca';
+import { usePersonalNombres } from './OTEditar';
+import { formatoTrabajosRampa, parseTrabajosRampa, type TrabajoRampa } from './trabajosRampa';
 import {
   actualizarRampa, ingresarRampa, liberarRampa, useCatalogosTaller, useStatusRampa,
   type RampaEntrada,
@@ -22,6 +27,9 @@ const horaAhora = () => new Date().toTimeString().slice(0, 5);
 const dia = (s: string | null | undefined) => (s ? String(s).split('T')[0] : '');
 const hora = (s: string | null | undefined) => (s ? String(s).slice(0, 5) : '');
 
+let secuenciaFila = 0;
+const nuevaFila = (desc = '', tecnico = ''): TrabajoRampa => ({ key: `t${++secuenciaFila}`, desc, tecnico });
+
 // Ingresar una unidad a una rampa, o editar su registro.
 export function RampaFormulario({ entrada, usuario, open, onClose, rampaInicial }: {
   entrada: RampaEntrada | null; usuario: string; open: boolean; onClose: () => void; rampaInicial?: string;
@@ -31,6 +39,8 @@ export function RampaFormulario({ entrada, usuario, open, onClose, rampaInicial 
   const cat = useCatalogosTaller();
   const placas = usePlacas();
   const todas = useStatusRampa();
+  const personal = usePersonalNombres();
+  const gps = useUnidadesGps(60_000);
   const editando = !!entrada;
 
   const [rampa, setRampa] = useState('');
@@ -42,24 +52,49 @@ export function RampaFormulario({ entrada, usuario, open, onClose, rampaInicial 
   const [fSal, setFSal] = useState('');
   const [hSal, setHSal] = useState('');
   const [situacion, setSituacion] = useState('');
-  const [obs, setObs] = useState('');
+  const [trabajos, setTrabajos] = useState<TrabajoRampa[]>([]);
+  const [notas, setNotas] = useState('');
   const [evidencia, setEvidencia] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Placa para la que ya se puso el km del GPS: después el usuario puede corregirlo sin que se pise
+  const kmAutoPara = useRef('');
+
+  // Kilometraje del GPS en vivo de la placa elegida (el mismo que usa la hoja de generar OT)
+  const kmDelGps = useMemo(() => {
+    const t = telemetriaDe(gps.data, placa);
+    return t && t.km > 0 ? Math.round(t.km) : null;
+  }, [gps.data, placa]);
 
   useEffect(() => {
     if (!open) return;
-    setError(null); setEvidencia(null);
+    setError(null); setEvidencia(null); kmAutoPara.current = '';
     setRampa(entrada?.rampaCatId ?? rampaInicial ?? ''); setPlaca(entrada?.placa ?? ''); setKm(entrada?.km != null ? String(entrada.km) : '');
     setConductor(entrada?.conductor ?? ''); setFIng(dia(entrada?.fecha_ingreso) || hoyISO()); setHIng(hora(entrada?.hora_ingreso) || horaAhora());
     setFSal(dia(entrada?.salida_programada)); setHSal(hora(entrada?.hora_salida_programada));
-    setSituacion(entrada?.situacion ?? ''); setObs(entrada?.observaciones ?? '');
+    setSituacion(entrada?.situacion ?? '');
+    const parseado = parseTrabajosRampa(entrada?.observaciones);
+    setTrabajos(parseado.trabajos.length ? parseado.trabajos.map(t => nuevaFila(t.desc, t.tecnico)) : [nuevaFila()]);
+    setNotas(parseado.notas);
   }, [open, entrada, rampaInicial]);
+
+  // Al elegir la placa, el km sale del GPS de ese momento (si ya llegó la telemetría)
+  useEffect(() => {
+    if (!open || !placa || kmDelGps == null) return;
+    if (placa === (entrada?.placa ?? '') || kmAutoPara.current === placa) return;
+    kmAutoPara.current = placa;
+    setKm(String(kmDelGps));
+  }, [open, placa, kmDelGps, entrada]);
 
   const rampas = cat.data?.rampas ?? [];
   const situaciones = (cat.data?.situaciones ?? []).map(s => s.descripcion ?? s.nombre ?? '').filter(Boolean);
+  const opcionesPersonal = (personal.data ?? []).map(n => ({ value: n, label: n }));
   // Rampas ya ocupadas (activas), salvo la que se está editando
   const ocupadas = new Set((todas.data ?? []).filter(e => e.estado !== 'Liberado' && rampaIdDe(e) !== (entrada ? rampaIdDe(entrada) : '')).map(e => e.rampaCatId));
+
+  function editarTrabajo(key: string, cambios: Partial<TrabajoRampa>) {
+    setTrabajos(prev => prev.map(t => (t.key === key ? { ...t, ...cambios } : t)));
+  }
 
   async function guardar() {
     if (!rampa) { setError('Elige una rampa.'); return; }
@@ -81,7 +116,7 @@ export function RampaFormulario({ entrada, usuario, open, onClose, rampaInicial 
     const d = {
       rampa, placa, km, conductor: conductor.trim(),
       fecha_ingreso: fIng || null, hora_ingreso: hIng || null, fecha_salida: fSal || null, hora_salida: hSal || null,
-      situacion, obs: obs.trim(), creado_por: usuario, evidencia_url: evidenciaUrl,
+      situacion, obs: formatoTrabajosRampa(trabajos, notas), creado_por: usuario, evidencia_url: evidenciaUrl,
     };
     try {
       if (entrada) await actualizarRampa(entrada.id ?? '', d); else await ingresarRampa(d);
@@ -116,8 +151,12 @@ export function RampaFormulario({ entrada, usuario, open, onClose, rampaInicial 
             <PlacaPicker {...p} value={placa} onChange={setPlaca} opciones={(placas.data ?? []).map(x => ({ placa: x.placa, detalle: x.cliente }))} />
           )}
         </Field>
-        <Field label="Conductor">{p => <TextInput {...p} value={conductor} onChange={e => setConductor(e.target.value)} />}</Field>
-        <Field label="Km / horas">{p => <TextInput {...p} inputMode="numeric" value={km} onChange={e => setKm(e.target.value)} />}</Field>
+        <Field label="Conductor">
+          {p => <Combobox {...p} options={opcionesPersonal} value={conductor || null} onChange={v => setConductor(v ?? '')} placeholder="Seleccione conductor…" />}
+        </Field>
+        <Field label="Km / horas" hint={kmDelGps != null ? `GPS: ${kmDelGps} km` : undefined}>
+          {p => <TextInput {...p} inputMode="numeric" value={km} onChange={e => setKm(e.target.value)} />}
+        </Field>
         <Field label="Fecha de ingreso">{p => <TextInput {...p} type="date" value={fIng} onChange={e => setFIng(e.target.value)} />}</Field>
         <Field label="Hora de ingreso">{p => <TextInput {...p} type="time" value={hIng} onChange={e => setHIng(e.target.value)} />}</Field>
         <Field label="Salida estimada (fecha)">{p => <TextInput {...p} type="date" value={fSal} min={fIng || undefined} onChange={e => setFSal(e.target.value)} />}</Field>
@@ -130,7 +169,23 @@ export function RampaFormulario({ entrada, usuario, open, onClose, rampaInicial 
             </SelectInput>
           )}
         </Field>
-        <Field label="Observaciones" wide>{p => <TextInput {...p} value={obs} onChange={e => setObs(e.target.value)} placeholder="Motivo del ingreso" />}</Field>
+        {/* Trabajos de la rampa: uno por línea, cada uno con su técnico (igual que en la orden de trabajo) */}
+        {trabajos.map((t, i) => (
+          <div key={t.key} style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr) auto', gap: 8, alignItems: 'end' }}>
+            <Field label={`Trabajo ${i + 1}`}>
+              {p => <TextInput {...p} value={t.desc} onChange={e => editarTrabajo(t.key, { desc: e.target.value })} placeholder="Motivo o trabajo a realizar" />}
+            </Field>
+            <Field label="Técnico">
+              {p => <Combobox {...p} options={opcionesPersonal} value={t.tecnico || null} onChange={v => editarTrabajo(t.key, { tecnico: v ?? '' })} placeholder="Seleccione técnico…" />}
+            </Field>
+            <Button variant="plain" iconOnly icon={<Trash2 size={16} />} aria-label={`Quitar trabajo ${i + 1}`} title="Quitar trabajo"
+              onClick={() => setTrabajos(prev => prev.filter(x => x.key !== t.key))} disabled={trabajos.length <= 1} />
+          </div>
+        ))}
+        <div style={{ gridColumn: '1 / -1' }}>
+          <Button variant="secondary" icon={<Plus size={16} />} onClick={() => setTrabajos(prev => [...prev, nuevaFila()])}>Agregar trabajo</Button>
+        </div>
+        <Field label="Notas" wide>{p => <TextInput {...p} value={notas} onChange={e => setNotas(e.target.value)} placeholder="Observaciones adicionales (opcional)" />}</Field>
         <Field label="Evidencia (foto o PDF)" wide hint={evidencia?.name ?? (entrada?.evidencia_url ? 'Ya tiene un archivo; elige otro para reemplazarlo' : undefined)}>
           {p => <ArchivoInput {...p} accept="image/*,application/pdf" onChange={setEvidencia} />}
         </Field>

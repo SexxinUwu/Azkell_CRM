@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, FileDown, Paperclip, Wallet } from 'lucide-react';
+import { pestanaConCamion } from '../../core/ui/CargaCamion';
 import { Button } from '../../core/ui/Button';
 import { Badge } from '../../core/ui/Display';
 import { Sheet } from '../../core/ui/Sheet';
@@ -83,10 +84,8 @@ export function PagoDetalleSheet({ oc, open, onClose, onProcesar }: {
   async function verPdf(o: OrdenPago) {
     // La pestaña se abre antes de generar el PDF: si no, el navegador la bloquea por no venir de un gesto directo
     const ventana = window.open('', '_blank');
-    if (ventana) {
-      ventana.document.title = `Orden ${codigoOC(o)}`;
-      ventana.document.body.textContent = 'Generando PDF…';
-    }
+    pestanaConCamion(ventana);
+    if (ventana) ventana.document.title = `Orden ${codigoOC(o)}`;
     setGenerando(true);
     try {
       const [inventario, empresa] = await Promise.all([

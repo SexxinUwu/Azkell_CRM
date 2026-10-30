@@ -817,7 +817,7 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
         <div>
           <p className="tarjeta__grupo-titulo">Observaciones</p>
           <div className="tarjeta__lista">
-            <div className="dato"><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{e.observaciones}</span></div>
+            <div className="dato"><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{motivoIngreso(e.observaciones)}</span></div>
           </div>
         </div>
       )}

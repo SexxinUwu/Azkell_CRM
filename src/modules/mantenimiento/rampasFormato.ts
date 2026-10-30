@@ -1,8 +1,9 @@
 // Formato de los datos de rampa que se ven igual en la tabla, las tarjetas y el PDF
+import { quitarAutomatico } from './trabajosRampa';
 
-/** Motivo de ingreso sin marcas del sistema (•, [Reporte …], "Falla Manual :") y con cada punto numerado en su línea */
+/** Motivo de ingreso sin marcas del sistema (•, [Reporte …], "Falla Manual :", el aviso automático) y con cada punto numerado en su línea */
 export function motivoIngreso(texto: string | null | undefined): string {
-  const limpio = String(texto ?? '')
+  const limpio = quitarAutomatico(String(texto ?? ''))
     .replace(/\[[^\]]*\]\s*/g, '')
     .replace(/•\s*/g, '')
     .replace(/(falla manual|manual)\s*:\s*/gi, '')

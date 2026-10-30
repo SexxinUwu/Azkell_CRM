@@ -11,6 +11,7 @@ import './modules/sistema/accesibilidad.css';
 import { AuthProvider } from './core/auth/AuthProvider';
 import { ToastProvider } from './core/ui/Toast';
 import { ApiError } from './core/api/client';
+import { LimiteDeError, esFalloDeModulo, recargarVersionNueva } from './core/ui/LimiteDeError';
 import App from './App';
 import { iniciarAcento } from './core/lib/accent';
 import { iniciarTema } from './core/lib/theme';
@@ -43,46 +44,29 @@ iniciarColaGastos();
 // Si se publicó una versión nueva mientras la pestaña estaba abierta, el archivo de un módulo ya no existe.
 // Se recarga la página una vez (sin bucles) en vez de mostrar el error de carga.
 window.addEventListener('vite:preloadError', (e) => {
-  const ultima = Number(sessionStorage.getItem('fleet_recarga_modulo') || 0);
-  if (Date.now() - ultima < 30_000) return;
-  sessionStorage.setItem('fleet_recarga_modulo', String(Date.now()));
+  if (!recargarVersionNueva()) return; // ya se recargó hace poco: el límite de errores muestra el aviso
   e.preventDefault();
-  window.location.reload();
 });
-// Algunos navegadores no emiten vite:preloadError: el import dinámico falla con su propio mensaje. Mismo criterio de una recarga.
+// Los imports diferidos (lazy) no siempre pasan por vite:preloadError: llegan como error de módulo. Mismo criterio.
+window.addEventListener('error', (e) => { if (esFalloDeModulo(String(e.message || e.error?.message || ''))) recargarVersionNueva(); });
 window.addEventListener('unhandledrejection', (e) => {
-  const msg = String((e.reason && (e.reason.message || e.reason)) || '');
-  if (!/Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(msg)) return;
-  const ultima = Number(sessionStorage.getItem('fleet_recarga_modulo') || 0);
-  if (Date.now() - ultima < 30_000) return;
-  sessionStorage.setItem('fleet_recarga_modulo', String(Date.now()));
-  window.location.reload();
+  if (esFalloDeModulo(String((e.reason as Error | undefined)?.message ?? e.reason ?? ''))) recargarVersionNueva();
 });
-
-// Los imports diferidos (lazy) de cada pantalla no siempre pasan por vite:preloadError: si la pestaña
-// tiene una versión anterior, el error llega como "Failed to fetch dynamically imported module". Mismo criterio: recargar una vez.
-const FALLO_DE_MODULO = /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i;
-function recargarSiFalloDeModulo(mensaje: string) {
-  if (!FALLO_DE_MODULO.test(mensaje)) return;
-  const ultima = Number(sessionStorage.getItem('fleet_recarga_modulo') || 0);
-  if (Date.now() - ultima < 30_000) return;
-  sessionStorage.setItem('fleet_recarga_modulo', String(Date.now()));
-  window.location.reload();
-}
-window.addEventListener('error', (e) => recargarSiFalloDeModulo(String(e.message || e.error?.message || '')));
-window.addEventListener('unhandledrejection', (e) => recargarSiFalloDeModulo(String((e.reason as Error | undefined)?.message ?? e.reason ?? '')));
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {/* reducedMotion="user": respeta "Reducir movimiento" del sistema (sin desplazamientos ni escalas) */}
-    <MotionConfig reducedMotion="user">
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <ToastProvider>
-            <App />
-          </ToastProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </MotionConfig>
+    {/* Si algo falla al pintar, se muestra un aviso en vez de la pantalla en blanco */}
+    <LimiteDeError>
+      {/* reducedMotion="user": respeta "Reducir movimiento" del sistema (sin desplazamientos ni escalas) */}
+      <MotionConfig reducedMotion="user">
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <ToastProvider>
+              <App />
+            </ToastProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </MotionConfig>
+    </LimiteDeError>
   </StrictMode>,
 );
