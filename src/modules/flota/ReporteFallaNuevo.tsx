@@ -296,8 +296,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
       if (!editando) { setCondSeg(cs); setCondViaje(cv); }
       setV(a => {
         const n = { ...a };
-        const remolque = (viaje?.placa_remolque || s?.placa_carreta || '').toUpperCase();
-        if (!n.placa_remolque && remolque) n.placa_remolque = remolque;
+        // La carreta no se copia sola del viaje ni de seguridad: solo entra si la eliges en el formulario
         if (!n.conductor && (cv || cs)) n.conductor = cv || cs;
         if (!n.procedencia) n.procedencia = viaje?.ruta || viaje?.origen || s?.procedencia || s?.destino || s?.zona || '';
         if (!n.orden_viaje && viaje?.viaje) n.orden_viaje = viaje.viaje;
