@@ -175,8 +175,8 @@ export function OrdenesTrabajoPage() {
 
   const estadosFiltro: readonly string[] | null = ESTADOS_PESTANA[filtroEstado] ?? null;
 
-  // Rango de fechas: con mes o rango elegido, ese manda. Si no hay: 'Todos' y 'Finalizadas' muestran solo hoy;
-  // 'Pendientes' y 'En Proceso' muestran desde la fecha del más antiguo de su estado hasta hoy.
+  // Rango de fechas: con mes o rango elegido, ese manda. Si no hay: 'Todos' (clave 'Todas') muestra desde el 1 del mes hasta hoy;
+  // 'Finalizadas' solo hoy; 'Pendientes' y 'En Proceso' desde la fecha del más antiguo de su estado hasta hoy.
   const rango = useMemo(() => {
     const hoy = hoyLima();
     if (fDesde || fHasta || fMes) {
@@ -187,6 +187,7 @@ export function OrdenesTrabajoPage() {
       const fechas = ots.filter(o => est.includes(o.estado)).map(otFecha).filter(f => f !== '—').sort();
       return { desde: fechas[0] ?? hoy, hasta: hoy };
     }
+    if (filtroEstado === 'Todas') return { desde: hoy.slice(0, 7) + '-01', hasta: hoy };
     return { desde: hoy, hasta: hoy };
   }, [fDesde, fHasta, fMes, filtroEstado, ots]);
 
