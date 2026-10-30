@@ -31,6 +31,7 @@
 .placas-kpi--accent .placas-kpi__valor { color: var(--accent-ink); }
 .placas-kpi--blue .placas-kpi__valor { color: var(--blue-ink); }
 .placas-kpi--gray .placas-kpi__valor { color: var(--label-3); }
+.placas-kpi--red .placas-kpi__valor { color: var(--red-ink); }
 
 /* ─── Barra de filtros ─── */
 .placas-toolbar__buscar { flex: 1 1 18rem; min-width: 0; }

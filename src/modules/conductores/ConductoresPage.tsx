@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, FileSpreadsheet, IdCard, MessageCircle, Phone, Plus, SearchX } from 'lucide-react';
+import { FileSpreadsheet, IdCard, MessageCircle, Phone, Plus, SearchX } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { MenuOtros } from '../../core/ui/MenuOtros';
-import { abrirClasico } from '../../core/layout/navigation';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
@@ -25,8 +24,10 @@ import { ImportarConductores } from './ImportarConductores';
 import { FotoConductor } from './FotoConductor';
 import './conductores.css';
 
-type FiltroEstado = 'todos' | 'activos' | 'inactivos';
+// Estados del clásico: Activo, Cesado y Bloqueado (Inactivo se conserva para registros antiguos)
+type FiltroEstado = 'todos' | 'activos' | 'cesados' | 'bloqueados' | 'inactivos';
 const activo = (c: Conductor) => c.estado.toLowerCase() === 'activo';
+const estadoDe = (c: Conductor) => c.estado.toLowerCase();
 
 // Excel con las mismas columnas y formato que el clásico (Directorio_Personal): nombre en título, teléfono solo dígitos, TERCERO → 3ro.
 const nombreTitulo = (s: string) => s.replace(/Ã'/g, 'Ñ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
@@ -64,7 +65,8 @@ export function ConductoresPage() {
   const conductores = data ?? [];
   const resumen = useMemo(() => ({
     activos: conductores.filter(activo).length,
-    inactivos: conductores.filter(c => !activo(c)).length,
+    cesados: conductores.filter(c => estadoDe(c) === 'cesado').length,
+    bloqueados: conductores.filter(c => estadoDe(c) === 'bloqueado').length,
     conLicencia: conductores.filter(c => c.licencia).length,
     sinDni: conductores.filter(c => !c.dni).length,
   }), [conductores]);
@@ -73,7 +75,8 @@ export function ConductoresPage() {
   const nombreEmpresa = (e: string) => gruposEmpresa.find(g => g.clave === claveEmpresa(e))?.nombre ?? e;
 
   const visibles = useMemo(() => conductores.filter(c =>
-    (estado === 'todos' || (estado === 'activos' ? activo(c) : !activo(c)))
+    (estado === 'todos' || (estado === 'activos' ? activo(c) : estado === 'cesados' ? estadoDe(c) === 'cesado'
+      : estado === 'bloqueados' ? estadoDe(c) === 'bloqueado' : estadoDe(c) === 'inactivo'))
     && (!empresas.length || empresas.some(e => claveEmpresa(e) === claveEmpresa(c.empresa)))
     && coincide(c, busqueda),
   ), [conductores, estado, empresas, busqueda]);
@@ -109,7 +112,6 @@ export function ConductoresPage() {
               { label: 'Exportar Excel', detalle: `${visibles.length} ${visibles.length === 1 ? 'persona' : 'personas'} con los filtros actuales`, icon: <FileSpreadsheet size={17} />,
                 onSelect: () => exportarConductores(visibles).catch(err => toast(errorMessage(err), 'error')) },
               puedeCrear && { label: 'Importar desde Excel', detalle: 'Agrega conductores en lote', icon: <FileSpreadsheet size={17} />, onSelect: () => setImportando(true) },
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('directorio/conductores') },
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ conductor: null })}>Nuevo conductor</Button>}
           </>
@@ -121,7 +123,8 @@ export function ConductoresPage() {
           <div className="placas-resumen">
             {[
               { label: 'Activos', value: resumen.activos, tone: 'green' },
-              { label: 'Inactivos', value: resumen.inactivos, tone: 'gray' },
+              { label: 'Cesados', value: resumen.cesados, tone: 'gray' },
+              { label: 'Bloqueados', value: resumen.bloqueados, tone: 'red' },
               { label: 'Con licencia', value: resumen.conLicencia, tone: 'blue' },
               { label: 'Sin DNI', value: resumen.sinDni, tone: resumen.sinDni ? 'amber' : 'gray' },
             ].map((k, i) => (
@@ -138,7 +141,10 @@ export function ConductoresPage() {
               <SearchField value={busqueda} onChange={setBusqueda} placeholder="Nombre, DNI, licencia, empresa o teléfono" />
             </div>
             <SegmentedControl<FiltroEstado> label="Estado" value={estado} onChange={setEstado}
-              options={[{ value: 'todos', label: 'Todos' }, { value: 'activos', label: 'Activos' }, { value: 'inactivos', label: 'Inactivos' }]} />
+              options={[
+                { value: 'todos', label: 'Todos' }, { value: 'activos', label: 'Activos' }, { value: 'cesados', label: 'Cesados' },
+                { value: 'bloqueados', label: 'Bloqueados' }, ...(conductores.some(c => estadoDe(c) === 'inactivo') ? [{ value: 'inactivos' as const, label: 'Inactivos' }] : []),
+              ]} />
           </div>
           {gruposEmpresa.length > 1 && (
             <div className="placas-tipos">

@@ -182,8 +182,11 @@ export function ConductorFormulario({ conductor, existentes, open, onClose, onGu
             </Field>
             <div className="field">
               <span className="field__label">Estado</span>
-              <SegmentedControl block label="Estado" value={c.estado === 'Inactivo' ? 'Inactivo' : 'Activo'} onChange={v => setC(x => ({ ...x, estado: v }))}
-                options={[{ value: 'Activo', label: 'Activo' }, { value: 'Inactivo', label: 'Inactivo' }]} />
+              <SegmentedControl block label="Estado" value={c.estado} onChange={v => setC(x => ({ ...x, estado: v }))}
+                options={[
+                  { value: 'Activo', label: 'Activo' }, { value: 'Cesado', label: 'Cesado' }, { value: 'Bloqueado', label: 'Bloqueado' },
+                  ...(c.estado === 'Inactivo' ? [{ value: 'Inactivo', label: 'Inactivo' }] : []),
+                ]} />
             </div>
             <Field label="Empresa" wide>
               {props => <Combobox {...props} options={empresas} value={c.empresa || null} onChange={v => setC(x => ({ ...x, empresa: v ?? '' }))}
