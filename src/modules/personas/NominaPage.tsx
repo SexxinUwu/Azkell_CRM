@@ -2,7 +2,7 @@ import '../mantenimiento/mant.css';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CircleAlert, FileSpreadsheet, Paperclip, Plus, Printer, Receipt, ShieldCheck } from 'lucide-react';
+import { CircleAlert, FileSpreadsheet, Paperclip, Plus, Printer, Receipt, ShieldCheck } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -14,7 +14,6 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 import { formatFechaPe, formatSoles } from '../../core/lib/format';
 import { imprimirBoleta } from './nominaBoleta';
 
@@ -107,7 +106,6 @@ export function NominaPage() {
           <>
             <MenuOtros opciones={[
               { label: 'Exportar Excel', icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('rrhh/nomina') },
             ]} />
             {vista === 'sst' && can('rrhh_nomina.crear', 'rrhh_personal.crear') && (
               <Button variant="primary" icon={<Plus size={16} />} onClick={() => setNuevaSst(true)}>Constancia SST</Button>
@@ -198,6 +196,7 @@ export function NominaPage() {
               <div className="dato"><span className="dato__label">Días trabajados</span><span className="dato__valor">{boleta.dias_trabajados} · {boleta.faltas} faltas · {boleta.minutos_tardanza} min de tardanza</span></div>
               <div className="dato"><span className="dato__label">Sueldo básico</span><span className="dato__valor">{s(boleta.sueldo_basico)}</span></div>
               <div className="dato"><span className="dato__label">Asignación familiar</span><span className="dato__valor">{s(boleta.asignacion_familiar)}</span></div>
+              <div className="dato"><span className="dato__label">Bono / movilidad</span><span className="dato__valor">{s(boleta.bono_fijo)}</span></div>
               <div className="dato"><span className="dato__label">Horas extras</span><span className="dato__valor">{s(boleta.horas_extras_importe)}</span></div>
               <div className="dato"><span className="dato__label">Pensión ({boleta.regimen_pensionario})</span><span className="dato__valor">- {s(boleta.descuento_pension)}</span></div>
               <div className="dato"><span className="dato__label">Faltas</span><span className="dato__valor">- {s(boleta.descuento_faltas)}</span></div>
