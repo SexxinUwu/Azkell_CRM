@@ -2,11 +2,10 @@ import '../mantenimiento/mant.css';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CircleAlert, CloudOff, Paperclip, Plus, Search, Smartphone, Trash2, Truck } from 'lucide-react';
+import { CircleAlert, CloudOff, Paperclip, Pencil, Plus, Search, Smartphone, Trash2, Truck } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
-import { MenuOtros } from '../../core/ui/MenuOtros';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ConductorFallaSheet } from './ConductorFallaSheet';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
@@ -15,7 +14,6 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
 import { uuid } from '../../core/lib/uuid';
-import { abrirClasico } from '../../core/layout/navigation';
 import {
   EVENTO_COLA, enviarGasto, enviarPendientes, guardarPendiente, guardarViaje, leerViaje,
   listarPendientes, quitarPendiente, sinSenal, type GastoPendiente,
@@ -71,6 +69,7 @@ export function PortalConductorPage() {
   const [entrada, setEntrada] = useState('');
   const [consulta, setConsulta] = useState('');
   const [nuevo, setNuevo] = useState(false);
+  const [editando, setEditando] = useState<Gasto | null>(null);
   const [porEliminar, setPorEliminar] = useState<Eliminar | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [seccion, setSeccion] = useState<Seccion>('gastos');
@@ -162,7 +161,6 @@ export function PortalConductorPage() {
         eyebrow="Personas y seguridad"
         title="Portal del conductor"
         subtitle="Viaje asignado, saldo de viáticos y rendición de gastos"
-        actions={<MenuOtros opciones={[{ label: 'Editar gastos en la versión actual', icon: <ArrowUpRight size={17} />, onSelect: () => abrirClasico('operaciones/conductor-portal') }]} />}
       />
 
       {totalPendientes > 0 && (
@@ -301,6 +299,7 @@ export function PortalConductorPage() {
                       </div>
                       <strong>{s(g.importe)}</strong>
                       {g.sustento_url && <a href={g.sustento_url} target="_blank" rel="noreferrer" className="placas-limpiar" aria-label="Ver sustento"><Paperclip size={16} /></a>}
+                      {puedeEditar && <button type="button" className="placas-limpiar" onClick={() => setEditando(g)} aria-label="Editar gasto"><Pencil size={16} /></button>}
                       {puedeEditar && <button type="button" className="placas-limpiar" style={{ color: 'var(--red-ink)' }} onClick={() => setPorEliminar({ tipo: 'servidor', gasto: g })} aria-label="Eliminar gasto"><Trash2 size={16} /></button>}
                     </div>
                   ))}
@@ -315,7 +314,8 @@ export function PortalConductorPage() {
         <ConductorFallaSheet open={reportando} viaje={viaje} conductor={r?.conductor?.nombre ?? ''} onClose={() => setReportando(false)}
           onHecho={() => qc.invalidateQueries({ queryKey: ['personas', 'portal-fallas'] })} />
       )}
-      <GastoSheet open={nuevo} viaje={viaje?.codigo ?? ''} conductor={r?.conductor?.nombre ?? ''} onClose={() => setNuevo(false)} onHecho={refrescar} />
+      <GastoSheet open={nuevo || !!editando} editar={editando} viaje={viaje?.codigo ?? ''} conductor={r?.conductor?.nombre ?? ''}
+        onClose={() => { setNuevo(false); setEditando(null); }} onHecho={refrescar} />
       <ConfirmSheet open={!!porEliminar} onClose={() => !ocupado && setPorEliminar(null)} onConfirm={eliminar} loading={ocupado}
         title={porEliminar?.tipo === 'pendiente' ? '¿Quitar este gasto del teléfono?' : '¿Eliminar este gasto?'}
         message={porEliminar ? `${porEliminar.tipo === 'pendiente' ? porEliminar.gasto.sub_motivo : (porEliminar.gasto.sub_motivo || porEliminar.gasto.tipo_gasto)} · ${s(porEliminar.gasto.importe)}` : ''}
@@ -445,7 +445,8 @@ function ListaVales({ datos, cargando }: { datos: Vale[] | undefined; cargando: 
 
 // Registro local primero: el gasto se guarda en el teléfono con su UUID y luego se intenta enviar.
 // Si no hay señal, queda pendiente; el servidor no lo duplica aunque se reenvíe.
-function GastoSheet({ open, viaje, conductor, onClose, onHecho }: { open: boolean; viaje: string; conductor: string; onClose: () => void; onHecho: () => Promise<unknown> }) {
+// Con `editar` se corrige un gasto ya enviado (PUT directo, como el clásico: requiere señal).
+function GastoSheet({ open, editar, viaje, conductor, onClose, onHecho }: { open: boolean; editar?: Gasto | null; viaje: string; conductor: string; onClose: () => void; onHecho: () => Promise<unknown> }) {
   const toast = useToast();
   const [motivo, setMotivo] = useState(MOTIVOS[6]);
   const [importe, setImporte] = useState('');
@@ -454,13 +455,44 @@ function GastoSheet({ open, viaje, conductor, onClose, onHecho }: { open: boolea
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { if (open) { setMotivo(MOTIVOS[6]); setImporte(''); setNota(''); setFoto(null); setError(null); } }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    if (editar) {
+      setMotivo(editar.sub_motivo || editar.tipo_gasto || MOTIVOS[6]);
+      setImporte(String(Number(editar.importe) || 0));
+      setNota(editar.detalle || '');
+    } else {
+      setMotivo(MOTIVOS[6]); setImporte(''); setNota('');
+    }
+    setFoto(null); setError(null);
+  }, [open, editar]);
+
+  async function guardarEdicion(v: number) {
+    if (!editar) return;
+    const f = new FormData();
+    f.append('orden_viaje', viaje);
+    f.append('conductor', conductor || 'Conductor');
+    f.append('tipo_gasto', 'Gastos de Viaje y Ruta');
+    f.append('sub_motivo', motivo);
+    f.append('importe', String(v));
+    f.append('detalle', nota.trim() || motivo);
+    f.append('usuario_creacion', conductor ? `${conductor} (Conductor)` : 'CONDUCTOR MÓVIL');
+    if (foto) f.append('sustento', foto);
+    const r = await api<{ ok?: boolean; error?: string }>(`/tesoreria/liquidaciones-gastos/${editar.id}`, { method: 'PUT', body: f });
+    if (r.ok === false) throw new Error(r.error || 'No se pudo guardar el gasto');
+    haptic('success'); toast('Gasto actualizado');
+    await onHecho(); onClose();
+  }
 
   async function guardar() {
     const v = parseFloat(importe.replace(',', '.'));
     if (!Number.isFinite(v) || v <= 0) { setError('Indica el importe del gasto.'); return; }
     if (!viaje) { setError('Este conductor no tiene un viaje asignado.'); return; }
     setEnviando(true); setError(null);
+    if (editar) {
+      try { await guardarEdicion(v); } catch (err) { setError(errorMessage(err)); haptic('warning'); } finally { setEnviando(false); }
+      return;
+    }
     const gasto: GastoPendiente = {
       uuid: uuid(),
       orden_viaje: viaje,
@@ -496,19 +528,25 @@ function GastoSheet({ open, viaje, conductor, onClose, onHecho }: { open: boolea
   }
 
   return (
-    <Sheet open={open} onClose={() => !enviando && onClose()} title="Registrar gasto del viaje"
+    <Sheet open={open} onClose={() => !enviando && onClose()} title={editar ? 'Editar gasto del viaje' : 'Registrar gasto del viaje'}
       footer={<><Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
-        <Button variant="primary" onClick={guardar} loading={enviando}>Guardar gasto</Button></>}>
+        <Button variant="primary" onClick={guardar} loading={enviando}>{editar ? 'Guardar cambios' : 'Guardar gasto'}</Button></>}>
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
-        {!navigator.onLine && (
+        {!editar && !navigator.onLine && (
           <div className="field field--wide"><Notice tone="neutral" icon={<CloudOff size={16} />}>Sin señal: el gasto se guardará en el teléfono y se enviará al volver la señal.</Notice></div>
         )}
         <Field label="¿En qué se gastó?" wide>
-          {p => <SelectInput {...p} value={motivo} onChange={e => setMotivo(e.target.value)}>{MOTIVOS.map(m => <option key={m} value={m}>{m}</option>)}</SelectInput>}
+          {p => (
+            <SelectInput {...p} value={motivo} onChange={e => setMotivo(e.target.value)}>
+              {(MOTIVOS.includes(motivo) ? MOTIVOS : [motivo, ...MOTIVOS]).map(m => <option key={m} value={m}>{m}</option>)}
+            </SelectInput>
+          )}
         </Field>
         <Field label="Importe (S/)">{p => <TextInput {...p} inputMode="decimal" value={importe} onChange={e => setImporte(e.target.value)} autoFocus />}</Field>
-        <Field label="Foto del comprobante" hint={foto?.name}>{p => <ArchivoInput {...p} accept="image/*" capture="environment" onChange={setFoto} />}</Field>
+        <Field label="Foto del comprobante" hint={foto?.name ?? (editar?.sustento_url ? 'Ya tiene sustento; elige otra foto solo para reemplazarlo' : undefined)}>
+          {p => <ArchivoInput {...p} accept="image/*" capture="environment" onChange={setFoto} />}
+        </Field>
         <Field label="Nota" wide>{p => <TextInput {...p} value={nota} onChange={e => setNota(e.target.value)} placeholder="Opcional" />}</Field>
       </div>
     </Sheet>
