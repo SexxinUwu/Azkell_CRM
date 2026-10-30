@@ -263,3 +263,10 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 | `routes/clientes.js` | 10 | `routes/perfil.js` | 8 |
 | `routes/legacy.js` | 5 | `routes/ordenes_compra.js` | 5 |
 | `routes/disponibilidad.js` | 4 | `routes/superadmin.js` | 4 |
+
+## Estado de cierre (2026-10-29)
+
+- Escapes al clásico: 0, salvo las guías SUNAT (decisión: el clásico emite a SUNAT hasta validar el sandbox).
+- Raíz `/` → app nueva; versión actual en `/clasico`.
+- Fase 5 (borrar el clásico: `Index.html`, `logica.js`, `modulos/`, `routes/` del clásico): **no iniciada**. Depende de validar la emisión de guías en sandbox y de las pruebas en navegador de la sección anterior.
+- Lista de pendientes de calca: ver `docs/paridad-botones-escape.md`, sección «Estado de cierre».

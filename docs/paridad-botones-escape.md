@@ -80,3 +80,19 @@ Fecha de revisión: 2026-10-29. Tarea solo de lectura: no se modificó `src/` ni
 | `mantenimiento/OtrosMantenimientoPage.tsx` | REVISAR |
 
 **Botones que se pueden quitar hoy: 2** (Bancos y Asistencia). Los REVISAR (7 entradas) pasan a SI solo si se prueban en el navegador o se comparan a fondo.
+
+## Estado de cierre (2026-10-29)
+
+- **Escapes «Abrir en la versión actual»:** quitados de todas las pantallas de la app nueva. Único acceso que queda: el enlace de emisión de **guías SUNAT** (`/clasico#operaciones/guia-remitente` y `/clasico#operaciones/guia-transportista`), por decisión: el clásico sigue emitiendo a SUNAT hasta validar el sandbox.
+- **Raíz y clásico:** `/` redirige a `/app`; la versión actual queda en `/clasico`.
+- **Menú:** ninguna entrada abre el clásico; las guías abren su pantalla React, que enlaza a la emisión.
+
+### Pendiente de calca (reportado por los agentes, no verificado en navegador)
+
+- Auditoría: columnas y filtros Módulo / Sub-Módulo (el clásico los deriva de otra fuente, no de `audit_logs`).
+- Centro de Comando: la Torre de alertas del clásico no está en React.
+- Operaciones: cuenta bancaria del conductor no se autollena (`/seguridad/recursos` devuelve solo nombres).
+- Órdenes de viaje: adjuntos, eventos, cambios y peajes quedan vacíos, como en el clásico.
+- Mantenimiento: «Confirmar y Generar OTs» del clásico asumido cubierto por «Nueva OT»; sin verificar en código.
+- Vales: la separación de vales usa palabras clave (aproximación).
+- Todos los flujos nuevos: pendientes de prueba en navegador con datos reales.
