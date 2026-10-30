@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CircleAlert, FileSpreadsheet, Plus, SearchX, Tags } from 'lucide-react';
+import { CircleAlert, FileSpreadsheet, Plus, SearchX, Tags } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Combobox, type ComboboxOption } from '../../core/ui/Combobox';
@@ -12,7 +12,6 @@ import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { abrirClasico } from '../../core/layout/navigation';
 import { guardarMotivoGasto, useCentrosCostos, useMotivosGastos, type MotivoGasto } from './api';
 
 const clave = (s: string) => s.trim().toUpperCase();
@@ -68,7 +67,6 @@ export function CcMotivosGasto({ arriba }: { arriba: ReactNode }) {
           <>
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${visibles.length} conceptos`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Abrir en la versión actual', icon: <ArrowUpRight size={17} />, separado: true, onSelect: () => abrirClasico('tesoreria/centros-costos') },
             ]} />
             {puedeEscribir && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setEditando({ item: null })}>Nuevo concepto</Button>}
           </>
