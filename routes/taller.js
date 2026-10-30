@@ -132,7 +132,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                                         situacion = 'Liberado', 
                                         fecha_salida_real = COALESCE(fecha_salida_real, CURDATE()), 
                                         hora_salida_real = COALESCE(hora_salida_real, CAST(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00') AS TIME)), 
-                                        fecha_liberado = COALESCE(fecha_liberado, NOW()) 
+                                        fecha_liberado = COALESCE(fecha_liberado, CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00')) 
                                      WHERE id = ?`,
                                     [rId],
                                     (errUpRampa) => {
@@ -356,7 +356,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 else if (!r.fecha_pausa3) slot = 3;
                 else return res.status(400).json({ error: 'Límite de 3 pausas alcanzado' });
                 targetDb.query(
-                    `UPDATE ordenes_trabajo SET estado='Pausada', fecha_pausa${slot}=NOW(), motivo_pausa${slot}=?, pausado_por${slot}=? WHERE ticket_entrada=?`,
+                    `UPDATE ordenes_trabajo SET estado='Pausada', fecha_pausa${slot}=CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'), motivo_pausa${slot}=?, pausado_por${slot}=? WHERE ticket_entrada=?`,
                     [motivo.trim(), pausado_por || null, ticketId],
                     (err2) => {
                         if (err2) return res.status(500).json({ error: err2.message });
@@ -381,7 +381,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 else if (r.fecha_pausa3 && !r.fecha_fin_pausa3) slot = 3;
                 else return res.status(400).json({ error: 'No hay pausa activa' });
                 targetDb.query(
-                    `UPDATE ordenes_trabajo SET estado='En Proceso', fecha_fin_pausa${slot}=NOW() WHERE ticket_entrada=?`,
+                    `UPDATE ordenes_trabajo SET estado='En Proceso', fecha_fin_pausa${slot}=CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00') WHERE ticket_entrada=?`,
                     [ticketId],
                     (err2) => {
                         if (err2) return res.status(500).json({ error: err2.message });
@@ -487,7 +487,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                                 generarId(req.db || db, 'ot_backlog', 'backlog_id', 'BK', anioBk, (nuevoBkId) => {
                                     targetDb.query(
                                         `INSERT INTO ot_backlog (backlog_id, placa, km, tema, tarea, reportado_por, fecha_reporte, estado, creado_por, ticket_ot)
-                                     VALUES (?, ?, ?, 'Pendiente de OT', ?, ?, NOW(), 'Pendiente', ?, ?)`,
+                                     VALUES (?, ?, ?, 'Pendiente de OT', ?, ?, CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00'), 'Pendiente', ?, ?)`,
                                         [nuevoBkId, placaOT, kmRegistrado, textoMotivo, cerrado_por || 'Taller', cerrado_por || 'Sistema', ticketId],
                                         (errBkIns) => {
                                             if (!errBkIns) console.log(`📋 Auto-Backlog generado: ${nuevoBkId} para ${placaOT} (${textoMotivo})`);
@@ -1318,7 +1318,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 `UPDATE taller_rampas SET estado='Liberado',
              fecha_liberado = CASE WHEN fecha_salida IS NOT NULL AND hora_salida IS NOT NULL
                               THEN CONCAT(fecha_salida, ' ', hora_salida)
-                              ELSE NOW() END,
+                              ELSE CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00') END,
              liberado_por=?,
              fecha_salida_real=?, hora_salida_real=?, situacion=COALESCE(?, situacion) WHERE id=?`,
                 [liberado_por || null, fecha_salida_real || null, hora_salida_real || null,
