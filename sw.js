@@ -1,5 +1,5 @@
 // v55: sale /app del service worker y descarta lo que quedó guardado (archivos de compilación que ya no existen)
-const CACHE_NAME = 'azkell-fleet-v58';
+const CACHE_NAME = 'azkell-fleet-v59';
 const STATIC_CACHE = 'azkell-libs-v2';
 // Fotos de artículos (S3): la URL firmada cambia en cada consulta, por eso se guardan por su ruta sin la firma
 const IMG_CACHE = 'azkell-img-v1';
@@ -8,16 +8,6 @@ const IMG_MAX = 600;
 const APP_CACHE = 'azkell-app-v1';
 const APP_ASSETS_MAX = 300;
 const APP_SHELL = '/app/__shell';
-
-// Archivos de la app
-const APP_ASSETS = [
-  '/clasico',
-  '/Index.html',
-  '/estilos.css',
-  '/logica.js',
-  '/lazy-libs.js',
-  '/utils.js'
-];
 
 // Librerías pesadas
 const LIB_ASSETS = [
@@ -41,9 +31,6 @@ self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
     Promise.allSettled([
-      caches.open(CACHE_NAME).then(c => {
-        return Promise.allSettled(APP_ASSETS.map(url => c.add(url).catch(() => {})));
-      }),
       caches.open(STATIC_CACHE).then(c => {
         return Promise.allSettled(LIB_ASSETS.map(url => c.add(url).catch(() => {})));
       })
@@ -195,7 +182,7 @@ self.addEventListener('fetch', event => {
   }
 
   // 3. Navegación principal (HTML) → Stale-While-Revalidate con timeout rápido (Cero pantallas en blanco)
-  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/Index.html') {
+  if (event.request.mode === 'navigate' || url.pathname === '/') {
     event.respondWith(
       fetchWithTimeout(event.request, 2000)
         .then(resp => {
@@ -209,7 +196,7 @@ self.addEventListener('fetch', event => {
         .catch(() => {
           return caches.match(event.request).then(cached => {
             if (cached) return cached;
-            return caches.match('/Index.html').then(idx => idx || caches.match('/clasico'));
+            return caches.match(APP_SHELL);
           });
         })
     );

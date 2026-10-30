@@ -27,9 +27,9 @@ interface Guia {
 }
 interface Item { id: number; descripcion?: string; cantidad?: number | string; unidad_medida?: string; peso?: number | string }
 
-const CFG: Record<TipoGuia, { ruta: string; titulo: string; clasico: string; excel: string }> = {
-  remitente: { ruta: '/guia-remitente', titulo: 'Guías de remitente', clasico: 'operaciones/guia-remitente', excel: 'Guias-remitente' },
-  transportista: { ruta: '/guia-transportista', titulo: 'Guías de transportista', clasico: 'operaciones/guia-transportista', excel: 'Guias-transportista' },
+const CFG: Record<TipoGuia, { ruta: string; titulo: string; excel: string }> = {
+  remitente: { ruta: '/guia-remitente', titulo: 'Guías de remitente', excel: 'Guias-remitente' },
+  transportista: { ruta: '/guia-transportista', titulo: 'Guías de transportista', excel: 'Guias-transportista' },
 };
 
 const estadoDe = (g: Guia) => {

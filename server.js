@@ -484,7 +484,7 @@ app.use('/libs', express.static(path.join(__dirname, 'libs'), {
     maxAge: '30d',
     immutable: true
 }));
-// El resto de archivos (logica.js, estilos.css, vistas) → no cachear para reflejar cambios.
+// El resto de archivos estáticos → no cachear para reflejar cambios.
 // Solo se publica lo que necesita el navegador: el código del servidor, los scripts,
 // archivo/ y cualquier otro archivo del proyecto nunca se sirven.
 const _staticRaiz = express.static(__dirname, {
@@ -498,11 +498,10 @@ const _staticRaiz = express.static(__dirname, {
         }
     }
 });
-const CARPETAS_PUBLICAS = new Set(['modulos', 'icons', 'web']);
+const CARPETAS_PUBLICAS = new Set(['icons', 'web']);
 const ARCHIVOS_PUBLICOS = new Set([
-    'Index.html', 'tv.html', 'wialon_callback.html',
-    'logica.js', 'utils.js', 'lazy-libs.js', 'sw.js',
-    'estilos.css', 'manifest.json',
+    'tv.html', 'wialon_callback.html',
+    'sw.js', 'manifest.json',
     'AzkellFleetTV.apk', 'MarsisaFleetTV.apk', 'tv.apk'
 ]);
 app.use((req, res, next) => {
@@ -863,8 +862,7 @@ app.get('/api/proxy/placa', verifyToken, async (req, res) => {
     });
 });
 
-// La raíz entra a la app nueva (React). La versión actual queda en /clasico, solo para emergencias y para
-// la emisión de guías SUNAT (ver «Guías» en la app nueva: enlace a /clasico#operaciones/guia-remitente).
+// La raíz entra a la app nueva (React). La versión anterior fue retirada.
 app.get('/', (req, res) => {
     if (_isSuperAdminReq(req) && fs.existsSync(path.join(DIST_APP, 'index.html'))) {
         return res.redirect(302, '/app/sistema/superadmin');
@@ -872,41 +870,6 @@ app.get('/', (req, res) => {
     return res.redirect(302, '/app/');
 });
 
-app.get('/clasico', async (req, res) => {
-    try {
-        // SuperAdmin (admin.*): entra directo al panel de empresas de la app nueva
-        if (_isSuperAdminReq(req) && fs.existsSync(path.join(DIST_APP, 'index.html'))) {
-            return res.redirect(302, '/app/sistema/superadmin');
-        }
-        let pageTitle = 'Azkell Fleet';
-        if (_isSuperAdminReq(req)) {
-            pageTitle = 'SuperAdmin SaaS Master — Azkell Fleet';
-        } else {
-            let nombreEmpresaRaw = '';
-            if (req.db) {
-                try {
-                    const [rows] = await req.db.promise().query(
-                        "SELECT valor FROM configuracion_erp WHERE clave = 'empresa_nombre' LIMIT 1"
-                    );
-                    if (rows && rows[0] && rows[0].valor) nombreEmpresaRaw = rows[0].valor;
-                } catch (e) {}
-            }
-            if (!nombreEmpresaRaw && req.tenantInfo && req.tenantInfo.nombre_empresa) {
-                nombreEmpresaRaw = req.tenantInfo.nombre_empresa;
-            }
-
-            const cleanName = _formatearNombreEmpresa(nombreEmpresaRaw || req.tenantSlug || 'Azkell Fleet');
-            pageTitle = `${cleanName} - Azkell Fleet`;
-        }
-
-        let html = fs.readFileSync(path.join(__dirname, 'Index.html'), 'utf8');
-        html = html.replace('<title>Azkell Fleet</title>', `<title>${pageTitle}</title>`);
-        res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        return res.send(html);
-    } catch (e) {
-        res.sendFile(path.join(__dirname, 'Index.html'));
-    }
-});
 
 // ── RUTA DEDICADA PARA SMART TV (CENTRO DE CONTROL / WAR ROOM) ─────
 // La pantalla nueva (React, escenario 1920×1080 escalable) sale de dist/tv-app (`npm run build:tv`).
