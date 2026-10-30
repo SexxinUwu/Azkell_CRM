@@ -278,8 +278,8 @@ export function OrdenesTrabajoPage() {
     }
   }
 
-  const puedeEditar  = can('ot.e') || can('reportes_ot.e');
-  const puedeEliminar = can('ot.d') || can('reportes_ot.d');
+  const puedeEditar  = can('ot.editar') || can('reportes_ot.editar');
+  const puedeEliminar = can('ot.eliminar') || can('reportes_ot.eliminar');
   // Se busca la OT en los datos actuales: el detalle refleja pausas y cierres tras cada acción
   const otActual = seleccionada ? (ots.find(o => otId(o) === otId(seleccionada)) ?? seleccionada) : null;
   const soloDetalle  = !!otActual;

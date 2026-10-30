@@ -4,7 +4,7 @@ import type { RutaModulo } from '../personal/rutas.tipos';
 export const RUTAS: RutaModulo[] = [
   {
     path: 'mantenimiento/dashboard/*',
-    permisos: ['mant_dashboard.ver', 'status_rampa.ver', 'admin'],
+    permisos: ['mant_dashboard.ver', 'dashboard.ver', 'status_rampa.ver', 'checklist.ver', 'admin'],
     Page: lazy(() => import('./MantDashboardPage').then(m => ({ default: m.MantDashboardPage }))),
     nav: { key: 'mant-dashboard', label: 'Resumen de taller', to: '/mantenimiento/dashboard', icon: 'LayoutDashboard', permisos: ['mant_dashboard.ver', 'status_rampa.ver', 'admin'] },
   },
@@ -40,25 +40,25 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'mantenimiento/reportes-ot/*',
-    permisos: ['reportes_ot.ver', 'ot.ver'],
+    permisos: ['reportes_ot.ver', 'ot.ver', 'admin'],
     Page: lazy(() => import('./OrdenesTrabajoPage').then(m => ({ default: m.OrdenesTrabajoPage }))),
     nav: { key: 'reportes-ot', label: 'Órdenes de trabajo', to: '/mantenimiento/reportes-ot', icon: 'ScrollText', permisos: ['reportes_ot.ver', 'ot.ver'] },
   },
   {
     path: 'mantenimiento/trabajos-ot/*',
-    permisos: ['trabajos_ot.ver'],
+    permisos: ['trabajos_ot.ver', 'admin'],
     Page: lazy(() => import('./TrabajosOtPage').then(m => ({ default: m.TrabajosOtPage }))),
     nav: { key: 'trabajos-ot', label: 'Trabajos de OT', to: '/mantenimiento/trabajos-ot', icon: 'Wrench', permisos: ['trabajos_ot.ver'] },
   },
   {
     path: 'mantenimiento/status-rampa/*',
-    permisos: ['status_rampa.ver'],
+    permisos: ['status_rampa.ver', 'admin'],
     Page: lazy(() => import('./StatusRampaPage').then(m => ({ default: m.StatusRampaPage }))),
     nav: { key: 'status-rampa', label: 'Status de rampa', to: '/mantenimiento/status-rampa', icon: 'Wrench', permisos: ['status_rampa.ver'] },
   },
   {
     path: 'mantenimiento/fleetrun/*',
-    permisos: ['fleetrun.ver', 'fleet.ver'],
+    permisos: ['fleetrun.ver', 'fleet.ver', 'admin'],
     Page: lazy(() => import('./FleetrunPage').then(m => ({ default: m.FleetrunPage }))),
     nav: { key: 'fleetrun', label: 'Fleetrun', to: '/mantenimiento/fleetrun', icon: 'Gauge', permisos: ['fleetrun.ver', 'fleet.ver'] },
   },
@@ -69,20 +69,20 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'mantenimiento/neumaticos-analisis/*',
-    permisos: ['neumaticos.ver'],
+    permisos: ['neumaticos.ver', 'admin'],
     Page: lazy(() => import('./NeumaticosAnalisis').then(m => ({ default: m.NeumaticosAnalisisPage }))),
     nav: { key: 'neumaticos-analisis', label: 'Análisis de neumáticos', to: '/mantenimiento/neumaticos-analisis', icon: 'Disc3', permisos: ['neumaticos.ver'] },
   },
   {
     path: 'mantenimiento/neumaticos-ultimas/*',
-    permisos: ['neumaticos.ver'],
+    permisos: ['neumaticos.ver', 'admin'],
     Page: lazy(() => import('./NeumaticosUltimasPage').then(m => ({ default: m.NeumaticosUltimasPage }))),
     nav: { key: 'neumaticos', label: 'Últimas inspecciones', to: '/mantenimiento/neumaticos-ultimas', icon: 'Disc3', permisos: ['neumaticos.ver'] },
   },
   {
     // Listado de todos los neumáticos (ciclo de vida); cada fila abre la ficha
     path: 'mantenimiento/neumaticos-listado/*',
-    permisos: ['neumaticos.ver'],
+    permisos: ['neumaticos.ver', 'admin'],
     Page: lazy(() => import('./NeumaticosListado').then(m => ({ default: m.NeumaticosListado }))),
   },
   {
@@ -105,7 +105,7 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'mantenimiento/planificacion/*',
-    permisos: ['plan.ver'],
+    permisos: ['plan.ver', 'admin'],
     Page: lazy(() => import('./PlanificacionPage').then(m => ({ default: m.PlanificacionPage }))),
     nav: { key: 'planificacion', label: 'Planificación', to: '/mantenimiento/planificacion', icon: 'History', permisos: ['plan.ver'] },
   },
@@ -116,12 +116,12 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'mantenimiento/tipos-mp/*',
-    permisos: ['plan.ver'],
+    permisos: ['cfg_mant.ver', 'admin'],
     Page: lazy(() => import('./TiposAlertasPage').then(m => ({ default: m.TiposAlertasPage }))),
   },
   {
     path: 'mantenimiento/incidencias/*',
-    permisos: ['incidencias_ruta.ver'],
+    permisos: ['incidencias_ruta.ver', 'admin'],
     Page: lazy(() => import('./IncidenciasPage').then(m => ({ default: m.IncidenciasPage }))),
     nav: { key: 'incidencias', label: 'Incidencias en ruta', to: '/mantenimiento/incidencias', icon: 'ShieldCheck', permisos: ['incidencias_ruta.ver'] },
   },
@@ -133,7 +133,7 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'mantenimiento/kits-mp/*',
-    permisos: ['plan.ver', 'admin'],
+    permisos: ['cfg_mant.ver', 'admin'],
     Page: lazy(() => import('./KitsMpPage').then(m => ({ default: m.KitsMpPage }))),
     nav: { key: 'kits-mp', label: 'Kits de mantenimiento', to: '/mantenimiento/kits-mp', icon: 'PackageCheck', permisos: ['plan.ver', 'admin'] },
   },
