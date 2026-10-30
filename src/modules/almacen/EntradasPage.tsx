@@ -5,7 +5,8 @@ import { CircleCheck, ClipboardList, Coins, CreditCard, Download, Eye, FileSprea
 import { exportarConsolidadoOC, exportarDetalleArticulosOC, descargarPlantillaEntradas } from './exportarEntradas';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField, TextInput } from '../../core/ui/Field';
+import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { MenuOtros, type OpcionOtros } from '../../core/ui/MenuOtros';
@@ -201,7 +202,8 @@ export function EntradasPage() {
   const [desde, setDesde] = useState(() => mesAtras(hoyLima()));
   const [hasta, setHasta] = useState(() => hoyLima());
   const [estado, setEstado] = useState<FiltroEstado>('todas');
-  const [vista] = useState<Vista>('articulos');
+  // Por defecto: una fila por orden de compra (sin duplicados); «Por artículo» muestra cada artículo
+  const [vista, setVista] = useState<Vista>('ordenes');
   const [pagina, setPagina] = useState(1);
   const [seleccionadaId, setSeleccionadaId] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<{ entrada: EntradaInv | null } | null>(null);
@@ -222,7 +224,7 @@ export function EntradasPage() {
   // Pagar es un acto de Tesorería: mismos permisos que Pago de requerimientos
   const puedePagar = can('tesoreria_caja.ver', 'tesoreria_pago_req.ver');
 
-  useEffect(() => { setPagina(1); }, [busqueda, desde, hasta, estado]);
+  useEffect(() => { setPagina(1); }, [busqueda, desde, hasta, estado, vista]);
 
   const visibles = useMemo(
     () => filtrarOrdenes(entradas, { busqueda, desde, hasta, estado }),
@@ -230,12 +232,13 @@ export function EntradasPage() {
   );
   const kpis = useMemo(() => kpisOrdenes(visibles), [visibles]);
   const conteo = useMemo(() => {
-    const c = { registradas: 0, aprobadas: 0, procesadas: 0 };
+    const c = { registradas: 0, aprobadas: 0, procesadas: 0, anuladas: 0 };
     for (const o of entradas) {
       const cat = categoriaEstado(o.estado);
       if (cat === 'registradas') c.registradas++;
       else if (cat === 'aprobadas') c.aprobadas++;
       else if (cat === 'procesadas') c.procesadas++;
+      else if (cat === 'anuladas') c.anuladas++;
     }
     return { ...c, todas: entradas.length };
   }, [entradas]);
@@ -409,6 +412,15 @@ export function EntradasPage() {
                 <button type="button" className="oc-cotizacion__quitar" aria-label="Quitar fechas"
                   onClick={() => { setDesde(''); setHasta(''); }}>×</button>
               </div>
+              <SegmentedControl<Vista> label="Ver por" value={vista} onChange={setVista}
+                options={[{ value: 'ordenes', label: 'Por orden de compra' }, { value: 'articulos', label: 'Por artículo' }]} />
+              <SelectInput aria-label="Estado de la orden" value={estado} onChange={ev => setEstado(ev.target.value as FiltroEstado)} style={{ width: 'auto' }}>
+                <option value="todas">Todas ({conteo.todas})</option>
+                <option value="registradas">Registradas ({conteo.registradas})</option>
+                <option value="aprobadas">Aprobadas ({conteo.aprobadas})</option>
+                <option value="procesadas">Procesadas ({conteo.procesadas})</option>
+                <option value="anuladas">Anuladas ({conteo.anuladas})</option>
+              </SelectInput>
               <span className="badge" style={{ marginLeft: 'auto' }}>
                 {visibles.length} {visibles.length === 1 ? 'registro' : 'registros'}
               </span>
