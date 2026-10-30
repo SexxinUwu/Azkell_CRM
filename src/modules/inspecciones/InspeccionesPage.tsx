@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import '../../core/ui/acciones-iconos.css';
 import { useToast } from '../../core/ui/Toast';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
@@ -115,12 +115,30 @@ export function InspeccionesPage() {
     && (!estados.length || estados.includes(u.ciclo.estado))
     && (!pal || [u.placa.placa, u.placa.cliente, u.placa.marca, u.placa.tipo].join(' ').toUpperCase().includes(pal) || clavePlaca(u.placa.placa).includes(clavePlaca(pal))));
 
-  const historial = (insp.data ?? []).filter(i => i.tipo !== 'Solo Frenos')
-    .filter(i => !pal || [i.placa, i.tecnico, i.cliente, i.id].join(' ').toUpperCase().includes(pal) || clavePlaca(i.placa).includes(clavePlaca(pal)))
-    .sort((a, b) => (b.fecha?.getTime() ?? 0) - (a.fecha?.getTime() ?? 0) || numId(b.id) - numId(a.id));
+  // Historial: cada visita con su tipo. Mecánica (inspección General), Neumática (inspección de neumáticos de la
+  // misma placa y del mismo día) o ambas. Una inspección que solo es de neumáticos también aparece.
+  const diaClave = (f: Date | null) => (f ? f.toDateString() : 'sin');
+  const neuPorVisita = new Map<string, NonNullable<typeof neu.data>[number]>();
+  (neu.data ?? []).forEach(n => { const k = `${clavePlaca(n.placa)}|${diaClave(n.fecha)}`; if (!neuPorVisita.has(k)) neuPorVisita.set(k, n); });
+  const mecanicasHist = (insp.data ?? []).filter(i => i.tipo !== 'Solo Frenos');
+  const mecKeys = new Set(mecanicasHist.map(i => `${clavePlaca(i.placa)}|${diaClave(i.fecha)}`));
+  type FilaHist = { clave: string; id: string; placa: string; fecha: Date | null; tecnico: string; km: number | null; cliente: string; insp: Inspeccion | null; mecanica: boolean; neumatica: boolean };
+  const filasHist: FilaHist[] = [
+    ...mecanicasHist.map<FilaHist>(i => ({
+      clave: `m-${i.id}`, id: i.id, placa: i.placa, fecha: i.fecha, tecnico: i.tecnico, km: i.km, cliente: i.cliente,
+      insp: i, mecanica: true, neumatica: neuPorVisita.has(`${clavePlaca(i.placa)}|${diaClave(i.fecha)}`),
+    })),
+    ...(neu.data ?? []).filter(n => !mecKeys.has(`${clavePlaca(n.placa)}|${diaClave(n.fecha)}`)).map<FilaHist>(n => ({
+      clave: `n-${n.id}`, id: n.id, placa: n.placa, fecha: n.fecha, tecnico: n.tecnico, km: n.km ?? null, cliente: '',
+      insp: null, mecanica: false, neumatica: true,
+    })),
+  ];
+  const historial = filasHist
+    .filter(f => !pal || [f.placa, f.tecnico, f.cliente, f.id].join(' ').toUpperCase().includes(pal) || clavePlaca(f.placa).includes(clavePlaca(pal)))
+    .sort((a, b) => (b.fecha?.getTime() ?? 0) - (a.fecha?.getTime() ?? 0) || (numId(b.id) - numId(a.id)) || 0);
   const porDia = useMemo(() => {
-    const g = new Map<string, Inspeccion[]>();
-    historial.slice(0, 200).forEach(i => { const k = i.fecha ? i.fecha.toDateString() : 'sin'; g.set(k, [...(g.get(k) ?? []), i]); });
+    const g = new Map<string, FilaHist[]>();
+    historial.slice(0, 200).forEach(f => { const k = diaClave(f.fecha); g.set(k, [...(g.get(k) ?? []), f]); });
     return [...g.values()];
   }, [historial]);
 
@@ -148,11 +166,24 @@ export function InspeccionesPage() {
         subtitle={cargando ? 'Cargando…' : `${total} unidades en operación · ${(insp.data ?? []).length} inspecciones registradas`}
         actions={
           <>
-            <MenuOtros opciones={[
-              can('insp.crear') && { label: 'Importar Excel', detalle: 'Con revisión antes de guardar', icon: <Upload size={17} />, onSelect: () => setImportando(true) },
-              can('insp.crear') && { label: 'Descargar plantilla', icon: <Download size={17} />, onSelect: () => { descargarPlantillaInspecciones(esquema.data ?? []).catch(err => toast(errorMessage(err), 'error')); } },
-              (can('insp.crear') || can('insp.editar')) && { label: 'Plantilla de inspección', detalle: 'Sistemas e ítems que se revisan', icon: <ListChecks size={17} />, onSelect: () => setEditandoPlantilla(true) },
-            ]} />
+            <div className="acciones-iconos">
+              {can('insp.crear') && (
+                <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Importar Excel" aria-label="Importar Excel" onClick={() => setImportando(true)}>
+                  <Upload size={17} />
+                </button>
+              )}
+              {can('insp.crear') && (
+                <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Descargar plantilla" aria-label="Descargar plantilla"
+                  onClick={() => { descargarPlantillaInspecciones(esquema.data ?? []).catch(err => toast(errorMessage(err), 'error')); }}>
+                  <Download size={17} />
+                </button>
+              )}
+              {(can('insp.crear') || can('insp.editar')) && (
+                <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--violeta" data-tip="Plantilla de inspección" aria-label="Plantilla de inspección" onClick={() => setEditandoPlantilla(true)}>
+                  <ListChecks size={17} />
+                </button>
+              )}
+            </div>
             {can('insp.crear') && <Button variant="primary" icon={<Plus size={16} />} onClick={() => navigate('/inspecciones/nueva')}>Nueva inspección</Button>}
           </>
         }
@@ -311,16 +342,22 @@ export function InspeccionesPage() {
                   <section key={grupo[0].fecha?.toDateString() ?? 'sin'} className="insp-dia">
                     <div className="list__header insp-dia__titulo">{diaTitulo(grupo[0].fecha)}</div>
                     <div className="list">
-                      {grupo.map(i => (
-                        <button key={i.id} type="button" className="row insp-fila" onClick={() => setAbierta(i)}>
-                          <LicensePlate plate={i.placa} size="sm" />
-                          <div className="row__main">
-                            <div className="row__title">{i.id}</div>
-                            <div className="row__subtitle">{[i.tecnico, i.km !== null ? `${i.km.toLocaleString('es-PE')} km` : '', i.cliente].filter(Boolean).join(' · ')}</div>
-                          </div>
-                          {fallas(i) > 0 ? <span className="insp-fallas">{fallas(i)} fallas</span> : <span className="insp-ok">Sin fallas</span>}
-                        </button>
-                      ))}
+                      {grupo.map(f => {
+                        const contenido = (
+                          <>
+                            <LicensePlate plate={f.placa} size="sm" />
+                            <div className="row__main">
+                              <div className="row__title">{f.id}</div>
+                              <div className="row__subtitle">{[f.tecnico, f.km !== null && f.km !== undefined ? `${f.km.toLocaleString('es-PE')} km` : '', f.cliente].filter(Boolean).join(' · ')}</div>
+                            </div>
+                            <TipoVisita mecanica={f.mecanica} neumatica={f.neumatica} />
+                            {f.insp && fallas(f.insp) > 0 ? <span className="insp-fallas">{fallas(f.insp)} fallas</span> : f.insp ? <span className="insp-ok">Sin fallas</span> : null}
+                          </>
+                        );
+                        return f.insp
+                          ? <button key={f.clave} type="button" className="row insp-fila" onClick={() => setAbierta(f.insp)}>{contenido}</button>
+                          : <div key={f.clave} className="row insp-fila">{contenido}</div>;
+                      })}
                     </div>
                   </section>
                 ))}
@@ -343,4 +380,11 @@ export function InspeccionesPage() {
       <PlantillaInspeccionSheet open={editandoPlantilla} onClose={() => setEditandoPlantilla(false)} />
     </Page>
   );
+}
+
+// Tipo de la visita: mecánica, neumática o ambas
+function TipoVisita({ mecanica, neumatica }: { mecanica: boolean; neumatica: boolean }) {
+  const texto = mecanica && neumatica ? 'Mecánica + Neumática' : neumatica ? 'Neumática' : 'Mecánica';
+  const clase = mecanica && neumatica ? 'insp-tipo--ambas' : neumatica ? 'insp-tipo--neumatica' : 'insp-tipo--mecanica';
+  return <span className={`insp-tipo ${clase}`}>{texto}</span>;
 }

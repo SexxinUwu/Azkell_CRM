@@ -563,3 +563,9 @@
 .insp-neu__codigo { display: flex; gap: var(--s-2); align-items: center; }
 .insp-neu__codigo > .input { flex: 1; min-width: 0; }
 .insp-neu__codigo > .btn { flex: none; white-space: nowrap; }
+
+/* Tipo de la visita en el historial: mecánica, neumática o ambas */
+.insp-tipo { font-size: 0.75rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 999px; white-space: nowrap; }
+.insp-tipo--mecanica { background: rgba(0, 122, 255, 0.14); color: #0a64d6; }
+.insp-tipo--neumatica { background: rgba(124, 58, 237, 0.14); color: #6d28d9; }
+.insp-tipo--ambas { background: rgba(52, 199, 89, 0.16); color: #15803d; }
