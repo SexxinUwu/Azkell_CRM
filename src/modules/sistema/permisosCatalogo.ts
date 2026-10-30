@@ -16,6 +16,9 @@ export const MODULOS_PERMISO: ModuloPermiso[] = [
   { grupo: 'FLOTA', key: 'placas', nombre: 'Maestro de Placas', desc: 'Configuración técnica de unidades', lcad: true },
   { grupo: 'FLOTA', key: 'entrega_vehiculos', nombre: 'Entrega de Vehículos', desc: 'Actas de entrega y recepción de flota', lcad: true },
   { grupo: 'FLOTA', key: 'checklist', nombre: 'Reporte de Fallas', desc: 'Checklist y reportes de falla de unidades', lcad: true },
+  { grupo: 'MANTENIMIENTO', key: 'plan', nombre: 'Planificación de Mantenimientos', desc: 'Programación de mantenimientos preventivos', lcad: true },
+  { grupo: 'MANTENIMIENTO', key: 'cfg_mant', nombre: 'Configuración de Mantenimiento', desc: 'Frecuencias, kits MP, tipos MP y configuración de métricas', lcad: true },
+  { grupo: 'MANTENIMIENTO', key: 'pers_mant', nombre: 'Personal de Taller', desc: 'Técnicos y personal del taller', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'mant_dashboard', nombre: 'Dashboard Mantenimiento', desc: 'Centro de comando de taller e inspecciones', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'status_rampa', nombre: 'Status Rampa', desc: 'Gestión visual en taller', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'insp', nombre: 'Análisis de Inspecciones', desc: 'Registro de inspecciones', lcad: true },
@@ -64,6 +67,7 @@ export const MODULOS_PERMISO: ModuloPermiso[] = [
   { grupo: 'SEGURIDAD', key: 'seguridad_unidades', nombre: 'CheckList Unidades', desc: 'Fichas y control de ingreso/salida', lcad: true },
   { grupo: 'SEGURIDAD', key: 'unidades_base', nombre: 'Unidades en Base', desc: 'Status y control de unidades en base', lcad: true },
   { grupo: 'CONFIGURACIÓN', key: 'usuarios', nombre: 'Usuarios y Roles', desc: 'Gestión de accesos y seguridad', lcad: true },
+  { grupo: 'CONFIGURACIÓN', key: 'cfg_situacion', nombre: 'Situaciones', desc: 'Catálogo de situaciones de unidades y rampa', lcad: true },
   { grupo: 'CONFIGURACIÓN', key: 'mod_auditoria', nombre: 'Auditoría', desc: 'Bitácora de actividad global', lcad: true },
   { grupo: 'CONFIGURACIÓN', key: 'integraciones', nombre: 'Integraciones', desc: 'Wialon, Fleetrun, WhatsApp y Webhooks', lcad: true },
 ];

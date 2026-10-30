@@ -157,8 +157,8 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Gerencia',
     items: [
-      { key: 'aprobaciones-oc', label: 'Aprobación de O/C', to: '/gerencia/aprobaciones-oc', icon: ClipboardCheck, permissions: ver('gerencia'), badge: 'aprob-oc' },
-      { key: 'aprobaciones-caja', label: 'Aprobación de caja', to: '/gerencia/aprobaciones-caja', icon: ClipboardCheck, permissions: ver('gerencia'), badge: 'aprob-caja' },
+      { key: 'aprobaciones-oc', label: 'Aprobación de O/C', to: '/gerencia/aprobaciones-oc', icon: ClipboardCheck, permissions: ver('gerencia_aprobaciones_oc'), badge: 'aprob-oc' },
+      { key: 'aprobaciones-caja', label: 'Aprobación de caja', to: '/gerencia/aprobaciones-caja', icon: ClipboardCheck, permissions: ver('gerencia_aprobaciones_caja'), badge: 'aprob-caja' },
     ],
   },
   {
