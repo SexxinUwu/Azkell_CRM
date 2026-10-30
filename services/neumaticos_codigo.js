@@ -118,6 +118,33 @@ async function borrarLlantasDeRecepcion(conn, recepcionId) {
     return res.affectedRows || 0;
 }
 
+/**
+ * Corrige las llantas cuando un artículo deja de ser NEUMATICOS en inventario: quita las llantas que dio de alta
+ * su línea de recepción. La línea es la posición de la fila dentro de la recepción (el mismo orden del alta).
+ * Si alguna de esas llantas ya se movió, no se borra nada de esa línea.
+ */
+async function corregirLlantasPorInventario(conn, inventarioId) {
+    const [arts] = await conn.query('SELECT familia FROM inventario WHERE id = ? LIMIT 1', [inventarioId]);
+    if (!arts.length || String(arts[0].familia || '').trim().toUpperCase() === 'NEUMATICOS') return 0;
+
+    const [recs] = await conn.query('SELECT DISTINCT recepcion_id FROM detalle_recepciones_oc WHERE inventario_id = ?', [inventarioId]);
+    let borradas = 0;
+    for (const { recepcion_id: recepcionId } of recs) {
+        const [filas] = await conn.query('SELECT id, inventario_id FROM detalle_recepciones_oc WHERE recepcion_id = ? ORDER BY id', [recepcionId]);
+        for (let i = 0; i < filas.length; i += 1) {
+            if (filas[i].inventario_id !== inventarioId) continue;
+            const patron = `${PREFIJO_RECEPCION}R${recepcionId}-L${i + 1}-%`;
+            const [movidas] = await conn.query(
+                'SELECT 1 FROM neumaticos_movimientos WHERE id_neumatico LIKE ? AND tipo <> ? LIMIT 1', [patron, MOV_ALTA]);
+            if (movidas.length) continue;
+            await conn.query('DELETE FROM neumaticos_movimientos WHERE id_neumatico LIKE ?', [patron]);
+            const [res] = await conn.query('DELETE FROM neumaticos_hoja_vida WHERE id_neumatico LIKE ?', [patron]);
+            borradas += res.affectedRows || 0;
+        }
+    }
+    return borradas;
+}
+
 module.exports = {
     ALMACEN_NUEVAS,
     PREFIJO_PROVISIONAL,
@@ -128,4 +155,5 @@ module.exports = {
     asignarCodigosFuego,
     crearLlantasDeRecepcion,
     borrarLlantasDeRecepcion,
+    corregirLlantasPorInventario,
 };

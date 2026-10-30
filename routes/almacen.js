@@ -1,6 +1,6 @@
 const express = require('express');
 const { tipoCambioSunat } = require('../services/tipo_cambio');
-const { crearLlantasDeRecepcion, borrarLlantasDeRecepcion } = require('../services/neumaticos_codigo');
+const { crearLlantasDeRecepcion, borrarLlantasDeRecepcion, corregirLlantasPorInventario } = require('../services/neumaticos_codigo');
 const router = express.Router();
 
 // Nombre de las llantas: "Llanta <marca> <medida> <modelo>" (p. ej. "Llanta MICHELIN 295/80R22.5 XMULTI").
@@ -729,6 +729,10 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                         getDb(req).query('UPDATE detalle_recepciones_oc SET inventario_id = ? WHERE inventario_id = ?', [newId, oldId], () => {});
                     }
                     if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
+                    // Si el artículo ya no es neumático, sus llantas dadas de alta por recepción se corrigen también
+                    const dbLlantas = getDb(req);
+                    corregirLlantasPorInventario(dbLlantas.promise ? dbLlantas.promise() : dbLlantas, newId)
+                        .catch(e => console.error('[corregirLlantasPorInventario]', e.message));
                     res.json({ ok: true, id: newId, old_id: oldId, migrado: newId !== oldId });
                 });
         };
