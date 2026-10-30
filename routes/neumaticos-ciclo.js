@@ -30,9 +30,9 @@ const VIDAS = ['R0', 'R1', 'R2', 'R3'];
 
 // Estado del ciclo (estado_ciclo) y su equivalente en el enum estado_operativo que usa la versión actual
 const ESTADO = {
-    ALMACEN: { ciclo: 'en_almacen', operativo: 'Stock_Taller' },
+    ALMACEN: { ciclo: 'en_almacen', operativo: 'Stock Taller' },
     MONTADA: { ciclo: 'en_unidad', operativo: 'Montada' },
-    EN_REENCAUCHE: { ciclo: 'en_reencauche', operativo: 'En_Rencauche' },
+    EN_REENCAUCHE: { ciclo: 'en_reencauche', operativo: 'En Rencauche' },
     DESECHO: { ciclo: 'desechado', operativo: 'Desecho' },
 };
 
