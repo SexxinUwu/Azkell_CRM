@@ -117,6 +117,19 @@ module.exports = function globalRBAC(req, res, next) {
     // O/C: solo Gerencia. Caja: Gerencia, y Tesorería como hasta ahora (su pantalla aprueba y anula caja).
     const esAprobacionOc = req.method === 'PUT' && /^\/almacen\/entradas\/[^/]+\/estado$/.test(path);
     const esAprobacionCaja = req.method === 'POST' && /^\/tesoreria\/caja\/[^/]+\/(aprobar|anular)$/.test(path);
+    // CAJA CHICA: asignación, gastos y reposición los aprueban Tesorería y Gerencia; el descuento, cualquiera de los dos
+    const aprobGerenciaChica = req.method === 'POST' && /^\/tesoreria\/caja-chica\/.+\/aprobar-gerencia$/.test(path);
+    const aprobTesoreriaChica = req.method === 'POST' && /^\/tesoreria\/caja-chica\/.+\/aprobar-tesoreria$/.test(path);
+    const descontarChica = req.method === 'POST' && /^\/tesoreria\/caja-chica\/movimientos\/[^/]+\/descontar$/.test(path);
+    if (aprobGerenciaChica || aprobTesoreriaChica || descontarChica) {
+        const reglasChica = aprobGerenciaChica ? [['gerencia_aprobaciones_caja', ['e', 'c']]]
+            : descontarChica ? [['gerencia_aprobaciones_caja', ['e', 'c']], ['tesoreria', ['c']]]
+            : [['tesoreria', ['c']]];
+        const tieneChica = reglasChica.some(([modulo, acciones]) => p[modulo] && acciones.some(a => p[modulo][a] === 1 || p[modulo][a] === true));
+        if (!tieneChica) return res.status(403).json({ error: 'RBAC: Permiso denegado para aprobar (caja chica)' });
+        return next();
+    }
+
     if (esAprobacionOc || esAprobacionCaja) {
         const reglas = esAprobacionOc
             ? [['gerencia_aprobaciones_oc', ['e', 'c']]]

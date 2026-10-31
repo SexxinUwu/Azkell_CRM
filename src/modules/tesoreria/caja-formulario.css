@@ -23,3 +23,44 @@
   display: flex; align-items: center; gap: 8px;
   font-size: 0.8125rem; color: var(--label-2);
 }
+
+/* Caja chica: tarjetas de fondos, resumen del fondo y lista de movimientos */
+.cc-fondos { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.cc-fondo {
+  display: flex; flex-direction: column; gap: 6px; padding: 14px;
+  background: var(--surface); border: 1px solid var(--separator); border-radius: var(--r-lg);
+  text-align: left; cursor: pointer; font: inherit; color: inherit;
+}
+.cc-fondo__cab { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.cc-fondo__responsable { font-weight: 700; overflow-wrap: anywhere; }
+.cc-fondo__moneda { font-size: 0.75rem; color: var(--label-2); }
+.cc-fondo__saldo { font-size: 1.25rem; font-weight: 700; font-family: var(--font-mono); }
+.cc-fondo__pie { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.75rem; color: var(--label-2); }
+.cc-fondo__pie > span { display: inline-flex; align-items: center; gap: 4px; }
+.cc-fondo__vencido { color: var(--red-ink); font-weight: 700; }
+
+.cc-resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.cc-resumen > div {
+  display: flex; flex-direction: column; gap: 4px; padding: 10px 12px;
+  background: var(--surface); border: 1px solid var(--separator); border-radius: var(--r-md);
+}
+.cc-resumen__etiqueta { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--label-2); }
+.cc-resumen__valor { font-size: 1.125rem; font-weight: 700; font-family: var(--font-mono); }
+.cc-resumen__texto { font-size: 0.8125rem; overflow-wrap: anywhere; }
+.cc-aprobar { display: inline-flex; gap: 8px; flex-wrap: wrap; margin-left: 8px; }
+
+.cc-movs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cc-mov {
+  display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--separator); border-radius: var(--r-md);
+}
+.cc-mov__cuerpo { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.cc-mov__titulo { font-weight: 600; overflow-wrap: anywhere; }
+.cc-mov__sub { font-size: 0.75rem; color: var(--label-2); }
+.cc-mov__estados { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cc-mov__enlace { display: inline-flex; gap: 4px; font-size: 0.75rem; color: var(--accent-ink); }
+.cc-mov__derecha { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.cc-mov__monto { font-family: var(--font-mono); font-weight: 700; }
+.cc-mov__monto--in { color: var(--green-ink); }
+.cc-mov__monto--out { color: var(--red-ink); }
+.cc-vacio { margin: 0; color: var(--label-2); font-size: 0.875rem; }

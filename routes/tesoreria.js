@@ -2378,7 +2378,7 @@ module.exports = function (db, broadcast, logAudit) {
             const oc = ocRows[0];
             // Solo se paga una orden aprobada o autorizada: una ya procesada no puede generar otro egreso
             const estadoOc = String(oc.estado || '').toLowerCase().trim();
-            if (!['aprobado', 'autorizado'].includes(estadoOc)) {
+            if (!['aprobado', 'autorizado', 'pago parcial'].includes(estadoOc)) {
                 return res.status(409).json({
                     error: `La orden de compra no se puede pagar: su estado actual es "${oc.estado}". Solo se pueden procesar órdenes Aprobadas o Autorizadas.`
                 });
@@ -2394,8 +2394,11 @@ module.exports = function (db, broadcast, logAudit) {
             const tcOc = parseFloat(oc.tipo_cambio) || 0;
             const totalOc = parseFloat(oc.total_pen) || 0;
             const importeOrigen = esUSD && tcOc > 0 ? Math.round((totalOc / tcOc) * 100) / 100 : totalOc;
+            // Con pago parcial de caja chica, lo que se paga aquí es solo lo que falta
+            const pendienteCajaChica = estadoOc === 'pago parcial' ? (await require('../services/caja_chica').pendienteOc(tdb, id)).pendiente : null;
+            const importeAPagar = pendienteCajaChica ?? importeOrigen;
             const montoEnviado = parseFloat(b.monto || b.importe) || 0;
-            const montoPagado = montoEnviado > 0 ? montoEnviado : importeOrigen;
+            const montoPagado = montoEnviado > 0 ? montoEnviado : importeAPagar;
 
             // 2. Subir voucher a S3 si se adjuntó
             let voucherUrl = oc.url_voucher || null;
@@ -2416,7 +2419,7 @@ module.exports = function (db, broadcast, logAudit) {
                     url_voucher = ?,
                     pagado_por = ?,
                     fecha_pago = NOW()
-                WHERE id = ? AND LOWER(TRIM(estado)) IN ('aprobado', 'autorizado')
+                WHERE id = ? AND LOWER(TRIM(estado)) IN ('aprobado', 'autorizado', 'pago parcial')
             `, [numeroConstancia, cuentaOrigen, voucherUrl, usuarioPago, id]);
             if (!updOc || updOc.affectedRows === 0) {
                 return res.status(409).json({ error: 'La orden de compra ya fue procesada por otro pago. No se registró un nuevo egreso.' });

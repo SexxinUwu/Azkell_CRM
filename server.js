@@ -5055,6 +5055,7 @@ app.get('/api/tipo-cambio/sunat', async (req, res) => {
         res.status(503).json({ ok: false, error: 'No se pudo consultar el tipo de cambio de SUNAT: ' + err.message });
     }
 });
+app.use('/api/tesoreria/caja-chica', require('./routes/caja_chica')(db, broadcast, logAudit));
 app.use('/api/tesoreria', require('./routes/tesoreria')(db, broadcast, logAudit));
 app.use('/api/rrhh', require('./routes/rrhh')(db, broadcast, logAudit));
 app.use('/api/telemetria', require('./routes/telemetria')(db));

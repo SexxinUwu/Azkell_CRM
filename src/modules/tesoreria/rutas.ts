@@ -9,6 +9,12 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'caja', label: 'Caja', to: '/tesoreria/caja', icon: 'Banknote', permisos: ['tesoreria_caja.ver'] },
   },
   {
+    path: 'tesoreria/caja-chica/*',
+    permisos: ['tesoreria_caja.ver', 'admin'],
+    Page: lazy(() => import('./CajaChicaPage').then(m => ({ default: m.CajaChicaPage }))),
+    nav: { key: 'caja-chica', label: 'Caja chica', to: '/tesoreria/caja-chica', icon: 'Wallet', permisos: ['tesoreria_caja.ver'] },
+  },
+  {
     path: 'tesoreria/movimientos/*',
     permisos: ['tesoreria_caja.ver', 'tesoreria_movimientos.ver', 'admin'],
     Page: lazy(() => import('./MovimientosPage').then(m => ({ default: m.MovimientosPage }))),
