@@ -175,6 +175,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'caja', label: 'Caja', to: '/tesoreria/caja', icon: Banknote, permissions: ver('tesoreria_caja') },
       { key: 'pago-requerimientos', label: 'Pago de requerimientos', to: '/tesoreria/pago-requerimientos', icon: Wallet, permissions: ver('tesoreria_caja', 'tesoreria_pago_req') },
       { key: 'movimientos', label: 'Movimientos', to: '/tesoreria/movimientos', icon: ArrowLeftRight, permissions: ver('tesoreria_caja', 'tesoreria_movimientos') },
+      { key: 'caja-chica', label: 'Caja chica', to: '/tesoreria/caja-chica', icon: Wallet, permissions: ver('tesoreria_caja') },
       { key: 'liquidaciones', label: 'Liquidación de gastos', to: '/tesoreria/liquidaciones', icon: ScrollText, permissions: ver('tesoreria_liquidaciones') },
       { key: 'cuentas', label: 'Cuentas por cobrar y pagar', to: '/tesoreria/cuentas', icon: FileText, permissions: ver('tesoreria_cuentas') },
       { key: 'bancos', label: 'Bancos', to: '/tesoreria/bancos', icon: Landmark, permissions: ver('tesoreria_bancos', 'tesoreria_caja') },
