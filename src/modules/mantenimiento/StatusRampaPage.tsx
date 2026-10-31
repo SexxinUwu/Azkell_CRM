@@ -1,22 +1,23 @@
 import { formatFechaPe } from '../../core/lib/format';
 import './mant.css';
 import './StatusRampa.css';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, Clock, FileSpreadsheet, FileText, LayoutDashboard, LogOut, MessageCircle, Pencil, Plus, RefreshCw, RotateCcw, SearchX, Settings2, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField } from '../../core/ui/Field';
+import { Field, SearchField, SelectInput } from '../../core/ui/Field';
 import { Switch } from '../../core/ui/Switch';
 import { MenuOtros } from '../../core/ui/MenuOtros';
-import { ConfirmSheet } from '../../core/ui/Sheet';
+import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { eliminarRampaRegistro, otId, reactivarRampa, rampaConductor, rampaId, useCatalogosTaller, useOrdenesTrabajoData, useOTsHijas, useTrabajosOT, useStatusRampa, tecnicosDeOT, type OrdenTrabajo, type RampaEntrada, type TrabajoOT } from './api';
+import { crearOTHija, eliminarRampaRegistro, otId, reactivarRampa, rampaConductor, rampaId, useCatalogosTaller, useOrdenesTrabajoData, useOTsHijas, useTrabajosOT, useStatusRampa, tecnicosDeOT, type OrdenTrabajo, type RampaEntrada, type TrabajoOT } from './api';
 import { OTFichaSheet } from './OTFichaSheet';
+import { SUBTIPOS_OT, TIPOS_OT } from './tipos-ot';
 import { ConfigurarRampasSheet, abrirPdfRampas, compartirRampasPdf, textoReporteRampas, type CatRampa, type DatosPdfRampa, type FilaPdfRampa } from './RampasHerramientas';
 import { enReporte, rampasDelReporte } from './rampasReporte';
 import type { ReactNode } from 'react';
@@ -683,6 +684,7 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
   // OT de la visita abierta en su ficha completa (trabajos, materiales, editar, acciones: como en Reportes OT)
   const [otSel, setOtSel] = useState<string | null>(null);
   const { can } = useAuth();
+  const [nuevaOT, setNuevaOT] = useState(false);
   const puedeEditarOT = can('reportes_ot.editar') || can('reportes_ot.editar');
   const puedeEliminarOT = can('reportes_ot.eliminar') || can('reportes_ot.eliminar');
 
@@ -725,7 +727,8 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
         {puedeEditar && (
           <div className="tarjeta__barra-acciones">
             <Button variant="secondary" icon={<FileText size={16} />} onClick={imprimirParabrisas}>OT Parabrisas</Button>
-            {!liberada && <Button variant="secondary" icon={<Pencil size={16} />} onClick={onEditar}>Editar</Button>}
+            {puedeEditar && e.ticket_entrada && <Button variant="secondary" icon={<Plus size={16} />} onClick={() => setNuevaOT(true)}>Nueva OT</Button>}
+          {!liberada && <Button variant="secondary" icon={<Pencil size={16} />} onClick={onEditar}>Editar</Button>}
             {!liberada
               ? <Button variant="primary" icon={<LogOut size={16} />} onClick={() => setLiberando(true)}>Liberar</Button>
               : <Button variant="secondary" icon={<RotateCcw size={16} />} onClick={reactivar} loading={ocupado}>Reactivar</Button>}
@@ -826,10 +829,63 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
         puedeEliminar={puedeEliminarOT}
       />
       <LiberarRampa entrada={e} usuario={usuario} open={liberando} onClose={() => setLiberando(false)} />
+      {e.ticket_entrada && (
+        <NuevaOTHijaSheet ticket={e.ticket_entrada} usuario={usuario} open={nuevaOT} onClose={() => setNuevaOT(false)} />
+      )}
       <ConfirmSheet open={eliminar} onClose={() => !eliminando && setEliminar(false)} onConfirm={eliminarRampa} loading={eliminando}
         title={`¿Eliminar el registro de ${e.placa ?? 'la rampa'}?`}
         message="Se eliminan también todas las órdenes de trabajo de esta visita, con sus trabajos e inspecciones. No se puede deshacer."
         confirmLabel="Eliminar" />
     </div>
+  );
+}
+
+// Nueva OT hija de una visita: tipo y subtipo (mismo catálogo que el clásico)
+function NuevaOTHijaSheet({ ticket, usuario, open, onClose }: { ticket: string; usuario: string; open: boolean; onClose: () => void }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [tipo, setTipo] = useState<string>(TIPOS_OT[0]);
+  const [sub, setSub] = useState<string>(SUBTIPOS_OT[TIPOS_OT[0]][0]);
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setTipo(TIPOS_OT[0]); setSub(SUBTIPOS_OT[TIPOS_OT[0]][0]); setError(null);
+  }, [open]);
+
+  async function crear() {
+    setEnviando(true); setError(null);
+    try {
+      const r = await crearOTHija(ticket, tipo, sub, usuario);
+      haptic('success'); toast(`OT ${r.id_ot ?? ''} creada`.trim());
+      await qc.invalidateQueries({ queryKey: ['mant', 'ots-hijas', ticket] });
+      onClose();
+    } catch (err) { setError(errorMessage(err)); haptic('warning'); }
+    finally { setEnviando(false); }
+  }
+
+  return (
+    <Sheet open={open} onClose={() => !enviando && onClose()} title="Nueva orden de trabajo"
+      footer={<><Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
+        <Button variant="primary" onClick={crear} loading={enviando}>Crear OT</Button></>}>
+      <div className="form-grid">
+        {error && <div className="field field--wide"><Notice tone="error">{error}</Notice></div>}
+        <Field label="Tipo de OT">
+          {p => (
+            <SelectInput {...p} value={tipo} onChange={e => { setTipo(e.target.value); setSub(SUBTIPOS_OT[e.target.value][0]); }}>
+              {TIPOS_OT.map(t => <option key={t} value={t}>{t}</option>)}
+            </SelectInput>
+          )}
+        </Field>
+        <Field label="Sub tipo">
+          {p => (
+            <SelectInput {...p} value={sub} onChange={e => setSub(e.target.value)}>
+              {(SUBTIPOS_OT[tipo] ?? []).map(s => <option key={s} value={s}>{s}</option>)}
+            </SelectInput>
+          )}
+        </Field>
+      </div>
+    </Sheet>
   );
 }
