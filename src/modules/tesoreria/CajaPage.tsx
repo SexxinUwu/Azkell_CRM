@@ -107,7 +107,7 @@ export function CajaPage() {
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-        <div className="inv-metricas">
+        <div className="inv-metricas inv-metricas--cuatro">
           <div className="inv-metrica"><span className="inv-metrica__num" style={{ color: 'var(--green-ink)' }}>{formatSoles(resumen.ingresos)}</span><span className="inv-metrica__label">Ingresos</span></div>
           <div className="inv-metrica"><span className="inv-metrica__num inv-metrica__num--critical">{formatSoles(resumen.egresos)}</span><span className="inv-metrica__label">Egresos</span></div>
           <div className="inv-metrica"><span className="inv-metrica__num">{formatSoles(resumen.saldo)}</span><span className="inv-metrica__label">Saldo</span></div>
