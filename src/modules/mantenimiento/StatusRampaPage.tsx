@@ -11,9 +11,7 @@ import { Switch } from '../../core/ui/Switch';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
-import { api, errorMessage } from '../../core/api/client';
-import { descargarArchivo } from '../../core/lib/pdf';
-import { pdfRampa, type MaterialOT } from './rampaPdf';
+import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
@@ -555,7 +553,7 @@ function RampaTabla({ entradas, ots, tecnicosPorRampa, verInspeccion, ultimasIns
           {entradas.map(e => {
             const horas = horasEnRampa(e.fecha_ingreso);
             return (
-              <tr key={rampaId(e)} className="rt__fila pressable" tabIndex={0} onClick={() => { haptic('selection'); onAbrir(e); }}
+              <tr key={rampaId(e)} className="rt__fila" tabIndex={0} onClick={() => { haptic('selection'); onAbrir(e); }}
                 onKeyDown={ev => { if (ev.key === 'Enter') onAbrir(e); }}>
                 <td>
                   <span className="rt__rampa">
@@ -617,7 +615,7 @@ function RampaMovil({ entradas, tecnicosPorRampa, verInspeccion, ultimasInsp, pu
         const libre = e.estado === 'Libre';
         // Es un div y no un botón: dentro hay otros botones (inspección, editar, liberar)
         return (
-          <div key={rampaId(e)} role="button" tabIndex={0} className="rm-card pressable"
+          <div key={rampaId(e)} role="button" tabIndex={0} className="rm-card"
             onClick={() => { haptic('selection'); onAbrir(e); }}
             onKeyDown={ev => { if (ev.key === 'Enter') onAbrir(e); }}>
             <span className="rm-cuerpo">
@@ -682,34 +680,11 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
   const liberada = e.estado === 'Liberado';
   const otsHijas = useOTsHijas(e.ticket_entrada);
   const ordenesData = useOrdenesTrabajoData();
-  const trabajosData = useTrabajosOT();
-  const [generandoPdf, setGenerandoPdf] = useState(false);
   // OT de la visita abierta en su ficha completa (trabajos, materiales, editar, acciones: como en Reportes OT)
   const [otSel, setOtSel] = useState<string | null>(null);
   const { can } = useAuth();
   const puedeEditarOT = can('reportes_ot.editar') || can('reportes_ot.editar');
   const puedeEliminarOT = can('reportes_ot.eliminar') || can('reportes_ot.eliminar');
-
-  // PDF de la rampa: OT de la visita, trabajos, materiales y evidencia firmada desde S3
-  async function imprimirRampa() {
-    setGenerandoPdf(true);
-    try {
-      const otsVisita = (ordenesData.data ?? []).filter(o => (o.ticket_entrada && o.ticket_entrada === e.ticket_entrada) || (o.id_rampa && o.id_rampa === e.id));
-      const materiales = (await Promise.all(otsVisita.map(async o => ({
-        id_ot: o.id_ot,
-        solicitudes: await api<MaterialOT[]>(`/taller/ot-materiales?ticket_ot=${encodeURIComponent(o.id_ot)}`).catch(() => [] as MaterialOT[]),
-      })))).flatMap(x => x.solicitudes.map(s => ({ id_ot: x.id_ot, solicitud: s })));
-      let evidenciaFirmada: string | null = null;
-      if (e.evidencia_url) {
-        const r = await api<{ signed?: Record<string, string> }>('/mantenimiento/inspecciones/presign-read', { method: 'POST', body: { urls: [e.evidencia_url] } });
-        evidenciaFirmada = r.signed?.[e.evidencia_url] ?? null;
-      }
-      const blob = await pdfRampa({ entrada: e, ots: ordenesData.data ?? [], trabajos: trabajosData.data ?? [], materiales, evidenciaFirmada, usuario });
-      descargarArchivo(blob, `Rampa-${e.placa ?? 'sin-placa'}-${e.ticket_entrada ?? e.id ?? ''}.pdf`);
-      haptic('success');
-    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
-    finally { setGenerandoPdf(false); }
-  }
 
   async function reactivar() {
     setOcupado(true);
@@ -749,8 +724,7 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
         </button>
         {puedeEditar && (
           <div className="tarjeta__barra-acciones">
-            <Button variant="secondary" icon={<FileText size={16} />} onClick={imprimirParabrisas}>OT Parabrisas (F-MAN-002)</Button>
-            <Button variant="secondary" icon={<FileText size={16} />} onClick={imprimirRampa} loading={generandoPdf}>PDF de la rampa</Button>
+            <Button variant="secondary" icon={<FileText size={16} />} onClick={imprimirParabrisas}>OT Parabrisas</Button>
             {!liberada && <Button variant="secondary" icon={<Pencil size={16} />} onClick={onEditar}>Editar</Button>}
             {!liberada
               ? <Button variant="primary" icon={<LogOut size={16} />} onClick={() => setLiberando(true)}>Liberar</Button>
