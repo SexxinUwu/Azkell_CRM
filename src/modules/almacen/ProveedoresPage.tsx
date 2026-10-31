@@ -85,15 +85,23 @@ export function ProveedoresPage() {
           subtitle={isLoading ? 'Cargando…' : `${proveedores.length} proveedores registrados`}
           actions={
             <>
-              <MenuOtros opciones={[
-                { label: 'Exportar Excel', detalle: `${visibles.length} proveedores`, icon: <FileSpreadsheet size={17} />,
-                  onSelect: () => exportarExcel('Proveedores', 'Proveedores',
+              <div className="acciones-iconos" role="group" aria-label="Acciones de proveedores">
+                <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Exportar Excel"
+                  aria-label="Exportar Excel" icon={<FileSpreadsheet size={17} />}
+                  onClick={() => exportarExcel('Proveedores', 'Proveedores',
                     ['Proveedor', 'RUC', 'Contacto', 'Teléfono', 'Correo', 'Dirección', 'Banco', 'Cuenta', 'CCI', 'Moneda'],
                     visibles.map(p => [p.nombre, p.ruc, p.contacto, p.telefono, p.correo, p.direccion, p.banco, p.cuenta, p.cci, p.moneda_pago]))
-                    .catch(err => toast(errorMessage(err), 'error')) },
-                puedeCrear && { label: 'Importar Excel', detalle: 'Con revisión antes de guardar', icon: <Upload size={17} />, separado: true, onSelect: () => setImportando(true) },
-                puedeCrear && { label: 'Descargar plantilla', icon: <Download size={17} />, onSelect: () => descargarPlantillaProveedores().catch(err => toast(errorMessage(err), 'error')) },
-              ]} />
+                    .catch(err => toast(errorMessage(err), 'error'))} />
+                {puedeCrear && (
+                  <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Importar Excel"
+                    aria-label="Importar Excel" icon={<Upload size={17} />} onClick={() => setImportando(true)} />
+                )}
+                {puedeCrear && (
+                  <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--ambar" data-tip="Descargar plantilla"
+                    aria-label="Descargar plantilla" icon={<Download size={17} />}
+                    onClick={() => descargarPlantillaProveedores().catch(err => toast(errorMessage(err), 'error'))} />
+                )}
+              </div>
               {puedeCrear && (
                 <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ proveedor: null })}>
                   Nuevo proveedor

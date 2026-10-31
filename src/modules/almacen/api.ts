@@ -573,10 +573,23 @@ export function useKardex(inventario_id: string | null) {
  * y las cuentas bancarias en su propia tabla: esos campos se mapean aquí (useProveedores / guardarProveedor).
  * El "contacto" no tiene columna en el servidor: al guardar se anota al final de las observaciones.
  */
+/** Una cuenta bancaria del proveedor: una fila del formulario y del servidor */
+export interface CuentaProveedor {
+  banco: string | null;
+  tipo_cuenta: string | null;
+  /** SOLES o DOLARES, como los guarda el servidor */
+  moneda: string | null;
+  numero_cuenta: string | null;
+  cci: string | null;
+  detraccion: boolean | null;
+}
+
 export interface ProveedorInv {
   id: string;
   nombre: string;
   razon_social: string | null;
+  /** RUC, DNI, CE u Otro */
+  tipo_documento: string | null;
   ruc: string | null;
   contacto: string | null;
   telefono: string | null;
@@ -589,20 +602,21 @@ export interface ProveedorInv {
   observaciones: string | null;
   estado: string | null;
   /** Todas sus cuentas bancarias (la orden de compra elige una) */
-  cuentas?: CuentaBancaria[];
+  cuentas?: CuentaProveedor[];
 }
 
 interface ProveedorServidor {
   id: string;
   nombre: string;
   razon_social: string | null;
+  tipo_documento?: string | null;
   numero_documento: string | null;
   email: string | null;
   telefono: string | null;
   direccion: string | null;
   estado: string | null;
   observaciones: string | null;
-  cuentas?: Array<{ banco: string | null; moneda: string | null; numero_cuenta: string | null; tipo_cuenta?: string | null; detraccion?: number | boolean | null }>;
+  cuentas?: Array<{ banco: string | null; moneda: string | null; numero_cuenta: string | null; tipo_cuenta?: string | null; cci?: string | null; detraccion?: number | boolean | null }>;
 }
 
 const MARCA_CONTACTO = 'Contacto: ';
@@ -615,6 +629,7 @@ function proveedorDesdeServidor(p: ProveedorServidor): ProveedorInv {
     id: String(p.id),
     nombre: p.nombre,
     razon_social: p.razon_social,
+    tipo_documento: p.tipo_documento ?? 'RUC',
     ruc: p.numero_documento,
     contacto: linea ? linea.slice(MARCA_CONTACTO.length) : null,
     telefono: p.telefono,
@@ -627,7 +642,7 @@ function proveedorDesdeServidor(p: ProveedorServidor): ProveedorInv {
     observaciones: obs.split('\n').filter(l => !l.startsWith(MARCA_CONTACTO)).join('\n') || null,
     estado: p.estado,
     cuentas: (p.cuentas ?? []).map(c => ({
-      banco: c.banco, moneda: c.moneda, numero_cuenta: c.numero_cuenta, tipo_cuenta: c.tipo_cuenta ?? null, detraccion: c.detraccion ?? null,
+      banco: c.banco, moneda: c.moneda, numero_cuenta: c.numero_cuenta, tipo_cuenta: c.tipo_cuenta ?? null, cci: c.cci ?? null, detraccion: c.detraccion ? true : false,
     })),
   };
 }
@@ -637,7 +652,7 @@ function proveedorAServidor(d: Partial<ProveedorInv>): Record<string, unknown> {
   return {
     nombre: d.nombre,
     razon_social: d.razon_social ?? null,
-    tipo_documento: 'RUC',
+    tipo_documento: d.tipo_documento ?? 'RUC',
     numero_documento: d.ruc ?? null,
     telefono: d.telefono ?? null,
     email: d.correo ?? null,
@@ -656,11 +671,14 @@ export function useProveedores() {
 }
 
 export async function guardarProveedor(data: Partial<ProveedorInv>, id?: string | number) {
-  // Las cuentas bancarias solo se envían al crear: al editar, el servidor reemplazaría todas las cuentas guardadas
-  const cuerpo = proveedorAServidor(data);
+  // Las cuentas van siempre que el formulario las trae: al editar, el servidor reemplaza las guardadas por estas.
+  // Sin lista de cuentas (otros llamados), se conservan las que ya tiene.
+  const cuentas = data.cuentas ?? (data.banco || data.cuenta
+    ? [{ banco: data.banco ?? null, tipo_cuenta: 'CUENTA CORRIENTE', moneda: data.moneda_pago === 'USD' ? 'DOLARES' : 'SOLES', numero_cuenta: data.cuenta ?? null, cci: data.cci ?? null, detraccion: false }]
+    : undefined);
+  const cuerpo = { ...proveedorAServidor(data), cuentas };
   if (id) return api(`/almacen/proveedores/${id}`, { method: 'PUT', body: cuerpo });
-  const cuentas = data.banco || data.cuenta ? [{ banco: data.banco ?? null, numero_cuenta: data.cuenta ?? null, moneda: data.moneda_pago ?? 'PEN' }] : undefined;
-  return api('/almacen/proveedores', { method: 'POST', body: { ...cuerpo, cuentas } });
+  return api('/almacen/proveedores', { method: 'POST', body: cuerpo });
 }
 
 export async function eliminarProveedor(id: string | number) {

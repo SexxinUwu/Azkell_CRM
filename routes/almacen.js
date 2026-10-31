@@ -270,6 +270,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                            'moneda', COALESCE(c.moneda, 'SOLES'),
                            'tipo_cuenta', c.tipo_cuenta,
                            'numero_cuenta', c.numero_cuenta,
+                           'cci', c.cci,
                            'detraccion', c.detraccion,
                            'estado', c.estado
                        )
@@ -304,6 +305,21 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
+    // La CCI es columna nueva: se agrega la primera vez que se guarda (si ya existe, no pasa nada)
+    const asegurarCci = (db, cb) => db.query('ALTER TABLE proveedor_cuentas_bancarias ADD COLUMN cci VARCHAR(40) DEFAULT NULL', () => cb());
+    // Filas de cuentas tal como se guardan: sin banco o sin número no se guardan
+    const filasCuentas = (proveedorId, cuentas) => cuentas.map(c => [
+        proveedorId,
+        c.banco || '',
+        c.moneda || 'SOLES',
+        c.tipo_cuenta || 'CUENTA CORRIENTE',
+        c.numero_cuenta || '',
+        c.cci || null,
+        c.detraccion ? 1 : 0,
+        c.estado !== false && c.estado !== 0 ? 1 : 0
+    ]).filter(c => c[1] && c[4]);
+    const INSERT_CUENTAS = 'INSERT INTO proveedor_cuentas_bancarias (proveedor_id,banco,moneda,tipo_cuenta,numero_cuenta,cci,detraccion,estado) VALUES ?';
+
     router.post('/proveedores', (req, res) => {
         const { nombre, razon_social, tipo_documento, numero_documento, telefono, email, direccion, estado, observaciones, marcas, cuentas } = req.body;
         _generarCodigoAlmacen('PROV', null, (err, id) => {
@@ -312,26 +328,22 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 [id, nombre, razon_social || null, tipo_documento || 'RUC', numero_documento || null, telefono || null, email || null, direccion || null, estado || 'Activo', observaciones || null],
                 (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
+                    const finalizar = () => {
+                        if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
+                        res.json({ ok: true, id });
+                    };
                     if (marcas && marcas.length) {
                         const mVals = marcas.map(m => [id, m]);
                         getDb(req).query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [mVals], () => { });
                     }
-                    if (cuentas && cuentas.length) {
-                        const cVals = cuentas.map(c => [
-                            id,
-                            c.banco || '',
-                            c.moneda || 'SOLES',
-                            c.tipo_cuenta || 'CUENTA CORRIENTE',
-                            c.numero_cuenta || '',
-                            c.detraccion ? 1 : 0,
-                            c.estado !== false && c.estado !== 0 ? 1 : 0
-                        ]).filter(c => c[1] && c[4]);
-                        if (cVals.length) {
-                            getDb(req).query('INSERT INTO proveedor_cuentas_bancarias (proveedor_id,banco,moneda,tipo_cuenta,numero_cuenta,detraccion,estado) VALUES ?', [cVals], () => { });
-                        }
-                    }
-                    if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
-                    res.json({ ok: true, id });
+                    const cVals = Array.isArray(cuentas) ? filasCuentas(id, cuentas) : [];
+                    if (!cVals.length) return finalizar();
+                    asegurarCci(getDb(req), () => {
+                        getDb(req).query(INSERT_CUENTAS, [cVals], (err3) => {
+                            if (err3) return res.status(500).json({ error: err3.message });
+                            finalizar();
+                        });
+                    });
                 });
         });
     });
@@ -343,30 +355,32 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             [nombre, razon_social || null, tipo_documento || 'RUC', numero_documento || null, telefono || null, email || null, direccion || null, estado || 'Activo', observaciones || null, id],
             (err) => {
                 if (err) return res.status(500).json({ error: err.message });
+                const finalizar = () => {
+                    if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
+                    res.json({ ok: true });
+                };
+                // Marcas y cuentas solo se reemplazan si vienen en la petición: si no vienen, se conservan
+                const cambiarCuentas = () => {
+                    if (!Array.isArray(cuentas)) return finalizar();
+                    asegurarCci(getDb(req), () => {
+                        getDb(req).query('DELETE FROM proveedor_cuentas_bancarias WHERE proveedor_id=?', [id], (errDel) => {
+                            if (errDel) return res.status(500).json({ error: errDel.message });
+                            const cVals = filasCuentas(id, cuentas);
+                            if (!cVals.length) return finalizar();
+                            getDb(req).query(INSERT_CUENTAS, [cVals], (errIns) => {
+                                if (errIns) return res.status(500).json({ error: errIns.message });
+                                finalizar();
+                            });
+                        });
+                    });
+                };
+                if (!Array.isArray(marcas)) return cambiarCuentas();
                 getDb(req).query('DELETE FROM proveedor_marcas_inv WHERE proveedor_id=?', [id], () => {
-                    if (marcas && marcas.length) {
+                    if (marcas.length) {
                         const mVals = marcas.map(m => [id, m]);
-                        getDb(req).query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [mVals], () => { });
-                    }
+                        getDb(req).query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [mVals], () => cambiarCuentas());
+                    } else cambiarCuentas();
                 });
-                getDb(req).query('DELETE FROM proveedor_cuentas_bancarias WHERE proveedor_id=?', [id], () => {
-                    if (cuentas && cuentas.length) {
-                        const cVals = cuentas.map(c => [
-                            id,
-                            c.banco || '',
-                            c.moneda || 'SOLES',
-                            c.tipo_cuenta || 'CUENTA CORRIENTE',
-                            c.numero_cuenta || '',
-                            c.detraccion ? 1 : 0,
-                            c.estado !== false && c.estado !== 0 ? 1 : 0
-                        ]).filter(c => c[1] && c[4]);
-                        if (cVals.length) {
-                            getDb(req).query('INSERT INTO proveedor_cuentas_bancarias (proveedor_id,banco,moneda,tipo_cuenta,numero_cuenta,detraccion,estado) VALUES ?', [cVals], () => { });
-                        }
-                    }
-                });
-                if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); }
-                res.json({ ok: true });
             });
     });
 
