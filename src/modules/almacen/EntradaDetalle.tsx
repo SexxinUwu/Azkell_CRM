@@ -3,9 +3,11 @@ import { Ban, Check, CircleAlert, CreditCard, Eye, FileDown, Package, Paperclip,
 import { formatFechaPe, formatMoneda } from '../../core/lib/format';
 import { type EntradaInv } from './api';
 import {
-  codigoLimpio, descripcionArticulo, desgloseIgv, esCredito, estadoPagable, etiquetaEstado, esServicio, naturalezaDeSubMotivo,
+  codigoLimpio, descripcionArticulo, desgloseIgv, esCredito, estadoPagable, etiquetaEstado, esServicio,
   numeroALetras, type TonoEstado,
 } from './entradaReglas';
+import { motivoDeSubMotivo } from './motivosCatalogo';
+import { useMotivosGastos } from '../tesoreria/api';
 import './entradas.css';
 
 interface Props {
@@ -116,7 +118,8 @@ export function EntradaDetalle({
   ];
 
   // Motivos: los mismos campos del formulario
-  const naturaleza = naturalezaDeSubMotivo(e.sub_motivo);
+  const motivosQ = useMotivosGastos();
+  const naturaleza = motivoDeSubMotivo(motivosQ.data ?? [], e.sub_motivo);
   const pago = `${moneda === 'USD' ? 'Dólares (US$)' : 'Soles (S/)'} · ${(e.condicion_pago || 'Al contado').toUpperCase()}${e.condicion_pago?.startsWith('A cr') && (e.dias_credito || e.dias_pagar) ? ` · ${e.dias_credito || e.dias_pagar} días` : ''}`;
   const esSrv = esServicio(e.tipo_orden);
   const tituloTipo = esSrv ? 'Orden de servicio' : 'Orden de compra';

@@ -18,10 +18,12 @@ import {
   type ArticuloInv, type EntradaInv, type PayloadEntrada,
 } from './api';
 import {
-  CENTROS_COSTO, CONDICIONES_PAGO, DIRECTIVOS, MODOS_IGV, MOTIVOS_GASTO, PRIORIDADES, SUB_MOTIVOS, TASA_IGV, TIPOS_ORDEN,
-  alertaPrecio, calcularLinea, centroCostoSugerido, codigoLimpio, esServicio, etiquetaCuentaEmpresa, etiquetaCuentaProveedor,
-  hoyLocal, importeLinea, naturalezaDeSubMotivo, totalesLineas, type CampoLinea, type LineaOC, type ModoIgv,
+  CONDICIONES_PAGO, DIRECTIVOS, MODOS_IGV, PRIORIDADES, TASA_IGV, TIPOS_ORDEN,
+  alertaPrecio, calcularLinea, codigoLimpio, esServicio, etiquetaCuentaEmpresa, etiquetaCuentaProveedor,
+  hoyLocal, importeLinea, totalesLineas, type CampoLinea, type LineaOC, type ModoIgv,
 } from './entradaReglas';
+import { centrosActivos, centroSugerido, motivoDeSubMotivo, motivosDe, subMotivosDe } from './motivosCatalogo';
+import { useCentrosCostos, useMotivosGastos } from '../tesoreria/api';
 import { EscanerQr } from './EscanerQr';
 import { ProveedorFormulario } from './ProveedorFormulario';
 import { InventarioFormulario } from './InventarioFormulario';
@@ -118,8 +120,21 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
   const [observaciones, setObservaciones] = useState('');
   const [autoriza, setAutoriza] = useState('');
   const [centroCosto, setCentroCosto] = useState<string>('CC-100');
-  const [motivoGasto, setMotivoGasto] = useState<string>('Gastos Administrativos / Oficina');
-  const [subMotivo, setSubMotivo] = useState<string>(SUB_MOTIVOS['Gastos Administrativos / Oficina'][0]);
+  // Motivos, sub motivos y centros de costo: del catálogo de Tesorería (el mismo que usa Caja)
+  const motivosQ = useMotivosGastos();
+  const centrosQ = useCentrosCostos();
+  const filasMotivo = motivosQ.data ?? [];
+  const [motivoGasto, setMotivoGasto] = useState<string>('');
+  const [subMotivo, setSubMotivo] = useState<string>('');
+  // Si el valor guardado ya no está en el catálogo, se muestra igual para no perderlo
+  const conActual = (lista: string[], actual: string) => (actual && !lista.includes(actual) ? [...lista, actual] : lista);
+  const motivoOpciones: ComboboxOption[] = conActual(motivosDe(filasMotivo), motivoGasto).map(m => ({ value: m, label: m }));
+  const subOpciones: ComboboxOption[] = conActual(subMotivosDe(filasMotivo, motivoGasto), subMotivo).map(s => ({ value: s, label: s }));
+  const centroOpciones: ComboboxOption[] = conActual(centrosActivos(centrosQ.data ?? []).map(c => c.codigo), centroCosto)
+    .map(codigo => {
+      const c = (centrosQ.data ?? []).find(x => x.codigo === codigo);
+      return { value: codigo, label: c ? `${c.codigo} - ${c.nombre}` : codigo };
+    });
   const [proveedorId, setProveedorId] = useState<string | null>(null);
   const [cuentaProv, setCuentaProv] = useState('');
   const [cuentaEmpresa, setCuentaEmpresa] = useState('');
@@ -158,8 +173,8 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       const tipo = esServicio(e.tipo_orden) ? 'Orden de servicio' : 'Orden de compra';
       const modo: ModoIgv = e.tipo_igv === 'incluido' || e.tipo_igv === 'mas_igv' ? e.tipo_igv : 'sin_igv';
       const sub = e.sub_motivo ?? '';
-      const naturaleza = naturalezaDeSubMotivo(sub) || (e.placa ? 'Mantenimiento y Auxilio' : 'Gastos Administrativos / Oficina');
-      const subs = SUB_MOTIVOS[naturaleza] ?? [];
+      const naturaleza = motivoDeSubMotivo(filasMotivo, sub) || (e.placa ? 'Mantenimiento y Auxilio' : 'Gastos Administrativos / Oficina');
+      const subs = subMotivosDe(filasMotivo, naturaleza);
       setTipoOrden(tipo);
       setMoneda(e.moneda === 'USD' ? 'USD' : 'PEN');
       setTipoCambio(e.tipo_cambio ? String(e.tipo_cambio) : '');
@@ -199,8 +214,8 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       setMoneda('PEN'); setTipoCambio('');
       setPlaca(''); setOtId(otPreset?.ot ?? null); setOtPlaca(otPreset?.placa ?? '');
       setMotivo(''); setObservaciones(''); setAutoriza('');
-      setCentroCosto('CC-100'); setMotivoGasto('Gastos Administrativos / Oficina');
-      setSubMotivo(SUB_MOTIVOS['Gastos Administrativos / Oficina'][0]);
+      setCentroCosto('CC-100'); setMotivoGasto('');
+      setSubMotivo('');
       setProveedorId(null); setCuentaProv(''); setCuentaEmpresa('');
       setCondicion('Al contado'); setDiasCredito('30'); setPrioridad('Normal');
       setUrlCotizacion(''); setNombreCotizacion('');
@@ -271,8 +286,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
 
   function cambiarMotivo(m: string) {
     setMotivoGasto(m);
-    setSubMotivo(SUB_MOTIVOS[m]?.[0] ?? '');
-    const cc = centroCostoSugerido(m);
+    const primerSub = subMotivosDe(filasMotivo, m)[0] ?? '';
+    setSubMotivo(primerSub);
+    const cc = centroSugerido(filasMotivo, m, primerSub);
     if (cc) setCentroCosto(cc);
   }
 
@@ -603,23 +619,20 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
               </Field>
               <Field label="Centro de costos *">
                 {p => (
-                  <SelectInput {...p} value={centroCosto} onChange={ev => setCentroCosto(ev.target.value)}>
-                    {CENTROS_COSTO.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </SelectInput>
+                  <Combobox {...p} options={centroOpciones} value={centroCosto || null} placeholder="Elige el centro de costos"
+                    onChange={v => setCentroCosto(v ?? '')} />
                 )}
               </Field>
               <Field label="Motivo (naturaleza del gasto) *">
                 {p => (
-                  <SelectInput {...p} value={motivoGasto} onChange={ev => cambiarMotivo(ev.target.value)}>
-                    {MOTIVOS_GASTO.map(m => <option key={m} value={m}>{m}</option>)}
-                  </SelectInput>
+                  <Combobox {...p} options={motivoOpciones} value={motivoGasto || null} placeholder="Elige el motivo"
+                    onChange={v => cambiarMotivo(v ?? '')} />
                 )}
               </Field>
               <Field label="Sub motivo (detalle) *">
                 {p => (
-                  <SelectInput {...p} value={subMotivo} onChange={ev => setSubMotivo(ev.target.value)}>
-                    {(SUB_MOTIVOS[motivoGasto] ?? []).map(s => <option key={s} value={s}>{s}</option>)}
-                  </SelectInput>
+                  <Combobox {...p} options={subOpciones} value={subMotivo || null} placeholder="Elige el sub motivo"
+                    onChange={v => setSubMotivo(v ?? '')} />
                 )}
               </Field>
             </div>
