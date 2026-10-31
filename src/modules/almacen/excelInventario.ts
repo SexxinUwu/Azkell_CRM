@@ -134,7 +134,7 @@ export async function exportar(articulos: ArticuloInv[]) {
   };
   const filas = articulos.map(a => [
     a.id, a.articulo || a.descripcion, a.codigo_articulo ?? '', a.familia ?? '', a.almacen ?? '', a.unidad ?? '', a.moneda,
-    Number(a.costo_referencial) || 0, Number(a.tc_ultima_oc) || '', costoFinalSoles(a), Number(a.stock_actual) || 0, Number(a.stock_min) || 0, Number(a.stock_max) || 0,
+    Number(a.costo_referencial) || 0, a.moneda === 'USD' ? (Number(a.tc_ultima_oc) || '') : '', costoFinalSoles(a), Number(a.stock_actual) || 0, Number(a.stock_min) || 0, Number(a.stock_max) || 0,
     a.marca ?? '', a.sistema ?? '', a.tipo ?? '', a.sub_tipo ?? '', a.ubicacion ?? '', a.anaquel ?? '', a.estado_art ?? '', a.observaciones ?? '',
   ]);
   const fecha = new Date().toISOString().slice(0, 10);
