@@ -11,7 +11,7 @@ import { Switch } from '../../core/ui/Switch';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
-import { errorMessage } from '../../core/api/client';
+import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
@@ -685,6 +685,8 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
   const [otSel, setOtSel] = useState<string | null>(null);
   const { can } = useAuth();
   const [nuevaOT, setNuevaOT] = useState(false);
+  // La visita tiene su OT principal (la que generó el reporte de fallas): la OT hija se cuelga de ella
+  const ticketVisita = (ordenesData.data ?? []).find(o => String(o.id_rampa ?? '') === String(e.id ?? ''))?.ticket_entrada ?? null;
   const puedeEditarOT = can('reportes_ot.editar') || can('reportes_ot.editar');
   const puedeEliminarOT = can('reportes_ot.eliminar') || can('reportes_ot.eliminar');
 
@@ -727,7 +729,7 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
         {puedeEditar && (
           <div className="tarjeta__barra-acciones">
             <Button variant="secondary" icon={<FileText size={16} />} onClick={imprimirParabrisas}>OT Parabrisas</Button>
-            {puedeEditar && e.ticket_entrada && <Button variant="secondary" icon={<Plus size={16} />} onClick={() => setNuevaOT(true)}>Nueva OT</Button>}
+            {puedeEditar && <Button variant="secondary" icon={<Plus size={16} />} onClick={() => setNuevaOT(true)}>Nueva OT</Button>}
           {!liberada && <Button variant="secondary" icon={<Pencil size={16} />} onClick={onEditar}>Editar</Button>}
             {!liberada
               ? <Button variant="primary" icon={<LogOut size={16} />} onClick={() => setLiberando(true)}>Liberar</Button>
@@ -829,9 +831,7 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
         puedeEliminar={puedeEliminarOT}
       />
       <LiberarRampa entrada={e} usuario={usuario} open={liberando} onClose={() => setLiberando(false)} />
-      {e.ticket_entrada && (
-        <NuevaOTHijaSheet ticket={e.ticket_entrada} usuario={usuario} open={nuevaOT} onClose={() => setNuevaOT(false)} />
-      )}
+      <NuevaOTHijaSheet rampa={e} ticket={ticketVisita} usuario={usuario} open={nuevaOT} onClose={() => setNuevaOT(false)} />
       <ConfirmSheet open={eliminar} onClose={() => !eliminando && setEliminar(false)} onConfirm={eliminarRampa} loading={eliminando}
         title={`¿Eliminar el registro de ${e.placa ?? 'la rampa'}?`}
         message="Se eliminan también todas las órdenes de trabajo de esta visita, con sus trabajos e inspecciones. No se puede deshacer."
@@ -841,7 +841,7 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
 }
 
 // Nueva OT hija de una visita: tipo y subtipo (mismo catálogo que el clásico)
-function NuevaOTHijaSheet({ ticket, usuario, open, onClose }: { ticket: string; usuario: string; open: boolean; onClose: () => void }) {
+function NuevaOTHijaSheet({ rampa, ticket, usuario, open, onClose }: { rampa: RampaEntrada; ticket: string | null; usuario: string; open: boolean; onClose: () => void }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [tipo, setTipo] = useState<string>(TIPOS_OT[0]);
@@ -857,7 +857,14 @@ function NuevaOTHijaSheet({ ticket, usuario, open, onClose }: { ticket: string; 
   async function crear() {
     setEnviando(true); setError(null);
     try {
-      const r = await crearOTHija(ticket, tipo, sub, usuario);
+      // Si la rampa aún no tiene OT principal, se crea (igual que en Taller) y la hija se cuelga de ella
+      let visita = ticket;
+      if (!visita) {
+        const base = await api<{ id_ot?: string }>('/taller/ordenes-trabajo', { method: 'POST', body: { placa: rampa.placa, estado: 'Pendiente', creado_por: usuario, id_rampa: rampa.id } });
+        visita = base.id_ot ?? null;
+      }
+      if (!visita) throw new Error('No se pudo crear la orden de la visita');
+      const r = await crearOTHija(visita, tipo, sub, usuario);
       haptic('success'); toast(`OT ${r.id_ot ?? ''} creada`.trim());
       await qc.invalidateQueries({ queryKey: ['mant', 'ots-hijas', ticket] });
       onClose();
