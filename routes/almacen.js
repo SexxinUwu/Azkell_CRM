@@ -283,7 +283,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         GROUP BY p.id, p.nombre, p.razon_social, p.tipo_documento, p.numero_documento, p.telefono, p.email, p.direccion, p.estado, p.observaciones, p.created_at, p.updated_at
         ORDER BY p.nombre
     `;
-        getDb(req).query(q, (err, rows) => {
+        asegurarCci(getDb(req), () => getDb(req).query(q, (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             const procesados = rows.map(r => {
                 let cuentas = [];
@@ -295,7 +295,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 return r;
             });
             res.json(procesados);
-        });
+        }));
     });
 
     router.get('/proveedores/:id/cuentas', (req, res) => {
@@ -306,7 +306,12 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     });
 
     // La CCI es columna nueva: se agrega la primera vez que se guarda (si ya existe, no pasa nada)
-    const asegurarCci = (db, cb) => db.query('ALTER TABLE proveedor_cuentas_bancarias ADD COLUMN cci VARCHAR(40) DEFAULT NULL', () => cb());
+    // Una sola vez por base: si la columna ya existe, el ALTER falla y no pasa nada
+    const cciListo = new WeakSet();
+    const asegurarCci = (db, cb) => {
+        if (cciListo.has(db)) return cb();
+        db.query('ALTER TABLE proveedor_cuentas_bancarias ADD COLUMN cci VARCHAR(40) DEFAULT NULL', () => { cciListo.add(db); cb(); });
+    };
     // Filas de cuentas tal como se guardan: sin banco o sin número no se guardan
     const filasCuentas = (proveedorId, cuentas) => cuentas.map(c => [
         proveedorId,
