@@ -1,0 +1,25 @@
+/* Formulario de movimiento de caja: bloques con título y cuadrícula compacta */
+
+.cf { display: flex; flex-direction: column; gap: 12px; }
+
+.cf-bloque {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--separator);
+  border-radius: var(--r-lg);
+}
+.cf-bloque__titulo {
+  margin: 0;
+  font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--label-2);
+}
+
+/* Campos en columnas de ancho mínimo: en pantalla ancha entran 3 o 4 por fila */
+.cf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px 12px; }
+.cf-grid > .field--wide { grid-column: 1 / -1; }
+
+.cf-check {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.8125rem; color: var(--label-2);
+}

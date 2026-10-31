@@ -1,11 +1,13 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQuery } from '@tanstack/react-query';
 import { CircleAlert } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
-import { Field, SelectInput, TextInput } from '../../core/ui/Field';
+import { Combobox, type ComboboxOption } from '../../core/ui/Combobox';
+import { Field, TextInput } from '../../core/ui/Field';
 import { decimalInput, parseDecimal } from '../../core/ui/forms';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
@@ -17,6 +19,7 @@ import {
   type CajaMovimiento, type CentroCosto, type OrdenViajeCaja,
 } from './api';
 import { AUTORIZAN, CC_VIAJES, COMPROBANTES, MODALIDADES, MOTIVO_VIAJES, PERSONAS, num } from './caja-lib';
+import './caja-formulario.css';
 
 interface Props {
   open: boolean;
@@ -33,6 +36,9 @@ const etiquetaCuenta = (c: CuentaPersona) => `${c.banco ?? ''} - ${c.numero_cuen
 /** Número de un campo decimal ya validado (vacío o inválido → 0) */
 const dec = (s: string | undefined) => parseDecimal(s ?? '') ?? 0;
 const unicas = (lista: Array<string | undefined>) => [...new Set(lista.filter((x): x is string => !!x))];
+/** Opciones de lista desplegable a partir de textos; el valor guardado aparece aunque ya no esté en la lista */
+const opciones = (lista: readonly string[], actual?: string): ComboboxOption[] =>
+  unicas([...lista, actual]).map(x => ({ value: x, label: x }));
 
 export function FormularioCaja({ open, mov, onClose, onGuardado }: Props) {
   const toast = useToast();
@@ -152,7 +158,7 @@ export function FormularioCaja({ open, mov, onClose, onGuardado }: Props) {
     limpiar('orden_viaje');
   }
 
-  /** Si el código no está en la lista ya cargada (p. ej. se escribió sin elegir), lo busca al salir del campo */
+  /** Si el código no está en la lista ya cargada (p. ej. se escribió sin elegir), lo busca */
   async function buscarViajeExacto(codigo: string) {
     const c = codigo.trim();
     if (!c || (ordenes.data ?? []).some(o => o.viaje === codigo)) return;
@@ -261,26 +267,57 @@ export function FormularioCaja({ open, mov, onClose, onGuardado }: Props) {
     </Field>
   );
 
-  const sel = (k: string, label: string, opciones: string[], o: { vacio?: boolean; wide?: boolean; disabled?: boolean; hint?: string; onCambio?: (val: string) => void } = {}) => (
+  /** Lista desplegable moderna (la misma de Placas, Conductores y Personal) */
+  const combo = (k: string, label: string, lista: ComboboxOption[], o: {
+    wide?: boolean; hint?: string; placeholder?: string; onCambio?: (val: string) => void;
+    onCrear?: (texto: string) => void; crearTexto?: string;
+  } = {}) => (
     <Field label={label} wide={o.wide} error={errCampos[k]} hint={o.hint}>
       {p => (
-        <SelectInput {...p} value={v[k] ?? ''} disabled={o.disabled}
-          onChange={e => (o.onCambio ? o.onCambio(e.target.value) : set(k, e.target.value))}>
-          {(o.vacio ?? true) && <option value="">—</option>}
-          {unicas([...opciones, v[k]]).map(x => <option key={x} value={x}>{x}</option>)}
-        </SelectInput>
+        <Combobox {...p} options={lista} value={v[k] || null} placeholder={o.placeholder ?? 'Elige…'}
+          onChange={val => {
+            if (o.onCambio) { o.onCambio(val ?? ''); return; }
+            set(k, val ?? '');
+            limpiar(k);
+          }}
+          onCreate={o.onCrear} createLabel={o.crearTexto} />
       )}
     </Field>
   );
 
-  const seccion = (titulo: string): ReactNode => (
-    <p className="t-footnote c-secondary" style={{ gridColumn: '1 / -1', margin: 'var(--s-2) 0 0', fontWeight: 600 }}>{titulo}</p>
+  /** Pestañas para pocas opciones (movimiento y moneda) */
+  const pestanas = (k: string, label: string, valores: Array<{ value: string; label: string }>, o: { wide?: boolean; hint?: string; bloqueado?: boolean; onCambio?: (val: string) => void } = {}) => (
+    <Field label={label} wide={o.wide} error={errCampos[k]} hint={o.hint}>
+      {() => (
+        <div style={o.bloqueado ? { opacity: 0.6, pointerEvents: 'none' } : undefined}>
+          <SegmentedControl block label={label} value={v[k] ?? valores[0].value} options={valores}
+            onChange={val => (o.onCambio ? o.onCambio(val) : (set(k, val), limpiar(k)))} />
+        </div>
+      )}
+    </Field>
+  );
+
+  const bloque = (titulo: string, hijos: React.ReactNode) => (
+    <section className="cf-bloque">
+      <h3 className="cf-bloque__titulo">{titulo}</h3>
+      <div className="cf-grid">{hijos}</div>
+    </section>
   );
 
   const ccActual = ccNormal(v.centro_costo);
-  const ccOpciones = centrosActivos.map(c => ({ value: ccValor(c), label: `${c.codigo} · ${c.nombre}` }));
+  const ccOpciones: ComboboxOption[] = centrosActivos.map(c => ({ value: ccValor(c), label: `${c.codigo} · ${c.nombre}` }));
   if (ccActual && !ccOpciones.some(o => o.value === ccActual)) ccOpciones.push({ value: ccActual, label: ccActual });
   const placaRequerida = requierePlaca(v.centro_costo);
+
+  const viajesOpciones: ComboboxOption[] = (ordenes.data ?? []).map(o => ({
+    value: o.viaje, label: o.viaje, description: [o.conductor, o.ruta].filter(Boolean).join(' · ') || undefined,
+  }));
+  const personasOpciones: ComboboxOption[] = (personas.data ?? []).map(p => ({
+    value: p.nombre, label: p.nombre, description: p.documento || undefined,
+  }));
+  const cuentasPersonaOpciones: ComboboxOption[] = cuentasPersona.map(c => ({
+    value: etiquetaCuenta(c), label: etiquetaCuenta(c), description: c.tipo_cuenta ?? undefined,
+  }));
 
   return (
     <Sheet open={open} ancho onClose={() => !enviando && onClose()}
@@ -289,97 +326,91 @@ export function FormularioCaja({ open, mov, onClose, onGuardado }: Props) {
         <Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
         <Button variant="primary" onClick={guardar} loading={enviando}>Guardar</Button>
       </>}>
-      <div className="form-grid">
-        {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
+      <div className="cf">
+        {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
 
-        {seccion('Documento')}
-        {sel('tipo_movimiento', 'Movimiento', ['EGRESO', 'INGRESO'], {
-          vacio: false, disabled: editando,
-          hint: editando ? 'El tipo no cambia al editar' : 'Egreso sale de caja; ingreso entra a caja',
-        })}
-        {txt('numero', `N° (serie ${v.serie ?? ''})`, { readOnly: editando, hint: editando ? undefined : 'Correlativo sugerido; se asigna solo al abrir' })}
-        {txt('fecha', 'Fecha', { type: 'date' })}
-        {txt('hora', 'Hora', { type: 'time' })}
-        {sel('moneda', 'Moneda', ['SOLES', 'DOLARES'], { vacio: false, onCambio: cambiarMoneda })}
-        {v.moneda === 'DOLARES' && txt('tipo_cambio', 'Tipo de cambio (S/ por US$)', { decimal: true })}
-        {txt('importe_total', 'Importe total', { decimal: true })}
-        {txt('retencion_detraccion', 'Retención / detracción', { decimal: true, hint: 'Opcional' })}
+        {bloque('Movimiento', <>
+          {pestanas('tipo_movimiento', 'Movimiento', [{ value: 'EGRESO', label: 'Egreso' }, { value: 'INGRESO', label: 'Ingreso' }], {
+            wide: true, bloqueado: editando,
+            hint: editando ? 'El tipo no cambia al editar' : 'Egreso sale de caja; ingreso entra a caja',
+          })}
+          {pestanas('moneda', 'Moneda', [{ value: 'SOLES', label: 'Soles (S/)' }, { value: 'DOLARES', label: 'Dólares (US$)' }], {
+            wide: true, onCambio: cambiarMoneda,
+          })}
+          {txt('numero', `N° (serie ${v.serie ?? ''})`, { readOnly: editando, hint: editando ? undefined : 'Se asigna al abrir' })}
+          {txt('fecha', 'Fecha', { type: 'date' })}
+          {txt('hora', 'Hora', { type: 'time' })}
+          {v.moneda === 'DOLARES' && txt('tipo_cambio', 'Tipo de cambio (S/ por US$)', { decimal: true })}
+          {txt('importe_total', 'Importe total', { decimal: true })}
+          {txt('retencion_detraccion', 'Retención / detracción', { decimal: true, hint: 'Opcional' })}
+        </>)}
 
-        {seccion('Clasificación')}
-        {sel('motivo', 'Motivo', motivoOpciones, { wide: true, onCambio: cambiarMotivo })}
-        {sel('sub_motivo', 'Sub motivo', subOpciones, { wide: true, onCambio: cambiarSub })}
-        <Field label="Centro de costos" wide error={errCampos.centro_costo} hint="Se sugiere según el motivo">
-          {p => (
-            <SelectInput {...p} value={ccActual} onChange={e => { set('centro_costo', e.target.value); limpiar('centro_costo'); }}>
-              <option value="">—</option>
-              {ccOpciones.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </SelectInput>
-          )}
-        </Field>
+        {bloque('Clasificación', <>
+          {combo('motivo', 'Motivo', opciones(motivoOpciones, v.motivo), { wide: true, onCambio: cambiarMotivo, placeholder: 'Elige el motivo' })}
+          {combo('sub_motivo', 'Sub motivo', opciones(subOpciones, v.sub_motivo), { wide: true, onCambio: cambiarSub, placeholder: 'Elige el sub motivo' })}
+          <Field label="Centro de costos" wide error={errCampos.centro_costo} hint="Se sugiere según el motivo">
+            {p => (
+              <Combobox {...p} options={ccOpciones} value={ccActual || null} placeholder="Elige el centro de costos"
+                onChange={val => { set('centro_costo', val ?? ''); limpiar('centro_costo'); }} />
+            )}
+          </Field>
+        </>)}
 
-        {seccion('Viaje')}
-        <Field label="Orden de viaje" wide hint="Escribe para buscar; al elegir se completan conductor, placa y ruta">
-          {p => (<>
-            <TextInput {...p} list="caja-viajes" autoComplete="off" value={v.orden_viaje ?? ''}
-              onChange={e => {
-                const val = e.target.value;
-                set('orden_viaje', val);
-                setQViaje(val.trim());
-                const o = (ordenes.data ?? []).find(x => x.viaje === val);
-                if (o) aplicarViaje(o);
-              }}
-              onBlur={e => buscarViajeExacto(e.target.value)} />
-            <datalist id="caja-viajes">
-              {(ordenes.data ?? []).map(o => <option key={o.viaje} value={o.viaje}>{`${o.conductor ?? ''} · ${o.ruta ?? ''}`}</option>)}
-            </datalist>
-          </>)}
-        </Field>
-        {txt('conductor', 'Conductor')}
-        {txt('ruta_viaje', 'Ruta')}
-        {txt('placa', 'Placa / unidad', {
-          hint: placaRequerida ? 'Requerida por el centro de costos' : 'Opcional',
-        })}
+        {bloque('Viaje', <>
+          {combo('orden_viaje', 'Orden de viaje', viajesOpciones, {
+            wide: true, placeholder: 'Busca el viaje',
+            hint: 'Al elegir se completan conductor, placa y ruta',
+            onCambio: val => {
+              set('orden_viaje', val);
+              setQViaje(val.trim());
+              const o = (ordenes.data ?? []).find(x => x.viaje === val);
+              if (o) aplicarViaje(o);
+            },
+            onCrear: texto => { set('orden_viaje', texto); setQViaje(texto.trim()); void buscarViajeExacto(texto); },
+            crearTexto: 'Usar este viaje',
+          })}
+          {txt('conductor', 'Conductor')}
+          {txt('ruta_viaje', 'Ruta')}
+          {txt('placa', 'Placa / unidad', { hint: placaRequerida ? 'Requerida por el centro de costos' : 'Opcional' })}
+        </>)}
 
-        {seccion('Pago')}
-        {sel('autoriza', 'Autoriza', AUTORIZAN)}
-        {sel('tipo_persona', 'Tipo de persona', PERSONAS, { vacio: false, onCambio: t => { set('tipo_persona', t); limpiar('tipo_persona'); } })}
-        <Field label="Persona" wide error={errCampos.persona} hint={tipo === 'BANCO' ? 'Nombre del banco o entidad financiera' : undefined}>
-          {p => (<>
-            <TextInput {...p} list="caja-personas" autoComplete="off" value={v.persona ?? ''} onChange={e => elegirPersona(e.target.value)} />
-            <datalist id="caja-personas">
-              {(personas.data ?? []).map(x => <option key={x.nombre} value={x.nombre} label={x.documento || undefined} />)}
-            </datalist>
-          </>)}
-        </Field>
-        {sel('modalidad_pago', 'Modalidad de pago', MODALIDADES)}
-        {sel('cuenta_bancaria_empresa', 'Cuenta de la empresa', cuentasEmpresa, { wide: true })}
-        <Field label="Cuenta de la persona" wide error={errCampos.cuenta_bancaria_persona} hint={tipo === 'PROVEEDOR' ? 'Se sugiere la cuenta del proveedor' : undefined}>
-          {p => (<>
-            <TextInput {...p} list="caja-cuentas-persona" autoComplete="off" value={v.cuenta_bancaria_persona ?? ''}
-              onChange={e => { set('cuenta_bancaria_persona', e.target.value); limpiar('cuenta_bancaria_persona'); }}
-              placeholder="BCP 191-XXXXXXXX-X-XX o CCI" />
-            <datalist id="caja-cuentas-persona">
-              {cuentasPersona.map(c => <option key={etiquetaCuenta(c)} value={`${etiquetaCuenta(c)}${c.tipo_cuenta ? ` (${c.tipo_cuenta})` : ''}`} />)}
-            </datalist>
-          </>)}
-        </Field>
-        {sel('tipo_comprobante', 'Comprobante', COMPROBANTES)}
-        {txt('numero_factura', 'N° de comprobante', { hint: 'Ej: F001-0029' })}
-        {txt('numero_constancia_deposito', 'N° de constancia de depósito', { hint: 'N° de operación' })}
+        {bloque('Pago', <>
+          {combo('autoriza', 'Autoriza', opciones(AUTORIZAN, v.autoriza), { placeholder: 'Elige quién autoriza' })}
+          {combo('tipo_persona', 'Tipo de persona', opciones(PERSONAS, v.tipo_persona), {
+            placeholder: 'Elige el tipo',
+            onCambio: t => { set('tipo_persona', t); limpiar('tipo_persona'); },
+          })}
+          {combo('persona', 'Persona', personasOpciones, {
+            wide: true, placeholder: 'Busca o escribe el nombre',
+            hint: tipo === 'BANCO' ? 'Nombre del banco o entidad financiera' : undefined,
+            onCambio: elegirPersona, onCrear: elegirPersona, crearTexto: 'Usar este nombre',
+          })}
+          {combo('modalidad_pago', 'Modalidad de pago', opciones(MODALIDADES, v.modalidad_pago), { placeholder: 'Elige la modalidad' })}
+          {combo('cuenta_bancaria_empresa', 'Cuenta de la empresa', opciones(cuentasEmpresa, v.cuenta_bancaria_empresa), { wide: true, placeholder: 'Elige la cuenta de la empresa' })}
+          {combo('cuenta_bancaria_persona', 'Cuenta de la persona', cuentasPersonaOpciones, {
+            wide: true, placeholder: 'Elige o escribe la cuenta',
+            hint: tipo === 'PROVEEDOR' ? 'Se sugiere la cuenta del proveedor' : undefined,
+            onCrear: t => { set('cuenta_bancaria_persona', t); limpiar('cuenta_bancaria_persona'); }, crearTexto: 'Usar esta cuenta',
+          })}
+          {combo('tipo_comprobante', 'Comprobante', opciones(COMPROBANTES, v.tipo_comprobante), { placeholder: 'Elige el comprobante' })}
+          {txt('numero_factura', 'N° de comprobante', { hint: 'Ej: F001-0029' })}
+          {txt('numero_constancia_deposito', 'N° de constancia', { hint: 'N° de operación' })}
+        </>)}
 
-        {seccion('Adjuntos y notas')}
-        <Field label="Voucher" hint={voucher?.name}>
-          {p => <ArchivoInput {...p} key={`v-${sesion}`} accept="image/*,application/pdf" onChange={setVoucher} />}
-        </Field>
-        <Field label="Sustento" hint={sustento?.name}>
-          {p => <ArchivoInput {...p} key={`s-${sesion}`} accept="image/*,application/pdf,.xlsx,.csv" onChange={setSustento} />}
-        </Field>
-        {txt('descripcion', 'Descripción', { wide: true })}
-        {txt('observacion', 'Observación', { wide: true })}
-        <label className="field field--wide" style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center' }}>
-          <input type="checkbox" checked={v.no_aplica_liquidacion === '1'} onChange={e => set('no_aplica_liquidacion', e.target.checked ? '1' : '0')} />
-          No aplica a liquidación de viaje
-        </label>
+        {bloque('Adjuntos y notas', <>
+          <Field label="Voucher" hint={voucher?.name}>
+            {p => <ArchivoInput {...p} key={`v-${sesion}`} accept="image/*,application/pdf" onChange={setVoucher} />}
+          </Field>
+          <Field label="Sustento" hint={sustento?.name}>
+            {p => <ArchivoInput {...p} key={`s-${sesion}`} accept="image/*,application/pdf,.xlsx,.csv" onChange={setSustento} />}
+          </Field>
+          {txt('descripcion', 'Descripción', { wide: true })}
+          {txt('observacion', 'Observación', { wide: true })}
+          <label className="cf-check field--wide">
+            <input type="checkbox" checked={v.no_aplica_liquidacion === '1'} onChange={e => set('no_aplica_liquidacion', e.target.checked ? '1' : '0')} />
+            No aplica a liquidación de viaje
+          </label>
+        </>)}
       </div>
     </Sheet>
   );

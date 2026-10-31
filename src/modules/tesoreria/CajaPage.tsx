@@ -7,7 +7,8 @@ import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Displ
 import { Field, TextInput } from '../../core/ui/Field';
 import { ChoiceChips } from '../../core/ui/Chips';
 import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import '../../core/ui/acciones-iconos.css';
+import '../almacen/almacen.css';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -92,11 +93,14 @@ export function CajaPage() {
         subtitle={isLoading ? 'Cargando…' : `${lista.length} movimientos · ${resumen.pendientes} por aprobar · ${periodo}`}
         actions={
           <>
-            <MenuOtros opciones={[
-              { label: 'Exportar Excel', detalle: `${lista.length} movimientos`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-              { label: 'Bancos', icon: <Banknote size={17} />, separado: true, onSelect: () => nav('/tesoreria/bancos') },
-              { label: 'Centros de costos', icon: <Boxes size={17} />, onSelect: () => nav('/tesoreria/centros-costos') },
-            ]} />
+            <div className="acciones-iconos" role="group" aria-label="Acciones de caja">
+              <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Exportar Excel"
+                aria-label="Exportar Excel" icon={<FileSpreadsheet size={17} />} onClick={exportar} />
+              <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Bancos"
+                aria-label="Bancos" icon={<Banknote size={17} />} onClick={() => nav('/tesoreria/bancos')} />
+              <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--ambar" data-tip="Centros de costos"
+                aria-label="Centros de costos" icon={<Boxes size={17} />} onClick={() => nav('/tesoreria/centros-costos')} />
+            </div>
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ mov: null })}>Nuevo</Button>}
           </>
         }
