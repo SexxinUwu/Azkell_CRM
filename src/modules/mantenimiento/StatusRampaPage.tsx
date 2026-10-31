@@ -6,7 +6,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, Clock, FileSpreadsheet, FileText, LayoutDashboard, LogOut, MessageCircle, Pencil, Plus, RefreshCw, RotateCcw, SearchX, Settings2, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { Field, SearchField, SelectInput } from '../../core/ui/Field';
+import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { Combobox, type ComboboxOption } from '../../core/ui/Combobox';
 import { Switch } from '../../core/ui/Switch';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
@@ -15,8 +16,10 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { crearOTHija, eliminarRampaRegistro, otId, reactivarRampa, rampaConductor, rampaId, useCatalogosTaller, useOrdenesTrabajoData, useOTsHijas, useTrabajosOT, useStatusRampa, tecnicosDeOT, type OrdenTrabajo, type RampaEntrada, type TrabajoOT } from './api';
+import { eliminarRampaRegistro, otId, reactivarRampa, rampaConductor, rampaId, useCatalogosTaller, useOrdenesTrabajoData, useOTsHijas, useTrabajosOT, useStatusRampa, tecnicosDeOT, type OrdenTrabajo, type RampaEntrada, type TrabajoOT } from './api';
 import { OTFichaSheet } from './OTFichaSheet';
+import { usePersonalNombres } from './OTEditar';
+import { parseTrabajosRampa } from './trabajosRampa';
 import { SUBTIPOS_OT, TIPOS_OT } from './tipos-ot';
 import { ConfigurarRampasSheet, abrirPdfRampas, compartirRampasPdf, textoReporteRampas, type CatRampa, type DatosPdfRampa, type FilaPdfRampa } from './RampasHerramientas';
 import { enReporte, rampasDelReporte } from './rampasReporte';
@@ -685,8 +688,6 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
   const [otSel, setOtSel] = useState<string | null>(null);
   const { can } = useAuth();
   const [nuevaOT, setNuevaOT] = useState(false);
-  // La visita tiene su OT principal (la que generó el reporte de fallas): la OT hija se cuelga de ella
-  const ticketVisita = (ordenesData.data ?? []).find(o => String(o.id_rampa ?? '') === String(e.id ?? ''))?.ticket_entrada ?? null;
   const puedeEditarOT = can('reportes_ot.editar') || can('reportes_ot.editar');
   const puedeEliminarOT = can('reportes_ot.eliminar') || can('reportes_ot.eliminar');
 
@@ -831,7 +832,7 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
         puedeEliminar={puedeEliminarOT}
       />
       <LiberarRampa entrada={e} usuario={usuario} open={liberando} onClose={() => setLiberando(false)} />
-      <NuevaOTHijaSheet rampa={e} ticket={ticketVisita} usuario={usuario} open={nuevaOT} onClose={() => setNuevaOT(false)} />
+      <NuevaOTRampaSheet rampa={e} usuario={usuario} open={nuevaOT} onClose={() => setNuevaOT(false)} />
       <ConfirmSheet open={eliminar} onClose={() => !eliminando && setEliminar(false)} onConfirm={eliminarRampa} loading={eliminando}
         title={`¿Eliminar el registro de ${e.placa ?? 'la rampa'}?`}
         message="Se eliminan también todas las órdenes de trabajo de esta visita, con sus trabajos e inspecciones. No se puede deshacer."
@@ -840,36 +841,68 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
   );
 }
 
-// Nueva OT hija de una visita: tipo y subtipo (mismo catálogo que el clásico)
-function NuevaOTHijaSheet({ rampa, ticket, usuario, open, onClose }: { rampa: RampaEntrada; ticket: string | null; usuario: string; open: boolean; onClose: () => void }) {
+// Nueva OT desde la rampa: la OT principal queda completa, igual que las que genera el reporte de fallas.
+// Placa, fechas, km y los trabajos del motivo de ingreso vienen de la rampa; tipo, subtipo, supervisor y técnicos se eligen.
+function NuevaOTRampaSheet({ rampa, usuario, open, onClose }: { rampa: RampaEntrada; usuario: string; open: boolean; onClose: () => void }) {
   const qc = useQueryClient();
   const toast = useToast();
+  const personas = usePersonalNombres().data ?? [];
+  const situacionesQ = useCatalogosTaller();
+  const situaciones = (situacionesQ.data?.situaciones ?? []).map(s => s.descripcion ?? s.nombre ?? '').filter(Boolean);
   const [tipo, setTipo] = useState<string>(TIPOS_OT[0]);
   const [sub, setSub] = useState<string>(SUBTIPOS_OT[TIPOS_OT[0]][0]);
+  const [supervisor, setSupervisor] = useState<string | null>(null);
+  const [situacion, setSituacion] = useState('En atención');
+  const [km, setKm] = useState('');
+  const [observaciones, setObservaciones] = useState('');
+  const [trabajos, setTrabajos] = useState<{ key: string; desc: string; tecnico: string | null }[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    setTipo(TIPOS_OT[0]); setSub(SUBTIPOS_OT[TIPOS_OT[0]][0]); setError(null);
-  }, [open]);
+    const previos = parseTrabajosRampa(rampa.observaciones).trabajos;
+    setTipo(TIPOS_OT[0]); setSub(SUBTIPOS_OT[TIPOS_OT[0]][0]); setSupervisor(null); setSituacion('En atención');
+    setKm(rampa.km ? String(rampa.km) : ''); setObservaciones('');
+    setTrabajos(previos.length
+      ? previos.map((t, i) => ({ key: `t${i}`, desc: t.desc ?? '', tecnico: t.tecnico || null }))
+      : [{ key: 't0', desc: '', tecnico: null }]);
+    setError(null);
+  }, [open, rampa]);
+
+  const subOpciones: ComboboxOption[] = (SUBTIPOS_OT[tipo] ?? []).map(s => ({ value: s, label: s }));
+  const personasOpciones: ComboboxOption[] = personas.map(p => ({ value: p, label: p }));
+
+  function cambiarTrabajo(key: string, cambios: Partial<{ desc: string; tecnico: string | null }>) {
+    setTrabajos(lista => lista.map(t => (t.key === key ? { ...t, ...cambios } : t)));
+  }
 
   async function crear() {
-    setEnviando(true); setError(null);
+    setError(null);
+    if (!rampa.placa) return setError('La rampa no tiene placa: no se puede crear la OT.');
+    if (!sub) return setError('Elige el subtipo de la OT.');
+    if (!supervisor) return setError('Elige el supervisor responsable.');
+    const vacios = trabajos.filter(t => !t.desc.trim() || !t.tecnico);
+    if (!trabajos.length || vacios.length) return setError('Cada trabajo necesita descripción y técnico.');
+    setEnviando(true);
     try {
-      // Si la rampa aún no tiene OT principal, se crea (igual que en Taller) y la hija se cuelga de ella
-      let visita = ticket;
-      if (!visita) {
-        const base = await api<{ id_ot?: string }>('/taller/ordenes-trabajo', { method: 'POST', body: { placa: rampa.placa, estado: 'Pendiente', creado_por: usuario, id_rampa: rampa.id } });
-        visita = base.id_ot ?? null;
-      }
-      if (!visita) throw new Error('No se pudo crear la orden de la visita');
-      const r = await crearOTHija(visita, tipo, sub, usuario);
-      haptic('success'); toast(`OT ${r.id_ot ?? ''} creada`.trim());
-      await qc.invalidateQueries({ queryKey: ['mant', 'ots-hijas', ticket] });
+      const r = await api<{ ok?: boolean; id_ot?: string }>('/taller/ordenes-trabajo/desde-rampa', {
+        method: 'POST',
+        body: {
+          id_rampa: rampa.id, tipo_ot: tipo, sub_tipo: sub, supervisor, situacion, km, observaciones, usuario,
+          trabajos: trabajos.map(t => ({ desc: t.desc.trim(), tecnico: t.tecnico ?? '' })),
+        },
+      });
+      haptic('success');
+      toast(`OT ${r.id_ot ?? ''} creada`.trim());
+      await qc.invalidateQueries({ queryKey: ['mant'] });
       onClose();
-    } catch (err) { setError(errorMessage(err)); haptic('warning'); }
-    finally { setEnviando(false); }
+    } catch (err) {
+      setError(errorMessage(err));
+      haptic('warning');
+    } finally {
+      setEnviando(false);
+    }
   }
 
   return (
@@ -878,19 +911,50 @@ function NuevaOTHijaSheet({ rampa, ticket, usuario, open, onClose }: { rampa: Ra
         <Button variant="primary" onClick={crear} loading={enviando}>Crear OT</Button></>}>
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error">{error}</Notice></div>}
+        <Field label="Unidad" wide>{() => <p style={{ margin: 0 }}><strong>{rampa.placa ?? '—'}</strong> · {rampa.rampa} · ingreso {formatFechaPe(rampa.fecha_ingreso)} {rampa.hora_ingreso?.slice(0, 5) ?? ''}</p>}</Field>
         <Field label="Tipo de OT">
-          {p => (
-            <SelectInput {...p} value={tipo} onChange={e => { setTipo(e.target.value); setSub(SUBTIPOS_OT[e.target.value][0]); }}>
+          {() => (
+            <SelectInput value={tipo} onChange={e => { setTipo(e.target.value); setSub(SUBTIPOS_OT[e.target.value][0]); }}>
               {TIPOS_OT.map(t => <option key={t} value={t}>{t}</option>)}
             </SelectInput>
           )}
         </Field>
-        <Field label="Sub tipo">
-          {p => (
-            <SelectInput {...p} value={sub} onChange={e => setSub(e.target.value)}>
-              {(SUBTIPOS_OT[tipo] ?? []).map(s => <option key={s} value={s}>{s}</option>)}
+        <Field label="Subtipo">
+          {() => <Combobox options={subOpciones} value={sub || null} placeholder="Elige el subtipo" onChange={v => setSub(v ?? '')} />}
+        </Field>
+        <Field label="Supervisor responsable" wide>
+          {() => <Combobox options={personasOpciones} value={supervisor} placeholder="Busca al supervisor" onChange={setSupervisor} />}
+        </Field>
+        <Field label="Situación">
+          {() => (
+            <SelectInput value={situacion} onChange={e => setSituacion(e.target.value)}>
+              {[...new Set([...situaciones, situacion])].map(s => <option key={s} value={s}>{s}</option>)}
             </SelectInput>
           )}
+        </Field>
+        <Field label="Km del tablero">
+          {() => <TextInput value={km} inputMode="numeric" onChange={e => setKm(e.target.value.replace(/\D/g, ''))} />}
+        </Field>
+        <Field label="Trabajos" wide hint="Una fila por trabajo. Cada uno necesita su técnico.">
+          {() => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+              {trabajos.map(t => (
+                <div key={t.key} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr) auto', gap: 'var(--s-2)', alignItems: 'center' }}>
+                  <TextInput value={t.desc} placeholder="Descripción del trabajo" onChange={e => cambiarTrabajo(t.key, { desc: e.target.value })} />
+                  <Combobox options={personasOpciones} value={t.tecnico} placeholder="Técnico" onChange={v => cambiarTrabajo(t.key, { tecnico: v })} />
+                  <Button variant="plain" size="sm" icon={<Trash2 size={15} />} aria-label="Quitar trabajo"
+                    disabled={trabajos.length === 1} onClick={() => setTrabajos(lista => lista.filter(x => x.key !== t.key))} />
+                </div>
+              ))}
+              <div>
+                <Button variant="secondary" size="sm" icon={<Plus size={15} />}
+                  onClick={() => setTrabajos(lista => [...lista, { key: `t${Date.now()}`, desc: '', tecnico: null }])}>Agregar trabajo</Button>
+              </div>
+            </div>
+          )}
+        </Field>
+        <Field label="Observaciones" wide>
+          {() => <TextInput value={observaciones} placeholder="Opcional" onChange={e => setObservaciones(e.target.value)} />}
         </Field>
       </div>
     </Sheet>

@@ -268,6 +268,71 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
+    // Nueva OT desde el detalle de una rampa: la OT principal queda completa (como las que genera el reporte de fallas)
+    // y cada trabajo entra con su técnico. Placa, fechas y km salen de la rampa.
+    router.post('/ordenes-trabajo/desde-rampa', (req, res) => {
+        const b = req.body || {};
+        const targetDb = req.db || db;
+        const idRampa = String(b.id_rampa || '').trim();
+        const tipo = String(b.tipo_ot || '').trim() || 'Correctivo';
+        const sub = String(b.sub_tipo || '').trim();
+        const supervisor = String(b.supervisor || '').trim();
+        const usuario = String(b.usuario || '').trim() || 'Sistema';
+        const trabajos = (Array.isArray(b.trabajos) ? b.trabajos : []).map(x => ({ desc: String(x.desc || '').trim(), tecnico: String(x.tecnico || '').trim() }));
+        if (!idRampa) return res.status(400).json({ error: 'Falta la rampa' });
+        if (!sub) return res.status(400).json({ error: 'Elige el subtipo de la OT' });
+        if (!supervisor) return res.status(400).json({ error: 'Elige el supervisor responsable' });
+        if (!trabajos.length || trabajos.some(x => !x.desc || !x.tecnico)) return res.status(400).json({ error: 'Cada trabajo necesita descripción y técnico' });
+
+        targetDb.query('SELECT * FROM taller_rampas WHERE id = ?', [idRampa], (errR, filas) => {
+            if (errR) return res.status(500).json({ error: errR.message });
+            const r = filas && filas[0];
+            if (!r) return res.status(404).json({ error: 'Rampa no encontrada' });
+            const placa = String(r.placa || '').trim().toUpperCase();
+            if (!placa) return res.status(400).json({ error: 'La rampa no tiene placa: no se puede crear la OT' });
+
+            const dia = d => (d instanceof Date
+                ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+                : String(d || '').slice(0, 10));
+            const dtIngreso = `${dia(r.fecha_ingreso) || dia(new Date())} ${r.hora_ingreso || '00:00:00'}`;
+            const dtSalida = r.fecha_salida ? `${dia(r.fecha_salida)} ${r.hora_salida || '00:00:00'}` : null;
+            const km = parseInt(b.km, 10) || parseInt(r.km, 10) || 0;
+            const tecnicos = Array.from(new Set(trabajos.map(x => x.tecnico)));
+            const situacion = String(b.situacion || '').trim() || 'En atención';
+
+            generarId(targetDb, 'ordenes_trabajo', 'id_ot', 'OT', new Date().getFullYear(), (nuevoId) => {
+                const detalles = {
+                    origen: 'Status de rampa', id_rampa: idRampa, rampa: r.rampa, placa,
+                    km, km_tablero: km,
+                    tipo_ot: tipo, tipo_mantenimiento: tipo, sub_tipo: sub, subtipo_ot: sub,
+                    supervisor, tecnico_lider: supervisor, tecnicos, tecnicos_str: tecnicos.join(', '),
+                    situacion, situacion_inicial: situacion,
+                    descripcion_falla: trabajos.map(x => `• ${x.desc}`).join('\n'),
+                    motivo: trabajos.map(x => x.desc).join(' · '),
+                    trabajos_det: trabajos,
+                    observaciones: String(b.observaciones || '').trim() || null,
+                    chofer: r.conductor || '', reportado_por: r.creado_por || '',
+                    fecha_ingreso: dtIngreso, fecha_inicio_ot: dtIngreso, fecha_hora_salida: dtSalida,
+                    historial: [{ fase: 'Recepción', fecha: new Date().toISOString(), usuario }],
+                };
+                targetDb.query(
+                    `INSERT INTO ordenes_trabajo (ticket_entrada, id_ot, placa, estado, detalles_json, creado_por, fecha_ingreso, fecha_inicio_ot, fecha_hora_salida, id_rampa)
+                     VALUES (?, ?, ?, 'Abierto', ?, ?, ?, ?, ?, ?)`,
+                    [nuevoId, nuevoId, placa, JSON.stringify(detalles), usuario, dtIngreso, dtIngreso, dtSalida, idRampa],
+                    (errOt) => {
+                        if (errOt) return res.status(500).json({ error: errOt.message });
+                        const filasT = trabajos.map((x, i) => [`${nuevoId}-${i + 1}`, nuevoId, placa, x.desc, x.tecnico, 'En Proceso']);
+                        targetDb.query('INSERT INTO trabajos_ot (id_ot, ticket_visita, placa, trabajo_realizado, tecnico, estado) VALUES ?', [filasT], (errT) => {
+                            if (errT) return res.status(500).json({ error: errT.message });
+                            if (typeof logAudit === 'function') logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'CREÓ', `Creó la OT ${nuevoId} desde la rampa ${r.rampa} (${placa})`);
+                            res.json({ ok: true, id: nuevoId, id_ot: nuevoId });
+                        });
+                    }
+                );
+            });
+        });
+    });
+
     router.post('/ordenes-trabajo', (req, res) => {
         const { placa, estado, fecha_ingreso, creado_por, detalles_json, id_rampa } = req.body;
         if (!placa) return res.status(400).json({ error: 'placa es requerida' });
