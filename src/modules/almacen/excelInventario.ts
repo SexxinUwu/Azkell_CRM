@@ -2,7 +2,7 @@
 // Exporta lo que está filtrado en pantalla; importa con POST /api/almacen/inventario/importar,
 // el mismo endpoint de la versión actual (siempre CREA artículos: no actualiza los existentes).
 import { api } from '../../core/api/client';
-import type { ArticuloInv } from './api';
+import { costoUnitarioSoles, type ArticuloInv } from './api';
 
 export class ArchivoInvalido extends Error {}
 
@@ -124,14 +124,8 @@ const ENCABEZADOS_EXPORT = ['Código', 'Artículo', 'Código artículo', 'Famili
 
 export async function exportar(articulos: ArticuloInv[]) {
   const { default: writeExcelFile } = await import('write-excel-file/browser');
-  // Costo final en soles: los dólares se multiplican por la TC de su última OC; lo que está en soles queda igual
-  const costoFinalSoles = (a: ArticuloInv) => {
-    const costo = Number(a.costo_referencial) || 0;
-    if (a.moneda !== 'USD') return Math.round(costo * 100) / 100;
-    const tc = Number(a.tc_ultima_oc) || Number(a.tipo_cambio) || 0;
-    const soles = tc > 0 ? costo * tc : (Number(a.costo_soles) || 0);
-    return Math.round(soles * 100) / 100;
-  };
+  // Costo final en soles: el mismo costo unitario con el que la app valoriza el stock, sin redondear (stock × costo = valor de la app)
+  const costoFinalSoles = (a: ArticuloInv) => costoUnitarioSoles(a);
   const filas = articulos.map(a => [
     a.id, a.articulo || a.descripcion, a.codigo_articulo ?? '', a.familia ?? '', a.almacen ?? '', a.unidad ?? '', a.moneda,
     Number(a.costo_referencial) || 0, a.moneda === 'USD' ? (Number(a.tc_ultima_oc) || '') : '', costoFinalSoles(a), Number(a.stock_actual) || 0, Number(a.stock_min) || 0, Number(a.stock_max) || 0,
