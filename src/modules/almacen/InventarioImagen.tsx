@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import QRCode from 'qrcode';
-import { Download, ImagePlus, Trash2 } from 'lucide-react';
+import { Camera, Download, ImagePlus, Trash2 } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { api, errorMessage } from '../../core/api/client';
 import { useToast } from '../../core/ui/Toast';
@@ -18,6 +18,7 @@ export function InventarioImagen({ articuloId, imagenUrl, onCambio }: Props) {
   const toast = useToast();
   const qc = useQueryClient();
   const archivo = useRef<HTMLInputElement>(null);
+  const camara = useRef<HTMLInputElement>(null);
   const [subiendo, setSubiendo] = useState(false);
   const [qr, setQr] = useState<string | null>(null);
 
@@ -74,14 +75,31 @@ export function InventarioImagen({ articuloId, imagenUrl, onCambio }: Props) {
           <Button variant="secondary" size="sm" icon={<ImagePlus size={15} />} loading={subiendo} onClick={() => archivo.current?.click()}>
             {imagenUrl ? 'Cambiar foto' : 'Subir foto'}
           </Button>
+          <Button variant="secondary" size="sm" icon={<Camera size={15} />} loading={subiendo} onClick={() => camara.current?.click()}>
+            Tomar foto
+          </Button>
           {imagenUrl && (
             <Button variant="plain" size="sm" icon={<Trash2 size={15} />} onClick={quitar}>Quitar</Button>
           )}
         </div>
+        {/* Galería del equipo */}
         <input
           ref={archivo}
           type="file"
           accept="image/*"
+          hidden
+          onChange={e => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (file) subir(file);
+          }}
+        />
+        {/* Cámara del teléfono (cámara trasera) */}
+        <input
+          ref={camara}
+          type="file"
+          accept="image/*"
+          capture="environment"
           hidden
           onChange={e => {
             const file = e.target.files?.[0];

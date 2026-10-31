@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, ScanLine } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
@@ -8,6 +8,7 @@ import { MultiSelect } from '../../core/ui/MultiSelect';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { guardarArticulo, useAlmacenesLista, useTipoCambioSunat, type ArticuloInv, type ArticuloNuevo } from './api';
+import { EscanerQr } from './EscanerQr';
 import { InventarioImagen } from './InventarioImagen';
 import { NuevaOpcionSheet } from './NuevaOpcionSheet';
 
@@ -83,6 +84,7 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
   const [articulo, setArticulo] = useState('');
   const [codigoArticulo, setCodigoArticulo] = useState('');
   const [codigoBarras, setCodigoBarras] = useState('');
+  const [escaneando, setEscaneando] = useState(false);
   const [marca, setMarca] = useState('');
   const [marcasUnidad, setMarcasUnidad] = useState<string[]>([]);
   const [familia, setFamilia] = useState('');
@@ -239,8 +241,23 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
         </p>
 
         <Field label="Código de barras">
-          {p => <TextInput {...p} value={codigoBarras} placeholder="EAN-13 / QR..." onChange={e => setCodigoBarras(e.target.value)} />}
+          {p => (
+            <div style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <TextInput {...p} value={codigoBarras} placeholder="EAN-13 / QR..." onChange={e => setCodigoBarras(e.target.value)} />
+              </div>
+              <Button variant="secondary" size="sm" icon={<ScanLine size={16} />} aria-label="Escanear código de barras o QR" onClick={() => setEscaneando(true)}>
+                Escanear
+              </Button>
+            </div>
+          )}
         </Field>
+        <EscanerQr
+          open={escaneando}
+          titulo="Escanear código de barras o QR"
+          onClose={() => setEscaneando(false)}
+          onLeido={texto => { setCodigoBarras(texto.trim()); setEscaneando(false); }}
+        />
         <Field label="Artículo *">
           {p => <TextInput {...p} value={articulo} placeholder="Ej: Filtro de aceite" onChange={e => setArticulo(e.target.value)} />}
         </Field>
