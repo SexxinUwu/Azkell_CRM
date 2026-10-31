@@ -816,6 +816,9 @@ export function tiposUnicos(items: ArticuloInv[]): string[] {
 /** Valor del filtro de la pantalla de almacenes para los artículos sin almacén válido */
 export const SIN_ALMACEN = '__sin_almacen__';
 
+/** Servicios (SERV-…): no están en almacén, así que no cuentan como artículos sin almacén válido */
+export const esServicio = (a: ArticuloInv) => a.tipo === 'Servicio' || a.id.toUpperCase().startsWith('SERV');
+
 /** Clave para comparar nombres de almacén: sin mayúsculas ni espacios sobrantes */
 export const claveAlmacen = (nombre: string | null | undefined) => (nombre ?? '').trim().toLowerCase();
 

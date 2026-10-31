@@ -14,7 +14,7 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
 import { formatSoles } from '../../core/lib/format';
 import {
-  claveAlmacen, coincideInv, eliminarArticulo, familiasUnicas, SIN_ALMACEN, useAlmacenesLista, valorEnStock,
+  claveAlmacen, coincideInv, eliminarArticulo, esServicio, familiasUnicas, SIN_ALMACEN, useAlmacenesLista, valorEnStock,
   useInventario, stockTono, type ArticuloInv,
 } from './api';
 import { InventarioFicha } from './InventarioFicha';
@@ -33,7 +33,6 @@ const TARJETAS_PAGINA = 24;
 const PRIORIDAD: Record<'ok' | 'warning' | 'critical', number> = { critical: 0, warning: 1, ok: 2 };
 
 /** Servicios (SERV-…) no se descuentan físicamente: van en su propia pestaña */
-const esServicio = (a: ArticuloInv) => a.tipo === 'Servicio' || a.id.toUpperCase().startsWith('SERV');
 /** Valor del stock en soles (solo artículos con existencias) */
 const valorItem = valorEnStock;
 

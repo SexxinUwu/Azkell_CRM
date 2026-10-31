@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode, type KeyboardEvent } from 'react';
 import { Boxes, Building2, MapPin, Package, TriangleAlert, Truck, Warehouse } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
-import { repartirPorAlmacen, SIN_ALMACEN, stockTono, type ArticuloInv } from './api';
+import { esServicio, repartirPorAlmacen, SIN_ALMACEN, stockTono, type ArticuloInv } from './api';
 
 interface Props {
   items: ArticuloInv[];
@@ -77,7 +77,8 @@ function TarjetaAlmacen({ frente, dorso, tono = 'normal' }: { frente: ReactNode;
 
 /** Pantalla de inicio del inventario: un almacén registrado por tarjeta, el inventario global y los artículos sin almacén válido */
 export function InventarioPortal({ items, almacenes, onElegir }: Props) {
-  const activos = useMemo(() => items.filter(i => i.activo), [items]);
+  // Los servicios no van en almacén: la tarjeta de sin almacén cuenta solo los físicos, como la lista
+  const activos = useMemo(() => items.filter(i => i.activo && !esServicio(i)), [items]);
   const { porAlmacen, sinAlmacen } = useMemo(() => repartirPorAlmacen(activos, almacenes), [activos, almacenes]);
   const nombresSinAlmacen = useMemo(
     () => [...new Set(sinAlmacen.map(i => (i.almacen ?? '').trim()).filter(Boolean))],
