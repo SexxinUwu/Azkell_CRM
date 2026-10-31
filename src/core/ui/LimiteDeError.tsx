@@ -6,7 +6,8 @@ import { CargaCamion } from './CargaCamion';
 // Tras un despliegue, la pestaña abierta pide archivos de la versión anterior (404) mientras el servidor
 // termina de publicar la nueva. Eso se resuelve solo: se muestra el camión y se reintenta con esperas crecientes.
 
-const FALLO_DE_MODULO = /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Loading chunk/i;
+// El último patrón: un import diferido que no trajo su módulo (versión vieja de la pestaña) llega como lectura de 'default'
+const FALLO_DE_MODULO = /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Loading chunk|reading 'default'/i;
 const CLAVE_INTENTOS = 'fleet_reintentos_version';
 // Esperas entre reintentos (ms): unos 40 segundos en total, suficiente para que termine un despliegue
 const ESPERAS = [2000, 4000, 6000, 8000, 10000, 12000];
