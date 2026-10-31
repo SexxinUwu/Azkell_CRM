@@ -310,7 +310,12 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     const cciListo = new WeakSet();
     const asegurarCci = (db, cb) => {
         if (cciListo.has(db)) return cb();
-        db.query('ALTER TABLE proveedor_cuentas_bancarias ADD COLUMN cci VARCHAR(40) DEFAULT NULL', () => { cciListo.add(db); cb(); });
+        db.query('ALTER TABLE proveedor_cuentas_bancarias ADD COLUMN cci VARCHAR(40) DEFAULT NULL', () => {
+            // Yape y Plin son tipos de cuenta de BCP y BBVA: la columna acepta también esos valores
+            db.query("ALTER TABLE proveedor_cuentas_bancarias MODIFY COLUMN tipo_cuenta ENUM('CUENTA CORRIENTE','CUENTA DE AHORROS','CUENTA REMUNERADA','YAPE','PLIN') NOT NULL", () => {
+                cciListo.add(db); cb();
+            });
+        });
     };
     // Filas de cuentas tal como se guardan: sin banco o sin número no se guardan
     const filasCuentas = (proveedorId, cuentas) => cuentas.map(c => [

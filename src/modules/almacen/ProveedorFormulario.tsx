@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
-import { Field, SelectInput, TextInput } from '../../core/ui/Field';
+import { Field, TextInput } from '../../core/ui/Field';
+import { Combobox } from '../../core/ui/Combobox';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { BANCOS_PERU, tieneYapePlin } from './bancosPeru';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { guardarProveedor, type CuentaProveedor, type ProveedorInv } from './api';
@@ -25,6 +27,8 @@ const TIPOS_DOC = [
   { value: 'Otro', label: 'Otro' },
 ];
 const TIPOS_CUENTA = ['CUENTA CORRIENTE', 'CUENTA DE AHORROS', 'CUENTA REMUNERADA'];
+// Yape y Plin solo cuando el banco es BCP o BBVA
+const tiposCuentaPara = (banco: string | null | undefined) => (tieneYapePlin(banco) ? [...TIPOS_CUENTA, 'YAPE', 'PLIN'] : TIPOS_CUENTA);
 const MONEDAS_CUENTA = [
   { value: 'SOLES', label: 'Soles (S/)' },
   { value: 'DOLARES', label: 'Dólares (US$)' },
@@ -163,9 +167,7 @@ export function ProveedorFormulario({ open, proveedor: p, inicial, onClose, onGu
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
               <Field label="Tipo de documento">
                 {pp => (
-                  <SelectInput {...pp} value={tipoDoc} onChange={ev => setTipoDoc(ev.target.value)}>
-                    {TIPOS_DOC.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </SelectInput>
+                  <Combobox {...pp} options={TIPOS_DOC} value={tipoDoc} placeholder="Elige el tipo" onChange={v => setTipoDoc(v ?? 'RUC')} />
                 )}
               </Field>
               <Field label="N° de documento">
@@ -210,20 +212,23 @@ export function ProveedorFormulario({ open, proveedor: p, inicial, onClose, onGu
               <div key={c.key} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)', padding: 'var(--s-3)', borderRadius: 'var(--r-md)', background: 'var(--fill-subtle)' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
                   <Field label="Banco">
-                    {pp => <TextInput {...pp} value={c.banco ?? ''} placeholder="Ej: BCP, Interbank" onChange={ev => cambiarCuenta(c.key, { banco: ev.target.value })} />}
+                    {pp => (
+                      <Combobox {...pp} options={BANCOS_PERU.map(b => ({ value: b, label: b }))} value={c.banco || null}
+                        placeholder="Elige el banco o caja" createLabel="Usar este banco"
+                        onChange={v => cambiarCuenta(c.key, { banco: v ?? '', tipo_cuenta: tieneYapePlin(v) ? c.tipo_cuenta : (c.tipo_cuenta === 'YAPE' || c.tipo_cuenta === 'PLIN' ? 'CUENTA CORRIENTE' : c.tipo_cuenta) })}
+                        onCreate={texto => cambiarCuenta(c.key, { banco: texto })} />
+                    )}
                   </Field>
                   <Field label="Tipo de cuenta">
                     {pp => (
-                      <SelectInput {...pp} value={c.tipo_cuenta ?? 'CUENTA CORRIENTE'} onChange={ev => cambiarCuenta(c.key, { tipo_cuenta: ev.target.value })}>
-                        {TIPOS_CUENTA.map(t => <option key={t} value={t}>{t}</option>)}
-                      </SelectInput>
+                      <Combobox {...pp} options={tiposCuentaPara(c.banco).map(t => ({ value: t, label: t }))} value={c.tipo_cuenta ?? 'CUENTA CORRIENTE'}
+                        placeholder="Elige el tipo" onChange={v => cambiarCuenta(c.key, { tipo_cuenta: v ?? 'CUENTA CORRIENTE' })} />
                     )}
                   </Field>
                   <Field label="Moneda">
                     {pp => (
-                      <SelectInput {...pp} value={c.moneda ?? 'SOLES'} onChange={ev => cambiarCuenta(c.key, { moneda: ev.target.value })}>
-                        {MONEDAS_CUENTA.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                      </SelectInput>
+                      <Combobox {...pp} options={MONEDAS_CUENTA} value={c.moneda ?? 'SOLES'} placeholder="Elige la moneda"
+                        onChange={v => cambiarCuenta(c.key, { moneda: v ?? 'SOLES' })} />
                     )}
                   </Field>
                   <Field label="N° de cuenta">
