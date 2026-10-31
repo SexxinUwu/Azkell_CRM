@@ -104,8 +104,10 @@ async function crearLlantasDeRecepcion(conn, { recepcionId, linea, inventarioId,
  * Solo si ninguna se ha movido: si tiene movimientos distintos de la alta, no se borra nada y lanza error.
  */
 async function borrarLlantasDeRecepcion(conn, recepcionId) {
+    // Acepta la conexión con callbacks (la de las rutas) o con promesas
+    const db = typeof conn.promise === 'function' ? conn.promise() : conn;
     const patron = `${PREFIJO_RECEPCION}R${recepcionId}-L%`;
-    const [movidas] = await conn.query(
+    const [movidas] = await db.query(
         `SELECT DISTINCT m.id_neumatico FROM neumaticos_movimientos m
          WHERE m.id_neumatico LIKE ? AND m.tipo <> ?`, [patron, MOV_ALTA]);
     if (movidas.length) {
@@ -113,8 +115,8 @@ async function borrarLlantasDeRecepcion(conn, recepcionId) {
         err.codigo = 'LLANTAS_MOVIDAS';
         throw err;
     }
-    await conn.query('DELETE FROM neumaticos_movimientos WHERE id_neumatico LIKE ?', [patron]);
-    const [res] = await conn.query('DELETE FROM neumaticos_hoja_vida WHERE id_neumatico LIKE ?', [patron]);
+    await db.query('DELETE FROM neumaticos_movimientos WHERE id_neumatico LIKE ?', [patron]);
+    const [res] = await db.query('DELETE FROM neumaticos_hoja_vida WHERE id_neumatico LIKE ?', [patron]);
     return res.affectedRows || 0;
 }
 

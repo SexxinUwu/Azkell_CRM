@@ -1742,7 +1742,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
         // 0. Llantas que dieron de alta las recepciones de esta OC: se quitan solo si ninguna se ha movido
         try {
-            const [recsOc] = await tdb.query('SELECT id FROM recepciones_oc WHERE oc_id = ?', [id]);
+            const [recsOc] = await (typeof tdb.promise === 'function' ? tdb.promise() : tdb).query('SELECT id FROM recepciones_oc WHERE oc_id = ?', [id]);
             for (const r of recsOc) await borrarLlantasDeRecepcion(tdb, r.id);
         } catch (errLl) {
             return res.status(409).json({ error: errLl.message });
@@ -1790,7 +1790,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         // Una OC anulada no deja llantas en Neumáticos: se quitan las de sus recepciones (solo si ninguna se movió)
         if (String(estado).toLowerCase().startsWith('anul')) {
             try {
-                const [recsAnul] = await tdb.query('SELECT id FROM recepciones_oc WHERE oc_id = ?', [id]);
+                const [recsAnul] = await (typeof tdb.promise === 'function' ? tdb.promise() : tdb).query('SELECT id FROM recepciones_oc WHERE oc_id = ?', [id]);
                 for (const r of recsAnul) await borrarLlantasDeRecepcion(tdb, r.id);
             } catch (errLl) {
                 return res.status(409).json({ error: errLl.message });
