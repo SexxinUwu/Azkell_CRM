@@ -1,5 +1,6 @@
 const express = require('express');
 const { tipoCambioSunat } = require('../services/tipo_cambio');
+const { fechaVencimiento } = require('../services/condicion_oc');
 const { crearLlantasDeRecepcion, borrarLlantasDeRecepcion, corregirLlantasPorInventario } = require('../services/neumaticos_codigo');
 const router = express.Router();
 
