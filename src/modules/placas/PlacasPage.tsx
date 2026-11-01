@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, CheckSquare, Container, Download, FileSpreadsheet, FileText, LayoutGrid, List, MessageCircle, Plus, SearchX, SlidersHorizontal, Trash2, Truck, X } from 'lucide-react';
+import { Check, CheckSquare, Container, Download, FileSpreadsheet, FileText, LayoutGrid, List, MessageCircle, Plus, SearchX, SlidersHorizontal, Trash2, Truck, Upload, X } from 'lucide-react';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { MenuOtros } from '../../core/ui/MenuOtros';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { ToggleChips } from '../../core/ui/Chips';
 import { ConfirmSheet } from '../../core/ui/Sheet';
+import '../../core/ui/acciones-iconos.css';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
@@ -135,13 +135,27 @@ export function PlacasPage() {
         subtitle={isLoading ? 'Cargando unidades…' : `${resumen.total} unidades · ${resumen.motoras} motoras · ${resumen.noMotoras} no motoras`}
         actions={
           <>
-            <MenuOtros opciones={[
-              puedeCrear && { label: 'Importar desde Excel', detalle: 'Crea o actualiza placas en lote', icon: <FileSpreadsheet size={17} />, onSelect: () => setImportando(true) },
-              puedeCrear && { label: 'Descargar plantilla', detalle: 'Excel con las columnas para importar', icon: <Download size={17} />, onSelect: () => descargarPlantilla().catch(aviso) },
-              { label: 'Exportar a Excel', detalle: 'Las unidades que ves con los filtros', icon: <FileSpreadsheet size={17} />, separado: true, disabled: !visibles.length, onSelect: excel },
-              { label: 'Reporte en PDF', detalle: 'Descarga el reporte de lo filtrado', icon: <FileText size={17} />, disabled: !visibles.length, onSelect: pdf },
-              { label: 'Enviar por WhatsApp', detalle: 'Comparte el PDF del reporte', icon: <MessageCircle size={17} />, disabled: !visibles.length, onSelect: whatsapp },
-            ]} />
+            <div className="acciones-iconos" role="group" aria-label="Acciones de placas">
+              {puedeCrear && (
+                <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Importar desde Excel" aria-label="Importar desde Excel" onClick={() => setImportando(true)}>
+                  <Upload size={17} />
+                </button>
+              )}
+              {puedeCrear && (
+                <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--ambar" data-tip="Descargar plantilla" aria-label="Descargar plantilla" onClick={() => descargarPlantilla().catch(aviso)}>
+                  <Download size={17} />
+                </button>
+              )}
+              <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Exportar a Excel" aria-label="Exportar a Excel" disabled={!visibles.length} onClick={excel}>
+                <FileSpreadsheet size={17} />
+              </button>
+              <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--rojo" data-tip="Reporte en PDF" aria-label="Reporte en PDF" disabled={!visibles.length} onClick={pdf}>
+                <FileText size={17} />
+              </button>
+              <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Enviar por WhatsApp" aria-label="Enviar por WhatsApp" disabled={!visibles.length} onClick={whatsapp}>
+                <MessageCircle size={17} />
+              </button>
+            </div>
             {puedeCrear && (
               <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ modo: 'crear', placa: null })}>Nueva placa</Button>
             )}
@@ -195,10 +209,10 @@ export function PlacasPage() {
               <SearchField value={busqueda} onChange={setBusqueda} placeholder="Placa, cliente, marca, modelo o VIN" />
             </div>
             <div className="placas-toolbar__vista" role="group" aria-label="Vista">
-              <button type="button" className="placas-vista-btn pressable" aria-pressed={vista === 'tarjetas'} onClick={() => cambiarVista('tarjetas')} aria-label="Ver en tarjetas">
+              <button type="button" className="placas-vista-btn acciones-iconos__boton pressable" data-tip="Ver en tarjetas" aria-pressed={vista === 'tarjetas'} onClick={() => cambiarVista('tarjetas')} aria-label="Ver en tarjetas">
                 <LayoutGrid size={18} />
               </button>
-              <button type="button" className="placas-vista-btn pressable" aria-pressed={vista === 'lista'} onClick={() => cambiarVista('lista')} aria-label="Ver en lista">
+              <button type="button" className="placas-vista-btn acciones-iconos__boton pressable" data-tip="Ver en lista" aria-pressed={vista === 'lista'} onClick={() => cambiarVista('lista')} aria-label="Ver en lista">
                 <List size={18} />
               </button>
             </div>
