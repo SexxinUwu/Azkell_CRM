@@ -1,0 +1,223 @@
+/* Placas en 3D: mismo lenguaje visual que el módulo Placas del ERP (tarjetas blancas muy redondeadas,
+   píldoras grises, botón principal negro y placas con franja PERÚ). Tres columnas: placas · unidad en 3D · especificaciones.
+   Todo el CSS vive bajo .flota3d (la raíz de la página). Del archivo original: body/html/:root pasan a .flota3d;
+   body.solo pasa a .flota3d--solo y body.m-detail pasa a .flota3d--detalle (celular). */
+
+.flota3d{
+  --bg:#f4f4f5;
+  --surface:#ffffff;
+  --soft:#ececee;
+  --soft-hi:#e2e2e6;
+  --line:#e6e6ea;
+  --ink:#111114;
+  --muted:#6b6b74;
+  --faint:#9a9aa3;
+  --eyebrow:#c2410c;
+  --green:#15803d;
+  --green-bg:#dcfce7;
+  --red:#b91c1c;
+  --red-bg:#fee2e2;
+  --blue:#1d4ed8;
+  --primary:#111114;
+  --on-primary:#ffffff;
+  --ring:#111114;
+  --stage-a:#ffffff;
+  --stage-b:#e6e8ec;
+  --shadow:0 1px 2px rgba(17,17,20,.04),0 4px 16px rgba(17,17,20,.05);
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --plate:"Barlow Condensed","Arial Narrow",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme='light']) .flota3d,
+  :root[data-theme='auto'] .flota3d{
+    --bg:#0b0b0d; --surface:#161619; --soft:#212126; --soft-hi:#2b2b31; --line:#26262c; --ink:#f4f4f5; --muted:#a1a1aa; --faint:#71717a;
+    --eyebrow:#fb923c; --green:#4ade80; --green-bg:rgba(34,197,94,.14); --red:#f87171; --red-bg:rgba(239,68,68,.15); --blue:#60a5fa;
+    --primary:#f4f4f5; --on-primary:#111114; --ring:#f4f4f5; --stage-a:#26272c; --stage-b:#111114; --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25);
+    color-scheme:dark;
+  }
+}
+:root[data-theme='dark'] .flota3d{
+  --bg:#0b0b0d; --surface:#161619; --soft:#212126; --soft-hi:#2b2b31; --line:#26262c; --ink:#f4f4f5; --muted:#a1a1aa; --faint:#71717a;
+  --eyebrow:#fb923c; --green:#4ade80; --green-bg:rgba(34,197,94,.14); --red:#f87171; --red-bg:rgba(239,68,68,.15); --blue:#60a5fa;
+  --primary:#f4f4f5; --on-primary:#111114; --ring:#f4f4f5; --stage-a:#26272c; --stage-b:#111114; --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25);
+  color-scheme:dark;
+}
+.flota3d{height:100vh;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:normal;letter-spacing:normal;-webkit-font-smoothing:antialiased}
+.flota3d [hidden]{display:none!important}
+.flota3d *,.flota3d *::before,.flota3d *::after{box-sizing:border-box}
+.flota3d button{font:inherit;color:inherit;cursor:pointer}
+.flota3d button:focus-visible,.flota3d input:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.flota3d svg{display:block;flex:none}
+
+.flota3d .app{height:100%;display:flex;flex-direction:column;padding:24px 28px 24px;gap:18px;max-width:1920px;margin:0 auto}
+.flota3d .head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.flota3d .eyebrow{margin:0;font-size:12px;font-weight:600;color:var(--eyebrow)}
+.flota3d a.eyebrow{display:flex;align-items:center;gap:4px;height:15px;line-height:15px;text-decoration:none}
+.flota3d a.eyebrow svg{width:12px;height:12px}
+.flota3d h1{margin:2px 0 0;font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.flota3d .subline{margin:4px 0 0;font-size:15px;line-height:normal;color:var(--muted)}
+.flota3d .subline button{border:0;background:none;padding:0;color:var(--ink);text-decoration:underline;font-size:13px}
+.flota3d .head-actions{margin-left:auto;display:flex;gap:10px;align-items:center}
+.flota3d .pill{display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 18px;border-radius:999px;border:0;background:var(--soft);font-weight:600;font-size:14px;white-space:nowrap}
+.flota3d .pill:hover{background:var(--soft-hi)}
+.flota3d .pill.primary{background:var(--primary);color:var(--on-primary)}
+.flota3d .pill.primary:hover{opacity:.88}
+.flota3d .pill.icon{width:42px;padding:0;justify-content:center}
+.flota3d .back{display:none!important}
+
+.flota3d .main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(330px,370px) minmax(0,1fr) minmax(320px,360px);gap:20px}
+.flota3d .card{background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow)}
+
+/* ---------- Lista de placas ---------- */
+.flota3d .list{display:flex;flex-direction:column;min-height:0;padding:16px 14px 0}
+.flota3d .search{display:flex;align-items:center;gap:10px;flex:none;position:static;min-width:0;height:42px;padding:0 14px;border-radius:999px;background:var(--soft);color:var(--muted)}
+.flota3d .search input{flex:1;min-width:0;border:0;background:none;color:var(--ink);font:inherit;font-size:14px;outline:none}
+.flota3d .search input::placeholder{color:var(--faint)}
+.flota3d .search svg{position:static;transform:none;color:var(--muted);pointer-events:none}
+.flota3d .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.flota3d .chip{height:34px;padding:0 13px;border-radius:999px;border:0;background:var(--soft);font-weight:500;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.flota3d .chip span{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.flota3d .chip:hover{background:var(--soft-hi)}
+.flota3d .chip[aria-pressed="true"]{background:var(--primary);color:var(--on-primary)}
+.flota3d .chip[aria-pressed="true"] span{color:inherit;opacity:.7}
+.flota3d .count{margin:12px 2px 8px;font-size:12px;color:var(--muted)}
+.flota3d .plates{list-style:none;margin:0 -6px;padding:2px 6px 14px;overflow:auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:8px}
+.flota3d .row{position:relative;width:100%;display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:14px 14px 12px;border-radius:18px;border:1px solid var(--line);background:var(--surface);text-align:left}
+.flota3d .row:hover{border-color:var(--faint)}
+.flota3d .row[aria-selected="true"]{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.flota3d .row .top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
+.flota3d .row .t{font-weight:600;font-size:15px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.flota3d .row .mt{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden}
+.flota3d .row .cl{margin-top:4px;padding-top:9px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flota3d .dots{display:inline-flex;gap:3px;margin-left:auto}
+.flota3d .dots i{width:10px;height:10px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+
+/* Placa peruana */
+.flota3d .plate{display:inline-flex;flex-direction:column;align-items:stretch;border:2.5px solid #1b1b1f;border-radius:9px;background:#fff;color:#111114;overflow:hidden;box-shadow:0 1px 0 rgba(0,0,0,.06)}
+.flota3d .plate small{display:block;text-align:center;font-family:var(--font);font-weight:700;font-size:8.5px;letter-spacing:.34em;padding:2px 0 1px .34em;background:#ececef;border-bottom:1.5px solid #1b1b1f;line-height:1.2}
+.flota3d .plate b{display:block;text-align:center;font-family:var(--plate);font-weight:700;font-size:28px;letter-spacing:.08em;line-height:1;padding:3px 10px 4px calc(10px + .08em)}
+.flota3d .plate.sm{min-width:118px}
+.flota3d .plate.lg{min-width:190px;border-width:3px;border-radius:11px}
+.flota3d .plate.lg small{font-size:10px;padding:3px 0 2px .34em}
+.flota3d .plate.lg b{font-size:40px;padding:3px 14px 5px calc(14px + .08em)}
+.flota3d .badge{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:999px;background:var(--green-bg);color:var(--green);font-size:12px;font-weight:600;white-space:nowrap}
+.flota3d .badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.flota3d .badge.off{background:var(--red-bg);color:var(--red)}
+
+/* ---------- Visor 3D ---------- */
+.flota3d .viewer{container-type:size;position:relative;overflow:hidden;min-height:0;background:radial-gradient(ellipse 75% 65% at 50% 62%,var(--stage-a),var(--stage-b))}
+.flota3d .c3d{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
+.flota3d .v-head{position:absolute;left:24px;right:24px;top:22px;display:flex;align-items:flex-start;gap:18px;pointer-events:none}
+.flota3d .v-head .txt{min-width:0}
+.flota3d .v-head h2{margin:0;font-size:24px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+.flota3d .v-head p{margin:4px 0 0;font-size:14px;color:var(--muted)}
+.flota3d .v-head .badge{margin-top:8px}
+.flota3d .navb{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow);display:grid;place-items:center}
+.flota3d .navb:hover{background:var(--soft)}
+.flota3d .navb.prev{left:16px}
+.flota3d .navb.next{right:16px}
+.flota3d .dock{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:4px;padding:6px;border-radius:999px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);max-width:calc(100% - 32px);overflow-x:auto;scrollbar-width:none}
+.flota3d .dock::-webkit-scrollbar{display:none}
+.flota3d .tool{height:40px;padding:0 13px;border-radius:999px;border:0;background:none;display:inline-flex;align-items:center;gap:7px;font-weight:500;font-size:13px;white-space:nowrap}
+.flota3d .tool:hover{background:var(--soft)}
+.flota3d .tool[aria-pressed="true"],.flota3d .tool[aria-expanded="true"]{background:var(--primary);color:var(--on-primary)}
+@container (max-width:860px){ .flota3d .tool .lbl{display:none} .flota3d .tool{padding:0 12px} .flota3d .hint{display:none} }
+@container (max-width:1060px){ .flota3d .hint{display:none} }
+.flota3d .sep{width:1px;margin:8px 2px;background:var(--line);flex:none}
+.flota3d .hint{position:absolute;right:20px;top:24px;margin:0;font-size:12px;color:var(--faint);pointer-events:none;text-align:right}
+.flota3d .part-card{position:absolute;left:50%;bottom:84px;transform:translateX(-50%);width:min(440px,calc(100% - 32px));padding:14px 16px;border-radius:18px;display:flex;gap:12px;align-items:flex-start}
+.flota3d .part-card div{min-width:0;flex:1}
+.flota3d .part-card h3{margin:0;font-size:16px;font-weight:700}
+.flota3d .part-card p{margin:4px 0 0;font-size:13.5px;line-height:1.5;color:var(--muted)}
+.flota3d .part-card button{border:0;background:var(--soft);border-radius:999px;height:30px;padding:0 12px;font-size:13px;font-weight:500}
+
+/* ---------- Especificaciones ---------- */
+.flota3d .spec{display:flex;flex-direction:column;min-height:0;padding:18px 0 0}
+.flota3d .spec h2{margin:0 18px;font-size:16px;font-weight:700}
+.flota3d .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 18px 0}
+.flota3d .kpi{border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.flota3d .kpi b{display:block;font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
+.flota3d .kpi b small{font-size:13px;font-weight:600;color:var(--muted);margin-left:3px;letter-spacing:0}
+.flota3d .kpi span{display:block;margin-top:3px;font-size:12px;color:var(--muted)}
+.flota3d .kpi .bar{height:4px;border-radius:4px;background:var(--soft);margin-top:9px;overflow:hidden}
+.flota3d .kpi .bar i{display:block;height:100%;border-radius:4px;background:var(--ink)}
+.flota3d .kpi.k1 b{color:var(--green)}
+.flota3d .kpi.k2 b{color:var(--blue)}
+.flota3d .motor{display:flex;align-items:center;gap:10px;margin:10px 18px 0;padding:10px 14px;border-radius:14px;background:var(--soft);font-size:13px}
+.flota3d .motor b{margin-left:auto;font-family:var(--mono);font-weight:500;font-size:13px}
+.flota3d .seg{display:flex;gap:4px;margin:16px 18px 0;padding:4px;border-radius:999px;background:var(--soft)}
+.flota3d .seg button{flex:1;height:34px;border:0;border-radius:999px;background:none;font-weight:600;font-size:13px;color:var(--muted)}
+.flota3d .seg button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.flota3d .tab-body{flex:1;min-height:0;overflow:auto;padding:4px 18px 18px}
+.flota3d .grp h3{margin:16px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.flota3d .grp dl{margin:0;display:grid;grid-template-columns:auto 1fr;font-size:13px}
+.flota3d .grp dt,.flota3d .grp dd{padding:7px 0;border-bottom:1px solid var(--line)}
+.flota3d .grp dt{color:var(--muted);padding-right:12px}
+.flota3d .grp dd{margin:0;font-weight:500;text-align:right;word-break:break-word;display:flex;justify-content:flex-end;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
+.flota3d .grp dd.mono{font-family:var(--mono);font-weight:400;font-size:12.5px;word-break:break-all}
+.flota3d .grp dd i{width:12px;height:12px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2);flex:none}
+.flota3d .ref{margin-top:16px;padding:12px 14px;border-radius:14px;background:var(--soft);font-size:12.5px;line-height:1.5;color:var(--muted)}
+.flota3d .ref b{color:var(--ink);font-weight:600}
+.flota3d .ref ul{margin:6px 0 0;padding-left:16px}
+.flota3d .parts{list-style:none;margin:0;padding:8px 0 0;display:flex;flex-direction:column;gap:2px}
+.flota3d .parts button{width:100%;text-align:left;border:0;background:none;padding:8px 10px;border-radius:10px;font-size:13.5px;display:flex;gap:10px;align-items:baseline}
+.flota3d .parts button span{font-family:var(--mono);font-size:11px;color:var(--faint);min-width:18px}
+.flota3d .parts button:hover{background:var(--soft)}
+.flota3d .parts button[aria-current="true"]{background:var(--primary);color:var(--on-primary)}
+.flota3d .parts button[aria-current="true"] span{color:inherit;opacity:.7}
+
+.flota3d .pop{position:fixed;z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.18)}
+.flota3d .pop h4{margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.flota3d .views{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:min(340px,calc(100vw - 48px))}
+.flota3d .views button{height:36px;border:0;border-radius:999px;background:var(--soft);font-weight:500;font-size:13px}
+.flota3d .views button:hover{background:var(--soft-hi)}
+.flota3d .views button:disabled{opacity:.4;cursor:not-allowed}
+.flota3d .swatches{display:flex;gap:8px;flex-wrap:wrap;width:250px}
+.flota3d .swatch{width:30px;height:30px;border-radius:50%;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
+.flota3d .swatch[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink)}
+.flota3d .pop .link{margin-top:12px;border:0;background:none;padding:0;font-size:13px;font-weight:500;text-decoration:underline}
+.flota3d .tip{position:fixed;pointer-events:none;padding:5px 9px;background:var(--primary);color:var(--on-primary);font-size:12px;border-radius:8px;white-space:nowrap;transform:translate(12px,12px);z-index:30}
+.flota3d .toast{position:fixed;left:50%;top:20px;transform:translateX(-50%);z-index:40;padding:11px 18px;border-radius:999px;background:var(--primary);color:var(--on-primary);font-weight:500;box-shadow:0 8px 30px rgba(0,0,0,.2);max-width:calc(100% - 32px)}
+.flota3d .fail{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center;background:var(--surface)}
+.flota3d .fail b{font-size:17px}
+.flota3d .fail p{margin:0;max-width:440px;color:var(--muted);font-size:13.5px;line-height:1.5}
+.flota3d .toast.err{background:var(--red);color:#fff}
+
+/* Modo solo: la unidad sin lista (para incrustar) */
+.flota3d--solo .list,.flota3d--solo .navb{display:none!important}
+.flota3d--solo .main{grid-template-columns:minmax(0,1fr) minmax(300px,360px)}
+
+@media (max-width:1280px){
+  .flota3d .main{grid-template-columns:minmax(300px,330px) minmax(0,1fr);grid-template-rows:minmax(420px,1fr) auto;overflow:auto}
+  .flota3d .list{grid-row:1 / span 2}
+  .flota3d .spec{min-height:0}
+  .flota3d .spec .tab-body{max-height:none;overflow:visible}
+  .flota3d .hint{display:none}
+}
+@media (max-width:900px){
+  .flota3d{overflow:auto}
+  .flota3d .app{height:auto;min-height:100%;padding:16px 14px;gap:14px}
+  .flota3d h1{font-size:26px}
+  .flota3d .head-actions{margin-left:0}
+  .flota3d .main{display:flex;flex-direction:column;overflow:visible}
+  .flota3d .viewer{height:62vh;min-height:380px;order:1}
+  .flota3d .spec{order:2}
+  .flota3d .list{order:3}
+  /* En el celular: primero la lista como pantalla principal; al tocar una placa se abre su vista con "‹ Placas" para volver */
+  .flota3d:not(.flota3d--detalle) .viewer,.flota3d:not(.flota3d--detalle) .spec{display:none}
+  .flota3d:not(.flota3d--detalle) .plates{overflow:visible;flex:none}
+  .flota3d:not(.flota3d--detalle) .list{padding-bottom:6px}
+  .flota3d--detalle .list,.flota3d--detalle .head > div:first-child{display:none}
+  .flota3d--detalle .head-actions{width:100%}
+  .flota3d--detalle .back{display:inline-flex!important;margin-right:auto;padding-left:12px}
+  .flota3d .v-head{left:16px;right:16px;top:16px;flex-direction:column;gap:8px}
+  .flota3d .v-head h2{font-size:19px}
+  .flota3d .plate.lg{min-width:150px}
+  .flota3d .plate.lg b{font-size:30px}
+  .flota3d .navb{top:58%;width:38px;height:38px}
+  .flota3d .navb.prev{left:10px}
+  .flota3d .navb.next{right:10px}
+  .flota3d .tip{display:none}
+}

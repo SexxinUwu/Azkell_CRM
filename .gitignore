@@ -14,3 +14,6 @@ scratch/
 assets/3d/scania_s730_original.glb
 assets/3d/scania_s730.glb
 assets/3d/scania_s730_ligero*.glb
+
+# Referencia local de Placas en 3D (no se versiona)
+docs/referencia/

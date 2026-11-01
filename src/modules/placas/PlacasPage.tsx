@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, CheckSquare, Container, Download, FileSpreadsheet, FileText, LayoutGrid, List, MessageCircle, Plus, SearchX, SlidersHorizontal, Trash2, Truck, Upload, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Box, Check, CheckSquare, Container, Download, FileSpreadsheet, FileText, LayoutGrid, List, MessageCircle, Plus, SearchX, SlidersHorizontal, Trash2, Truck, Upload, X } from 'lucide-react';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -55,6 +56,7 @@ export function PlacasPage() {
   const [porEliminar, setPorEliminar] = useState<string[] | null>(null);
   const [eliminando, setEliminando] = useState(false);
 
+  const navigate = useNavigate();
   const puedeCrear = can('placas.crear');
   const puedeEditar = can('placas.editar');
   const puedeEliminar = can('placas.eliminar');
@@ -136,6 +138,9 @@ export function PlacasPage() {
         actions={
           <>
             <div className="acciones-iconos" role="group" aria-label="Acciones de placas">
+              <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Vista 3D" aria-label="Vista 3D" onClick={() => navigate('/placas/3d')}>
+                <Box size={17} />
+              </button>
               {puedeCrear && (
                 <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Importar desde Excel" aria-label="Importar desde Excel" onClick={() => setImportando(true)}>
                   <Upload size={17} />

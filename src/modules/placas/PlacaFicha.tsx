@@ -1,12 +1,12 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { History, Pencil, Printer, Trash2 } from 'lucide-react';
+import { Box, History, Pencil, Printer, Trash2 } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { useToast } from '../../core/ui/Toast';
 import { apiFetch } from '../../core/api/client';
@@ -31,6 +31,7 @@ export function PlacaFicha({ placa, onClose, onEditar, onEliminar }: { placa: Pl
   const { can } = useAuth();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const [historialAbierto, setHistorialAbierto] = useState(false);
   const [imprimiendo, setImprimiendo] = useState(false);
 
@@ -98,6 +99,9 @@ export function PlacaFicha({ placa, onClose, onEditar, onEliminar }: { placa: Pl
             <Button variant="plain" className="ficha__eliminar" icon={<Trash2 size={16} />} onClick={() => onEliminar(p)}>Eliminar</Button>
           ) : (
             <Button variant="secondary" onClick={onClose}>Cerrar</Button>
+          )}
+          {p && (
+            <Button variant="secondary" icon={<Box size={16} />} onClick={() => navigate(`/placas/3d?placa=${encodeURIComponent(p.placa)}`)}>Ver en 3D</Button>
           )}
           {onEditar && p && (
             <Button variant="primary" icon={<Pencil size={16} />} onClick={() => onEditar(p)}>Editar</Button>
