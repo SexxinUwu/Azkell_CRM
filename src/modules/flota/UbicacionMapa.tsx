@@ -46,7 +46,7 @@ interface Props {
 }
 
 const HERRAMIENTAS: Array<{ k: keyof OpcionesMapa | 'overview'; tip: string; movil?: boolean; d: string; extra?: string }> = [
-  { k: 'traffic', tip: 'Tráfico en tiempo real', d: 'M10 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM12 7h.01M12 12h.01M12 17h.01' },
+  { k: 'traffic', tip: 'Tráfico en tiempo real', d: 'M9 2.5h6a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-15a2 2 0 0 1 2-2zM12 21.5V23M7 8H4M20 8h-3' },
   { k: 'terrain', tip: 'Relieve 3D (más pesado)', d: 'm3 20 6-10 4 6 3-4 5 8z' },
   { k: 'buildings', tip: 'Edificios 3D', d: 'M4 21V8l6-4v17M10 21h10V11l-10-3' },
   { k: 'trails', tip: 'Estelas', d: 'M3 17c4 0 4-6 8-6s4 6 8 6M20 17h.01' },
@@ -115,7 +115,7 @@ export function UbicacionMapa(p: Props) {
             <button key={h.k} type="button" data-tip={h.k === 'traffic' && !HAY_TRAFICO ? 'Tráfico: falta la clave VITE_TOMTOM_KEY' : h.tip} aria-label={h.tip} disabled={h.k === 'traffic' && !HAY_TRAFICO} data-ocultar-movil={h.movil === false ? '' : undefined}
               aria-pressed={h.k === 'overview' ? undefined : activo(h.k)}
               onClick={() => (h.k === 'overview' ? motorRef.current?.visionGeneral() : alternar(h.k))}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={h.d} /></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={h.d} />{h.k === 'traffic' && <><circle cx="12" cy="7.5" r="1.3" fill="currentColor" /><circle cx="12" cy="12" r="1.3" fill="currentColor" /><circle cx="12" cy="16.5" r="1.3" fill="currentColor" /></>}</svg>
             </button>
           ))}
         </div>

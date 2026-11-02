@@ -399,7 +399,7 @@ export function UbicacionPage() {
 
               {piloto && seleccion && (
                 <div className="tg-pilot tg-glass">
-                  <span>Cámara piloto · <b>{seleccion.placa}</b></span>
+                  <span className="tg-pl-t"><span>Cámara piloto · <b>{seleccion.placa}</b></span><PilotoEdad motor={motor} placa={seleccion.placa} /></span>
                   <PilotoVelocidad motor={motor} placa={seleccion.placa} />
                   <button type="button" className="tg-btn" style={{ height: 32, padding: '0 12px' }} onClick={() => motor?.setFollow(false)}>Salir</button>
                 </div>
@@ -441,6 +441,17 @@ function PilotoVelocidad({ motor, placa }: { motor: import('./gps/motor').MotorT
   }, [motor, placa]);
   return (
     <span className="tg-pl-v"><b>{Math.round(lec.kmh)}</b><small>km/h</small>
-      {lec.edadS != null && <small className="tg-pl-edad" title="Último mensaje del equipo GPS">· GPS hace {lec.edadS} s</small>}</span>
+      {lec.edadS != null && <small className="tg-pl-edad tg-pl-edad--lado" title="Último mensaje del equipo GPS">· GPS hace {lec.edadS} s</small>}</span>
   );
+}
+
+/** Celular: "hace X s" bajo la placa, en una sola línea (en escritorio va al lado de la velocidad) */
+function PilotoEdad({ motor, placa }: { motor: import('./gps/motor').MotorTelemetria | null; placa: string }) {
+  const [edad, setEdad] = useState<number | null>(null);
+  useEffect(() => {
+    if (!motor) return;
+    const t = setInterval(() => setEdad(motor.leer(placa)?.edadS ?? null), 500);
+    return () => clearInterval(t);
+  }, [motor, placa]);
+  return edad != null ? <small className="tg-pl-edad tg-pl-edad--abajo" title="Último mensaje del equipo GPS">último mensaje hace {edad} s</small> : null;
 }

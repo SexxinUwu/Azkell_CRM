@@ -155,7 +155,7 @@ export class MotorTelemetria {
         const p = this.mapa.project(u.view); const d = Math.hypot(p.x - e.point.x, p.y - e.point.y);
         if (d < bd) { bd = d; best = u; }
       });
-      if (best) this.seleccionar((best as U).placa, false, true);
+      if (best) this.seleccionar((best as U).placa, MOVIL(), true);
     });
     this.ro = new ResizeObserver(() => { this.mapa.resize(); this.sucio = true; });
     this.ro.observe(this.root);
@@ -488,7 +488,22 @@ export class MotorTelemetria {
 
   // ─── Cámara y selección ───
   /** Avisa que hay una hoja inferior abierta en el celular (para ubicar la unidad arriba de ella) */
-  setHoja(abierta: boolean) { if (!this.follow) this.mapa.setPadding({ top: 0, left: 0, right: 0, bottom: abierta && MOVIL() ? Math.round(this.root.clientHeight * .46) : 0 }); }
+  /**
+   * Relleno del mapa en celular: arriba, el borde inferior de la fila de KPIs + 8 px; abajo, el alto de la ficha (46 % de la altura).
+   * Así la unidad queda en la franja visible, ni bajo los KPIs ni bajo la ficha.
+   */
+  private relleno(conFicha: boolean) {
+    if (!MOVIL()) return { top: 0, left: 0, right: 0, bottom: 0 };
+    // La fila de KPIs es un overlay de React (hermano del mapa), no un hijo de this.root
+    const k = document.querySelector('.tg-kpis');
+    const top = k ? Math.max(0, Math.round(k.getBoundingClientRect().bottom - this.root.getBoundingClientRect().top)) + 8 : 0;
+    return { top, left: 0, right: 0, bottom: conFicha ? Math.round(this.root.clientHeight * .46) : 0 };
+  }
+  setHoja(abierta: boolean) {
+    // setPadding equivale a un jumpTo y cancelaría el vuelo hacia la unidad: con el mapa en movimiento no se toca (el vuelo ya lleva su relleno)
+    if (this.follow || this.mapa.isMoving()) return;
+    this.mapa.setPadding(this.relleno(abierta));
+  }
 
   seleccionar(placa: string | null, volar: boolean, avisar = false) {
     const cambia = placa !== this.sel;
@@ -502,10 +517,10 @@ export class MotorTelemetria {
     }
     if (avisar && cambia) this.cb.onSeleccion(placa);
     const u = placa ? this.units.get(placa) : null;
-    const bottom = u && MOVIL() ? Math.round(this.root.clientHeight * .46) : 0;
-    const pad = { top: 0, left: 0, right: 0, bottom };
+    const pad = this.relleno(!!u);
     if (u && u.view && volar && cambia) this.mapa.flyTo({ center: u.b ? u.b.pos : u.view, zoom: Math.max(this.mapa.getZoom(), 15.8), pitch: 60, bearing: this.mapa.getBearing(), duration: 2200, essential: true, padding: pad });
-    else if (!this.follow) this.mapa.setPadding(pad);
+    // Con un vuelo en curso no se toca el relleno (setPadding cancelaría el vuelo hacia la unidad)
+    else if (!this.follow && !this.mapa.isMoving()) this.mapa.setPadding(pad);
     this.uiAcc = 1; this.sucioDatos = true; this.sucio = true; this.mapa.triggerRepaint();
   }
 
@@ -515,7 +530,7 @@ export class MotorTelemetria {
     this.follow = nuevo;
     if (nuevo) { this.followT = 0; this.mapa.stop(); }
     const H = this.root.clientHeight;
-    this.mapa.setPadding(nuevo ? { top: Math.round(H * (MOVIL() ? .3 : .38)), bottom: 0, left: 0, right: 0 } : { top: 0, bottom: this.sel && MOVIL() ? Math.round(H * .46) : 0, left: 0, right: 0 });
+    this.mapa.setPadding(nuevo ? { top: Math.round(H * (MOVIL() ? .3 : .38)), bottom: 0, left: 0, right: 0 } : this.relleno(!!this.sel));
     this.cb.onPiloto(nuevo);
   }
   get piloto() { return this.follow; }
