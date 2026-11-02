@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { Box, Check, CheckSquare, Container, Download, FileSpreadsheet, FileText, LayoutGrid, List, MessageCircle, Plus, SearchX, SlidersHorizontal, Trash2, Truck, Upload, X } from 'lucide-react';
+import { Box, Check, CheckSquare, Container, Download, FileSpreadsheet, FileText, LayoutGrid, MessageCircle, Plus, SearchX, SlidersHorizontal, Trash2, Truck, Upload, X } from 'lucide-react';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -29,13 +29,9 @@ import './placas.css';
 // La vista 3D (con three) se descarga solo al elegirla: Tarjetas y Lista no la cargan
 const Vista3D = lazy(() => import('./tresd/Vista3D').then(m => ({ default: m.Vista3D })));
 
-type Vista = 'tarjetas' | 'lista' | '3d';
-const VISTA_KEY = 'azkell.placas.vista';
-const esVista = (v: string | null): v is Vista => v === 'tarjetas' || v === 'lista' || v === '3d';
-function vistaGuardada(): Vista {
-  try { const v = localStorage.getItem(VISTA_KEY); if (esVista(v)) return v; } catch { /* sin almacenamiento */ }
-  return 'tarjetas';
-}
+// Dos vistas: Tarjetas y 3D. Entra siempre en 3D (en celular esa vista abre primero su lista y el detalle al tocar una placa)
+type Vista = 'tarjetas' | '3d';
+const esVista = (v: string | null): v is Vista => v === 'tarjetas' || v === '3d';
 
 const esMotoraTipo = (tipo: string) => /tracto|cami/i.test(tipo);
 export const IconoTipo = ({ placa, size = 18 }: { placa: Placa; size?: number }) =>
@@ -57,7 +53,7 @@ export function PlacasPage() {
   const [filtrando, setFiltrando] = useState(false);
   const [params, setParams] = useSearchParams();
   const vistaParam = params.get('vista');
-  const [vista, setVista] = useState<Vista>(() => (vistaParam === '3d' ? '3d' : vistaGuardada()));
+  const [vista, setVista] = useState<Vista>(() => (vistaParam === 'tarjetas' ? 'tarjetas' : '3d'));
   const [detalle3d, setDetalle3d] = useState(false);
   const [abierta, setAbierta] = useState<Placa | null>(null);
   const [formulario, setFormulario] = useState<{ modo: 'crear' | 'editar'; placa: Placa | null } | null>(null);
@@ -87,7 +83,6 @@ export function PlacasPage() {
 
   const cambiarVista = (v: Vista) => {
     setVista(v);
-    try { localStorage.setItem(VISTA_KEY, v); } catch { /* nada */ }
   };
   // ?vista=3d (por ejemplo desde "Ver en 3D" de la ficha) activa la vista aunque la página ya esté abierta
   useEffect(() => {
@@ -235,9 +230,6 @@ export function PlacasPage() {
               <button type="button" className="placas-vista-btn acciones-iconos__boton pressable" data-tip="Ver en tarjetas" aria-pressed={vista === 'tarjetas'} onClick={() => cambiarVista('tarjetas')} aria-label="Ver en tarjetas">
                 <LayoutGrid size={18} />
               </button>
-              <button type="button" className="placas-vista-btn acciones-iconos__boton pressable" data-tip="Ver en lista" aria-pressed={vista === 'lista'} onClick={() => cambiarVista('lista')} aria-label="Ver en lista">
-                <List size={18} />
-              </button>
               <button type="button" className="placas-vista-btn acciones-iconos__boton pressable" data-tip="Vista 3D" aria-pressed={vista === '3d'} onClick={() => cambiarVista('3d')} aria-label="Vista 3D">
                 <Box size={18} />
               </button>
@@ -315,23 +307,7 @@ export function PlacasPage() {
                 })}
               </AnimatePresence>
             </motion.ul>
-          ) : (
-            <motion.div className="list placas-lista" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={spring}>
-              {visibles.map(p => (
-                <button key={p.placa} type="button" className={`row placas-fila${seleccion.has(p.placa) ? ' placas-fila--marcada' : ''}`} onClick={() => tocar(p)}>
-                  {seleccionando && (
-                    <span className={`placa-check${seleccion.has(p.placa) ? ' placa-check--on' : ''}`}>{seleccion.has(p.placa) && <Check size={14} strokeWidth={3} />}</span>
-                  )}
-                  <LicensePlate plate={p.placa} size="sm" />
-                  <div className="row__main">
-                    <div className="row__title">{[p.marca, p.modelo].filter(Boolean).join(' ') || 'Sin marca'}</div>
-                    <div className="row__subtitle">{[p.tipo, p.anio, p.cliente].filter(Boolean).join(' · ')}</div>
-                  </div>
-                  <Estado p={p} />
-                </button>
-              ))}
-            </motion.div>
-          )}
+          ) : null}
           </div>
           )}
         </>
