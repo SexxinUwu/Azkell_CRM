@@ -351,3 +351,6 @@
 
 .tg-cell__nota { display: block; margin-top: 4px; font-size: 10.5px; color: var(--muted); }
 .tg-tools button:disabled { opacity: .4; cursor: not-allowed; }
+
+.tg-edad { display: block; margin-top: 6px; font-size: 11.5px; color: var(--muted); }
+.tg-pl-edad { margin-left: 6px; letter-spacing: 0; }

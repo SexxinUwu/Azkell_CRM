@@ -25,7 +25,7 @@ export interface EntradaMotor {
 
 export interface Geocerca { id: string; name: string; color: string; ring: LngLat[] }
 export interface Alerta { id: number; placa: string; icono: string; color: string; msg: string; hora: string }
-export interface Lectura { kmh: number; rumbo: number; hist: number[]; st: ClaseEstado; geocerca: string | null }
+export interface Lectura { /** Segundos desde el último mensaje del equipo GPS (null si Wialon no lo informó) */ edadS: number | null; kmh: number; rumbo: number; hist: number[]; st: ClaseEstado; geocerca: string | null }
 export interface OpcionesMapa { traffic: boolean; terrain: boolean; buildings: boolean; trails: boolean; geo: boolean; smooth: boolean; models: boolean; buildingsSat: boolean }
 
 interface Fix { pos: LngLat; hdg: number; t: number }
@@ -285,13 +285,16 @@ export class MotorTelemetria {
         };
         this.units.set(e.placa, u);
       }
+      // El equipo reporta cada 10 a 30 s: la unidad se anima durante ese tiempo real entre dos mensajes (no durante los 4 s de la consulta), así no queda parada entre uno y otro
+      const tPosAnt = u.e.tPos;
+      const durUnidad = (e.tPos && tPosAnt && e.tPos > tPosAnt) ? clamp(e.tPos - tPosAnt, 1000, 45000) : dur;
       u.e = e; u.vc.desc = e.desc;
       u.kmh = e.velocidad;
       if (e.lat != null && e.lng != null) {
         const pos: LngLat = [e.lng, e.lat];
         // Con la unidad casi quieta el rumbo del GPS no sirve: se conserva el anterior
         const hdg = e.velocidad > MOV_KMH || !u.b ? e.rumbo : u.b.hdg;
-        const largo = u.llego ? now - u.llego > Math.max(dur * 3, 10000) : false;
+        const largo = u.llego ? now - u.llego > Math.max(durUnidad * 3, 120000) : false;
         if (!u.b || !u.view || distM(u.b.pos, pos) > SALTO_M || largo) {
           // Primer dato, salto grande o hueco largo: se coloca sin animar
           u.a = u.b = { pos, hdg, t: now }; u.llego = now;
@@ -299,7 +302,7 @@ export class MotorTelemetria {
         } else if (u.b.pos[0] !== pos[0] || u.b.pos[1] !== pos[1] || u.b.hdg !== hdg) {
           // Se dibuja desde donde está hasta la lectura nueva, tardando lo que tarda en llegar la siguiente
           u.a = { pos: u.view.slice() as LngLat, hdg: u.hview, t: now };
-          u.b = { pos, hdg, t: now + dur }; u.llego = now;
+          u.b = { pos, hdg, t: now + durUnidad }; u.llego = now;
         }
         this.eventos(u, pos);
       } else { u.a = u.b = null; u.view = null; u.vc.pos = null; }
@@ -540,7 +543,7 @@ export class MotorTelemetria {
   leer(placa: string): Lectura | null {
     const u = this.units.get(placa);
     if (!u) return null;
-    return { kmh: u.kmh, rumbo: u.hview, hist: u.hist, st: u.st, geocerca: u.geo ? (this.geos.find(g => g.id === u.geo)?.name ?? null) : null };
+    return { edadS: u.e.tPos ? Math.max(0, Math.round((Date.now() - u.e.tPos) / 1000)) : null, kmh: u.kmh, rumbo: u.hview, hist: u.hist, st: u.st, geocerca: u.geo ? (this.geos.find(g => g.id === u.geo)?.name ?? null) : null };
   }
 
   // ─── Historial / Playback ───

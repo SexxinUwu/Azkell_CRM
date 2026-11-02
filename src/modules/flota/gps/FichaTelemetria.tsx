@@ -142,6 +142,7 @@ export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, onCerr
         <button type="button" className="tg-x" onClick={onCerrar} aria-label="Cerrar ficha"><X size={16} /></button>
       </div>
       <span className="tg-state" style={{ background: s.c + '22', color: s.c }}>● {estadoTxt}</span>
+      {l?.edadS != null && st !== 'off' && <span className="tg-edad" title="El equipo GPS manda un mensaje cada cierto tiempo; la posición no se actualiza entre uno y otro">Último mensaje del GPS hace {l.edadS < 90 ? `${l.edadS} s` : `${Math.round(l.edadS / 60)} min`}</span>}
 
       <div className="tg-gauge">
         <div><Velocimetro kmh={kmh} /></div>

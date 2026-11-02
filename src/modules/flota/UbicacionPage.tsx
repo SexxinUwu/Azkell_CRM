@@ -402,11 +402,14 @@ export function UbicacionPage() {
 }
 
 function PilotoVelocidad({ motor, placa }: { motor: import('./gps/motor').MotorTelemetria | null; placa: string }) {
-  const [kmh, setKmh] = useState(0);
+  const [lec, setLec] = useState<{ kmh: number; edadS: number | null }>({ kmh: 0, edadS: null });
   useEffect(() => {
     if (!motor) return;
-    const t = setInterval(() => setKmh(motor.leer(placa)?.kmh ?? 0), 500);
+    const t = setInterval(() => { const l = motor.leer(placa); setLec({ kmh: l?.kmh ?? 0, edadS: l?.edadS ?? null }); }, 500);
     return () => clearInterval(t);
   }, [motor, placa]);
-  return <span className="tg-pl-v"><b>{Math.round(kmh)}</b><small>km/h</small></span>;
+  return (
+    <span className="tg-pl-v"><b>{Math.round(lec.kmh)}</b><small>km/h</small>
+      {lec.edadS != null && <small className="tg-pl-edad" title="Último mensaje del equipo GPS">· GPS hace {lec.edadS} s</small>}</span>
+  );
 }
