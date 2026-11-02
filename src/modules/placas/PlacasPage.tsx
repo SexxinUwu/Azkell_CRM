@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Box, Check, CheckSquare, Container, Download, FileSpreadsheet, FileText, LayoutGrid, List, MessageCircle, Plus, SearchX, SlidersHorizontal, Trash2, Truck, Upload, X } from 'lucide-react';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Button, PageLoader } from '../../core/ui/Button';
@@ -26,8 +26,16 @@ import { PlacaFormulario } from './PlacaFormulario';
 import { ImportarPlacas } from './ImportarPlacas';
 import './placas.css';
 
-type Vista = 'tarjetas' | 'lista';
+// La vista 3D (con three) se descarga solo al elegirla: Tarjetas y Lista no la cargan
+const Vista3D = lazy(() => import('./tresd/Vista3D').then(m => ({ default: m.Vista3D })));
+
+type Vista = 'tarjetas' | 'lista' | '3d';
 const VISTA_KEY = 'azkell.placas.vista';
+const esVista = (v: string | null): v is Vista => v === 'tarjetas' || v === 'lista' || v === '3d';
+function vistaGuardada(): Vista {
+  try { const v = localStorage.getItem(VISTA_KEY); if (esVista(v)) return v; } catch { /* sin almacenamiento */ }
+  return 'tarjetas';
+}
 
 const esMotoraTipo = (tipo: string) => /tracto|cami/i.test(tipo);
 export const IconoTipo = ({ placa, size = 18 }: { placa: Placa; size?: number }) =>
@@ -47,7 +55,10 @@ export function PlacasPage() {
   const [busqueda, setBusqueda] = useState('');
   const [filtros, setFiltros] = useState<FiltrosPlacas>(FILTROS_VACIOS);
   const [filtrando, setFiltrando] = useState(false);
-  const [vista, setVista] = useState<Vista>(() => (localStorage.getItem(VISTA_KEY) as Vista) || 'tarjetas');
+  const [params, setParams] = useSearchParams();
+  const vistaParam = params.get('vista');
+  const [vista, setVista] = useState<Vista>(() => (vistaParam === '3d' ? '3d' : vistaGuardada()));
+  const [detalle3d, setDetalle3d] = useState(false);
   const [abierta, setAbierta] = useState<Placa | null>(null);
   const [formulario, setFormulario] = useState<{ modo: 'crear' | 'editar'; placa: Placa | null } | null>(null);
   const [importando, setImportando] = useState(false);
@@ -56,7 +67,6 @@ export function PlacasPage() {
   const [porEliminar, setPorEliminar] = useState<string[] | null>(null);
   const [eliminando, setEliminando] = useState(false);
 
-  const navigate = useNavigate();
   const puedeCrear = can('placas.crear');
   const puedeEditar = can('placas.editar');
   const puedeEliminar = can('placas.eliminar');
@@ -78,6 +88,17 @@ export function PlacasPage() {
   const cambiarVista = (v: Vista) => {
     setVista(v);
     try { localStorage.setItem(VISTA_KEY, v); } catch { /* nada */ }
+  };
+  // ?vista=3d (por ejemplo desde "Ver en 3D" de la ficha) activa la vista aunque la página ya esté abierta
+  useEffect(() => {
+    if (esVista(vistaParam)) cambiarVista(vistaParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vistaParam]);
+  // En la vista 3D, ?placa= elige la unidad; en celular abre su detalle y el atrás del teléfono vuelve a la lista
+  const elegir3d = (placa: string | null, reemplazar: boolean) => {
+    const siguiente = new URLSearchParams(params);
+    if (placa) siguiente.set('placa', placa); else siguiente.delete('placa');
+    setParams(siguiente, { replace: reemplazar });
   };
   const limpiar = () => { setBusqueda(''); setFiltros(FILTROS_VACIOS); };
   const hayFiltros = !!busqueda || cuentaActivos > 0;
@@ -131,16 +152,13 @@ export function PlacasPage() {
 
   return (
     <Page wide fill>
-      <PageHeader
+      {!detalle3d && <PageHeader
         eyebrow="Flota"
         title="Placas"
         subtitle={isLoading ? 'Cargando unidades…' : `${resumen.total} unidades · ${resumen.motoras} motoras · ${resumen.noMotoras} no motoras`}
         actions={
           <>
             <div className="acciones-iconos" role="group" aria-label="Acciones de placas">
-              <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Vista 3D" aria-label="Vista 3D" onClick={() => navigate('/placas/3d')}>
-                <Box size={17} />
-              </button>
               {puedeCrear && (
                 <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Importar desde Excel" aria-label="Importar desde Excel" onClick={() => setImportando(true)}>
                   <Upload size={17} />
@@ -166,12 +184,12 @@ export function PlacasPage() {
             )}
           </>
         }
-      />
+      />}
 
       {isLoading ? <PageLoader /> : isError ? <Notice tone="error">{errorMessage(error)}</Notice> : (
         <>
           {/* Resumen con cifras que cuentan al aparecer */}
-          <div className="placas-resumen">
+          <div className="placas-resumen" style={vista === '3d' || detalle3d ? { display: 'none' } : undefined}>
             {([
               { label: 'Activas', value: resumen.activas, tone: 'green', filtro: null },
               { label: 'Motoras', value: resumen.motoras, tone: 'blue', filtro: 'motoras' },
@@ -209,7 +227,7 @@ export function PlacasPage() {
             })}
           </div>
 
-          <div className="toolbar placas-toolbar">
+          <div className="toolbar placas-toolbar" style={detalle3d ? { display: 'none' } : undefined}>
             <div className="placas-toolbar__buscar">
               <SearchField value={busqueda} onChange={setBusqueda} placeholder="Placa, cliente, marca, modelo o VIN" />
             </div>
@@ -220,11 +238,14 @@ export function PlacasPage() {
               <button type="button" className="placas-vista-btn acciones-iconos__boton pressable" data-tip="Ver en lista" aria-pressed={vista === 'lista'} onClick={() => cambiarVista('lista')} aria-label="Ver en lista">
                 <List size={18} />
               </button>
+              <button type="button" className="placas-vista-btn acciones-iconos__boton pressable" data-tip="Vista 3D" aria-pressed={vista === '3d'} onClick={() => cambiarVista('3d')} aria-label="Vista 3D">
+                <Box size={18} />
+              </button>
             </div>
             <Button variant="secondary" icon={<SlidersHorizontal size={16} />} onClick={() => setFiltrando(true)} aria-label={cuentaActivos ? `Filtros, ${cuentaActivos} activos` : 'Filtros'}>
               <span className="placas-filtros__texto">Filtros</span>{cuentaActivos > 0 && <span className="placas-filtros__n t-numeric">{cuentaActivos}</span>}
             </Button>
-            {puedeEliminar && (
+            {puedeEliminar && vista !== '3d' && (
               <Button variant={seleccionando ? 'primary' : 'secondary'} icon={seleccionando ? <X size={16} /> : <CheckSquare size={16} />}
                 onClick={() => (seleccionando ? salirSeleccion() : setSeleccionando(true))}>
                 {seleccionando ? 'Terminar' : 'Seleccionar'}
@@ -232,12 +253,12 @@ export function PlacasPage() {
             )}
           </div>
           {tiposDisponibles.length > 1 && (
-            <div className="placas-tipos">
+            <div className="placas-tipos" style={detalle3d ? { display: 'none' } : undefined}>
               <ToggleChips label="Tipo de unidad" value={filtros.tipos} onChange={tipos => setFiltros(f => ({ ...f, tipos }))} options={tiposDisponibles.map(t => ({ value: t, label: t }))} />
             </div>
           )}
 
-          <p className="placas-conteo t-footnote c-secondary" aria-live="polite">
+          <p className="placas-conteo t-footnote c-secondary" aria-live="polite" style={detalle3d ? { display: 'none' } : undefined}>
             {visibles.length === placas.length ? `${placas.length} unidades` : `${visibles.length} de ${placas.length} unidades`}
             {hayFiltros && <> · <button type="button" className="placas-limpiar" onClick={limpiar}>Quitar filtros</button></>}
             {seleccionando && visibles.length > 0 && (
@@ -247,6 +268,13 @@ export function PlacasPage() {
             )}
           </p>
 
+          {vista === '3d' ? (
+            <div className="placas-area placas-area--3d">
+              <Suspense fallback={<PageLoader />}>
+                <Vista3D placas={visibles} todas={placas} cargando={isLoading} placaParam={params.get('placa') || ''} onElegir={elegir3d} onDetalle={setDetalle3d} />
+              </Suspense>
+            </div>
+          ) : (
           <div className="placas-area">
           {visibles.length === 0 ? (
             <EmptyState icon={<SearchX size={22} />} title="No hay unidades con esos filtros">
@@ -305,6 +333,7 @@ export function PlacasPage() {
             </motion.div>
           )}
           </div>
+          )}
         </>
       )}
 

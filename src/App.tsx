@@ -1,6 +1,6 @@
 // Rutas de la app nueva (publicada en /app/). Cada módulo aporta sus páginas desde src/modules/<modulo>/.
 // Las pantallas que aún no se migran se abren en la versión actual (ver core/layout/navigation.ts).
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { RequirePermission, RequireSession } from './core/auth/guards';
 import { AppShell } from './core/layout/AppShell';
@@ -15,12 +15,8 @@ import { EditarPerfilPage } from './modules/perfil/EditarPerfilPage';
 import { Inactividad } from './core/auth/Inactividad';
 import { RUTAS_MODULOS } from './core/layout/navigation';
 import { PantallaError } from './core/ui/PantallaError';
-import { PageLoader } from './core/ui/Button';
-import { LimiteDeError } from './core/ui/LimiteDeError';
 // Pantallas de módulos: se descargan aparte, al abrirlas (el marco de la app ya está en pantalla)
 const PlacasPage = lazy(() => import('./modules/placas/PlacasPage').then(m => ({ default: m.PlacasPage })));
-// Vista 3D de placas: pantalla completa, fuera del marco (sin menú lateral ni barra inferior)
-const PlacasTresDPage = lazy(() => import('./modules/placas/tresd/PlacasTresDPage').then(m => ({ default: m.PlacasTresDPage })));
 const InspeccionesPage = lazy(() => import('./modules/inspecciones/InspeccionesPage').then(m => ({ default: m.InspeccionesPage })));
 const RegistrarInspeccionPage = lazy(() => import('./modules/inspecciones/RegistrarInspeccionPage').then(m => ({ default: m.RegistrarInspeccionPage })));
 const EditarInspeccionPage = lazy(() => import('./modules/inspecciones/RegistrarInspeccionPage').then(m => ({ default: m.EditarInspeccionPage })));
@@ -44,19 +40,6 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/legal/:pagina" element={<LegalPage />} />
-        {/* Fuera de AppShell: sin menú lateral ni barra inferior. Misma sesión, permiso e inactividad que el resto */}
-        <Route path="/placas/3d" element={
-          <RequireSession>
-            <SoloPanelSaas>
-              <RequirePermission any={['placas.ver']}>
-                <Suspense fallback={<PageLoader />}>
-                  <LimiteDeError><PlacasTresDPage /></LimiteDeError>
-                </Suspense>
-              </RequirePermission>
-              <Inactividad />
-            </SoloPanelSaas>
-          </RequireSession>
-        } />
         <Route element={<RequireSession><SoloPanelSaas><AppShell /><Inactividad /></SoloPanelSaas></RequireSession>}>
           <Route index element={<InicioPage />} />
           <Route path="perfil" element={<PerfilPage />} />

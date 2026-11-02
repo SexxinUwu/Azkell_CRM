@@ -1,8 +1,7 @@
-// Placas en 3D: pantalla completa de la flota (lista, unidad en 3D y especificaciones).
+// Placas en 3D: tercera vista de Placas (lista, unidad en 3D y especificaciones), dentro del marco del ERP.
 // Diseño, textos y comportamiento del archivo docs/referencia/flota-3d.html.
 import { Component, Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, useSearchParams } from 'react-router-dom';
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
 import '@fontsource/inter/600.css';
@@ -13,11 +12,12 @@ import '@fontsource/barlow-condensed/700.css';
 import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/500.css';
 import './flota3d.css';
-import { usePlacas } from '../api';
+import type { Placa } from '../api';
+import { useToast } from '../../../core/ui/Toast';
 import {
-  CATS, coincide, colorsOf, estaFueraDeUso, etiquetaCampo, fmt, GRUPOS, hexCss, MONO, norm, num,
+  colorsOf, estaFueraDeUso, etiquetaCampo, fmt, GRUPOS, hexCss, MONO, norm, num,
   resolverModelo, tanks, textoEstado, tituloUnidad, unidadesDe, UNIDADES,
-  type Cat, type Resuelta, type Unidad,
+  type Resuelta, type Unidad,
 } from './datos';
 import { useOscuro } from './useOscuro';
 import type { Escena3D, Toggle, Vista } from './escena3d';
@@ -50,19 +50,6 @@ function guardarUltima(placa: string) {
   try { localStorage.setItem(CLAVE_ULTIMA, placa); } catch { /* sin almacenamiento: no pasa nada */ }
 }
 
-function useMedia(query: string): boolean {
-  const [ok, setOk] = useState<boolean>(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia(query).matches);
-  useEffect(() => {
-    if (!window.matchMedia) return;
-    const mq = window.matchMedia(query);
-    const actualizar = () => setOk(mq.matches);
-    actualizar();
-    mq.addEventListener('change', actualizar);
-    return () => mq.removeEventListener('change', actualizar);
-  }, [query]);
-  return ok;
-}
-
 function Svg({ size = 16, sw = 2, children }: { size?: number; sw?: number; children: ReactNode }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={sw}
@@ -93,7 +80,7 @@ class VisorBoundary extends Component<{ children: ReactNode }, { error: string |
   render() {
     if (this.state.error !== null) {
       return (
-        <section className="card viewer" aria-label="Unidad en 3D">
+        <section className="f3d-card viewer" aria-label="Unidad en 3D">
           <div className="fail" role="alert">
             <b>No se pudo mostrar la flota en 3D</b>
             <p>Detalle: {this.state.error}</p>
@@ -304,15 +291,15 @@ function VisorTresD({ unidad, res, oscuro, parte, capa, escenaRef, onSeleccion, 
 
   return (
     <>
-      <section className="card viewer" ref={visorRef} aria-label="Unidad en 3D">
+      <section className="f3d-card viewer" ref={visorRef} aria-label="Unidad en 3D">
         <canvas ref={canvasRef} className="c3d" tabIndex={0}
           aria-label="Modelo 3D de la unidad. Arrastra para girar, rueda para acercar." />
         <div className="v-head" ref={headRef}>
-          <span className="plate lg"><small>PERÚ</small><b>{unidad.plate}</b></span>
+          <span className="f3d-plate lg"><small>PERÚ</small><b>{unidad.plate}</b></span>
           <div className="txt">
             <h2>{tituloUnidad(unidad)}</h2>
             <p>{subLinea}</p>
-            <span className={'badge' + (estaFueraDeUso(unidad) ? ' off' : '')}>{textoEstado(unidad)}</span>
+            <span className={'f3d-badge' + (estaFueraDeUso(unidad) ? ' off' : '')}>{textoEstado(unidad)}</span>
           </div>
         </div>
         <p className="hint">Arrastra para girar · rueda para zoom<br />clic en una pieza para ver qué es</p>
@@ -323,12 +310,12 @@ function VisorTresD({ unidad, res, oscuro, parte, capa, escenaRef, onSeleccion, 
           <Svg size={18} sw={2.4}><path d="m9 5 7 7-7 7" /></Svg>
         </button>
         {parte && (
-          <div className="card part-card" role="status">
+          <div className="f3d-card part-card" role="status">
             <div><h3>{parte.name}</h3><p>{parte.desc}</p></div>
             <button type="button" onClick={cerrarParte}>Cerrar</button>
           </div>
         )}
-        <div className="dock" ref={dockRef} role="toolbar" aria-label="Herramientas del modelo">
+        <div className="f3d-dock" ref={dockRef} role="toolbar" aria-label="Herramientas del modelo">
           <button type="button" className="tool" data-pop="views" aria-expanded={!!pop && pop.nombre === 'views'}
             title="Vistas" onClick={ev => abrirPop('views', ev.currentTarget)}>
             <Svg><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></Svg>
@@ -444,94 +431,114 @@ function Grupo({ titulo, claves, f, extra }: { titulo: string; claves: string[];
   );
 }
 
-/* ---------- Página ---------- */
-export function PlacasTresDPage() {
-  const q = usePlacas();
-  const [params, setParams] = useSearchParams();
-  const phone = useMedia('(max-width: 900px)');
-  const { oscuro, alternar } = useOscuro();
+/* ---------- Vista 3D: tercera vista de Placas (lista | visor | especificaciones) ---------- */
+interface Vista3DProps {
+  /** Placas filtradas: lo que muestra la lista (el buscador y los filtros son los de la página) */
+  placas: Placa[];
+  /** Toda la flota: las barras de los indicadores son proporcionales al máximo de la flota */
+  todas: Placa[];
+  cargando: boolean;
+  /** Valor crudo de ?placa= ('' si no hay) */
+  placaParam: string;
+  /** Elige una placa (o null para volver a la lista en celular). reemplazar = no añade historial */
+  onElegir: (placa: string | null, reemplazar: boolean) => void;
+  /** Avisa a la página cuando el detalle del celular está abierto (para ocultar su encabezado) */
+  onDetalle: (abierto: boolean) => void;
+}
+
+// Debajo de este ancho del contenedor (no de la ventana) la vista pasa a dos pantallas, como en celular
+const ANCHO_CELULAR = 700;
+
+export function Vista3D({ placas, todas, cargando, placaParam, onElegir, onDetalle }: Vista3DProps) {
+  const toast = useToast();
+  const { oscuro } = useOscuro();
+  const rootRef = useRef<HTMLDivElement>(null);
   const [capa, setCapa] = useState<HTMLDivElement | null>(null);
   const escenaRef = useRef<Escena3D | null>(null);
   const listaRef = useRef<HTMLUListElement>(null);
   const pasoRef = useRef<(d: number) => void>(() => undefined);
 
-  const [cat, setCat] = useState<'all' | Cat>('all');
-  const [busqueda, setBusqueda] = useState('');
+  const [ancho, setAncho] = useState<number>(() => (typeof window !== 'undefined' ? window.innerWidth : 1200));
   const [tab, setTab] = useState<'ficha' | 'piezas'>('ficha');
   const [modelo, setModelo] = useState<Modelo | null>(null);
   const [parte, setParte] = useState<Parte | null>(null);
-  const [toast, setToast] = useState<{ msg: string; err: boolean } | null>(null);
 
-  const soloMode = params.get('solo') === '1';
-  const placaParam = norm(params.get('placa')).replace(/ /g, '');
-  // Celular: la lista es la pantalla principal; con ?placa= (o ?solo=1) se abre el detalle
-  const detalle = phone && (soloMode || placaParam !== '');
+  const placaPedida = norm(placaParam).replace(/ /g, '');
+  const estrecho = ancho < ANCHO_CELULAR;
+  // Celular: la lista es la pantalla principal; con ?placa= se abre el detalle
+  const detalle = estrecho && placaPedida !== '';
 
-  const data = useMemo(() => unidadesDe(q.data ?? []), [q.data]);
-  const motoras = data.rows.filter(u => norm(u.f.MOTORA) === 'MOTORA').length;
-  const noMotoras = data.rows.filter(u => norm(u.f.MOTORA) === 'NO MOTORA').length;
-  const conteo = useMemo(() => {
-    const c: Record<string, number> = { all: data.rows.length };
-    data.rows.forEach(u => { c[u.cat] = (c[u.cat] || 0) + 1; });
-    return c;
-  }, [data.rows]);
-  const vista = useMemo(
-    () => data.rows.filter(u => (cat === 'all' || u.cat === cat) && coincide(u, busqueda)),
-    [data.rows, cat, busqueda],
-  );
+  // El ancho del contenedor manda (el menú lateral ocupa espacio), no el de la ventana
+  useLayoutEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    setAncho(el.clientWidth || window.innerWidth);
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => setAncho(el.clientWidth || window.innerWidth));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    onDetalle(detalle);
+  }, [detalle, onDetalle]);
+  useEffect(() => () => onDetalle(false), [onDetalle]);
+
+  // Al abrir el detalle (celular) se empieza arriba del todo: sube el contenedor y todo lo que lo envuelve
+  useEffect(() => {
+    if (!detalle) return;
+    let el: HTMLElement | null = rootRef.current;
+    while (el) { if (el.scrollTop > 0) el.scrollTop = 0; el = el.parentElement; }
+    window.scrollTo(0, 0);
+  }, [detalle]);
+
+  const dTodas = useMemo(() => unidadesDe(todas), [todas]);
+  const dVista = useMemo(() => unidadesDe(placas), [placas]);
+  const filas = dVista.rows;
   const maximos = useMemo(
-    () => KPIS.map(k => data.rows.reduce((m, u) => Math.max(m, k.get(u.f) || 0), 0) || 1),
-    [data.rows],
+    () => KPIS.map(k => dTodas.rows.reduce((m, u) => Math.max(m, k.get(u.f) || 0), 0) || 1),
+    [dTodas.rows],
   );
 
-  // Unidad elegida: la de ?placa=, si no la última vista, si no la primera
+  // Unidad elegida: la de ?placa=, si no la última vista, si no la primera de la lista
   const unidad: Unidad | null = useMemo(() => {
-    if (!data.rows.length) return null;
-    const porParam = placaParam ? data.rows.find(r => r.plate === placaParam) : undefined;
+    const porParam = placaPedida ? dTodas.rows.find(r => r.plate === placaPedida) : undefined;
     if (porParam) return porParam;
+    if (!filas.length) return null;
     const ult = leerUltima();
-    const porUlt = ult ? data.rows.find(r => r.plate === ult) : undefined;
-    return porUlt || data.rows[0];
-  }, [data.rows, placaParam]);
+    const porUlt = ult ? filas.find(r => r.plate === ult) : undefined;
+    return porUlt || filas[0];
+  }, [dTodas.rows, filas, placaPedida]);
   const res = useMemo(() => (unidad ? resolverModelo(unidad) : null), [unidad]);
   const plateActual = unidad ? unidad.plate : '';
 
   useEffect(() => { if (unidad) guardarUltima(unidad.plate); }, [unidad]);
 
+  // ?placa= que no existe: aviso (una vez por valor)
   useEffect(() => {
-    if (placaParam && data.rows.length && !data.rows.some(r => r.plate === placaParam)) {
-      setToast({ msg: 'La placa ' + placaParam + ' no está en las placas registradas', err: true });
+    if (placaPedida && dTodas.rows.length && !dTodas.rows.some(r => r.plate === placaPedida)) {
+      toast('La placa ' + placaPedida + ' no está en las placas registradas', 'error');
     }
-  }, [placaParam, data.rows]);
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 5200);
-    return () => clearTimeout(t);
-  }, [toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placaPedida, dTodas.rows]);
 
-  // Navegación por el router (sin pushState): ?placa= se añade o quita
-  const irA = (placa: string | null, replace = false) => {
-    const next = new URLSearchParams(params);
-    if (placa) next.set('placa', placa); else next.delete('placa');
-    setParams(next, { replace });
-  };
-  const elegir = (u: Unidad) => { if (placaParam !== u.plate) irA(u.plate); };
-  const volverLista = () => irA(null, true);
+  const elegir = (u: Unidad) => { if (placaPedida !== u.plate) onElegir(u.plate, !estrecho); };
 
   const paso = (d: number) => {
-    const lista = vista.length ? vista : data.rows;
+    const lista = filas.length ? filas : dTodas.rows;
     const n = lista.length;
     if (!n) return;
     const i = unidad ? lista.findIndex(r => r.plate === unidad.plate) : -1;
-    irA(lista[i < 0 ? 0 : (i + d + n) % n].plate, true);
+    onElegir(lista[i < 0 ? 0 : (i + d + n) % n].plate, true);
   };
   useEffect(() => { pasoRef.current = paso; });
 
-  // Teclado: flechas para cambiar de placa (como el archivo)
+  // Teclado: flechas para cambiar de placa (no mientras se escribe en un campo)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const t = e.target instanceof HTMLElement ? e.target : null;
-      if (t && t.closest('input')) return;
+      const t = e.target instanceof Element ? e.target : null;
+      if (t && t.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); pasoRef.current(1); }
       if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); pasoRef.current(-1); }
     };
@@ -545,9 +552,7 @@ export function PlacasTresDPage() {
     if (!ul || !plateActual) return;
     const el = ul.querySelector<HTMLElement>('[data-plate="' + plateActual + '"]');
     if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
-  }, [plateActual, detalle, vista]);
-
-  const clases = ['flota3d', soloMode ? 'flota3d--solo' : '', detalle ? 'flota3d--detalle' : ''].filter(Boolean).join(' ');
+  }, [plateActual, detalle, filas]);
 
   const onPaso = (d: number) => pasoRef.current(d);
 
@@ -555,156 +560,117 @@ export function PlacasTresDPage() {
   GRUPOS.forEach(([, ks]) => ks.forEach(k => usados.add(k)));
 
   return (
-    <div className={clases}>
-      <div className="app">
-        <header className="head">
-          <div>
-            <Link to="/placas" className="eyebrow">
-              <Svg size={14} sw={2.4}><path d="m15 5-7 7 7 7" /></Svg>Flota
-            </Link>
-            <h1>Placas en 3D</h1>
-            <p className="subline">
-              <span>{data.rows.length} unidades · {motoras} motoras · {noMotoras} no motoras</span>
-            </p>
-          </div>
-          <div className="head-actions">
-            {!soloMode && (
-              <button type="button" className="pill back" onClick={volverLista} aria-label="Volver a la lista de placas">
-                <Svg size={16} sw={2.4}><path d="m15 5-7 7 7 7" /></Svg>Placas
-              </button>
-            )}
-            <button type="button" className="pill icon" onClick={alternar}
-              aria-label={oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'} title="Modo claro / oscuro">
-              {oscuro
-                ? <Svg size={18}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></Svg>
-                : <Svg size={18}><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z" /></Svg>}
-            </button>
-          </div>
-        </header>
-
-        <div className="main">
-          <aside className="card list" aria-label="Placas">
-            <label className="search">
-              <Svg size={16} sw={2.2}><circle cx="11" cy="11" r="7" /><path d="m16.5 16.5 4 4" /></Svg>
-              <input type="search" placeholder="Placa, cliente, marca, modelo o VIN" autoComplete="off"
-                aria-label="Buscar placa" value={busqueda} onChange={e => setBusqueda(e.target.value)} />
-            </label>
-            <div className="chips">
-              {CATS.map(k => {
-                if (k.id !== 'all' && !conteo[k.id]) return null;
-                return (
-                  <button key={k.id} type="button" className="chip" aria-pressed={cat === k.id}
-                    onClick={() => setCat(cat === k.id ? 'all' : k.id)}>
-                    {k.single}<span>{conteo[k.id] || 0}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <p className="count">
-              {q.isLoading
-                ? 'Cargando unidades…'
-                : vista.length + (vista.length === 1 ? ' unidad' : ' unidades') +
-                  (data.omitidas ? ' · ' + data.omitidas + ' filas sin tipo ni marca no se muestran' : '')}
-            </p>
-            {q.isError && <p className="count">{q.error instanceof Error ? q.error.message : 'No se pudieron cargar las placas'}</p>}
-            <ul className="plates" role="listbox" aria-label="Lista de placas" ref={listaRef}>
-              {vista.map(u => {
-                const on = u.plate === plateActual;
-                return (
-                  <li key={u.plate}>
-                    <button type="button" className="row" role="option" aria-selected={on} data-plate={u.plate}
-                      onClick={() => elegir(u)}>
-                      <span className="top">
-                        <span className="plate sm"><small>PERÚ</small><b>{u.plate}</b></span>
-                        <span className={'badge' + (estaFueraDeUso(u) ? ' off' : '')}>{textoEstado(u)}</span>
-                      </span>
-                      <span className="t">{tituloUnidad(u)}</span>
-                      <span className="mt">
-                        <Svg size={14}>{u.cat === 'T' || u.cat === 'C' ? ICONO_CAMION : ICONO_CAJA}</Svg>
-                        {[u.f.TIPO, u.f.CONFIGURACION, u.f.ANO].filter(Boolean).join(' · ')}
-                        <span className="dots" title={u.f.COLOR || undefined}>
-                          {colorsOf(u.f.COLOR).slice(0, 4).map((h, i) => <i key={i} style={{ background: hexCss(h) }} />)}
-                        </span>
-                      </span>
-                      <span className="cl">{u.f.CLIENTE || 'Sin cliente'}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </aside>
-
-          <VisorBoundary>
-            {unidad && res ? (
-              <VisorTresD
-                unidad={unidad} res={res} oscuro={oscuro} parte={parte} capa={capa}
-                escenaRef={escenaRef} onSeleccion={setParte} onModelo={setModelo} onPaso={onPaso}
-              />
-            ) : (
-              <section className="card viewer" aria-label="Unidad en 3D">
-                {!q.isLoading && <p className="hint">Sin unidades para mostrar</p>}
-              </section>
-            )}
-          </VisorBoundary>
-
-          <aside className="card spec" aria-label="Especificaciones">
-            <h2>Especificaciones</h2>
-            {unidad && res && (
-              <>
-                <div className="kpis">
-                  {KPIS.map((k, j) => {
-                    const v = k.get(unidad.f);
-                    return (
-                      <div key={k.label} className={'kpi ' + k.cls}>
-                        <b>{v == null ? '—' : fmt(v)}{v != null && k.unit ? <small>{k.unit}</small> : null}</b>
-                        <span>{k.label}</span>
-                        <div className="bar"><i style={{ width: (v ? Math.min(100, v / maximos[j] * 100) : 0) + '%' }} /></div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="motor">
-                  <Svg size={16}><path d="M4 10h3l2-3h6v3h3v2h2v4h-2v2h-3l-2 2H8l-2-2H4z" /></Svg>
-                  <span>Motor</span>
-                  <b>{unidad.f['MODELO MOTOR'] || (norm(unidad.f.MOTORA) === 'NO MOTORA' ? 'No motora' : '—')}</b>
-                </div>
-                <div className="seg" role="tablist">
-                  <button type="button" role="tab" aria-selected={tab === 'ficha'} onClick={() => setTab('ficha')}>Ficha</button>
-                  <button type="button" role="tab" aria-selected={tab === 'piezas'} onClick={() => setTab('piezas')}>Componentes</button>
-                </div>
-                <div className="tab-body" hidden={tab !== 'ficha'}>
-                  {GRUPOS.map(([titulo, claves]) => {
-                    const nTanques = ['TANQUE 1', 'TANQUE 2', 'TANQUE 3'].filter(k => num(unidad.f[k]) != null).length;
-                    const extra = titulo === 'Motor y combustible' && nTanques > 1
-                      ? <><dt>Total tanques</dt><dd>{fmt(tanks(unidad.f))} gal</dd></>
-                      : null;
-                    return <Grupo key={titulo} titulo={titulo} claves={claves} f={unidad.f} extra={extra} />;
-                  })}
-                  <Grupo titulo="Otros datos" claves={Object.keys(unidad.f).filter(k => !usados.has(k))} f={unidad.f} />
-                  <div className="ref">
-                    <b>Modelo 3D: </b>{res.ref}. Representación genérica pintada con los colores registrados.
-                    {res.notes.length > 0 && <ul>{res.notes.map((t, i) => <li key={i}>{t}</li>)}</ul>}
-                  </div>
-                </div>
-                <div className="tab-body" hidden={tab !== 'piezas'}>
-                  <ul className="parts">
-                    {modelo && modelo.parts.map((p, i) => (
-                      <li key={p.id}>
-                        <button type="button" aria-current={!!parte && parte.id === p.id}
-                          onClick={() => { const e = escenaRef.current; if (e) e.seleccionar(p, true); }}>
-                          <span>{String(i + 1).padStart(2, '0')}</span>{p.name}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </>
-            )}
-          </aside>
+    <div className="flota3d" ref={rootRef}>
+      <div className={'f3d-main' + (detalle ? ' f3d-main--detalle' : '')}>
+        <div className="f3d-top">
+          <button type="button" className="pill back" onClick={() => onElegir(null, true)} aria-label="Volver a la lista de placas">
+            <Svg size={16} sw={2.4}><path d="m15 5-7 7 7 7" /></Svg>Placas
+          </button>
         </div>
-        <div ref={setCapa} style={{ display: 'contents' }} />
+
+        <aside className="f3d-card f3d-list" aria-label="Placas">
+          <p className="count">
+            {cargando
+              ? 'Cargando unidades…'
+              : filas.length + (filas.length === 1 ? ' unidad' : ' unidades') +
+                (dVista.omitidas ? ' · ' + dVista.omitidas + ' filas sin tipo ni marca no se muestran' : '')}
+          </p>
+          <ul className="plates" role="listbox" aria-label="Lista de placas" ref={listaRef}>
+            {filas.map(u => {
+              const on = u.plate === plateActual;
+              return (
+                <li key={u.plate}>
+                  <button type="button" className="f3d-row" role="option" aria-selected={on} data-plate={u.plate}
+                    onClick={() => elegir(u)}>
+                    <span className="top">
+                      <span className="f3d-plate sm"><small>PERÚ</small><b>{u.plate}</b></span>
+                      <span className={'f3d-badge' + (estaFueraDeUso(u) ? ' off' : '')}>{textoEstado(u)}</span>
+                    </span>
+                    <span className="t">{tituloUnidad(u)}</span>
+                    <span className="mt">
+                      <Svg size={14}>{u.cat === 'T' || u.cat === 'C' ? ICONO_CAMION : ICONO_CAJA}</Svg>
+                      {[u.f.TIPO, u.f.CONFIGURACION, u.f.ANO].filter(Boolean).join(' · ')}
+                      <span className="dots" title={u.f.COLOR || undefined}>
+                        {colorsOf(u.f.COLOR).slice(0, 4).map((h, i) => <i key={i} style={{ background: hexCss(h) }} />)}
+                      </span>
+                    </span>
+                    <span className="cl">{u.f.CLIENTE || 'Sin cliente'}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </aside>
+
+        <VisorBoundary>
+          {unidad && res ? (
+            <VisorTresD
+              unidad={unidad} res={res} oscuro={oscuro} parte={parte} capa={capa}
+              escenaRef={escenaRef} onSeleccion={setParte} onModelo={setModelo} onPaso={onPaso}
+            />
+          ) : (
+            <section className="f3d-card viewer" aria-label="Unidad en 3D">
+              {!cargando && <p className="hint">Sin unidades para mostrar</p>}
+            </section>
+          )}
+        </VisorBoundary>
+
+        <aside className="f3d-card spec" aria-label="Especificaciones">
+          <h2>Especificaciones</h2>
+          {unidad && res && (
+            <>
+              <div className="kpis">
+                {KPIS.map((k, j) => {
+                  const v = k.get(unidad.f);
+                  return (
+                    <div key={k.label} className={'kpi ' + k.cls}>
+                      <b>{v == null ? '—' : fmt(v)}{v != null && k.unit ? <small>{k.unit}</small> : null}</b>
+                      <span>{k.label}</span>
+                      <div className="bar"><i style={{ width: (v ? Math.min(100, v / maximos[j] * 100) : 0) + '%' }} /></div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="motor">
+                <Svg size={16}><path d="M4 10h3l2-3h6v3h3v2h2v4h-2v2h-3l-2 2H8l-2-2H4z" /></Svg>
+                <span>Motor</span>
+                <b>{unidad.f['MODELO MOTOR'] || (norm(unidad.f.MOTORA) === 'NO MOTORA' ? 'No motora' : '—')}</b>
+              </div>
+              <div className="seg" role="tablist">
+                <button type="button" role="tab" aria-selected={tab === 'ficha'} onClick={() => setTab('ficha')}>Ficha</button>
+                <button type="button" role="tab" aria-selected={tab === 'piezas'} onClick={() => setTab('piezas')}>Componentes</button>
+              </div>
+              <div className="tab-body" hidden={tab !== 'ficha'}>
+                {GRUPOS.map(([titulo, claves]) => {
+                  const nTanques = ['TANQUE 1', 'TANQUE 2', 'TANQUE 3'].filter(k => num(unidad.f[k]) != null).length;
+                  const extra = titulo === 'Motor y combustible' && nTanques > 1
+                    ? <><dt>Total tanques</dt><dd>{fmt(tanks(unidad.f))} gal</dd></>
+                    : null;
+                  return <Grupo key={titulo} titulo={titulo} claves={claves} f={unidad.f} extra={extra} />;
+                })}
+                <Grupo titulo="Otros datos" claves={Object.keys(unidad.f).filter(k => !usados.has(k))} f={unidad.f} />
+                <div className="ref">
+                  <b>Modelo 3D: </b>{res.ref}. Representación genérica pintada con los colores registrados.
+                  {res.notes.length > 0 && <ul>{res.notes.map((t, i) => <li key={i}>{t}</li>)}</ul>}
+                </div>
+              </div>
+              <div className="tab-body" hidden={tab !== 'piezas'}>
+                <ul className="parts">
+                  {modelo && modelo.parts.map((p, i) => (
+                    <li key={p.id}>
+                      <button type="button" aria-current={!!parte && parte.id === p.id}
+                        onClick={() => { const e = escenaRef.current; if (e) e.seleccionar(p, true); }}>
+                        <span>{String(i + 1).padStart(2, '0')}</span>{p.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
+        </aside>
       </div>
-      {toast && <div className={'toast' + (toast.err ? ' err' : '')} role="status">{toast.msg}</div>}
+      <div ref={setCapa} style={{ display: 'contents' }} />
     </div>
   );
 }

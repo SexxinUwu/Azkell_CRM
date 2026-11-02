@@ -101,7 +101,7 @@ export function PlacaFicha({ placa, onClose, onEditar, onEliminar }: { placa: Pl
             <Button variant="secondary" onClick={onClose}>Cerrar</Button>
           )}
           {p && (
-            <Button variant="secondary" icon={<Box size={16} />} onClick={() => navigate(`/placas/3d?placa=${encodeURIComponent(p.placa)}`)}>Ver en 3D</Button>
+            <Button variant="secondary" icon={<Box size={16} />} onClick={() => { onClose(); navigate(`/placas?vista=3d&placa=${encodeURIComponent(p.placa)}`); }}>Ver en 3D</Button>
           )}
           {onEditar && p && (
             <Button variant="primary" icon={<Pencil size={16} />} onClick={() => onEditar(p)}>Editar</Button>
