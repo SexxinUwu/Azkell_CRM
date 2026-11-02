@@ -1,4 +1,9 @@
 {
     "java.configuration.updateBuildConfiguration": "interactive",
+    "java.import.exclusions": [
+        "**/node_modules/**",
+        "**/.claude/worktrees/**",
+        "**/archivo/**"
+    ],
     "chat.permissions.default": "autoApprove"
 }
