@@ -20,6 +20,25 @@ const _ce = (req) => {
     return _cachePorEmpresa.get(k);
 };
 const INSP_CACHE_TTL = 45000; // 45s
+// Token y URL de Wialon de la empresa (integraciones_api; si no hay, el .env)
+function credencialesWialon(tdb) {
+    const leer = (clave) => new Promise((resolve) => {
+        tdb.query("SELECT valor FROM integraciones_api WHERE clave = ? LIMIT 1", [clave], (err, rows) => resolve(rows && rows[0] && rows[0].valor ? String(rows[0].valor).trim() : ''));
+    });
+    return Promise.all([leer('wialon_token'), leer('wialon_url')]).then(([t, u]) => ({
+        token: t || process.env.WIALON_TOKEN || '',
+        baseUrl: u || 'https://hst-api.wialon.us/wialon/ajax.html'
+    }));
+}
+// Sensor de nivel de combustible en % de una unidad (campo `sens` de Wialon, flag 4096). Evita sensores de consumo o tasa.
+function elegirSensorCombustible(sens) {
+    const lista = Object.values(sens || {}).filter(x => x && x.id != null);
+    const nombre = (x) => String(x.n || '');
+    const malo = /consum|tasa|rate|rendim|total|acumul|presi|temp/i;
+    const nivel = lista.filter(x => !malo.test(nombre(x)) && /(combust|fuel|diesel|tanque)/i.test(nombre(x)) && /(nivel|level|%)/i.test(nombre(x) + ' ' + (x.m || '')));
+    return nivel.find(x => String(x.m || '').trim() === '%') || nivel[0]
+        || lista.find(x => /fuel level/i.test(String(x.t || '')) && !malo.test(nombre(x))) || null;
+}
 const WIALON_CACHE_TTL = 4000; // 4s de refresco ultra rápido para tiempo real y animación fluida
 
 function parseMesInt(val) {
@@ -1503,8 +1522,10 @@ router.post('/:metodo', async (req, res) => {
                 });
 
                 // ── Geocodificación Inversa Wialon GIS en Lote ──
+                // Sin esperar: la posición se responde ya y las direcciones nuevas llegan en la lectura siguiente (el logout espera a que termine)
+                let geoPendiente = null;
                 if (coordsToGeocode.length > 0 && gisSid) {
-                    try {
+                    geoPendiente = (async () => { try {
                         const host = new URL(baseUrl).hostname;
                         const geoUrl = `https://geocode-maps.wialon.com/${host}/gis_geocode?coords=${encodeURIComponent(JSON.stringify(coordsToGeocode))}&flags=1255211008&gis_sid=${gisSid}`;
                         const geoController = new AbortController();
@@ -1526,10 +1547,11 @@ router.post('/:metodo', async (req, res) => {
                         }
                     } catch (geoErr) {
                         console.warn('Wialon Geocoding GIS aviso:', geoErr.message);
-                    }
+                    } })();
                 }
 
-                fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(e=>{});
+                const cerrarSesionWialon = () => fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(e=>{});
+                if (geoPendiente) geoPendiente.finally(cerrarSesionWialon); else cerrarSesionWialon();
 
                 // ── Snapshot automático de KM GPS (una vez por día por placa) ──
                 const hoy = new Date().toISOString().split('T')[0];
@@ -1586,6 +1608,37 @@ router.post('/:metodo', async (req, res) => {
     // ============================================================
     // ⏱️ HISTORIAL DE RECORRIDO / PLAYBACK TELEMETRÍA (WIALON)
     // ============================================================
+    // Nivel de combustible actual (%) de una unidad: el sensor de nivel que tenga configurado en Wialon
+    if (metodo === 'obtenerCombustibleWialon') {
+        const pl = (req.body && req.body.args && req.body.args[0]) ? req.body.args[0] : (req.body || {});
+        const unitId = Number(pl.unitId);
+        if (!unitId) return res.json({ data: { nivel: null } });
+        try {
+            const { token, baseUrl } = await credencialesWialon(req.db || db);
+            if (!token) return res.json({ data: { nivel: null } });
+            const login = await (await fetch(`${baseUrl}?svc=token/login&params=${encodeURIComponent(JSON.stringify({ token }))}`)).json();
+            if (!login || !login.eid) return res.json({ data: { nivel: null } });
+            const sid = login.eid;
+            let nivel = null, nombre = '';
+            try {
+                const it = await (await fetch(`${baseUrl}?svc=core/search_item&params=${encodeURIComponent(JSON.stringify({ id: unitId, flags: 4096 }))}&sid=${sid}`)).json();
+                const sensor = elegirSensorCombustible(it && it.item && it.item.sens);
+                if (sensor) {
+                    nombre = sensor.n || '';
+                    const r = await (await fetch(`${baseUrl}?svc=unit/calc_last_message&params=${encodeURIComponent(JSON.stringify({ unitId, sensorId: sensor.id, flags: 0 }))}&sid=${sid}`)).json();
+                    let v = typeof r === 'number' ? r : (r && typeof r === 'object' ? (r[sensor.id] != null ? r[sensor.id] : Object.values(r)[0]) : null);
+                    if (Array.isArray(v)) v = v[0];
+                    if (typeof v === 'number' && isFinite(v) && v > -1e5) nivel = Math.round(Math.max(0, Math.min(100, v)) * 10) / 10;
+                }
+            } finally {
+                fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(() => {});
+            }
+            return res.json({ data: { nivel, nombre } });
+        } catch (e) {
+            return res.json({ data: { nivel: null, error: e.message } });
+        }
+    }
+
     if (metodo === 'obtenerHistorialGPS' || metodo === 'obtenerTrackGPS') {
         const payload = (req.body && req.body.args && req.body.args[0]) ? req.body.args[0] : (req.body || {});
         const placaParam = String(payload.placa || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
@@ -1648,13 +1701,29 @@ router.post('/:metodo', async (req, res) => {
                 return res.json({ data: { error: `No se encontró la unidad satelital para la placa ${placaParam}.` } });
             }
 
+            // Sensor de nivel de combustible (%) de la unidad, si lo tiene configurado
+            let sensorCombustible = null;
+            try {
+                const itc = await (await fetch(`${baseUrl}?svc=core/search_item&params=${encodeURIComponent(JSON.stringify({ id: targetUnitId, flags: 4096 }))}&sid=${sid}`)).json();
+                sensorCombustible = elegirSensorCombustible(itc && itc.item && itc.item.sens);
+            } catch (e) { sensorCombustible = null; }
+
             // Consultar mensajes / telemetría en el rango
             // load_interval devuelve como máximo loadCount mensajes y, si el rango trae más, descarta los MÁS ANTIGUOS (se perdía el inicio del viaje).
             const cargarVentana = async (desde, hasta, cuantos) => {
                 const msgParams = { itemId: targetUnitId, timeFrom: desde, timeTo: hasta, flags: 0x0000, flagsMask: 0xFF00, loadCount: cuantos };
                 const msgRes = await fetch(`${baseUrl}?svc=messages/load_interval&params=${encodeURIComponent(JSON.stringify(msgParams))}&sid=${sid}`);
                 const msgData = await msgRes.json();
-                return (msgData && Array.isArray(msgData.messages)) ? msgData.messages : [];
+                const msgs = (msgData && Array.isArray(msgData.messages)) ? msgData.messages : [];
+                // Nivel de combustible de cada mensaje de la ventana (calc_sensors usa los mensajes recién cargados)
+                if (sensorCombustible && msgs.length) {
+                    try {
+                        const cp = { source: '', indexFrom: 0, indexTo: msgs.length - 1, unitId: targetUnitId, sensorId: sensorCombustible.id };
+                        const arr = await (await fetch(`${baseUrl}?svc=unit/calc_sensors&params=${encodeURIComponent(JSON.stringify(cp))}&sid=${sid}`)).json();
+                        if (Array.isArray(arr)) msgs.forEach((m, i) => { const v = Array.isArray(arr[i]) ? arr[i][0] : arr[i]; if (typeof v === 'number' && isFinite(v) && v > -1e5) m.__f = Math.max(0, Math.min(100, v)); });
+                    } catch (e) { /* sin nivel en esta ventana */ }
+                }
+                return msgs;
             };
 
             let rawMessages = [];
@@ -1762,7 +1831,8 @@ router.post('/:metodo', async (req, res) => {
                     curso: course,
                     altitud: alt,
                     tiempo: t,
-                    ignicion: isIgn ? 1 : 0
+                    ignicion: isIgn ? 1 : 0,
+                    combustible: m.__f != null ? Math.round(m.__f * 10) / 10 : null
                 });
             }
 
@@ -1830,7 +1900,8 @@ router.post('/:metodo', async (req, res) => {
                     },
                     paradas: paradasOut, // sin `completo`: últimas 20 paradas
                     excesos: excesosOut,
-                    puntos: puntosOut
+                    puntos: puntosOut,
+                    sensorCombustible: sensorCombustible ? (sensorCombustible.n || 'Combustible') : null
                 }, extra)
             });
 

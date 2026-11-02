@@ -1,6 +1,6 @@
 import './flota.css';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
+import { MapPin, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
 import { Page } from '../../core/ui/Display';
 import { PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
@@ -13,6 +13,7 @@ import { PanelHistorial, type Velocidad } from './UbicacionPlayback';
 import { useHistorial } from './UbicacionHistorial';
 import { estadoUnidad, useDisponibilidad, useUnidadesGps, type EstadoUnidad, type UnidadMapa } from './api';
 import { usePlacas } from '../placas/api';
+import { analizarCombustible } from './gps/combustible';
 import { descripcionCamion } from './gps/tipoUnidad';
 import { FichaTelemetria, Grab } from './gps/FichaTelemetria';
 import { ST } from './gps/camiones';
@@ -32,12 +33,6 @@ const SEGMENTOS: Array<{ value: Segmento; label: string }> = [
 const coincideSegmento = (u: UnidadMapa, s: Segmento) =>
   s === 'todos' || (s === 'senal' ? estadoUnidad(u) !== 'sin_senal' : estadoUnidad(u) === s);
 
-// Agrupación de la lista: por empresa o una sola lista
-type Agrupar = 'empresa' | 'individual';
-const CLAVE_AGRUPAR = 'fleet_gps_agrupar';
-function agrupacionGuardada(): Agrupar {
-  try { const v = localStorage.getItem(CLAVE_AGRUPAR); return v === 'individual' || v === 'wialon' ? 'individual' : 'empresa'; } catch { return 'empresa'; }
-}
 type BaseMapa = 'mapa' | 'sat';
 function baseGuardada(): BaseMapa {
   try { return localStorage.getItem('fleet_gps_base') === 'sat' ? 'sat' : 'mapa'; } catch { return 'mapa'; }
@@ -57,8 +52,6 @@ export function UbicacionPage() {
   const unidades = useMemo(() => data ?? [], [data]);
   const [empresa, setEmpresa] = useState('TODAS');
   const [segmento, setSegmento] = useState<Segmento>('todos');
-  const [agrupar, setAgrupar] = useState<Agrupar>(agrupacionGuardada);
-  const [colapsados, setColapsados] = useState<Set<string>>(() => new Set());
   const [filtrando, setFiltrando] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [ocultas, setOcultas] = useState<Set<string>>(() => new Set());
@@ -109,30 +102,18 @@ export function UbicacionPage() {
     return new Map(unidades.map(u => [u.placa, descripcionCamion(porPlaca.get(placaLimpia(u.placa)), u.tipo)]));
   }, [placas.data, unidades]);
 
-  const cambiarAgrupar = (v: Agrupar) => {
-    haptic('selection');
-    setAgrupar(v);
-    try { localStorage.setItem(CLAVE_AGRUPAR, v); } catch { /* sin almacenamiento */ }
-  };
   const cambiarBase = useCallback((b: BaseMapa) => {
     haptic('selection');
     setBase(b);
     try { localStorage.setItem('fleet_gps_base', b); } catch { /* sin almacenamiento */ }
   }, []);
 
-  const grupos = useMemo(() => {
-    const ordenadas = (us: UnidadMapa[]) => [...us].sort((a, b) => ORDEN[estadoUnidad(a, ahora)] - ORDEN[estadoUnidad(b, ahora)] || a.placa.localeCompare(b.placa));
-    if (agrupar === 'individual') return [{ clave: 'todas', nombre: 'Todas las unidades', units: ordenadas(lista), plana: true }];
-    const m = new Map<string, { clave: string; nombre: string; units: UnidadMapa[]; plana?: boolean }>();
-    for (const u of lista) {
-      const clave = claveEmpresa(u.empresa) || 'OTRAS';
-      const g = m.get(clave) ?? { clave, nombre: empresas.find(e => e.clave === clave)?.nombre ?? 'Otras unidades', units: [] };
-      g.units.push(u);
-      m.set(clave, g);
-    }
-    return [...m.values()].map(g => ({ ...g, units: ordenadas(g.units) })).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  // Una sola lista: en movimiento primero, luego ralentí, detenidas y sin señal
+  const ordenada = useMemo(
+    () => [...lista].sort((a, b) => ORDEN[estadoUnidad(a, ahora)] - ORDEN[estadoUnidad(b, ahora)] || a.placa.localeCompare(b.placa)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lista, empresas, agrupar, Math.floor(ahora / 5000)]);
+    [lista, Math.floor(ahora / 5000)],
+  );
 
   const cifras = useMemo(() => {
     let conSenal = 0;
@@ -158,6 +139,11 @@ export function UbicacionPage() {
   const abiertoHistorial = panel === 'historial' && seleccion ? seleccion : null;
   const historialQ = useHistorial(abiertoHistorial?.placa ?? null, abiertoHistorial?.id ?? null, { horas, dia, desde, hasta });
   const historial = abiertoHistorial ? historialQ.data : undefined;
+  const analisis = useMemo(() => analizarCombustible(historial), [historial]);
+  const eventosHist = useMemo(
+    () => analisis.eventos.map(e => ({ lat: e.lat, lng: e.lng, tip: `${e.tipo === 'caida' ? 'Caída de combustible' : 'Recarga'} · ${e.desde}% → ${e.hasta}%` })),
+    [analisis],
+  );
   const errorHistorial = historialQ.error ? errorMessage(historialQ.error) : '';
 
   // Datos nuevos o rango nuevo: se vuelve al inicio del recorrido
@@ -212,23 +198,6 @@ export function UbicacionPage() {
       return n;
     });
   };
-  const alternarGrupo = (units: UnidadMapa[]) => {
-    haptic('selection');
-    setOcultas(prev => {
-      const n = new Set(prev);
-      const todasVis = units.every(u => !n.has(u.placa));
-      for (const u of units) { if (todasVis) n.add(u.placa); else n.delete(u.placa); }
-      return n;
-    });
-  };
-  const alternarColapso = (clave: string) => {
-    haptic('selection');
-    setColapsados(prev => {
-      const n = new Set(prev);
-      if (n.has(clave)) n.delete(clave); else n.add(clave);
-      return n;
-    });
-  };
   const elegir = useCallback((placa: string | null) => {
     if (placa) haptic('selection');
     setSeleccionada(placa);
@@ -261,19 +230,31 @@ export function UbicacionPage() {
   const activos = (empresa !== 'TODAS' ? 1 : 0) + (segmento !== 'todos' ? 1 : 0);
   const conteoSeg = (s: Segmento) => delEmpresa.filter(u => coincideSegmento(u, s)).length;
 
+  // Un clic elige la unidad; otro clic sobre la misma la vuelve a centrar donde está ahora (si se movió, la sigue)
+  const clicUnidad = (placa: string) => {
+    if (seleccionada === placa) { haptic('selection'); motor?.centrarSeleccion(); } else elegir(placa);
+  };
   const filaUnidad = (u: UnidadMapa) => {
     const estado = estadoUnidad(u, ahora);
     const c = ST[CLASE[estado]];
+    const exceso = estado === 'movimiento' && u.velocidad > 90;
     return (
-      <li key={u.placa} className="tg-unit" data-sel={seleccionada === u.placa}>
+      <li key={u.placa} className="tg-unit" data-sel={seleccionada === u.placa} data-estado={estado}>
         <input type="checkbox" className="tg-unit__check" checked={!ocultas.has(u.placa)} onChange={() => alternarUnidad(u.placa)} aria-label={`Mostrar ${u.placa} en el mapa`} />
-        <button type="button" className="tg-unit__b" role="option" aria-selected={seleccionada === u.placa} onClick={() => elegir(u.placa)}>
-          <span className="dot" style={{ background: c.c, boxShadow: `0 0 10px ${c.c}` }} />
-          <span className="pl">{u.placa}</span>
-          <span className="sp" style={{ color: estado === 'movimiento' && u.velocidad > 90 ? ST.off.c : 'inherit' }}>
-            {estado === 'sin_senal' ? <small>sin señal</small> : <>{Math.round(u.velocidad)}<small> km/h</small></>}
+        <button type="button" className="tg-unit__b" role="option" aria-selected={seleccionada === u.placa} onClick={() => clicUnidad(u.placa)}
+          title={seleccionada === u.placa ? 'Clic para centrar la unidad donde está ahora' : 'Ver unidad'}>
+          <span className="tg-unit__riel" style={{ background: c.c, boxShadow: `0 0 10px ${c.c}` }} aria-hidden />
+          <span className="tg-unit__cuerpo">
+            <span className="tg-unit__l1">
+              <span className="pl">{u.placa}</span>
+              <span className="tg-pill" style={{ color: c.c, background: c.c + '22' }}>{c.l}</span>
+            </span>
+            <span className="sub"><MapPin size={11} aria-hidden />{u.ubicacion || u.nombre || 'Sin dirección'}</span>
+            <span className="tg-unit__l3">{corta(u.empresa)}{u.tipo ? ` · ${u.tipo}` : ''}</span>
           </span>
-          <span className="sub">{c.l} · {corta(u.empresa)}{u.ubicacion ? ` · ${u.ubicacion}` : ''}</span>
+          <span className="sp" style={{ color: exceso ? ST.off.c : undefined }}>
+            {estado === 'sin_senal' ? <small>sin señal</small> : <><b>{Math.round(u.velocidad)}</b><small>km/h</small></>}
+          </span>
         </button>
       </li>
     );
@@ -289,7 +270,7 @@ export function UbicacionPage() {
           <Suspense fallback={<div className="tg-cargando">Cargando mapa…</div>}>
             <UbicacionMapa unidades={unidades} descs={descs} visibles={visibles} seleccionada={seleccionada}
               hojaAbierta={!!seleccion} encuadreVersion={0} encuadrarA={encuadrarA}
-              historial={historial ?? null} indice={indice} onElegir={elegir} onAlerta={nuevaAlerta} onPiloto={setPiloto}
+              historial={historial ?? null} eventosHist={eventosHist} indice={indice} onElegir={elegir} onAlerta={nuevaAlerta} onPiloto={setPiloto}
               tema={tema} base={base} onBase={cambiarBase}>
               <header className="tg-top">
                 <div className="tg-brand tg-glass">
@@ -326,8 +307,6 @@ export function UbicacionPage() {
                     <button type="button" className="tg-chip" aria-pressed={activos > 0} onClick={() => setFiltrando(true)}>
                       <SlidersHorizontal size={13} aria-hidden />Filtros{activos > 0 && <em>{activos}</em>}
                     </button>
-                    <button type="button" className="tg-chip" aria-pressed={agrupar === 'empresa'} onClick={() => cambiarAgrupar('empresa')}>Empresa</button>
-                    <button type="button" className="tg-chip" aria-pressed={agrupar === 'individual'} onClick={() => cambiarAgrupar('individual')}>Individual</button>
                     <label className="tg-visibles">
                       <input type="checkbox" checked={todasVisibles} onChange={alternarTodas} disabled={!lista.length} />
                       <span>Visibles ({visiblesEnMapa}/{enLista})</span>
@@ -335,30 +314,7 @@ export function UbicacionPage() {
                   </div>
                 </div>
                 <ul className="tg-list" role="listbox" aria-label="Lista de unidades">
-                  {grupos.map(g => {
-                    if (g.plana) {
-                      return <li key={g.clave}><ul className="tg-grupo__unidades">{g.units.map(filaUnidad)}</ul></li>;
-                    }
-                    const visiblesGrupo = g.units.filter(u => !ocultas.has(u.placa)).length;
-                    const todasGrupo = visiblesGrupo === g.units.length;
-                    const ningunaGrupo = visiblesGrupo === 0;
-                    const abierto = !colapsados.has(g.clave);
-                    return (
-                      <li key={g.clave}>
-                        <div className="tg-grupo__cab">
-                          <input type="checkbox" className="tg-grupo__check" checked={todasGrupo}
-                            ref={el => { if (el) el.indeterminate = !todasGrupo && !ningunaGrupo; }}
-                            onChange={() => alternarGrupo(g.units)} aria-label={`Mostrar el grupo ${g.nombre} en el mapa`} />
-                          <button type="button" className="tg-grupo__titulo" aria-expanded={abierto} onClick={() => alternarColapso(g.clave)}>
-                            <ChevronDown size={14} aria-hidden />
-                            <span>{g.nombre}</span>
-                            <span className="tg-grupo__conteo">{visiblesGrupo}/{g.units.length}</span>
-                          </button>
-                        </div>
-                        {abierto && <ul className="tg-grupo__unidades">{g.units.map(filaUnidad)}</ul>}
-                      </li>
-                    );
-                  })}
+                  {ordenada.map(filaUnidad)}
                   {!lista.length && <li><p className="tg-vacio">Sin unidades con ese filtro.</p></li>}
                 </ul>
               </aside>
@@ -370,7 +326,7 @@ export function UbicacionPage() {
                       onCerrar={cerrarPanel} onHistorial={() => { haptic('selection'); setPanel('historial'); }}
                       onToggleHoja={abrir => setHojaFicha(h => (abrir === undefined ? !h : abrir))} />
                   ) : (
-                    <PanelHistorial placa={seleccion.placa} horas={horas}
+                    <PanelHistorial placa={seleccion.placa} horas={horas} analisis={analisis}
                       onHoras={setHoras} dia={dia} onDia={d => { setDia(d); setDesde(null); setHasta(null); }} desde={desde} hasta={hasta} onRango={(a, b) => { setDesde(a); setHasta(b); setDia(null); }} onIrA={(lat, lng) => motor?.irA(lat, lng)} historial={historial} cargando={historialQ.isFetching && !historial}
                       error={errorHistorial} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
                       reproduciendo={reproduciendo} onReproducir={() => setReproduciendo(r => !r)}

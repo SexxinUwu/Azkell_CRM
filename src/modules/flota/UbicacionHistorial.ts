@@ -9,6 +9,8 @@ export interface PuntoHistorial {
   curso: number;
   ignicion: boolean;
   altitud: number;
+  /** Nivel de combustible (%) si la unidad tiene sensor */
+  combustible: number | null;
   /** Segundos desde 1970 (como en Wialon) */
   tiempo: number;
 }
@@ -22,6 +24,8 @@ export interface Historial {
   excesos: ExcesoHistorial[];
   /** El servidor no pudo cargar todo el rango: el trazado puede tener huecos */
   truncado?: boolean;
+  /** Nombre del sensor de combustible de la unidad (null si no tiene) */
+  sensorCombustible: string | null;
   metricas: { totalKm: number; maxSpeed: number; avgSpeed: number; tiempoMovMin: number; paradasTotal: number };
 }
 
@@ -49,7 +53,8 @@ export function useHistorial(placa: string | null, unitId: number | null, rango:
           ? { placa, unitId, fechaInicio: new Date(desde).toISOString(), fechaFin: new Date(hasta).toISOString(), completo: true }
           : dia
             ? { placa, unitId, fechaInicio: inicioDia(dia).toISOString(), fechaFin: new Date(inicioDia(dia).getTime() + 86400000).toISOString(), completo: true }
-            : { placa, unitId, horas }] },
+            // completo también en las últimas horas: trae todas las paradas y el nivel de combustible de todo el rango
+            : { placa, unitId, horas, completo: true }] },
       });
       const d = (r?.data ?? {}) as Record<string, unknown>;
       if (d.error) throw new Error(String(d.error));
@@ -59,10 +64,12 @@ export function useHistorial(placa: string | null, unitId: number | null, rango:
       const m = (d.metricas ?? {}) as Record<string, unknown>;
       return {
         truncado: d.truncado === true,
+        sensorCombustible: typeof d.sensorCombustible === 'string' ? d.sensorCombustible : null,
         puntos: puntos
           .map(p => ({
             lat: num(p.lat), lng: num(p.lng), velocidad: num(p.velocidad), curso: num(p.curso),
             ignicion: p.ignicion === true || Number(p.ignicion) === 1, altitud: num(p.altitud), tiempo: num(p.tiempo),
+            combustible: p.combustible == null ? null : num(p.combustible),
           }))
           .filter(p => p.lat !== 0 && p.lng !== 0),
         paradas: paradas.map(s => ({ lat: num(s.lat), lng: num(s.lng), durMin: num(s.durMin), startT: num(s.startT), endT: num(s.endT) })),

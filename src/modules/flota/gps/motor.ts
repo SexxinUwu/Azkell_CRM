@@ -92,6 +92,7 @@ export class MotorTelemetria {
   private geos: Geocerca[] = [];
   private hist: Historial | null = null;
   private histIdx = 0;
+  private histEventos: Array<{ lat: number; lng: number; tip: string }> = [];
   private aviso: maplibregl.Popup | null = null;
 
   private raf = 0;
@@ -470,7 +471,7 @@ export class MotorTelemetria {
     const u = placa ? this.units.get(placa) : null;
     const bottom = u && MOVIL() ? Math.round(this.root.clientHeight * .46) : 0;
     const pad = { top: 0, left: 0, right: 0, bottom };
-    if (u && u.view && volar && cambia) this.mapa.flyTo({ center: u.view, zoom: Math.max(this.mapa.getZoom(), 15.8), pitch: 60, bearing: this.mapa.getBearing(), duration: 2200, essential: true, padding: pad });
+    if (u && u.view && volar && cambia) this.mapa.flyTo({ center: u.b ? u.b.pos : u.view, zoom: Math.max(this.mapa.getZoom(), 15.8), pitch: 60, bearing: this.mapa.getBearing(), duration: 2200, essential: true, padding: pad });
     else if (!this.follow) this.mapa.setPadding(pad);
     this.uiAcc = 1; this.sucioDatos = true; this.sucio = true; this.mapa.triggerRepaint();
   }
@@ -488,7 +489,8 @@ export class MotorTelemetria {
 
   centrarSeleccion() {
     const u = this.sel ? this.units.get(this.sel) : null;
-    if (u?.view) this.mapa.flyTo({ center: u.view, zoom: 17.3, pitch: 62, bearing: u.hview, duration: 1800 });
+    // Va a la última posición recibida; si la unidad se movió, otro clic vuelve a centrarla donde está ahora
+    if (u?.view) this.mapa.flyTo({ center: u.b ? u.b.pos : u.view, zoom: Math.max(this.mapa.getZoom(), 16.5), pitch: Math.max(this.mapa.getPitch(), 55), bearing: u.hview, duration: 1200, essential: true });
   }
 
   /** Encuadra las unidades visibles con posición (o solo las placas indicadas) */
@@ -544,11 +546,12 @@ export class MotorTelemetria {
       pin(ini, '#16a34a', '▶', 'Inicio · ' + hora(ini.tiempo)), pin(fin, '#0f172a', '■', 'Fin · ' + hora(fin.tiempo)),
       ...h.paradas.map((s, i) => pin(s, '#ea580c', 'II', `Parada ${i + 1} · ${s.durMin} min`)),
       ...h.excesos.map(e => pin(e, '#dc2626', '!', `Exceso · ${Math.round(e.velocidad)} km/h`)),
+      ...this.histEventos.map(e => pin(e, '#f59e0b', '⛽', e.tip)),
     ]));
     this.cursorHistorial(this.histIdx);
   }
-  mostrarHistorial(h: Historial | null) {
-    this.hist = h; this.histIdx = 0;
+  mostrarHistorial(h: Historial | null, eventos: Array<{ lat: number; lng: number; tip: string }> = []) {
+    this.hist = h; this.histIdx = 0; this.histEventos = eventos;
     this.aviso?.remove();
     if (this.styleReady) { this.aplicarOpciones(false); this.pintarHistorial(); }
     this.units.forEach(u => { if (h) this.ocultarEtiqueta(u); });

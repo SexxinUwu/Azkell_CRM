@@ -28,6 +28,8 @@ interface Props {
   /** Placas buscadas: el mapa se acerca a ellas */
   encuadrarA: string[];
   historial: Historial | null;
+  /** Caídas y recargas de combustible que se marcan sobre la ruta */
+  eventosHist?: Array<{ lat: number; lng: number; tip: string }>;
   indice: number;
   onElegir: (placa: string | null) => void;
   onAlerta: (a: Alerta) => void;
@@ -86,7 +88,7 @@ export function UbicacionMapa(p: Props) {
   useEffect(() => { if (p.encuadreVersion > 0) motorRef.current?.visionGeneral(); }, [p.encuadreVersion]);
   const claveBusqueda = p.encuadrarA.join('|');
   useEffect(() => { if (claveBusqueda) motorRef.current?.visionGeneral(false, claveBusqueda.split('|')); }, [claveBusqueda]);
-  useEffect(() => { motorRef.current?.mostrarHistorial(p.historial); }, [p.historial]);
+  useEffect(() => { motorRef.current?.mostrarHistorial(p.historial, p.eventosHist); }, [p.historial, p.eventosHist]);
   useEffect(() => { motorRef.current?.cursorHistorial(p.indice); }, [p.indice, p.historial]);
 
   const alternar = (k: keyof OpcionesMapa) => {

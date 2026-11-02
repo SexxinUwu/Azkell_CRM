@@ -517,3 +517,18 @@ export function useConfigSistemas(enabled = true) {
     staleTime: 10 * 60_000,
   });
 }
+
+/** Nivel de combustible actual (%) de una unidad, del sensor que tiene en Wialon. null si no tiene sensor. */
+export function useCombustible(unitId: number | null) {
+  return useQuery({
+    queryKey: ['flota', 'combustible', unitId],
+    enabled: unitId != null,
+    refetchInterval: 20_000,
+    staleTime: 10_000,
+    queryFn: async (): Promise<{ nivel: number | null; nombre: string }> => {
+      const r = await api<{ data?: { nivel?: number | null; nombre?: string } }>('/script/obtenerCombustibleWialon', { method: 'POST', body: { args: [{ unitId }] } });
+      const d = r?.data ?? {};
+      return { nivel: typeof d.nivel === 'number' ? d.nivel : null, nombre: d.nombre ?? '' };
+    },
+  });
+}

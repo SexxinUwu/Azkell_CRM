@@ -4,7 +4,7 @@ import { MapPin, MessageCircle, Navigation, Route, X } from 'lucide-react';
 import { ST } from './camiones';
 import type { Lectura, MotorTelemetria } from './motor';
 import { EXCESO_KMH } from './mapaConfig';
-import type { UnidadMapa } from '../api';
+import { useCombustible, type UnidadMapa } from '../api';
 
 const CARDINALES = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
 
@@ -91,6 +91,7 @@ interface Props {
 
 export function FichaTelemetria({ u, motor, conductor, piloto, onCerrar, onHistorial, onToggleHoja }: Props) {
   const l = useLectura(motor, u.placa);
+  const combustible = useCombustible(u.id).data;
   const st = l?.st ?? 'det';
   const s = ST[st];
   const kmh = l?.kmh ?? u.velocidad;
@@ -137,6 +138,13 @@ export function FichaTelemetria({ u, motor, conductor, piloto, onCerrar, onHisto
       <Grafico hist={l?.hist ?? []} />
 
       <div className="tg-grid">
+        {combustible?.nivel != null && (
+          <div className="tg-cell tg-cell--ancho">
+            <span className="tg-lbl">Nivel de combustible</span>
+            <b className="mono">{Math.round(combustible.nivel)} %</b>
+            <span className="tg-barra" aria-hidden><i style={{ width: `${combustible.nivel}%`, background: combustible.nivel < 20 ? ST.off.c : combustible.nivel < 40 ? ST.ral.c : ST.mov.c }} /></span>
+          </div>
+        )}
         {celdas.map(c => (
           <div key={c.t} className={`tg-cell${c.ancho ? ' tg-cell--ancho' : ''}`}>
             <span className="tg-lbl">{c.t}</span>
