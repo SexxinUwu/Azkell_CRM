@@ -167,7 +167,7 @@ export function UbicacionPage() {
   const historialQ = useHistorial(abiertoHistorial?.placa ?? null, abiertoHistorial?.id ?? null, { horas, dia, desde, hasta });
   const historial = abiertoHistorial ? historialQ.data : undefined;
   const capacidades = useMemo(
-    () => new Map((placas.data ?? []).map(pl => [placaLimpia(pl.placa), parseFloat(String(pl.capacidadTanque).replace(',', '.')) || 0])),
+    () => new Map((placas.data ?? []).map(pl => [placaLimpia(pl.placa), parseFloat(String(pl.capacidadTanque).replace(',', '.')) || [pl.tanque1, pl.tanque2, pl.tanque3].reduce((s, x) => s + (parseFloat(x) || 0), 0) || 0])),
     [placas.data],
   );
   const capacidadSel = (seleccion && capacidades.get(placaLimpia(seleccion.placa))) || null;

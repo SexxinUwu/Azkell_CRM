@@ -33,15 +33,27 @@ function credencialesWialon(tdb) {
 // Sensor de nivel de combustible en % de una unidad (campo `sens` de Wialon, flag 4096). Evita sensores de consumo o tasa.
 function elegirSensorCombustible(sens) {
     const lista = Object.values(sens || {}).filter(x => x && x.id != null);
-    const nombre = (x) => String(x.n || '');
-    const malo = /consum|tasa|rate|rendim|total|acumul|presi|temp/i;
+    const nombre = (x) => String(x.n || '').toLowerCase();
     const metrica = (x) => String(x.m || '').trim().toLowerCase();
-    const nivel = lista.filter(x => !malo.test(nombre(x)) && /(combust|fuel|diesel|tanque)/i.test(nombre(x)) && /(nivel|level|%)/i.test(nombre(x) + ' ' + (x.m || '')));
-    const enPorcentaje = nivel.find(x => metrica(x) === '%') || nivel.find(x => /%/.test(nombre(x)));
+
+    // 1. Prioridad: "Combustible Total" (sensor oficial que suma Tanque P + Tanque S en tractos como BER940, CFC770)
+    const combTotal = lista.find(x => /combustible total|total fuel/i.test(nombre(x)) || (x.t === 'fuel level' && /total/i.test(nombre(x))));
+    if (combTotal) return combTotal;
+
+    // Sensores a descartar (consumo acumulado, tasa de consumo, presión, temperatura)
+    const malo = /consum|tasa|rate|rendim|acumul|presi|temp/i;
+
+    // 2. Sensor nativo tipo fuel level
+    const fuelLevel = lista.find(x => !malo.test(nombre(x)) && x.t === 'fuel level');
+    if (fuelLevel) return fuelLevel;
+
+    // 3. Sensor de porcentaje (%)
+    const enPorcentaje = lista.find(x => !malo.test(nombre(x)) && /(combust|fuel|diesel|tanque)/i.test(nombre(x)) && (metrica(x) === '%' || /%/.test(nombre(x))));
     if (enPorcentaje) return enPorcentaje;
-    // Sin sensor en %: el del tanque en galones o litros (se convierte a % con la capacidad de la ficha de la placa)
-    const tanque = lista.find(x => !malo.test(nombre(x)) && /(tanque|tank)/i.test(nombre(x)) && /^(gal|galones|gallons|l|lt|lts|litros|liters|litres)$/.test(metrica(x)));
-    return nivel[0] || tanque || lista.find(x => /fuel level/i.test(String(x.t || '')) && !malo.test(nombre(x))) || null;
+
+    // 4. Tanque en galones o litros
+    const tanque = lista.find(x => !malo.test(nombre(x)) && /(tanque|tank|combust|diesel)/i.test(nombre(x)) && /^(gal|galones|gallons|l|lt|lts|litros|liters|litres)$/.test(metrica(x)));
+    return tanque || lista.find(x => /fuel level/i.test(String(x.t || '')) && !malo.test(nombre(x))) || null;
 }
 const WIALON_CACHE_TTL = 4000; // 4s de refresco ultra rápido para tiempo real y animación fluida
 
