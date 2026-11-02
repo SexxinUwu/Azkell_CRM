@@ -88,7 +88,22 @@ export function UbicacionPage() {
   const [piloto, setPiloto] = useState(false);
   const [hojaLista, setHojaLista] = useState(false);
   const [hojaFicha, setHojaFicha] = useState(false);
+  const tgRef = useRef<HTMLDivElement>(null);
   const [motor, setMotor] = useState<import('./gps/motor').MotorTelemetria | null>(null);
+
+  // Las hojas y el panel piloto terminan justo sobre la barra de módulos del ERP: se mide su posición real
+  useEffect(() => {
+    const ajustar = () => {
+      const el = tgRef.current, dock = document.querySelector('.dock');
+      if (!el) return;
+      if (dock && getComputedStyle(dock).display !== 'none') el.style.setProperty('--tg-dock', `${Math.round(innerHeight - dock.getBoundingClientRect().top)}px`);
+      else el.style.removeProperty('--tg-dock');
+    };
+    ajustar();
+    const t = setTimeout(ajustar, 800);
+    addEventListener('resize', ajustar);
+    return () => { clearTimeout(t); removeEventListener('resize', ajustar); };
+  }, [isLoading, isError]);
 
   // El motor del mapa se crea al cargar el chunk del mapa
   useEffect(() => {
@@ -296,7 +311,7 @@ export function UbicacionPage() {
       {isLoading ? <PageLoader variante="camion" /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : (
-        <div className="tg" data-tema={oscuro ? 'noche' : 'day'} data-ficha={seleccion ? 'si' : 'no'} data-piloto={piloto ? 'si' : 'no'}
+        <div className="tg" ref={tgRef} data-tema={oscuro ? 'noche' : 'day'} data-ficha={seleccion ? 'si' : 'no'} data-piloto={piloto ? 'si' : 'no'}
           data-hist={panel === 'historial' && seleccion ? 'si' : 'no'} data-hoja={hojaLista ? 'full' : ''} data-det={hojaFicha ? 'full' : ''}>
           <Suspense fallback={<div className="tg-cargando">Cargando mapa…</div>}>
             <UbicacionMapa unidades={unidades} descs={descs} visibles={visibles} seleccionada={seleccionada}
@@ -312,6 +327,15 @@ export function UbicacionPage() {
                   <button type="button" className="tg-refrescar" aria-label="Actualizar" title="Actualizar" disabled={isFetching} onClick={() => refetch()}>
                     <RefreshCw size={16} />
                   </button>
+                </div>
+                <div className="tg-kpis" aria-label="Resumen de la flota">
+                  {([['todos', 'Flota monitoreada', 'var(--cyan)'], ['movimiento', 'En movimiento', ST.mov.c], ['ralenti', 'Ralentí', ST.ral.c], ['detenido', 'Detenidas', ST.det.c], ['sin_senal', 'Sin señal', ST.off.c]] as const).map(([v, nombre, color]) => (
+                    <button key={v} type="button" className="tg-kpi tg-glass" aria-pressed={segmento === v}
+                      onClick={() => { haptic('selection'); setSegmento(s => (s === v && v !== 'todos' ? 'todos' : v)); }}>
+                      <span><i style={{ background: color, boxShadow: `0 0 8px ${color}` }} />{nombre}</span>
+                      <b>{conteoSeg(v)}</b>
+                    </button>
+                  ))}
                 </div>
               </header>
 
