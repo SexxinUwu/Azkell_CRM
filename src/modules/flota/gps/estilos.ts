@@ -1,7 +1,7 @@
 // Estilos del mapa Noche (neón), Día y Satélite. Copiado literal de buildStyle() del prototipo.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { LayerSpecification, StyleSpecification } from 'maplibre-gl';
-import { ATRIBUCION, MAPA_URLS } from './mapaConfig';
+import { ATRIBUCION, MAPA_URLS, SATELITE_MAXZOOM } from './mapaConfig';
 
 export type TemaMapa = 'night' | 'day' | 'sat';
 
@@ -59,6 +59,6 @@ export function buildStyle(t: TemaMapa, relieve: boolean): StyleSpecification {
       dem:{type:'raster-dem', tiles:[MAPA_URLS.relieve], encoding:'terrarium', tileSize:256, maxzoom:14, attribution:ATRIBUCION.relieve}},
     projection:{type:'mercator'}, sky, light:{anchor:'viewport', color:night ? '#a9c8ff' : '#ffffff', intensity:night ? .38 : .3, position:[1.2, 200, 35]}, layers:L};
   if (relieve) style.terrain = {source:'dem', exaggeration:1.35};
-  if (sat) style.sources.sat = {type:'raster', tiles:[MAPA_URLS.satelite], tileSize:256, maxzoom:19, attribution:ATRIBUCION.satelite};
+  if (sat) style.sources.sat = {type:'raster', tiles:[MAPA_URLS.satelite], tileSize:256, maxzoom:SATELITE_MAXZOOM, attribution:ATRIBUCION.satelite};
   return style;
 }

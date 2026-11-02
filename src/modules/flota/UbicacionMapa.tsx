@@ -29,7 +29,9 @@ interface Props {
   encuadrarA: string[];
   historial: Historial | null;
   /** Caídas y recargas de combustible que se marcan sobre la ruta */
-  eventosHist?: Array<{ lat: number; lng: number; tip: string }>;
+  eventosHist?: { eventos: Array<{ lat: number; lng: number; tip: string }>; paradasBaja: number[]; viajes: Array<[number, number]> };
+  /** Viaje resaltado en el mapa (índice) o null */
+  viajeSel?: number | null;
   indice: number;
   onElegir: (placa: string | null) => void;
   onAlerta: (a: Alerta) => void;
@@ -89,6 +91,7 @@ export function UbicacionMapa(p: Props) {
   const claveBusqueda = p.encuadrarA.join('|');
   useEffect(() => { if (claveBusqueda) motorRef.current?.visionGeneral(false, claveBusqueda.split('|')); }, [claveBusqueda]);
   useEffect(() => { motorRef.current?.mostrarHistorial(p.historial, p.eventosHist); }, [p.historial, p.eventosHist]);
+  useEffect(() => { motorRef.current?.resaltarViaje(p.viajeSel ?? null); }, [p.viajeSel]);
   useEffect(() => { motorRef.current?.cursorHistorial(p.indice); }, [p.indice, p.historial]);
 
   const alternar = (k: keyof OpcionesMapa) => {

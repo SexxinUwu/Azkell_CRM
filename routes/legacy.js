@@ -35,9 +35,13 @@ function elegirSensorCombustible(sens) {
     const lista = Object.values(sens || {}).filter(x => x && x.id != null);
     const nombre = (x) => String(x.n || '');
     const malo = /consum|tasa|rate|rendim|total|acumul|presi|temp/i;
+    const metrica = (x) => String(x.m || '').trim().toLowerCase();
     const nivel = lista.filter(x => !malo.test(nombre(x)) && /(combust|fuel|diesel|tanque)/i.test(nombre(x)) && /(nivel|level|%)/i.test(nombre(x) + ' ' + (x.m || '')));
-    return nivel.find(x => String(x.m || '').trim() === '%') || nivel[0]
-        || lista.find(x => /fuel level/i.test(String(x.t || '')) && !malo.test(nombre(x))) || null;
+    const enPorcentaje = nivel.find(x => metrica(x) === '%') || nivel.find(x => /%/.test(nombre(x)));
+    if (enPorcentaje) return enPorcentaje;
+    // Sin sensor en %: el del tanque en galones o litros (se convierte a % con la capacidad de la ficha de la placa)
+    const tanque = lista.find(x => !malo.test(nombre(x)) && /(tanque|tank)/i.test(nombre(x)) && /^(gal|galones|gallons|l|lt|lts|litros|liters|litres)$/.test(metrica(x)));
+    return nivel[0] || tanque || lista.find(x => /fuel level/i.test(String(x.t || '')) && !malo.test(nombre(x))) || null;
 }
 const WIALON_CACHE_TTL = 4000; // 4s de refresco ultra rápido para tiempo real y animación fluida
 
@@ -1619,7 +1623,7 @@ router.post('/:metodo', async (req, res) => {
             const login = await (await fetch(`${baseUrl}?svc=token/login&params=${encodeURIComponent(JSON.stringify({ token }))}`)).json();
             if (!login || !login.eid) return res.json({ data: { nivel: null } });
             const sid = login.eid;
-            let nivel = null, nombre = '';
+            let nivel = null, nombre = '', unidad = '%';
             try {
                 const it = await (await fetch(`${baseUrl}?svc=core/search_item&params=${encodeURIComponent(JSON.stringify({ id: unitId, flags: 4096 }))}&sid=${sid}`)).json();
                 const sensor = elegirSensorCombustible(it && it.item && it.item.sens);
@@ -1628,12 +1632,15 @@ router.post('/:metodo', async (req, res) => {
                     const r = await (await fetch(`${baseUrl}?svc=unit/calc_last_message&params=${encodeURIComponent(JSON.stringify({ unitId, sensorId: sensor.id, flags: 0 }))}&sid=${sid}`)).json();
                     let v = typeof r === 'number' ? r : (r && typeof r === 'object' ? (r[sensor.id] != null ? r[sensor.id] : Object.values(r)[0]) : null);
                     if (Array.isArray(v)) v = v[0];
-                    if (typeof v === 'number' && isFinite(v) && v > -1e5) nivel = Math.round(Math.max(0, Math.min(100, v)) * 10) / 10;
+                    // Un 0,00 exacto es un sensor sin lectura (marca 0 con la unidad en marcha): no se toma como tanque vacío
+                    const enPct = String(sensor.m || '').trim() === '%';
+                    if (typeof v === 'number' && isFinite(v) && v > 0 && v > -1e5) nivel = Math.round((enPct ? Math.min(100, v) : v) * 10) / 10;
+                    unidad = String(sensor.m || '%').trim() || '%';
                 }
             } finally {
                 fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(() => {});
             }
-            return res.json({ data: { nivel, nombre } });
+            return res.json({ data: { nivel, nombre, unidad } });
         } catch (e) {
             return res.json({ data: { nivel: null, error: e.message } });
         }
@@ -1720,7 +1727,7 @@ router.post('/:metodo', async (req, res) => {
                     try {
                         const cp = { source: '', indexFrom: 0, indexTo: msgs.length - 1, unitId: targetUnitId, sensorId: sensorCombustible.id };
                         const arr = await (await fetch(`${baseUrl}?svc=unit/calc_sensors&params=${encodeURIComponent(JSON.stringify(cp))}&sid=${sid}`)).json();
-                        if (Array.isArray(arr)) msgs.forEach((m, i) => { const v = Array.isArray(arr[i]) ? arr[i][0] : arr[i]; if (typeof v === 'number' && isFinite(v) && v > -1e5) m.__f = Math.max(0, Math.min(100, v)); });
+                        if (Array.isArray(arr)) msgs.forEach((m, i) => { const v = Array.isArray(arr[i]) ? arr[i][0] : arr[i]; if (typeof v === 'number' && isFinite(v) && v > -1e5) m.__f = String(sensorCombustible.m || '').trim() === '%' ? Math.max(0, Math.min(100, v)) : Math.max(0, v); });
                     } catch (e) { /* sin nivel en esta ventana */ }
                 }
                 return msgs;
@@ -1832,7 +1839,8 @@ router.post('/:metodo', async (req, res) => {
                     altitud: alt,
                     tiempo: t,
                     ignicion: isIgn ? 1 : 0,
-                    combustible: m.__f != null ? Math.round(m.__f * 10) / 10 : null
+                    // 0,00 con la unidad en marcha = sensor sin lectura, no un tanque vacío
+                    combustible: (m.__f != null && !(m.__f === 0 && isIgn)) ? Math.round(m.__f * 10) / 10 : null
                 });
             }
 
@@ -1901,7 +1909,8 @@ router.post('/:metodo', async (req, res) => {
                     paradas: paradasOut, // sin `completo`: últimas 20 paradas
                     excesos: excesosOut,
                     puntos: puntosOut,
-                    sensorCombustible: sensorCombustible ? (sensorCombustible.n || 'Combustible') : null
+                    sensorCombustible: sensorCombustible ? (sensorCombustible.n || 'Combustible') : null,
+                    unidadCombustible: sensorCombustible ? (String(sensorCombustible.m || '%').trim() || '%') : null
                 }, extra)
             });
 

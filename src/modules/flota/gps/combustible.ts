@@ -20,6 +20,8 @@ export interface EventoCombustible {
 export interface NivelParada { startT: number; antes: number | null; despues: number | null }
 export interface AnalisisCombustible {
   hay: boolean;
+  /** '%' o 'gal' (cuando el sensor mide galones y la placa no tiene capacidad de tanque) */
+  unidad: string;
   inicio: number | null;
   fin: number | null;
   minimo: number | null;
@@ -32,15 +34,20 @@ export interface AnalisisCombustible {
 const mediana = (v: number[]) => { const o = [...v].sort((a, b) => a - b); return o[Math.floor(o.length / 2)]; };
 
 /** El sensor se mueve con el chapoteo del tanque: se suaviza con la mediana de 5 lecturas */
-function suavizar(pts: PuntoHistorial[]) {
-  const con = pts.filter(p => p.combustible != null) as Array<PuntoHistorial & { combustible: number }>;
-  return con.map((p, i) => ({ p, f: mediana(con.slice(Math.max(0, i - 2), i + 3).map(x => x.combustible)) }));
+function suavizar(pts: PuntoHistorial[], factor: number) {
+  // Un 0 con la unidad en marcha es un sensor sin lectura, no un tanque vacío
+  const con = pts.filter(p => p.combustible != null && !(p.combustible === 0 && p.ignicion)) as Array<PuntoHistorial & { combustible: number }>;
+  return con.map((p, i) => ({ p, f: mediana(con.slice(Math.max(0, i - 2), i + 3).map(x => x.combustible * factor)) }));
 }
 
-export function analizarCombustible(h: Historial | null | undefined): AnalisisCombustible {
-  const vacio: AnalisisCombustible = { hay: false, inicio: null, fin: null, minimo: null, eventos: [], paradas: new Map(), serie: [] };
+/**
+ * factor: multiplica la lectura del sensor para dejarla en la unidad mostrada (por ejemplo 100 / capacidad del tanque para pasar galones a %).
+ */
+export function analizarCombustible(h: Historial | null | undefined, opts: { factor?: number; unidad?: string } = {}): AnalisisCombustible {
+  const factor = opts.factor ?? 1, unidad = opts.unidad ?? '%';
+  const vacio: AnalisisCombustible = { hay: false, unidad, inicio: null, fin: null, minimo: null, eventos: [], paradas: new Map(), serie: [] };
   if (!h || !h.puntos.length) return vacio;
-  const s = suavizar(h.puntos);
+  const s = suavizar(h.puntos, factor);
   if (s.length < 3) return vacio;
 
   const eventos: EventoCombustible[] = [];
@@ -71,7 +78,7 @@ export function analizarCombustible(h: Historial | null | undefined): AnalisisCo
 
   const paso = Math.max(1, Math.ceil(s.length / 240));
   return {
-    hay: true,
+    hay: true, unidad,
     inicio: Math.round(s[0].f), fin: Math.round(s[s.length - 1].f), minimo: Math.round(Math.min(...s.map(x => x.f))),
     eventos, paradas,
     serie: s.filter((_, i) => i % paso === 0 || i === s.length - 1).map(x => [x.p.tiempo, x.f] as [number, number]),

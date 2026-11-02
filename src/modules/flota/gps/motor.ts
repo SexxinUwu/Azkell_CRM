@@ -93,6 +93,9 @@ export class MotorTelemetria {
   private hist: Historial | null = null;
   private histIdx = 0;
   private histEventos: Array<{ lat: number; lng: number; tip: string }> = [];
+  private histParadasBaja = new Set<number>();
+  private histViajes: Array<[number, number]> = [];
+  private histViaje = -1;
   private aviso: maplibregl.Popup | null = null;
 
   private raf = 0;
@@ -197,6 +200,7 @@ export class MotorTelemetria {
     m.addLayer({ id: 'trails', type: 'line', source: 'trails', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-width': W([9, 1.5, 18, 7]) as any, 'line-gradient': ['interpolate', ['linear'], ['line-progress'], 0, 'rgba(34,227,160,0)', .6, 'rgba(56,214,255,.7)', 1, 'rgba(160,255,230,1)'] } });
     m.addSource('units', { type: 'geojson', data: fc([]) });
     m.addLayer({ id: 'units', type: 'symbol', source: 'units', layout: { 'icon-image': ['concat', ['case', ['get', 'sel'], 's-', 'u-'], ['get', 'st']], 'icon-rotate': ['get', 'hdg'], 'icon-rotation-alignment': 'map', 'icon-pitch-alignment': 'map', 'icon-allow-overlap': true, 'icon-ignore-placement': true, 'icon-size': ['interpolate', ['linear'], ['zoom'], 8, .7, 13, 1, 17, 1.25], 'symbol-sort-key': ['case', ['get', 'sel'], 10, 0] }, paint: { 'icon-opacity': this.iconOpacity() as any } });
+    this.imagenFlecha();
     m.addLayer(this.camiones.capa);
     this.capasHistorial();
     this.camiones.noche = this.tema === 'night';
@@ -297,7 +301,11 @@ export class MotorTelemetria {
     const ahora = Date.now();
     this.units.forEach(u => {
       const st = claseEstado({ lat: u.e.lat, lng: u.e.lng, velocidad: u.e.velocidad, ignicion: u.e.ignicion, tPos: u.e.tPos }, ahora);
-      if (u.estadoInit && st === 'off' && u.st !== 'off') this.alertar(u, '📡', ST.off.c, 'Perdió la señal GPS');
+      // Solo si venía en marcha o en ralentí: un equipo apagado que duerme no mandar mensajes es normal
+      if (u.estadoInit && st === 'off' && (u.st === 'mov' || u.st === 'ral')) {
+        const min = u.e.tPos ? Math.round((ahora - u.e.tPos) / 60000) : null;
+        this.alertar(u, '📡', ST.off.c, 'Perdió la señal GPS' + (min != null ? ` · último mensaje hace ${min} min` : ''));
+      }
       if (st !== u.st) { u.st = st; u.vc.st = st; this.sucioDatos = true; }
       u.estadoInit = true;
     });
@@ -516,11 +524,26 @@ export class MotorTelemetria {
   }
 
   // ─── Historial / Playback ───
+  private imagenFlecha() {
+    if (this.mapa.hasImage('h-flecha')) return;
+    const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d')!;
+    g.fillStyle = 'rgba(255,255,255,.92)'; g.strokeStyle = 'rgba(8,12,20,.55)'; g.lineWidth = 2; g.beginPath();
+    g.moveTo(22, 16); g.lineTo(10, 9); g.lineTo(13, 16); g.lineTo(10, 23); g.closePath(); g.fill(); g.stroke();
+    this.mapa.addImage('h-flecha', { width: 32, height: 32, data: new Uint8Array(g.getImageData(0, 0, 32, 32).data.buffer) }, { pixelRatio: 2 });
+  }
+  private opacidadViaje(): any {
+    const v = this.histViaje;
+    return v < 0 ? 1 : ['case', ['==', ['get', 'trip'], v], 1, .18];
+  }
   private capasHistorial() {
     const m = this.mapa;
+    // Ruta coloreada por velocidad: gris detenida, verde normal, ámbar rápido, rojo exceso
+    const color: any = ['interpolate', ['linear'], ['get', 'v'], 0, '#8a9ab0', 3, '#8a9ab0', 4, '#22e3a0', 55, '#22e3a0', 70, '#ffb020', 90, '#ff5470'];
     m.addSource('h-ruta', { type: 'geojson', data: fc([]) });
-    m.addLayer({ id: 'h-ruta-glow', type: 'line', source: 'h-ruta', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#38d6ff', 'line-opacity': .3, 'line-blur': 5, 'line-width': W([9, 4, 18, 16]) as any } });
-    m.addLayer({ id: 'h-ruta', type: 'line', source: 'h-ruta', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#38d6ff', 'line-opacity': .95, 'line-width': W([9, 2, 18, 7]) as any } });
+    m.addLayer({ id: 'h-ruta-glow', type: 'line', source: 'h-ruta', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': color, 'line-opacity': .28, 'line-blur': 5, 'line-width': W([9, 4, 18, 16]) as any } });
+    m.addLayer({ id: 'h-ruta', type: 'line', source: 'h-ruta', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': color, 'line-opacity': this.opacidadViaje(), 'line-width': W([9, 2.2, 18, 7]) as any } });
+    m.addSource('h-linea', { type: 'geojson', data: fc([]) });
+    m.addLayer({ id: 'h-flechas', type: 'symbol', source: 'h-linea', minzoom: 11, layout: { 'symbol-placement': 'line', 'symbol-spacing': 110, 'icon-image': 'h-flecha', 'icon-size': ['interpolate', ['linear'], ['zoom'], 11, .45, 17, .8], 'icon-allow-overlap': true, 'icon-ignore-placement': true, 'icon-rotation-alignment': 'map' }, paint: { 'icon-opacity': .85 } });
     m.addSource('h-pins', { type: 'geojson', data: fc([]) });
     m.addLayer({ id: 'h-pins', type: 'circle', source: 'h-pins', paint: { 'circle-radius': 11, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
     m.addLayer({ id: 'h-pins-txt', type: 'symbol', source: 'h-pins', layout: { 'text-field': ['get', 'sym'], 'text-font': F_BOLD, 'text-size': 11, 'text-allow-overlap': true }, paint: { 'text-color': '#ffffff' } });
@@ -537,30 +560,50 @@ export class MotorTelemetria {
     const m = this.mapa, h = this.hist;
     if (!m.getSource('h-ruta')) return;
     const set = (id: string, d: any) => (m.getSource(id) as GeoJSONSource | undefined)?.setData(d);
-    if (!h || !h.puntos.length) { set('h-ruta', fc([])); set('h-pins', fc([])); set('h-cur', fc([])); return; }
+    if (!h || !h.puntos.length) { set('h-ruta', fc([])); set('h-linea', fc([])); set('h-pins', fc([])); set('h-cur', fc([])); return; }
     const hora = (t: number) => new Date(t * 1000).toLocaleString('es-PE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     const pin = (p: { lat: number; lng: number }, color: string, sym: string, tip: string) => ({ type: 'Feature', properties: { color, sym, tip }, geometry: { type: 'Point', coordinates: [p.lng, p.lat] } });
     const ini = h.puntos[0], fin = h.puntos[h.puntos.length - 1];
-    set('h-ruta', fc([{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: h.puntos.map(p => [p.lng, p.lat]) } }]));
+    // Viaje de cada tramo (-1 = fuera de los viajes, por ejemplo en una parada)
+    const viajeDe = (i: number) => { const k = this.histViajes.findIndex(([a, b]) => i >= a && i < b); return k; };
+    const seg: any[] = [];
+    for (let i = 0; i < h.puntos.length - 1; i++) {
+      const a = h.puntos[i], b = h.puntos[i + 1];
+      seg.push({ type: 'Feature', properties: { v: (a.velocidad + b.velocidad) / 2, trip: viajeDe(i) }, geometry: { type: 'LineString', coordinates: [[a.lng, a.lat], [b.lng, b.lat]] } });
+    }
+    set('h-ruta', fc(seg));
+    set('h-linea', fc([{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: h.puntos.map(p => [p.lng, p.lat]) } }]));
     set('h-pins', fc([
       pin(ini, '#16a34a', '▶', 'Inicio · ' + hora(ini.tiempo)), pin(fin, '#0f172a', '■', 'Fin · ' + hora(fin.tiempo)),
-      ...h.paradas.map((s, i) => pin(s, '#ea580c', 'II', `Parada ${i + 1} · ${s.durMin} min`)),
+      // P = parada; roja con ⛽ si el combustible bajó durante la parada
+      ...h.paradas.map((s, i) => {
+        const baja = this.histParadasBaja.has(s.startT);
+        return pin(s, baja ? '#ef4444' : '#ff8a2a', baja ? '⛽' : 'P', `Parada ${i + 1} · ${s.durMin} min · ${hora(s.startT)}${baja ? ' · bajó el combustible' : ''}`);
+      }),
       ...h.excesos.map(e => pin(e, '#dc2626', '!', `Exceso · ${Math.round(e.velocidad)} km/h`)),
       ...this.histEventos.map(e => pin(e, '#f59e0b', '⛽', e.tip)),
     ]));
     this.cursorHistorial(this.histIdx);
   }
-  mostrarHistorial(h: Historial | null, eventos: Array<{ lat: number; lng: number; tip: string }> = []) {
-    this.hist = h; this.histIdx = 0; this.histEventos = eventos;
+  mostrarHistorial(h: Historial | null, extra: { eventos?: Array<{ lat: number; lng: number; tip: string }>; paradasBaja?: number[]; viajes?: Array<[number, number]> } = {}) {
+    this.hist = h; this.histIdx = 0; this.histEventos = extra.eventos ?? []; this.histParadasBaja = new Set(extra.paradasBaja ?? []); this.histViajes = extra.viajes ?? []; this.histViaje = -1;
     this.aviso?.remove();
-    if (this.styleReady) { this.aplicarOpciones(false); this.pintarHistorial(); }
+    if (this.styleReady) { this.aplicarOpciones(false); this.pintarHistorial(); this.mapa.getLayer('h-ruta') && this.mapa.setPaintProperty('h-ruta', 'line-opacity', this.opacidadViaje()); }
     this.units.forEach(u => { if (h) this.ocultarEtiqueta(u); });
-    if (h && h.puntos.length) {
-      this.setFollow(false);
-      const b = new maplibregl.LngLatBounds([h.puntos[0].lng, h.puntos[0].lat], [h.puntos[0].lng, h.puntos[0].lat]);
-      h.puntos.forEach(p => b.extend([p.lng, p.lat]));
-      this.mapa.fitBounds(b, { padding: MOVIL() ? { top: 150, bottom: 300, left: 30, right: 30 } : 70, pitch: 0, bearing: 0, duration: 800 });
-    }
+    if (h && h.puntos.length) { this.setFollow(false); this.encuadrarPuntos(0, h.puntos.length - 1); }
+  }
+  private encuadrarPuntos(i0: number, i1: number) {
+    const h = this.hist; if (!h) return;
+    const pts = h.puntos.slice(i0, i1 + 1); if (!pts.length) return;
+    const b = new maplibregl.LngLatBounds([pts[0].lng, pts[0].lat], [pts[0].lng, pts[0].lat]);
+    pts.forEach(p => b.extend([p.lng, p.lat]));
+    this.mapa.fitBounds(b, { padding: MOVIL() ? { top: 150, bottom: 340, left: 30, right: 30 } : { top: 130, bottom: 190, left: 380, right: 400 }, pitch: 0, bearing: 0, duration: 800, maxZoom: 17 });
+  }
+  /** Resalta un viaje (los demás tramos se atenúan) y lo encuadra; null quita el resaltado */
+  resaltarViaje(i: number | null) {
+    this.histViaje = i == null ? -1 : i;
+    if (this.mapa.getLayer('h-ruta')) this.mapa.setPaintProperty('h-ruta', 'line-opacity', this.opacidadViaje());
+    if (i != null && this.histViajes[i]) this.encuadrarPuntos(this.histViajes[i][0], this.histViajes[i][1]);
   }
   cursorHistorial(i: number) {
     this.histIdx = i;

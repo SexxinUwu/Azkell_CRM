@@ -1,6 +1,6 @@
 import './flota.css';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MapPin, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
+import { MapPin, RefreshCw, Search, SlidersHorizontal, X } from 'lucide-react';
 import { Page } from '../../core/ui/Display';
 import { PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
@@ -13,7 +13,10 @@ import { PanelHistorial, type Velocidad } from './UbicacionPlayback';
 import { useHistorial } from './UbicacionHistorial';
 import { estadoUnidad, useDisponibilidad, useUnidadesGps, type EstadoUnidad, type UnidadMapa } from './api';
 import { usePlacas } from '../placas/api';
-import { analizarCombustible } from './gps/combustible';
+import { analizarCombustible, FUEL_CAMBIO_PCT } from './gps/combustible';
+import { factorCombustible } from './gps/unidadCombustible';
+import { armarTramos } from './gps/viajes';
+import { BarraReproduccion } from './gps/BarraReproduccion';
 import { descripcionCamion } from './gps/tipoUnidad';
 import { FichaTelemetria, Grab } from './gps/FichaTelemetria';
 import { ST } from './gps/camiones';
@@ -40,6 +43,17 @@ function baseGuardada(): BaseMapa {
 
 const corta = (empresa: string) => claveEmpresa(empresa).split(' ')[0] || '—';
 const placaLimpia = (s: string) => s.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+/** Para buscar: sin tildes, guiones ni espacios, en mayúsculas */
+const limpiar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+/** Wialon puede traer varias unidades con la misma placa: se deja la que tiene posición y el mensaje más reciente */
+function unicasPorPlaca(lista: UnidadMapa[]): UnidadMapa[] {
+  const m = new Map<string, UnidadMapa>();
+  for (const u of lista) {
+    const a = m.get(u.placa);
+    if (!a || (a.lat == null && u.lat != null) || ((a.lat == null) === (u.lat == null) && (u.tPos ?? 0) > (a.tPos ?? 0))) m.set(u.placa, u);
+  }
+  return [...m.values()];
+}
 const CLASE: Record<EstadoUnidad, keyof typeof ST> = { movimiento: 'mov', ralenti: 'ral', detenido: 'det', sin_senal: 'off' };
 const ORDEN: Record<EstadoUnidad, number> = { movimiento: 0, ralenti: 1, detenido: 2, sin_senal: 3 };
 
@@ -49,7 +63,7 @@ export function UbicacionPage() {
   const { data, isLoading, isError, error, dataUpdatedAt, isFetching, refetch } = useUnidadesGps();
   const disp = useDisponibilidad();
   const placas = usePlacas();
-  const unidades = useMemo(() => data ?? [], [data]);
+  const unidades = useMemo(() => unicasPorPlaca(data ?? []), [data]);
   const [empresa, setEmpresa] = useState('TODAS');
   const [segmento, setSegmento] = useState<Segmento>('todos');
   const [filtrando, setFiltrando] = useState(false);
@@ -64,13 +78,13 @@ export function UbicacionPage() {
   const [indice, setIndice] = useState(0);
   const [reproduciendo, setReproduciendo] = useState(false);
   const [velocidad, setVelocidad] = useState<Velocidad>(1);
+  const [viajeSel, setViajeSel] = useState<number | null>(null);
   // El mapa base (Mapa o Satélite) lo elige la persona; el color claro u oscuro lo define el tema del sistema
   const { oscuro } = useOscuro();
   const [base, setBase] = useState<BaseMapa>(baseGuardada);
   const tema: TemaMapa = base === 'sat' ? 'sat' : oscuro ? 'night' : 'day';
     const [ahora, setAhora] = useState(() => Date.now());
   const [alertas, setAlertas] = useState<Alerta[]>([]);
-  const [totalAlertas, setTotalAlertas] = useState(0);
   const [piloto, setPiloto] = useState(false);
   const [hojaLista, setHojaLista] = useState(false);
   const [hojaFicha, setHojaFicha] = useState(false);
@@ -91,11 +105,20 @@ export function UbicacionPage() {
 
   const empresas = useMemo(() => agruparEmpresas(unidades.map(u => u.empresa)), [unidades]);
   const delEmpresa = useMemo(() => unidades.filter(u => empresa === 'TODAS' || claveEmpresa(u.empresa) === empresa), [unidades, empresa]);
-  const lista = useMemo(() => {
-    const q = busqueda.trim().toUpperCase();
-    // Solo por identificador de la unidad: placa, y el nombre en Wialon (ahí aparece la placa cuando el servidor no la extrae)
-    return delEmpresa.filter(u => (!q || [u.placa, u.nombre].some(t => t.toUpperCase().includes(q))) && coincideSegmento(u, segmento));
-  }, [delEmpresa, busqueda, segmento]);
+  const conductorPorPlaca = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const d of disp.data ?? []) {
+      const c = (d.conductor_asignado || '').trim();
+      if (!c || /sin asignar/i.test(c)) continue;
+      for (const pl of [d.placa_camion, d.placa_carreta]) if (pl) m.set(placaLimpia(pl), c);
+    }
+    return m;
+  }, [disp.data]);
+  // Escribir una placa filtra la lista al instante: sin tildes, guiones ni mayúsculas; busca en placa, nombre en Wialon y conductor
+  const q = limpiar(busqueda);
+  const lista = useMemo(() => delEmpresa.filter(u =>
+    (!q || [u.placa, u.nombre, conductorPorPlaca.get(u.placa) ?? ''].some(t => limpiar(t).includes(q))) && coincideSegmento(u, segmento)),
+  [delEmpresa, q, segmento, conductorPorPlaca]);
 
   const descs = useMemo(() => {
     const porPlaca = new Map((placas.data ?? []).map(p => [placaLimpia(p.placa), p]));
@@ -110,9 +133,13 @@ export function UbicacionPage() {
 
   // Una sola lista: en movimiento primero, luego ralentí, detenidas y sin señal
   const ordenada = useMemo(
-    () => [...lista].sort((a, b) => ORDEN[estadoUnidad(a, ahora)] - ORDEN[estadoUnidad(b, ahora)] || a.placa.localeCompare(b.placa)),
+    () => {
+      // Con búsqueda, primero las que empiezan igual y luego las que la contienen
+      const rango = (u: UnidadMapa) => (!q ? 0 : u.placa.startsWith(q) ? 0 : u.placa.includes(q) ? 1 : 2);
+      return [...lista].sort((a, b) => rango(a) - rango(b) || ORDEN[estadoUnidad(a, ahora)] - ORDEN[estadoUnidad(b, ahora)] || a.placa.localeCompare(b.placa));
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [lista, Math.floor(ahora / 5000)],
+    [lista, q, Math.floor(ahora / 5000)],
   );
 
   const cifras = useMemo(() => {
@@ -139,45 +166,55 @@ export function UbicacionPage() {
   const abiertoHistorial = panel === 'historial' && seleccion ? seleccion : null;
   const historialQ = useHistorial(abiertoHistorial?.placa ?? null, abiertoHistorial?.id ?? null, { horas, dia, desde, hasta });
   const historial = abiertoHistorial ? historialQ.data : undefined;
-  const analisis = useMemo(() => analizarCombustible(historial), [historial]);
-  const eventosHist = useMemo(
-    () => analisis.eventos.map(e => ({ lat: e.lat, lng: e.lng, tip: `${e.tipo === 'caida' ? 'Caída de combustible' : 'Recarga'} · ${e.desde}% → ${e.hasta}%` })),
-    [analisis],
+  const capacidades = useMemo(
+    () => new Map((placas.data ?? []).map(pl => [placaLimpia(pl.placa), parseFloat(String(pl.capacidadTanque).replace(',', '.')) || 0])),
+    [placas.data],
   );
+  const capacidadSel = (seleccion && capacidades.get(placaLimpia(seleccion.placa))) || null;
+  // Sensor en % directo, o en galones/litros pasados a % con la capacidad del tanque de la placa (sin capacidad: en galones)
+  const fc = factorCombustible(historial?.unidadCombustible, capacidadSel);
+  const analisis = useMemo(() => analizarCombustible(historial, { factor: fc.factor, unidad: fc.unidad }), [historial, fc.factor, fc.unidad]);
+  const tramos = useMemo(() => armarTramos(historial, analisis), [historial, analisis]);
+  const eventosHist = useMemo(() => {
+    const U = analisis.unidad === '%' ? '%' : ' gal';
+    return {
+      eventos: analisis.eventos.map(e => ({ lat: e.lat, lng: e.lng, tip: `${e.tipo === 'caida' ? 'Caída de combustible' : 'Recarga'} · ${e.desde}${U} → ${e.hasta}${U}` })),
+      paradasBaja: [...analisis.paradas.values()].filter(n => n.antes != null && n.despues != null && n.antes - n.despues >= FUEL_CAMBIO_PCT).map(n => n.startT),
+      viajes: tramos.flatMap(t => (t.tipo === 'viaje' ? [t.viaje.rango] : [])),
+    };
+  }, [analisis, tramos]);
   const errorHistorial = historialQ.error ? errorMessage(historialQ.error) : '';
 
   // Datos nuevos o rango nuevo: se vuelve al inicio del recorrido
   useEffect(() => {
     setIndice(0);
     setReproduciendo(false);
+    setViajeSel(null);
   }, [historial]);
 
-  // Reproducción: avanza un punto cada 300 ms (la velocidad la acelera), como en la versión actual
+  // Reproducción: a 1x avanza un punto cada 300 ms; con 5x, 10x y 100x salta varios puntos por cada paso de 50 ms
   useEffect(() => {
     if (!reproduciendo || !historial) return;
-    const paso = Math.max(20, Math.round(300 / velocidad));
+    let acum = 0;
     const t = setInterval(() => {
+      acum += velocidad * 50 / 300;
+      const n = Math.floor(acum);
+      if (!n) return;
+      acum -= n;
       setIndice(i => {
-        if (i >= historial.puntos.length - 1) {
-          setReproduciendo(false);
-          return i;
-        }
-        return i + 1;
+        if (i >= historial.puntos.length - 1) { setReproduciendo(false); return i; }
+        return Math.min(historial.puntos.length - 1, i + n);
       });
-    }, paso);
+    }, 50);
     return () => clearInterval(t);
   }, [reproduciendo, velocidad, historial]);
 
-  const conductorDe = (placa: string) => {
-    const c = disp.data?.find(d => placaLimpia(d.placa_camion || '') === placa || placaLimpia(d.placa_carreta || '') === placa)?.conductor_asignado;
-    return c && c.trim() && !/sin asignar/i.test(c) ? c : null;
-  };
+  const conductorDe = (placa: string) => conductorPorPlaca.get(placa) ?? null;
 
   // Alertas en pantalla (sin enviar nada fuera): se quitan solas a los 14 s
   const conductorRef = useRef(conductorDe);
   conductorRef.current = conductorDe;
   const nuevaAlerta = useCallback((a: Alerta) => {
-    setTotalAlertas(n => n + 1);
     setAlertas(prev => [a, ...prev].slice(0, 4));
     setTimeout(() => setAlertas(prev => prev.filter(x => x.id !== a.id)), 14000);
   }, []);
@@ -221,12 +258,6 @@ export function UbicacionPage() {
     return () => document.removeEventListener('keydown', f);
   }, [piloto, seleccionada, motor, elegir]);
 
-  const kpis = [
-    { clave: 'todos', label: 'Flota monitoreada', valor: cifras.total, color: 'var(--cyan)' },
-    { clave: 'senal', label: 'Con señal GPS', valor: cifras.conSenal, color: ST.mov.c },
-    { clave: 'movimiento', label: 'En movimiento', valor: cifras.enMovimiento, color: ST.ral.c },
-    { clave: 'sin_senal', label: 'Sin señal', valor: cifras.sinSenal, color: ST.off.c },
-  ] as const;
   const activos = (empresa !== 'TODAS' ? 1 : 0) + (segmento !== 'todos' ? 1 : 0);
   const conteoSeg = (s: Segmento) => delEmpresa.filter(u => coincideSegmento(u, s)).length;
 
@@ -270,28 +301,17 @@ export function UbicacionPage() {
           <Suspense fallback={<div className="tg-cargando">Cargando mapa…</div>}>
             <UbicacionMapa unidades={unidades} descs={descs} visibles={visibles} seleccionada={seleccionada}
               hojaAbierta={!!seleccion} encuadreVersion={0} encuadrarA={encuadrarA}
-              historial={historial ?? null} eventosHist={eventosHist} indice={indice} onElegir={elegir} onAlerta={nuevaAlerta} onPiloto={setPiloto}
+              historial={historial ?? null} eventosHist={eventosHist} viajeSel={viajeSel} indice={indice} onElegir={elegir} onAlerta={nuevaAlerta} onPiloto={setPiloto}
               tema={tema} base={base} onBase={cambiarBase}>
               <header className="tg-top">
                 <div className="tg-brand tg-glass">
                   <span className="tg-eyebrow">Flota · Telemetría</span>
                   <h1>Ubicación GPS</h1>
                   <span className="tg-live" aria-live="polite"><i />En vivo{segundos !== null && ` · ${segundos}s`}</span>
+                  <span className="tg-resumen">{cifras.total} unidades · {cifras.enMovimiento} en movimiento · {cifras.sinSenal} sin señal</span>
                   <button type="button" className="tg-refrescar" aria-label="Actualizar" title="Actualizar" disabled={isFetching} onClick={() => refetch()}>
                     <RefreshCw size={16} />
                   </button>
-                </div>
-                <div className="tg-kpis">
-                  {kpis.map(k => (
-                    <button key={k.clave} type="button" className="tg-kpi tg-glass" aria-pressed={segmento === k.clave}
-                      onClick={() => { haptic('selection'); setSegmento(s => (s === k.clave && k.clave !== 'todos' ? 'todos' : k.clave)); }}>
-                      <span><i style={{ background: k.color, boxShadow: `0 0 8px ${k.color}` }} />{k.label}</span>
-                      <b>{k.valor}</b>
-                    </button>
-                  ))}
-                  <div className="tg-kpi tg-glass" style={{ cursor: 'default' }}>
-                    <span><i style={{ background: 'var(--orange)' }} />Alertas</span><b>{totalAlertas}</b>
-                  </div>
                 </div>
               </header>
 
@@ -300,9 +320,12 @@ export function UbicacionPage() {
                   <Grab onToggle={abrir => setHojaLista(h => (abrir === undefined ? !h : abrir))} />
                   <label className="tg-search">
                     <Search size={16} aria-hidden />
-                    <input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Buscar por placa o nombre…" aria-label="Buscar unidad"
+                    <input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Buscar placa, nombre o conductor…" aria-label="Buscar unidad" autoComplete="off" spellCheck={false}
+                      onKeyDown={e => { if (e.key === 'Enter' && ordenada[0]) { e.preventDefault(); elegir(ordenada[0].placa); } }}
                       onFocus={() => { if (matchMedia('(max-width:900px)').matches) setHojaLista(true); }} />
+                    {busqueda && <button type="button" className="tg-search__x" aria-label="Borrar búsqueda" onClick={() => setBusqueda('')}><X size={14} /></button>}
                   </label>
+                  {q && <p className="tg-resultados" aria-live="polite">{lista.length === 1 ? '1 resultado' : `${lista.length} resultados`}</p>}
                   <div className="tg-chips">
                     <button type="button" className="tg-chip" aria-pressed={activos > 0} onClick={() => setFiltrando(true)}>
                       <SlidersHorizontal size={13} aria-hidden />Filtros{activos > 0 && <em>{activos}</em>}
@@ -322,11 +345,11 @@ export function UbicacionPage() {
               {seleccion && (
                 <section className="tg-detail tg-glass" aria-label={panel === 'ficha' ? `Ficha de ${seleccion.placa}` : `Historial de ${seleccion.placa}`}>
                   {panel === 'ficha' ? (
-                    <FichaTelemetria u={seleccion} motor={motor} conductor={conductorDe(seleccion.placa)} piloto={piloto}
+                    <FichaTelemetria u={seleccion} motor={motor} conductor={conductorDe(seleccion.placa)} piloto={piloto} capacidad={capacidadSel}
                       onCerrar={cerrarPanel} onHistorial={() => { haptic('selection'); setPanel('historial'); }}
                       onToggleHoja={abrir => setHojaFicha(h => (abrir === undefined ? !h : abrir))} />
                   ) : (
-                    <PanelHistorial placa={seleccion.placa} horas={horas} analisis={analisis}
+                    <PanelHistorial placa={seleccion.placa} horas={horas} analisis={analisis} tramos={tramos} viajeSel={viajeSel} onViaje={setViajeSel}
                       onHoras={setHoras} dia={dia} onDia={d => { setDia(d); setDesde(null); setHasta(null); }} desde={desde} hasta={hasta} onRango={(a, b) => { setDesde(a); setHasta(b); setDia(null); }} onIrA={(lat, lng) => motor?.irA(lat, lng)} historial={historial} cargando={historialQ.isFetching && !historial}
                       error={errorHistorial} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
                       reproduciendo={reproduciendo} onReproducir={() => setReproduciendo(r => !r)}
@@ -335,6 +358,12 @@ export function UbicacionPage() {
                       onSalir={() => { setPanel('ficha'); setReproduciendo(false); }} />
                   )}
                 </section>
+              )}
+
+              {panel === 'historial' && historial && historial.puntos.length > 0 && (
+                <BarraReproduccion historial={historial} analisis={analisis} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
+                  reproduciendo={reproduciendo} onReproducir={() => setReproduciendo(r => !r)} onReiniciar={() => { setIndice(0); setReproduciendo(false); }}
+                  velocidad={velocidad} onVelocidad={setVelocidad} />
               )}
 
               {piloto && seleccion && (

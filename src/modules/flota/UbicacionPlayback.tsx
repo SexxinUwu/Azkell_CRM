@@ -1,15 +1,17 @@
-// Historial / playback de una unidad: periodo, resumen, combustible, reproducción y lugares con hora.
+// Historial / playback de una unidad: periodo, resumen, combustible, viajes y paradas con hora, y reproducción.
 // Cada bloque tiene su título; en celular se apila y se desplaza dentro de la hoja.
 import { useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, CalendarDays, ChevronLeft, ChevronRight, Clock, Fuel, Gauge, MapPin, Pause, Play, RotateCcw, Route, TriangleAlert, X } from 'lucide-react';
 import { fechaHora, soloHora, type Historial } from './UbicacionHistorial';
 import { FUEL_CAMBIO_PCT, type AnalisisCombustible } from './gps/combustible';
+import { VELOCIDADES_REP, type VelocidadRep } from './gps/BarraReproduccion';
+import type { Tramo } from './gps/viajes';
 
 const HORAS = [6, 12, 24, 48];
-const VELOCIDADES = [1, 2, 5, 10] as const;
-export type Velocidad = 1 | 2 | 5 | 10;
+export type Velocidad = VelocidadRep;
 
 const aISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const aLocal = (d: Date) => `${aISO(d)}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 const sumarDias = (d: string, n: number) => { const x = new Date(`${d}T12:00:00`); x.setDate(x.getDate() + n); return aISO(x); };
 const dur = (min: number) => (min >= 60 ? `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min` : `${min} min`);
 
@@ -27,6 +29,9 @@ interface Props {
   onIrA: (lat: number, lng: number) => void;
   historial: Historial | undefined;
   analisis: AnalisisCombustible;
+  tramos: Tramo[];
+  viajeSel: number | null;
+  onViaje: (n: number | null) => void;
   cargando: boolean;
   error: string;
   indice: number;
@@ -41,18 +46,19 @@ interface Props {
 
 function GraficoCombustible({ a, t0, t1, tCursor, onElegir }: { a: AnalisisCombustible; t0: number; t1: number; tCursor: number | null; onElegir: (t: number) => void }) {
   const W = 300, H = 96, L = 24, B = 14, ancho = W - L - 4, alto = H - B - 4;
+  const max = a.unidad === '%' ? 100 : Math.max(...a.serie.map(s => s[1]), 1);
   const x = (t: number) => L + (t1 > t0 ? (t - t0) / (t1 - t0) : 0) * ancho;
-  const y = (v: number) => 4 + (1 - Math.max(0, Math.min(100, v)) / 100) * alto;
+  const y = (v: number) => 4 + (1 - Math.max(0, Math.min(max, v)) / max) * alto;
   const linea = a.serie.map(([t, v]) => `${x(t).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
   return (
     <svg className="tg-h-grafico" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Nivel de combustible durante el recorrido"
       onClick={e => { const r = e.currentTarget.getBoundingClientRect(); const px = (e.clientX - r.left) / r.width * W; onElegir(t0 + Math.max(0, Math.min(1, (px - L) / ancho)) * (t1 - t0)); }}>
-      {[0, 50, 100].map(v => (
-        <g key={v}><line x1={L} x2={W - 4} y1={y(v)} y2={y(v)} className="tg-h-rejilla" /><text x={L - 4} y={y(v) + 3} textAnchor="end" className="tg-h-eje">{v}</text></g>
+      {[0, max / 2, max].map(v => (
+        <g key={v}><line x1={L} x2={W - 4} y1={y(v)} y2={y(v)} className="tg-h-rejilla" /><text x={L - 4} y={y(v) + 3} textAnchor="end" className="tg-h-eje">{Math.round(v)}</text></g>
       ))}
       <polyline points={linea} className="tg-h-linea" />
       {a.eventos.map(e => (
-        <g key={e.t0}><rect x={x(e.t0) - 1.5} y={4} width={Math.max(3, x(e.t1) - x(e.t0) + 3)} height={alto} className={e.tipo === 'caida' ? 'tg-h-banda tg-h-banda--caida' : 'tg-h-banda tg-h-banda--recarga'} /></g>
+        <rect key={e.t0} x={x(e.t0) - 1.5} y={4} width={Math.max(3, x(e.t1) - x(e.t0) + 3)} height={alto} className={e.tipo === 'caida' ? 'tg-h-banda tg-h-banda--caida' : 'tg-h-banda tg-h-banda--recarga'} />
       ))}
       {tCursor != null && <line x1={x(tCursor)} x2={x(tCursor)} y1={4} y2={4 + alto} className="tg-h-cursor" />}
       <text x={L} y={H - 2} className="tg-h-eje">{soloHora(t0)}</text>
@@ -63,11 +69,13 @@ function GraficoCombustible({ a, t0, t1, tCursor, onElegir }: { a: AnalisisCombu
 
 export function PanelHistorial(p: Props) {
   const hoy = aISO(new Date());
+  const ayer = sumarDias(hoy, -1);
   const [borrDesde, setBorrDesde] = useState(p.desde ?? '');
   const [borrHasta, setBorrHasta] = useState(p.hasta ?? '');
   const [errRango, setErrRango] = useState('');
-  const [rangoAbierto, setRangoAbierto] = useState(!!p.desde);
+  const [rangoAbierto, setRangoAbierto] = useState(false);
   const minimo = aISO(new Date(Date.now() - 400 * 86400000)); // Wialon conserva 400 días
+  const esSemana = !!(p.desde && p.hasta && Math.abs(new Date(p.hasta).getTime() - new Date(p.desde).getTime() - 7 * 86400000) < 3600000);
   const verRango = () => {
     const a = new Date(borrDesde).getTime(), b = new Date(borrHasta).getTime();
     if (!borrDesde || !borrHasta || isNaN(a) || isNaN(b)) return setErrRango('Elige fecha y hora de inicio y de fin.');
@@ -76,12 +84,14 @@ export function PanelHistorial(p: Props) {
     setErrRango('');
     p.onRango(borrDesde, borrHasta);
   };
+  const semana = () => { const fin = new Date(), ini = new Date(fin.getTime() - 7 * 86400000); setBorrDesde(aLocal(ini)); setBorrHasta(aLocal(fin)); p.onRango(aLocal(ini), aLocal(fin)); };
 
   const h = p.historial;
   const puntos = h?.puntos ?? [];
   const punto = puntos[p.indice];
   const m = h?.metricas;
   const a = p.analisis;
+  const U = a.unidad === '%' ? '%' : ' gal';
   // Tiempo en ruta: suma de los tramos con la unidad en movimiento (sin contar huecos de más de 5 min sin señal)
   const minRuta = useMemo(() => {
     let s = 0;
@@ -97,12 +107,11 @@ export function PanelHistorial(p: Props) {
     puntos.forEach((q, i) => { const dd = Math.abs(q.tiempo - t); if (dd < d) { d = dd; mejor = i; } });
     p.onIndice(mejor);
   };
-  const etiqueta = p.desde && p.hasta ? 'RANGO' : p.dia
-    ? new Date(`${p.dia}T12:00:00`).toLocaleDateString('es-PE', { weekday: 'short', day: '2-digit', month: 'short' }).toUpperCase()
+  const etiqueta = p.desde && p.hasta ? (esSemana ? 'SEMANA' : 'RANGO') : p.dia
+    ? (p.dia === hoy ? 'HOY' : p.dia === ayer ? 'AYER' : new Date(`${p.dia}T12:00:00`).toLocaleDateString('es-PE', { weekday: 'short', day: '2-digit', month: 'short' }).toUpperCase())
     : `ÚLTIMAS ${p.horas} H`;
   const subtitulo = p.cargando ? 'Cargando telemetría satelital…' : p.error ? p.error
     : puntos.length ? `${puntos.length.toLocaleString('es-PE')} puntos · ${fechaHora(t0)} a ${fechaHora(t1)}` : 'Sin recorrido en el rango elegido';
-  const caidas = a.eventos.filter(e => e.tipo === 'caida');
 
   return (
     <div className="tg-h" aria-label={`Historial de ${p.placa}`}>
@@ -117,6 +126,11 @@ export function PanelHistorial(p: Props) {
 
       <section className="tg-h-sec">
         <h3>Periodo</h3>
+        <div className="tg-h-chips" role="group" aria-label="Periodo">
+          <button type="button" className="tg-chip" aria-pressed={p.dia === hoy} onClick={() => p.onDia(hoy)}>Hoy</button>
+          <button type="button" className="tg-chip" aria-pressed={p.dia === ayer} onClick={() => p.onDia(ayer)}>Ayer</button>
+          <button type="button" className="tg-chip" aria-pressed={esSemana} onClick={semana}>Semana</button>
+        </div>
         <div className="tg-h-chips" role="group" aria-label="Últimas horas">
           {HORAS.map(x => (
             <button key={x} type="button" className="tg-chip" aria-pressed={!p.dia && !p.desde && p.horas === x}
@@ -150,7 +164,7 @@ export function PanelHistorial(p: Props) {
             <div className="tg-cell"><span className="tg-lbl">Recorrido</span><b className="mono">{m.totalKm.toLocaleString('es-PE')} km</b></div>
             <div className="tg-cell"><span className="tg-lbl">Tiempo en ruta</span><b className="mono">{dur(minRuta)}</b></div>
             <div className="tg-cell"><span className="tg-lbl">Vel. máx. / prom.</span><b className="mono">{Math.round(m.maxSpeed)} / {Math.round(m.avgSpeed)} km/h</b></div>
-            <div className="tg-cell"><span className="tg-lbl">Paradas</span><b className="mono">{h?.paradas.length ?? m.paradasTotal}</b></div>
+            <div className="tg-cell"><span className="tg-lbl">Viajes / paradas</span><b className="mono">{p.tramos.filter(t => t.tipo === 'viaje').length} / {h?.paradas.length ?? m.paradasTotal}</b></div>
           </div>
         </section>
       )}
@@ -159,17 +173,17 @@ export function PanelHistorial(p: Props) {
         <section className="tg-h-sec">
           <h3><Fuel size={13} aria-hidden />Combustible{h?.sensorCombustible && <small>{h.sensorCombustible}</small>}</h3>
           {!a.hay ? (
-            <p className="tg-h-vacio">{h?.sensorCombustible ? 'El sensor no reportó nivel en este rango.' : 'Esta unidad no tiene sensor de nivel de combustible en Wialon.'}</p>
+            <p className="tg-h-vacio">{h?.sensorCombustible ? 'El sensor no reportó un nivel válido en este rango.' : 'Esta unidad no tiene sensor de nivel de combustible en Wialon.'}</p>
           ) : (
             <>
               <div className="tg-h-grid tg-h-grid--3">
-                <div className="tg-cell"><span className="tg-lbl">Al inicio</span><b className="mono">{a.inicio}%</b></div>
-                <div className="tg-cell"><span className="tg-lbl">Al final</span><b className="mono">{a.fin}%</b></div>
-                <div className="tg-cell"><span className="tg-lbl">Mínimo</span><b className="mono">{a.minimo}%</b></div>
+                <div className="tg-cell"><span className="tg-lbl">Al inicio</span><b className="mono">{a.inicio}{U}</b></div>
+                <div className="tg-cell"><span className="tg-lbl">Al final</span><b className="mono">{a.fin}{U}</b></div>
+                <div className="tg-cell"><span className="tg-lbl">Mínimo</span><b className="mono">{a.minimo}{U}</b></div>
               </div>
               <GraficoCombustible a={a} t0={t0} t1={t1} tCursor={punto?.tiempo ?? null} onElegir={irATiempo} />
               {a.eventos.length === 0 ? (
-                <p className="tg-h-ok">Sin caídas ni recargas bruscas (cambios de {FUEL_CAMBIO_PCT} puntos o más en 20 min).</p>
+                <p className="tg-h-ok">Sin caídas ni recargas bruscas (cambios de {FUEL_CAMBIO_PCT}{U} o más en 20 min).</p>
               ) : (
                 <ul className="tg-h-eventos">
                   {a.eventos.map(e => (
@@ -177,7 +191,7 @@ export function PanelHistorial(p: Props) {
                       <button type="button" className={`tg-h-evento tg-h-evento--${e.tipo}`} onClick={() => p.onIrA(e.lat, e.lng)}>
                         <span className="tg-h-evento__icono">{e.tipo === 'caida' ? <ArrowDown size={14} /> : <ArrowUp size={14} />}</span>
                         <span>
-                          <b>{e.tipo === 'caida' ? (e.detenida ? 'Caída brusca con la unidad detenida' : 'Caída brusca') : 'Recarga'}: {e.desde}% → {e.hasta}%</b>
+                          <b>{e.tipo === 'caida' ? (e.detenida ? 'Caída brusca con la unidad detenida' : 'Caída brusca') : 'Recarga'}: {e.desde}{U} → {e.hasta}{U}</b>
                           <small>{soloHora(e.t0)} a {soloHora(e.t1)}{e.tipo === 'caida' && e.detenida ? ' · posible extracción, revisar' : ''}</small>
                         </span>
                       </button>
@@ -185,14 +199,14 @@ export function PanelHistorial(p: Props) {
                   ))}
                 </ul>
               )}
-              {caidas.length > 0 && <p className="tg-h-nota">Se marcan con ⛽ sobre la ruta.</p>}
             </>
           )}
         </section>
       )}
 
+      {/* En escritorio la reproducción va en la barra inferior del mapa; en celular, aquí */}
       {puntos.length > 0 && (
-        <section className="tg-h-sec">
+        <section className="tg-h-sec tg-h-sec--rep">
           <h3>Reproducción</h3>
           <input type="range" className="tg-h-barra" min={0} max={puntos.length - 1} value={p.indice} onChange={e => p.onIndice(Number(e.target.value))} aria-label="Momento del recorrido" />
           {punto && (
@@ -200,8 +214,7 @@ export function PanelHistorial(p: Props) {
               <span className="tg-h-hora">{fechaHora(punto.tiempo)}</span>
               <span><Gauge size={13} aria-hidden /> <b>{Math.round(punto.velocidad)} km/h</b></span>
               <span>Motor {punto.ignicion ? 'ON' : 'OFF'}</span>
-              {punto.altitud ? <span>{Math.round(punto.altitud)} msnm</span> : null}
-              {punto.combustible != null && <span><Fuel size={13} aria-hidden /> <b>{Math.round(punto.combustible)}%</b></span>}
+              {punto.combustible != null && <span><Fuel size={13} aria-hidden /> <b>{Math.round(punto.combustible)}</b></span>}
             </div>
           )}
           <div className="tg-h-controles">
@@ -210,7 +223,7 @@ export function PanelHistorial(p: Props) {
               {p.reproduciendo ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
             </button>
             <div className="tg-h-chips" role="group" aria-label="Velocidad de reproducción">
-              {VELOCIDADES.map(v => <button key={v} type="button" className="tg-chip" aria-pressed={p.velocidad === v} onClick={() => p.onVelocidad(v)}>{v}x</button>)}
+              {VELOCIDADES_REP.map(v => <button key={v} type="button" className="tg-chip" aria-pressed={p.velocidad === v} onClick={() => p.onVelocidad(v)}>{v}x</button>)}
             </div>
           </div>
         </section>
@@ -218,29 +231,43 @@ export function PanelHistorial(p: Props) {
 
       {h && puntos.length > 0 && (
         <section className="tg-h-sec">
-          <h3><Clock size={13} aria-hidden />Lugares y horas</h3>
+          <h3><Clock size={13} aria-hidden />Viajes y paradas</h3>
           <ol className="tg-h-lugares">
-            <li><button type="button" onClick={() => p.onIrA(puntos[0].lat, puntos[0].lng)}>
-              <span className="tg-h-punto-linea tg-h-punto-linea--ini" /><span className="tg-h-hora">{soloHora(t0)}</span>
-              <span className="tg-h-lugar"><b>Inicio</b><small>{fechaHora(t0)}</small></span></button></li>
-            {h.paradas.map((s, i) => {
-              const n = a.paradas.get(s.startT);
+            {p.tramos.length === 0 && <li className="tg-h-vacio">Sin viajes en este periodo.</li>}
+            {p.tramos.map(t => {
+              if (t.tipo === 'viaje') {
+                const v = t.viaje, sel = p.viajeSel === v.n - 1;
+                return (
+                  <li key={`v${v.n}`}>
+                    <button type="button" className={`tg-h-viaje${sel ? ' tg-h-viaje--sel' : ''}`} aria-pressed={sel}
+                      onClick={() => { p.onViaje(sel ? null : v.n - 1); p.onIndice(v.rango[0]); }}>
+                      <span className="tg-h-viaje__num">{v.n}</span>
+                      <span className="tg-h-lugar">
+                        <b>Viaje {v.n} · {v.km.toLocaleString('es-PE')} km</b>
+                        <small>{soloHora(v.t0)} → {soloHora(v.t1)} · {dur(v.durMin)} · prom. {v.vProm} km/h</small>
+                        {v.combIni != null && v.combFin != null && <small className="tg-h-combu"><Fuel size={11} aria-hidden /> {v.combIni}{U} → {v.combFin}{U}</small>}
+                      </span>
+                    </button>
+                  </li>
+                );
+              }
+              const s = t.parada, n = t.nivel;
               const baja = n && n.antes != null && n.despues != null && n.antes - n.despues >= FUEL_CAMBIO_PCT;
               return (
-                <li key={s.startT}><button type="button" onClick={() => p.onIrA(s.lat, s.lng)}>
-                  <span className="tg-h-punto-linea tg-h-punto-linea--parada" /><span className="tg-h-hora">{soloHora(s.startT)}</span>
-                  <span className="tg-h-lugar">
-                    <b><MapPin size={12} aria-hidden /> Parada {i + 1} · {dur(s.durMin)}</b>
-                    <small>{soloHora(s.startT)} a {soloHora(s.endT)}</small>
-                    {n && n.antes != null && n.despues != null && (
-                      <small className={baja ? 'tg-h-combu tg-h-combu--baja' : 'tg-h-combu'}><Fuel size={11} aria-hidden /> {n.antes}% → {n.despues}%{baja ? ' · bajó durante la parada' : ''}</small>
-                    )}
-                  </span></button></li>
+                <li key={`p${s.startT}`}>
+                  <button type="button" className={`tg-h-parada${baja ? ' tg-h-parada--baja' : ''}`} onClick={() => p.onIrA(s.lat, s.lng)}>
+                    <span className="tg-h-parada__p">{baja ? '⛽' : 'P'}</span>
+                    <span className="tg-h-lugar">
+                      <b><MapPin size={12} aria-hidden /> Parada {t.n} · {dur(s.durMin)}</b>
+                      <small>{soloHora(s.startT)} a {soloHora(s.endT)}</small>
+                      {n && n.antes != null && n.despues != null && (
+                        <small className={baja ? 'tg-h-combu tg-h-combu--baja' : 'tg-h-combu'}><Fuel size={11} aria-hidden /> {n.antes}{U} → {n.despues}{U}{baja ? ' · bajó durante la parada' : ''}</small>
+                      )}
+                    </span>
+                  </button>
+                </li>
               );
             })}
-            <li><button type="button" onClick={() => p.onIrA(puntos[puntos.length - 1].lat, puntos[puntos.length - 1].lng)}>
-              <span className="tg-h-punto-linea tg-h-punto-linea--fin" /><span className="tg-h-hora">{soloHora(t1)}</span>
-              <span className="tg-h-lugar"><b>Fin</b><small>{fechaHora(t1)}</small></span></button></li>
           </ol>
         </section>
       )}

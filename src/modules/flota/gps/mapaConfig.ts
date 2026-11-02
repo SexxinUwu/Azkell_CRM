@@ -28,3 +28,6 @@ export const MOV_KMH = 2;
 export const SALTO_M = 500;
 /** Zoom mínimo de la capa 3D */
 export const ZOOM_3D = 14.6;
+
+/** Zoom máximo de las imágenes de satélite: más cerca, el mapa agranda las de este nivel (Esri no tiene imágenes más cercanas en el campo y muestra "Map data not yet available") */
+export const SATELITE_MAXZOOM = 16;

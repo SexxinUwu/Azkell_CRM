@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MapPin, MessageCircle, Navigation, Route, X } from 'lucide-react';
 import { ST } from './camiones';
 import type { Lectura, MotorTelemetria } from './motor';
+import { factorCombustible } from './unidadCombustible';
 import { EXCESO_KMH } from './mapaConfig';
 import { useCombustible, type UnidadMapa } from '../api';
 
@@ -84,14 +85,23 @@ interface Props {
   motor: MotorTelemetria | null;
   conductor: string | null;
   piloto: boolean;
+  /** Capacidad del tanque de la placa (galones), si está registrada */
+  capacidad: number | null;
   onCerrar: () => void;
   onHistorial: () => void;
   onToggleHoja: (abrir?: boolean) => void;
 }
 
-export function FichaTelemetria({ u, motor, conductor, piloto, onCerrar, onHistorial, onToggleHoja }: Props) {
+export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, onCerrar, onHistorial, onToggleHoja }: Props) {
   const l = useLectura(motor, u.placa);
   const combustible = useCombustible(u.id).data;
+  // En % directo, o en galones/litros convertidos con la capacidad del tanque; sin capacidad se muestra en galones
+  const nivelComb = (() => {
+    if (!combustible || combustible.nivel == null) return null;
+    const f = factorCombustible(combustible.unidad, capacidad);
+    if (f.unidad === '%') { const pct = combustible.unidad === '%' ? combustible.nivel : combustible.nivel * f.factor; return { pct: Math.min(100, pct), texto: `${Math.round(pct)} %` }; }
+    return { pct: null, texto: `${Math.round(combustible.nivel * f.factor * 10) / 10} gal` };
+  })();
   const st = l?.st ?? 'det';
   const s = ST[st];
   const kmh = l?.kmh ?? u.velocidad;
@@ -138,11 +148,11 @@ export function FichaTelemetria({ u, motor, conductor, piloto, onCerrar, onHisto
       <Grafico hist={l?.hist ?? []} />
 
       <div className="tg-grid">
-        {combustible?.nivel != null && (
+        {nivelComb && (
           <div className="tg-cell tg-cell--ancho">
             <span className="tg-lbl">Nivel de combustible</span>
-            <b className="mono">{Math.round(combustible.nivel)} %</b>
-            <span className="tg-barra" aria-hidden><i style={{ width: `${combustible.nivel}%`, background: combustible.nivel < 20 ? ST.off.c : combustible.nivel < 40 ? ST.ral.c : ST.mov.c }} /></span>
+            <b className="mono">{nivelComb.texto}</b>
+            {nivelComb.pct != null && <span className="tg-barra" aria-hidden><i style={{ width: `${nivelComb.pct}%`, background: nivelComb.pct < 20 ? ST.off.c : nivelComb.pct < 40 ? ST.ral.c : ST.mov.c }} /></span>}
           </div>
         )}
         {celdas.map(c => (

@@ -26,6 +26,8 @@ export interface Historial {
   truncado?: boolean;
   /** Nombre del sensor de combustible de la unidad (null si no tiene) */
   sensorCombustible: string | null;
+  /** Unidad del sensor: '%', 'gal', 'L'… */
+  unidadCombustible: string | null;
   metricas: { totalKm: number; maxSpeed: number; avgSpeed: number; tiempoMovMin: number; paradasTotal: number };
 }
 
@@ -65,6 +67,7 @@ export function useHistorial(placa: string | null, unitId: number | null, rango:
       return {
         truncado: d.truncado === true,
         sensorCombustible: typeof d.sensorCombustible === 'string' ? d.sensorCombustible : null,
+        unidadCombustible: typeof d.unidadCombustible === 'string' ? d.unidadCombustible : null,
         puntos: puntos
           .map(p => ({
             lat: num(p.lat), lng: num(p.lng), velocidad: num(p.velocidad), curso: num(p.curso),
