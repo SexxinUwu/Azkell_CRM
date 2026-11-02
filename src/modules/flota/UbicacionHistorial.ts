@@ -28,16 +28,23 @@ const num = (v: unknown, defecto = 0) => {
   return v == null || v === '' || !Number.isFinite(n) ? defecto : n;
 };
 
-/** Recorrido de las últimas N horas de una unidad */
-export function useHistorial(placa: string | null, unitId: number | null, horas: number) {
+/** Rango del recorrido: las últimas N horas, o un día completo ('AAAA-MM-DD', hora local) */
+export type RangoHistorial = { horas: number; dia: string | null };
+const inicioDia = (d: string) => new Date(`${d}T00:00:00`);
+
+/** Recorrido de una unidad: las últimas N horas o un día anterior (el servidor consulta el recorrido guardado en Wialon) */
+export function useHistorial(placa: string | null, unitId: number | null, rango: RangoHistorial) {
+  const { horas, dia } = rango;
   return useQuery({
-    queryKey: ['flota', 'historial', placa, unitId, horas],
+    queryKey: ['flota', 'historial', placa, unitId, horas, dia],
     enabled: !!placa,
     staleTime: 60_000,
     queryFn: async (): Promise<Historial> => {
       const r = await api<{ data?: Record<string, unknown> }>('/script/obtenerHistorialGPS', {
         method: 'POST',
-        body: { args: [{ placa, unitId, horas }] },
+        body: { args: [dia
+          ? { placa, unitId, fechaInicio: inicioDia(dia).toISOString(), fechaFin: new Date(inicioDia(dia).getTime() + 86400000).toISOString() }
+          : { placa, unitId, horas }] },
       });
       const d = (r?.data ?? {}) as Record<string, unknown>;
       if (d.error) throw new Error(String(d.error));
@@ -67,4 +74,9 @@ export function useHistorial(placa: string | null, unitId: number | null, horas:
 export function fechaHora(segundos: number) {
   const d = new Date(segundos * 1000);
   return `${d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })} ${d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+}
+
+/** Solo la hora: 14:32 */
+export function soloHora(segundos: number) {
+  return new Date(segundos * 1000).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
 }

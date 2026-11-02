@@ -1,0 +1,191 @@
+/* Ubicación GPS: telemetría en vivo. Estilos del prototipo aprobado (colores, tamaños y textos sin cambios),
+   con prefijo tg- y dentro de la pantalla del módulo. */
+.tg {
+  --bg: #05070c; --panel: rgba(12, 17, 26, .72); --panel-solid: #0c111a; --line: rgba(140, 170, 210, .14); --ink: #e8eef7; --muted: #8a9ab0; --faint: #56657a;
+  --accent: #22e3a0; --cyan: #38d6ff; --amber: #ffb020; --red: #ff5470; --blue: #5b9dff; --orange: #ff8a2a;
+  --chip: rgba(255, 255, 255, .06); --chip-on: rgba(56, 214, 255, .16); --shadow: 0 12px 40px rgba(0, 0, 0, .45); --blur: saturate(160%) blur(18px);
+  /* Alto de la barra de módulos del celular: las hojas inferiores se levantan esa altura */
+  --tg-dock: calc(var(--tabbar-gap, 12px) + 62px + var(--safe-bottom, 0px));
+  position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; border-radius: var(--r-xl, 20px);
+  background: var(--bg); color: var(--ink); font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased;
+  box-sizing: border-box; min-height: 560px;
+}
+.tg[data-tema="day"] {
+  --bg: #eef0f3; --panel: rgba(255, 255, 255, .82); --panel-solid: #fff; --line: rgba(20, 30, 50, .10); --ink: #111418; --muted: #5b6575; --faint: #8a94a3;
+  --accent: #0fae78; --cyan: #0a8fd6; --chip: rgba(10, 20, 40, .05); --chip-on: rgba(10, 143, 214, .12); --shadow: 0 10px 30px rgba(20, 30, 50, .14);
+}
+.tg *, .tg *::before, .tg *::after { box-sizing: border-box; }
+.tg button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; padding: 0; }
+.tg-lienzo { position: absolute; inset: 0; }
+.tg-host, .tg-mapa, .tg-map { position: absolute; inset: 0; }
+.tg-tags { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+.tg-glass { background: var(--panel); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+.tg .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+
+/* Encabezado */
+.tg-top { position: absolute; left: 16px; right: 16px; top: 14px; display: flex; gap: 12px; align-items: stretch; pointer-events: none; z-index: 5; }
+.tg-top > * { pointer-events: auto; }
+.tg-brand { padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; min-width: 250px; position: relative; }
+.tg-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--orange); }
+.tg-brand h1 { margin: 2px 0 0; font-size: 20px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); }
+.tg-live { display: inline-flex; align-items: center; gap: 7px; margin-top: 6px; font-size: 11.5px; color: var(--muted); }
+.tg-live i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 0 var(--accent); animation: tg-pulse 1.6s infinite; }
+.tg-refrescar { position: absolute; right: 10px; top: 10px; width: 32px; height: 32px; border-radius: 50%; background: var(--chip); display: grid; place-items: center; color: var(--muted); }
+.tg-refrescar:disabled { opacity: .5; }
+@keyframes tg-pulse { 0% { box-shadow: 0 0 0 0 rgba(34, 227, 160, .6); } 70% { box-shadow: 0 0 0 9px rgba(34, 227, 160, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 227, 160, 0); } }
+.tg-kpis { flex: 1; display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+.tg-kpis::-webkit-scrollbar { display: none; }
+.tg-kpi { flex: 1; min-width: 128px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; text-align: left; transition: transform .15s, border-color .15s; }
+.tg-kpi:hover { transform: translateY(-1px); }
+.tg-kpi[aria-pressed="true"] { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan), var(--shadow); }
+.tg-kpi > span { font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.tg-kpi > span i { width: 7px; height: 7px; border-radius: 50%; }
+.tg-kpi b { font-family: "JetBrains Mono", monospace; font-size: 24px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); }
+
+/* Lista */
+.tg-side { position: absolute; left: 16px; top: 112px; bottom: 16px; width: 330px; display: flex; flex-direction: column; overflow: hidden; z-index: 4; }
+.tg-side-h { padding: 14px 14px 10px; border-bottom: 1px solid var(--line); }
+.tg-search { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 12px; background: var(--chip); border: 1px solid var(--line); color: var(--muted); }
+.tg-search input { flex: 1; min-width: 0; border: 0; background: none; color: var(--ink); font: inherit; font-size: 13.5px; outline: none; }
+.tg-search input::placeholder { color: var(--faint); }
+.tg-chips { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.tg-chip { height: 28px; padding: 0 10px; border-radius: 999px; background: var(--chip); font-size: 12px; font-weight: 600; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.tg-chip[aria-pressed="true"] { background: var(--chip-on); color: var(--ink); box-shadow: inset 0 0 0 1px var(--cyan); }
+.tg-chip em { font-style: normal; font-family: "JetBrains Mono", monospace; font-size: 11px; opacity: .8; }
+.tg-visibles { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; margin-left: auto; }
+.tg-visibles input, .tg-unit__check, .tg-grupo__check { width: 15px; height: 15px; accent-color: var(--cyan); cursor: pointer; }
+.tg-list { flex: 1; overflow-y: auto; padding: 8px; scrollbar-width: thin; list-style: none; margin: 0; }
+.tg-grupo__cab { display: flex; align-items: center; gap: 8px; padding: 6px 6px 4px; }
+.tg-grupo__titulo { flex: 1; display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); text-align: left; }
+.tg-grupo__titulo svg { transition: transform .15s; }
+.tg-grupo__titulo[aria-expanded="false"] svg { transform: rotate(-90deg); }
+.tg-grupo__conteo { margin-left: auto; font-family: "JetBrains Mono", monospace; font-weight: 500; letter-spacing: 0; }
+.tg-grupo__unidades { list-style: none; margin: 0; padding: 0; }
+.tg-unit { display: flex; align-items: center; gap: 6px; padding-left: 6px; border-radius: 14px; border: 1px solid transparent; transition: background .15s; }
+.tg-unit:hover { background: var(--chip); }
+.tg-unit[data-sel="true"] { background: var(--chip-on); border-color: var(--cyan); }
+.tg-unit__b { flex: 1; min-width: 0; display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: center; padding: 10px 10px 10px 4px; text-align: left; }
+.tg-unit .dot { width: 10px; height: 10px; border-radius: 50%; grid-row: span 2; }
+.tg-unit .pl { font-family: "Barlow Condensed", sans-serif; font-size: 19px; font-weight: 700; letter-spacing: .04em; line-height: 1; }
+.tg-unit .sp { font-family: "JetBrains Mono", monospace; font-size: 13px; font-weight: 700; text-align: right; }
+.tg-unit .sp small { font-size: 10px; color: var(--muted); font-weight: 500; }
+.tg-unit .sub { grid-column: 2/4; font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tg-vacio { padding: 20px; color: var(--muted); font-size: 13px; }
+
+/* Ficha */
+.tg-detail { position: absolute; right: 16px; top: 112px; width: 340px; max-height: calc(100% - 128px); overflow-y: auto; padding: 16px; z-index: 4; scrollbar-width: thin; transition: transform .3s cubic-bezier(.2, .8, .2, 1), opacity .3s; }
+.tg-d-head { display: flex; align-items: center; gap: 12px; }
+.tg-plate { display: inline-flex; flex-direction: column; background: #fff; color: #111; border: 2.5px solid #111; border-radius: 7px; overflow: hidden; line-height: 1; }
+.tg-plate small { background: #c9ccd2; font-size: 7px; font-weight: 800; letter-spacing: .3em; text-align: center; padding: 2px 0 1px; }
+.tg-plate b { font-family: "Barlow Condensed", sans-serif; font-size: 26px; letter-spacing: .06em; padding: 2px 10px 3px; }
+.tg-d-head .t { flex: 1; min-width: 0; }
+.tg-d-head .t strong { display: block; font-size: 14px; }
+.tg-d-head .t span { font-size: 12px; color: var(--muted); }
+.tg-x { width: 32px; height: 32px; border-radius: 50%; background: var(--chip); display: grid !important; place-items: center; flex: none; }
+.tg-state { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.tg-gauge { display: grid; grid-template-columns: 150px 1fr; gap: 10px; align-items: center; margin-top: 12px; }
+.tg-gauge svg { width: 150px; height: 110px; }
+.tg-gauge .num { font-family: "JetBrains Mono", monospace; font-size: 34px; font-weight: 700; fill: var(--ink); }
+.tg-gauge .unitlbl { font-size: 10px; fill: var(--muted); letter-spacing: .14em; }
+.tg-compass { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.tg-dial { width: 74px; height: 74px; border-radius: 50%; border: 1px solid var(--line); position: relative; background: radial-gradient(circle, var(--chip) 0, transparent 70%); }
+.tg-dial i { position: absolute; left: 50%; top: 50%; width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 30px solid var(--cyan); transform-origin: 50% 100%; margin: -30px 0 0 -8px; filter: drop-shadow(0 0 6px var(--cyan)); }
+.tg-dial span { position: absolute; top: 3px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: 800; color: var(--red); }
+.tg-compass b { font-family: "JetBrains Mono", monospace; color: var(--ink); font-size: 13px; }
+.tg-spark { width: 100%; height: 56px; margin-top: 6px; display: block; }
+.tg-lbl { font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.tg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.tg-cell { background: var(--chip); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.tg-cell b { display: block; margin-top: 4px; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.tg-cell b.mono { font-size: 13.5px; }
+.tg-cell--ancho { grid-column: 1/3; }
+.tg-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.tg-btn { height: 40px; border-radius: 12px; background: var(--chip); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--line); color: var(--ink); text-decoration: none; }
+.tg-btn.primary { grid-column: 1/3; background: linear-gradient(135deg, #ff8a2a, #ff5e3a); color: #fff; border: 0; box-shadow: 0 8px 24px rgba(255, 110, 50, .35); }
+.tg-btn[aria-pressed="true"] { background: var(--chip-on); box-shadow: inset 0 0 0 1px var(--cyan); }
+.tg-grab { display: none; }
+
+/* El historial / playback conserva su propio marcado: aquí toma los colores de la telemetría */
+.tg-detail .gps-ficha {
+  --label: var(--ink); --label-2: var(--muted); --fill-subtle: var(--chip); --fill: var(--chip); --separator: var(--line); --surface: var(--panel-solid);
+  position: static; background: none; box-shadow: none; border: 0; padding: 0; width: auto; max-height: none; color: var(--ink); transform: none;
+}
+
+/* Controles */
+.tg-ctrl { position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px; display: flex; gap: 8px; align-items: center; z-index: 4; }
+.tg-seg { display: flex; padding: 4px; gap: 2px; }
+.tg-seg button { height: 32px; padding: 0 12px; border-radius: 12px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.tg-seg button[aria-pressed="true"] { background: var(--chip-on); color: var(--ink); box-shadow: inset 0 0 0 1px var(--cyan); }
+.tg-tools { display: flex; padding: 4px; gap: 2px; }
+.tg-tools button { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; color: var(--muted); position: relative; }
+.tg-tools button[aria-pressed="true"] { color: var(--cyan); background: var(--chip-on); }
+.tg-tools button:hover::after { content: attr(data-tip); position: absolute; bottom: 46px; right: 0; white-space: nowrap; background: var(--panel-solid); border: 1px solid var(--line); color: var(--ink); font-size: 12px; padding: 5px 9px; border-radius: 8px; }
+
+/* Alertas */
+.tg-alerts { position: absolute; left: 362px; bottom: 76px; width: 320px; display: flex; flex-direction: column; gap: 8px; z-index: 4; pointer-events: none; }
+.tg-alert { pointer-events: auto; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; text-align: left; animation: tg-slide .35s cubic-bezier(.2, .8, .2, 1); }
+.tg-alert i { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; flex: none; font-style: normal; font-size: 14px; }
+.tg-alert b { display: block; font-size: 12.5px; color: var(--ink); }
+.tg-alert span { font-size: 11.5px; color: var(--muted); }
+@keyframes tg-slide { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Etiquetas sobre el mapa */
+.tg-tag { position: absolute; left: 0; top: 0; will-change: transform; pointer-events: auto; display: flex; align-items: center; gap: 6px; padding: 3px 8px 3px 6px; border-radius: 9px; background: rgba(8, 12, 20, .82); border: 1px solid rgba(140, 170, 210, .22); color: #e8eef7; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; backdrop-filter: blur(6px); transition: opacity .2s; }
+.tg[data-tema="day"] .tg-tag { background: rgba(255, 255, 255, .92); color: #111; border-color: rgba(20, 30, 50, .15); }
+.tg-tag i { width: 7px; height: 7px; border-radius: 50%; }
+.tg-tag .k { font-family: "JetBrains Mono", monospace; font-weight: 500; opacity: .8; }
+.tg-tag.sel { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan), 0 0 18px rgba(56, 214, 255, .45); }
+.tg-pilot { position: absolute; left: 50%; top: 112px; transform: translateX(-50%); padding: 8px 14px; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 10px; z-index: 5; color: var(--ink); }
+.tg-pilot b { color: var(--cyan); }
+.tg-pl-v { display: flex; align-items: baseline; gap: 4px; }
+.tg-pl-v b { font-family: 'JetBrains Mono', monospace; font-size: 20px; color: var(--ink); }
+.tg-pl-v small { font-size: 10px; color: var(--muted); letter-spacing: .1em; }
+.tg .maplibregl-ctrl-attrib { font-size: 10px; }
+.tg .maplibregl-popup-content { background: var(--panel-solid); color: var(--ink); font-size: 12px; border-radius: 10px; padding: 8px 12px; }
+.tg .maplibregl-popup-tip { display: none; }
+.tg-cargando { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; z-index: 6; }
+
+/* Celular: mapa a pantalla completa, KPIs que se deslizan, hojas inferiores */
+@media (max-width: 900px) {
+  /* No es fixed: la transición entre módulos aplica un transform y lo encerraría. Ocupa el alto de la ventana bajo la barra superior */
+  .tg { position: relative; flex: none; width: auto; height: calc(100dvh - 44px); margin: -8px -16px 0; border-radius: 0; min-height: 0; }
+  .tg-glass { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--panel-solid); }
+  .tg:not([data-tema="day"]) .tg-glass { background: rgba(9, 13, 21, .94); }
+  .tg-top { top: calc(env(safe-area-inset-top) + 8px); left: 8px; right: 8px; flex-direction: column; gap: 6px; }
+  .tg-brand { min-width: 0; flex-direction: row; align-items: center; justify-content: space-between; padding: 9px 14px; border-radius: 16px; padding-right: 54px; }
+  .tg-eyebrow { display: none; }
+  .tg-brand h1 { font-size: 15px; margin: 0; }
+  .tg-live { margin: 0; font-size: 11px; }
+  .tg-refrescar { top: 50%; transform: translateY(-50%); right: 10px; }
+  .tg-kpis { gap: 6px; }
+  .tg-kpi { flex: none; min-width: 0; padding: 7px 11px; border-radius: 12px; flex-direction: row; align-items: center; gap: 8px; }
+  .tg-kpi > span { font-size: 9.5px; letter-spacing: .08em; }
+  .tg-kpi b { font-size: 16px; }
+  .tg-grab { display: block; width: 46px; height: 5px; border-radius: 9px; background: var(--faint); opacity: .7; margin: -4px auto 10px; padding: 0; position: relative; }
+  .tg-grab::before { content: ""; position: absolute; left: -40px; right: -40px; top: -14px; bottom: -14px; }
+  .tg-side { left: 0; right: 0; top: auto; bottom: var(--tg-dock); width: auto; height: calc(78% - var(--tg-dock)); border-radius: 22px 22px 0 0; transform: translateY(calc(100% - 150px)); transition: transform .35s cubic-bezier(.2, .8, .2, 1); }
+  .tg-side-h { padding-top: 14px; }
+  .tg[data-hoja="full"] .tg-side { transform: none; }
+  .tg[data-ficha="si"] .tg-side, .tg[data-piloto="si"] .tg-side { transform: translateY(120%); }
+  .tg-detail { left: 0; right: 0; top: auto; bottom: var(--tg-dock); width: auto; max-height: calc(46% - var(--tg-dock) * .4); border-radius: 22px 22px 0 0; padding: 14px 16px 16px; transition: max-height .35s cubic-bezier(.2, .8, .2, 1), transform .35s, opacity .3s; }
+  .tg[data-det="full"] .tg-detail { max-height: calc(88% - var(--tg-dock)); }
+  .tg[data-piloto="si"] .tg-detail { transform: translateY(120%); opacity: 0; pointer-events: none; }
+  .tg-gauge { grid-template-columns: 130px 1fr; }
+  .tg-gauge svg { width: 130px; height: 96px; }
+  .tg-alerts { left: 8px; right: 62px; width: auto; top: calc(env(safe-area-inset-top) + 112px); bottom: auto; }
+  .tg-alerts .tg-alert:nth-child(n+2) { display: none; }
+  .tg[data-ficha="si"] .tg-alerts, .tg[data-piloto="si"] .tg-alerts { display: none; }
+  .tg-ctrl { left: auto; right: 8px; top: calc(env(safe-area-inset-top) + 112px); bottom: auto; transform: none; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .tg-tools { flex-direction: column; border-radius: 16px; }
+  .tg-tools button { width: 40px; height: 40px; }
+  .tg-tools button:hover::after { display: none; }
+  .tg-seg { flex-direction: column; border-radius: 16px; }
+  .tg-seg button { height: 34px; padding: 0 8px; font-size: 11px; }
+  .tg-tools button[data-ocultar-movil] { display: none; }
+  .tg[data-det="full"] .tg-ctrl, .tg[data-hoja="full"] .tg-ctrl, .tg[data-piloto="si"] .tg-ctrl, .tg[data-ficha="si"] .tg-seg { display: none; }
+  .tg-pilot { top: auto; left: 8px; right: 8px; bottom: calc(var(--tg-dock) + 8px); transform: none; justify-content: space-between; padding: 12px 14px; border-radius: 18px; }
+  .tg-pilot .tg-pl-v b { font-size: 30px; }
+  .tg[data-piloto="si"] .tg-kpis { display: none; }
+  .tg-tag { font-size: 10px; padding: 2px 7px 2px 5px; }
+  .tg .maplibregl-ctrl-bottom-left { bottom: calc(var(--tg-dock) + 0px); }
+}

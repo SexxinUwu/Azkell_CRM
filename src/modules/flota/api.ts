@@ -2,6 +2,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
 import { DOCS } from './docsEstado';
+import { claseEstado } from './gps/estado';
+import type { ClaseEstado } from './gps/camiones';
 import type { ConfigSistemas } from './fman';
 
 // ─── Disponibilidad ──────────────────────────────────────────────────────────
@@ -445,17 +447,18 @@ export interface UnidadMapa {
   voltaje: string;
   ignicion: boolean;
   ubicacion: string;
+  /** Momento del último mensaje de Wialon (ms desde 1970); null si el servidor no lo informó */
+  tPos: number | null;
   /** Grupos de Wialon a los que pertenece (el servidor los manda en `grupos` por unidad) */
   grupos?: string[];
 }
 
-/** movimiento: más de 3 km/h · ralenti: encendida y casi quieta · detenido: apagada · sin_senal: sin posición */
+/** movimiento: más de 2 km/h · ralenti: velocidad 0 con ignición · detenido: velocidad 0 sin ignición · sin_senal: sin posición o sin mensajes hace más de 10 min */
 export type EstadoUnidad = 'movimiento' | 'ralenti' | 'detenido' | 'sin_senal';
 
-export function estadoUnidad(u: UnidadMapa): EstadoUnidad {
-  if (u.lat == null || u.lng == null) return 'sin_senal';
-  if (u.velocidad > 3) return 'movimiento';
-  return u.ignicion ? 'ralenti' : 'detenido';
+const POR_CLASE: Record<ClaseEstado, EstadoUnidad> = { mov: 'movimiento', ral: 'ralenti', det: 'detenido', off: 'sin_senal' };
+export function estadoUnidad(u: UnidadMapa, ahora = Date.now()): EstadoUnidad {
+  return POR_CLASE[claseEstado(u, ahora)];
 }
 
 const numero = (v: unknown, defecto = 0) => {
@@ -494,6 +497,7 @@ export function useUnidadesGps(intervaloMs = 4000) {
             voltaje: g.voltaje == null ? '' : String(g.voltaje),
             ignicion: g.ignicion === true || Number(g.ignicion) === 1,
             ubicacion: String(g.ubicacion ?? ''),
+            tPos: g.tiempo_pos == null || !Number.isFinite(Number(g.tiempo_pos)) ? null : Number(g.tiempo_pos) * 1000,
             grupos: Array.isArray(g.grupos) ? g.grupos.map(x => String(x).trim()).filter(Boolean) : [],
           };
         })

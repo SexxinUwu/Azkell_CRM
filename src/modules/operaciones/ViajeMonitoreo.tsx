@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Notice } from '../../core/ui/Display';
 import { errorMessage } from '../../core/api/client';
-import { UbicacionMapa } from '../flota/UbicacionMapa';
+import { UbicacionMapa } from '../flota/MapaLeaflet';
 import { estadoUnidad, useUnidadesGps, type EstadoUnidad } from '../flota/api';
 
 export interface ViajeMonitoreo {
