@@ -128,6 +128,18 @@ export class MotorTelemetria {
     this.mapa.on('style.load', () => this.prepararCapas());
     this.mapa.on('move', () => { this.sucio = true; });
     this.mapa.on('dragstart', e => { if (this.follow && (e as any).originalEvent) this.setFollow(false); });
+    // Con la cámara piloto el jumpTo por cuadro impide que MapLibre emita dragstart: el arrastre (ratón o dedo) se detecta aquí.
+    // Solo actúa con la cámara activa; sin ella no toca ningún gesto del mapa.
+    const cv = this.mapa.getCanvas();
+    let ini: { x: number; y: number } | null = null;
+    const abajo = (x: number, y: number) => { ini = this.follow ? { x, y } : null; };
+    const mueve = (x: number, y: number) => { if (ini && this.follow && Math.hypot(x - ini.x, y - ini.y) > 6) { ini = null; this.setFollow(false); } };
+    cv.addEventListener('mousedown', ev => abajo(ev.clientX, ev.clientY));
+    cv.addEventListener('mousemove', ev => mueve(ev.clientX, ev.clientY));
+    cv.addEventListener('touchstart', ev => abajo(ev.touches[0].clientX, ev.touches[0].clientY), { passive: true });
+    cv.addEventListener('touchmove', ev => mueve(ev.touches[0].clientX, ev.touches[0].clientY), { passive: true });
+    window.addEventListener('mouseup', () => { ini = null; });
+    window.addEventListener('touchend', () => { ini = null; });
     this.mapa.on('click', e => {
       let best: U | null = null, bd = 34;
       this.units.forEach(u => {
