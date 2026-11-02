@@ -29,5 +29,17 @@ export const SALTO_M = 500;
 /** Zoom mínimo de la capa 3D */
 export const ZOOM_3D = 14.6;
 
-/** Zoom máximo de las imágenes de satélite: más cerca, el mapa agranda las de este nivel (Esri no tiene imágenes más cercanas en el campo y muestra "Map data not yet available") */
-export const SATELITE_MAXZOOM = 15;
+/** Satélite en tres capas: base (existe en todo el país), intermedia y de detalle. Lima tiene imágenes hasta el zoom 19 y el campo hasta el 17. */
+export const SAT_BASE_MAXZOOM = 16;
+export const SAT_MEDIA_MAXZOOM = 17;
+export const SAT_DETALLE_MAXZOOM = 19;
+/** Tamaño en bytes de la lámina gris "Map data not yet available" de Esri */
+export const SAT_PLACEHOLDER_BYTES = 2521;
+
+// Tráfico en tiempo real (TomTom, plan gratuito: hace falta una clave en VITE_TOMTOM_KEY). Sin clave, el botón queda desactivado.
+const tomtom = (import.meta.env.VITE_TOMTOM_KEY as string | undefined) || '';
+export const HAY_TRAFICO = !!tomtom;
+export const TRAFICO_URL = tomtom ? `https://api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=${tomtom}` : '';
+export const TRAFICO_ATRIBUCION = '© <a href="https://www.tomtom.com">TomTom</a>';
+/** Cada cuánto se vuelven a pedir las teselas de tráfico (ms) */
+export const TRAFICO_REFRESCO_MS = 120_000;

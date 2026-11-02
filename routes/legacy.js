@@ -30,30 +30,38 @@ function credencialesWialon(tdb) {
         baseUrl: u || 'https://hst-api.wialon.us/wialon/ajax.html'
     }));
 }
-// Sensor de nivel de combustible en % de una unidad (campo `sens` de Wialon, flag 4096). Evita sensores de consumo o tasa.
-function elegirSensorCombustible(sens) {
+// Sensores de nivel de combustible de una unidad (campo `sens` de Wialon, flag 4096), en orden de preferencia:
+// los que miden en %, luego los de tipo "fuel level" (Combustible Total primero) y luego los de tanque en galones/litros.
+// Un sensor puede existir y marcar 0,00 o "---": por eso se prueba con el último mensaje y se usa el primero que da un valor.
+function candidatosCombustible(sens) {
     const lista = Object.values(sens || {}).filter(x => x && x.id != null);
     const nombre = (x) => String(x.n || '').toLowerCase();
     const metrica = (x) => String(x.m || '').trim().toLowerCase();
-
-    // 1. Prioridad: "Combustible Total" (sensor oficial que suma Tanque P + Tanque S en tractos como BER940, CFC770)
-    const combTotal = lista.find(x => /combustible total|total fuel/i.test(nombre(x)) || (x.t === 'fuel level' && /total/i.test(nombre(x))));
-    if (combTotal) return combTotal;
-
-    // Sensores a descartar (consumo acumulado, tasa de consumo, presión, temperatura)
     const malo = /consum|tasa|rate|rendim|acumul|presi|temp/i;
-
-    // 2. Sensor nativo tipo fuel level
-    const fuelLevel = lista.find(x => !malo.test(nombre(x)) && x.t === 'fuel level');
-    if (fuelLevel) return fuelLevel;
-
-    // 3. Sensor de porcentaje (%)
-    const enPorcentaje = lista.find(x => !malo.test(nombre(x)) && /(combust|fuel|diesel|tanque)/i.test(nombre(x)) && (metrica(x) === '%' || /%/.test(nombre(x))));
-    if (enPorcentaje) return enPorcentaje;
-
-    // 4. Tanque en galones o litros
-    const tanque = lista.find(x => !malo.test(nombre(x)) && /(tanque|tank|combust|diesel)/i.test(nombre(x)) && /^(gal|galones|gallons|l|lt|lts|litros|liters|litres)$/.test(metrica(x)));
-    return tanque || lista.find(x => /fuel level/i.test(String(x.t || '')) && !malo.test(nombre(x))) || null;
+    const esComb = (x) => /(combust|fuel|diesel|tanque|tank)/i.test(nombre(x));
+    const pct = lista.filter(x => !malo.test(nombre(x)) && esComb(x) && (metrica(x) === '%' || /%/.test(nombre(x))));
+    const nivel = lista.filter(x => !pct.includes(x) && !malo.test(nombre(x)) && x.t === 'fuel level')
+        .sort((a, b) => (/total/i.test(nombre(b)) ? 1 : 0) - (/total/i.test(nombre(a)) ? 1 : 0));
+    const gal = lista.filter(x => !pct.includes(x) && !nivel.includes(x) && !malo.test(nombre(x)) && esComb(x) && /^(gal|galones|gallons|l|lt|lts|litros|liters|litres)$/.test(metrica(x)));
+    return [...pct, ...nivel, ...gal];
+}
+async function valorSensorUltimo(baseUrl, sid, unitId, sensor) {
+    try {
+        const r = await (await fetch(`${baseUrl}?svc=unit/calc_last_message&params=${encodeURIComponent(JSON.stringify({ unitId, sensorId: sensor.id, flags: 0 }))}&sid=${sid}`)).json();
+        let v = typeof r === 'number' ? r : (r && typeof r === 'object' ? (r[sensor.id] != null ? r[sensor.id] : Object.values(r)[0]) : null);
+        if (Array.isArray(v)) v = v[0];
+        // 0,00 exacto = sensor sin lectura; en % no puede pasar de 100
+        if (typeof v === 'number' && isFinite(v) && v > 0 && v > -1e5) return (String(sensor.m || '').trim() === '%' && v > 100) ? null : v;
+    } catch (e) { /* sin lectura */ }
+    return null;
+}
+async function elegirSensorValido(baseUrl, sid, unitId, sens) {
+    const c = candidatosCombustible(sens);
+    for (const sensor of c) {
+        const valor = await valorSensorUltimo(baseUrl, sid, unitId, sensor);
+        if (valor != null) return { sensor, valor };
+    }
+    return { sensor: c[0] || null, valor: null };
 }
 const WIALON_CACHE_TTL = 4000; // 4s de refresco ultra rápido para tiempo real y animación fluida
 
@@ -1638,16 +1646,11 @@ router.post('/:metodo', async (req, res) => {
             let nivel = null, nombre = '', unidad = '%';
             try {
                 const it = await (await fetch(`${baseUrl}?svc=core/search_item&params=${encodeURIComponent(JSON.stringify({ id: unitId, flags: 4096 }))}&sid=${sid}`)).json();
-                const sensor = elegirSensorCombustible(it && it.item && it.item.sens);
+                const { sensor, valor } = await elegirSensorValido(baseUrl, sid, unitId, it && it.item && it.item.sens);
                 if (sensor) {
                     nombre = sensor.n || '';
-                    const r = await (await fetch(`${baseUrl}?svc=unit/calc_last_message&params=${encodeURIComponent(JSON.stringify({ unitId, sensorId: sensor.id, flags: 0 }))}&sid=${sid}`)).json();
-                    let v = typeof r === 'number' ? r : (r && typeof r === 'object' ? (r[sensor.id] != null ? r[sensor.id] : Object.values(r)[0]) : null);
-                    if (Array.isArray(v)) v = v[0];
-                    // Un 0,00 exacto es un sensor sin lectura (marca 0 con la unidad en marcha): no se toma como tanque vacío
-                    const enPct = String(sensor.m || '').trim() === '%';
-                    if (typeof v === 'number' && isFinite(v) && v > 0 && v > -1e5) nivel = Math.round((enPct ? Math.min(100, v) : v) * 10) / 10;
                     unidad = String(sensor.m || '%').trim() || '%';
+                    if (valor != null) nivel = Math.round(valor * 10) / 10;
                 }
             } finally {
                 fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(() => {});
@@ -1724,7 +1727,7 @@ router.post('/:metodo', async (req, res) => {
             let sensorCombustible = null;
             try {
                 const itc = await (await fetch(`${baseUrl}?svc=core/search_item&params=${encodeURIComponent(JSON.stringify({ id: targetUnitId, flags: 4096 }))}&sid=${sid}`)).json();
-                sensorCombustible = elegirSensorCombustible(itc && itc.item && itc.item.sens);
+                sensorCombustible = (await elegirSensorValido(baseUrl, sid, targetUnitId, itc && itc.item && itc.item.sens)).sensor;
             } catch (e) { sensorCombustible = null; }
 
             // Consultar mensajes / telemetría en el rango

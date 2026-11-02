@@ -99,8 +99,14 @@ export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, onCerr
   const nivelComb = (() => {
     if (!combustible || combustible.nivel == null) return null;
     const f = factorCombustible(combustible.unidad, capacidad);
-    if (f.unidad === '%') { const pct = combustible.unidad === '%' ? combustible.nivel : combustible.nivel * f.factor; return { pct: Math.min(100, pct), texto: `${Math.round(pct)} %` }; }
-    return { pct: null, texto: `${Math.round(combustible.nivel * f.factor * 10) / 10} gal` };
+    const nombre = combustible.nombre;
+    if (f.unidad === '%') {
+      const pct = combustible.unidad === '%' ? combustible.nivel : combustible.nivel * f.factor;
+      // Si la cuenta pasa de 100 %, la capacidad registrada no coincide con el sensor: se muestra la lectura sin inventar un porcentaje
+      if (pct > 105) return { pct: null, nombre, texto: `${Math.round(combustible.nivel * 10) / 10} ${combustible.unidad}` };
+      return { pct, nombre, texto: `${Math.round(pct)} %` };
+    }
+    return { pct: null, nombre, texto: `${Math.round(combustible.nivel * f.factor * 10) / 10} gal` };
   })();
   const st = l?.st ?? 'det';
   const s = ST[st];
@@ -152,6 +158,7 @@ export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, onCerr
           <div className="tg-cell tg-cell--ancho">
             <span className="tg-lbl">Nivel de combustible</span>
             <b className="mono">{nivelComb.texto}</b>
+            {nivelComb.nombre && <small className="tg-cell__nota">Sensor: {nivelComb.nombre}</small>}
             {nivelComb.pct != null && <span className="tg-barra" aria-hidden><i style={{ width: `${nivelComb.pct}%`, background: nivelComb.pct < 20 ? ST.off.c : nivelComb.pct < 40 ? ST.ral.c : ST.mov.c }} /></span>}
           </div>
         )}

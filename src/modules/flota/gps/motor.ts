@@ -7,7 +7,8 @@ import { buildStyle, F_BOLD, W, type TemaMapa } from './estilos';
 import { Camiones3D, ST, type ClaseEstado, type DescCamion, type VistaCamion } from './camiones';
 import { angLerp, distM, enAnillo, type LngLat } from './geo';
 import { claseEstado } from './estado';
-import { EXCESO_KMH, EXCESO_REARME_KMH, MOV_KMH, SALTO_M, ZOOM_3D } from './mapaConfig';
+import { registrarEsri } from './satelite';
+import { EXCESO_KMH, EXCESO_REARME_KMH, HAY_TRAFICO, MOV_KMH, SALTO_M, TRAFICO_ATRIBUCION, TRAFICO_REFRESCO_MS, TRAFICO_URL, ZOOM_3D } from './mapaConfig';
 import type { Historial } from '../UbicacionHistorial';
 
 export interface EntradaMotor {
@@ -25,7 +26,7 @@ export interface EntradaMotor {
 export interface Geocerca { id: string; name: string; color: string; ring: LngLat[] }
 export interface Alerta { id: number; placa: string; icono: string; color: string; msg: string; hora: string }
 export interface Lectura { kmh: number; rumbo: number; hist: number[]; st: ClaseEstado; geocerca: string | null }
-export interface OpcionesMapa { terrain: boolean; buildings: boolean; trails: boolean; geo: boolean; smooth: boolean; models: boolean; buildingsSat: boolean }
+export interface OpcionesMapa { traffic: boolean; terrain: boolean; buildings: boolean; trails: boolean; geo: boolean; smooth: boolean; models: boolean; buildingsSat: boolean }
 
 interface Fix { pos: LngLat; hdg: number; t: number }
 interface U {
@@ -79,7 +80,7 @@ export class MotorTelemetria {
   readonly root: HTMLDivElement;
   readonly mapa: MapaGL;
   tema: TemaMapa;
-  opt: OpcionesMapa = { terrain: false, buildings: true, trails: true, geo: true, smooth: true, models: true, buildingsSat: false };
+  opt: OpcionesMapa = { traffic: false, terrain: false, buildings: true, trails: true, geo: true, smooth: true, models: true, buildingsSat: false };
 
   private mapDiv: HTMLDivElement;
   private tagLayer: HTMLDivElement;
@@ -123,6 +124,7 @@ export class MotorTelemetria {
     this.tagLayer = document.createElement('div'); this.tagLayer.className = 'tg-tags';
     this.root.append(this.mapDiv, this.tagLayer);
 
+    registrarEsri();
     this.mapa = new maplibregl.Map({
       container: this.mapDiv, style: buildStyle(tema, false), center: [-75.4, -9.6], zoom: 4.6, pitch: 0, bearing: 0, maxPitch: 80,
       attributionControl: false, pixelRatio: Math.min(window.devicePixelRatio || 1, MOVIL() ? 1.5 : 2),
@@ -188,6 +190,11 @@ export class MotorTelemetria {
   private prepararCapas() {
     const m = this.mapa;
     (Object.keys(ST) as ClaseEstado[]).forEach(k => { m.addImage('u-' + k, iconImg(ST[k].c, false), { pixelRatio: 2 }); m.addImage('s-' + k, iconImg(ST[k].c, true), { pixelRatio: 2 }); });
+    // Tráfico en tiempo real: debajo de las geocercas y las unidades
+    if (HAY_TRAFICO) {
+      m.addSource('trafico', { type: 'raster', tiles: [TRAFICO_URL], tileSize: 256, maxzoom: 22, attribution: TRAFICO_ATRIBUCION });
+      m.addLayer({ id: 'trafico', type: 'raster', source: 'trafico', paint: { 'raster-opacity': .9 } });
+    }
     m.addSource('geo', { type: 'geojson', data: this.datosGeo() });
     m.addLayer({ id: 'geo-fill', type: 'fill-extrusion', source: 'geo', paint: { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': 45, 'fill-extrusion-opacity': .16 } });
     m.addLayer({ id: 'geo-line', type: 'line', source: 'geo', paint: { 'line-color': ['get', 'color'], 'line-width': 2.5, 'line-blur': .5 } });
@@ -217,12 +224,25 @@ export class MotorTelemetria {
     vis('buildings', o.buildings && (this.tema !== 'sat' || o.buildingsSat));
     ['trails', 'trails-glow'].forEach(id => vis(id, o.trails && !this.hist));
     ['geo-fill', 'geo-line', 'geo-label'].forEach(id => vis(id, o.geo));
+    vis('trafico', o.traffic);
+    this.programarTrafico(o.traffic);
     vis('units', !this.hist);
     if (m.getLayer('units')) m.setPaintProperty('units', 'icon-opacity', this.iconOpacity());
     this.camiones.activa = o.models && !this.hist;
     this.camiones.relieve = o.terrain;
     if (conRelieve) m.setTerrain(o.terrain ? { source: 'dem', exaggeration: 1.35 } : null);
     this.sucio = true; this.sucioDatos = true;
+  }
+
+  private timerTrafico: ReturnType<typeof setInterval> | null = null;
+  /** Mientras el tráfico está encendido se vuelve a pedir cada 2 minutos */
+  private programarTrafico(on: boolean) {
+    if (this.timerTrafico) { clearInterval(this.timerTrafico); this.timerTrafico = null; }
+    if (!on || !HAY_TRAFICO) return;
+    this.timerTrafico = setInterval(() => {
+      const src = this.mapa.getSource('trafico') as unknown as { setTiles?: (t: string[]) => void } | undefined;
+      src?.setTiles?.([TRAFICO_URL + '&t=' + Date.now()]);
+    }, TRAFICO_REFRESCO_MS);
   }
 
   setOpcion(k: keyof OpcionesMapa, v: boolean) {

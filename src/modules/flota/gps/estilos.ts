@@ -1,7 +1,7 @@
 // Estilos del mapa Noche (neón), Día y Satélite. Copiado literal de buildStyle() del prototipo.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { LayerSpecification, StyleSpecification } from 'maplibre-gl';
-import { ATRIBUCION, MAPA_URLS, SATELITE_MAXZOOM } from './mapaConfig';
+import { ATRIBUCION, MAPA_URLS, SAT_BASE_MAXZOOM, SAT_DETALLE_MAXZOOM, SAT_MEDIA_MAXZOOM } from './mapaConfig';
 
 export type TemaMapa = 'night' | 'day' | 'sat';
 
@@ -15,7 +15,11 @@ export function buildStyle(t: TemaMapa, relieve: boolean): StyleSpecification {
   const L: LayerSpecification[] = [];
   if (sat){
     L.push(<any>{id:'bg', type:'background', paint:{'background-color':'#0b0f14'}});
-    L.push(<any>{id:'sat', type:'raster', source:'sat', paint:{'raster-saturation':-0.1, 'raster-contrast':0.08}});
+    const pintura = {'raster-saturation':-0.05, 'raster-contrast':0.06, 'raster-fade-duration':150};
+    L.push(<any>{id:'sat', type:'raster', source:'sat', paint:pintura});
+    // Las capas de más zoom van encima: donde Esri no tiene imágenes son transparentes y se ve la de abajo
+    L.push(<any>{id:'sat-media', type:'raster', source:'sat-media', minzoom:SAT_BASE_MAXZOOM - 0.5, paint:pintura});
+    L.push(<any>{id:'sat-detalle', type:'raster', source:'sat-detalle', minzoom:SAT_MEDIA_MAXZOOM - 0.5, paint:pintura});
   } else {
     L.push(<any>{id:'bg', type:'background', paint:{'background-color':P.bg}});
     L.push(<any>{id:'landuse', type:'fill', source:'omt', 'source-layer':'landuse', filter:isCls(['residential','suburb','neighbourhood','commercial','industrial']), paint:{'fill-color':P.res, 'fill-opacity':.8}});
@@ -59,6 +63,10 @@ export function buildStyle(t: TemaMapa, relieve: boolean): StyleSpecification {
       dem:{type:'raster-dem', tiles:[MAPA_URLS.relieve], encoding:'terrarium', tileSize:256, maxzoom:14, attribution:ATRIBUCION.relieve}},
     projection:{type:'mercator'}, sky, light:{anchor:'viewport', color:night ? '#a9c8ff' : '#ffffff', intensity:night ? .38 : .3, position:[1.2, 200, 35]}, layers:L};
   if (relieve) style.terrain = {source:'dem', exaggeration:1.35};
-  if (sat) style.sources.sat = {type:'raster', tiles:[MAPA_URLS.satelite], tileSize:256, maxzoom:SATELITE_MAXZOOM, attribution:ATRIBUCION.satelite};
+  if (sat) {
+    style.sources.sat = {type:'raster', tiles:[MAPA_URLS.satelite], tileSize:256, maxzoom:SAT_BASE_MAXZOOM, attribution:ATRIBUCION.satelite};
+    style.sources['sat-media'] = {type:'raster', tiles:['esri://{z}/{y}/{x}'], tileSize:256, maxzoom:SAT_MEDIA_MAXZOOM};
+    style.sources['sat-detalle'] = {type:'raster', tiles:['esri://{z}/{y}/{x}'], tileSize:256, maxzoom:SAT_DETALLE_MAXZOOM};
+  }
   return style;
 }

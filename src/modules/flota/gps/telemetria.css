@@ -344,3 +344,10 @@
   .tg-alerts { top: calc(env(safe-area-inset-top) + 64px); }
   .tg-pilot { top: auto; }
 }
+
+/* La tarjeta del título (con su resumen) y la lista ya no se tocan */
+.tg-side { top: 150px; }
+@media (max-width: 900px) { .tg-side { top: auto; } }
+
+.tg-cell__nota { display: block; margin-top: 4px; font-size: 10.5px; color: var(--muted); }
+.tg-tools button:disabled { opacity: .4; cursor: not-allowed; }

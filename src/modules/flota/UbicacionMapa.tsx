@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { motorTelemetria, type Alerta, type EntradaMotor, type MotorTelemetria, type OpcionesMapa } from './gps/motor';
 import { ST, type ClaseEstado, type DescCamion } from './gps/camiones';
 import type { TemaMapa } from './gps/estilos';
+import { HAY_TRAFICO } from './gps/mapaConfig';
 import type { UnidadMapa } from './api';
 import type { Historial } from './UbicacionHistorial';
 
@@ -45,6 +46,7 @@ interface Props {
 }
 
 const HERRAMIENTAS: Array<{ k: keyof OpcionesMapa | 'overview'; tip: string; movil?: boolean; d: string; extra?: string }> = [
+  { k: 'traffic', tip: 'Tráfico en tiempo real', d: 'M10 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM12 7h.01M12 12h.01M12 17h.01' },
   { k: 'terrain', tip: 'Relieve 3D (más pesado)', d: 'm3 20 6-10 4 6 3-4 5 8z' },
   { k: 'buildings', tip: 'Edificios 3D', d: 'M4 21V8l6-4v17M10 21h10V11l-10-3' },
   { k: 'trails', tip: 'Estelas', d: 'M3 17c4 0 4-6 8-6s4 6 8 6M20 17h.01' },
@@ -110,7 +112,7 @@ export function UbicacionMapa(p: Props) {
       <div className="tg-ctrl">
         <div className="tg-tools tg-glass" role="toolbar" aria-label="Herramientas del mapa">
           {HERRAMIENTAS.map(h => (
-            <button key={h.k} type="button" data-tip={h.tip} aria-label={h.tip} data-ocultar-movil={h.movil === false ? '' : undefined}
+            <button key={h.k} type="button" data-tip={h.k === 'traffic' && !HAY_TRAFICO ? 'Tráfico: falta la clave VITE_TOMTOM_KEY' : h.tip} aria-label={h.tip} disabled={h.k === 'traffic' && !HAY_TRAFICO} data-ocultar-movil={h.movil === false ? '' : undefined}
               aria-pressed={h.k === 'overview' ? undefined : activo(h.k)}
               onClick={() => (h.k === 'overview' ? motorRef.current?.visionGeneral() : alternar(h.k))}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={h.d} /></svg>
