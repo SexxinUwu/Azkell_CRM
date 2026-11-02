@@ -2,7 +2,7 @@ import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ChevronDown, ChevronRight, Droplets, FileSpreadsheet, Fuel, RefreshCw, SearchX } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, Droplets, FileSpreadsheet, Fuel, RefreshCw, SearchX, SlidersHorizontal } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -14,6 +14,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
+import { FILTROS_ANALISIS_VACIOS, FiltrosAnalisisSheet, cuentaFiltrosAnalisis, dentroDeRango, normalizarBusqueda, type FiltrosAnalisis, type OpcionesFiltro } from './FiltrosAnalisisSheet';
 import { analizarViaje, coincideCombustible, type AnalisisViaje, type MatrizCalc, type TramoCalc, type ViajeCalc } from './analisisCalculo';
 
 interface Stats { fechaInicio?: string; fechaFin?: string; vouchers?: Voucher[]; kmInicio: number; kmFin: number; recorridoKm: number; totalGalones: number; totalGasto: number; rendimiento: number }
@@ -29,6 +30,9 @@ interface Trip {
 interface Resp { ok: boolean; trips: Trip[]; kpis: { totalViajes: number; totalGalones: number; totalGasto: number; totalKm: number; promGalViaje: number; promPrecioGal: number; promKmGal: number } }
 
 const n = (v: unknown) => Number(v) || 0;
+// Mismos valores que muestra la tabla, para que los filtros coincidan con lo que se ve
+const valorFiltro = (s: unknown) => String(s ?? '').trim() || '---';
+const estadoDe = (t: Trip) => String(t.estado || 'INICIADO').toUpperCase();
 // 'AAAA-MM-DD[ HH:mm[:ss]]' (hora local) -> fecha nativa de Excel; si no es fecha queda el texto
 const fechaExcel = (s?: string | null): Date | string => {
   const m = /^(d{4})-(d{2})-(d{2})(?:[ T](d{2}):(d{2})(?::(d{2}))?)?/.exec(String(s ?? '').trim());
@@ -297,9 +301,9 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const hoyLima = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
   const [desde, setDesde] = useState(hoyLima);
   const [hasta, setHasta] = useState(hoyLima);
-  const [auditoria, setAuditoria] = useState('');
-  const [placaF, setPlacaF] = useState('');
-  const [conductorF, setConductorF] = useState('');
+  const [filtros, setFiltros] = useState<FiltrosAnalisis>(FILTROS_ANALISIS_VACIOS);
+  const [filtrando, setFiltrando] = useState(false);
+  const hayFiltros = cuentaFiltrosAnalisis(filtros) > 0;
   const [orden, setOrden] = useState('trip_desc');
   const [abierto, setAbierto] = useState<string | null>(null);
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
@@ -311,7 +315,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const toast = useToast();
   const navigate = useNavigate();
 
-  useEffect(() => { setPagina(1); }, [q, desde, hasta, auditoria, placaF, conductorF, orden, tamano]);
+  useEffect(() => { setPagina(1); }, [q, desde, hasta, filtros, orden, tamano]);
   const guardarAud = useGuardarAuditoria(modulo, user?.name ?? '');
   const guardar = (viaje: string, estado: string, obs: string) => guardarAud.mutateAsync({ viaje, estado, obs });
 
@@ -379,11 +383,42 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
     return { galones: u.reduce((s, v) => s + n(v.totalGalones), 0), gasto: u.reduce((s, v) => s + n(v.totalGasto), 0), rendimiento: u.length ? n(u[0].rendimiento) : 0 };
   };
 
+  // Cálculo por viaje y por tramo (IDA / RETORNO) con la misma lógica del clásico
+  const analisis = useMemo(() => {
+    const mapa = new Map<string, AnalisisViaje>();
+    if (urea) return mapa;
+    for (const x of trips) {
+      const viaje: ViajeCalc = {
+        ruta: x.ruta, rutaIda: x.rutaIda, rutaRetorno: x.rutaRetorno, motor: x.motor, configuracion: x.configuracion, carreta: x.carreta,
+        pesoIda: x.pesoIda, pesoRetorno: x.pesoRetorno, pesoMaxTn: x.pesoMaxTn, kmInicio: x.kmInicio, kmFin: x.kmFin,
+        vouchers: (x.vouchers ?? []).filter(v => esD2(String(v.producto ?? ''))),
+      };
+      mapa.set(x.viaje, analizarViaje(viaje, matriz));
+    }
+    return mapa;
+  }, [trips, matriz, urea]);
+
+  // Opciones de los filtros: los valores que hay en los viajes ya filtrados por fecha y búsqueda
+  const opciones = useMemo<OpcionesFiltro>(() => {
+    const lista = (f: (t: Trip) => string) => [...new Set(trips.map(f))].filter(Boolean).sort((a, b) => a.localeCompare(b, 'es'));
+    return {
+      auditoria: AUDIT, estados: lista(estadoDe), placas: lista(t => valorFiltro(t.placa)), carretas: lista(t => valorFiltro(t.carreta)),
+      motores: lista(t => valorFiltro(t.motor)), rutas: lista(t => valorFiltro(t.ruta)), conductores: lista(t => valorFiltro(t.conductor)),
+    };
+  }, [trips]);
+
   // Orden de viaje: del más reciente al más antiguo; los "SIN-VIAJE" (vales sueltos) van al final
-  const placas = useMemo(() => [...new Set(trips.map(t => t.placa).filter(Boolean))].sort(), [trips]);
-  const conductores = useMemo(() => [...new Set(trips.map(t => t.conductor).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [trips]);
+  // Diferencia del viaje (galones reales − teóricos); null si no hay teórico o galones
+  const difDe = (t: Trip) => { const a = analisis.get(t.viaje); const gal = cifras(t).galones; return a && a.galTeorico > 0 && gal > 0 ? gal - a.galTeorico : null; };
   const visibles = useMemo(() => trips
-    .filter(t => (!auditoria || t.estadoAuditoria === auditoria) && (!placaF || t.placa === placaF) && (!conductorF || t.conductor === conductorF))
+    .filter(t => (!filtros.auditoria.length || filtros.auditoria.includes(t.estadoAuditoria)) && (!filtros.estados.length || filtros.estados.includes(estadoDe(t))))
+    .filter(t => (!filtros.placas.length || filtros.placas.includes(valorFiltro(t.placa))) && (!filtros.carretas.length || filtros.carretas.includes(valorFiltro(t.carreta))))
+    .filter(t => (!filtros.motores.length || filtros.motores.includes(valorFiltro(t.motor))) && (!filtros.rutas.length || filtros.rutas.includes(valorFiltro(t.ruta))))
+    .filter(t => !filtros.conductores.length || filtros.conductores.includes(valorFiltro(t.conductor)))
+    .filter(t => !filtros.viaje.trim() || normalizarBusqueda(t.viaje).includes(normalizarBusqueda(filtros.viaje)))
+    .filter(t => dentroDeRango(n(t.pesoMaxTn), filtros.peso) && dentroDeRango(cifras(t).galones, filtros.galones))
+    .filter(t => dentroDeRango(cifras(t).rendimiento, filtros.rendimiento) && dentroDeRango(cifras(t).gasto, filtros.gasto))
+    .filter(t => dentroDeRango(difDe(t), filtros.diferencia))
     .filter(t => !ocultarSinViaje || !t.viaje.startsWith('SIN-VIAJE'))
     .sort((a, b) => {
       const sinA = a.viaje.startsWith('SIN-VIAJE') ? 1 : 0;
@@ -397,25 +432,10 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         case 'cost_desc': return n(b.totalGasto) - n(a.totalGasto);
         default: return b.viaje.localeCompare(a.viaje, undefined, { numeric: true });
       }
-    }), [trips, auditoria, placaF, conductorF, orden, ocultarSinViaje]);
+    }), [trips, filtros, orden, ocultarSinViaje, analisis]); // eslint-disable-line react-hooks/exhaustive-deps
   const paginas = Math.max(1, Math.ceil(visibles.length / tamano));
   const pagActual = Math.min(pagina, paginas);
   const pagina_ = useMemo(() => visibles.slice((pagActual - 1) * tamano, pagActual * tamano), [visibles, pagActual, tamano]);
-
-  // Cálculo por viaje y por tramo (IDA / RETORNO) con la misma lógica del clásico
-  const analisis = useMemo(() => {
-    const mapa = new Map<string, AnalisisViaje>();
-    if (urea) return mapa;
-    for (const x of visibles) {
-      const viaje: ViajeCalc = {
-        ruta: x.ruta, rutaIda: x.rutaIda, rutaRetorno: x.rutaRetorno, motor: x.motor, configuracion: x.configuracion, carreta: x.carreta,
-        pesoIda: x.pesoIda, pesoRetorno: x.pesoRetorno, pesoMaxTn: x.pesoMaxTn, kmInicio: x.kmInicio, kmFin: x.kmFin,
-        vouchers: (x.vouchers ?? []).filter(v => esD2(String(v.producto ?? ''))),
-      };
-      mapa.set(x.viaje, analizarViaje(viaje, matriz));
-    }
-    return mapa;
-  }, [visibles, matriz, urea]);
 
   // CAN (GPS): los viajes de la página van en una sola petición; el servidor consulta Wialon en secuencia
   const lote = useMemo(() => pagina_.filter(x => x.placa).map((x, index) => {
@@ -633,15 +653,10 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         <SearchField value={busqueda} placeholder="Viaje, placa, ruta o conductor…"
           onChange={v => { setBusqueda(v); window.clearTimeout((window as unknown as { _anT?: number })._anT); (window as unknown as { _anT?: number })._anT = window.setTimeout(() => setQ(v.trim()), 350); }} />
         <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
-          <SelectInput value={auditoria} onChange={e => setAuditoria(e.target.value)} aria-label="Auditoría" style={{ width: 'auto' }}>
-            <option value="">Toda auditoría</option>{AUDIT.map(a => <option key={a} value={a}>{a}</option>)}
-          </SelectInput>
-          <SelectInput value={placaF} onChange={e => setPlacaF(e.target.value)} aria-label="Placa" style={{ width: 'auto' }}>
-            <option value="">Todas las placas</option>{placas.map(p => <option key={p} value={p}>{p}</option>)}
-          </SelectInput>
-          <SelectInput value={conductorF} onChange={e => setConductorF(e.target.value)} aria-label="Conductor" style={{ width: 'auto', maxWidth: 220 }}>
-            <option value="">Todos los conductores</option>{conductores.map(c => <option key={c} value={c}>{c}</option>)}
-          </SelectInput>
+          <Button variant={hayFiltros ? 'primary' : 'secondary'} icon={<SlidersHorizontal size={15} />} onClick={() => setFiltrando(true)}
+            aria-label={hayFiltros ? `Filtros, ${cuentaFiltrosAnalisis(filtros)} activos` : 'Filtros'}>
+            {hayFiltros ? `Filtros (${cuentaFiltrosAnalisis(filtros)})` : 'Filtros'}
+          </Button>
           <SelectInput value={orden} onChange={e => setOrden(e.target.value)} aria-label="Orden" style={{ width: 'auto' }}>
             {ORDENES.map(o => <option key={o.v} value={o.v}>{o.t}</option>)}
           </SelectInput>
@@ -667,7 +682,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         )}
 
         {datos.isLoading ? <PageLoader /> : datos.isError ? <Notice tone="error">{errorMessage(datos.error)}</Notice> : visibles.length === 0 ? (
-          <EmptyState icon={busqueda || auditoria || desde || hasta ? <SearchX size={22} /> : <Icono size={22} />} title={busqueda || auditoria ? 'Sin coincidencias' : 'Sin viajes para analizar'}>
+          <EmptyState icon={busqueda || hayFiltros || desde || hasta ? <SearchX size={22} /> : <Icono size={22} />} title={busqueda || hayFiltros ? 'Sin coincidencias' : 'Sin viajes para analizar'}>
             {urea ? 'Aparecen los viajes con vales de urea.' : 'Aparecen los viajes con vales de combustible.'}
           </EmptyState>
         ) : (
@@ -775,6 +790,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
       </div>
 
       <DetalleViaje trip={t} urea={urea} puedeAuditar={puedeAuditar} guardar={guardar} analisis={t ? analisis.get(t.viaje) : undefined} gpsLote={gps.data?.[t?.viaje ?? '']?.data ?? null} onClose={() => setAbierto(null)} cifras={cifras} />
+      <FiltrosAnalisisSheet open={filtrando} onClose={() => setFiltrando(false)} filtros={filtros} onChange={setFiltros} opciones={opciones} resultado={visibles.length} urea={urea} />
     </Page>
   );
 }
