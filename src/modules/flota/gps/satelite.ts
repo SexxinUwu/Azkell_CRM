@@ -18,7 +18,8 @@ function imagenTransparente(): Promise<ArrayBuffer> {
   return transparente;
 }
 
-const url = (z: string, y: string, x: string) => MAPA_URLS.satelite.replace('{z}', z).replace('{y}', y).replace('{x}', x);
+const plantilla = (t: string, z: string, y: string, x: string) => t.replace('{z}', z).replace('{y}', y).replace('{x}', x);
+const url = (z: string, y: string, x: string) => plantilla(MAPA_URLS.satelite, z, y, x);
 const sha1 = async (b: ArrayBuffer) => [...new Uint8Array(await crypto.subtle.digest('SHA-1', b))].map(n => n.toString(16).padStart(2, '0')).join('');
 
 // Firma de la lámina de "sin imágenes": se aprende pidiendo una tesela a un zoom que Esri no tiene
@@ -37,6 +38,12 @@ export function registrarEsri() {
   maplibregl.addProtocol(ESQUEMA_ESRI, async (params, controlador) => {
     const [z, y, x] = params.url.replace(`${ESQUEMA_ESRI}://`, '').split('/');
     try {
+      // Primero Clarity (más reciente); si no tiene la tesela (404), la imagen estándar de Esri
+      const c = await fetch(plantilla(MAPA_URLS.sateliteClarity, z, y, x), { signal: controlador.signal });
+      if (c.ok) {
+        const d = await c.arrayBuffer();
+        if (d.byteLength !== SAT_PLACEHOLDER_BYTES) return { data: d };
+      }
       const r = await fetch(url(z, y, x), { signal: controlador.signal });
       if (!r.ok) return { data: (await imagenTransparente()).slice(0) };
       const data = await r.arrayBuffer();

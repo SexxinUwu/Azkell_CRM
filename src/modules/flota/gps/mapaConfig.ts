@@ -5,6 +5,8 @@ export const MAPA_URLS = {
   vectores: 'https://tiles.openfreemap.org/planet',
   tipografias: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
   relieve: 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png',
+  // Esri Clarity: imágenes más recientes y con más detalle; llega a los mismos zooms que la estándar (z19 en Lima, z17 en el campo)
+  sateliteClarity: 'https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   // Con VITE_ESRI_KEY se usa la versión con clave de Esri; si no, la pública
   satelite: esri
     ? `https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=${esri}`
