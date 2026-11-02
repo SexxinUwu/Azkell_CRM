@@ -20,6 +20,8 @@ export interface Historial {
   puntos: PuntoHistorial[];
   paradas: ParadaHistorial[];
   excesos: ExcesoHistorial[];
+  /** El servidor no pudo cargar todo el rango: el trazado puede tener huecos */
+  truncado?: boolean;
   metricas: { totalKm: number; maxSpeed: number; avgSpeed: number; tiempoMovMin: number; paradasTotal: number };
 }
 
@@ -29,22 +31,25 @@ const num = (v: unknown, defecto = 0) => {
 };
 
 /** Rango del recorrido: las últimas N horas, o un día completo ('AAAA-MM-DD', hora local) */
-export type RangoHistorial = { horas: number; dia: string | null };
+export type RangoHistorial = { horas: number; dia: string | null; /** 'AAAA-MM-DDTHH:mm' local */ desde?: string | null; hasta?: string | null };
 const inicioDia = (d: string) => new Date(`${d}T00:00:00`);
 
 /** Recorrido de una unidad: las últimas N horas o un día anterior (el servidor consulta el recorrido guardado en Wialon) */
 export function useHistorial(placa: string | null, unitId: number | null, rango: RangoHistorial) {
-  const { horas, dia } = rango;
+  const { horas, dia, desde, hasta } = rango;
   return useQuery({
-    queryKey: ['flota', 'historial', placa, unitId, horas, dia],
+    queryKey: ['flota', 'historial', placa, unitId, horas, dia, desde, hasta],
     enabled: !!placa,
     staleTime: 60_000,
     queryFn: async (): Promise<Historial> => {
       const r = await api<{ data?: Record<string, unknown> }>('/script/obtenerHistorialGPS', {
         method: 'POST',
-        body: { args: [dia
-          ? { placa, unitId, fechaInicio: inicioDia(dia).toISOString(), fechaFin: new Date(inicioDia(dia).getTime() + 86400000).toISOString() }
-          : { placa, unitId, horas }] },
+        body: { args: [desde && hasta
+          // completo: recorre todo el rango por ventanas, así no se pierde el inicio por el tope de 2.000 mensajes
+          ? { placa, unitId, fechaInicio: new Date(desde).toISOString(), fechaFin: new Date(hasta).toISOString(), completo: true }
+          : dia
+            ? { placa, unitId, fechaInicio: inicioDia(dia).toISOString(), fechaFin: new Date(inicioDia(dia).getTime() + 86400000).toISOString(), completo: true }
+            : { placa, unitId, horas }] },
       });
       const d = (r?.data ?? {}) as Record<string, unknown>;
       if (d.error) throw new Error(String(d.error));
@@ -53,6 +58,7 @@ export function useHistorial(placa: string | null, unitId: number | null, rango:
       const excesos = (Array.isArray(d.excesos) ? d.excesos : []) as Array<Record<string, unknown>>;
       const m = (d.metricas ?? {}) as Record<string, unknown>;
       return {
+        truncado: d.truncado === true,
         puntos: puntos
           .map(p => ({
             lat: num(p.lat), lng: num(p.lng), velocidad: num(p.velocidad), curso: num(p.curso),

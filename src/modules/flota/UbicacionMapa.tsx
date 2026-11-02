@@ -32,8 +32,10 @@ interface Props {
   onElegir: (placa: string | null) => void;
   onAlerta: (a: Alerta) => void;
   onPiloto: (on: boolean) => void;
+  /** Estilo efectivo (Noche, Día o Satélite); Noche y Día salen del tema del sistema */
   tema: TemaMapa;
-  onTema: (t: TemaMapa) => void;
+  base: 'mapa' | 'sat';
+  onBase: (b: 'mapa' | 'sat') => void;
   /** Contenido flotante que va encima del mapa (barra superior, lista, ficha) */
   children?: React.ReactNode;
 }
@@ -46,7 +48,7 @@ const HERRAMIENTAS: Array<{ k: keyof OpcionesMapa | 'overview'; tip: string; mov
   { k: 'models', tip: 'Unidades en 3D al acercar', d: 'M2 15h13V7H2zM15 10h4l3 3v2h-7M6 18h.01M18 18h.01' },
   { k: 'overview', tip: 'Ver toda la flota', d: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5' },
 ];
-const ESTILOS: Array<{ s: TemaMapa; l: string }> = [{ s: 'night', l: 'Noche' }, { s: 'day', l: 'Día' }, { s: 'sat', l: 'Satélite' }];
+const ESTILOS: Array<{ s: 'mapa' | 'sat'; l: string }> = [{ s: 'mapa', l: 'Mapa' }, { s: 'sat', l: 'Satélite' }];
 
 export function UbicacionMapa(p: Props) {
   const host = useRef<HTMLDivElement>(null);
@@ -111,7 +113,7 @@ export function UbicacionMapa(p: Props) {
           ))}
         </div>
         <div className="tg-seg tg-glass" role="group" aria-label="Estilo del mapa">
-          {ESTILOS.map(e => <button key={e.s} type="button" aria-pressed={p.tema === e.s} onClick={() => p.onTema(e.s)}>{e.l}</button>)}
+          {ESTILOS.map(e => <button key={e.s} type="button" aria-pressed={p.base === e.s} onClick={() => p.onBase(e.s)}>{e.l}</button>)}
         </div>
       </div>
     </div>

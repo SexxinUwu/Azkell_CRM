@@ -1607,8 +1607,10 @@ router.post('/:metodo', async (req, res) => {
         if (!placaParam && !targetUnitId) {
             return res.json({ data: { error: 'Debe especificar placa o unitId para consultar el historial.' } });
         }
-        if (completo && (toSec <= fromSec || toSec - fromSec > 72 * 3600)) {
-            return res.json({ data: { error: 'El rango del historial completo debe ser mayor a 0 y de máximo 72 horas.' } });
+        // Hasta 7 días (el plan de Wialon conserva 400 días). Más de 72 h se consulta por ventanas de 6 h para no pasar del tope de llamadas.
+        const MAX_HORAS_COMPLETO = 7 * 24;
+        if (completo && (toSec <= fromSec || toSec - fromSec > MAX_HORAS_COMPLETO * 3600)) {
+            return res.json({ data: { error: 'El rango del historial completo debe ser mayor a 0 y de máximo 7 días.' } });
         }
 
         try {
@@ -1660,9 +1662,9 @@ router.post('/:metodo', async (req, res) => {
             if (!completo) {
                 rawMessages = await cargarVentana(fromSec, toSec, 2000);
             } else {
-                // Ventanas de 2 h con tope de 5000 mensajes; si una ventana se satura se parte a la mitad (hasta 6 niveles).
+                // Ventanas de 2 h (6 h si el rango pasa de 72 h) con tope de 5000 mensajes; si una ventana se satura se parte a la mitad (hasta 6 niveles).
                 // Topes de seguridad: 80 consultas, 150000 mensajes y 45 s.
-                const LOTE = 5000, VENTANA = 2 * 3600, MAX_LLAMADAS = 80, MAX_MENSAJES = 150000;
+                const LOTE = 5000, VENTANA = (toSec - fromSec > 72 * 3600 ? 6 : 2) * 3600, MAX_LLAMADAS = 80, MAX_MENSAJES = 150000;
                 const limite = Date.now() + 45000;
                 let llamadas = 0;
                 const cargar = async (desde, hasta, prof) => {

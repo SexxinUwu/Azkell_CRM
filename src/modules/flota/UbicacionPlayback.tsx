@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import { ChevronLeft, ChevronRight, CircleAlert, Clock, Gauge, MapPin, Pause, Play, RotateCcw, Route, X } from 'lucide-react';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
@@ -18,6 +19,10 @@ interface Props {
   /** Día elegido ('AAAA-MM-DD') o null para las últimas horas */
   dia: string | null;
   onDia: (d: string | null) => void;
+  /** Rango libre 'AAAA-MM-DDTHH:mm' (hora local) o null */
+  desde: string | null;
+  hasta: string | null;
+  onRango: (desde: string | null, hasta: string | null) => void;
   /** Lleva el mapa a un lugar del recorrido */
   onIrA: (lat: number, lng: number) => void;
   historial: Historial | undefined;
@@ -36,6 +41,18 @@ interface Props {
 /** Reproducción del recorrido: rango de horas, cifras del recorrido, línea de tiempo y controles */
 export function PanelHistorial(p: Props) {
   const hoy = aISO(new Date());
+  const [borrDesde, setBorrDesde] = useState(p.desde ?? '');
+  const [borrHasta, setBorrHasta] = useState(p.hasta ?? '');
+  const [errRango, setErrRango] = useState('');
+  const minimo = aISO(new Date(Date.now() - 400 * 86400000)); // Wialon conserva 400 días
+  const verRango = () => {
+    const a = new Date(borrDesde).getTime(), b = new Date(borrHasta).getTime();
+    if (!borrDesde || !borrHasta || isNaN(a) || isNaN(b)) return setErrRango('Elige la fecha y hora de inicio y de fin.');
+    if (b <= a) return setErrRango('El fin debe ser después del inicio.');
+    if (b - a > 7 * 86400000) return setErrRango('El rango puede ser de máximo 7 días.');
+    setErrRango('');
+    p.onRango(borrDesde, borrHasta);
+  };
   const puntos = p.historial?.puntos ?? [];
   const punto = puntos[p.indice];
   const m = p.historial?.metricas;
@@ -51,7 +68,7 @@ export function PanelHistorial(p: Props) {
         <div className="gps-ficha__titulo">
           <div className="gps-ficha__linea">
             <strong className="gps-ficha__placa">{p.placa}</strong>
-            <span className="gps-etiqueta">{p.dia ? new Date(`${p.dia}T12:00:00`).toLocaleDateString('es-PE', { weekday: 'short', day: '2-digit', month: 'short' }).toUpperCase() : `ÚLTIMAS ${p.horas} HORAS`}</span>
+            <span className="gps-etiqueta">{p.desde && p.hasta ? 'RANGO' : p.dia ? new Date(`${p.dia}T12:00:00`).toLocaleDateString('es-PE', { weekday: 'short', day: '2-digit', month: 'short' }).toUpperCase() : `ÚLTIMAS ${p.horas} HORAS`}</span>
           </div>
           <span className={`gps-ficha__sub${p.error ? ' gps-historial__error' : ''}`}>{subtitulo}</span>
         </div>
@@ -59,13 +76,25 @@ export function PanelHistorial(p: Props) {
       </header>
 
       <div className="gps-historial__rango">
-        <SegmentedControl label="Rango de horas" value={p.dia ? '' : String(p.horas)} onChange={v => { p.onDia(null); p.onHoras(Number(v)); }} options={HORAS} />
+        <SegmentedControl label="Rango de horas" value={p.dia || p.desde ? '' : String(p.horas)} onChange={v => { p.onDia(null); p.onRango(null, null); p.onHoras(Number(v)); }} options={HORAS} />
       </div>
       <div className="gps-historial__dia">
         <button type="button" aria-label="Día anterior" onClick={() => p.onDia(sumarDias(p.dia ?? hoy, -1))}><ChevronLeft size={16} /></button>
-        <input type="date" value={p.dia ?? ''} max={hoy} aria-label="Día del recorrido" onChange={e => p.onDia(e.target.value || null)} />
+        <input type="date" value={p.dia ?? ''} min={minimo} max={hoy} aria-label="Día del recorrido" onChange={e => p.onDia(e.target.value || null)} />
         <button type="button" aria-label="Día siguiente" disabled={!p.dia || p.dia >= hoy} onClick={() => p.onDia(p.dia && sumarDias(p.dia, 1) < hoy ? sumarDias(p.dia, 1) : null)}><ChevronRight size={16} /></button>
       </div>
+
+      <div className="gps-historial__rango-libre">
+        <span className="gps-dato__titulo">Rango (máx. 7 días)</span>
+        <div>
+          <input type="datetime-local" value={borrDesde} min={`${minimo}T00:00`} max={`${hoy}T23:59`} aria-label="Desde" onChange={e => setBorrDesde(e.target.value)} />
+          <input type="datetime-local" value={borrHasta} min={`${minimo}T00:00`} max={`${hoy}T23:59`} aria-label="Hasta" onChange={e => setBorrHasta(e.target.value)} />
+        </div>
+        <button type="button" onClick={verRango}>Ver rango</button>
+        {errRango && <p className="gps-historial__error">{errRango}</p>}
+      </div>
+
+      {p.historial?.truncado && <p className="gps-historial__nota"><CircleAlert size={13} /> El rango es muy denso y el GPS no pudo cargarse completo; el trazado puede tener huecos.</p>}
 
       {m && (
         <div className="gps-historial__cifras">

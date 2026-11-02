@@ -277,3 +277,8 @@
 .gps-historial__lugares { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; }
 .gps-historial__lugares button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: var(--fill-subtle); border: 0; color: inherit; font: inherit; font-size: .8rem; text-align: left; cursor: pointer; }
 .gps-historial__lugares .gps-historial__hora { font-size: .8rem; min-width: 44px; }
+
+.gps-historial__rango-libre { display: flex; flex-direction: column; gap: 6px; }
+.gps-historial__rango-libre > div { display: grid; grid-template-columns: 1fr; gap: 6px; }
+.gps-historial__rango-libre input { height: 36px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--separator); background: var(--fill-subtle); color: inherit; font: inherit; min-width: 0; }
+.gps-historial__rango-libre button { height: 36px; border-radius: 10px; background: var(--fill-subtle); border: 0; color: inherit; font: inherit; font-weight: 600; cursor: pointer; }

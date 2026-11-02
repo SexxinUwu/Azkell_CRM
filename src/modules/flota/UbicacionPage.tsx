@@ -17,6 +17,7 @@ import { descripcionCamion } from './gps/tipoUnidad';
 import { FichaTelemetria, Grab } from './gps/FichaTelemetria';
 import { ST } from './gps/camiones';
 import type { TemaMapa } from './gps/estilos';
+import { useOscuro } from '../placas/tresd/useOscuro';
 import type { Alerta } from './gps/motor';
 
 // El mapa (MapLibre + three.js) pesa: se descarga solo al abrir este módulo
@@ -37,8 +38,9 @@ const CLAVE_AGRUPAR = 'fleet_gps_agrupar';
 function agrupacionGuardada(): Agrupar {
   try { const v = localStorage.getItem(CLAVE_AGRUPAR); return v === 'individual' || v === 'wialon' ? 'individual' : 'empresa'; } catch { return 'empresa'; }
 }
-function temaGuardado(): TemaMapa {
-  try { const v = localStorage.getItem('fleet_gps_tema'); return v === 'day' || v === 'sat' ? v : 'night'; } catch { return 'night'; }
+type BaseMapa = 'mapa' | 'sat';
+function baseGuardada(): BaseMapa {
+  try { return localStorage.getItem('fleet_gps_base') === 'sat' ? 'sat' : 'mapa'; } catch { return 'mapa'; }
 }
 
 const corta = (empresa: string) => claveEmpresa(empresa).split(' ')[0] || '—';
@@ -64,10 +66,15 @@ export function UbicacionPage() {
   const [panel, setPanel] = useState<'ficha' | 'historial'>('ficha');
   const [horas, setHoras] = useState(24);
   const [dia, setDia] = useState<string | null>(null);
+  const [desde, setDesde] = useState<string | null>(null);
+  const [hasta, setHasta] = useState<string | null>(null);
   const [indice, setIndice] = useState(0);
   const [reproduciendo, setReproduciendo] = useState(false);
   const [velocidad, setVelocidad] = useState<Velocidad>(1);
-  const [tema, setTema] = useState<TemaMapa>(temaGuardado);
+  // El mapa base (Mapa o Satélite) lo elige la persona; el color claro u oscuro lo define el tema del sistema
+  const { oscuro } = useOscuro();
+  const [base, setBase] = useState<BaseMapa>(baseGuardada);
+  const tema: TemaMapa = base === 'sat' ? 'sat' : oscuro ? 'night' : 'day';
     const [ahora, setAhora] = useState(() => Date.now());
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [totalAlertas, setTotalAlertas] = useState(0);
@@ -107,9 +114,10 @@ export function UbicacionPage() {
     setAgrupar(v);
     try { localStorage.setItem(CLAVE_AGRUPAR, v); } catch { /* sin almacenamiento */ }
   };
-  const cambiarTema = useCallback((t: TemaMapa) => {
+  const cambiarBase = useCallback((b: BaseMapa) => {
     haptic('selection');
-    setTema(t);
+    setBase(b);
+    try { localStorage.setItem('fleet_gps_base', b); } catch { /* sin almacenamiento */ }
   }, []);
 
   const grupos = useMemo(() => {
@@ -148,7 +156,7 @@ export function UbicacionPage() {
 
   // Historial: solo se pide cuando el panel de historial está abierto
   const abiertoHistorial = panel === 'historial' && seleccion ? seleccion : null;
-  const historialQ = useHistorial(abiertoHistorial?.placa ?? null, abiertoHistorial?.id ?? null, { horas, dia });
+  const historialQ = useHistorial(abiertoHistorial?.placa ?? null, abiertoHistorial?.id ?? null, { horas, dia, desde, hasta });
   const historial = abiertoHistorial ? historialQ.data : undefined;
   const errorHistorial = historialQ.error ? errorMessage(historialQ.error) : '';
 
@@ -276,13 +284,13 @@ export function UbicacionPage() {
       {isLoading ? <PageLoader variante="camion" /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : (
-        <div className="tg" data-tema={tema === 'day' ? 'day' : 'noche'} data-ficha={seleccion ? 'si' : 'no'} data-piloto={piloto ? 'si' : 'no'}
+        <div className="tg" data-tema={oscuro ? 'noche' : 'day'} data-ficha={seleccion ? 'si' : 'no'} data-piloto={piloto ? 'si' : 'no'}
           data-hoja={hojaLista ? 'full' : ''} data-det={hojaFicha ? 'full' : ''}>
           <Suspense fallback={<div className="tg-cargando">Cargando mapa…</div>}>
             <UbicacionMapa unidades={unidades} descs={descs} visibles={visibles} seleccionada={seleccionada}
               hojaAbierta={!!seleccion} encuadreVersion={0} encuadrarA={encuadrarA}
               historial={historial ?? null} indice={indice} onElegir={elegir} onAlerta={nuevaAlerta} onPiloto={setPiloto}
-              tema={tema} onTema={cambiarTema}>
+              tema={tema} base={base} onBase={cambiarBase}>
               <header className="tg-top">
                 <div className="tg-brand tg-glass">
                   <span className="tg-eyebrow">Flota · Telemetría</span>
@@ -363,7 +371,7 @@ export function UbicacionPage() {
                       onToggleHoja={abrir => setHojaFicha(h => (abrir === undefined ? !h : abrir))} />
                   ) : (
                     <PanelHistorial placa={seleccion.placa} horas={horas}
-                      onHoras={setHoras} dia={dia} onDia={setDia} onIrA={(lat, lng) => motor?.irA(lat, lng)} historial={historial} cargando={historialQ.isFetching && !historial}
+                      onHoras={setHoras} dia={dia} onDia={d => { setDia(d); setDesde(null); setHasta(null); }} desde={desde} hasta={hasta} onRango={(a, b) => { setDesde(a); setHasta(b); setDia(null); }} onIrA={(lat, lng) => motor?.irA(lat, lng)} historial={historial} cargando={historialQ.isFetching && !historial}
                       error={errorHistorial} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
                       reproduciendo={reproduciendo} onReproducir={() => setReproduciendo(r => !r)}
                       onReiniciar={() => { setIndice(0); setReproduciendo(false); }}
