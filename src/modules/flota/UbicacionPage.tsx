@@ -297,7 +297,7 @@ export function UbicacionPage() {
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : (
         <div className="tg" data-tema={oscuro ? 'noche' : 'day'} data-ficha={seleccion ? 'si' : 'no'} data-piloto={piloto ? 'si' : 'no'}
-          data-hoja={hojaLista ? 'full' : ''} data-det={hojaFicha ? 'full' : ''}>
+          data-hist={panel === 'historial' && seleccion ? 'si' : 'no'} data-hoja={hojaLista ? 'full' : ''} data-det={hojaFicha ? 'full' : ''}>
           <Suspense fallback={<div className="tg-cargando">Cargando mapa…</div>}>
             <UbicacionMapa unidades={unidades} descs={descs} visibles={visibles} seleccionada={seleccionada}
               hojaAbierta={!!seleccion} encuadreVersion={0} encuadrarA={encuadrarA}
@@ -325,6 +325,13 @@ export function UbicacionPage() {
                       onFocus={() => { if (matchMedia('(max-width:900px)').matches) setHojaLista(true); }} />
                     {busqueda && <button type="button" className="tg-search__x" aria-label="Borrar búsqueda" onClick={() => setBusqueda('')}><X size={14} /></button>}
                   </label>
+                  <div className="tg-estados" role="group" aria-label="Filtrar por estado">
+                    {([['todos', 'Todas'], ['movimiento', 'Movimiento'], ['ralenti', 'Ralentí'], ['detenido', 'Detenidas'], ['sin_senal', 'Sin señal']] as const).map(([v, etiqueta]) => (
+                      <button key={v} type="button" className="tg-chip" aria-pressed={segmento === v} onClick={() => { haptic('selection'); setSegmento(s => (s === v && v !== 'todos' ? 'todos' : v)); }}>
+                        {etiqueta} <em>{conteoSeg(v)}</em>
+                      </button>
+                    ))}
+                  </div>
                   {q && <p className="tg-resultados" aria-live="polite">{lista.length === 1 ? '1 resultado' : `${lista.length} resultados`}</p>}
                   <div className="tg-chips">
                     <button type="button" className="tg-chip" aria-pressed={activos > 0} onClick={() => setFiltrando(true)}>
@@ -346,10 +353,10 @@ export function UbicacionPage() {
                 <section className="tg-detail tg-glass" aria-label={panel === 'ficha' ? `Ficha de ${seleccion.placa}` : `Historial de ${seleccion.placa}`}>
                   {panel === 'ficha' ? (
                     <FichaTelemetria u={seleccion} motor={motor} conductor={conductorDe(seleccion.placa)} piloto={piloto} capacidad={capacidadSel}
-                      onCerrar={cerrarPanel} onHistorial={() => { haptic('selection'); setPanel('historial'); }}
+                      onCerrar={cerrarPanel} onHistorial={() => { haptic('selection'); setHojaFicha(false); setPanel('historial'); }}
                       onToggleHoja={abrir => setHojaFicha(h => (abrir === undefined ? !h : abrir))} />
                   ) : (
-                    <PanelHistorial placa={seleccion.placa} horas={horas} analisis={analisis} tramos={tramos} viajeSel={viajeSel} onViaje={setViajeSel}
+                    <PanelHistorial placa={seleccion.placa} horas={horas} onToggleHoja={abrir => setHojaFicha(h => (abrir === undefined ? !h : abrir))} analisis={analisis} tramos={tramos} viajeSel={viajeSel} onViaje={setViajeSel}
                       onHoras={setHoras} dia={dia} onDia={d => { setDia(d); setDesde(null); setHasta(null); }} desde={desde} hasta={hasta} onRango={(a, b) => { setDesde(a); setHasta(b); setDia(null); }} onIrA={(lat, lng) => motor?.irA(lat, lng)} historial={historial} cargando={historialQ.isFetching && !historial}
                       error={errorHistorial} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
                       reproduciendo={reproduciendo} onReproducir={() => setReproduciendo(r => !r)}

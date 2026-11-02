@@ -6,6 +6,7 @@ import { fechaHora, soloHora, type Historial } from './UbicacionHistorial';
 import { FUEL_CAMBIO_PCT, type AnalisisCombustible } from './gps/combustible';
 import { VELOCIDADES_REP, type VelocidadRep } from './gps/BarraReproduccion';
 import type { Tramo } from './gps/viajes';
+import { Grab } from './gps/FichaTelemetria';
 
 const HORAS = [6, 12, 24, 48];
 export type Velocidad = VelocidadRep;
@@ -42,6 +43,8 @@ interface Props {
   velocidad: Velocidad;
   onVelocidad: (v: Velocidad) => void;
   onSalir: () => void;
+  /** Celular: expande o pliega la hoja */
+  onToggleHoja?: (abrir?: boolean) => void;
 }
 
 function GraficoCombustible({ a, t0, t1, tCursor, onElegir }: { a: AnalisisCombustible; t0: number; t1: number; tCursor: number | null; onElegir: (t: number) => void }) {
@@ -115,6 +118,7 @@ export function PanelHistorial(p: Props) {
 
   return (
     <div className="tg-h" aria-label={`Historial de ${p.placa}`}>
+      {p.onToggleHoja && <Grab onToggle={p.onToggleHoja} />}
       <header className="tg-h-cab">
         <span className="tg-h-icono"><Route size={18} /></span>
         <div className="tg-h-titulo">

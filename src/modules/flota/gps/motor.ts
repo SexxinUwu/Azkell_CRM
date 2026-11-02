@@ -131,6 +131,8 @@ export class MotorTelemetria {
       canvasContextAttributes: { antialias: true },
     } as any);
     this.mapa.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+    // En celular la atribución empieza plegada (botón "i"): no tapa la hoja inferior
+    if (MOVIL()) this.mapa.once('load', () => this.root.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'));
     this.mapa.on('style.load', () => this.prepararCapas());
     this.mapa.on('move', () => { this.sucio = true; });
     this.mapa.on('dragstart', e => { if (this.follow && (e as any).originalEvent) this.setFollow(false); });
