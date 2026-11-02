@@ -38,10 +38,11 @@ export const SAT_DETALLE_MAXZOOM = 19;
 /** Tamaño en bytes de la lámina gris "Map data not yet available" de Esri */
 export const SAT_PLACEHOLDER_BYTES = 2521;
 
-// Tráfico en tiempo real (TomTom, plan gratuito: hace falta una clave en VITE_TOMTOM_KEY). Sin clave, el botón queda desactivado.
+// Tráfico en tiempo real (TomTom Orbis Traffic Flow: calles principales y secundarias; probado en Lima, Trujillo y Tarapoto).
+// Hace falta una clave en VITE_TOMTOM_KEY. Sin clave, el botón queda desactivado.
 const tomtom = (import.meta.env.VITE_TOMTOM_KEY as string | undefined) || '';
 export const HAY_TRAFICO = !!tomtom;
-export const TRAFICO_URL = tomtom ? `https://api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=${tomtom}` : '';
+export const TRAFICO_URL = tomtom ? `https://api.tomtom.com/maps/orbis/traffic/tile/flow/{z}/{x}/{y}.png?apiVersion=1&key=${tomtom}` : '';
 export const TRAFICO_ATRIBUCION = '© <a href="https://www.tomtom.com">TomTom</a>';
 /** Cada cuánto se vuelven a pedir las teselas de tráfico (ms) */
 export const TRAFICO_REFRESCO_MS = 120_000;

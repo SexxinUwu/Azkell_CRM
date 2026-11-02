@@ -5,6 +5,8 @@ import react from '@vitejs/plugin-react';
 // servida por el mismo server.js desde dist/app.
 export default defineConfig({
   root: 'src',
+  // El .env vive en la raíz del proyecto (no en src). Solo se exponen al navegador las variables que empiezan con VITE_
+  envDir: '..',
   base: '/app/',
   publicDir: false,
   plugins: [react()],
