@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Banknote, Boxes, ChevronLeft, ChevronRight, Contact, IdCard, LayoutDashboard, Plus, Route, Settings, ShieldCheck,
@@ -81,6 +81,8 @@ export function RolesPanel({ roles, canEdit = true }: { roles: RolFila[]; canEdi
   const toast = useToast();
   const qc = useQueryClient();
   const isNarrow = useMediaQuery('(max-width: 899px)');
+  const sinMovimiento = useReducedMotion();
+  const resorte = sinMovimiento ? { duration: 0.01 } : spring;
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [draft, setDraft] = useState<Borrador | null>(null);
   const [pendiente, setPendiente] = useState<{ id: number | null } | null>(null);
@@ -217,7 +219,7 @@ export function RolesPanel({ roles, canEdit = true }: { roles: RolFila[]; canEdi
               </div>
             ) : (
               <motion.div key={selected.id} className="roles__contenido"
-                initial={{ opacity: 0, x: isNarrow ? 16 : 0 }} animate={{ opacity: 1, x: 0 }} transition={spring}>
+                initial={{ opacity: 0, x: isNarrow && !sinMovimiento ? 16 : 0 }} animate={{ opacity: 1, x: 0 }} transition={resorte}>
                 {isNarrow && (
                   <button type="button" className="roles__volver" onClick={() => elegir(null)}>
                     <ChevronLeft size={18} /> Roles
@@ -313,8 +315,8 @@ export function RolesPanel({ roles, canEdit = true }: { roles: RolFila[]; canEdi
       <AnimatePresence>
         {dirty && !readOnly && selected && (
           <motion.div className="save-bar" role="status"
-            initial={{ opacity: 0, y: 24, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 24, scale: 0.98 }} transition={spring}>
+            initial={{ opacity: 0, y: sinMovimiento ? 0 : 24, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: sinMovimiento ? 0 : 24, scale: 0.98 }} transition={resorte}>
             <span className="save-bar__texto">Tienes cambios sin guardar</span>
             <div className="save-bar__acciones">
               <Button size="sm" variant="secondary" onClick={() => setDraft(aBorrador(selected))}>Descartar</Button>

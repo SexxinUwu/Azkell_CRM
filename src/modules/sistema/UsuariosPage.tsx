@@ -3,7 +3,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { Field, PasswordInput, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { Field, PasswordInput, SearchField, TextInput } from '../../core/ui/Field';
+import { ChoiceChips } from '../../core/ui/Chips';
+import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
@@ -115,6 +117,10 @@ const TABS = ['Usuarios', 'Roles'] as const;
 export function UsuariosPage() {
   const qc    = useQueryClient();
   const toast = useToast();
+  const { can } = useAuth();
+  const puedeCrear = can('usuarios.crear');
+  const puedeEditar = can('usuarios.editar');
+  const puedeEliminar = can('usuarios.eliminar');
   const { data, isLoading, isError, error } = useUsuarios();
   const { data: roles = [] } = useRoles();
 
@@ -286,7 +292,7 @@ export function UsuariosPage() {
         title="Usuarios y roles"
         subtitle={lista.length > 0 ? `${lista.length} usuarios · ${activos} activos · ${admins} admins` : undefined}
         actions={
-          tab === 'Usuarios' ? (
+          tab === 'Usuarios' && puedeCrear ? (
             <Button variant="primary" size="sm" icon={<Plus size={15} />} onClick={abrirCrear}>
               Nuevo usuario
             </Button>
@@ -341,7 +347,7 @@ export function UsuariosPage() {
             </div>
           )}
 
-          {tab === 'Roles' && <RolesPanel roles={roles} />}
+          {tab === 'Roles' && <RolesPanel roles={roles} canEdit={puedeEditar} />}
         </>
       )}
 
@@ -352,11 +358,11 @@ export function UsuariosPage() {
         title={editando ? 'Editar usuario' : 'Nuevo usuario'}
         footer={
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            {editando && (
+            {editando && puedeEliminar && (
               <Button variant="danger" icon={<Trash2 size={15} />} onClick={() => setConfirmEliminar(editando)} disabled={guardando} style={{ marginRight: 'auto' }}>Eliminar</Button>
             )}
             <Button variant="plain" onClick={() => setModal(false)} disabled={guardando}>Cancelar</Button>
-            <Button variant="primary" type="submit" form="form-usuario" loading={guardando}>
+            <Button variant="primary" type="submit" form="form-usuario" loading={guardando} disabled={editando ? !puedeEditar : !puedeCrear}>
               {editando ? 'Guardar cambios' : 'Crear usuario'}
             </Button>
           </div>
@@ -401,27 +407,15 @@ export function UsuariosPage() {
             )}
           </Field>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-2)' }}>
-            <Field label="Rol" error={errs.rol}>
-              {props => (
-                <SelectInput {...props} value={form.rol_id}
-                  onChange={e => setForm(f => ({ ...f, rol_id: e.target.value }))}>
-                  <option value="">Elige un rol…</option>
-                  {roles.map(r => (
-                    <option key={r.id} value={r.id}>{r.nombre}</option>
-                  ))}
-                </SelectInput>
-              )}
-            </Field>
-            <Field label="Estado">
-              {props => (
-                <SelectInput {...props} value={form.estado}
-                  onChange={e => setForm(f => ({ ...f, estado: e.target.value }))}>
-                  <option value="Activo">Activo</option>
-                  <option value="Inactivo">Inactivo</option>
-                </SelectInput>
-              )}
-            </Field>
           </div>
+          <Field label="Rol" error={errs.rol}>
+            {() => <ChoiceChips label="Rol" value={form.rol_id} onChange={v => setForm(f => ({ ...f, rol_id: v }))}
+              options={roles.map(r => ({ value: String(r.id), label: r.nombre }))} />}
+          </Field>
+          <Field label="Estado">
+            {() => <SegmentedControl label="Estado" block value={form.estado} onChange={v => setForm(f => ({ ...f, estado: v }))}
+              options={[{ value: 'Activo', label: 'Activo' }, { value: 'Inactivo', label: 'Inactivo' }]} />}
+          </Field>
         </form>
       </Sheet>
 

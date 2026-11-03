@@ -3999,6 +3999,8 @@ app.put('/api/usuarios-v2/:id', async (req, res) => {
         if (!errA && filasA && filasA[0]) req.auditAntes = filasA[0];
         targetDb.query(`UPDATE usuarios SET ${fields.join(',')} WHERE idUsuario=?`, values, (err) => {
             if (err) return res.status(500).json({ error: err.message });
+            // Desactivar a alguien cierra sus sesiones abiertas (antes seguía dentro hasta que el token vencía)
+            if ((estado || 'Activo') === 'Inactivo' && correo) targetDb.query('DELETE FROM sesiones_activas WHERE LOWER(usuario_correo)=?', [String(correo).trim().toLowerCase()], () => {});
             broadcast('usuarios', 'actualizar');
             const antesU = (!errA && filasA && filasA[0]) ? filasA[0] : {};
             const despuesU = { nombre: nombre || '', dni: (dni || '').trim(), cargo: cargo || '', correo: correo || '', estado: estado || 'Activo', rol, rol_id: rolId };
@@ -4031,6 +4033,7 @@ app.delete('/api/usuarios-v2/:id', (req, res) => {
         if (yo && yo === correo) return res.status(400).json({ error: 'No puedes eliminar tu propio usuario.' });
         targetDb.query('DELETE FROM usuarios WHERE idUsuario=?', [id], (err) => {
             if (err) return res.status(500).json({ error: 'No se pudo eliminar: el usuario tiene registros asociados. Mejor desactívalo.' });
+            targetDb.query('DELETE FROM sesiones_activas WHERE LOWER(usuario_correo)=?', [correo], () => {});
             broadcast('usuarios', 'eliminar');
             auditar(targetDb, actorDe(req), { action: 'DELETE', entity: 'user', entityId: id, summary: `Eliminó al usuario ${u.nombre || u.correo}` });
             logAudit(req.user ? req.user.correo : 'admin', 'usuarios', 'ELIMINÓ', `${u.nombre || u.correo}`);
