@@ -1,14 +1,13 @@
 import { formatFechaHoraPe, formatSoles } from '../../core/lib/format';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CalendarDays, ClipboardCheck, Disc, Download, FileText, Gauge, Package, Pencil, Play, Plus, Share2, Timer, Trash2 } from 'lucide-react';
+import { ArrowUpRight, Ban, CalendarDays, ClipboardCheck, Disc, Download, FileText, Gauge, Package, Pencil, Play, Plus, RotateCcw, Share2, Timer, Trash2 } from 'lucide-react';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, Notice } from '../../core/ui/Display';
 import { pestanaConCamion } from '../../core/ui/CargaCamion';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
-import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -315,17 +314,6 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     }
   }
 
-  async function descargarPlantilla() {
-    setExportando(true);
-    try {
-      await abrirPdf(() => pdfPlantillaOt(ot, extrasPdf()), `Plantilla orden de trabajo ${idOt}.pdf`);
-    } catch (err) {
-      toast(errorMessage(err), 'error');
-    } finally {
-      setExportando(false);
-    }
-  }
-
   // Acciones principales según el ciclo de vida; el resto va al menú
   const principal = (() => {
     if (!puedeEditar) return null;
@@ -341,24 +329,12 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     </>
   ) : null;
 
-  const opcionesMenu = [
-    ...acciones
-      .filter(a => !['iniciar', 'reanudar', 'pausar', 'cerrar'].includes(a))
-      .map(a => ({ label: ETIQUETA_ACCION[a], destructiva: a === 'anular', separado: a === 'anular', onSelect: () => onAccion(a) })),
-    puedeEditar && ot.estado === 'Pausada' && { label: 'Cerrar OT', onSelect: () => setCerrando(true) },
-    puedeEliminar && { label: 'Eliminar OT', destructiva: true, separado: true, onSelect: onEliminar },
-    { label: 'Descargar plantilla', onSelect: descargarPlantilla },
-  ].filter(Boolean) as Parameters<typeof MenuOtros>[0]['opciones'];
-
   return (
     <div className="ot-ficha">
-      <div className="tarjeta__barra">
+      <div className="tarjeta__barra tarjeta__barra--plana">
         <button type="button" className="tarjeta__volver" onClick={onVolver}>
           <span style={{ fontSize: '1.2rem' }}>‹</span> Órdenes
         </button>
-        <div className="tarjeta__barra-acciones">
-          {opcionesMenu.length > 0 && <MenuOtros opciones={opcionesMenu} />}
-        </div>
       </div>
 
       <div className="ot-ficha__hero">
@@ -371,19 +347,26 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
       <div className="ot-acciones">
         {principal}
         {botonesEstado}
+        {puedeEditar && ot.estado === 'Pausada' && <Button variant="primary" onClick={() => setCerrando(true)}>Cerrar OT</Button>}
+        {/* Las demás acciones son íconos: el nombre aparece al pasar el mouse (y lo lee el lector de pantalla) */}
         {puedeEditar && (
           <>
-            <Button variant="secondary" icon={<Pencil size={15} />} onClick={() => setEditandoOT(true)}>Editar OT</Button>
-            <Button variant="secondary" icon={<CalendarDays size={15} />} onClick={() => setEditandoFechas(true)}>Fechas</Button>
-            <Button variant="secondary" icon={<Gauge size={15} />} onClick={() => setEditandoKm(true)}>Kilometraje</Button>
+            <Button variant="secondary" iconOnly icon={<Pencil size={17} />} title="Editar OT" aria-label="Editar OT" onClick={() => setEditandoOT(true)} />
+            <Button variant="secondary" iconOnly icon={<CalendarDays size={17} />} title="Fechas" aria-label="Fechas" onClick={() => setEditandoFechas(true)} />
+            <Button variant="secondary" iconOnly icon={<Gauge size={17} />} title="Kilometraje" aria-label="Kilometraje" onClick={() => setEditandoKm(true)} />
           </>
         )}
-        <Button variant="secondary" icon={<Download size={15} />} onClick={() => exportar('descargar')} disabled={exportando || loadMat || loadTra}>
-          PDF
-        </Button>
-        <Button variant="secondary" icon={<Share2 size={15} />} onClick={() => exportar('whatsapp')} disabled={exportando || loadMat || loadTra}>
-          Compartir WhatsApp
-        </Button>
+        <Button variant="secondary" iconOnly icon={<Download size={17} />} title="Descargar PDF" aria-label="Descargar PDF" onClick={() => exportar('descargar')} disabled={exportando || loadMat || loadTra} />
+        <Button variant="secondary" iconOnly icon={<Share2 size={17} />} title="Compartir por WhatsApp" aria-label="Compartir por WhatsApp" onClick={() => exportar('whatsapp')} disabled={exportando || loadMat || loadTra} />
+        {puedeEditar && acciones.includes('reactivar') && (
+          <Button variant="secondary" iconOnly icon={<RotateCcw size={17} />} title="Reactivar OT" aria-label="Reactivar OT" onClick={() => onAccion('reactivar')} />
+        )}
+        {puedeEditar && acciones.includes('anular') && (
+          <Button variant="secondary" iconOnly icon={<Ban size={17} />} title="Anular OT" aria-label="Anular OT" onClick={() => onAccion('anular')} />
+        )}
+        {puedeEliminar && (
+          <Button variant="danger" iconOnly icon={<Trash2 size={17} />} title="Eliminar OT" aria-label="Eliminar OT" onClick={onEliminar} />
+        )}
         {idsInspeccion.map(id => (
           <button key={id} type="button" className="ot-enlace" onClick={() => setInspeccionAbierta(id)}>
             Inspección {id} <ArrowUpRight size={14} />

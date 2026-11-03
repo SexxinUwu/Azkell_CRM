@@ -111,12 +111,9 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                         const rPlaca = String(rampa.placa || '').toUpperCase().trim();
                         if (!rPlaca && !rId) return;
 
-                        // Buscar OTs asociadas a esta rampa o placa
-                        const otsRampa = (rowsOt || []).filter(o => {
-                            const oPlaca = String(o.placa || '').toUpperCase().trim();
-                            const oRampaId = o.id_rampa;
-                            return (oRampaId && String(oRampaId) === String(rId)) || (oPlaca && oPlaca === rPlaca);
-                        });
+                        // Un status (visita a rampa) está atado solo a sus propias OT (id_rampa). Las OT de otra visita de la misma
+                        // placa no cuentan: así un status nuevo de una placa que ya tuvo OT cerradas no se libera solo.
+                        const otsRampa = (rowsOt || []).filter(o => o.id_rampa && String(o.id_rampa) === String(rId));
 
                         // Si tiene OTs y TODAS están finalizadas/cerradas, liberar la rampa automáticamente
                         if (otsRampa.length > 0) {
@@ -1447,7 +1444,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                     );
                 }
                 if (obs !== undefined) {
-                    (req.db || db).query('SELECT ticket_entrada, detalles_json FROM ordenes_trabajo WHERE id_rampa = ? OR (UPPER(placa) = UPPER(?) AND estado != "Finalizado")', [req.params.id, placa], (errOTs, rowsOTs) => {
+                    (req.db || db).query('SELECT ticket_entrada, detalles_json FROM ordenes_trabajo WHERE id_rampa = ?', [req.params.id], (errOTs, rowsOTs) => {
                         if (!errOTs && rowsOTs && rowsOTs.length) {
                             rowsOTs.forEach(row => {
                                 let det = {};

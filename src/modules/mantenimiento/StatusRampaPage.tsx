@@ -41,18 +41,12 @@ function leerVerInspeccion(): boolean {
   try { return localStorage.getItem(CLAVE_VER_INSPECCION) !== '0'; } catch { return true; }
 }
 
-const placaNorm = (s: string | null | undefined) => String(s ?? '').trim().toUpperCase();
 
-// OT abiertas de una rampa: enlazadas a esa rampa, o de la misma placa cuando su rampa ya no está activa
-// (p. ej. la unidad se liberó y volvió a ingresar: la OT en curso no debe quedar huérfana)
-function otsDeRampa(e: RampaEntrada, ots: OrdenTrabajo[], entradas: RampaEntrada[]): OrdenTrabajo[] {
-  const rampasActivas = new Set(entradas.map(x => String(x.id ?? '')));
-  return ots.filter(o => {
-    const rampaOT = String(o.id_rampa ?? '');
-    if (rampaOT && rampaOT === String(e.id ?? '')) return true;
-    if (/cerrad|finaliz|anulad/i.test(String(o.estado ?? ''))) return false;
-    return placaNorm(o.placa) !== '' && placaNorm(o.placa) === placaNorm(e.placa) && !rampasActivas.has(rampaOT);
-  });
+// OT de una rampa: solo las de ese status (id_rampa). Un status es una visita con su propio código: las OT de otra visita de la
+// misma placa no le pertenecen, aunque la placa se repita. `_entradas` se conserva por compatibilidad con los llamadores.
+function otsDeRampa(e: RampaEntrada, ots: OrdenTrabajo[], _entradas: RampaEntrada[]): OrdenTrabajo[] {
+  const id = String(e.id ?? '');
+  return ots.filter(o => !!o.id_rampa && String(o.id_rampa) === id);
 }
 
 // Técnicos únicos de las OT abiertas de cada rampa: los de la OT (detalles) y los de sus trabajos (trabajos_ot.tecnico, separados por coma)
@@ -683,9 +677,9 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
   const [eliminando, setEliminando] = useState(false);
   const liberada = e.estado === 'Liberado';
   const ordenesData = useOrdenesTrabajoData();
-  // OT de esta visita: las enlazadas a la rampa o con su mismo ticket de entrada (la más reciente primero)
-  const otsDeEstaRampa = useMemo(() => (ordenesData.data ?? []).filter(o => String(o.id_rampa ?? '') === String(e.id ?? '') || (!!e.ticket_entrada && o.ticket_entrada === e.ticket_entrada))
-    .sort((x, y) => otId(y).localeCompare(otId(x))), [ordenesData.data, e.id, e.ticket_entrada]);
+  // OT de esta visita (solo las de este status), la más reciente primero
+  const otsDeEstaRampa = useMemo(() => (ordenesData.data ?? []).filter(o => !!o.id_rampa && String(o.id_rampa) === String(e.id ?? ''))
+    .sort((x, y) => otId(y).localeCompare(otId(x))), [ordenesData.data, e.id]);
   // OT de la visita abierta en su ficha completa (trabajos, materiales, editar, acciones: como en Reportes OT)
   const [otSel, setOtSel] = useState<string | null>(null);
   const { can } = useAuth();
@@ -813,14 +807,13 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
             <div className="dato"><span className="dato__valor" style={{ color: 'var(--label-2)' }}>Aún no hay órdenes de trabajo en esta visita.</span></div>
           )}
           {otsDeEstaRampa.map(ot => (
-            <button key={otId(ot)} type="button" className="dato" style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 0, cursor: 'pointer', font: 'inherit', color: 'inherit', display: 'flex', alignItems: 'center', gap: 'var(--s-3)' }}
-              onClick={() => { haptic('selection'); setOtSel(otId(ot)); }}>
-              <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                <span className="dato__valor dato__valor--mono">{otId(ot)}</span>
-                <span className="dato__label">{[ot.situacion, ot.tecnico, ot.fecha_ingreso ? formatFechaPe(ot.fecha_ingreso) : ''].filter(Boolean).join(' · ') || 'Orden de trabajo'}</span>
+            <button key={otId(ot)} type="button" className="ot-fila" onClick={() => { haptic('selection'); setOtSel(otId(ot)); }}>
+              <span className="ot-fila__texto">
+                <span className="ot-fila__id">{otId(ot)}</span>
+                <span className="ot-fila__sub">{[ot.situacion, ot.tecnico, ot.fecha_ingreso ? formatFechaPe(ot.fecha_ingreso) : ''].filter(Boolean).join(' · ') || 'Orden de trabajo'}</span>
               </span>
               <span className="ot-estado ot-estado--neutral">{ot.estado ?? '—'}</span>
-              <span aria-hidden style={{ color: 'var(--label-3)', fontSize: '1.2rem' }}>›</span>
+              <ChevronRight size={18} className="ot-fila__flecha" aria-hidden />
             </button>
           ))}
         </div>

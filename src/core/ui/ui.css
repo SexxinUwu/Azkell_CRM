@@ -1023,6 +1023,8 @@ label.row__main { cursor: pointer; }
   backdrop-filter: blur(20px) saturate(1.8);
 }
 .contactos--dividido .tarjeta__barra { top: 0; background: color-mix(in srgb, var(--surface) 82%, transparent); }
+/* Sin franja translúcida: dentro de una hoja el botón de volver queda sobre el fondo, sin velo */
+.tarjeta__barra--plana, .contactos--dividido .tarjeta__barra--plana { position: static; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; min-height: 2.75rem; }
 .tarjeta__barra-acciones { display: flex; align-items: center; gap: var(--s-2); margin-left: auto; }
 .tarjeta__volver {
   display: inline-flex; align-items: center; gap: 0.125rem; min-height: 2.75rem; padding-right: var(--s-2);
