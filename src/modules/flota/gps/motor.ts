@@ -65,6 +65,31 @@ export interface CallbacksMotor {
 }
 
 const MOVIL = () => matchMedia('(max-width:900px)').matches;
+
+/**
+ * MapLibre 5.6 puede lanzar "Cannot read properties of undefined (reading 'key')" en _updateRetainedTiles
+ * (con cámara inclinada, una tesela ya está en el zoom máximo de la fuente mientras el zoom de referencia aún no).
+ * Cada cuadro fallaba y el mapa quedaba a medias. Se corrige el zoom de referencia y, si aun así falla,
+ * se conservan solo las teselas ideales para que el cuadro se dibuje.
+ */
+function protegerTeselas(mapa: MapaGL) {
+  const cache = Object.values((mapa as unknown as { style?: { sourceCaches?: Record<string, unknown> } }).style?.sourceCaches ?? {})[0] as { constructor: { prototype: Record<string, unknown> } } | undefined;
+  const proto = cache?.constructor.prototype as { _updateRetainedTiles?: (...a: any[]) => unknown; _addTile?: (id: unknown) => unknown; __protegido?: boolean } | undefined;
+  if (!proto || proto.__protegido || typeof proto._updateRetainedTiles !== 'function') return;
+  const original = proto._updateRetainedTiles;
+  proto.__protegido = true;
+  proto._updateRetainedTiles = function (this: { _source?: { maxzoom?: number }; _addTile: (id: unknown) => unknown }, ideal: Array<{ overscaledZ: number; key: string }>, zoom: number) {
+    const maxzoom = this._source?.maxzoom ?? 22;
+    const zRef = ideal.some(t => t.overscaledZ >= maxzoom) ? Math.max(zoom, maxzoom) : zoom;
+    try {
+      return original.call(this, ideal, zRef);
+    } catch {
+      const retener: Record<string, unknown> = {};
+      for (const t of ideal) { try { this._addTile(t); } catch { /* tesela fuera de rango */ } retener[t.key] = t; }
+      return retener;
+    }
+  };
+}
 /** Con "reducir movimiento" el mapa salta a su destino en vez de volar */
 const REDUCIR = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const fc = (features: any[]) => ({ type: 'FeatureCollection' as const, features });
@@ -137,7 +162,7 @@ export class MotorTelemetria {
     this.mapa.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
     // En celular la atribución empieza plegada (botón "i"): no tapa la hoja inferior
     if (MOVIL()) this.mapa.once('load', () => this.root.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'));
-    this.mapa.on('style.load', () => this.prepararCapas());
+    this.mapa.on('style.load', () => { protegerTeselas(this.mapa); this.prepararCapas(); });
     // Errores de teselas de tráfico: 401, 403 o 429 (o varios seguidos) apagan la capa; sin repetir errores en la consola
     this.mapa.on('error', e => {
       const ev = e as unknown as { sourceId?: string; error?: { status?: number } };

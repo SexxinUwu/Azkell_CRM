@@ -84,7 +84,7 @@ const usuarioDe = req => {
 // Misma regla de administrador que globalRBAC: Fundador, Administrador o permisos.admin === true.
 function tienePermiso(req, clave, accion = 'c') {
     const rol = String((req && req.user && req.user.rol) || '');
-    if (rol === 'Fundador' || rol === 'Administrador' || rol.toLowerCase().includes('admin')) return true;
+    if (rol === 'Fundador') return true;
     let p = {};
     try {
         const raw = req && req.user ? req.user.permisos : null;

@@ -2755,7 +2755,7 @@ app.post('/api/login', limiterLoginCuenta, (req, res) => {
                 let permisosFinales;
                 let rolFinal = usuario.rol || "Personalizado";
 
-                let esAdminRol = (usuario.rol && usuario.rol.toLowerCase().includes('admin')) || usuario.rol_es_admin;
+                let esAdminRol = !!usuario.rol_es_admin;
 
                 if (loginInput.toLowerCase() === 'admin@azkell.com' || (usuario.correo && usuario.correo.toLowerCase() === 'admin@azkell.com')) {
                     permisosFinales = JSON.stringify({ admin: true });
@@ -2854,7 +2854,7 @@ app.post('/api/login', limiterLoginCuenta, (req, res) => {
 
                             let permisosFinales;
                             let rolFinal = usuario.rol || "Personalizado";
-                            let esAdminRol = (usuario.rol && usuario.rol.toLowerCase().includes('admin')) || usuario.rol_es_admin;
+                            let esAdminRol = !!usuario.rol_es_admin;
 
                             if (loginInput.toLowerCase() === 'admin@azkell.com' || (usuario.correo && usuario.correo.toLowerCase() === 'admin@azkell.com')) {
                                 permisosFinales = JSON.stringify({ admin: true });
@@ -3859,6 +3859,7 @@ app.post('/api/roles', (req, res) => {
     const targetDb = req.db || db;
     const { nombre, color, permisos_json, es_admin, orden } = req.body;
     if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+    if (es_admin && !esAdminPeticion(req)) return res.status(403).json({ error: 'Solo un administrador puede crear un rol de administrador.' });
     targetDb.query(
         'INSERT INTO roles (nombre, color, permisos_json, es_admin, orden) VALUES (?, ?, ?, ?, ?)',
         [nombre, color || '#5865F2', permisos_json || '{}', es_admin ? 1 : 0, orden || 0],
@@ -3884,6 +3885,7 @@ app.put('/api/roles/:id', (req, res) => {
     const targetDb = req.db || db;
     targetDb.query('SELECT nombre, color, permisos_json, es_admin, orden FROM roles WHERE id=?', [id], (errA, filasA) => {
         const antes = (!errA && filasA && filasA[0]) ? filasA[0] : {};
+        if ((es_admin || antes.es_admin) && !esAdminPeticion(req)) return res.status(403).json({ error: 'Solo un administrador puede editar un rol de administrador o darle ese acceso a otro rol.' });
         targetDb.query(
             'UPDATE roles SET nombre=?, color=?, permisos_json=?, es_admin=?, orden=? WHERE id=?',
             [nombre, color || '#5865F2', permisos_json || '{}', es_admin ? 1 : 0, orden || 0, id],
@@ -3892,9 +3894,9 @@ app.put('/api/roles/:id', (req, res) => {
 
                 // Sincronizar permisos_json en todos los usuarios asignados a este rol
                 targetDb.query(
-                    'UPDATE usuarios SET permisos_json=? WHERE rol_id=?',
-                    [permisos_json || '{}', id],
-                    () => {}
+                    'UPDATE usuarios SET permisos_json=?, rol=? WHERE rol_id=?',
+                    [permisos_json || '{}', nombre, id],
+                    (eSync) => { if (eSync) console.error('Sincronizar permisos del rol', id, ':', eSync.message); }
                 );
 
                 broadcast('usuarios', 'actualizar_rol');
@@ -3919,8 +3921,9 @@ app.put('/api/roles/:id', (req, res) => {
 app.delete('/api/roles/:id', (req, res) => {
     const { id } = req.params;
     const targetDb = req.db || db;
-    targetDb.query('SELECT nombre FROM roles WHERE id = ?', [id], (errN, filasN) => {
+    targetDb.query('SELECT nombre, es_admin FROM roles WHERE id = ?', [id], (errN, filasN) => {
         const nombreRol = (!errN && filasN && filasN[0]) ? filasN[0].nombre : `ID ${id}`;
+        if (filasN && filasN[0] && filasN[0].es_admin && !esAdminPeticion(req)) return res.status(403).json({ error: 'Solo un administrador puede eliminar un rol de administrador.' });
         targetDb.query('SELECT COUNT(*) AS cnt FROM usuarios WHERE rol_id = ?', [id], (err, results) => {
             if (err) return res.status(500).json({ error: err.message });
             if (results[0].cnt > 0) return res.status(400).json({ error: `Este rol tiene ${results[0].cnt} usuario(s) asignado(s). Reasígnalos antes de eliminar.` });
@@ -3940,14 +3943,73 @@ app.delete('/api/roles/:id', (req, res) => {
 // 👤 USUARIOS v2 — ENDPOINTS MODERNOS
 // ============================================================
 
+// Reglas de seguridad de usuarios y roles
+const CORREO_FUNDADOR = 'admin@azkell.com';
+function esAdminPeticion(req) {
+    if (req.user && String(req.user.correo || '').toLowerCase() === CORREO_FUNDADOR) return true;
+    try { return JSON.parse((req.user && req.user.permisos) || '{}').admin === true; } catch { return false; }
+}
+const consultar = (conn, sql, params = []) => new Promise((ok, mal) => conn.query(sql, params, (e, r) => (e ? mal(e) : ok(r))));
+const CORREO_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Valida y normaliza lo que viene de la pantalla; devuelve { error, codigo } o { datos }
+async function prepararUsuario(req, conn, idActual) {
+    const { nombre, dni, cargo, correo, password, estado, rol_id } = req.body;
+    const acceso = String(correo || '').trim().toLowerCase();
+    if (!acceso) return { error: 'Escribe el correo o el DNI del usuario.', codigo: 400 };
+    if (!CORREO_VALIDO.test(acceso) && !/^\d{8}$/.test(acceso)) return { error: 'El usuario de acceso debe ser un correo o un DNI de 8 dígitos.', codigo: 400 };
+    const dniLimpio = String(dni || '').trim();
+    if (dniLimpio && !/^\d{8}$/.test(dniLimpio)) return { error: 'El DNI debe tener 8 dígitos.', codigo: 400 };
+    const rolId = (rol_id !== undefined && rol_id !== '' && rol_id !== null) ? (parseInt(rol_id, 10) || null) : null;
+
+    // Rol elegido: su nombre se guarda como etiqueta y su marca es_admin decide los privilegios
+    let rolFila = null;
+    if (rolId) {
+        [rolFila] = await consultar(conn, 'SELECT id, nombre, es_admin FROM roles WHERE id=?', [rolId]);
+        if (!rolFila) return { error: 'El rol elegido ya no existe.', codigo: 400 };
+    }
+    const esFundadorNuevo = acceso === CORREO_FUNDADOR;
+    const soyAdmin = esAdminPeticion(req);
+    // Solo un administrador puede dar un rol de administrador o crear la cuenta del fundador
+    if (((rolFila && rolFila.es_admin) || esFundadorNuevo) && !soyAdmin) return { error: 'Solo un administrador puede asignar un rol de administrador.', codigo: 403 };
+    if (idActual) {
+        const [actual] = await consultar(conn, 'SELECT u.correo, r.es_admin FROM usuarios u LEFT JOIN roles r ON r.id = u.rol_id WHERE u.idUsuario=?', [idActual]);
+        if (!actual) return { error: 'El usuario ya no existe.', codigo: 404 };
+        const eraFundador = String(actual.correo || '').trim().toLowerCase() === CORREO_FUNDADOR;
+        if (eraFundador && String((req.user && req.user.correo) || '').toLowerCase() !== CORREO_FUNDADOR) return { error: 'Solo el fundador puede modificar su propia cuenta.', codigo: 403 };
+        if (actual.es_admin && !soyAdmin) return { error: 'Solo un administrador puede modificar a otro administrador.', codigo: 403 };
+        if (eraFundador && acceso !== CORREO_FUNDADOR) return { error: 'No se puede cambiar el correo del fundador.', codigo: 400 };
+    }
+    // Duplicados (el correo ya es único en la base; el DNI se revisa aquí)
+    const dupC = await consultar(conn, 'SELECT idUsuario FROM usuarios WHERE LOWER(TRIM(correo))=? AND idUsuario<>?', [acceso, idActual || '']);
+    if (dupC.length) return { error: 'Ya existe un usuario con ese correo o DNI de acceso.', codigo: 409 };
+    if (dniLimpio) {
+        const dupD = await consultar(conn, 'SELECT idUsuario FROM usuarios WHERE dni=? AND idUsuario<>?', [dniLimpio, idActual || '']);
+        if (dupD.length) return { error: 'Ya existe un usuario con ese DNI.', codigo: 409 };
+    }
+    // Clave: la misma política que "Mi cuenta" (mínimo 10, no común ni filtrada)
+    const clave = password && String(password).trim() ? String(password).trim() : '';
+    if (!idActual && !clave) return { error: 'Escribe una contraseña para el primer acceso.', codigo: 400 };
+    if (clave) {
+        const motivo = await require('./services/politica_clave').motivoClaveRechazada(clave, '');
+        if (motivo) return { error: motivo, codigo: 400 };
+    }
+    return {
+        datos: {
+            nombre: nombre || '', dni: dniLimpio, cargo: cargo || '', correo: acceso, clave,
+            estado: estado === 'Inactivo' ? 'Inactivo' : 'Activo', rolId,
+            rolEtiqueta: esFundadorNuevo ? 'Fundador' : (rolFila ? rolFila.nombre : 'Personalizado'),
+        },
+    };
+}
+
 app.post('/api/usuarios-v2', async (req, res) => {
     const targetDb = req.db || db;
-    const { nombre, dni, cargo, correo, password, estado, rol_id } = req.body;
-    if (!correo) return res.status(400).json({ error: 'Correo requerido' });
-    const rolId = (rol_id && rol_id !== '') ? parseInt(rol_id) || null : null;
-    let rol = 'Personalizado';
-    if (correo.trim().toLowerCase() === 'admin@azkell.com') rol = 'Fundador';
-    const hashedPassword = password ? await bcrypt.hash(password, 10) : '';
+    let prep;
+    try { prep = await prepararUsuario(req, targetDb, null); } catch (e) { return res.status(500).json({ error: e.message }); }
+    if (prep.error) return res.status(prep.codigo).json({ error: prep.error });
+    const d = prep.datos;
+    const hashedPassword = await bcrypt.hash(d.clave, 10);
     targetDb.query('SELECT idUsuario FROM usuarios', (err, results) => {
         let maxId = 1000;
         if (!err && results) {
@@ -3961,18 +4023,17 @@ app.post('/api/usuarios-v2', async (req, res) => {
         const newId = `USR-${maxId + 1}`;
         targetDb.query(
             'INSERT INTO usuarios (idUsuario, nombre, dni, cargo, correo, password, password_visible, rol, estado, permisos_json, rol_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-            [newId, nombre || '', (dni || '').trim(), cargo || '', correo, hashedPassword, '', rol, estado || 'Activo', '{}', rolId],
+            [newId, d.nombre, d.dni, d.cargo, d.correo, hashedPassword, '', d.rolEtiqueta, d.estado, '{}', d.rolId],
             (err2) => {
-                if (err2) return res.status(500).json({ error: err2.message });
+                if (err2) return res.status(err2.code === 'ER_DUP_ENTRY' ? 409 : 500).json({ error: err2.code === 'ER_DUP_ENTRY' ? 'Ya existe un usuario con ese correo o DNI de acceso.' : err2.message });
                 broadcast('usuarios', 'crear');
                 auditar(targetDb, actorDe(req), {
                     action: 'CREATE', entity: 'user', entityId: newId,
-                    summary: `Creó al usuario ${nombre || correo}`,
-                    changes: diff({}, { nombre: nombre || '', correo, cargo: cargo || '', estado: estado || 'Activo', rol, rol_id: rolId },
+                    summary: `Creó al usuario ${d.nombre || d.correo}`,
+                    changes: diff({}, { nombre: d.nombre, correo: d.correo, cargo: d.cargo, estado: d.estado, rol: d.rolEtiqueta, rol_id: d.rolId },
                         ['nombre', 'correo', 'cargo', 'estado', 'rol', 'rol_id']),
                 });
-                const usuario = req.body.creado_por || 'admin';
-                logAudit(usuario, 'usuarios', 'CREÓ', `${nombre || correo}`);
+                logAudit(req.user ? req.user.correo : 'admin', 'usuarios', 'CREÓ', `${d.nombre || d.correo}`);
                 res.json({ data: 'Éxito', id: newId });
             }
         );
@@ -3982,15 +4043,14 @@ app.post('/api/usuarios-v2', async (req, res) => {
 app.put('/api/usuarios-v2/:id', async (req, res) => {
     const targetDb = req.db || db;
     const { id } = req.params;
-    const { nombre, dni, cargo, correo, password, estado, rol_id } = req.body;
-    const rolId = (rol_id !== undefined && rol_id !== '' && rol_id !== null) ? parseInt(rol_id) || null : null;
-    let rol = 'Personalizado';
-    if (correo && correo.trim().toLowerCase() === 'admin@azkell.com') rol = 'Fundador';
+    let prep;
+    try { prep = await prepararUsuario(req, targetDb, id); } catch (e) { return res.status(500).json({ error: e.message }); }
+    if (prep.error) return res.status(prep.codigo).json({ error: prep.error });
+    const d = prep.datos;
     const fields = ['nombre=?', 'dni=?', 'cargo=?', 'correo=?', 'estado=?', 'rol=?', 'rol_id=?'];
-    const values = [nombre || '', (dni || '').trim(), cargo || '', correo || '', estado || 'Activo', rol, rolId];
-    if (password && password.trim() !== '') {
-        const hashedPassword = await bcrypt.hash(password.trim(), 10);
-        fields.push('password=?'); values.push(hashedPassword);
+    const values = [d.nombre, d.dni, d.cargo, d.correo, d.estado, d.rolEtiqueta, d.rolId];
+    if (d.clave) {
+        fields.push('password=?'); values.push(await bcrypt.hash(d.clave, 10));
         fields.push('password_visible=?'); values.push('');
     }
     values.push(id);
@@ -3998,22 +4058,21 @@ app.put('/api/usuarios-v2/:id', async (req, res) => {
     targetDb.query('SELECT nombre, dni, cargo, correo, estado, rol, rol_id FROM usuarios WHERE idUsuario=?', [id], (errA, filasA) => {
         if (!errA && filasA && filasA[0]) req.auditAntes = filasA[0];
         targetDb.query(`UPDATE usuarios SET ${fields.join(',')} WHERE idUsuario=?`, values, (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-            // Desactivar a alguien cierra sus sesiones abiertas (antes seguía dentro hasta que el token vencía)
-            if ((estado || 'Activo') === 'Inactivo' && correo) targetDb.query('DELETE FROM sesiones_activas WHERE LOWER(usuario_correo)=?', [String(correo).trim().toLowerCase()], () => {});
+            if (err) return res.status(err.code === 'ER_DUP_ENTRY' ? 409 : 500).json({ error: err.code === 'ER_DUP_ENTRY' ? 'Ya existe un usuario con ese correo o DNI de acceso.' : err.message });
             broadcast('usuarios', 'actualizar');
+            // Desactivar o cambiar la clave cierra las sesiones abiertas de esa persona
+            if (d.estado === 'Inactivo' || d.clave) targetDb.query('DELETE FROM sesiones_activas WHERE LOWER(usuario_correo)=?', [d.correo], () => {});
             const antesU = (!errA && filasA && filasA[0]) ? filasA[0] : {};
-            const despuesU = { nombre: nombre || '', dni: (dni || '').trim(), cargo: cargo || '', correo: correo || '', estado: estado || 'Activo', rol, rol_id: rolId };
+            const despuesU = { nombre: d.nombre, dni: d.dni, cargo: d.cargo, correo: d.correo, estado: d.estado, rol: d.rolEtiqueta, rol_id: d.rolId };
             const cambiosU = diff(antesU, despuesU, ['nombre', 'dni', 'cargo', 'correo', 'estado', 'rol', 'rol_id']);
             if (Object.keys(cambiosU).length) {
-                auditar(targetDb, actorDe(req), { action: 'UPDATE', entity: 'user', entityId: id, summary: `Editó al usuario ${nombre || correo}`, changes: cambiosU });
+                auditar(targetDb, actorDe(req), { action: 'UPDATE', entity: 'user', entityId: id, summary: `Editó al usuario ${d.nombre || d.correo}`, changes: cambiosU });
             }
-            if (password && password.trim() !== '') {
+            if (d.clave) {
                 // Solo se registra que cambió la clave; nunca el valor
-                auditar(targetDb, actorDe(req), { action: 'PASSWORD_CHANGE', entity: 'user', entityId: id, summary: `Cambió la contraseña de ${nombre || correo || 'un usuario'}` });
+                auditar(targetDb, actorDe(req), { action: 'PASSWORD_CHANGE', entity: 'user', entityId: id, summary: `Cambió la contraseña de ${d.nombre || d.correo || 'un usuario'}` });
             }
-            const editor = req.body.editado_por || 'admin';
-            logAudit(editor, 'usuarios', 'MODIFICÓ', `${nombre || correo}`);
+            logAudit(req.user ? req.user.correo : 'admin', 'usuarios', 'MODIFICÓ', `${d.nombre || d.correo}`);
             res.json({ data: 'Éxito' });
         });
     });
@@ -4023,12 +4082,13 @@ app.put('/api/usuarios-v2/:id', async (req, res) => {
 app.delete('/api/usuarios-v2/:id', (req, res) => {
     const targetDb = req.db || db;
     const { id } = req.params;
-    targetDb.query('SELECT idUsuario, nombre, correo, rol FROM usuarios WHERE idUsuario=?', [id], (errS, filas) => {
+    targetDb.query('SELECT u.idUsuario, u.nombre, u.correo, u.rol, r.es_admin FROM usuarios u LEFT JOIN roles r ON r.id = u.rol_id WHERE u.idUsuario=?', [id], (errS, filas) => {
         if (errS) return res.status(500).json({ error: errS.message });
         const u = filas && filas[0];
         if (!u) return res.status(404).json({ error: 'El usuario ya no existe.' });
         const correo = String(u.correo || '').trim().toLowerCase();
         if (correo === 'admin@azkell.com' || u.rol === 'Fundador') return res.status(403).json({ error: 'El usuario fundador no se puede eliminar.' });
+        if (u.es_admin && !esAdminPeticion(req)) return res.status(403).json({ error: 'Solo un administrador puede eliminar a otro administrador.' });
         const yo = String((req.user && (req.user.correo || req.user.email)) || '').trim().toLowerCase();
         if (yo && yo === correo) return res.status(400).json({ error: 'No puedes eliminar tu propio usuario.' });
         targetDb.query('DELETE FROM usuarios WHERE idUsuario=?', [id], (err) => {

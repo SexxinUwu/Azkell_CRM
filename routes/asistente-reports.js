@@ -30,7 +30,7 @@ function tienePermiso(user, clave) {
   if (!user) return false;
   if ((user.correo || '').toLowerCase() === 'admin@azkell.com') return true;
   const rol = (user.rol || '').toLowerCase();
-  if (rol.includes('admin') || rol === 'fundador' || rol === 'gerente general') return true;
+  if (rol === 'fundador') return true;
   try {
     const p = typeof user.permisos === 'string' ? JSON.parse(user.permisos || '{}') : (user.permisos || {});
     if (p.admin === true) return true;

@@ -25,7 +25,7 @@ export function permisosDesdeMatriz(raw: unknown, rol = '', correo = ''): string
 
   // Mismo criterio que window.checkPerm en logica.js
   const r = rol.toLowerCase();
-  const esAdmin = p.admin === true || r.includes('admin') || r === 'fundador' || r === 'gerente general'
+  const esAdmin = p.admin === true || r === 'fundador'
     || correo.toLowerCase() === 'admin@azkell.com';
   if (esAdmin) return [ADMIN];
 

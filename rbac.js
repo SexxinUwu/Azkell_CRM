@@ -89,7 +89,7 @@ module.exports = function globalRBAC(req, res, next) {
         return next();
     }
 
-    if (req.user.rol === 'Fundador' || req.user.rol === 'Administrador' || (req.user.rol && req.user.rol.toLowerCase().includes('admin'))) return next();
+    if (req.user.rol === 'Fundador') return next(); // el acceso total de un rol viene de su marca es_admin (verifyToken pone permisos.admin)
 
     let p = {};
     try {
