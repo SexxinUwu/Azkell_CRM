@@ -8,7 +8,7 @@ import { MenuOtros } from '../../core/ui/MenuOtros';
 import { errorMessage } from '../../core/api/client';
 import { exportarExcel } from '../../core/lib/excel';
 import { useToast } from '../../core/ui/Toast';
-import { stockLabel, stockTono, useInventario, useKardex, type ArticuloInv } from './api';
+import { coincideInv, stockLabel, stockTono, useInventario, useKardex, type ArticuloInv } from './api';
 import { formatFechaPe, formatSoles } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
 
@@ -31,13 +31,7 @@ export function KardexPage() {
 
   const resultados = useMemo(() => {
     if (!busqueda.trim() || !inventario || seleccionado) return [];
-    const q = busqueda.toUpperCase();
-    return inventario.filter(a =>
-      a.id.toUpperCase().includes(q) ||
-      (a.articulo ?? '').toUpperCase().includes(q) ||
-      (a.codigo_articulo ?? '').toUpperCase().includes(q) ||
-      (a.familia ?? '').toUpperCase().includes(q)
-    ).slice(0, 25);
+    return inventario.filter(a => coincideInv(a, busqueda)).slice(0, 25);
   }, [inventario, busqueda, seleccionado]);
 
   const movimientosFiltrados = useMemo(() => {

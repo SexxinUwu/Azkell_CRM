@@ -13,10 +13,20 @@ export const MAPA_URLS = {
     : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
 } as const;
 
+// Mapbox Satellite: una sola fuente en todos los zooms (sin saltos de color). Con VITE_MAPBOX_KEY (token público pk.…) es el satélite
+// por defecto; agregar ?satelite=esri a la dirección fuerza Esri para comparar, y ?satelite=mapbox lo contrario.
+const mapbox = (import.meta.env.VITE_MAPBOX_KEY as string | undefined) || '';
+const elegido = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('satelite') : null;
+export const SAT_MAPBOX = !!mapbox && elegido !== 'esri';
+export const SAT_MAPBOX_URL = `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=${mapbox}`;
+/** Mapbox tiene imágenes hasta el zoom 22 en zonas urbanas; más allá se agranda la última */
+export const SAT_MAPBOX_MAXZOOM = 20;
+
 export const ATRIBUCION = {
   vectores: '© <a href="https://openfreemap.org">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   relieve: 'Relieve: Mapzen/AWS',
   satelite: 'Imágenes © Esri, Maxar',
+  mapbox: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="https://www.maxar.com/">Maxar</a>',
 };
 
 /** Último mensaje más viejo que esto = sin señal */

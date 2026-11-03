@@ -1,7 +1,7 @@
 // Estilos del mapa Noche (neón), Día y Satélite. Copiado literal de buildStyle() del prototipo.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { LayerSpecification, StyleSpecification } from 'maplibre-gl';
-import { ATRIBUCION, MAPA_URLS, SAT_BASE_MAXZOOM, SAT_DETALLE_MAXZOOM, SAT_MEDIA_MAXZOOM } from './mapaConfig';
+import { ATRIBUCION, MAPA_URLS, SAT_BASE_MAXZOOM, SAT_DETALLE_MAXZOOM, SAT_MAPBOX, SAT_MAPBOX_MAXZOOM, SAT_MAPBOX_URL, SAT_MEDIA_MAXZOOM } from './mapaConfig';
 
 export type TemaMapa = 'night' | 'day' | 'sat';
 
@@ -17,9 +17,11 @@ export function buildStyle(t: TemaMapa, relieve: boolean): StyleSpecification {
     L.push(<any>{id:'bg', type:'background', paint:{'background-color':'#0b0f14'}});
     const pintura = {'raster-saturation':-0.05, 'raster-contrast':0.06, 'raster-fade-duration':150};
     L.push(<any>{id:'sat', type:'raster', source:'sat', paint:pintura});
-    // Las capas de más zoom van encima: donde Esri no tiene imágenes son transparentes y se ve la de abajo
-    L.push(<any>{id:'sat-media', type:'raster', source:'sat-media', minzoom:SAT_BASE_MAXZOOM - 0.5, paint:pintura});
-    L.push(<any>{id:'sat-detalle', type:'raster', source:'sat-detalle', minzoom:SAT_MEDIA_MAXZOOM - 0.5, paint:pintura});
+    if (!SAT_MAPBOX) {
+      // Las capas de más zoom van encima: donde Esri no tiene imágenes son transparentes y se ve la de abajo
+      L.push(<any>{id:'sat-media', type:'raster', source:'sat-media', minzoom:SAT_BASE_MAXZOOM - 0.5, paint:pintura});
+      L.push(<any>{id:'sat-detalle', type:'raster', source:'sat-detalle', minzoom:SAT_MEDIA_MAXZOOM - 0.5, paint:pintura});
+    }
   } else {
     L.push(<any>{id:'bg', type:'background', paint:{'background-color':P.bg}});
     L.push(<any>{id:'landuse', type:'fill', source:'omt', 'source-layer':'landuse', filter:isCls(['residential','suburb','neighbourhood','commercial','industrial']), paint:{'fill-color':P.res, 'fill-opacity':.8}});
@@ -54,6 +56,13 @@ export function buildStyle(t: TemaMapa, relieve: boolean): StyleSpecification {
     'fill-extrusion-base':['coalesce', ['get','render_min_height'], 0], 'fill-extrusion-opacity':night ? .92 : .85, 'fill-extrusion-vertical-gradient':true}});
   const labelPaint = {'text-color':sat ? '#ffffff' : P.label, 'text-halo-color':sat ? 'rgba(0,0,0,.75)' : P.halo, 'text-halo-width':1.4};
   L.push(<any>{id:'road-label', type:'symbol', source:'omt', 'source-layer':'transportation_name', minzoom:13.5, filter:isCls(['motorway','trunk','primary','secondary','tertiary']), layout:{'symbol-placement':'line', 'text-field':['coalesce', ['get','name:es'], ['get','name']], 'text-font':F_REG, 'text-size':11, 'text-letter-spacing':.04}, paint:labelPaint});
+  // Lugares y negocios del mapa base (OpenStreetMap): puntos y nombres que aparecen al acercarse. Los más importantes salen primero.
+  const poiNombre = ['coalesce', ['get','name:es'], ['get','name']];
+  L.push(<any>{id:'poi-dot', type:'circle', source:'omt', 'source-layer':'poi', minzoom:14.5, filter:['all', ['has','name'], ['<=', ['coalesce', ['get','rank'], 99], 25]],
+    paint:{'circle-radius':['interpolate', ['linear'], ['zoom'], 14.5, 2.2, 18, 4], 'circle-color':sat ? '#ffffff' : (night ? '#7fb2ff' : '#5b7bd6'), 'circle-stroke-color':sat ? 'rgba(0,0,0,.7)' : P.halo, 'circle-stroke-width':1.2, 'circle-opacity':['interpolate', ['linear'], ['zoom'], 14.5, 0, 15.2, .95]}});
+  L.push(<any>{id:'poi-label', type:'symbol', source:'omt', 'source-layer':'poi', minzoom:15, filter:['all', ['has','name'], ['any', ['<=', ['coalesce', ['get','rank'], 99], 8], ['>=', ['zoom'], 16.2]]],
+    layout:{'text-field':poiNombre, 'text-font':F_REG, 'text-size':['interpolate', ['linear'], ['zoom'], 15, 10, 18, 12.5], 'text-anchor':'top', 'text-offset':[0, .7], 'text-max-width':8, 'text-optional':true, 'symbol-sort-key':['coalesce', ['get','rank'], 99]},
+    paint:{'text-color':sat ? '#ffffff' : (night ? '#c4d4ea' : '#3b4660'), 'text-halo-color':sat ? 'rgba(0,0,0,.8)' : P.halo, 'text-halo-width':1.4}});
   L.push(<any>{id:'place-label', type:'symbol', source:'omt', 'source-layer':'place', filter:isCls(['city','town','suburb','neighbourhood','village']), layout:{'text-field':['coalesce', ['get','name:es'], ['get','name']], 'text-font':['match', ['get','class'], ['city','town'], ['literal', F_BOLD], ['literal', F_REG]], 'text-size':['match', ['get','class'], 'city', 16, 'town', 13, 11.5], 'text-transform':['match', ['get','class'], ['suburb','neighbourhood'], 'uppercase', 'none'], 'text-letter-spacing':['match', ['get','class'], ['suburb','neighbourhood'], .12, .02], 'text-max-width':8}, paint:labelPaint});
   const sky = night ? {'sky-color':'#03050a', 'horizon-color':'#0d2238', 'fog-color':'#04070d', 'sky-horizon-blend':.6, 'horizon-fog-blend':.7, 'fog-ground-blend':.55, 'atmosphere-blend':.2}
     : sat ? {'sky-color':'#5d9ae0', 'horizon-color':'#cfe2f5', 'fog-color':'#c6d4e2', 'sky-horizon-blend':.5, 'horizon-fog-blend':.6, 'fog-ground-blend':.6, 'atmosphere-blend':.6}
@@ -64,9 +73,15 @@ export function buildStyle(t: TemaMapa, relieve: boolean): StyleSpecification {
     projection:{type:'mercator'}, sky, light:{anchor:'viewport', color:night ? '#a9c8ff' : '#ffffff', intensity:night ? .38 : .3, position:[1.2, 200, 35]}, layers:L};
   if (relieve) style.terrain = {source:'dem', exaggeration:1.35};
   if (sat) {
-    style.sources.sat = {type:'raster', tiles:[MAPA_URLS.satelite], tileSize:256, maxzoom:SAT_BASE_MAXZOOM, attribution:ATRIBUCION.satelite};
-    style.sources['sat-media'] = {type:'raster', tiles:['esri://{z}/{y}/{x}'], tileSize:256, maxzoom:SAT_MEDIA_MAXZOOM};
-    style.sources['sat-detalle'] = {type:'raster', tiles:['esri://{z}/{y}/{x}'], tileSize:256, maxzoom:SAT_DETALLE_MAXZOOM};
+    if (SAT_MAPBOX) {
+      // Una sola fuente en todos los zooms: el color no cambia al acercarse o alejarse
+      style.sources.sat = {type:'raster', tiles:[SAT_MAPBOX_URL], tileSize:512, maxzoom:SAT_MAPBOX_MAXZOOM - 1, attribution:ATRIBUCION.mapbox};
+    } else {
+      // Las tres capas pasan por el mismo protocolo (Clarity primero, Esri estándar de respaldo) para que el color sea el mismo
+      style.sources.sat = {type:'raster', tiles:['esri://{z}/{y}/{x}'], tileSize:256, maxzoom:SAT_BASE_MAXZOOM, attribution:ATRIBUCION.satelite};
+      style.sources['sat-media'] = {type:'raster', tiles:['esri://{z}/{y}/{x}'], tileSize:256, maxzoom:SAT_MEDIA_MAXZOOM};
+      style.sources['sat-detalle'] = {type:'raster', tiles:['esri://{z}/{y}/{x}'], tileSize:256, maxzoom:SAT_DETALLE_MAXZOOM};
+    }
   }
   return style;
 }

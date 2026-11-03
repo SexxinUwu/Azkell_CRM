@@ -58,17 +58,20 @@ export function stockLabel(a: ArticuloInv): string {
   return 'OK';
 }
 
+const sinTildes = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+
+/**
+ * Búsqueda por código, nombre, descripción, marca, familia, sistema, tipo, anaquel o código de barras.
+ * Sin importar mayúsculas ni tildes; con varias palabras, el artículo debe contener todas (en cualquier campo).
+ */
 export function coincideInv(a: ArticuloInv, q: string): boolean {
-  if (!q) return true;
-  const u = q.toUpperCase();
-  return (
-    a.id.toUpperCase().includes(u) ||
-    (a.articulo ?? '').toUpperCase().includes(u) ||
-    (a.codigo_articulo ?? '').toUpperCase().includes(u) ||
-    (a.familia ?? '').toUpperCase().includes(u) ||
-    (a.sistema ?? '').toUpperCase().includes(u) ||
-    (a.codigo_barras ?? '').toUpperCase().includes(u)
-  );
+  const palabras = sinTildes(q).split(/\s+/).filter(Boolean);
+  if (!palabras.length) return true;
+  const texto = sinTildes([
+    a.id, a.articulo, a.descripcion, a.codigo_articulo, a.codigo_barras, a.marca, a.familia, a.tipo, a.sub_tipo,
+    a.sistema, a.sub_sistema, a.anaquel, a.ubicacion,
+  ].filter(Boolean).join(' '));
+  return palabras.every(p => texto.includes(p));
 }
 
 export function useInventario() {
