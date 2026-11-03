@@ -1,5 +1,5 @@
 // v55: sale /app del service worker y descarta lo que quedó guardado (archivos de compilación que ya no existen)
-const CACHE_NAME = 'azkell-fleet-v59';
+const CACHE_NAME = 'azkell-fleet-v60';
 const STATIC_CACHE = 'azkell-libs-v2';
 // Fotos de artículos (S3): la URL firmada cambia en cada consulta, por eso se guardan por su ruta sin la firma
 const IMG_CACHE = 'azkell-img-v1';
@@ -80,7 +80,8 @@ function appArchivo(request) {
 // HTML de /app: es el mismo para todas las rutas (React resuelve la pantalla), así que basta una copia
 function appPantalla(request) {
   const clave = self.location.origin + APP_SHELL;
-  return fetchWithTimeout(request, 3000).then(resp => {
+  // 10 s: con 3 s, un servidor lento justo después de publicar daba la copia vieja, cuyos archivos ya no existen
+  return fetchWithTimeout(request, 10000).then(resp => {
     if (resp.status === 200) {
       const copia = resp.clone(); // antes de que el navegador empiece a leer el cuerpo
       caches.open(APP_CACHE).then(c => c.put(clave, copia)).catch(() => {});

@@ -527,7 +527,13 @@ const DIST_APP = path.join(__dirname, 'dist', 'app');
 app.use('/app/assets', express.static(path.join(DIST_APP, 'assets'), { maxAge: '1y', immutable: true, index: false }));
 // Un archivo de compilación que ya no existe (la página quedó de una versión anterior) debe dar 404,
 // no el index.html: si no, el navegador lo rechaza con "MIME type text/html" y la página se rompe.
-app.use('/app/assets', (req, res) => res.status(404).type('text/plain').send('Archivo no encontrado'));
+// Un módulo (.js) que ya no existe es una página vieja que sigue abierta tras publicar una versión nueva. En vez de un 404 rojo en la
+// consola (y una pantalla rota), se responde un script que limpia la copia guardada de la app y recarga una sola vez.
+const SCRIPT_RECARGA = "(function(){try{var k='fleet_recarga_script',u=Number(sessionStorage.getItem(k)||0);if(Date.now()-u<30000)return;sessionStorage.setItem(k,String(Date.now()));if(window.caches)caches.delete('azkell-app-v1');}catch(e){}setTimeout(function(){location.reload();},50);})();";
+app.use('/app/assets', (req, res) => {
+    if (/\.js$/i.test(req.path)) return res.status(200).set('Cache-Control', 'no-store').type('application/javascript').send(SCRIPT_RECARGA);
+    res.status(404).type('text/plain').send('Archivo no encontrado');
+});
 // Mismo título que el clásico: nombre de la empresa (quitando S.A.C.) + Azkell Fleet
 async function tituloDeAplicacion(req) {
     if (_isSuperAdminReq(req)) return 'SuperAdmin SaaS Master — Azkell Fleet';
