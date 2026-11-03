@@ -2,7 +2,9 @@ import './flota.css';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MapPin, RefreshCw, Search, SlidersHorizontal, X } from 'lucide-react';
 import { Page } from '../../core/ui/Display';
-import { PageLoader } from '../../core/ui/Button';
+import { Button, PageLoader } from '../../core/ui/Button';
+import { LicensePlate } from '../../core/ui/LicensePlate';
+import { AnimatePresence } from 'motion/react';
 import { Notice } from '../../core/ui/Display';
 import { ChoiceChips } from '../../core/ui/Chips';
 import { GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
@@ -18,7 +20,8 @@ import { factorCombustible } from './gps/unidadCombustible';
 import { armarTramos } from './gps/viajes';
 import { BarraReproduccion } from './gps/BarraReproduccion';
 import { descripcionCamion } from './gps/tipoUnidad';
-import { FichaTelemetria, Grab } from './gps/FichaTelemetria';
+import { FichaTelemetria } from './gps/FichaTelemetria';
+import { AsaHoja, HojaGesto, ZonaArrastre } from './gps/HojaGesto';
 import { ST } from './gps/camiones';
 import type { TemaMapa } from './gps/estilos';
 import { useOscuro } from '../placas/tresd/useOscuro';
@@ -41,6 +44,12 @@ function baseGuardada(): BaseMapa {
   try { return localStorage.getItem('fleet_gps_base') === 'sat' ? 'sat' : 'mapa'; } catch { return 'mapa'; }
 }
 
+// Alturas de las hojas del celular (px según el alto de la ventana): lista asoma 150 px y abre al 78 %; ficha 46 % y 88 %
+const SNAPS_LISTA = (vh: number) => [150, vh * 78];
+const ALTO_LISTA = (vh: number) => vh * 78;
+const SNAPS_FICHA = (vh: number) => [vh * 46, vh * 88];
+const ALTO_FICHA = (vh: number) => vh * 88;
+const placaFmt = (p: string) => (/^[A-Z0-9]{6}$/.test(p) ? `${p.slice(0, 3)}-${p.slice(3)}` : p);
 const corta = (empresa: string) => claveEmpresa(empresa).split(' ')[0] || '—';
 const placaLimpia = (s: string) => s.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
 /** Para buscar: sin tildes, guiones ni espacios, en mayúsculas */
@@ -286,13 +295,13 @@ export function UbicacionPage() {
     const exceso = estado === 'movimiento' && u.velocidad > 90;
     return (
       <li key={u.placa} className="tg-unit" data-sel={seleccionada === u.placa} data-estado={estado}>
-        <input type="checkbox" className="tg-unit__check" checked={!ocultas.has(u.placa)} onChange={() => alternarUnidad(u.placa)} aria-label={`Mostrar ${u.placa} en el mapa`} />
+        <label className="tg-unit__sel"><input type="checkbox" className="tg-unit__check" checked={!ocultas.has(u.placa)} onChange={() => alternarUnidad(u.placa)} aria-label={`Mostrar ${u.placa} en el mapa`} /></label>
         <button type="button" className="tg-unit__b" role="option" aria-selected={seleccionada === u.placa} onClick={() => clicUnidad(u.placa)}
           title={seleccionada === u.placa ? 'Clic para centrar la unidad donde está ahora' : 'Ver unidad'}>
-          <span className="tg-unit__riel" style={{ background: c.c, boxShadow: `0 0 10px ${c.c}` }} aria-hidden />
+          <span className="tg-unit__riel" style={{ background: c.c }} aria-hidden />
           <span className="tg-unit__cuerpo">
             <span className="tg-unit__l1">
-              <span className="pl">{u.placa}</span>
+              <span className="pl"><LicensePlate plate={placaFmt(u.placa)} size="sm" /></span>
               <span className="tg-pill" style={{ color: c.c, background: c.c + '22' }}>{c.l}</span>
             </span>
             <span className="sub"><MapPin size={11} aria-hidden />{u.ubicacion || u.nombre || 'Sin dirección'}</span>
@@ -324,63 +333,61 @@ export function UbicacionPage() {
                   <h1>Ubicación GPS</h1>
                   <span className="tg-live" aria-live="polite"><i />En vivo{segundos !== null && ` · ${segundos}s`}</span>
                   <span className="tg-resumen">{cifras.total} unidades · {cifras.enMovimiento} en movimiento · {cifras.sinSenal} sin señal</span>
-                  <button type="button" className="tg-refrescar" aria-label="Actualizar" title="Actualizar" disabled={isFetching} onClick={() => refetch()}>
-                    <RefreshCw size={16} />
-                  </button>
+                  <Button variant="plain" iconOnly className="tg-refrescar" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar" disabled={isFetching} onClick={() => refetch()} />
                 </div>
                 <div className="tg-kpis" aria-label="Resumen de la flota">
                   {([['todos', 'Flota monitoreada', 'var(--cyan)'], ['movimiento', 'En movimiento', ST.mov.c], ['ralenti', 'Ralentí', ST.ral.c], ['detenido', 'Detenidas', ST.det.c], ['sin_senal', 'Sin señal', ST.off.c]] as const).map(([v, nombre, color]) => (
                     <button key={v} type="button" className="tg-kpi tg-glass" aria-pressed={segmento === v}
                       onClick={() => { haptic('selection'); setSegmento(s => (s === v && v !== 'todos' ? 'todos' : v)); }}>
-                      <span><i style={{ background: color, boxShadow: `0 0 8px ${color}` }} />{nombre}</span>
+                      <span><i style={{ background: color }} />{nombre}</span>
                       <b>{conteoSeg(v)}</b>
                     </button>
                   ))}
                 </div>
               </header>
 
-              <aside className="tg-side tg-glass" aria-label="Unidades">
-                <div className="tg-side-h">
-                  <Grab onToggle={abrir => setHojaLista(h => (abrir === undefined ? !h : abrir))} />
+              <HojaGesto className="tg-side tg-glass" label="Unidades" snaps={SNAPS_LISTA} alto={ALTO_LISTA}
+                snap={seleccion || piloto ? -1 : hojaLista ? 1 : 0} onSnap={i => setHojaLista(i === 1)}>
+                <ZonaArrastre className="tg-side-h">
+                  <AsaHoja />
                   <label className="tg-search">
                     <Search size={16} aria-hidden />
                     <input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Buscar placa, nombre o conductor…" aria-label="Buscar unidad" autoComplete="off" spellCheck={false}
                       onKeyDown={e => { if (e.key === 'Enter' && ordenada[0]) { e.preventDefault(); elegir(ordenada[0].placa); } }}
                       onFocus={() => { if (matchMedia('(max-width:900px)').matches) setHojaLista(true); }} />
-                    {busqueda && <button type="button" className="tg-search__x" aria-label="Borrar búsqueda" onClick={() => setBusqueda('')}><X size={14} /></button>}
+                    {busqueda && <Button variant="plain" size="sm" iconOnly className="tg-search__x" icon={<X size={16} />} aria-label="Borrar búsqueda" onClick={() => setBusqueda('')} />}
                   </label>
-                  <div className="tg-estados" role="group" aria-label="Filtrar por estado">
-                    {([['todos', 'Todas'], ['movimiento', 'Movimiento'], ['ralenti', 'Ralentí'], ['detenido', 'Detenidas'], ['sin_senal', 'Sin señal']] as const).map(([v, etiqueta]) => (
-                      <button key={v} type="button" className="tg-chip" aria-pressed={segmento === v} onClick={() => { haptic('selection'); setSegmento(s => (s === v && v !== 'todos' ? 'todos' : v)); }}>
-                        {etiqueta} <em>{conteoSeg(v)}</em>
-                      </button>
-                    ))}
+                  <div className="tg-estados">
+                    <ChoiceChips label="Filtrar por estado" value={segmento === 'senal' ? 'todos' : segmento}
+                      onChange={v => { haptic('selection'); setSegmento(s => (s === v && v !== 'todos' ? 'todos' : (v as Segmento))); }}
+                      options={([['todos', 'Todas'], ['movimiento', 'Movimiento'], ['ralenti', 'Ralentí'], ['detenido', 'Detenidas'], ['sin_senal', 'Sin señal']] as const).map(([v, etiqueta]) => ({ value: v, label: <>{etiqueta} <em>{conteoSeg(v)}</em></> }))} />
                   </div>
                   {q && <p className="tg-resultados" aria-live="polite">{lista.length === 1 ? '1 resultado' : `${lista.length} resultados`}</p>}
                   <div className="tg-chips">
-                    <button type="button" className="tg-chip" aria-pressed={activos > 0} onClick={() => setFiltrando(true)}>
-                      <SlidersHorizontal size={13} aria-hidden />Filtros{activos > 0 && <em>{activos}</em>}
-                    </button>
+                    <Button variant="secondary" size="sm" aria-pressed={activos > 0} icon={<SlidersHorizontal size={15} aria-hidden />} onClick={() => setFiltrando(true)}>
+                      Filtros{activos > 0 && <em>{activos}</em>}
+                    </Button>
                     <label className="tg-visibles">
                       <input type="checkbox" checked={todasVisibles} onChange={alternarTodas} disabled={!lista.length} />
                       <span>Visibles ({visiblesEnMapa}/{enLista})</span>
                     </label>
                   </div>
-                </div>
+                </ZonaArrastre>
                 <ul className="tg-list" role="listbox" aria-label="Lista de unidades">
                   {ordenada.map(filaUnidad)}
                   {!lista.length && <li><p className="tg-vacio">Sin unidades con ese filtro.</p></li>}
                 </ul>
-              </aside>
+              </HojaGesto>
 
+              <AnimatePresence>
               {seleccion && (
-                <section className="tg-detail tg-glass" aria-label={panel === 'ficha' ? `Ficha de ${seleccion.placa}` : `Historial de ${seleccion.placa}`}>
+                <HojaGesto key="ficha" className="tg-detail tg-glass" label={panel === 'ficha' ? `Ficha de ${seleccion.placa}` : `Historial de ${seleccion.placa}`}
+                  snaps={SNAPS_FICHA} alto={ALTO_FICHA} snap={piloto ? -1 : hojaFicha ? 1 : 0} onSnap={i => setHojaFicha(i === 1)}>
                   {panel === 'ficha' ? (
                     <FichaTelemetria u={seleccion} motor={motor} conductor={conductorDe(seleccion.placa)} piloto={piloto} capacidad={capacidadSel}
-                      onCerrar={cerrarPanel} onHistorial={() => { haptic('selection'); setHojaFicha(false); setPanel('historial'); }}
-                      onToggleHoja={abrir => setHojaFicha(h => (abrir === undefined ? !h : abrir))} />
+                      onCerrar={cerrarPanel} onHistorial={() => { haptic('selection'); setHojaFicha(false); setPanel('historial'); }} />
                   ) : (
-                    <PanelHistorial placa={seleccion.placa} horas={horas} onToggleHoja={abrir => setHojaFicha(h => (abrir === undefined ? !h : abrir))} analisis={analisis} tramos={tramos} viajeSel={viajeSel} onViaje={setViajeSel}
+                    <PanelHistorial placa={seleccion.placa} horas={horas} analisis={analisis} tramos={tramos} viajeSel={viajeSel} onViaje={setViajeSel}
                       onHoras={setHoras} dia={dia} onDia={d => { setDia(d); setDesde(null); setHasta(null); }} desde={desde} hasta={hasta} onRango={(a, b) => { setDesde(a); setHasta(b); setDia(null); }} onIrA={(lat, lng) => motor?.irA(lat, lng)} historial={historial} cargando={historialQ.isFetching && !historial}
                       error={errorHistorial} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
                       reproduciendo={reproduciendo} onReproducir={() => setReproduciendo(r => !r)}
@@ -388,8 +395,9 @@ export function UbicacionPage() {
                       velocidad={velocidad} onVelocidad={setVelocidad}
                       onSalir={() => { setPanel('ficha'); setReproduciendo(false); }} />
                   )}
-                </section>
+                </HojaGesto>
               )}
+              </AnimatePresence>
 
               {panel === 'historial' && historial && historial.puntos.length > 0 && (
                 <BarraReproduccion historial={historial} analisis={analisis} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
@@ -401,7 +409,7 @@ export function UbicacionPage() {
                 <div className="tg-pilot tg-glass">
                   <span className="tg-pl-t"><span>Cámara piloto · <b>{seleccion.placa}</b></span><PilotoEdad motor={motor} placa={seleccion.placa} /></span>
                   <PilotoVelocidad motor={motor} placa={seleccion.placa} />
-                  <button type="button" className="tg-btn" style={{ height: 32, padding: '0 12px' }} onClick={() => motor?.setFollow(false)}>Salir</button>
+                  <Button variant="secondary" size="sm" onClick={() => motor?.setFollow(false)}>Salir</Button>
                 </div>
               )}
 

@@ -65,6 +65,8 @@ export interface CallbacksMotor {
 }
 
 const MOVIL = () => matchMedia('(max-width:900px)').matches;
+/** Con "reducir movimiento" el mapa salta a su destino en vez de volar */
+const REDUCIR = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const fc = (features: any[]) => ({ type: 'FeatureCollection' as const, features });
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
@@ -562,7 +564,7 @@ export class MotorTelemetria {
     if (avisar && cambia) this.cb.onSeleccion(placa);
     const u = placa ? this.units.get(placa) : null;
     const pad = this.relleno(!!u);
-    if (u && u.view && volar && cambia) this.mapa.flyTo({ center: u.b ? u.b.pos : u.view, zoom: Math.max(this.mapa.getZoom(), 15.8), pitch: 60, bearing: this.mapa.getBearing(), duration: 2200, essential: true, padding: pad });
+    if (u && u.view && volar && cambia) this.mapa.flyTo({ center: u.b ? u.b.pos : u.view, zoom: Math.max(this.mapa.getZoom(), 15.8), pitch: 60, bearing: this.mapa.getBearing(), duration: REDUCIR() ? 0 : 2200, essential: !REDUCIR(), padding: pad });
     // Con un vuelo en curso no se toca el relleno (setPadding cancelaría el vuelo hacia la unidad)
     else if (!this.follow && !this.mapa.isMoving()) this.mapa.setPadding(pad);
     this.uiAcc = 1; this.sucioDatos = true; this.sucio = true; this.mapa.triggerRepaint();
@@ -582,7 +584,7 @@ export class MotorTelemetria {
   centrarSeleccion() {
     const u = this.sel ? this.units.get(this.sel) : null;
     // Va a la última posición recibida; si la unidad se movió, otro clic vuelve a centrarla donde está ahora
-    if (u?.view) this.mapa.flyTo({ center: u.b ? u.b.pos : u.view, zoom: Math.max(this.mapa.getZoom(), 16.5), pitch: Math.max(this.mapa.getPitch(), 55), bearing: u.hview, duration: 1200, essential: true });
+    if (u?.view) this.mapa.flyTo({ center: u.b ? u.b.pos : u.view, zoom: Math.max(this.mapa.getZoom(), 16.5), pitch: Math.max(this.mapa.getPitch(), 55), bearing: u.hview, duration: REDUCIR() ? 0 : 1200, essential: !REDUCIR() });
   }
 
   /** Encuadra las unidades visibles con posición (o solo las placas indicadas) */
@@ -594,12 +596,12 @@ export class MotorTelemetria {
     this.setFollow(false);
     const b = new maplibregl.LngLatBounds(pts[0], pts[0]);
     pts.forEach(p => b.extend(p));
-    const opts: any = { padding: MOVIL() ? { top: 150, bottom: 190, left: 30, right: 30 } : 70, maxZoom: 15, duration: primera ? 0 : 1800, pitch: pts.length > 1 ? 48 : 58, bearing: -22 };
+    const opts: any = { padding: MOVIL() ? { top: 150, bottom: 190, left: 30, right: 30 } : 70, maxZoom: 15, duration: primera || REDUCIR() ? 0 : 1800, pitch: pts.length > 1 ? 48 : 58, bearing: -22 };
     this.mapa.fitBounds(b, opts);
   }
 
   /** Lleva la cámara a un punto (lugar del historial) */
-  irA(lat: number, lng: number) { this.mapa.flyTo({ center: [lng, lat], zoom: Math.max(this.mapa.getZoom(), 16), duration: 1200 }); }
+  irA(lat: number, lng: number) { this.mapa.flyTo({ center: [lng, lat], zoom: Math.max(this.mapa.getZoom(), 16), duration: REDUCIR() ? 0 : 1200 }); }
 
   leer(placa: string): Lectura | null {
     const u = this.units.get(placa);
@@ -681,7 +683,7 @@ export class MotorTelemetria {
     const pts = h.puntos.slice(i0, i1 + 1); if (!pts.length) return;
     const b = new maplibregl.LngLatBounds([pts[0].lng, pts[0].lat], [pts[0].lng, pts[0].lat]);
     pts.forEach(p => b.extend([p.lng, p.lat]));
-    this.mapa.fitBounds(b, { padding: MOVIL() ? { top: 150, bottom: 340, left: 30, right: 30 } : { top: 130, bottom: 190, left: 380, right: 400 }, pitch: 0, bearing: 0, duration: 800, maxZoom: 17 });
+    this.mapa.fitBounds(b, { padding: MOVIL() ? { top: 150, bottom: 340, left: 30, right: 30 } : { top: 130, bottom: 190, left: 380, right: 400 }, pitch: 0, bearing: 0, duration: REDUCIR() ? 0 : 800, maxZoom: 17 });
   }
   /** Resalta un viaje (los demás tramos se atenúan) y lo encuadra; null quita el resaltado */
   resaltarViaje(i: number | null) {

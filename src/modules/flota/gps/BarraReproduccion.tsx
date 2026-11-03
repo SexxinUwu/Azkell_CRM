@@ -1,6 +1,8 @@
 // Barra de reproducción del historial: franjas de estado (movimiento, ralentí, parada), curva de combustible y velocidades.
 import { useMemo, useRef } from 'react';
 import { Pause, Play, RotateCcw } from 'lucide-react';
+import { Button } from '../../../core/ui/Button';
+import { SegmentedControl } from '../../../core/ui/SegmentedControl';
 import { fechaHora, type Historial } from '../UbicacionHistorial';
 import type { AnalisisCombustible } from './combustible';
 
@@ -59,10 +61,8 @@ export function BarraReproduccion({ historial: h, analisis: a, indice, onIndice,
   return (
     <div className="tg-rep tg-glass" role="group" aria-label="Reproducción del recorrido">
       <div className="tg-rep__ctrl">
-        <button type="button" className="tg-h-btn" onClick={onReiniciar} aria-label="Volver al inicio"><RotateCcw size={15} /></button>
-        <button type="button" className="tg-h-play" onClick={onReproducir} aria-label={reproduciendo ? 'Pausar' : 'Reproducir'}>
-          {reproduciendo ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
-        </button>
+        <Button variant="secondary" iconOnly icon={<RotateCcw size={18} />} aria-label="Volver al inicio" onClick={onReiniciar} />
+        <Button variant="primary" iconOnly icon={reproduciendo ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />} aria-label={reproduciendo ? 'Pausar' : 'Reproducir'} onClick={onReproducir} />
       </div>
       <div className="tg-rep__centro">
         <div className="tg-rep__info">
@@ -76,16 +76,16 @@ export function BarraReproduccion({ historial: h, analisis: a, indice, onIndice,
           onPointerMove={e => { if (e.buttons) elegir(e.clientX); }}>
           {franjas.map((f, i) => <rect key={i} x={x(f.a)} y={28} width={Math.max(1.5, x(f.b) - x(f.a))} height={12} rx={2} fill={COLOR[f.e]} opacity={0.9} />)}
           {a.eventos.map(e => <rect key={e.t0} x={x(e.t0) - 2} y={2} width={Math.max(5, x(e.t1) - x(e.t0) + 4)} height={26} fill={e.tipo === 'caida' ? 'rgba(255,84,112,.35)' : 'rgba(34,227,160,.3)'} />)}
-          {curva && <polyline points={curva} fill="none" stroke="#38d6ff" strokeWidth={2} vectorEffect="non-scaling-stroke" />}
+          {curva && <polyline points={curva} fill="none" stroke="var(--accent)" strokeWidth={2} vectorEffect="non-scaling-stroke" />}
           {p && <line x1={x(p.tiempo)} x2={x(p.tiempo)} y1={0} y2={44} stroke="currentColor" strokeWidth={2} vectorEffect="non-scaling-stroke" />}
         </svg>
         <div className="tg-rep__leyenda">
           <span><i style={{ background: COLOR.mov }} />Movimiento</span><span><i style={{ background: COLOR.ral }} />Ralentí</span><span><i style={{ background: COLOR.det }} />Parada</span>
-          {a.hay && <span><i style={{ background: '#38d6ff' }} />Combustible</span>}
+          {a.hay && <span><i style={{ background: 'var(--accent)' }} />Combustible</span>}
         </div>
       </div>
-      <div className="tg-rep__vel" role="group" aria-label="Velocidad de reproducción">
-        {VELOCIDADES_REP.map(v => <button key={v} type="button" className="tg-chip" aria-pressed={velocidad === v} onClick={() => onVelocidad(v)}>{v}x</button>)}
+      <div className="tg-rep__vel">
+        <SegmentedControl label="Velocidad de reproducción" value={String(velocidad) as '1' | '5' | '10' | '100'} onChange={v => onVelocidad(Number(v) as VelocidadRep)} options={VELOCIDADES_REP.map(v => ({ value: String(v) as '1' | '5' | '10' | '100', label: `${v}x` }))} />
       </div>
     </div>
   );

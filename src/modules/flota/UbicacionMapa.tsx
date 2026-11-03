@@ -1,11 +1,9 @@
 // Mapa de telemetría en vivo (MapLibre + camiones en 3D). El mapa y la escena viven en gps/motor.ts, fuera de React:
 // aquí solo se conecta con los datos, y se dibujan los controles flotantes (herramientas, estilo, cámara piloto y alertas).
 import 'maplibre-gl/dist/maplibre-gl.css';
-import '@fontsource/jetbrains-mono/500.css';
-import '@fontsource/jetbrains-mono/700.css';
-import '@fontsource/barlow-condensed/700.css';
 import './gps/telemetria.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { motorTelemetria, type Alerta, type EntradaMotor, type MotorTelemetria, type OpcionesMapa } from './gps/motor';
 import { ST, type ClaseEstado, type DescCamion } from './gps/camiones';
 import type { TemaMapa } from './gps/estilos';
@@ -120,15 +118,15 @@ export function UbicacionMapa(p: Props) {
       <div className="tg-ctrl">
         <div className="tg-tools tg-glass" role="toolbar" aria-label="Herramientas del mapa">
           {HERRAMIENTAS.map(h => (
-            <button key={h.k} type="button" data-tip={h.k === 'traffic' && traficoNo ? AVISO_TRAFICO : h.k === 'traffic' && !HAY_TRAFICO ? 'Tráfico: falta la clave VITE_TOMTOM_KEY' : h.tip} aria-label={h.k === 'traffic' && traficoNo ? AVISO_TRAFICO : h.tip} disabled={h.k === 'traffic' && (!HAY_TRAFICO || traficoNo)} data-ocultar-movil={h.movil === false ? '' : undefined}
+            <button key={h.k} type="button" className="btn btn--plain btn--icon tg-tool" data-tip={h.k === 'traffic' && traficoNo ? AVISO_TRAFICO : h.k === 'traffic' && !HAY_TRAFICO ? 'Tráfico: falta la clave VITE_TOMTOM_KEY' : h.tip} aria-label={h.k === 'traffic' && traficoNo ? AVISO_TRAFICO : h.tip} disabled={h.k === 'traffic' && (!HAY_TRAFICO || traficoNo)} data-ocultar-movil={h.movil === false ? '' : undefined}
               aria-pressed={h.k === 'overview' ? undefined : activo(h.k)}
               onClick={() => (h.k === 'overview' ? motorRef.current?.visionGeneral() : alternar(h.k))}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={h.d} />{h.k === 'traffic' && <><circle cx="12" cy="7.5" r="1.3" fill="currentColor" /><circle cx="12" cy="12" r="1.3" fill="currentColor" /><circle cx="12" cy="16.5" r="1.3" fill="currentColor" /></>}</svg>
             </button>
           ))}
         </div>
-        <div className="tg-seg tg-glass" role="group" aria-label="Estilo del mapa">
-          {ESTILOS.map(e => <button key={e.s} type="button" aria-pressed={p.base === e.s} onClick={() => p.onBase(e.s)}>{e.l}</button>)}
+        <div className="tg-seg tg-glass">
+          <SegmentedControl label="Estilo del mapa" value={p.base} onChange={p.onBase} options={ESTILOS.map(e => ({ value: e.s, label: e.l }))} />
         </div>
       </div>
     </div>

@@ -1,6 +1,9 @@
 // Ficha de la unidad: velocímetro, brújula, velocidad de los últimos 2 minutos y solo los datos que existen.
 import { useEffect, useRef, useState } from 'react';
 import { MapPin, MessageCircle, Navigation, Route, X } from 'lucide-react';
+import { Button } from '../../../core/ui/Button';
+import { LicensePlate } from '../../../core/ui/LicensePlate';
+import { AsaHoja, ZonaArrastre } from './HojaGesto';
 import { ST } from './camiones';
 import type { Lectura, MotorTelemetria } from './motor';
 import { factorCombustible } from './unidadCombustible';
@@ -49,30 +52,15 @@ function Grafico({ hist }: { hist: number[] }) {
     g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, hh);
     if (hist.length < 2) return;
     const max = 110, x = (i: number) => i / 119 * w, y = (v: number) => hh - 4 - Math.min(1, v / max) * (hh - 10);
-    const grad = g.createLinearGradient(0, 0, 0, hh); grad.addColorStop(0, 'rgba(56,214,255,.35)'); grad.addColorStop(1, 'rgba(56,214,255,0)');
+    const acento = getComputedStyle(c).getPropertyValue('--accent').trim() || '#f56300';
+    const grad = g.createLinearGradient(0, 0, 0, hh); grad.addColorStop(0, acento); grad.addColorStop(1, 'transparent');
     const off = 120 - hist.length;
-    g.beginPath(); g.moveTo(x(off), hh); hist.forEach((v, i) => g.lineTo(x(off + i), y(v))); g.lineTo(x(off + hist.length - 1), hh); g.fillStyle = grad; g.fill();
-    g.beginPath(); hist.forEach((v, i) => (i ? g.lineTo(x(off + i), y(v)) : g.moveTo(x(off + i), y(v)))); g.strokeStyle = '#38d6ff'; g.lineWidth = 2; g.stroke();
+    g.beginPath(); g.moveTo(x(off), hh); hist.forEach((v, i) => g.lineTo(x(off + i), y(v))); g.lineTo(x(off + hist.length - 1), hh); g.globalAlpha = 0.28; g.fillStyle = grad; g.fill(); g.globalAlpha = 1;
+    g.beginPath(); hist.forEach((v, i) => (i ? g.lineTo(x(off + i), y(v)) : g.moveTo(x(off + i), y(v)))); g.strokeStyle = acento; g.lineWidth = 2; g.stroke();
     g.setLineDash([3, 4]); g.strokeStyle = 'rgba(255,84,112,.6)'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, y(EXCESO_KMH)); g.lineTo(w, y(EXCESO_KMH)); g.stroke(); g.setLineDash([]);
   }, [hist, hist.length]);
   return <canvas ref={ref} className="tg-spark" aria-hidden />;
 }
-
-function Grab({ onToggle }: { onToggle: (abrir?: boolean) => void }) {
-  const y0 = useRef<number | null>(null);
-  const movio = useRef(false);
-  return (
-    <button type="button" className="tg-grab" aria-label="Expandir ficha"
-      onClick={() => { if (!movio.current) onToggle(); movio.current = false; }}
-      onTouchStart={e => { y0.current = e.touches[0].clientY; movio.current = false; }}
-      onTouchEnd={e => {
-        if (y0.current === null) return;
-        const dy = e.changedTouches[0].clientY - y0.current; y0.current = null;
-        if (Math.abs(dy) > 25) { movio.current = true; onToggle(dy < 0); }
-      }} />
-  );
-}
-export { Grab };
 
 const hace = (ms: number) => {
   const min = Math.round(ms / 60000);
@@ -89,10 +77,9 @@ interface Props {
   capacidad: number | null;
   onCerrar: () => void;
   onHistorial: () => void;
-  onToggleHoja: (abrir?: boolean) => void;
 }
 
-export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, onCerrar, onHistorial, onToggleHoja }: Props) {
+export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, onCerrar, onHistorial }: Props) {
   const l = useLectura(motor, u.placa);
   const combustible = useCombustible(u.id).data;
   // En % directo, o en galones/litros convertidos con la capacidad del tanque; sin capacidad se muestra en galones
@@ -132,15 +119,15 @@ export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, onCerr
 
   return (
     <>
-      <Grab onToggle={onToggleHoja} />
-      <div className="tg-d-head">
-        <span className="tg-plate"><small>PERÚ</small><b>{placaPeru(u.placa)}</b></span>
+      <AsaHoja />
+      <ZonaArrastre className="tg-d-head">
+        <LicensePlate plate={placaPeru(u.placa)} />
         <div className="t">
           <strong>{u.marcaModelo || u.nombre || u.placa}</strong>
           <span>{[u.tipo, u.empresa].filter(Boolean).join(' · ')}</span>
         </div>
-        <button type="button" className="tg-x" onClick={onCerrar} aria-label="Cerrar ficha"><X size={16} /></button>
-      </div>
+        <Button variant="plain" iconOnly icon={<X size={18} />} aria-label="Cerrar ficha" onClick={onCerrar} />
+      </ZonaArrastre>
       <span className="tg-state" style={{ background: s.c + '22', color: s.c }}>● {estadoTxt}</span>
       {l?.edadS != null && st !== 'off' && <span className="tg-edad" title="El equipo GPS manda un mensaje cada cierto tiempo; la posición no se actualiza entre uno y otro">Último mensaje del GPS hace {l.edadS < 90 ? `${l.edadS} s` : `${Math.round(l.edadS / 60)} min`}</span>}
 
@@ -173,18 +160,18 @@ export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, onCerr
           <div className="tg-cell tg-cell--ancho">
             <span className="tg-lbl">Dirección geocodificada</span>
             <b>{u.ubicacion}</b>
-            {tienePos && <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: '"JetBrains Mono", monospace' }}>{u.lat!.toFixed(4)}, {u.lng!.toFixed(4)}</span>}
+            {tienePos && <span style={{ fontSize: 11, color: 'var(--label-2)' }}>{u.lat!.toFixed(4)}, {u.lng!.toFixed(4)}</span>}
           </div>
         )}
       </div>
 
       <div className="tg-actions">
-        {tienePos && <button type="button" className="tg-btn primary" aria-pressed={piloto} onClick={() => motor?.setFollow(!piloto)}>{piloto ? 'Salir de cámara piloto' : 'Cámara piloto'}</button>}
-        <button type="button" className="tg-btn" onClick={onHistorial}><Route size={15} />Historial / Playback</button>
-        {tienePos && <button type="button" className="tg-btn" onClick={() => motor?.centrarSeleccion()}>Centrar</button>}
-        {tienePos && <a className="tg-btn" href={waze} target="_blank" rel="noopener noreferrer"><Navigation size={14} />Waze</a>}
-        {tienePos && <a className="tg-btn" href={maps} target="_blank" rel="noopener noreferrer"><MapPin size={14} />Maps</a>}
-        <a className="tg-btn" href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle size={14} />WhatsApp</a>
+        {tienePos && <Button variant="primary" block aria-pressed={piloto} onClick={() => motor?.setFollow(!piloto)}>{piloto ? 'Salir de cámara piloto' : 'Cámara piloto'}</Button>}
+        <Button variant="secondary" icon={<Route size={16} />} onClick={onHistorial}>Historial</Button>
+        {tienePos && <Button variant="secondary" onClick={() => motor?.centrarSeleccion()}>Centrar</Button>}
+        {tienePos && <a className="btn btn--secondary" href={waze} target="_blank" rel="noopener noreferrer"><Navigation size={16} />Waze</a>}
+        {tienePos && <a className="btn btn--secondary" href={maps} target="_blank" rel="noopener noreferrer"><MapPin size={16} />Maps</a>}
+        <a className="btn btn--secondary" href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle size={16} />WhatsApp</a>
       </div>
     </>
   );

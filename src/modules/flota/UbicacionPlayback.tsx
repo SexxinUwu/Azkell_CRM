@@ -6,7 +6,10 @@ import { fechaHora, soloHora, type Historial } from './UbicacionHistorial';
 import { FUEL_CAMBIO_PCT, type AnalisisCombustible } from './gps/combustible';
 import { VELOCIDADES_REP, type VelocidadRep } from './gps/BarraReproduccion';
 import type { Tramo } from './gps/viajes';
-import { Grab } from './gps/FichaTelemetria';
+import { AsaHoja, ZonaArrastre } from './gps/HojaGesto';
+import { Button } from '../../core/ui/Button';
+import { ChoiceChips } from '../../core/ui/Chips';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
 
 const HORAS = [6, 12, 24, 48];
 export type Velocidad = VelocidadRep;
@@ -43,8 +46,6 @@ interface Props {
   velocidad: Velocidad;
   onVelocidad: (v: Velocidad) => void;
   onSalir: () => void;
-  /** Celular: expande o pliega la hoja */
-  onToggleHoja?: (abrir?: boolean) => void;
 }
 
 function GraficoCombustible({ a, t0, t1, tCursor, onElegir }: { a: AnalisisCombustible; t0: number; t1: number; tCursor: number | null; onElegir: (t: number) => void }) {
@@ -118,33 +119,28 @@ export function PanelHistorial(p: Props) {
 
   return (
     <div className="tg-h" aria-label={`Historial de ${p.placa}`}>
-      {p.onToggleHoja && <Grab onToggle={p.onToggleHoja} />}
-      <header className="tg-h-cab">
+      <AsaHoja />
+      <ZonaArrastre className="tg-h-cab">
         <span className="tg-h-icono"><Route size={18} /></span>
         <div className="tg-h-titulo">
           <div><strong>{p.placa}</strong><span className="tg-h-etiqueta">{etiqueta}</span></div>
           <small className={p.error ? 'tg-h-error' : undefined}>{subtitulo}</small>
         </div>
-        <button type="button" className="tg-x" onClick={p.onSalir} aria-label="Cerrar historial"><X size={16} /></button>
-      </header>
+        <Button variant="plain" iconOnly icon={<X size={18} />} aria-label="Cerrar historial" onClick={p.onSalir} />
+      </ZonaArrastre>
 
       <section className="tg-h-sec">
         <h3>Periodo</h3>
-        <div className="tg-h-chips" role="group" aria-label="Periodo">
-          <button type="button" className="tg-chip" aria-pressed={p.dia === hoy} onClick={() => p.onDia(hoy)}>Hoy</button>
-          <button type="button" className="tg-chip" aria-pressed={p.dia === ayer} onClick={() => p.onDia(ayer)}>Ayer</button>
-          <button type="button" className="tg-chip" aria-pressed={esSemana} onClick={semana}>Semana</button>
-        </div>
-        <div className="tg-h-chips" role="group" aria-label="Últimas horas">
-          {HORAS.map(x => (
-            <button key={x} type="button" className="tg-chip" aria-pressed={!p.dia && !p.desde && p.horas === x}
-              onClick={() => { p.onDia(null); p.onRango(null, null); p.onHoras(x); }}>{x} h</button>
-          ))}
-        </div>
+        <ChoiceChips label="Periodo" value={p.dia === hoy ? 'hoy' : p.dia === ayer ? 'ayer' : esSemana ? 'semana' : (!p.dia && !p.desde ? `h${p.horas}` : '')}
+          onChange={v => {
+            if (v === 'hoy') p.onDia(hoy); else if (v === 'ayer') p.onDia(ayer); else if (v === 'semana') semana();
+            else { p.onDia(null); p.onRango(null, null); p.onHoras(Number(v.slice(1))); }
+          }}
+          options={[{ value: 'hoy', label: 'Hoy' }, { value: 'ayer', label: 'Ayer' }, { value: 'semana', label: 'Semana' }, ...HORAS.map(x => ({ value: `h${x}`, label: `${x} h` }))]} />
         <div className="tg-h-dia">
-          <button type="button" aria-label="Día anterior" onClick={() => p.onDia(sumarDias(p.dia ?? hoy, -1))}><ChevronLeft size={16} /></button>
+          <Button variant="secondary" iconOnly icon={<ChevronLeft size={18} />} aria-label="Día anterior" onClick={() => p.onDia(sumarDias(p.dia ?? hoy, -1))} />
           <label><CalendarDays size={14} aria-hidden /><input type="date" value={p.dia ?? ''} min={minimo} max={hoy} aria-label="Día del recorrido" onChange={e => p.onDia(e.target.value || null)} /></label>
-          <button type="button" aria-label="Día siguiente" disabled={!p.dia || p.dia >= hoy} onClick={() => p.onDia(p.dia && sumarDias(p.dia, 1) < hoy ? sumarDias(p.dia, 1) : null)}><ChevronRight size={16} /></button>
+          <Button variant="secondary" iconOnly icon={<ChevronRight size={18} />} aria-label="Día siguiente" disabled={!p.dia || p.dia >= hoy} onClick={() => p.onDia(p.dia && sumarDias(p.dia, 1) < hoy ? sumarDias(p.dia, 1) : null)} />
         </div>
         <button type="button" className="tg-h-acordeon" aria-expanded={rangoAbierto} onClick={() => setRangoAbierto(v => !v)}>
           Rango personalizado <small>máx. 7 días</small><ChevronRight size={14} />
@@ -153,7 +149,7 @@ export function PanelHistorial(p: Props) {
           <div className="tg-h-rango">
             <label>Desde<input type="datetime-local" value={borrDesde} min={`${minimo}T00:00`} max={`${hoy}T23:59`} onChange={e => setBorrDesde(e.target.value)} /></label>
             <label>Hasta<input type="datetime-local" value={borrHasta} min={`${minimo}T00:00`} max={`${hoy}T23:59`} onChange={e => setBorrHasta(e.target.value)} /></label>
-            <button type="button" className="tg-btn primary" onClick={verRango}>Ver rango</button>
+            <Button variant="primary" block onClick={verRango}>Ver rango</Button>
             {errRango && <p className="tg-h-error">{errRango}</p>}
           </div>
         )}
@@ -222,13 +218,9 @@ export function PanelHistorial(p: Props) {
             </div>
           )}
           <div className="tg-h-controles">
-            <button type="button" className="tg-h-btn" onClick={p.onReiniciar} aria-label="Volver al inicio"><RotateCcw size={16} /></button>
-            <button type="button" className="tg-h-play" onClick={p.onReproducir} aria-label={p.reproduciendo ? 'Pausar' : 'Reproducir'}>
-              {p.reproduciendo ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
-            </button>
-            <div className="tg-h-chips" role="group" aria-label="Velocidad de reproducción">
-              {VELOCIDADES_REP.map(v => <button key={v} type="button" className="tg-chip" aria-pressed={p.velocidad === v} onClick={() => p.onVelocidad(v)}>{v}x</button>)}
-            </div>
+            <Button variant="secondary" iconOnly icon={<RotateCcw size={18} />} aria-label="Volver al inicio" onClick={p.onReiniciar} />
+            <Button variant="primary" iconOnly icon={p.reproduciendo ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />} aria-label={p.reproduciendo ? 'Pausar' : 'Reproducir'} onClick={p.onReproducir} />
+            <SegmentedControl label="Velocidad de reproducción" value={String(p.velocidad) as '1' | '5' | '10' | '100'} onChange={v => p.onVelocidad(Number(v) as Velocidad)} options={VELOCIDADES_REP.map(v => ({ value: String(v) as '1' | '5' | '10' | '100', label: `${v}x` }))} />
           </div>
         </section>
       )}
