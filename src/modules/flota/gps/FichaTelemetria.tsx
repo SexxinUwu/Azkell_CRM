@@ -7,6 +7,7 @@ import { AsaHoja, ZonaArrastre } from './HojaGesto';
 import { ST } from './camiones';
 import type { Lectura, MotorTelemetria } from './motor';
 import { factorCombustible } from './unidadCombustible';
+import { RESERVA_COMBUSTIBLE_PCT } from './mapaConfig';
 import { EXCESO_KMH } from './mapaConfig';
 import { useCombustible, type UnidadMapa } from '../api';
 
@@ -95,6 +96,15 @@ export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, onCerr
     }
     return { pct: null, nombre, texto: `${Math.round(combustible.nivel * f.factor * 10) / 10} gal` };
   })();
+  // Con la capacidad del tanque (tabla de placas) el porcentaje se vuelve galones: cuánto hay, cuánto se puede usar sin tocar la reserva (20 %) y cuánto es reserva
+  const detalleComb = (() => {
+    if (!nivelComb || nivelComb.pct == null || !capacidad || capacidad <= 0) return null;
+    const pct = Math.max(0, Math.min(100, nivelComb.pct));
+    const enTanque = capacidad * pct / 100;
+    const reserva = capacidad * RESERVA_COMBUSTIBLE_PCT / 100;
+    return { capacidad, enTanque, reserva, utilizable: Math.max(0, enTanque - reserva), enReserva: pct <= RESERVA_COMBUSTIBLE_PCT, pct };
+  })();
+  const gal = (n: number) => `${n.toLocaleString('es-PE', { maximumFractionDigits: 1 })} gal`;
   const st = l?.st ?? 'det';
   const s = ST[st];
   const kmh = l?.kmh ?? u.velocidad;
@@ -143,11 +153,29 @@ export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, onCerr
 
       <div className="tg-grid">
         {nivelComb && (
-          <div className="tg-cell tg-cell--ancho">
+          <div className={`tg-cell tg-cell--ancho tg-comb${detalleComb?.enReserva ? ' tg-comb--reserva' : ''}`}>
             <span className="tg-lbl">Nivel de combustible</span>
-            <b className="mono">{nivelComb.texto}</b>
-            {nivelComb.nombre && <small className="tg-cell__nota">Sensor: {nivelComb.nombre}</small>}
-            {nivelComb.pct != null && <span className="tg-barra" aria-hidden><i style={{ width: `${nivelComb.pct}%`, background: nivelComb.pct < 20 ? ST.off.c : nivelComb.pct < 40 ? ST.ral.c : ST.mov.c }} /></span>}
+            <div className="tg-comb__fila">
+              <b className="mono">{nivelComb.texto}</b>
+              {detalleComb && <span className="tg-comb__gal mono">{gal(detalleComb.enTanque)}</span>}
+            </div>
+            {nivelComb.pct != null && (
+              <span className="tg-barra tg-barra--comb" aria-hidden>
+                <i style={{ width: `${nivelComb.pct}%`, background: nivelComb.pct < 20 ? ST.off.c : nivelComb.pct < 40 ? ST.ral.c : ST.mov.c }} />
+                {detalleComb && <em style={{ left: `${RESERVA_COMBUSTIBLE_PCT}%` }} />}
+              </span>
+            )}
+            {detalleComb && (
+              <>
+                {detalleComb.enReserva && <div className="tg-comb__aviso" role="status">En reserva: conviene cargar combustible, rodar así daña la unidad.</div>}
+                <div className="tg-comb__cifras">
+                  <div><small>Utilizable</small><b className="mono">{gal(detalleComb.utilizable)}</b><span>sin tocar la reserva</span></div>
+                  <div><small>Reserva ({RESERVA_COMBUSTIBLE_PCT} %)</small><b className="mono">{gal(detalleComb.reserva)}</b><span>no se debe usar</span></div>
+                  <div><small>Tanque</small><b className="mono">{gal(detalleComb.capacidad)}</b><span>capacidad total</span></div>
+                </div>
+              </>
+            )}
+            {nivelComb.nombre && <small className="tg-cell__nota">Sensor: {nivelComb.nombre}{!detalleComb && nivelComb.pct != null && !capacidad ? ' · sin capacidad de tanque en Placas' : ''}</small>}
           </div>
         )}
         {celdas.map(c => (

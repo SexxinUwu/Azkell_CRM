@@ -34,6 +34,8 @@ export const SIN_SENAL_MS = 10 * 60 * 1000;
 /** Exceso de velocidad (km/h) y velocidad a la que se rearma la alerta */
 export const EXCESO_KMH = 90;
 export const EXCESO_REARME_KMH = 80;
+/** Reserva de combustible de toda unidad: el último 20 % del tanque (rodar en reserva daña la unidad) */
+export const RESERVA_COMBUSTIBLE_PCT = 20;
 /** Por encima de esta velocidad la unidad está en movimiento */
 export const MOV_KMH = 2;
 /** Salto (m) a partir del cual la unidad se teletransporta en vez de animarse */
