@@ -55,6 +55,10 @@ export function useMiPerfil() {
     },
     initialData: () => perfilGuardado(correo),
     staleTime: 30_000,
+    // La foto o el nombre pueden cambiar desde otro dispositivo (el teléfono): se revisa al abrir la pantalla
+    // y cada minuto mientras la pestaña está a la vista, sin esperar a que se vuelva a enfocar.
+    refetchOnMount: 'always',
+    refetchInterval: 60_000,
   });
 }
 
