@@ -417,6 +417,13 @@ module.exports = function (db) {
         }
     }
 
+    // Una llanta en R3 ya hizo 3 reencauches y no admite más: solo puede ir a descarte
+    function exigirReencauchable(llanta) {
+        if (String(llanta.vida || 'R0').trim().toUpperCase() === VIDAS[VIDAS.length - 1]) {
+            throw aviso(409, 'Ya tiene 3 reencauches: mándala a descarte');
+        }
+    }
+
     // Pasa la llanta a otro almacén y estado, y deja su fila en el kardex (siempre dentro de la transacción de la ruta)
     async function pasarLlanta(conn, req, llanta, { almacen, estado, mov, observacion }) {
         await conn.query(
@@ -430,7 +437,7 @@ module.exports = function (db) {
     }
 
     // Ruta de una sola llanta: permiso, bloqueo FOR UPDATE, comprobación de situación, cambio y kardex
-    function rutaMovimiento(ruta, { permiso, desde, accion, hacia, mov, texto }) {
+    function rutaMovimiento(ruta, { permiso, desde, accion, hacia, mov, texto, validar }) {
         router.post(ruta, async (req, res) => {
             try {
                 if (!tienePermiso(req, permiso, 'c')) throw aviso(403, `Sin permiso (${permiso}) para ${texto}`);
@@ -441,6 +448,7 @@ module.exports = function (db) {
                 await conTransaccion(pool(req), async (conn) => {
                     const llanta = await bloquearLlanta(conn, codigo);
                     exigirSituacion(llanta, desde, accion);
+                    if (validar) validar(llanta);
                     await pasarLlanta(conn, req, llanta, { ...hacia, mov, observacion });
                 });
                 res.json({ ok: true, data: { codigo, almacen_id: hacia.almacen, estado: hacia.estado.ciclo } });
@@ -534,6 +542,8 @@ module.exports = function (db) {
 
             const resultado = await conTransaccion(pool(req), async (conn) => {
                 const llanta = await bloquearLlanta(conn, codigo);
+                // A reforma solo van llantas que admiten otro reencauche (una en R3 va a descarte)
+                if (destino === 'reforma') exigirReencauchable(llanta);
 
                 const [abiertas] = await conn.query(
                     'SELECT * FROM neumaticos_instalaciones WHERE id_neumatico = ? AND fecha_out IS NULL FOR UPDATE',
@@ -591,6 +601,7 @@ module.exports = function (db) {
     rutaMovimiento('/marcar-reforma', {
         permiso: PERMISO_REENCAUCHE, desde: ['disponible'], accion: 'marcar para reforma', texto: 'marcar llantas para reforma',
         hacia: { almacen: ALMACEN.RETEN, estado: ESTADO.EN_REENCAUCHE }, mov: MOV.MARCAR_REFORMA,
+        validar: exigirReencauchable,
     });
     // disponible → Retén, esperando descarte
     rutaMovimiento('/marcar-descarte', {
