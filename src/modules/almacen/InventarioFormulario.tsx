@@ -1,9 +1,12 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Plus, ScanLine } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
-import { Field, SelectInput, TextInput } from '../../core/ui/Field';
+import { Field, TextInput } from '../../core/ui/Field';
+import { Combobox } from '../../core/ui/Combobox';
+import { ChoiceChips } from '../../core/ui/Chips';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { MultiSelect } from '../../core/ui/MultiSelect';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
@@ -55,6 +58,8 @@ function leerLista(texto: string | null): string[] {
   }
 }
 
+const opc = (lista: string[], actual: string) => opciones(lista, actual).map(v => ({ value: v, label: v }));
+
 const grilla = (columnas: string): CSSProperties => ({
   display: 'grid', gridTemplateColumns: columnas, gap: 'var(--s-3)',
 });
@@ -79,6 +84,12 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
     queryFn: () => api<Record<string, string>>('/almacen/configuracion'),
     staleTime: 5 * 60_000,
   });
+
+  // El almacén de un artículo nuevo es el Principal (nunca "Sin almacén")
+  const almacenPrincipal = useMemo(() => {
+    const lista = almacenesQ.data ?? [];
+    return (lista.find(x => /principal/i.test(x.nombre)) ?? lista[0])?.nombre ?? 'Principal';
+  }, [almacenesQ.data]);
 
   const [guardando, setGuardando] = useState(false);
   const [articulo, setArticulo] = useState('');
@@ -151,12 +162,17 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
       // Alta rápida de un servicio: tipo y unidad "Servicio", como el clásico
       const servicio = !!inicial?.servicio;
       setArticulo(inicial?.articulo ?? ''); setCodigoArticulo(''); setCodigoBarras(''); setMarca(''); setMarcasUnidad([]);
-      setFamilia(servicio ? '' : FAMILIA_LLANTA); setTipo(servicio ? 'Servicio' : ''); setSubTipo(''); setAlmacen(''); setAnaquel('');
+      setFamilia(servicio ? '' : FAMILIA_LLANTA); setTipo(servicio ? 'Servicio' : ''); setSubTipo(''); setAlmacen(almacenPrincipal); setAnaquel('');
       setUnidad(servicio ? 'Servicio' : 'Unidades'); setStockMin('0'); setStockMax('0'); setCantidadInicial('0');
       setMoneda('PEN'); setCostoRef('0'); setTipoCambio(''); setEstado('Activo'); setObservaciones('');
       setSistema(''); setSubSistema(''); setUbicacion('');
     }
   }, [open, a, inicial?.articulo, inicial?.servicio]);
+
+  // Si la lista de almacenes llega después de abrir el formulario, el nuevo artículo queda en el Principal
+  useEffect(() => {
+    if (open && !a && !almacen) setAlmacen(almacenPrincipal);
+  }, [open, a, almacen, almacenPrincipal]);
 
   useEffect(() => {
     if (!open) return;
@@ -267,10 +283,9 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
         <Field label="Marca">
           {p => (
             <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
-              <SelectInput {...p} value={marca} onChange={e => setMarca(e.target.value)} style={{ flex: 1 }}>
-                <option value="">— Sin marca —</option>
-                {opciones((marcasQ.data ?? []).map(m => m.nombre), marca).map(m => <option key={m} value={m}>{m}</option>)}
-              </SelectInput>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Combobox {...p} options={opc((marcasQ.data ?? []).map(m => m.nombre), marca)} value={marca || null} onChange={v => setMarca(v ?? '')} placeholder="Busca o elige una marca" />
+              </div>
               <Button variant="secondary" iconOnly icon={<Plus size={16} />} aria-label="Nueva marca" onClick={() => setNuevaOpcion('marca')} />
             </div>
           )}
@@ -278,10 +293,9 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
         <Field label="Familia">
           {p => (
             <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
-              <SelectInput {...p} value={familia} onChange={e => setFamilia(e.target.value)} style={{ flex: 1 }}>
-                <option value="">— Sin familia —</option>
-                {opciones((familiasQ.data ?? []).map(f => f.nombre), familia).map(f => <option key={f} value={f}>{f}</option>)}
-              </SelectInput>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Combobox {...p} options={opc((familiasQ.data ?? []).map(f => f.nombre), familia)} value={familia || null} onChange={v => setFamilia(v ?? '')} placeholder="Busca o elige una familia" />
+              </div>
               <Button variant="secondary" iconOnly icon={<Plus size={16} />} aria-label="Nueva familia" onClick={() => setNuevaOpcion('familia')} />
             </div>
           )}
@@ -305,33 +319,18 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
         )}
 
         {!llanta && (
-          <div style={grilla('1fr 1fr')}>
+          <>
             <Field label="Tipo">
-              {p => (
-                <SelectInput {...p} value={tipo} onChange={e => setTipo(e.target.value)}>
-                  <option value="">— Sin tipo —</option>
-                  {opciones(TIPOS, tipo).map(t => <option key={t} value={t}>{t}</option>)}
-                </SelectInput>
-              )}
+              {() => <ChoiceChips label="Tipo" value={tipo} onChange={v => setTipo(v === tipo ? '' : v)} options={opciones(TIPOS, tipo).map(t => ({ value: t, label: t }))} />}
             </Field>
             <Field label="Sub-tipo">
-              {p => (
-                <SelectInput {...p} value={subTipo} onChange={e => setSubTipo(e.target.value)}>
-                  <option value="">— Sin sub-tipo —</option>
-                  {opciones(SUB_TIPOS, subTipo).map(t => <option key={t} value={t}>{t}</option>)}
-                </SelectInput>
-              )}
+              {() => <ChoiceChips label="Sub-tipo" value={subTipo} onChange={v => setSubTipo(v === subTipo ? '' : v)} options={opciones(SUB_TIPOS, subTipo).map(t => ({ value: t, label: t }))} />}
             </Field>
-          </div>
+          </>
         )}
 
         <Field label="Almacén">
-          {p => (
-            <SelectInput {...p} value={almacen} onChange={e => setAlmacen(e.target.value)}>
-              <option value="">— Sin almacén —</option>
-              {opciones((almacenesQ.data ?? []).map(al => al.nombre), almacen).map(al => <option key={al} value={al}>{al}</option>)}
-            </SelectInput>
-          )}
+          {p => <Combobox {...p} options={opc((almacenesQ.data ?? []).map(al => al.nombre), almacen)} value={almacen || null} onChange={v => setAlmacen(v ?? '')} placeholder="Elige el almacén" />}
         </Field>
 
         {!llanta && (
@@ -341,12 +340,7 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
             </Field>
             <div style={grilla('1fr 1fr 1fr')}>
               <Field label="Unidad">
-                {p => (
-                  <SelectInput {...p} value={unidadValor} onChange={e => setUnidad(e.target.value)}>
-                    <option value="">— Sin unidad —</option>
-                    {opciones(unidades.map(u => u.descripcion || u.nombre), unidadValor).map(u => <option key={u} value={u}>{u}</option>)}
-                  </SelectInput>
-                )}
+                {p => <Combobox {...p} options={opc(unidades.map(u => u.descripcion || u.nombre), unidadValor)} value={unidadValor || null} onChange={v => setUnidad(v ?? '')} placeholder="Unidad" />}
               </Field>
               <Field label="Mín.">
                 {p => <TextInput {...p} type="number" min={0} step="0.0001" value={stockMin} onChange={e => setStockMin(e.target.value)} />}
@@ -369,12 +363,7 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
             {p => <TextInput {...p} type="number" min={0} step="0.0001" value={costoRef} placeholder="0.00" onChange={e => setCostoRef(e.target.value)} />}
           </Field>
           <Field label="Moneda">
-            {p => (
-              <SelectInput {...p} value={moneda} onChange={e => setMoneda(e.target.value as 'PEN' | 'USD')}>
-                <option value="PEN">PEN (S/)</option>
-                <option value="USD">USD ($)</option>
-              </SelectInput>
-            )}
+            {() => <SegmentedControl label="Moneda" value={moneda} onChange={setMoneda} options={[{ value: 'PEN', label: 'S/ PEN' }, { value: 'USD', label: '$ USD' }]} block />}
           </Field>
         </div>
         {moneda === 'USD' && (
@@ -385,11 +374,7 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
 
         {!llanta && (
           <Field label="Estado">
-            {p => (
-              <SelectInput {...p} value={estado} onChange={e => setEstado(e.target.value)}>
-                {opciones(ESTADOS, estado).map(s => <option key={s} value={s}>{s}</option>)}
-              </SelectInput>
-            )}
+            {() => <ChoiceChips label="Estado" value={estado} onChange={setEstado} options={opciones(ESTADOS, estado).map(s => ({ value: s, label: s }))} />}
           </Field>
         )}
 

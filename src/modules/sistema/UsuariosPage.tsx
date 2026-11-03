@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, SearchX } from 'lucide-react';
+import { Plus, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, PasswordInput, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -172,8 +172,9 @@ export function UsuariosPage() {
   async function guardar() {
     const nuevos: Record<string, string> = {};
     if (!form.nombre.trim()) nuevos.nombre = 'Escribe el nombre completo.';
-    if (!form.correo.trim()) nuevos.correo = 'Escribe el correo.';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo.trim())) nuevos.correo = 'Revisa el correo: debe tener la forma usuario@empresa.com.';
+    const acceso = form.correo.trim();
+    if (!acceso) nuevos.correo = 'Escribe el correo o el DNI.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(acceso) && !/^\d{8}$/.test(acceso)) nuevos.correo = 'Escribe un correo (usuario@empresa.com) o un DNI de 8 dígitos.';
     if (!editando && !form.password.trim()) nuevos.password = 'Escribe una contraseña para el primer acceso.';
     if (!form.rol_id) nuevos.rol = 'Elige el rol del usuario.';
     setErrs(nuevos);
@@ -229,6 +230,26 @@ export function UsuariosPage() {
       toast(errorMessage(e), 'error');
     } finally {
       setToggling(null);
+    }
+  }
+
+  const [confirmEliminar, setConfirmEliminar] = useState<Usuario | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+
+  async function eliminarUsuario() {
+    if (!confirmEliminar) return;
+    setEliminando(true);
+    try {
+      await api(`/usuarios-v2/${usuarioId(confirmEliminar)}`, { method: 'DELETE' });
+      toast('Usuario eliminado');
+      setConfirmEliminar(null);
+      setModal(false);
+      qc.invalidateQueries({ queryKey: ['sistema', 'usuarios'] });
+    } catch (e) {
+      setConfirmEliminar(null);
+      toast(errorMessage(e), 'error');
+    } finally {
+      setEliminando(false);
     }
   }
 
@@ -331,6 +352,9 @@ export function UsuariosPage() {
         title={editando ? 'Editar usuario' : 'Nuevo usuario'}
         footer={
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            {editando && (
+              <Button variant="danger" icon={<Trash2 size={15} />} onClick={() => setConfirmEliminar(editando)} disabled={guardando} style={{ marginRight: 'auto' }}>Eliminar</Button>
+            )}
             <Button variant="plain" onClick={() => setModal(false)} disabled={guardando}>Cancelar</Button>
             <Button variant="primary" type="submit" form="form-usuario" loading={guardando}>
               {editando ? 'Guardar cambios' : 'Crear usuario'}
@@ -346,11 +370,11 @@ export function UsuariosPage() {
                 placeholder="Ej. Juan Pérez" />
             )}
           </Field>
-          <Field label="Correo electrónico" error={errs.correo} hint={editando ? 'Si lo cambias, el usuario entra con el nuevo correo.' : undefined}>
+          <Field label="Usuario de acceso (correo o DNI)" error={errs.correo} hint={editando ? 'Si lo cambias, el usuario entra con el nuevo dato.' : 'Puede ser un correo o un DNI de 8 dígitos.'}>
             {props => (
-              <TextInput {...props} type="email" value={form.correo}
+              <TextInput {...props} type="text" inputMode="email" autoCapitalize="none" autoCorrect="off" value={form.correo}
                 onChange={e => setForm(f => ({ ...f, correo: e.target.value }))}
-                placeholder="usuario@empresa.com" />
+                placeholder="usuario@empresa.com o 12345678" />
             )}
           </Field>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-2)' }}>
@@ -400,6 +424,16 @@ export function UsuariosPage() {
           </div>
         </form>
       </Sheet>
+
+      <ConfirmSheet
+        open={!!confirmEliminar}
+        onClose={() => setConfirmEliminar(null)}
+        onConfirm={eliminarUsuario}
+        loading={eliminando}
+        title="Eliminar usuario"
+        message={`¿Eliminar definitivamente a ${String(confirmEliminar?.nombre ?? confirmEliminar?.correo ?? '')}? No se puede deshacer. Si solo quieres quitarle el acceso, mejor desactívalo.`}
+        confirmLabel="Eliminar"
+      />
 
       <ConfirmSheet
         open={!!confirmToggle}

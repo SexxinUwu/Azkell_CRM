@@ -27,6 +27,8 @@ interface ComboboxProps {
   /** Si se pasa, aparece "Registrar «lo escrito»" al final de la lista */
   onCreate?: (text: string) => void;
   createLabel?: string;
+  /** Varias formas de registrar lo escrito (por ejemplo "Registrar artículo" y "Registrar servicio"). Si se pasa, reemplaza a onCreate. */
+  creates?: Array<{ label: string; onCreate: (text: string) => void; icon?: ReactNode }>;
   loading?: boolean;
   disabled?: boolean;
   /** Cuántos resultados mostrar como máximo (el resto aparece al seguir escribiendo) */
@@ -70,7 +72,7 @@ function Highlight({ text, words }: { text: string; words: string[] }) {
  * Con onCreate, permite registrar lo que no está en la lista sin salir del formulario.
  */
 export function Combobox({
-  id, options, value, onChange, placeholder = 'Escribe para buscar', onCreate, createLabel = 'Registrar', loading, disabled, limit = 50,
+  id, options, value, onChange, placeholder = 'Escribe para buscar', onCreate, createLabel = 'Registrar', creates, loading, disabled, limit = 50,
   enHoja = false, tituloHoja, ...aria
 }: ComboboxProps) {
   const autoId = useId();
@@ -101,8 +103,9 @@ export function Combobox({
 
   const text = query.trim();
   const exact = results.some(o => fold(o.label) === fold(text));
-  const showCreate = !!onCreate && !exact;
-  const count = results.length + (showCreate ? 1 : 0);
+  const acciones = creates ?? (onCreate ? [{ label: createLabel, onCreate }] : []);
+  const showCreate = acciones.length > 0 && !exact;
+  const count = results.length + (showCreate ? acciones.length : 0);
 
   useEffect(() => { setActive(0); }, [query, open]);
 
@@ -151,16 +154,16 @@ export function Combobox({
     close();
   }
 
-  function create() {
+  function create(k = 0) {
     const t = text;
     close();
     inputRef.current?.blur();
-    onCreate?.(t);
+    acciones[k]?.onCreate(t);
   }
 
   function pick(index: number) {
     if (index < results.length) choose(results[index]);
-    else if (showCreate) create();
+    else if (showCreate) create(index - results.length);
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -259,23 +262,24 @@ export function Combobox({
                 {o.value === value && <Check size={16} className="combobox__check" aria-hidden />}
               </li>
             ))}
-            {showCreate && (
+            {showCreate && acciones.map((ac, k) => (
               <li
-                id={`${listId}-${results.length}`}
-                data-index={results.length}
+                key={ac.label}
+                id={`${listId}-${results.length + k}`}
+                data-index={results.length + k}
                 role="option"
                 aria-selected={false}
-                className={`combobox__option combobox__create${active === results.length ? ' is-active' : ''}`}
-                onPointerEnter={() => setActive(results.length)}
-                onClick={create}
+                className={`combobox__option combobox__create${active === results.length + k ? ' is-active' : ''}`}
+                onPointerEnter={() => setActive(results.length + k)}
+                onClick={() => create(k)}
               >
-                <span className="combobox__icon"><Plus size={16} strokeWidth={2.5} /></span>
+                <span className="combobox__icon">{ac.icon ?? <Plus size={16} strokeWidth={2.5} />}</span>
                 <span className="combobox__text">
-                  <span className="combobox__label">{text ? <>{createLabel} «{text}»</> : createLabel}</span>
-                  {!results.length && text && <span className="combobox__desc">No está en la lista</span>}
+                  <span className="combobox__label">{text ? <>{ac.label} «{text}»</> : ac.label}</span>
+                  {k === 0 && !results.length && text && <span className="combobox__desc">No está en la lista</span>}
                 </span>
               </li>
-            )}
+            ))}
           </motion.ul>
         )}
       </AnimatePresence>

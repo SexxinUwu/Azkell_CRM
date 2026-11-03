@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CreditCard, FileText, Truck, Landmark, Package, Paperclip, Plus, ScanLine, Users, X } from 'lucide-react';
+import { CreditCard, FileText, Truck, Landmark, Package, Paperclip, Plus, ScanLine, Users, Wrench, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
@@ -246,14 +246,16 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
 
   // ── Opciones ──────────────────────────────────────────────────────────────
 
+  // Artículos y servicios van juntos en cualquier orden (de compra o de servicio): cada uno se reconoce por su ícono y su etiqueta
   const opcionesArticulos: ComboboxOption[] = inventario
-    .filter(a => esArticuloServicio(a) === servicio)
     .map(a => ({
       value: a.id,
       label: a.descripcion || a.articulo || a.id,
-      description: [a.id, a.marca, a.familia].filter(Boolean).join(' · '),
+      description: [esArticuloServicio(a) ? 'Servicio' : 'Artículo', a.id, a.marca, a.familia].filter(Boolean).join(' · '),
       keywords: [a.codigo_articulo, a.codigo_barras, a.articulo].filter(Boolean).join(' '),
-      icon: a.imagen_url
+      icon: esArticuloServicio(a)
+        ? <span className="oc-opcion__sin-foto"><Wrench size={15} strokeWidth={1.8} /></span>
+        : a.imagen_url
         ? <img src={a.imagen_url} alt="" className="oc-opcion__foto" loading="lazy" />
         : <span className="oc-opcion__sin-foto"><Package size={15} strokeWidth={1.8} /></span>,
     }));
@@ -308,14 +310,8 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
   }
 
   function cambiarTipo(t: string) {
+    // Artículos y servicios conviven en las dos clases de orden: las líneas se conservan
     setTipoOrden(t);
-    const seraServicio = t === 'Orden de servicio';
-    // Los artículos de la otra clase no sirven en esta orden: se quitan
-    setLineas(prev => prev.map(l => {
-      if (!l.inventario_id) return l;
-      const art = inventario.find(a => a.id === l.inventario_id);
-      return art && esArticuloServicio(art) !== seraServicio ? { ...l, inventario_id: null, descripcion: '', refCosto: null, unidad: null } : l;
-    }));
   }
 
   function cambiarModoIgv(nuevo: ModoIgv) {
@@ -380,7 +376,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
   /** Resultado del escáner: busca por código (o código de barras) entre los artículos de esta clase */
   function leerCodigo(texto: string) {
     const codigo = texto.trim();
-    const art = inventario.find(a => (a.id === codigo || (a.codigo_barras ?? '').trim() === codigo) && esArticuloServicio(a) === servicio);
+    const art = inventario.find(a => a.id === codigo || (a.codigo_barras ?? '').trim() === codigo);
     const key = escanerKey;
     setEscanerKey(null);
     if (!key) return;
@@ -433,7 +429,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
   const errorLinea = (l: LineaOC): string | null => {
     // Una línea sin artículo y sin precio es una fila vacía: no cuenta
     if (!l.inventario_id) {
-      return num(l.pu) > 0 ? (servicio ? 'Elige un servicio de la lista' : 'Elige un artículo de la lista') : null;
+      return num(l.pu) > 0 ? 'Elige un artículo o un servicio de la lista' : null;
     }
     if (!(num(l.cantidad) > 0)) return 'La cantidad debe ser mayor que cero';
     if (!(num(l.pu) >= 0)) return 'El precio no puede ser negativo';
@@ -444,7 +440,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
     proveedor: !proveedorId ? 'Elige el proveedor de la lista.' : undefined,
     tc: moneda === 'USD' && !(tc > 0) ? 'Indica el tipo de cambio del día.' : undefined,
     dias: condicion === 'A crédito' && !(num(diasCredito) > 0) ? 'Indica los días de crédito.' : undefined,
-    articulos: usados.length === 0 ? (servicio ? 'Agrega al menos un servicio.' : 'Agrega al menos un artículo.') : undefined,
+    articulos: usados.length === 0 ? (servicio ? 'Agrega al menos un servicio o artículo.' : 'Agrega al menos un artículo o servicio.') : undefined,
   };
   const hayErrores = Object.values(errorCab).some(Boolean) || lineas.some(l => errorLinea(l) !== null);
   const mostrar = (msg: string | undefined) => (intento ? msg : undefined);
@@ -734,7 +730,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
             {mostrar(errorCab.articulos) && <p role="alert" className="t-footnote oc-error">{errorCab.articulos}</p>}
 
             {lineas.length === 0 && (
-              <p className="t-footnote c-secondary" style={{ margin: 0 }}>Sin líneas. Usa «Agregar» para añadir {servicio ? 'un servicio' : 'un artículo'}.</p>
+              <p className="t-footnote c-secondary" style={{ margin: 0 }}>Sin líneas. Usa «Agregar» para añadir un artículo o un servicio.</p>
             )}
 
             <div className="oc-lineas">
@@ -750,16 +746,18 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
                           options={opcionesArticulos}
                           value={l.inventario_id}
                           onChange={id => elegirArticulo(l.key, id)}
-                          placeholder={servicio ? 'Busca un servicio…' : 'Busca por código o nombre…'}
+                          placeholder="Busca un artículo o un servicio…"
                           enHoja
-                          tituloHoja={servicio ? 'Buscar servicio' : 'Buscar artículo'}
+                          tituloHoja="Buscar artículo o servicio"
                           loading={inventarioQ.isLoading}
-                          onCreate={texto => setAltaArticulo({ key: l.key, texto: texto.trim(), servicio })}
-                          createLabel={servicio ? 'Registrar servicio' : 'Registrar artículo'}
+                          creates={[
+                            { label: 'Registrar artículo', onCreate: texto => setAltaArticulo({ key: l.key, texto: texto.trim(), servicio: false }), icon: <Package size={16} strokeWidth={2} /> },
+                            { label: 'Registrar servicio', onCreate: texto => setAltaArticulo({ key: l.key, texto: texto.trim(), servicio: true }), icon: <Wrench size={16} strokeWidth={2} /> },
+                          ]}
                           aria-invalid={!!mostrar(error ?? undefined) || undefined}
                         />
                       </div>
-                      {!servicio && (
+                      {(
                         <button type="button" className="oc-icono oc-icono--qr" title="Escanear código" aria-label="Escanear código del artículo"
                           onClick={() => setEscanerKey(l.key)}>
                           <ScanLine size={16} />
@@ -820,7 +818,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       </Sheet>
 
       <EscanerQr open={escanerKey !== null} onClose={() => setEscanerKey(null)} onLeido={leerCodigo}
-        titulo={servicio ? 'Escanear servicio' : 'Escanear artículo'} />
+        titulo="Escanear artículo o servicio" />
 
       <ProveedorFormulario
         open={altaProveedor !== null}

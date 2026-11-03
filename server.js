@@ -4017,6 +4017,28 @@ app.put('/api/usuarios-v2/:id', async (req, res) => {
     });
 });
 
+// Eliminar un usuario de verdad (la alternativa suave es ponerlo en Inactivo)
+app.delete('/api/usuarios-v2/:id', (req, res) => {
+    const targetDb = req.db || db;
+    const { id } = req.params;
+    targetDb.query('SELECT idUsuario, nombre, correo, rol FROM usuarios WHERE idUsuario=?', [id], (errS, filas) => {
+        if (errS) return res.status(500).json({ error: errS.message });
+        const u = filas && filas[0];
+        if (!u) return res.status(404).json({ error: 'El usuario ya no existe.' });
+        const correo = String(u.correo || '').trim().toLowerCase();
+        if (correo === 'admin@azkell.com' || u.rol === 'Fundador') return res.status(403).json({ error: 'El usuario fundador no se puede eliminar.' });
+        const yo = String((req.user && (req.user.correo || req.user.email)) || '').trim().toLowerCase();
+        if (yo && yo === correo) return res.status(400).json({ error: 'No puedes eliminar tu propio usuario.' });
+        targetDb.query('DELETE FROM usuarios WHERE idUsuario=?', [id], (err) => {
+            if (err) return res.status(500).json({ error: 'No se pudo eliminar: el usuario tiene registros asociados. Mejor desactívalo.' });
+            broadcast('usuarios', 'eliminar');
+            auditar(targetDb, actorDe(req), { action: 'DELETE', entity: 'user', entityId: id, summary: `Eliminó al usuario ${u.nombre || u.correo}` });
+            logAudit(req.user ? req.user.correo : 'admin', 'usuarios', 'ELIMINÓ', `${u.nombre || u.correo}`);
+            res.json({ data: 'Éxito' });
+        });
+    });
+});
+
 // ============================================================
 // 🔑 CAMBIO DE CONTRASEÑA (usuario cambia su propia clave)
 // ============================================================
