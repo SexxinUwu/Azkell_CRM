@@ -4,7 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { Boxes, DollarSign, FileSpreadsheet, LayoutGrid, Package, PackageMinus, PackagePlus, PackageX, Plus, RefreshCw, SearchX, TriangleAlert } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page } from '../../core/ui/Display';
-import { SearchField, TextInput } from '../../core/ui/Field';
+import { TextInput } from '../../core/ui/Field';
+import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
+import { ChoiceChips } from '../../core/ui/Chips';
+import { Combobox } from '../../core/ui/Combobox';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { MenuOtros } from '../../core/ui/MenuOtros';
@@ -75,6 +78,7 @@ export function InventarioPage() {
   const [porEliminar, setPorEliminar] = useState<ArticuloInv | null>(null);
   const [eliminando, setEliminando] = useState(false);
   const [importando, setImportando] = useState(false);
+  const [filtrando, setFiltrando] = useState(false);
 
   const puedeCrear = can('inv.crear');
   const puedeEditar = can('inv.editar');
@@ -116,6 +120,7 @@ export function InventarioPage() {
     }
   }, [filtrados, orden]);
 
+  const nFiltros = Number(!!anaquel.trim()) + Number(filtro !== 'todos') + Number(!!familia);
   const hayFiltros = !!busqueda || !!anaquel.trim() || filtro !== 'todos' || !!familia;
 
   // Con búsqueda o filtros, los indicadores son de lo filtrado; sin ellos, los totales de la pestaña
@@ -246,47 +251,14 @@ export function InventarioPage() {
           </div>
 
           {/* ─── Búsqueda y filtros ─── */}
-          <div className="inv-barra">
-            <div className="inv-barra__buscar">
-              <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar código, descripción, marca..." />
-            </div>
-            <TextInput className="inv-barra__anaquel" value={anaquel} placeholder="Anaquel..."
-              onChange={e => setAnaquel(e.target.value)} aria-label="Buscar por anaquel" />
+          <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar código, descripción, marca..."
+            activos={nFiltros} onAbrirFiltros={() => setFiltrando(true)}>
             <SegmentedControl<Pestana> label="Tipo" value={pestana} onChange={setPestana}
               options={[
                 { value: 'fisicos', label: 'Inventario físico' },
                 { value: 'servicios', label: 'Catálogo servicios' },
               ]} />
-          </div>
-
-          <div className="inv-pastillas" role="group" aria-label="Familia">
-            <button type="button" className={`inv-pastilla${!familia ? ' inv-pastilla--activa' : ''}`} onClick={() => setFamilia('')}>
-              Todos los artículos
-            </button>
-            {familias.map(f => (
-              <button key={f} type="button" className={`inv-pastilla${familia === f ? ' inv-pastilla--activa' : ''}`}
-                onClick={() => setFamilia(f)}>{f}</button>
-            ))}
-          </div>
-
-          <div className="inv-barra inv-barra--fila">
-            <SegmentedControl<Filtro> label="Estado" value={filtro} onChange={setFiltro}
-              options={[
-                { value: 'todos', label: 'Todos' },
-                { value: 'warning', label: 'Bajo' },
-                { value: 'critical', label: 'Sin stock' },
-                { value: 'ok', label: 'OK' },
-              ]} />
-            <label className="inv-orden">
-              <span>Orden</span>
-              <select value={orden} onChange={e => setOrden(e.target.value as Orden)}>
-                <option value="relevancia">Relevancia</option>
-                <option value="nombre">Nombre</option>
-                <option value="stock">Stock menor</option>
-                <option value="valor">Mayor valor</option>
-              </select>
-            </label>
-          </div>
+          </BarraFiltros>
 
           {/* ─── Tarjetas de producto ─── */}
           {visibles.length === 0 ? (
@@ -315,6 +287,35 @@ export function InventarioPage() {
           )}
         </div>
       )}
+
+      <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={nFiltros} resultado={visibles.length} unidad="artículo"
+        onLimpiar={() => { setAnaquel(''); setFiltro('todos'); setFamilia(''); }}>
+        <GrupoFiltro titulo="Estado">
+          <ChoiceChips<Filtro> label="Estado" value={filtro} onChange={setFiltro}
+            options={[
+              { value: 'todos', label: 'Todos' },
+              { value: 'warning', label: 'Bajo' },
+              { value: 'critical', label: 'Sin stock' },
+              { value: 'ok', label: 'OK' },
+            ]} />
+        </GrupoFiltro>
+        <GrupoFiltro titulo="Familia">
+          <Combobox enHoja tituloHoja="Familia" placeholder="Todas las familias" value={familia || null}
+            onChange={v => setFamilia(v ?? '')} options={familias.map(f => ({ value: f, label: f }))} />
+        </GrupoFiltro>
+        <GrupoFiltro titulo="Anaquel">
+          <TextInput value={anaquel} placeholder="Anaquel..." onChange={e => setAnaquel(e.target.value)} aria-label="Buscar por anaquel" />
+        </GrupoFiltro>
+        <GrupoFiltro titulo="Orden">
+          <ChoiceChips<Orden> label="Orden" value={orden} onChange={setOrden}
+            options={[
+              { value: 'relevancia', label: 'Relevancia' },
+              { value: 'nombre', label: 'Nombre' },
+              { value: 'stock', label: 'Stock menor' },
+              { value: 'valor', label: 'Mayor valor' },
+            ]} />
+        </GrupoFiltro>
+      </HojaFiltros>
 
       {/* Ficha del artículo: ventana sobre la lista */}
       <Sheet open={abierto && !!seleccionado && !enPortal} onClose={() => setAbierto(false)} title="Artículo" ancho ligera>
