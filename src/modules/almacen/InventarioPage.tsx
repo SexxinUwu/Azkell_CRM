@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Boxes, Download, DollarSign, FileSpreadsheet, LayoutGrid, Package, PackageMinus, PackagePlus, PackageX, Plus, RefreshCw, SearchX, TriangleAlert, Upload } from 'lucide-react';
+import { Boxes, Download, DollarSign, FileSpreadsheet, LayoutGrid, Package, PackageMinus, PackagePlus, PackageX, Plus, RefreshCw, SearchX, CheckSquare, TriangleAlert, Upload } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page } from '../../core/ui/Display';
 import { TextInput } from '../../core/ui/Field';
@@ -17,7 +17,7 @@ import { haptic } from '../../core/lib/haptics';
 import { formatSoles } from '../../core/lib/format';
 import {
   claveAlmacen, coincideInv, eliminarArticulo, esServicio, familiasUnicas, SIN_ALMACEN, useAlmacenesLista, valorEnStock,
-  useInventario, stockTono, type ArticuloInv,
+  useInventario, stockTono, type ArticuloInv, cambiarEstadoMasivo, enReposicion, esVigente, sinExistencias,
 } from './api';
 import { InventarioFicha } from './InventarioFicha';
 import { InventarioFormulario } from './InventarioFormulario';
@@ -29,6 +29,7 @@ import { descargarPlantilla, exportar } from './excelInventario';
 import './almacen.css';
 
 type Filtro = 'todos' | 'ok' | 'warning' | 'critical';
+type EstadoFiltro = 'todos' | ArticuloInv['estado_art'];
 type Pestana = 'fisicos' | 'servicios';
 type Orden = 'relevancia' | 'nombre' | 'stock' | 'valor';
 /** Tarjetas por tanda: el resto se carga con "Cargar más" */
@@ -38,6 +39,14 @@ const PRIORIDAD: Record<'ok' | 'warning' | 'critical', number> = { critical: 0, 
 /** Servicios (SERV-…) no se descuentan físicamente: van en su propia pestaña */
 /** Valor del stock en soles (solo artículos con existencias) */
 const valorItem = valorEnStock;
+
+/** Filtro de stock sobre artículos vigentes: "Sin stock" y "Bajo" son las mismas cifras que los indicadores */
+function coincideFiltro(i: ArticuloInv, f: Filtro): boolean {
+  if (f === 'todos') return true;
+  if (f === 'critical') return sinExistencias(i);
+  if (f === 'warning') return enReposicion(i) && Number(i.stock_actual) > 0;
+  return esVigente(i) && stockTono(i) === 'ok';
+}
 
 function Kpi({ etiqueta, valor, sub, icono, tono, accion }: {
   etiqueta: string; valor: ReactNode; sub: ReactNode; icono: ReactNode;
@@ -79,6 +88,10 @@ export function InventarioPage() {
   const [eliminando, setEliminando] = useState(false);
   const [importando, setImportando] = useState(false);
   const [filtrando, setFiltrando] = useState(false);
+  const [estadoArt, setEstadoArt] = useState<EstadoFiltro>('todos');
+  const [seleccionando, setSeleccionando] = useState(false);
+  const [marcados, setMarcados] = useState<Set<string>>(new Set());
+  const [aplicando, setAplicando] = useState(false);
 
   const puedeCrear = can('inv.crear');
   const puedeEditar = can('inv.editar');
@@ -102,11 +115,12 @@ export function InventarioPage() {
   ), [items, pestana, enAlmacen]);
 
   const filtrados = useMemo(() => base.filter(i =>
-    (filtro === 'todos' || stockTono(i) === filtro) &&
+    coincideFiltro(i, filtro) &&
+    (estadoArt === 'todos' || i.estado_art === estadoArt) &&
     (!familia || i.familia === familia) &&
     (!anaquel.trim() || (i.anaquel ?? '').toUpperCase().includes(anaquel.trim().toUpperCase())) &&
     coincideInv(i, busqueda),
-  ), [base, filtro, familia, anaquel, busqueda]);
+  ), [base, filtro, estadoArt, familia, anaquel, busqueda]);
 
   // Orden: primero lo que hay que reponer (sin stock, bajo) y luego por nombre
   const visibles = useMemo(() => {
@@ -120,17 +134,18 @@ export function InventarioPage() {
     }
   }, [filtrados, orden]);
 
-  const nFiltros = Number(!!anaquel.trim()) + Number(filtro !== 'todos') + Number(!!familia);
-  const hayFiltros = !!busqueda || !!anaquel.trim() || filtro !== 'todos' || !!familia;
+  const nFiltros = Number(!!anaquel.trim()) + Number(filtro !== 'todos') + Number(!!familia) + Number(estadoArt !== 'todos');
+  const hayFiltros = !!busqueda || !!anaquel.trim() || filtro !== 'todos' || !!familia || estadoArt !== 'todos';
 
-  // Con búsqueda o filtros, los indicadores son de lo filtrado; sin ellos, los totales de la pestaña
+  // Con búsqueda o filtros, los indicadores son de lo filtrado; sin ellos, los totales de la pestaña.
+  // Activos y alertas solo cuentan artículos vigentes (estado Activo): los inactivos o descontinuados no piden compra.
   const indicadores = useMemo(() => {
     const lista = hayFiltros ? filtrados : base;
     return {
-      total: lista.length,
+      total: lista.filter(esVigente).length,
       valor: lista.reduce((s, i) => s + valorItem(i), 0),
-      bajo: lista.filter(i => stockTono(i) === 'warning').length,
-      sinStock: lista.filter(i => stockTono(i) === 'critical').length,
+      alerta: lista.filter(enReposicion).length,
+      sinStock: lista.filter(sinExistencias).length,
     };
   }, [base, filtrados, hayFiltros]);
 
@@ -143,7 +158,8 @@ export function InventarioPage() {
   // Al cambiar búsqueda o filtros, la lista vuelve a la primera tanda
   useEffect(() => {
     setCuantos(TARJETAS_PAGINA);
-  }, [busqueda, anaquel, filtro, familia, pestana, almacenSel, orden]);
+    setMarcados(new Set());
+  }, [busqueda, anaquel, filtro, estadoArt, familia, pestana, almacenSel, orden]);
 
   function elegirAlmacen(nombre: string | null) {
     setAlmacenSel(nombre);
@@ -165,6 +181,33 @@ export function InventarioPage() {
       haptic('warning');
     } finally {
       setEliminando(false);
+    }
+  }
+
+  const alMarcar = useCallback((a: ArticuloInv) => {
+    haptic('selection');
+    setMarcados(prev => {
+      const siguiente = new Set(prev);
+      if (siguiente.has(a.id)) siguiente.delete(a.id);
+      else siguiente.add(a.id);
+      return siguiente;
+    });
+  }, []);
+
+  async function marcarEstado(estado: ArticuloInv['estado_art']) {
+    const n = marcados.size;
+    setAplicando(true);
+    try {
+      await cambiarEstadoMasivo([...marcados], estado);
+      toast(`${n} artículo${n !== 1 ? 's' : ''} ${n !== 1 ? 'quedaron' : 'quedó'} como ${estado.toLowerCase()}`);
+      haptic('success');
+      setMarcados(new Set());
+      await qc.invalidateQueries({ queryKey: ['almacen', 'inventario'] });
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+      haptic('warning');
+    } finally {
+      setAplicando(false);
     }
   }
 
@@ -238,6 +281,12 @@ export function InventarioPage() {
             </div>
             <div className="inv-head__acciones">
               <Button variant="secondary" icon={<LayoutGrid size={16} />} onClick={() => setEnPortal(true)}>Almacenes</Button>
+              {puedeEditar && (
+                <Button variant={seleccionando ? 'primary' : 'secondary'} icon={<CheckSquare size={16} />}
+                  onClick={() => { setSeleccionando(v => !v); setMarcados(new Set()); }}>
+                  {seleccionando ? 'Terminar selección' : 'Seleccionar'}
+                </Button>
+              )}
               {botonesAcciones}
               {puedeCrear && (
                 <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ articulo: null })}>
@@ -253,7 +302,7 @@ export function InventarioPage() {
               icono={<DollarSign size={18} />} sub="Solo con stock · en soles" />
             <Kpi etiqueta="Artículos activos" valor={indicadores.total} icono={<Boxes size={18} />}
               sub={tituloAlmacen} />
-            <Kpi etiqueta="Alerta de reposición" valor={indicadores.bajo + indicadores.sinStock} tono="warning"
+            <Kpi etiqueta="Alerta de reposición" valor={indicadores.alerta} tono="warning"
               icono={<TriangleAlert size={18} />} sub="Bajo el mínimo"
               accion={<button type="button" className="inv-kpi__enlace" onClick={() => setFiltro('critical')}>Filtrar críticos</button>} />
             <Kpi etiqueta="Sin stock" valor={indicadores.sinStock} tono="critical" icono={<PackageX size={18} />}
@@ -275,7 +324,7 @@ export function InventarioPage() {
             <EmptyState icon={<SearchX size={22} />} title="Ningún artículo coincide">
               {hayFiltros && (
                 <button type="button" className="placas-limpiar"
-                  onClick={() => { setBusqueda(''); setAnaquel(''); setFiltro('todos'); setFamilia(''); }}>
+                  onClick={() => { setBusqueda(''); setAnaquel(''); setFiltro('todos'); setFamilia(''); setEstadoArt('todos'); }}>
                   Quitar filtros
                 </button>
               )}
@@ -283,7 +332,10 @@ export function InventarioPage() {
           ) : (
             <>
               <div className="prod-grid">
-                {enPantalla.map(a => <ProductoCard key={a.id} a={a} onAbrir={abrir} />)}
+                {enPantalla.map(a => (
+                  <ProductoCard key={a.id} a={a} onAbrir={abrir} seleccionando={seleccionando}
+                    marcado={marcados.has(a.id)} onMarcar={alMarcar} />
+                ))}
               </div>
               {visibles.length > cuantos && (
                 <button type="button" className="mov__mas pressable inv-mas" onClick={() => setCuantos(n => n + TARJETAS_PAGINA)}>
@@ -295,12 +347,38 @@ export function InventarioPage() {
               </p>
             </>
           )}
+          {seleccionando && (
+            <div className="inv-seleccion" role="region" aria-label="Selección masiva">
+              <span className="inv-seleccion__texto"><strong>{marcados.size}</strong> seleccionado{marcados.size !== 1 ? 's' : ''}</span>
+              <div className="inv-seleccion__acciones">
+                <Button variant="plain" disabled={!visibles.length} onClick={() => setMarcados(new Set(visibles.map(a => a.id)))}>
+                  Seleccionar lo filtrado ({visibles.length})
+                </Button>
+                <Button variant="plain" disabled={!marcados.size} onClick={() => setMarcados(new Set())}>Limpiar</Button>
+                {(['Activo', 'Inactivo', 'Descontinuado'] as const).map(e => (
+                  <Button key={e} variant="secondary" disabled={!marcados.size || aplicando} loading={aplicando}
+                    onClick={() => marcarEstado(e)}>
+                    Marcar {e.toLowerCase()}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={nFiltros} resultado={visibles.length} unidad="artículo"
-        onLimpiar={() => { setAnaquel(''); setFiltro('todos'); setFamilia(''); }}>
-        <GrupoFiltro titulo="Estado">
+        onLimpiar={() => { setAnaquel(''); setFiltro('todos'); setFamilia(''); setEstadoArt('todos'); }}>
+        <GrupoFiltro titulo="Estado del artículo">
+          <ChoiceChips<EstadoFiltro> label="Estado del artículo" value={estadoArt} onChange={setEstadoArt}
+            options={[
+              { value: 'todos', label: 'Todos' },
+              { value: 'Activo', label: 'Activos' },
+              { value: 'Inactivo', label: 'Inactivos' },
+              { value: 'Descontinuado', label: 'Descontinuados' },
+            ]} />
+        </GrupoFiltro>
+        <GrupoFiltro titulo="Stock">
           <ChoiceChips<Filtro> label="Estado" value={filtro} onChange={setFiltro}
             options={[
               { value: 'todos', label: 'Todos' },

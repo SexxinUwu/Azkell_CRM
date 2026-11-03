@@ -1,5 +1,5 @@
 import { memo, type KeyboardEvent } from 'react';
-import { MapPin, Package, Plus } from 'lucide-react';
+import { Check, MapPin, Package, Plus } from 'lucide-react';
 import { formatSoles } from '../../core/lib/format';
 import { costoUnitarioSoles, stockTono, valorEnStock, type ArticuloInv } from './api';
 
@@ -20,14 +20,20 @@ const cantidad = (n: number) => (n % 1 === 0 ? String(n) : n.toFixed(2));
 interface Props {
   a: ArticuloInv;
   onAbrir: (a: ArticuloInv) => void;
+  /** Modo selección: el clic marca la tarjeta en lugar de abrirla */
+  seleccionando?: boolean;
+  marcado?: boolean;
+  onMarcar?: (a: ArticuloInv) => void;
 }
 
 /**
  * Tarjeta de producto: imagen con estado de stock, código, ubicación, marca, nombre,
  * compatibilidad, barra de nivel y costo. Al pasar el mouse se levanta y el "+" gira.
  */
-export const ProductoCard = memo(function ProductoCard({ a, onAbrir }: Props) {
+export const ProductoCard = memo(function ProductoCard({ a, onAbrir, seleccionando = false, marcado = false, onMarcar }: Props) {
   const tono = stockTono(a);
+  const enEstado = a.estado_art !== 'Activo';
+  const etiqueta = enEstado ? a.estado_art : ESTADO_TEXTO[tono];
   const stock = Number(a.stock_actual);
   const unidad = a.unidad ?? 'Unidades';
   const costo = costoUnitarioSoles(a);
@@ -35,21 +41,32 @@ export const ProductoCard = memo(function ProductoCard({ a, onAbrir }: Props) {
   const nivel = a.stock_max > 0 ? Math.min(100, Math.round((stock / a.stock_max) * 100)) : 0;
   const ubicacion = [a.ubicacion, a.anaquel ? `Anq ${a.anaquel}` : ''].filter(Boolean).join(' • ');
 
+  const pulsar = () => {
+    if (seleccionando && onMarcar) onMarcar(a);
+    else onAbrir(a);
+  };
+
   const alTeclear = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAbrir(a); }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pulsar(); }
   };
 
   return (
-    <article className={`prod prod--${tono}`}>
-      <div className="prod__tarjeta" role="button" tabIndex={0} onClick={() => onAbrir(a)} onKeyDown={alTeclear}
-        aria-label={`Ver ${a.descripcion || a.articulo}`}>
+    <article className={`prod prod--${tono}${marcado ? ' prod--marcado' : ''}`}>
+      <div className="prod__tarjeta" role="button" tabIndex={0} onClick={pulsar} onKeyDown={alTeclear}
+        aria-pressed={seleccionando ? marcado : undefined}
+        aria-label={`${seleccionando ? 'Marcar' : 'Ver'} ${a.descripcion || a.articulo}`}>
         <header className="prod__cabecera">
           <span className="prod__codigo">{a.id}</span>
           {ubicacion && <span className="prod__ubicacion"><MapPin size={12} /> {ubicacion}</span>}
         </header>
 
         <div className="prod__imagen">
-          <span className={`prod__estado prod__estado--${tono}`}>{ESTADO_TEXTO[tono]}: {cantidad(stock)} {unidad}</span>
+          <span className={`prod__estado prod__estado--${enEstado ? 'inactivo' : tono}`}>{etiqueta}: {cantidad(stock)} {unidad}</span>
+          {seleccionando && (
+            <span className={`prod__check${marcado ? ' prod__check--on' : ''}`} aria-hidden="true">
+              {marcado && <Check size={14} strokeWidth={3} />}
+            </span>
+          )}
           {a.imagen_url
             ? <img src={a.imagen_url} alt="" loading="lazy" />
             : <Package size={48} strokeWidth={1.3} />}

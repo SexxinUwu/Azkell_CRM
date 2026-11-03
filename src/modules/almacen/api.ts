@@ -45,6 +45,21 @@ export type ArticuloNuevo = Omit<ArticuloInv, 'id' | 'stock_actual' | 'ultimo_pr
   cantidad_inicial?: number;
 };
 
+/** Artículo que se compra: solo estos cuentan en "activos" y en las alertas de reposición */
+export function esVigente(a: ArticuloInv): boolean {
+  return a.activo === 1 && a.estado_art === 'Activo';
+}
+
+/** Bajo su stock mínimo (solo si tiene mínimo definido); incluye los que están en cero */
+export function enReposicion(a: ArticuloInv): boolean {
+  return esVigente(a) && Number(a.stock_min) > 0 && Number(a.stock_actual) <= Number(a.stock_min);
+}
+
+/** Vigente y sin existencias */
+export function sinExistencias(a: ArticuloInv): boolean {
+  return esVigente(a) && Number(a.stock_actual) <= 0;
+}
+
 export function stockTono(a: ArticuloInv): 'ok' | 'warning' | 'critical' {
   if (a.stock_actual <= 0) return 'critical';
   if (a.stock_min > 0 && a.stock_actual <= a.stock_min) return 'warning';
@@ -89,6 +104,11 @@ export async function guardarArticulo(data: Partial<ArticuloNuevo>, id?: string)
 
 export async function eliminarArticulo(id: string) {
   return api(`/almacen/inventario/${id}`, { method: 'DELETE' });
+}
+
+/** Cambia el estado de varios artículos a la vez (Activo, Inactivo o Descontinuado) */
+export async function cambiarEstadoMasivo(ids: string[], estado_art: ArticuloInv['estado_art']) {
+  return api('/almacen/inventario/bulk-estado', { method: 'POST', body: { ids, estado_art } });
 }
 
 export async function regularizarStock(id: string, stock_fisico: number, motivo: string) {

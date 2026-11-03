@@ -789,6 +789,19 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
+    // Cambio de estado (Activo / Inactivo / Descontinuado) de varios artículos a la vez; siguen en el catálogo
+    router.post('/inventario/bulk-estado', (req, res) => {
+        const { ids, estado_art } = req.body;
+        const estados = ['Activo', 'Inactivo', 'Descontinuado'];
+        if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'Sin IDs' });
+        if (!estados.includes(estado_art)) return res.status(400).json({ error: 'Estado no válido' });
+        const placeholders = ids.map(() => '?').join(',');
+        getDb(req).query(`UPDATE inventario SET estado_art=? WHERE id IN (${placeholders})`, [estado_art, ...ids], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true, actualizados: result.affectedRows });
+        });
+    });
+
     function _getPeruNowString() {
         const formatter = new Intl.DateTimeFormat('en-CA', {
             timeZone: 'America/Lima',
