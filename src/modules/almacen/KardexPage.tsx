@@ -12,7 +12,10 @@ import { coincideInv, stockLabel, stockTono, useInventario, useKardex, type Arti
 import { formatFechaPe, formatSoles } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
 
-function fmtQty(n: number): string {
+function fmtQty(valor: number | string | null | undefined): string {
+  // MySQL devuelve los decimales como texto: se convierte antes de formatear
+  const n = Number(valor);
+  if (!Number.isFinite(n)) return '0';
   return n % 1 === 0 ? String(n) : n.toFixed(3);
 }
 
