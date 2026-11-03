@@ -16,7 +16,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { eliminarRampaRegistro, otId, reactivarRampa, rampaConductor, rampaId, useCatalogosTaller, useOrdenesTrabajoData, useOTsHijas, useTrabajosOT, useStatusRampa, tecnicosDeOT, type OrdenTrabajo, type RampaEntrada, type TrabajoOT } from './api';
+import { eliminarRampaRegistro, otId, reactivarRampa, rampaConductor, rampaId, useCatalogosTaller, useOrdenesTrabajoData, useTrabajosOT, useStatusRampa, tecnicosDeOT, type OrdenTrabajo, type RampaEntrada, type TrabajoOT } from './api';
 import { OTFichaSheet } from './OTFichaSheet';
 import { usePersonalNombres } from './OTEditar';
 import { parseTrabajosRampa } from './trabajosRampa';
@@ -682,8 +682,10 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
   const [eliminar, setEliminar] = useState(false);
   const [eliminando, setEliminando] = useState(false);
   const liberada = e.estado === 'Liberado';
-  const otsHijas = useOTsHijas(e.ticket_entrada);
   const ordenesData = useOrdenesTrabajoData();
+  // OT de esta visita: las enlazadas a la rampa o con su mismo ticket de entrada (la más reciente primero)
+  const otsDeEstaRampa = useMemo(() => (ordenesData.data ?? []).filter(o => String(o.id_rampa ?? '') === String(e.id ?? '') || (!!e.ticket_entrada && o.ticket_entrada === e.ticket_entrada))
+    .sort((x, y) => otId(y).localeCompare(otId(x))), [ordenesData.data, e.id, e.ticket_entrada]);
   // OT de la visita abierta en su ficha completa (trabajos, materiales, editar, acciones: como en Reportes OT)
   const [otSel, setOtSel] = useState<string | null>(null);
   const { can } = useAuth();
@@ -802,27 +804,27 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
         </div>
       )}
 
-      {/* Órdenes de trabajo hijas de esta visita */}
-      {e.ticket_entrada && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <p className="tarjeta__grupo-titulo">Órdenes de trabajo</p>
-          </div>
-          <div className="tarjeta__lista">
-            {otsHijas.isLoading && <div className="dato"><span className="dato__valor">Cargando…</span></div>}
-            {!otsHijas.isLoading && (otsHijas.data ?? []).length === 0 && (
-              <div className="dato"><span className="dato__valor" style={{ color: 'var(--label-2)' }}>Aún no hay órdenes de trabajo en esta visita.</span></div>
-            )}
-            {(otsHijas.data ?? []).map(ot => (
-              <button key={ot.id_ot} type="button" className="dato" style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 0, cursor: 'pointer', font: 'inherit', color: 'inherit' }}
-                onClick={() => { haptic('selection'); setOtSel(ot.id_ot); }}>
-                <span className="dato__label">{ot.id_ot}</span>
-                <span className="dato__valor">{[ot.tipo_ot, ot.sub_tipo].filter(Boolean).join(' · ')} · {ot.estado ?? '—'}</span>
-              </button>
-            ))}
-          </div>
+      {/* Órdenes de trabajo de esta visita: al tocar una se abre su ficha completa */}
+      <div>
+        <p className="tarjeta__grupo-titulo">Órdenes de trabajo{otsDeEstaRampa.length ? ` · ${otsDeEstaRampa.length}` : ''}</p>
+        <div className="tarjeta__lista">
+          {ordenesData.isLoading && <div className="dato"><span className="dato__valor">Cargando…</span></div>}
+          {!ordenesData.isLoading && otsDeEstaRampa.length === 0 && (
+            <div className="dato"><span className="dato__valor" style={{ color: 'var(--label-2)' }}>Aún no hay órdenes de trabajo en esta visita.</span></div>
+          )}
+          {otsDeEstaRampa.map(ot => (
+            <button key={otId(ot)} type="button" className="dato" style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 0, cursor: 'pointer', font: 'inherit', color: 'inherit', display: 'flex', alignItems: 'center', gap: 'var(--s-3)' }}
+              onClick={() => { haptic('selection'); setOtSel(otId(ot)); }}>
+              <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                <span className="dato__valor dato__valor--mono">{otId(ot)}</span>
+                <span className="dato__label">{[ot.situacion, ot.tecnico, ot.fecha_ingreso ? formatFechaPe(ot.fecha_ingreso) : ''].filter(Boolean).join(' · ') || 'Orden de trabajo'}</span>
+              </span>
+              <span className="ot-estado ot-estado--neutral">{ot.estado ?? '—'}</span>
+              <span aria-hidden style={{ color: 'var(--label-3)', fontSize: '1.2rem' }}>›</span>
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
       <OTFichaSheet
         ot={(ordenesData.data ?? []).find(o => otId(o) === otSel) ?? null}

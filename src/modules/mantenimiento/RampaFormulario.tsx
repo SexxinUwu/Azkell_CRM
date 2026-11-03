@@ -89,8 +89,13 @@ export function RampaFormulario({ entrada, usuario, open, onClose, rampaInicial 
   const rampas = cat.data?.rampas ?? [];
   const situaciones = (cat.data?.situaciones ?? []).map(s => s.descripcion ?? s.nombre ?? '').filter(Boolean);
   const opcionesPersonal = (personal.data ?? []).map(n => ({ value: n, label: n }));
-  // Rampas ya ocupadas (activas), salvo la que se está editando
-  const ocupadas = new Set((todas.data ?? []).filter(e => e.estado !== 'Liberado' && rampaIdDe(e) !== (entrada ? rampaIdDe(entrada) : '')).map(e => e.rampaCatId));
+  // Una rampa admite varias unidades a la vez: solo se muestra cuántas tiene ahora (sin contar la que se está editando)
+  const unidadesEnRampa = new Map<string, number>();
+  for (const e of todas.data ?? []) {
+    if (e.estado === 'Liberado' || rampaIdDe(e) === (entrada ? rampaIdDe(entrada) : '')) continue;
+    const k = String(e.rampaCatId ?? '');
+    unidadesEnRampa.set(k, (unidadesEnRampa.get(k) ?? 0) + 1);
+  }
 
   function editarTrabajo(key: string, cambios: Partial<TrabajoRampa>) {
     setTrabajos(prev => prev.map(t => (t.key === key ? { ...t, ...cambios } : t)));
@@ -99,7 +104,6 @@ export function RampaFormulario({ entrada, usuario, open, onClose, rampaInicial 
   async function guardar() {
     if (!rampa) { setError('Elige una rampa.'); return; }
     if (!placa) { setError('Elige la placa de la unidad.'); return; }
-    if (!editando && ocupadas.has(rampa)) { setError('Esa rampa ya está ocupada. Libérala primero o elige otra.'); return; }
     setEnviando(true); setError(null);
     let evidenciaUrl: string | null = entrada?.evidencia_url ?? null;
     try {
@@ -139,8 +143,8 @@ export function RampaFormulario({ entrada, usuario, open, onClose, rampaInicial 
             <SelectInput {...p} value={rampa} onChange={e => setRampa(e.target.value)}>
               <option value="">Elige una rampa…</option>
               {rampas.map(r => (
-                <option key={String(r.id)} value={String(r.id)} disabled={!editando && ocupadas.has(String(r.id))}>
-                  {r.nombre_rampa ?? r.nombre ?? r.id}{ocupadas.has(String(r.id)) ? ' (ocupada)' : ''}
+                <option key={String(r.id)} value={String(r.id)}>
+                  {r.nombre_rampa ?? r.nombre ?? r.id}{unidadesEnRampa.get(String(r.id)) ? ` (${unidadesEnRampa.get(String(r.id))} ${unidadesEnRampa.get(String(r.id)) === 1 ? 'unidad' : 'unidades'})` : ''}
                 </option>
               ))}
             </SelectInput>
