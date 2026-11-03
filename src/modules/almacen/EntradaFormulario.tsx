@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { CreditCard, FileText, Truck, Landmark, Package, Paperclip, Plus, ScanLine, Users, Wrench, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
-import { Field, SelectInput, TextInput } from '../../core/ui/Field';
+import { Field, TextInput } from '../../core/ui/Field';
 import { Combobox, type ComboboxOption } from '../../core/ui/Combobox';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
@@ -135,6 +135,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       const c = (centrosQ.data ?? []).find(x => x.codigo === codigo);
       return { value: codigo, label: c ? `${c.codigo} - ${c.nombre}` : codigo };
     });
+  const listaOpc = (lista: string[]): ComboboxOption[] => lista.map(v => ({ value: v, label: v }));
   const [proveedorId, setProveedorId] = useState<string | null>(null);
   const [cuentaProv, setCuentaProv] = useState('');
   const [cuentaEmpresa, setCuentaEmpresa] = useState('');
@@ -548,17 +549,14 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
               </Field>
               <Field label="Tipo de orden">
                 {p => (
-                  <SelectInput {...p} value={tipoOrden} onChange={ev => cambiarTipo(ev.target.value)}>
-                    {TIPOS_ORDEN.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
-                  </SelectInput>
+                  <Combobox {...p} enHoja tituloHoja="Tipo de orden" options={TIPOS_ORDEN.map(t => ({ value: t, label: t.toUpperCase() }))}
+                    value={tipoOrden} onChange={v => v && cambiarTipo(v)} placeholder="Elige el tipo" />
                 )}
               </Field>
               <Field label="Moneda">
                 {p => (
-                  <SelectInput {...p} value={moneda} onChange={ev => cambiarMoneda(ev.target.value as 'PEN' | 'USD')}>
-                    <option value="PEN">Soles (S/)</option>
-                    <option value="USD">Dólares (US$)</option>
-                  </SelectInput>
+                  <Combobox {...p} enHoja tituloHoja="Moneda" options={[{ value: 'PEN', label: 'Soles (S/)' }, { value: 'USD', label: 'Dólares (US$)' }]}
+                    value={moneda} onChange={v => v && cambiarMoneda(v as 'PEN' | 'USD')} placeholder="Elige la moneda" />
                 )}
               </Field>
               {moneda === 'USD' && (
@@ -576,7 +574,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
                 <>
                   <Field label="OT asociada (opcional)">
                     {p => (
-                      <Combobox id={p.id} options={otsOpciones} value={otId} onChange={elegirOt} placeholder="Busca la OT…" loading={otsQ.isLoading} />
+                      <Combobox id={p.id} enHoja tituloHoja="Buscar OT" options={otsOpciones} value={otId} onChange={elegirOt} placeholder="Busca la OT…" loading={otsQ.isLoading} />
                     )}
                   </Field>
                   <Field label="Placa de la OT">
@@ -607,27 +605,23 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
             <div className="oc-grid">
               <Field label="Autoriza / solicitante *" error={mostrar(errorCab.autoriza)}>
                 {p => (
-                  <SelectInput {...p} value={autoriza} onChange={ev => setAutoriza(ev.target.value)}>
-                    <option value="">Selecciona al directivo…</option>
-                    {DIRECTIVOS.map(d => <option key={d} value={d}>{d}</option>)}
-                  </SelectInput>
+                  <Combobox {...p} enHoja tituloHoja="Autoriza / solicitante" options={listaOpc(autoriza && !(DIRECTIVOS as readonly string[]).includes(autoriza) ? [autoriza, ...DIRECTIVOS] : [...DIRECTIVOS])}
+                    value={autoriza || null} onChange={v => setAutoriza(v ?? '')} placeholder="Selecciona al directivo…"
+                    aria-invalid={!!mostrar(errorCab.autoriza) || undefined} />
                 )}
               </Field>
-              <Field label="Centro de costos *">
-                {p => (
-                  <Combobox {...p} options={centroOpciones} value={centroCosto || null} placeholder="Elige el centro de costos"
-                    onChange={v => setCentroCosto(v ?? '')} />
-                )}
+              <Field label="Centro de costos" hint="Se asigna solo según el motivo y el sub motivo">
+                {p => <TextInput {...p} readOnly value={centroOpciones.find(o => o.value === centroCosto)?.label ?? centroCosto} />}
               </Field>
               <Field label="Motivo (naturaleza del gasto) *">
                 {p => (
-                  <Combobox {...p} options={motivoOpciones} value={motivoGasto || null} placeholder="Elige el motivo"
+                  <Combobox {...p} enHoja tituloHoja="Motivo (naturaleza del gasto)" options={motivoOpciones} value={motivoGasto || null} placeholder="Elige el motivo"
                     onChange={v => cambiarMotivo(v ?? '')} />
                 )}
               </Field>
               <Field label="Sub motivo (detalle) *">
                 {p => (
-                  <Combobox {...p} options={subOpciones} value={subMotivo || null} placeholder="Elige el sub motivo"
+                  <Combobox {...p} enHoja tituloHoja="Sub motivo (detalle)" options={subOpciones} value={subMotivo || null} placeholder="Elige el sub motivo"
                     onChange={v => setSubMotivo(v ?? '')} />
                 )}
               </Field>
@@ -640,6 +634,8 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
                 {p => (
                   <Combobox
                     id={p.id}
+                    enHoja
+                    tituloHoja="Buscar proveedor"
                     options={opcionesProveedores}
                     value={proveedorId}
                     onChange={id => { setProveedorId(id); setCuentaProv(''); }}
@@ -656,18 +652,15 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
               </Field>
               <Field label="Cuenta bancaria del proveedor">
                 {p => (
-                  <SelectInput {...p} value={cuentaProv} onChange={ev => setCuentaProv(ev.target.value)} disabled={!proveedorId}>
-                    <option value="">{proveedorId ? 'Selecciona la cuenta…' : 'Primero elige el proveedor'}</option>
-                    {cuentasProvEtiquetas.map(c => <option key={c} value={c}>{c}</option>)}
-                  </SelectInput>
+                  <Combobox {...p} enHoja tituloHoja="Cuenta bancaria del proveedor" options={listaOpc(cuentasProvEtiquetas)} value={cuentaProv || null}
+                    onChange={v => setCuentaProv(v ?? '')} disabled={!proveedorId}
+                    placeholder={proveedorId ? 'Selecciona la cuenta…' : 'Primero elige el proveedor'} />
                 )}
               </Field>
               <Field label="Cuenta bancaria de la empresa" wide>
                 {p => (
-                  <SelectInput {...p} value={cuentaEmpresa} onChange={ev => setCuentaEmpresa(ev.target.value)}>
-                    <option value="">Selecciona la cuenta de la empresa…</option>
-                    {cuentasEmpresaEtiquetas.map(c => <option key={c} value={c}>{c}</option>)}
-                  </SelectInput>
+                  <Combobox {...p} enHoja tituloHoja="Cuenta bancaria de la empresa" options={listaOpc(cuentasEmpresaEtiquetas)} value={cuentaEmpresa || null}
+                    onChange={v => setCuentaEmpresa(v ?? '')} placeholder="Selecciona la cuenta de la empresa…" />
                 )}
               </Field>
             </div>
@@ -677,9 +670,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
             <div className="oc-grid">
               <Field label="Condición de pago *" hint={condicion === 'A crédito' ? undefined : 'Al contado: la orden se paga al aprobarla (Confirmar pago) y se recepciona después.'}>
                 {p => (
-                  <SelectInput {...p} value={condicion} onChange={ev => { setCondicion(ev.target.value); if (ev.target.value !== 'A crédito') setDiasCredito('0'); else if (!num(diasCredito)) setDiasCredito('30'); }}>
-                    {CONDICIONES_PAGO.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
-                  </SelectInput>
+                  <Combobox {...p} enHoja tituloHoja="Condición de pago" options={CONDICIONES_PAGO.map(c => ({ value: c, label: c.toUpperCase() }))} value={condicion}
+                    placeholder="Elige la condición"
+                    onChange={v => { if (!v) return; setCondicion(v); if (v !== 'A crédito') setDiasCredito('0'); else if (!num(diasCredito)) setDiasCredito('30'); }} />
                 )}
               </Field>
               {condicion === 'A crédito' ? (
@@ -689,9 +682,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
               ) : null}
               <Field label="Prioridad *">
                 {p => (
-                  <SelectInput {...p} value={prioridad} onChange={ev => setPrioridad(ev.target.value)}>
-                    {PRIORIDADES.map(x => <option key={x} value={x}>{x}</option>)}
-                  </SelectInput>
+                  <Combobox {...p} enHoja tituloHoja="Prioridad" options={listaOpc([...PRIORIDADES])} value={prioridad} onChange={v => v && setPrioridad(v)} placeholder="Elige la prioridad" />
                 )}
               </Field>
               <Field label="Cotización del proveedor" wide hint="Opcional, pero recomendada">
