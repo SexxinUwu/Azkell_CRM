@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Boxes, DollarSign, FileSpreadsheet, LayoutGrid, Package, PackageMinus, PackagePlus, PackageX, Plus, RefreshCw, SearchX, TriangleAlert } from 'lucide-react';
+import { Boxes, Download, DollarSign, FileSpreadsheet, LayoutGrid, Package, PackageMinus, PackagePlus, PackageX, Plus, RefreshCw, SearchX, TriangleAlert, Upload } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page } from '../../core/ui/Display';
 import { TextInput } from '../../core/ui/Field';
@@ -10,7 +10,6 @@ import { ChoiceChips } from '../../core/ui/Chips';
 import { Combobox } from '../../core/ui/Combobox';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
-import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -24,6 +23,7 @@ import { InventarioFicha } from './InventarioFicha';
 import { InventarioFormulario } from './InventarioFormulario';
 import { InventarioPortal } from './InventarioPortal';
 import { ProductoCard } from './InventarioGrid';
+import '../../core/ui/acciones-iconos.css';
 import { ImportarInventario } from './ImportarInventario';
 import { descargarPlantilla, exportar } from './excelInventario';
 import './almacen.css';
@@ -168,22 +168,32 @@ export function InventarioPage() {
     }
   }
 
-  const otros = (
-    <MenuOtros opciones={[
-      { label: 'Entradas', icon: <PackagePlus size={17} />, onSelect: () => nav('/almacen/entradas') },
-      { label: 'Salidas', icon: <PackageMinus size={17} />, onSelect: () => nav('/almacen/salidas') },
-      { label: 'Kardex', icon: <RefreshCw size={17} />, onSelect: () => nav('/almacen/kardex') },
-      { label: 'Recepción de compras', icon: <Package size={17} />, onSelect: () => nav('/almacen/recepcion-compras') },
-      { label: 'Exportar Excel', detalle: hayFiltros ? `Solo los ${visibles.length} filtrados` : `${visibles.length} artículos`,
-        icon: <FileSpreadsheet size={17} />, separado: true,
-        onSelect: async () => {
-          try { await exportar(visibles); haptic('success'); } catch (err) { toast(errorMessage(err), 'error'); }
-        } },
-      puedeCrear && { label: 'Importar desde Excel', detalle: 'Crea artículos en lote', icon: <FileSpreadsheet size={17} />,
-        onSelect: () => setImportando(true) },
-      puedeCrear && { label: 'Descargar plantilla', icon: <FileSpreadsheet size={17} />,
+  // Acciones secundarias como iconos de color; el nombre aparece al pasar el mouse
+  const accionesIconos = [
+    { tip: 'Entradas', color: 'verde', icono: <PackagePlus size={18} />, onSelect: () => nav('/almacen/entradas') },
+    { tip: 'Salidas', color: 'rojo', icono: <PackageMinus size={18} />, onSelect: () => nav('/almacen/salidas') },
+    { tip: 'Kardex', color: 'azul', icono: <RefreshCw size={18} />, onSelect: () => nav('/almacen/kardex') },
+    { tip: 'Recepción de compras', color: 'violeta', icono: <Package size={18} />, onSelect: () => nav('/almacen/recepcion-compras') },
+    { tip: 'Exportar Excel', color: 'ambar', icono: <FileSpreadsheet size={18} />,
+      onSelect: async () => {
+        try { await exportar(visibles); haptic('success'); } catch (err) { toast(errorMessage(err), 'error'); }
+      } },
+    ...(puedeCrear ? [
+      { tip: 'Importar desde Excel', color: 'azul', icono: <Upload size={18} />, onSelect: () => setImportando(true) },
+      { tip: 'Descargar plantilla', color: 'ambar', icono: <Download size={18} />,
         onSelect: async () => { try { await descargarPlantilla(); } catch (err) { toast(errorMessage(err), 'error'); } } },
-    ]} />
+    ] : []),
+  ];
+
+  const botonesAcciones = (
+    <div className="acciones-iconos">
+      {accionesIconos.map(a => (
+        <button key={a.tip} type="button" className={`acciones-iconos__boton acciones-iconos__boton--${a.color} inv-accion`}
+          data-tip={a.tip} aria-label={a.tip} onClick={a.onSelect}>
+          {a.icono}
+        </button>
+      ))}
+    </div>
   );
 
   // Ficha dentro de una ventana sobre la lista. Editar o eliminar la cierran; al guardar se vuelve a abrir.
@@ -228,7 +238,7 @@ export function InventarioPage() {
             </div>
             <div className="inv-head__acciones">
               <Button variant="secondary" icon={<LayoutGrid size={16} />} onClick={() => setEnPortal(true)}>Almacenes</Button>
-              {otros}
+              {botonesAcciones}
               {puedeCrear && (
                 <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ articulo: null })}>
                   Nuevo artículo
