@@ -1490,7 +1490,12 @@ router.post('/:metodo', async (req, res) => {
                         const course = item.pos && item.pos.c != null ? Number(item.pos.c) : 0;
                         const alt = item.pos && item.pos.z != null ? Number(item.pos.z) : 0;
                         const sats = item.pos && item.pos.sc != null ? Number(item.pos.sc) : 0;
-                        const timePos = item.pos && item.pos.t != null ? Number(item.pos.t) : null;
+                        // Hora del último mensaje de la unidad: el más reciente entre el de posición y el último mensaje
+                        // de cualquier tipo (igual que "hace X min" del Monitoreo de Wialon). Una unidad detenida con el motor
+                        // apagado puede seguir enviando mensajes sin posición nueva y no por eso está sin señal.
+                        const tPosicion = item.pos && item.pos.t != null ? Number(item.pos.t) : null;
+                        const tMensaje = item.lmsg && item.lmsg.t != null ? Number(item.lmsg.t) : null;
+                        const timePos = [tPosicion, tMensaje].filter(v => v != null && Number.isFinite(v)).reduce((m, v) => Math.max(m, v), 0) || null;
 
                         // Telemetría de Ignición y Voltaje
                         const prms = (item.lmsg && item.lmsg.p) ? item.lmsg.p : {};
