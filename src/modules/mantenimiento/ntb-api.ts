@@ -78,10 +78,19 @@ export function usePlacasLista() {
   });
 }
 
+/** A dónde va una llanta retirada de una unidad: todas pasan por el Retén (almacén 1146) */
+export type DestinoRetiro = 'reten' | 'reforma' | 'descarte';
+
+/** Resultado del reencauche que vuelve de la reformadora */
+export type ResultadoReencauche = 'aprobada' | 'rechazada';
+
 export type Movimiento =
   | { clase: 'instalar'; codigo: string; placa: string; posicion: string; km: number }
-  | { clase: 'retirar'; codigo: string; placa: string; posicion: string; km: number; destino: 'desecho' | 'reencauche' }
-  | { clase: 'retorno'; codigo: string; proveedor: string; costo_servicio: number; disenio: string; remanente: number | null };
+  | { clase: 'retirar'; codigo: string; placa: string; posicion: string; km: number; destino: DestinoRetiro }
+  | {
+    clase: 'retorno'; codigo: string; proveedor: string; costo_servicio: number; disenio: string; remanente: number | null;
+    resultado: ResultadoReencauche; observacion: string;
+  };
 
 async function enviar(ruta: string, body: unknown): Promise<void> {
   const r = await api<RespuestaMovimiento>(ruta, { method: 'POST', body });
@@ -97,15 +106,16 @@ export function ejecutarMovimiento(m: Movimiento): Promise<void> {
   }
   return enviar('/neumaticos/retorno-reencauche', {
     codigo: m.codigo, proveedor: m.proveedor, costo_servicio: m.costo_servicio, disenio: m.disenio, remanente: m.remanente,
+    resultado: m.resultado, observacion: m.observacion,
   });
 }
 
 /**
- * Intercambio: primero se retira la llanta que ocupa la posición (el servidor exige destino reencauche o desecho)
+ * Intercambio: primero se retira la llanta que ocupa la posición (el servidor exige destino reten, reforma o descarte)
  * y después se instala la que viene de bodega. Si la instalación falla, la primera ya salió: se avisa con claridad.
  */
 export async function ejecutarIntercambio(
-  saliente: { codigo: string; placa: string; posicion: string; destino: 'desecho' | 'reencauche'; km: number },
+  saliente: { codigo: string; placa: string; posicion: string; destino: DestinoRetiro; km: number },
   entrante: { codigo: string; placa: string; posicion: string; km: number },
 ): Promise<void> {
   await ejecutarMovimiento({ clase: 'retirar', ...saliente });

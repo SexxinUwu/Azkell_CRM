@@ -20,7 +20,7 @@ interface Props {
   onActualizado?: () => void;
 }
 
-interface DatosLlanta { medida: string | null; modelo: string | null; cocada_inicial: number | null }
+interface DatosLlanta { medida: string | null; modelo: string | null; cocada_inicial: number | null; vida_inicial?: string | null }
 type Pestana = 'especificaciones' | 'movimientos';
 
 const ESTADO_TEXTO = { ok: 'Stock óptimo', warning: 'Stock bajo', critical: 'Sin stock' } as const;
@@ -221,6 +221,7 @@ export function InventarioFicha({ articulo: a, onEditar, onEliminar, onActualiza
               {esLlanta && <Dato etiqueta="Medida" valor={llanta?.medida} />}
               {esLlanta && <Dato etiqueta="Modelo" valor={llanta?.modelo} />}
               {esLlanta && <Dato etiqueta="Cocada inicial (mm)" valor={llanta?.cocada_inicial} />}
+              {esLlanta && <Dato etiqueta="Vida al comprar" valor={llanta?.vida_inicial && llanta.vida_inicial !== 'R0' ? `Reencauchada ${llanta.vida_inicial}` : 'Nueva'} />}
             </div>
           ) : (
             <div className="ficha__panel" role="tabpanel">

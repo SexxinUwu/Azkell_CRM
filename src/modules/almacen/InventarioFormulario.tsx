@@ -26,7 +26,15 @@ interface Props {
 
 interface Unidad { nombre: string; descripcion: string | null }
 interface Nombrado { nombre: string }
-interface DatosLlanta { medida: string | null; modelo: string | null; cocada_inicial: number | null }
+interface DatosLlanta { medida: string | null; modelo: string | null; cocada_inicial: number | null; vida_inicial?: string | null }
+
+/** Vida con la que se compra la llanta: R0 entra al almacén Nuevas; R1 a R3 (ya reencauchada) entra al almacén Reencauche */
+const VIDAS_AL_COMPRAR = [
+  { value: 'R0', label: 'Nueva' },
+  { value: 'R1', label: 'Reencauchada R1' },
+  { value: 'R2', label: 'Reencauchada R2' },
+  { value: 'R3', label: 'Reencauchada R3' },
+];
 
 // Mismas listas que el formulario clásico (tipos, subtipos y estados)
 const TIPOS = ['Original', 'Alternativo', 'Servicio'];
@@ -120,6 +128,7 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
   const [medida, setMedida] = useState('');
   const [modeloLlanta, setModeloLlanta] = useState('');
   const [cocada, setCocada] = useState('');
+  const [vidaInicial, setVidaInicial] = useState('R0');
   const [imagenUrl, setImagenUrl] = useState<string | null>(null);
   const [nuevaOpcion, setNuevaOpcion] = useState<'marca' | 'familia' | null>(null);
 
@@ -176,13 +185,14 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
 
   useEffect(() => {
     if (!open) return;
-    if (!a?.id) { setMedida(''); setModeloLlanta(''); setCocada(''); return; }
+    if (!a?.id) { setMedida(''); setModeloLlanta(''); setCocada(''); setVidaInicial('R0'); return; }
     api<{ ok?: boolean; data?: DatosLlanta | null }>('/almacen/neumaticos-articulo/' + encodeURIComponent(String(a.id)))
       .then(r => {
         const d = r.data;
         setMedida(d?.medida ?? '');
         setModeloLlanta(d?.modelo ?? '');
         setCocada(d?.cocada_inicial == null ? '' : String(d.cocada_inicial));
+        setVidaInicial(d?.vida_inicial || 'R0');
       })
       .catch(() => {});
   }, [open, a?.id]);
@@ -233,7 +243,7 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
         try {
           await api('/almacen/neumaticos-articulo/' + encodeURIComponent(String(idArticulo)), {
             method: 'PUT',
-            body: { medida, modelo: modeloLlanta, cocada_inicial: cocada === '' ? null : Number(cocada) },
+            body: { medida, modelo: modeloLlanta, cocada_inicial: cocada === '' ? null : Number(cocada), vida_inicial: vidaInicial },
           });
         } catch {
           toast('El artículo se guardó, pero no los datos de la llanta', 'error');
@@ -314,6 +324,9 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
             </Field>
             <Field label="Cocada inicial (mm)">
               {p => <TextInput {...p} type="number" min={0} value={cocada} placeholder="Ej: 20" onChange={e => setCocada(e.target.value)} />}
+            </Field>
+            <Field label="Vida al comprar" hint="Nueva entra al almacén Nuevas. Una llanta comprada ya reencauchada (R1, R2, R3) entra al almacén Reencauche con esa vida.">
+              {() => <ChoiceChips label="Vida al comprar" value={vidaInicial} onChange={setVidaInicial} options={VIDAS_AL_COMPRAR} />}
             </Field>
           </div>
         )}

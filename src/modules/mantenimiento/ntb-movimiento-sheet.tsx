@@ -10,7 +10,7 @@ import { decimalInput, digitsInput, parseDecimal } from '../../core/ui/forms';
 import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import type { LlantaTablero } from './neumaticos-tablero-tipos';
-import { ejecutarIntercambio, ejecutarMovimiento, tituloLlanta, vidaSiguiente, vidaTexto } from './ntb-api';
+import { ejecutarIntercambio, ejecutarMovimiento, tituloLlanta, vidaSiguiente, vidaTexto, type DestinoRetiro, type ResultadoReencauche } from './ntb-api';
 
 export type Propuesta =
   | { clase: 'instalar'; llanta: LlantaTablero; posicion: string }
@@ -18,15 +18,22 @@ export type Propuesta =
   | { clase: 'reforma' | 'descarte'; llanta: LlantaTablero; posicion: string }
   | { clase: 'retorno'; llanta: LlantaTablero };
 
-type Destino = 'reencauche' | 'desecho';
+type Destino = DestinoRetiro;
+
+/** Cómo se dice cada destino en el texto de la hoja */
+const TEXTO_DESTINO: Record<Destino, string> = {
+  reten: 'el Retén',
+  reforma: 'reforma (queda en el Retén para enviarla a la reformadora)',
+  descarte: 'descarte (queda en el Retén esperando descarte)',
+};
 
 interface Props {
   open: boolean;
   propuesta: Propuesta;
   placa: string;
-  /** Enviar a reencauche permitido (reforma y la baja del intercambio) */
+  /** Enviar para reforma permitido (reforma y el destino del intercambio) */
   puedeReencauche: boolean;
-  /** Dar de baja permitido (descarte y la baja del intercambio) */
+  /** Enviar a descarte permitido (descarte y el destino del intercambio) */
   puedeBaja: boolean;
   onClose: () => void;
   onHecho: (mensaje: string) => void;
@@ -54,13 +61,17 @@ function Resumen({ children }: { children: ReactNode }) {
 }
 
 export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puedeBaja, onClose, onHecho }: Props) {
+  // Toda llanta retirada pasa por el Retén: puede quedar ahí disponible, ir a reforma o esperar su descarte
   const opcionesDestino: Array<{ value: Destino; label: string }> = [
-    ...(puedeReencauche ? [{ value: 'reencauche' as const, label: 'Reencauche' }] : []),
-    ...(puedeBaja ? [{ value: 'desecho' as const, label: 'Dar de baja' }] : []),
+    { value: 'reten', label: 'Retén' },
+    ...(puedeReencauche ? [{ value: 'reforma' as const, label: 'Enviar para reforma' }] : []),
+    ...(puedeBaja ? [{ value: 'descarte' as const, label: 'Esperando descarte' }] : []),
   ];
 
   const [km, setKm] = useState('');
-  const [destino, setDestino] = useState<Destino>(puedeReencauche ? 'reencauche' : 'desecho');
+  const [destino, setDestino] = useState<Destino>('reten');
+  const [resultado, setResultado] = useState<ResultadoReencauche>('aprobada');
+  const [motivo, setMotivo] = useState('');
   const [proveedor, setProveedor] = useState('');
   const [costo, setCosto] = useState('');
   const [disenio, setDisenio] = useState('');
@@ -70,7 +81,7 @@ export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puede
 
   const sigueVida = vidaSiguiente(propuesta.clase === 'retorno' ? propuesta.llanta.vida : null);
   const destinoValido = propuesta.clase === 'intercambio' ? opcionesDestino.some(o => o.value === destino) : true;
-  const bloqueada = propuesta.clase === 'retorno' ? !sigueVida : propuesta.clase === 'intercambio' && !destinoValido;
+  const bloqueada = propuesta.clase === 'retorno' ? (resultado === 'aprobada' && !sigueVida) : propuesta.clase === 'intercambio' && !destinoValido;
 
   async function confirmar() {
     setError(null);
@@ -91,11 +102,11 @@ export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puede
         mensaje = `${propuesta.entrante.codigo} ocupa ${propuesta.posicion}`;
       } else if (propuesta.clase === 'reforma' || propuesta.clase === 'descarte') {
         const k = kilometraje(km, propuesta.llanta.km_montaje ?? null);
-        const dest: Destino = propuesta.clase === 'reforma' ? 'reencauche' : 'desecho';
+        const dest: Destino = propuesta.clase === 'reforma' ? 'reforma' : 'descarte';
         await ejecutarMovimiento({ clase: 'retirar', codigo: propuesta.llanta.codigo, placa, posicion: propuesta.posicion, km: k, destino: dest });
         mensaje = propuesta.clase === 'reforma'
-          ? `${propuesta.llanta.codigo} enviada a reforma`
-          : `${propuesta.llanta.codigo} dada de baja`;
+          ? `${propuesta.llanta.codigo} enviada a reforma (en el Retén)`
+          : `${propuesta.llanta.codigo} enviada a descarte (en el Retén)`;
       } else {
         const c = parseDecimal(costo);
         if (Number.isNaN(c)) throw new Error('El costo del servicio no es válido.');
@@ -104,8 +115,11 @@ export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puede
         await ejecutarMovimiento({
           clase: 'retorno', codigo: propuesta.llanta.codigo, proveedor: proveedor.trim(),
           costo_servicio: c ?? 0, disenio: disenio.trim(), remanente: r,
+          resultado, observacion: motivo.trim(),
         });
-        mensaje = `${propuesta.llanta.codigo} regresó de reencauche`;
+        mensaje = resultado === 'aprobada'
+          ? `${propuesta.llanta.codigo} regresó de reencauche`
+          : `${propuesta.llanta.codigo} rechazada: queda esperando descarte en el Retén`;
       }
       haptic('success');
       onHecho(mensaje);
@@ -128,7 +142,7 @@ export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puede
         <>
           <Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
           <Button variant={descarte ? 'destructive' : 'accent'} onClick={confirmar} loading={enviando} disabled={bloqueada}>
-            {descarte ? 'Dar de baja' : propuesta.clase === 'retorno' ? 'Registrar retorno' : 'Confirmar'}
+            {descarte ? 'Enviar a descarte' : propuesta.clase === 'retorno' ? (resultado === 'rechazada' ? 'Registrar rechazo' : 'Registrar retorno') : 'Confirmar'}
           </Button>
         </>
       }
@@ -143,7 +157,7 @@ export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puede
 
         {propuesta.clase === 'intercambio' && (
           <Resumen>
-            <p>1. La llanta <b>{propuesta.saliente.codigo}</b> sale de <b>{propuesta.posicion}</b> y se envía a {destino === 'desecho' ? 'baja' : 'reencauche'}.</p>
+            <p>1. La llanta <b>{propuesta.saliente.codigo}</b> sale de <b>{propuesta.posicion}</b> y pasa a {TEXTO_DESTINO[destino]}.</p>
             <p>2. La llanta <b>{propuesta.entrante.codigo}</b> ({tituloLlanta(propuesta.entrante)}) ocupa <b>{propuesta.posicion}</b>.</p>
             {opcionesDestino.length > 0 ? (
               <SegmentedControl<Destino> label="Destino de la llanta que sale" value={destino} onChange={setDestino} options={opcionesDestino} block />
@@ -155,15 +169,15 @@ export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puede
 
         {propuesta.clase === 'reforma' && (
           <Resumen>
-            <p>La llanta <b>{propuesta.llanta.codigo}</b> sale de <b>{propuesta.posicion}</b> de <b>{placa}</b> y se envía a reencauche.</p>
-            <p className="ntb-hoja__nota">Queda en Reforma hasta que registres su retorno.</p>
+            <p>La llanta <b>{propuesta.llanta.codigo}</b> sale de <b>{propuesta.posicion}</b> de <b>{placa}</b> y se marca para reforma.</p>
+            <p className="ntb-hoja__nota">Queda en el Retén, lista para despachar a la reformadora.</p>
           </Resumen>
         )}
 
         {propuesta.clase === 'descarte' && (
           <Resumen>
-            <p>La llanta <b>{propuesta.llanta.codigo}</b> sale de <b>{propuesta.posicion}</b> de <b>{placa}</b> y se da de baja (desecho).</p>
-            <p className="ntb-hoja__nota">Esta acción no se puede deshacer desde el tablero.</p>
+            <p>La llanta <b>{propuesta.llanta.codigo}</b> sale de <b>{propuesta.posicion}</b> de <b>{placa}</b> y se envía a descarte.</p>
+            <p className="ntb-hoja__nota">Queda en el Retén esperando descarte; la baja definitiva es un paso aparte.</p>
           </Resumen>
         )}
 
@@ -183,12 +197,26 @@ export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puede
           <>
             <Resumen>
               <p>Registra el retorno de <b>{propuesta.llanta.codigo}</b> desde reencauche.</p>
-              {sigueVida ? (
-                <p className="ntb-hoja__nota">Vida {vidaTexto(propuesta.llanta.vida)} → <b>{sigueVida}</b>. Queda en Reparadas, lista para instalar.</p>
+              <SegmentedControl<ResultadoReencauche> label="Resultado del reencauche" value={resultado} onChange={setResultado} block
+                options={[{ value: 'aprobada', label: 'Aprobada' }, { value: 'rechazada', label: 'Rechazada' }]} />
+              {resultado === 'rechazada' ? (
+                <p className="ntb-hoja__nota">No sube la vida ni suma costo. Queda en el Retén esperando descarte.</p>
+              ) : sigueVida ? (
+                <p className="ntb-hoja__nota">Vida {vidaTexto(propuesta.llanta.vida)} → <b>{sigueVida}</b>. Queda en Reencauche, ya reencauchada y lista para instalar.</p>
               ) : (
                 <Notice tone="error" icon={<CircleAlert size={16} />}>Esta llanta ya está en R3 y no admite más reencauches.</Notice>
               )}
             </Resumen>
+            {resultado === 'rechazada' ? (
+              <div className="form-grid">
+                <Field label="Proveedor de reencauche">
+                  {p => <TextInput {...p} value={proveedor} onChange={e => setProveedor(e.target.value)} />}
+                </Field>
+                <Field label="Motivo del rechazo" hint="Opcional.">
+                  {p => <TextInput {...p} value={motivo} onChange={e => setMotivo(e.target.value)} />}
+                </Field>
+              </div>
+            ) : (
             <div className="form-grid">
               <Field label="Proveedor de reencauche">
                 {p => <TextInput {...p} value={proveedor} onChange={e => setProveedor(e.target.value)} />}
@@ -205,6 +233,7 @@ export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puede
                   onChange={e => setRemanente(decimalInput(e.target.value))} />}
               </Field>
             </div>
+            )}
           </>
         )}
 

@@ -3,6 +3,8 @@
 // entran como "Sin código de fuego"; las que ya existían con PROV- quedan como "Código provisional".
 
 const ALMACEN_NUEVAS = 100;
+const ALMACEN_REENCAUCHE = 1142;
+const VIDAS_INICIALES = ['R0', 'R1', 'R2', 'R3'];
 const ESTADO_ALMACEN = { ciclo: 'en_almacen', operativo: 'Stock Taller' };
 const MOV_ALTA = 'ALTA';
 const PREFIJO_PROVISIONAL = 'PROV-';
@@ -60,19 +62,45 @@ async function asignarCodigosFuego(conn, ids, anio = anioLima()) {
 }
 
 /**
- * Crea una llanta "Sin código de fuego" por cada unidad recibida de un artículo de familia NEUMATICOS.
- * Medida, modelo y cocada inicial vienen del artículo "Llanta" (neumaticos_articulo).
- * Idempotente: si una unidad ya existe (misma recepción y línea) no se vuelve a crear.
+ * ¿Este artículo del inventario es una llanta? Solo entonces una recepción da de alta llantas.
+ * Debe ser de la familia NEUMATICOS, tener fila en neumaticos_articulo con medida, y su id no puede empezar con SERV
+ * (parches, válvulas, aros y servicios de la familia no son llantas).
+ * `datos` es la fila de neumaticos_articulo del artículo (o null si no tiene).
  */
-async function crearLlantasDeRecepcion(conn, { recepcionId, linea, inventarioId, marca, cantidad, costoUnitario, usuario, fecha }) {
+function esArticuloLlanta(articulo, datos) {
+    const id = String((articulo && articulo.id) || '').trim().toUpperCase();
+    if (id.startsWith('SERV')) return false;
+    if (String((articulo && articulo.familia) || '').trim().toUpperCase() !== 'NEUMATICOS') return false;
+    return !!datos && String(datos.medida || '').trim() !== '';
+}
+
+/** Vida con la que se compra la llanta: R0 (nueva), R1, R2 o R3 (ya reencauchada). Sin dato o dato raro, R0. */
+function vidaInicialDe(datos) {
+    const v = String((datos && datos.vida_inicial) || '').trim().toUpperCase();
+    return VIDAS_INICIALES.includes(v) ? v : 'R0';
+}
+
+/**
+ * Crea una llanta "Sin código de fuego" por cada unidad recibida de un artículo que sí es llanta (ver esArticuloLlanta).
+ * Medida, modelo, cocada y vida inicial vienen del artículo "Llanta" (neumaticos_articulo).
+ * Vida R0: entra al almacén Nuevas (100). Otra vida (ya reencauchada): entra con esa vida al almacén Reencauche (1142).
+ * Si el artículo no es una llanta, no crea nada. Idempotente: si una unidad ya existe (misma recepción y línea) no se vuelve a crear.
+ */
+async function crearLlantasDeRecepcion(conn, { recepcionId, linea, inventarioId, familia, marca, cantidad, costoUnitario, usuario, fecha }) {
     const cantidadEntera = Math.floor(Number(cantidad) || 0);
     if (cantidadEntera <= 0) return 0;
 
-    const [arts] = await conn.query(
-        'SELECT medida, modelo, cocada_inicial FROM neumaticos_articulo WHERE inventario_id = ?', [inventarioId]);
-    const art = arts[0] || {};
+    // SELECT *: si la base aún no tiene la columna vida_inicial, la llanta entra como nueva (R0)
+    const [arts] = await conn.query('SELECT * FROM neumaticos_articulo WHERE inventario_id = ?', [inventarioId]);
+    const art = arts[0] || null;
+    if (!esArticuloLlanta({ id: inventarioId, familia }, art)) return 0;
+
     const cocada = art.cocada_inicial == null ? null : Number(art.cocada_inicial);
     const costo = Number(costoUnitario) || 0;
+    const vida = vidaInicialDe(art);
+    const reencauchada = vida !== 'R0';
+    const almacen = reencauchada ? ALMACEN_REENCAUCHE : ALMACEN_NUEVAS;
+    const contador = Number(vida.slice(1));
 
     let creadas = 0;
     for (let k = 1; k <= cantidadEntera; k += 1) {
@@ -84,16 +112,17 @@ async function crearLlantasDeRecepcion(conn, { recepcionId, linea, inventarioId,
             `INSERT INTO neumaticos_hoja_vida
              (id_neumatico, marca, modelo, medida, estado, remanente_inicial, remanente_actual, costo_compra,
               km_acumulado, estado_ciclo, vida, contador_reencauches, costo_reencauches, almacen_id, estado_operativo)
-             VALUES (?, ?, ?, ?, 'NUEVA', ?, ?, ?, 0, ?, 'R0', 0, 0, ?, ?)`,
-            [id, marca || '', art.modelo || '', art.medida || '', cocada ?? 0, cocada ?? 0, costo,
-             ESTADO_ALMACEN.ciclo, ALMACEN_NUEVAS, ESTADO_ALMACEN.operativo]);
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 0, ?, ?)`,
+            [id, marca || '', art.modelo || '', art.medida || '', reencauchada ? 'RENCAUCHADA' : 'NUEVA',
+             cocada ?? 0, cocada ?? 0, costo,
+             ESTADO_ALMACEN.ciclo, vida, contador, almacen, ESTADO_ALMACEN.operativo]);
 
         await conn.query(
             `INSERT INTO neumaticos_movimientos
              (id_neumatico, tipo, almacen_origen_id, almacen_destino_id, placa, posicion, km, fecha, usuario, observacion)
              VALUES (?, ?, NULL, ?, NULL, NULL, 0, ?, ?, ?)`,
-            [id, MOV_ALTA, ALMACEN_NUEVAS, fecha, usuario || null,
-             `Recepción de compra ${recepcionId}, línea ${linea}. Costo de compra: ${costo}`]);
+            [id, MOV_ALTA, almacen, fecha, usuario || null,
+             `Recepción de compra ${recepcionId}, línea ${linea}. Costo de compra: ${costo}${reencauchada ? `. Comprada ya reencauchada (${vida})` : ''}`]);
         creadas += 1;
     }
     return creadas;
@@ -156,6 +185,8 @@ module.exports = {
     leerLetra,
     asignarCodigosFuego,
     crearLlantasDeRecepcion,
+    esArticuloLlanta,
+    vidaInicialDe,
     borrarLlantasDeRecepcion,
     corregirLlantasPorInventario,
 };

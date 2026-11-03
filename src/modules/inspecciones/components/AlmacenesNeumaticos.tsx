@@ -12,19 +12,26 @@ import type { PosicionBajo } from './ChasisEsquemaVisual';
 import '../inspecciones.css';
 
 // Almacenes de llantas junto al modelo 3D de la inspección de neumáticos:
-//   Papelera (desecho) y almacén de reencauche: se suelta aquí una llanta arrastrada desde el modelo.
-//   Repisa de disponibles (nuevas y reparadas): se arrastra una llanta a una posición vacía del modelo para montarla.
-//   POST /neumaticos/retirar    { codigo, placa, posicion, destino: 'desecho'|'reencauche', km, observacion }
+//   Papelera (descarte) y zona de reforma: se suelta aquí una llanta arrastrada desde el modelo. Toda llanta retirada pasa por el Retén.
+//   Repisa de disponibles (nuevas, reencauchadas, reparadas y retén): se arrastra una llanta a una posición vacía del modelo para montarla.
+//   POST /neumaticos/retirar    { codigo, placa, posicion, destino: 'reten'|'reforma'|'descarte', km, observacion }
 //   POST /neumaticos/instalar   { codigo, placa, posicion, km }
-//   GET  /neumaticos/llantas    → { ok, data }: la repisa para montar usa las de almacén 100 (nuevas) y 1144 (reparadas)
-//   GET  /neumaticos/almacenes  → { ok, grupos, conteos }: los 4 grupos de almacén, con su conteo (solo lectura)
+//   GET  /neumaticos/llantas    → { ok, data }: la repisa para montar usa las de los almacenes 100, 1142, 1144 y 1146
+//   GET  /neumaticos/almacenes  → { ok, grupos, conteos }: disponibles por almacén, enviar_reforma y esperando_descarte (solo lectura)
 
-export type Destino = 'desecho' | 'reencauche';
+export type Destino = 'reten' | 'reforma' | 'descarte';
 
 /** Almacenes de la repisa (ver routes/neumaticos-ciclo.js) */
 const ALMACEN_NUEVAS = 100;
+const ALMACEN_REENCAUCHE = 1142;
 const ALMACEN_REPARADAS = 1144;
-const condicionDe = (almacen: number | null | undefined) => (almacen === ALMACEN_NUEVAS ? 'Nueva' : almacen === ALMACEN_REPARADAS ? 'Reparada' : '');
+const ALMACEN_RETEN = 1146;
+const ALMACENES_REPISA = [ALMACEN_NUEVAS, ALMACEN_REENCAUCHE, ALMACEN_REPARADAS, ALMACEN_RETEN];
+const condicionDe = (almacen: number | null | undefined) => (
+  almacen === ALMACEN_NUEVAS ? 'Nueva'
+    : almacen === ALMACEN_REENCAUCHE ? 'Reencauchada'
+      : almacen === ALMACEN_REPARADAS ? 'Reparada'
+        : almacen === ALMACEN_RETEN ? 'Retén' : '');
 
 /** Lo que el almacén necesita de cada llanta del formulario */
 export interface LlantaAlmacen {
@@ -40,12 +47,19 @@ export interface LlantaDisponible {
 /** Zona de retiro sobre la que está el puntero durante un arrastre (o ninguna) */
 export type ZonaRetiro = 'papelera' | 'reencauche' | null;
 
-/** Llanta de uno de los cuatro grupos de almacén (fila de GET /neumaticos/almacenes) */
+/** Llanta de uno de los grupos de almacén (fila de GET /neumaticos/almacenes) */
 export interface LlantaGrupo {
   codigo: string; marca: string | null; modelo: string | null; medida: string | null;
   estado_ciclo: string; almacen_id: number | null;
 }
-interface RespGrupos { ok?: boolean; grupos?: { disponibles: LlantaGrupo[]; reencauchadas: LlantaGrupo[]; enviar_reforma: LlantaGrupo[]; desechadas: LlantaGrupo[] } }
+interface RespGrupos {
+  ok?: boolean;
+  grupos?: {
+    disponibles: { nuevas: LlantaGrupo[]; reencauchadas: LlantaGrupo[]; reparadas: LlantaGrupo[]; reten: LlantaGrupo[] };
+    enviar_reforma: LlantaGrupo[];
+    esperando_descarte: LlantaGrupo[];
+  };
+}
 
 export interface AlmacenesHandle {
   /** Una llanta del modelo se soltó en (x, y) de la pantalla: si cayó en la papelera o el reencauche, se abre la confirmación */
@@ -71,9 +85,11 @@ type Dialogo =
   | { tipo: 'retiro'; posicion: string; codigo: string; destino: Destino | null }
   | { tipo: 'montaje'; posicion: string; llanta: LlantaDisponible };
 
-/** Permiso para dar de baja una llanta (desecho definitivo) */
+/** Permisos de los destinos: descarte (baja) y reforma (reencauche). El Retén solo pide el permiso de mover. */
 const PERMISO_BAJA = 'neumaticos.baja';
-const AVISO_BAJA = 'No tienes permiso para dar de baja llantas (neumaticos.baja).';
+const PERMISO_REENCAUCHE = 'neumaticos.reencauche';
+const AVISO_BAJA = 'No tienes permiso para enviar llantas a descarte (neumaticos.baja).';
+const AVISO_REFORMA = 'No tienes permiso para enviar llantas a reforma (neumaticos.reencauche).';
 
 const numero = (v: unknown) => Number(String(v ?? '').replace(',', '.')) || 0;
 
@@ -122,28 +138,31 @@ export const AlmacenesNeumaticos = forwardRef<AlmacenesHandle, AlmacenesProps>(f
   const toast = useToast();
   const { can } = useAuth();
   const puedeBaja = can(PERMISO_BAJA);
+  const puedeReforma = can(PERMISO_REENCAUCHE);
   const papeleraRef = useRef<HTMLDivElement>(null);
   const reencaucheRef = useRef<HTMLDivElement>(null);
   // Las funciones del handle leen siempre las props actuales (llantas, km) sin volver a crearlo
   const vivo = useRef(props);
   vivo.current = props;
 
-  // Repisa: llantas en almacén de nuevas o reparadas (no montadas, no en reencauche ni en desecho)
+  // Repisa: llantas en un almacén de uso (nuevas, reencauchadas, reparadas o Retén); no las montadas, en reforma ni en descarte
   const disponibles = useQuery<{ ok?: boolean; data?: LlantaDisponible[] }>({
     queryKey: ['neumaticos', 'repisa'],
     queryFn: () => api<{ ok?: boolean; data?: LlantaDisponible[] }>('/neumaticos/llantas'),
     staleTime: 0,
   });
   // Solo las llantas con código de fuego: las que no lo tienen no se montan
-  const lista = (disponibles.data?.data ?? []).filter(l => (l.almacen_id === ALMACEN_NUEVAS || l.almacen_id === ALMACEN_REPARADAS) && !!l.codigo_fuego);
-  // Los cuatro grupos de almacén: siempre se muestran, con su conteo (0 si no hay llantas)
+  const lista = (disponibles.data?.data ?? []).filter(l => ALMACENES_REPISA.includes(Number(l.almacen_id)) && !!l.codigo_fuego);
+  // Los grupos de almacén: siempre se muestran, con su conteo (0 si no hay llantas)
   const grupos = useQuery<RespGrupos>({
     queryKey: ['neumaticos', 'almacenes'],
     queryFn: () => api<RespGrupos>('/neumaticos/almacenes'),
     staleTime: 0,
   });
   const gDatos = grupos.data?.grupos;
-  const nGrupo = (clave: keyof NonNullable<RespGrupos['grupos']>) => (gDatos ? gDatos[clave].length : 0);
+  const nDescarte = gDatos?.esperando_descarte.length ?? 0;
+  const nReforma = gDatos?.enviar_reforma.length ?? 0;
+  const nuevasYReparadas = gDatos ? [...gDatos.disponibles.nuevas, ...gDatos.disponibles.reparadas] : undefined;
 
   const [dialogo, setDialogo] = useState<Dialogo | null>(null);
   const [observacion, setObservacion] = useState('');
@@ -162,7 +181,7 @@ export const AlmacenesNeumaticos = forwardRef<AlmacenesHandle, AlmacenesProps>(f
       if (!l || posicionVacia(l)) { toast(`La posición #${posicion} está vacía.`, 'error'); return; }
       if (!l.codigo.trim()) { toast(`La llanta #${posicion} no tiene código. Escríbelo en el editor antes de retirarla.`, 'error'); return; }
       setObservacion(''); setError(null);
-      setDialogo({ tipo: 'retiro', posicion, codigo: l.codigo.trim().toUpperCase(), destino: enPapelera ? null : 'reencauche' });
+      setDialogo({ tipo: 'retiro', posicion, codigo: l.codigo.trim().toUpperCase(), destino: enPapelera ? null : 'reforma' });
     },
     zonaBajo(x, y) {
       if (dentro(papeleraRef.current, x, y)) return 'papelera';
@@ -215,9 +234,10 @@ export const AlmacenesNeumaticos = forwardRef<AlmacenesHandle, AlmacenesProps>(f
     if (!dialogo || enviando) return;
     if (!String(km).trim()) { setError('Indica el kilometraje de la unidad antes de continuar.'); return; }
     if (dialogo.tipo === 'retiro') {
-      if (!dialogo.destino) { setError('Elige si la llanta va a desecho o a reencauche.'); return; }
-      // Desecho definitivo: solo con permiso de baja. Sin permiso se avisa y no se envía nada.
-      if (dialogo.destino === 'desecho' && !puedeBaja) { setError(AVISO_BAJA); toast(AVISO_BAJA, 'error'); return; }
+      if (!dialogo.destino) { setError('Elige a dónde va la llanta: Retén, reforma o descarte.'); return; }
+      // Descarte y reforma piden su permiso. Sin permiso se avisa y no se envía nada.
+      if (dialogo.destino === 'descarte' && !puedeBaja) { setError(AVISO_BAJA); toast(AVISO_BAJA, 'error'); return; }
+      if (dialogo.destino === 'reforma' && !puedeReforma) { setError(AVISO_REFORMA); toast(AVISO_REFORMA, 'error'); return; }
     }
     setEnviando(true); setError(null);
     try {
@@ -228,7 +248,7 @@ export const AlmacenesNeumaticos = forwardRef<AlmacenesHandle, AlmacenesProps>(f
         });
         if (r.ok === false) throw new Error(r.error || 'No se pudo retirar la llanta');
         onRetirada(dialogo.posicion);
-        toast(`Llanta ${dialogo.codigo} ${dialogo.destino === 'desecho' ? 'dada de baja' : 'enviada a reencauche'}`);
+        toast(`Llanta ${dialogo.codigo} ${dialogo.destino === 'descarte' ? 'enviada a descarte' : dialogo.destino === 'reforma' ? 'enviada a reforma' : 'en el Retén'}`);
       } else {
         const r = await api<{ ok?: boolean; error?: string }>('/neumaticos/instalar', {
           method: 'POST',
@@ -257,17 +277,19 @@ export const AlmacenesNeumaticos = forwardRef<AlmacenesHandle, AlmacenesProps>(f
     <>
       <section className="insp-alm" aria-label="Almacenes de llantas">
         <div ref={papeleraRef} className={`insp-alm__caja insp-alm__caja--papelera${zonaSobre === 'papelera' ? ' insp-alm__caja--sobre' : ''}`}>
-          <span className="insp-alm__cab"><Trash2 size={16} aria-hidden /> Desechadas · Papelera <span className="insp-alm__conteo">{nGrupo('desechadas')}</span></span>
-          <p className="insp-alm__nota">Suelta aquí una llanta del modelo para darla de baja: desecho definitivo o reencauche.</p>
+          <span className="insp-alm__cab"><Trash2 size={16} aria-hidden /> Esperando descarte · Papelera <span className="insp-alm__conteo">{nDescarte}</span></span>
+          <p className="insp-alm__nota">Suelta aquí una llanta del modelo para retirarla: queda en el Retén (disponible, para reforma o para descarte).</p>
         </div>
         <div ref={reencaucheRef} className={`insp-alm__caja insp-alm__caja--reencauche${zonaSobre === 'reencauche' ? ' insp-alm__caja--sobre' : ''}`}>
-          <span className="insp-alm__cab"><Recycle size={16} aria-hidden /> Para reencauche <span className="insp-alm__conteo">{nGrupo('enviar_reforma')}</span></span>
-          <p className="insp-alm__nota">Suelta aquí una llanta del modelo para enviarla a reencauchar.</p>
+          <span className="insp-alm__cab"><Recycle size={16} aria-hidden /> Para reforma <span className="insp-alm__conteo">{gDatos ? nReforma : 0}</span></span>
+          <p className="insp-alm__nota">Suelta aquí una llanta del modelo para enviarla a reforma (queda en el Retén).</p>
         </div>
-        <GrupoLlantas titulo="Reencauchadas" icono={<Recycle size={16} aria-hidden />} nota="Regresaron del reencauche (almacén Reparadas)."
-          llantas={gDatos?.reencauchadas} cargando={grupos.isLoading} error={grupos.isError ? errorMessage(grupos.error) : null} />
-        <GrupoLlantas titulo="Disponibles" icono={<Warehouse size={16} aria-hidden />} nota="Nuevas o de reencauche, con código de fuego."
-          llantas={gDatos?.disponibles} cargando={grupos.isLoading} error={grupos.isError ? errorMessage(grupos.error) : null} />
+        <GrupoLlantas titulo="Reencauchadas" icono={<Recycle size={16} aria-hidden />} nota="Ya reencauchadas, listas para instalar (almacén Reencauche)."
+          llantas={gDatos?.disponibles.reencauchadas} cargando={grupos.isLoading} error={grupos.isError ? errorMessage(grupos.error) : null} />
+        <GrupoLlantas titulo="Disponibles" icono={<Warehouse size={16} aria-hidden />} nota="Nuevas o reparadas, con código de fuego."
+          llantas={nuevasYReparadas} cargando={grupos.isLoading} error={grupos.isError ? errorMessage(grupos.error) : null} />
+        <GrupoLlantas titulo="Retén" icono={<Warehouse size={16} aria-hidden />} nota="Retiradas de una unidad y disponibles hasta decidir su destino."
+          llantas={gDatos?.disponibles.reten} cargando={grupos.isLoading} error={grupos.isError ? errorMessage(grupos.error) : null} />
         <div className="insp-alm__caja insp-alm__caja--repisa">
           <span className="insp-alm__cab"><Warehouse size={16} aria-hidden /> Repisa para montar ({lista.length})</span>
           <p className="insp-alm__nota">Arrastra una llanta a una posición vacía del modelo para montarla.</p>
@@ -277,7 +299,7 @@ export const AlmacenesNeumaticos = forwardRef<AlmacenesHandle, AlmacenesProps>(f
             ) : disponibles.isError ? (
               <p className="insp-alm__error" role="alert">No se pudo cargar la repisa: {errorMessage(disponibles.error)}</p>
             ) : lista.length === 0 ? (
-              <p className="insp-alm__nota">Sin llantas nuevas ni reparadas.</p>
+              <p className="insp-alm__nota">Sin llantas disponibles.</p>
             ) : lista.map(l => (
               <button key={l.codigo} type="button" className="insp-alm__llanta" aria-label={`Llanta ${l.codigo}, arrastrar a una posición vacía del modelo`}
                 onPointerDown={e => iniciarArrastre(e, l)} onPointerMove={moverArrastre}
@@ -299,7 +321,7 @@ export const AlmacenesNeumaticos = forwardRef<AlmacenesHandle, AlmacenesProps>(f
         footer={dialogo && (
           <>
             <Button variant="secondary" onClick={cerrar} disabled={enviando}>Cancelar</Button>
-            <Button variant={dialogo.tipo === 'retiro' && dialogo.destino === 'desecho' ? 'destructive' : 'primary'} onClick={confirmar} loading={enviando}>
+            <Button variant={dialogo.tipo === 'retiro' && dialogo.destino === 'descarte' ? 'destructive' : 'primary'} onClick={confirmar} loading={enviando}>
               {dialogo.tipo === 'montaje' ? 'Montar llanta' : 'Confirmar'}
             </Button>
           </>
@@ -311,14 +333,17 @@ export const AlmacenesNeumaticos = forwardRef<AlmacenesHandle, AlmacenesProps>(f
             </p>
             {dialogo.tipo === 'retiro' ? (
               <>
-                <p className="insp-alm__titulo">¿Desecho definitivo o reencauche?</p>
+                <p className="insp-alm__titulo">¿A dónde va la llanta? Pasa por el Retén</p>
                 <div className="insp-alm__opciones" role="group" aria-label="Destino de la llanta">
-                  <button type="button" className="insp-alm__opcion pressable" aria-pressed={dialogo.destino === 'desecho'}
-                    onClick={() => setDialogo({ ...dialogo, destino: 'desecho' })}>Desecho definitivo</button>
-                  <button type="button" className="insp-alm__opcion pressable" aria-pressed={dialogo.destino === 'reencauche'}
-                    onClick={() => setDialogo({ ...dialogo, destino: 'reencauche' })}>Reencauche</button>
+                  <button type="button" className="insp-alm__opcion pressable" aria-pressed={dialogo.destino === 'reten'}
+                    onClick={() => setDialogo({ ...dialogo, destino: 'reten' })}>Retén</button>
+                  <button type="button" className="insp-alm__opcion pressable" aria-pressed={dialogo.destino === 'reforma'}
+                    onClick={() => setDialogo({ ...dialogo, destino: 'reforma' })}>Enviar para reforma</button>
+                  <button type="button" className="insp-alm__opcion pressable" aria-pressed={dialogo.destino === 'descarte'}
+                    onClick={() => setDialogo({ ...dialogo, destino: 'descarte' })}>Esperando descarte</button>
                 </div>
-                {dialogo.destino === 'desecho' && !puedeBaja && <p className="insp-alm__error" role="alert">{AVISO_BAJA}</p>}
+                {dialogo.destino === 'descarte' && !puedeBaja && <p className="insp-alm__error" role="alert">{AVISO_BAJA}</p>}
+                {dialogo.destino === 'reforma' && !puedeReforma && <p className="insp-alm__error" role="alert">{AVISO_REFORMA}</p>}
                 <Field label="Observación">{p => <TextInput {...p} value={observacion} onChange={e => setObservacion(e.target.value)} placeholder="Opcional" />}</Field>
               </>
             ) : (
