@@ -1,3 +1,4 @@
+require('dotenv').config({ path: require('path').join(__dirname, '.env.local') }); // entorno de pruebas en tu PC (si existe, manda sobre .env)
 require('dotenv').config();
 // Sin JWT_SECRET no se pueden firmar ni verificar sesiones: no arrancar con un valor inventado
 if (!process.env.JWT_SECRET) {

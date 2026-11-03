@@ -17,3 +17,4 @@ assets/3d/scania_s730_ligero*.glb
 
 # Referencia local de Placas en 3D (no se versiona)
 docs/referencia/
+.env.local
