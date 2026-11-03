@@ -2,16 +2,17 @@
 // (modulos/almacen/entradas/logica.js), con la misma estructura, los mismos estilos en línea y el mismo contenido.
 // Lo usan Almacén > Entradas y Tesorería > Pago de requerimientos (el clásico de pagos usa el mismo documento).
 // Se renderiza con html2canvas/jsPDF (core/lib/pdf.ts) en su tamaño natural: no se reduce la escala.
+// Diseño propio, limpio y moderno (tarjetas suaves, líneas finas); mantiene los mismos datos y columnas del documento anterior.
 import { generarPDFBlob, montarParaPDF } from '../../core/lib/pdf';
 import type { EmpresaDocumentos, EntradaInv } from './api';
-import { codigoLimpio, numeroALetras } from './entradaReglas';
+import { codigoLimpio, desgloseIgv, numeroALetras } from './entradaReglas';
 import type { OrdenPago } from '../tesoreria/pago-datos';
 
 /** Tipo de cambio que usa el clásico cuando la orden no trae uno */
 const TC_CLASICO = 3.4;
 /** Logo de la empresa del subdominio, cuando no hay uno guardado en el navegador */
 const LOGO_RESPALDO = '/api/tenant-logo';
-const FUENTE_URL = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap';
+const FUENTE_URL = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap';
 
 /** Renglón de la orden (el clásico lee cant, cu, imp, descripción y U.M.) */
 export interface LineaOC {
@@ -43,6 +44,9 @@ export interface OrdenCompraPdf {
   proveedorRuc: string | null;
   lineas: LineaOC[];
   empresa: EmpresaDocumentos | null;
+  /** Tamaño del logo en píxeles, ya ajustado a su proporción (lo calcula generarPdfOrdenCompra) */
+  logoAncho?: number;
+  logoAlto?: number;
 }
 
 type UnidadDe = (id: string | null | undefined) => string | undefined;
@@ -156,7 +160,20 @@ export function totalOrdenCompra(d: OrdenCompraPdf): number {
   return totalReal;
 }
 
-/** HTML del documento: misma estructura y estilos en línea que _entGenerarHtmlPDF del clásico */
+/** Colores del documento: neutros y suaves (papel blanco, texto casi negro, grises de apoyo y un único acento) */
+const C = {
+  texto: '#1d1d1f', suave: '#6e6e73', tenue: '#8e8e93', linea: '#e5e5ea', fondo: '#f5f5f7', acento: '#0a66c2',
+};
+const FUENTE = "'Inter','Plus Jakarta Sans',-apple-system,'SF Pro Text','Segoe UI',Roboto,Arial,sans-serif";
+
+/** Dato con título pequeño en mayúsculas y valor debajo */
+const dato = (titulo: string, valor: string, ancho = '33.33%') =>
+  '<div style="width:' + ancho + ';box-sizing:border-box;padding:0 10px 10px 0;">' +
+    '<div style="font-size:8.5px;font-weight:600;letter-spacing:0.7px;text-transform:uppercase;color:' + C.tenue + ';margin-bottom:2px;">' + esc(titulo) + '</div>' +
+    '<div style="font-size:11px;font-weight:600;color:' + C.texto + ';line-height:1.3;">' + (esc(valor) || '—') + '</div>' +
+  '</div>';
+
+/** HTML del documento: diseño limpio y moderno (tarjetas suaves, líneas finas, cifras alineadas) */
 export function htmlOrdenCompra(d: OrdenCompraPdf): string {
   const emp = d.empresa;
   const tc = Number(d.tipoCambio) || TC_CLASICO;
@@ -164,18 +181,22 @@ export function htmlOrdenCompra(d: OrdenCompraPdf): string {
   const usd = d.usd;
   const txtMoneda = usd ? 'DÓLARES' : 'SOLES';
   const txtMonedaS = usd ? 'US$' : 'S/';
-  const totalText = totalReal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmt2 = (n: number) => n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const totalText = fmt2(totalReal);
 
-  const itemsHTML = d.lineas.map((it, i) => {
-    const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-    const celda = 'padding:5px 8px;border-bottom:1px solid #e2e8f0;';
-    return '<tr style="background-color: ' + bg + ';">' +
-      '<td style="' + celda + 'text-align:left;font-weight:600;color:#475569;font-size:9.5px;white-space:nowrap;">' + esc(it.codigo) + '</td>' +
-      '<td style="' + celda + 'text-align:center;font-weight:700;color:#0f172a;">' + it.cantidad.toLocaleString('es-PE', { maximumFractionDigits: 3 }) + '</td>' +
-      '<td style="' + celda + 'text-align:center;font-weight:600;color:#475569;font-size:10px;">' + esc(it.unidad) + '</td>' +
-      '<td style="' + celda + 'text-transform:uppercase;font-weight:600;color:#0f172a;line-height:1.25;">' + esc(it.descripcion) + '</td>' +
-      '<td style="' + celda + 'text-align:right;color:#334155;">' + it.costoUnitario.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + '</td>' +
-      '<td style="' + celda + 'text-align:right;font-weight:700;color:#0f172a;">' + it.importe.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
+  // Desglose de IGV solo cuando la orden lo declara (el total ya incluye el 18 %)
+  const { gravado: base, igv, conIgv } = desgloseIgv(totalReal, d.tipoIgv);
+
+  const th = 'padding:7px 8px;font-size:8.5px;font-weight:600;letter-spacing:0.7px;text-transform:uppercase;color:' + C.tenue + ';border-bottom:1px solid ' + C.linea + ';line-height:1.25;';
+  const itemsHTML = d.lineas.map(it => {
+    const td = 'padding:5.5px 8px;border-bottom:1px solid ' + C.linea + ';vertical-align:top;';
+    return '<tr>' +
+      '<td style="' + td + 'text-align:left;font-size:9.5px;font-weight:500;color:' + C.suave + ';white-space:nowrap;">' + esc(it.codigo) + '</td>' +
+      '<td style="' + td + 'text-align:center;font-weight:600;color:' + C.texto + ';">' + it.cantidad.toLocaleString('es-PE', { maximumFractionDigits: 3 }) + '</td>' +
+      '<td style="' + td + 'text-align:center;font-size:10px;color:' + C.suave + ';">' + esc(it.unidad) + '</td>' +
+      '<td style="' + td + 'text-transform:uppercase;font-weight:600;color:' + C.texto + ';line-height:1.3;">' + esc(it.descripcion) + '</td>' +
+      '<td style="' + td + 'text-align:right;color:' + C.suave + ';">' + it.costoUnitario.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + '</td>' +
+      '<td style="' + td + 'text-align:right;font-weight:700;color:' + C.texto + ';">' + fmt2(it.importe) + '</td>' +
       '</tr>';
   }).join('');
 
@@ -184,10 +205,9 @@ export function htmlOrdenCompra(d: OrdenCompraPdf): string {
     condPagoText = 'CRÉDITO' + (d.diasCredito ? ' / ' + d.diasCredito + ' DÍAS' : '');
   }
 
-  const numDisplay = d.id;
   const tipoDocTitle = (d.tipoOrden || 'ORDEN DE COMPRA').toUpperCase();
 
-  // Datos de la empresa: el clásico los lee del navegador (sincronizados con /api/configuracion)
+  // Datos de la empresa: se leen del navegador (sincronizados con /api/configuracion)
   const logoGuardado = (() => { try { return localStorage.getItem('fleet_empresa_logo') || ''; } catch { return ''; } })();
   const correo = (() => { try { return localStorage.getItem('fleet_empresa_correo') || ''; } catch { return ''; } })();
   const empLogo = logoGuardado || LOGO_RESPALDO;
@@ -196,115 +216,87 @@ export function htmlOrdenCompra(d: OrdenCompraPdf): string {
   const empDireccion = (emp?.direccion || '').toUpperCase();
   const empTelefono = emp?.telefono || '';
 
-  // Header Left: Logo + Info Empresa
-  let headerLeftHtml = '<div style="display:flex;flex-direction:column;gap:2px;max-width:440px;">';
-  if (empLogo) {
-    headerLeftHtml += '<img src="' + esc(empLogo) + '" style="height:40px;width:auto;margin-bottom:2px;display:block;" alt="Logo Empresa" />';
-  }
-  headerLeftHtml += '<div style="font-size:14px;font-weight:900;color:#0f172a;letter-spacing:-0.3px;line-height:1.2;text-transform:uppercase;">' + esc(empNombre) + '</div>';
-  if (empDireccion) {
-    headerLeftHtml += '<div style="font-size:9px;color:#475569;line-height:1.3;text-transform:uppercase;">' + esc(empDireccion) + '</div>';
-  }
-  if (empTelefono) {
-    headerLeftHtml += '<div style="font-size:9.5px;color:#475569;">' + esc(empTelefono) + '</div>';
-  }
-  if (correo) {
-    headerLeftHtml += '<div style="font-size:9.5px;color:#475569;">' + esc(correo) + '</div>';
-  }
-  headerLeftHtml += '</div>';
+  // Logo: con ancho y alto en píxeles que respetan su proporción (html2canvas no respeta object-fit ni width:auto y lo estiraba)
+  const logoHtml = empLogo
+    ? '<img src="' + esc(empLogo) + '" style="' + (d.logoAncho && d.logoAlto ? 'width:' + d.logoAncho + 'px;height:' + d.logoAlto + 'px;' : 'height:40px;') + 'display:block;margin-bottom:6px;" alt="Logo" />'
+    : '';
 
-  // Header Right: Tarjeta Recuadro RUC + Tipo Documento + Correlativo
-  const headerRightHtml = '<div style="min-width:190px;max-width:240px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:8px 14px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">' +
-    (empRuc ? '<div style="font-size:11px;font-weight:700;color:#0284c7;letter-spacing:0.5px;margin-bottom:2px;">RUC: ' + esc(empRuc) + '</div>' : '') +
-    '<div style="font-size:13.5px;font-weight:900;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">' + esc(tipoDocTitle) + '</div>' +
-    '<div style="font-size:13px;font-weight:800;color:#2563eb;letter-spacing:0.5px;">N° ' + esc(numDisplay) + '</div>' +
-    '</div>';
+  const izquierda = '<div style="max-width:380px;">' + logoHtml +
+    '<div style="font-size:13px;font-weight:700;color:' + C.texto + ';letter-spacing:-0.1px;line-height:1.25;">' + esc(empNombre) + '</div>' +
+    '<div style="font-size:9px;color:' + C.suave + ';line-height:1.45;margin-top:2px;">' +
+      (empRuc ? 'RUC ' + esc(empRuc) : '') +
+      (empDireccion ? '<br/>' + esc(empDireccion) : '') +
+      (empTelefono || correo ? '<br/>' + esc([empTelefono, correo].filter(Boolean).join('  ·  ')) : '') +
+    '</div></div>';
 
-  // Formatear Fecha y Proveedor
-  const fechaFmt = fechaDMA(d.fecha);
+  const derecha = '<div style="text-align:right;">' +
+    '<div style="font-size:9px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:' + C.acento + ';">' + esc(tipoDocTitle) + '</div>' +
+    '<div style="font-size:24px;font-weight:700;letter-spacing:-0.6px;color:' + C.texto + ';line-height:1.15;margin-top:2px;">N° ' + esc(d.id) + '</div>' +
+    '<div style="font-size:10px;color:' + C.suave + ';margin-top:4px;">Emitida el ' + esc(fechaDMA(d.fecha)) + '</div>' +
+  '</div>';
+
   const provNombre = (d.proveedorNombre || '').toUpperCase();
-  const provRuc = d.proveedorRuc ? (' (' + d.proveedorRuc + ')') : '';
+  const provRuc = d.proveedorRuc ? 'RUC ' + d.proveedorRuc : '';
 
-  const solicitante = d.solicitante || '';
-  const placaVehiculo = d.placa || '';
-  const motivoEntrada = d.motivoEntrada || '';
+  const detalles =
+    dato('Tipo de orden', d.tipoOrden || 'ORDEN DE COMPRA') +
+    dato('Condición de pago', condPagoText) +
+    dato('Moneda', txtMoneda + (usd ? ' (T/C ' + tc.toFixed(3) + ')' : '')) +
+    dato('Placa / vehículo', d.placa || '') +
+    dato('Solicitante', d.solicitante || '') +
+    dato('Centro de costo', d.centroCosto || '');
 
   return '' +
-    '<div style="font-family:\'Plus Jakarta Sans\', \'Inter\', Arial, sans-serif;width:100%;margin:0 auto;padding:22px 28px;color:#0f172a;box-sizing:border-box;">' +
+    '<div style="font-family:' + FUENTE + ';width:100%;margin:0 auto;padding:26px 32px 22px;color:' + C.texto + ';box-sizing:border-box;-webkit-font-smoothing:antialiased;">' +
 
-      '<!-- HEADER -->' +
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #0f172a;padding-bottom:10px;margin-bottom:12px;">' +
-        headerLeftHtml +
-        headerRightHtml +
+      // Encabezado
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:1px solid ' + C.linea + ';margin-bottom:14px;">' +
+        izquierda + derecha +
       '</div>' +
 
-      '<!-- RESUMEN FECHA Y PROVEEDOR -->' +
-      '<div style="display:flex;gap:10px;margin-bottom:10px;">' +
-        '<div style="flex:0 0 30%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;">' +
-          '<div style="font-size:9px;text-transform:uppercase;color:#64748b;font-weight:700;letter-spacing:0.5px;margin-bottom:2px;">Fecha de Emisión</div>' +
-          '<div style="font-size:12.5px;font-weight:800;color:#0f172a;">' + esc(fechaFmt) + '</div>' +
-        '</div>' +
-        '<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;">' +
-          '<div style="font-size:9px;text-transform:uppercase;color:#64748b;font-weight:700;letter-spacing:0.5px;margin-bottom:2px;">Proveedor</div>' +
-          '<div style="font-size:12.5px;font-weight:800;color:#0f172a;text-transform:uppercase;">' + esc(provNombre) + '<span style="font-weight:600;color:#475569;font-size:12px;">' + esc(provRuc) + '</span></div>' +
+      // Proveedor
+      '<div style="background:' + C.fondo + ';border-radius:12px;padding:11px 14px;margin-bottom:10px;">' +
+        '<div style="font-size:8.5px;font-weight:600;letter-spacing:0.7px;text-transform:uppercase;color:' + C.tenue + ';margin-bottom:2px;">Proveedor</div>' +
+        '<div style="font-size:13px;font-weight:700;color:' + C.texto + ';">' + esc(provNombre) +
+          (provRuc ? '<span style="font-weight:500;color:' + C.suave + ';font-size:10.5px;margin-left:8px;">' + esc(provRuc) + '</span>' : '') +
         '</div>' +
       '</div>' +
 
-      '<!-- DETALLES DE LA ORDEN -->' +
-      '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:10px;overflow:hidden;">' +
-        '<div style="background:#f1f5f9;padding:5px 12px;font-size:10px;font-weight:800;color:#334155;border-bottom:1px solid #e2e8f0;text-transform:uppercase;letter-spacing:0.5px;">' +
-          'Detalles de la Orden' +
-        '</div>' +
-        '<div style="display:flex;flex-wrap:wrap;padding:8px 12px 4px;font-size:11px;">' +
-          '<div style="width:33.33%;margin-bottom:6px;">' +
-            '<span style="font-size:9px;color:#64748b;display:block;margin-bottom:1px;text-transform:uppercase;font-weight:600;">Tipo de Orden</span>' +
-            '<span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + esc(d.tipoOrden || 'ORDEN DE COMPRA') + '</span>' +
-          '</div>' +
-          '<div style="width:33.33%;margin-bottom:6px;">' +
-            '<span style="font-size:9px;color:#64748b;display:block;margin-bottom:1px;text-transform:uppercase;font-weight:600;">Condición de Pago</span>' +
-            '<span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + esc(condPagoText) + '</span>' +
-          '</div>' +
-          '<div style="width:33.33%;margin-bottom:6px;">' +
-            '<span style="font-size:9px;color:#64748b;display:block;margin-bottom:1px;text-transform:uppercase;font-weight:600;">Moneda</span>' +
-            '<span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + txtMoneda + (usd ? ' (T/C: ' + tc.toFixed(3) + ')' : '') + '</span>' +
-          '</div>' +
-          '<div style="width:33.33%;margin-bottom:6px;">' +
-            '<span style="font-size:9px;color:#64748b;display:block;margin-bottom:1px;text-transform:uppercase;font-weight:600;">Placa / Vehículo</span>' +
-            '<span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + esc(placaVehiculo) + '</span>' +
-          '</div>' +
-          (solicitante ? '<div style="width:33.33%;margin-bottom:6px;"><span style="font-size:9px;color:#64748b;display:block;margin-bottom:1px;text-transform:uppercase;font-weight:600;">Solicitante</span><span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + esc(solicitante) + '</span></div>' : '') +
-          (d.centroCosto ? '<div style="width:33.33%;margin-bottom:6px;"><span style="font-size:9px;color:#64748b;display:block;margin-bottom:1px;text-transform:uppercase;font-weight:600;">Centro de Costo</span><span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + esc(d.centroCosto) + '</span></div>' : '') +
-          '<div style="width:100%;margin-top:0;margin-bottom:4px;">' +
-            '<span style="font-size:9px;color:#64748b;display:block;margin-bottom:1px;text-transform:uppercase;font-weight:600;">Motivo</span>' +
-            '<span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + esc(motivoEntrada) + '</span>' +
-          '</div>' +
-        '</div>' +
+      // Detalles de la orden
+      '<div style="background:' + C.fondo + ';border-radius:12px;padding:11px 4px 1px 14px;margin-bottom:14px;">' +
+        '<div style="display:flex;flex-wrap:wrap;">' + detalles + '</div>' +
+        (d.motivoEntrada
+          ? '<div style="padding:0 10px 10px 0;"><div style="font-size:8.5px;font-weight:600;letter-spacing:0.7px;text-transform:uppercase;color:' + C.tenue + ';margin-bottom:2px;">Motivo</div>' +
+            '<div style="font-size:11px;font-weight:600;color:' + C.texto + ';line-height:1.3;text-transform:uppercase;">' + esc(d.motivoEntrada) + '</div></div>'
+          : '') +
       '</div>' +
 
-      '<!-- TABLA DE ARTÍCULOS -->' +
-      '<div style="border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;margin-bottom:8px;">' +
-        '<table style="width:100%;font-size:10.5px;border-collapse:collapse;table-layout:fixed;">' +
-          '<thead>' +
-            '<tr style="background:#0f172a;color:#ffffff;">' +
-              '<th style="padding:6px 8px;font-weight:700;letter-spacing:0.3px;font-size:9.5px;line-height:1.2;text-align:left;width:68px;">CÓDIGO</th>' +
-              '<th style="padding:6px 8px;font-weight:700;letter-spacing:0.3px;font-size:9.5px;line-height:1.2;text-align:center;width:42px;">CANT</th>' +
-              '<th style="padding:6px 8px;font-weight:700;letter-spacing:0.3px;font-size:9.5px;line-height:1.2;text-align:center;width:62px;">UNIDAD DE MEDIDA</th>' +
-              '<th style="padding:6px 8px;font-weight:700;letter-spacing:0.3px;font-size:9.5px;line-height:1.2;text-align:left;">DESCRIPCIÓN</th>' +
-              '<th style="padding:6px 8px;font-weight:700;letter-spacing:0.3px;font-size:9.5px;line-height:1.2;text-align:right;width:68px;">PRECIO UNITARIO</th>' +
-              '<th style="padding:6px 8px;font-weight:700;letter-spacing:0.3px;font-size:9.5px;line-height:1.2;text-align:right;width:82px;">IMPORTE</th>' +
-            '</tr>' +
-          '</thead>' +
-          '<tbody>' +
-            itemsHTML +
-          '</tbody>' +
-        '</table>' +
-        '<div style="background:#f8fafc;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;border-top:2px solid #e2e8f0;">' +
-          '<div style="font-size:10px;color:#64748b;max-width:380px;">' +
-            '<b style="color:#334155;">SON:</b> ' + numeroALetras(totalReal) + ' ' + txtMoneda +
-          '</div>' +
-          '<div style="font-size:15px;color:#0f172a;">' +
-            '<span style="font-weight:700;font-size:11px;color:#64748b;margin-right:10px;text-transform:uppercase;">Total General</span>' +
-            '<b>' + txtMonedaS + ' ' + totalText + '</b>' +
+      // Tabla
+      '<table style="width:100%;font-size:10.5px;border-collapse:collapse;table-layout:fixed;">' +
+        '<thead><tr>' +
+          '<th style="' + th + 'text-align:left;width:68px;">Código</th>' +
+          '<th style="' + th + 'text-align:center;width:42px;">Cant</th>' +
+          '<th style="' + th + 'text-align:center;width:62px;">Unidad de medida</th>' +
+          '<th style="' + th + 'text-align:left;">Descripción</th>' +
+          '<th style="' + th + 'text-align:right;width:70px;">Precio unitario</th>' +
+          '<th style="' + th + 'text-align:right;width:82px;">Importe</th>' +
+        '</tr></thead>' +
+        '<tbody>' + itemsHTML + '</tbody>' +
+      '</table>' +
+
+      // Totales
+      '<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-top:14px;">' +
+        '<div style="font-size:9.5px;color:' + C.suave + ';max-width:340px;line-height:1.4;">' +
+          '<span style="font-weight:600;color:' + C.texto + ';">Son:</span> ' + numeroALetras(totalReal) + ' ' + txtMoneda +
+        '</div>' +
+        '<div style="min-width:210px;background:' + C.fondo + ';border-radius:12px;padding:10px 14px;">' +
+          (conIgv
+            ? '<div style="display:flex;justify-content:space-between;font-size:10px;color:' + C.suave + ';margin-bottom:3px;"><span>Subtotal</span><span>' + txtMonedaS + ' ' + fmt2(base) + '</span></div>' +
+              '<div style="display:flex;justify-content:space-between;font-size:10px;color:' + C.suave + ';margin-bottom:6px;"><span>IGV 18 %</span><span>' + txtMonedaS + ' ' + fmt2(igv) + '</span></div>'
+            : '') +
+          '<div style="display:flex;justify-content:space-between;align-items:baseline;' + (conIgv ? 'border-top:1px solid ' + C.linea + ';padding-top:6px;' : '') + '">' +
+            '<span style="font-size:9px;font-weight:600;letter-spacing:0.7px;text-transform:uppercase;color:' + C.tenue + ';">Total</span>' +
+            '<span style="font-size:17px;font-weight:700;letter-spacing:-0.3px;color:' + C.texto + ';">' + txtMonedaS + ' ' + totalText + '</span>' +
           '</div>' +
         '</div>' +
       '</div>' +
@@ -331,8 +323,25 @@ function cargarFuente(): void {
 }
 
 /** PDF de la orden de compra, en su tamaño natural (sin reducir la escala para caber en una hoja) */
+/** Mide el logo y lo ajusta a una caja de 150 × 44 px sin deformarlo; null si no se pudo cargar */
+function medirLogo(src: string): Promise<{ ancho: number; alto: number } | null> {
+  return new Promise(ok => {
+    const img = new Image();
+    img.onload = () => {
+      if (!img.naturalWidth || !img.naturalHeight) return ok(null);
+      const k = Math.min(150 / img.naturalWidth, 44 / img.naturalHeight);
+      ok({ ancho: Math.round(img.naturalWidth * k), alto: Math.round(img.naturalHeight * k) });
+    };
+    img.onerror = () => ok(null);
+    img.src = src;
+  });
+}
+
 export async function generarPdfOrdenCompra(d: OrdenCompraPdf): Promise<Blob> {
   cargarFuente();
+  const logoGuardado = (() => { try { return localStorage.getItem('fleet_empresa_logo') || ''; } catch { return ''; } })();
+  const medida = await medirLogo(logoGuardado || LOGO_RESPALDO);
+  if (medida) d = { ...d, logoAncho: medida.ancho, logoAlto: medida.alto };
   const el = document.createElement('div');
   el.style.cssText = 'width:210mm;background:#ffffff;';
   el.innerHTML = htmlOrdenCompra(d);
