@@ -60,6 +60,8 @@ export interface CallbacksMotor {
   onSeleccion: (placa: string | null) => void;
   onAlerta: (a: Alerta) => void;
   onPiloto: (on: boolean) => void;
+  /** Cambió algo de las opciones por su cuenta (por ejemplo, el tráfico dejó de estar disponible) */
+  onOpciones?: () => void;
 }
 
 const MOVIL = () => matchMedia('(max-width:900px)').matches;
@@ -134,6 +136,15 @@ export class MotorTelemetria {
     // En celular la atribución empieza plegada (botón "i"): no tapa la hoja inferior
     if (MOVIL()) this.mapa.once('load', () => this.root.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'));
     this.mapa.on('style.load', () => this.prepararCapas());
+    // Errores de teselas de tráfico: 401, 403 o 429 (o varios seguidos) apagan la capa; sin repetir errores en la consola
+    this.mapa.on('error', e => {
+      const ev = e as unknown as { sourceId?: string; error?: { status?: number } };
+      if (ev.sourceId === 'trafico') {
+        this.fallosTrafico++;
+        if ([401, 403, 429].includes(ev.error?.status ?? 0) || this.fallosTrafico >= 5) this.apagarTrafico();
+      } else console.error(e.error ?? e);
+    });
+    this.mapa.on('data', e => { if ((e as unknown as { sourceId?: string; tile?: unknown }).sourceId === 'trafico' && (e as unknown as { tile?: unknown }).tile) this.fallosTrafico = 0; });
     this.mapa.on('move', () => { this.sucio = true; });
     this.mapa.on('dragstart', e => { if (this.follow && (e as any).originalEvent) this.setFollow(false); });
     // Con la cámara piloto el jumpTo por cuadro impide que MapLibre emita dragstart: el arrastre (ratón o dedo) se detecta aquí.
@@ -193,7 +204,7 @@ export class MotorTelemetria {
     const m = this.mapa;
     (Object.keys(ST) as ClaseEstado[]).forEach(k => { m.addImage('u-' + k, iconImg(ST[k].c, false), { pixelRatio: 2 }); m.addImage('s-' + k, iconImg(ST[k].c, true), { pixelRatio: 2 }); });
     // Tráfico en tiempo real: debajo de las geocercas y las unidades
-    if (HAY_TRAFICO) {
+    if (HAY_TRAFICO && !this.traficoNoDisponible) {
       m.addSource('trafico', { type: 'raster', tiles: [TRAFICO_URL], tileSize: 256, maxzoom: 22, attribution: TRAFICO_ATRIBUCION });
       m.addLayer({ id: 'trafico', type: 'raster', source: 'trafico', paint: { 'raster-opacity': .9 } });
     }
@@ -236,7 +247,27 @@ export class MotorTelemetria {
     this.sucio = true; this.sucioDatos = true;
   }
 
+  /** TomTom respondió 401, 403 o 429 (clave no autorizada o sin cupo), o fallaron varias teselas seguidas: no se vuelve a pedir hasta recargar la página */
+  traficoNoDisponible = false;
+  private fallosTrafico = 0;
   private timerTrafico: ReturnType<typeof setInterval> | null = null;
+
+  /** Una sola petición de prueba antes de encender el tráfico: con clave sin cupo o no autorizada no se piden más teselas */
+  private async probarTrafico(): Promise<boolean> {
+    try {
+      const r = await fetch(TRAFICO_URL.replace('{z}', '0').replace('{x}', '0').replace('{y}', '0'), { cache: 'no-store' });
+      return ![401, 403, 429].includes(r.status);
+    } catch { return true; /* sin red: la capa lo reintentará y, si falla varias veces, se apaga */ }
+  }
+  private apagarTrafico() {
+    if (this.traficoNoDisponible) return;
+    this.traficoNoDisponible = true;
+    this.opt.traffic = false;
+    this.programarTrafico(false);
+    try { if (this.mapa.getLayer('trafico')) this.mapa.removeLayer('trafico'); if (this.mapa.getSource('trafico')) this.mapa.removeSource('trafico'); } catch { /* ya quitado */ }
+    console.warn('Tráfico no disponible (sin cupo o clave no autorizada).');
+    this.cb.onOpciones?.();
+  }
   /** Mientras el tráfico está encendido se vuelve a pedir cada 2 minutos */
   private programarTrafico(on: boolean) {
     if (this.timerTrafico) { clearInterval(this.timerTrafico); this.timerTrafico = null; }
@@ -248,6 +279,18 @@ export class MotorTelemetria {
   }
 
   setOpcion(k: keyof OpcionesMapa, v: boolean) {
+    if (k === 'traffic') {
+      if (!v) { this.opt.traffic = false; if (this.styleReady) this.aplicarOpciones(false); return; }
+      if (this.traficoNoDisponible || !HAY_TRAFICO) return;
+      // Se enciende solo si la prueba sale bien; el estado del botón se actualiza con onOpciones
+      void this.probarTrafico().then(ok => {
+        if (!ok) { this.apagarTrafico(); return; }
+        this.opt.traffic = true; this.fallosTrafico = 0;
+        if (this.styleReady) this.aplicarOpciones(false);
+        this.cb.onOpciones?.();
+      });
+      return;
+    }
     this.opt[k] = v;
     if (k === 'buildings' && this.tema === 'sat') { this.opt.buildingsSat = v; this.opt.buildings = true; }
     if (this.styleReady) this.aplicarOpciones(k === 'terrain');
@@ -329,7 +372,8 @@ export class MotorTelemetria {
       // Solo si venía en marcha o en ralentí: un equipo apagado que duerme no mandar mensajes es normal
       if (u.estadoInit && st === 'off' && (u.st === 'mov' || u.st === 'ral')) {
         const min = u.e.tPos ? Math.round((ahora - u.e.tPos) / 60000) : null;
-        this.alertar(u, '📡', ST.off.c, 'Perdió la señal GPS' + (min != null ? ` · último mensaje hace ${min} min` : ''));
+        // El aviso emergente de pérdida de señal solo sale en la web; en el teléfono no (la unidad igual pasa a "Sin señal" en la lista y el mapa)
+        if (!MOVIL()) this.alertar(u, '📡', ST.off.c, 'Perdió la señal GPS' + (min != null ? ` · último mensaje hace ${min} min` : ''));
       }
       if (st !== u.st) { u.st = st; u.vc.st = st; this.sucioDatos = true; }
       u.estadoInit = true;

@@ -438,3 +438,7 @@
 /* "hace X s" bajo la placa solo en celular (en escritorio va al lado de la velocidad) */
 .tg-pl-edad--abajo { display: none; }
 @media (max-width: 900px) { .tg-pl-edad--abajo { display: block; } }
+
+/* Aviso cuando el tráfico no está disponible */
+.tg-aviso-trafico { position: absolute; left: 50%; bottom: 76px; transform: translateX(-50%); z-index: 6; padding: 8px 14px; border-radius: 12px; background: var(--panel-solid); border: 1px solid var(--line2, var(--line)); color: var(--ink); font-size: 12.5px; box-shadow: var(--shadow); white-space: nowrap; }
+@media (max-width: 900px) { .tg-aviso-trafico { top: calc(env(safe-area-inset-top) + 112px); bottom: auto; left: 8px; right: 62px; transform: none; white-space: normal; } }

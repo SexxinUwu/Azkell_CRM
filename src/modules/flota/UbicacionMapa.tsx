@@ -54,12 +54,15 @@ const HERRAMIENTAS: Array<{ k: keyof OpcionesMapa | 'overview'; tip: string; mov
   { k: 'models', tip: 'Unidades en 3D al acercar', d: 'M2 15h13V7H2zM15 10h4l3 3v2h-7M6 18h.01M18 18h.01' },
   { k: 'overview', tip: 'Ver toda la flota', d: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5' },
 ];
+const AVISO_TRAFICO = 'Tráfico no disponible (sin cupo o clave no autorizada)';
 const ESTILOS: Array<{ s: 'mapa' | 'sat'; l: string }> = [{ s: 'mapa', l: 'Mapa' }, { s: 'sat', l: 'Satélite' }];
 
 export function UbicacionMapa(p: Props) {
   const host = useRef<HTMLDivElement>(null);
   const motorRef = useRef<MotorTelemetria | null>(null);
   const [opt, setOpt] = useState<OpcionesMapa | null>(null);
+  const [traficoNo, setTraficoNo] = useState(false);
+  const [avisoTrafico, setAvisoTrafico] = useState(false);
   const cbRef = useRef(p);
   cbRef.current = p;
 
@@ -71,6 +74,10 @@ export function UbicacionMapa(p: Props) {
       onSeleccion: placa => cbRef.current.onElegir(placa),
       onAlerta: a => cbRef.current.onAlerta(a),
       onPiloto: on => cbRef.current.onPiloto(on),
+      onOpciones: () => {
+        setOpt({ ...m.opt });
+        if (m.traficoNoDisponible) { setTraficoNo(true); setAvisoTrafico(true); setTimeout(() => setAvisoTrafico(false), 8000); }
+      },
     };
     if (host.current) m.montar(host.current);
     m.setTema(cbRef.current.tema);
@@ -109,10 +116,11 @@ export function UbicacionMapa(p: Props) {
     <div className="tg-lienzo">
       <div ref={host} className="tg-host" />
       {p.children}
+      {avisoTrafico && <div className="tg-aviso-trafico" role="status">{AVISO_TRAFICO}</div>}
       <div className="tg-ctrl">
         <div className="tg-tools tg-glass" role="toolbar" aria-label="Herramientas del mapa">
           {HERRAMIENTAS.map(h => (
-            <button key={h.k} type="button" data-tip={h.k === 'traffic' && !HAY_TRAFICO ? 'Tráfico: falta la clave VITE_TOMTOM_KEY' : h.tip} aria-label={h.tip} disabled={h.k === 'traffic' && !HAY_TRAFICO} data-ocultar-movil={h.movil === false ? '' : undefined}
+            <button key={h.k} type="button" data-tip={h.k === 'traffic' && traficoNo ? AVISO_TRAFICO : h.k === 'traffic' && !HAY_TRAFICO ? 'Tráfico: falta la clave VITE_TOMTOM_KEY' : h.tip} aria-label={h.k === 'traffic' && traficoNo ? AVISO_TRAFICO : h.tip} disabled={h.k === 'traffic' && (!HAY_TRAFICO || traficoNo)} data-ocultar-movil={h.movil === false ? '' : undefined}
               aria-pressed={h.k === 'overview' ? undefined : activo(h.k)}
               onClick={() => (h.k === 'overview' ? motorRef.current?.visionGeneral() : alternar(h.k))}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={h.d} />{h.k === 'traffic' && <><circle cx="12" cy="7.5" r="1.3" fill="currentColor" /><circle cx="12" cy="12" r="1.3" fill="currentColor" /><circle cx="12" cy="16.5" r="1.3" fill="currentColor" /></>}</svg>
