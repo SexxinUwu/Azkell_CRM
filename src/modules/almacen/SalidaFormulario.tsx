@@ -18,12 +18,12 @@ import {
 import { ArticuloSelector, SolicitanteSelector, usePersonalSolicitante } from './SelectoresSalida';
 import { SalidaKitSheet } from './SalidaKitSheet';
 import { SalidaOCSheet } from './SalidaOCSheet';
-import { AvisoSheet } from './SalidaDialogos';
 import './salidas.css';
 
 // Solicitud de salida (alta y edición). Como el clásico: cabecera (fecha, tipo de orden, OT, destino, placa,
 // solicitante, observaciones) y la lista de artículos, con kits de mantenimiento y órdenes de compra.
-// El stock no se descuenta aquí: lo descuenta el servidor al despachar. Solo se valida que alcance.
+// El stock no se descuenta aquí: lo descuenta el servidor al despachar, y solo despacha lo que haya en stock.
+// Una solicitud puede pedir más de lo disponible: quien solicita no valida existencias (solo se muestra el disponible como dato).
 
 interface Fila extends ItemSalida { uid: number }
 
@@ -63,7 +63,6 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
   const [items, setItems] = useState<Fila[]>([]);
   const [kitAbierto, setKitAbierto] = useState(false);
   const [ocAbierta, setOcAbierta] = useState(false);
-  const [avisoStock, setAvisoStock] = useState<Array<{ desc: string; stock: number; req: number }> | null>(null);
 
   const esAjuste = tipoOrden === TIPO_ORDEN_AJUSTE;
   const mostrarPlaca = !esAjuste && tipoDestino === 'Vehiculo';
@@ -74,7 +73,6 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
     setIntento(false);
     setKitAbierto(false);
     setOcAbierta(false);
-    setAvisoStock(null);
     if (s) {
       setFecha(s.fecha?.split('T')[0] ?? '');
       setTipoOrden(s.tipo_orden === TIPO_ORDEN_AJUSTE ? TIPO_ORDEN_AJUSTE : TIPO_ORDEN_SALIDA);
@@ -126,27 +124,11 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
     return Number(art.stock_actual) + yaDescontado;
   }
 
-  // Cantidad pedida de cada artículo sumando todas las filas (el mismo artículo puede venir de un kit y a mano)
-  const pedidoPorArticulo = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const it of items) if (it.inventario_id) m.set(it.inventario_id, (m.get(it.inventario_id) ?? 0) + (Number(it.cantidad) || 0));
-    return m;
-  }, [items]);
-
   /** Error de datos de una fila (artículo y cantidad); bloquea guardar. null si está bien o vacía */
   function errorBasico(it: Fila): string | null {
     if (!it.descripcion.trim() && !it.inventario_id) return null;
     if (!it.inventario_id) return 'Elige un artículo de la lista del inventario';
     if (!(Number(it.cantidad) > 0)) return 'La cantidad debe ser mayor que cero';
-    return null;
-  }
-
-  /** Stock insuficiente para lo pedido del artículo (sumando todas las filas que lo piden) */
-  function errorStock(it: Fila): string | null {
-    if (!it.inventario_id) return null;
-    const disp = disponibleDe(it.inventario_id);
-    const pedido = pedidoPorArticulo.get(it.inventario_id) ?? 0;
-    if (disp !== null && pedido > disp) return `Stock insuficiente: disponible ${Number(disp).toLocaleString('es-PE', { maximumFractionDigits: 3 })}`;
     return null;
   }
 
@@ -217,17 +199,6 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
     setIntento(true);
     if (!fecha) { haptic('warning'); toast('La fecha es requerida', 'error'); return; }
     if (sinArticulos || hayErrores || sinResponsable) { haptic('warning'); toast(sinArticulos ? 'Agrega al menos un artículo' : 'Revisa los artículos marcados', 'error'); return; }
-
-    // Stock acumulado por artículo (aviso como el clásico, con la lista de lo que falta)
-    const insuficientes: Array<{ desc: string; stock: number; req: number }> = [];
-    for (const [id, req] of pedidoPorArticulo) {
-      const disp = disponibleDe(id);
-      if (disp !== null && req > disp) {
-        const art = inventario.find(a => a.id === id);
-        insuficientes.push({ desc: art?.descripcion || art?.articulo || id, stock: disp, req });
-      }
-    }
-    if (insuficientes.length) { haptic('warning'); setAvisoStock(insuficientes); return; }
 
     const cuerpo = {
       fecha,
@@ -321,7 +292,7 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
 
           <div className="sal-items-form">
             {items.map((it, idx) => {
-              const error = errorBasico(it) ?? errorStock(it);
+              const error = errorBasico(it);
               const disp = it.inventario_id ? disponibleDe(it.inventario_id) : null;
               return (
                 <div key={it.uid} className={`sal-item-form${error ? ' sal-item-form--error' : ''}`}>
@@ -390,18 +361,6 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
           toast(`Se agregaron ${nuevas.length} productos de la orden de compra ${codigo}`);
         }}
       />
-
-      <AvisoSheet open={avisoStock !== null} onClose={() => setAvisoStock(null)} titulo="Stock insuficiente">
-        <p style={{ margin: 0, textAlign: 'center' }}>Se ha detectado stock insuficiente para los siguientes artículos:</p>
-        <div className="sal-aviso-lista-stock">
-          {(avisoStock ?? []).map((e, i) => (
-            <div key={i} className="sal-aviso-stock">
-              <span className="sal-aviso-stock__desc">{e.desc}</span>
-              <span className="sal-aviso-stock__datos">Stock: <b>{Number(e.stock).toLocaleString('es-PE', { maximumFractionDigits: 3 })}</b> · Solicitado: <b>{Number(e.req).toLocaleString('es-PE', { maximumFractionDigits: 3 })}</b></span>
-            </div>
-          ))}
-        </div>
-      </AvisoSheet>
     </Sheet>
   );
 }
