@@ -17,6 +17,7 @@ import { estadoUnidad, useDisponibilidad, useUnidadesGps, type EstadoUnidad, typ
 import { usePlacas } from '../placas/api';
 import { analizarCombustible, FUEL_CAMBIO_PCT } from './gps/combustible';
 import { factorCombustible } from './gps/unidadCombustible';
+import { useCombustibleFlota, useEnReserva, useRendimientoFlota, useVigilanciaCombustible } from './gps/combustibleFlota';
 import { armarTramos } from './gps/viajes';
 import { BarraReproduccion } from './gps/BarraReproduccion';
 import { descripcionCamion } from './gps/tipoUnidad';
@@ -31,13 +32,14 @@ import type { Alerta } from './gps/motor';
 const UbicacionMapa = lazy(() => import('./UbicacionMapa').then(m => ({ default: m.UbicacionMapa })));
 
 // Segmento de la lista: los mismos filtros de estado que la versión actual
-type Segmento = 'todos' | 'senal' | 'movimiento' | 'ralenti' | 'detenido' | 'sin_senal';
+type Segmento = 'todos' | 'senal' | 'movimiento' | 'ralenti' | 'detenido' | 'sin_senal' | 'reserva';
 const SEGMENTOS: Array<{ value: Segmento; label: string }> = [
   { value: 'todos', label: 'Todas' }, { value: 'senal', label: 'Con señal' }, { value: 'movimiento', label: 'En movimiento' },
   { value: 'ralenti', label: 'Ralentí' }, { value: 'detenido', label: 'Detenido' }, { value: 'sin_senal', label: 'Sin señal' },
+  { value: 'reserva', label: 'En reserva' },
 ];
-const coincideSegmento = (u: UnidadMapa, s: Segmento) =>
-  s === 'todos' || (s === 'senal' ? estadoUnidad(u) !== 'sin_senal' : estadoUnidad(u) === s);
+const coincideSegmento = (u: UnidadMapa, s: Segmento, enReserva: Set<string>) =>
+  s === 'todos' || (s === 'reserva' ? enReserva.has(u.placa) : s === 'senal' ? estadoUnidad(u) !== 'sin_senal' : estadoUnidad(u) === s);
 
 type BaseMapa = 'mapa' | 'sat';
 function baseGuardada(): BaseMapa {
@@ -140,9 +142,17 @@ export function UbicacionPage() {
   }, [disp.data]);
   // Escribir una placa filtra la lista al instante: sin tildes, guiones ni mayúsculas; busca en placa, nombre en Wialon y conductor
   const q = limpiar(busqueda);
+  const capacidades = useMemo(
+    () => new Map((placas.data ?? []).map(pl => [placaLimpia(pl.placa), parseFloat(String(pl.capacidadTanque).replace(',', '.')) || [pl.tanque1, pl.tanque2, pl.tanque3].reduce((s, x) => s + (parseFloat(x) || 0), 0) || 0])),
+    [placas.data],
+  );
+  // Combustible de toda la flota: filtro y contador de "En reserva", rendimiento para la autonomía y avisos
+  const combustibleFlota = useCombustibleFlota();
+  const rendimientos = useRendimientoFlota();
+  const enReserva = useEnReserva(combustibleFlota.data, capacidades);
   const lista = useMemo(() => delEmpresa.filter(u =>
-    (!q || [u.placa, u.nombre, conductorPorPlaca.get(u.placa) ?? ''].some(t => limpiar(t).includes(q))) && coincideSegmento(u, segmento)),
-  [delEmpresa, q, segmento, conductorPorPlaca]);
+    (!q || [u.placa, u.nombre, conductorPorPlaca.get(u.placa) ?? ''].some(t => limpiar(t).includes(q))) && coincideSegmento(u, segmento, enReserva)),
+  [delEmpresa, q, segmento, conductorPorPlaca, enReserva]);
 
   const descs = useMemo(() => {
     const porPlaca = new Map((placas.data ?? []).map(p => [placaLimpia(p.placa), p]));
@@ -190,10 +200,6 @@ export function UbicacionPage() {
   const abiertoHistorial = panel === 'historial' && seleccion ? seleccion : null;
   const historialQ = useHistorial(abiertoHistorial?.placa ?? null, abiertoHistorial?.id ?? null, { horas, dia, desde, hasta });
   const historial = abiertoHistorial ? historialQ.data : undefined;
-  const capacidades = useMemo(
-    () => new Map((placas.data ?? []).map(pl => [placaLimpia(pl.placa), parseFloat(String(pl.capacidadTanque).replace(',', '.')) || [pl.tanque1, pl.tanque2, pl.tanque3].reduce((s, x) => s + (parseFloat(x) || 0), 0) || 0])),
-    [placas.data],
-  );
   const capacidadSel = (seleccion && capacidades.get(placaLimpia(seleccion.placa))) || null;
   // Sensor en % directo, o en galones/litros pasados a % con la capacidad del tanque de la placa (sin capacidad: en galones)
   const fc = factorCombustible(historial?.unidadCombustible, capacidadSel);
@@ -242,6 +248,7 @@ export function UbicacionPage() {
     setAlertas(prev => [a, ...prev].slice(0, 4));
     setTimeout(() => setAlertas(prev => prev.filter(x => x.id !== a.id)), 14000);
   }, []);
+  useVigilanciaCombustible(combustibleFlota.data, capacidades, unidades, nuevaAlerta);
 
   const alternarUnidad = (placa: string) => {
     haptic('selection');
@@ -283,7 +290,7 @@ export function UbicacionPage() {
   }, [piloto, seleccionada, motor, elegir]);
 
   const activos = (empresa !== 'TODAS' ? 1 : 0) + (segmento !== 'todos' ? 1 : 0);
-  const conteoSeg = (s: Segmento) => delEmpresa.filter(u => coincideSegmento(u, s)).length;
+  const conteoSeg = (s: Segmento) => delEmpresa.filter(u => coincideSegmento(u, s, enReserva)).length;
 
   // Un clic elige la unidad; otro clic sobre la misma la vuelve a centrar donde está ahora (si se movió, la sigue)
   const clicUnidad = (placa: string) => {
@@ -303,6 +310,7 @@ export function UbicacionPage() {
             <span className="tg-unit__l1">
               <span className="pl"><LicensePlate plate={placaFmt(u.placa)} size="sm" /></span>
               <span className="tg-pill" style={{ color: c.c, background: c.c + '22' }}>{c.l}</span>
+              {enReserva.has(u.placa) && <span className="tg-pill tg-pill--reserva" title="Combustible en reserva (20 % o menos)">⛽ Reserva</span>}
             </span>
             <span className="sub"><MapPin size={11} aria-hidden />{u.ubicacion || u.nombre || 'Sin dirección'}</span>
             <span className="tg-unit__l3">{corta(u.empresa)}{u.tipo ? ` · ${u.tipo}` : ''}</span>
@@ -336,7 +344,7 @@ export function UbicacionPage() {
                   <Button variant="plain" iconOnly className="tg-refrescar" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar" disabled={isFetching} onClick={() => refetch()} />
                 </div>
                 <div className="tg-kpis" aria-label="Resumen de la flota">
-                  {([['todos', 'Flota monitoreada', 'var(--cyan)'], ['movimiento', 'En movimiento', ST.mov.c], ['ralenti', 'Ralentí', ST.ral.c], ['detenido', 'Detenidas', ST.det.c], ['sin_senal', 'Sin señal', ST.off.c]] as const).map(([v, nombre, color]) => (
+                  {([['todos', 'Flota monitoreada', 'var(--cyan)'], ['movimiento', 'En movimiento', ST.mov.c], ['ralenti', 'Ralentí', ST.ral.c], ['detenido', 'Detenidas', ST.det.c], ['sin_senal', 'Sin señal', ST.off.c], ['reserva', 'En reserva', '#ff9f0a']] as const).map(([v, nombre, color]) => (
                     <button key={v} type="button" className="tg-kpi tg-glass" aria-pressed={segmento === v}
                       onClick={() => { haptic('selection'); setSegmento(s => (s === v && v !== 'todos' ? 'todos' : v)); }}>
                       <span><i style={{ background: color }} />{nombre}</span>
@@ -360,7 +368,7 @@ export function UbicacionPage() {
                   <div className="tg-estados">
                     <ChoiceChips label="Filtrar por estado" value={segmento === 'senal' ? 'todos' : segmento}
                       onChange={v => { haptic('selection'); setSegmento(s => (s === v && v !== 'todos' ? 'todos' : (v as Segmento))); }}
-                      options={([['todos', 'Todas'], ['movimiento', 'Movimiento'], ['ralenti', 'Ralentí'], ['detenido', 'Detenidas'], ['sin_senal', 'Sin señal']] as const).map(([v, etiqueta]) => ({ value: v, label: <>{etiqueta} <em>{conteoSeg(v)}</em></> }))} />
+                      options={([['todos', 'Todas'], ['movimiento', 'Movimiento'], ['ralenti', 'Ralentí'], ['detenido', 'Detenidas'], ['sin_senal', 'Sin señal'], ['reserva', 'Reserva']] as const).map(([v, etiqueta]) => ({ value: v, label: <>{etiqueta} <em>{conteoSeg(v)}</em></> }))} />
                   </div>
                   {q && <p className="tg-resultados" aria-live="polite">{lista.length === 1 ? '1 resultado' : `${lista.length} resultados`}</p>}
                   <div className="tg-chips">
@@ -384,7 +392,7 @@ export function UbicacionPage() {
                 <HojaGesto key="ficha" className="tg-detail tg-glass" label={panel === 'ficha' ? `Ficha de ${seleccion.placa}` : `Historial de ${seleccion.placa}`}
                   snaps={SNAPS_FICHA} alto={ALTO_FICHA} snap={piloto ? -1 : hojaFicha ? 1 : 0} onSnap={i => setHojaFicha(i === 1)}>
                   {panel === 'ficha' ? (
-                    <FichaTelemetria u={seleccion} motor={motor} conductor={conductorDe(seleccion.placa)} piloto={piloto} capacidad={capacidadSel}
+                    <FichaTelemetria u={seleccion} motor={motor} conductor={conductorDe(seleccion.placa)} piloto={piloto} capacidad={capacidadSel} rendimiento={rendimientos.data?.get(placaLimpia(seleccion.placa)) ?? null}
                       onCerrar={cerrarPanel} onHistorial={() => { haptic('selection'); setHojaFicha(false); setPanel('historial'); }} />
                   ) : (
                     <PanelHistorial placa={seleccion.placa} horas={horas} analisis={analisis} tramos={tramos} viajeSel={viajeSel} onViaje={setViajeSel}

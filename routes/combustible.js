@@ -1144,6 +1144,34 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // Rendimiento real de cada unidad (km por galón) de sus vales de los últimos 120 días: de un vale al último,
+    // los kilómetros recorridos entre los galones cargados después del primero. Solo con 3 vales o más y 200 km o más.
+    router.get('/rendimiento-flota', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const [rows] = await tdb.query(
+                `SELECT UPPER(REPLACE(REPLACE(vehiculo,'-',''),' ','')) AS placa, fecha, kilometraje, galones
+                   FROM ${getValesTable(req)}
+                  WHERE estado != 'ANULADO' AND fecha >= DATE_SUB(NOW(), INTERVAL 120 DAY) AND kilometraje > 0 AND galones > 0 AND vehiculo IS NOT NULL AND vehiculo <> ''
+                  ORDER BY placa, fecha ASC, id ASC`);
+            const porPlaca = new Map();
+            for (const r of rows) { if (!porPlaca.has(r.placa)) porPlaca.set(r.placa, []); porPlaca.get(r.placa).push(r); }
+            const salida = [];
+            for (const [placa, v] of porPlaca) {
+                if (v.length < 3) continue;
+                const km = Number(v[v.length - 1].kilometraje) - Number(v[0].kilometraje);
+                const gal = v.slice(1).reduce((s2, x) => s2 + Number(x.galones || 0), 0);
+                if (!(km >= 200) || !(gal > 0)) continue;
+                const rend = km / gal;
+                if (rend < 0.5 || rend > 15) continue; // fuera de lo razonable para un camión: kilometraje mal digitado
+                salida.push({ placa, rendimiento: Math.round(rend * 100) / 100, vales: v.length, km: Math.round(km), galones: Math.round(gal * 10) / 10 });
+            }
+            res.json(salida);
+        } catch (e) {
+            res.status(500).json({ error: e.message });
+        }
+    });
+
     router.get('/analisis-viajes', async (req, res) => {
         try {
             const tdb = getDb(req);

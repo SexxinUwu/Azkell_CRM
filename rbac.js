@@ -72,6 +72,7 @@ module.exports = function globalRBAC(req, res, next) {
         '/neumaticos/medida-detalle',
         '/combustible/catalogos',
         '/combustible/rendimiento-teorico',
+        '/combustible/rendimiento-flota',
         '/combustible/matriz',
         '/combustible/vales',
         '/operaciones/reporte-viajes',

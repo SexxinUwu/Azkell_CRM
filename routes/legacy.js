@@ -1666,6 +1666,66 @@ router.post('/:metodo', async (req, res) => {
         }
     }
 
+    // ============================================================
+    // Nivel de combustible de TODAS las unidades (para el filtro y la alerta de reserva del mapa).
+    // Wialon: una búsqueda de unidades con sus sensores y lecturas en lote (core/batch); con caché de 60 s por empresa.
+    if (metodo === 'obtenerCombustibleWialonFlota') {
+        const tdbF = req.db || db;
+        const claveF = 'flota|' + (req.tenantSlug || (req.headers && req.headers.host) || '');
+        global.__combFlotaCache = global.__combFlotaCache || new Map();
+        const guardado = global.__combFlotaCache.get(claveF);
+        if (guardado && Date.now() - guardado.t < 60000) return res.json({ data: guardado.datos });
+        try {
+            const { token, baseUrl } = await credencialesWialon(tdbF);
+            if (!token) return res.json({ data: [] });
+            const login = await (await fetch(`${baseUrl}?svc=token/login&params=${encodeURIComponent(JSON.stringify({ token }))}`)).json();
+            if (!login || !login.eid) return res.json({ data: [] });
+            const sid = login.eid;
+            const salida = [];
+            try {
+                const busq = await (await fetch(`${baseUrl}?svc=core/search_items&params=${encodeURIComponent(JSON.stringify({ spec: { itemsType: 'avl_unit', propName: 'sys_name', propValueMask: '*', sortType: 'sys_name' }, force: 1, flags: 4097, from: 0, to: 0 }))}&sid=${sid}`)).json();
+                const unidades = (busq && busq.items) || [];
+                let resolverPlaca = crearResolutorPlacas([]);
+                try {
+                    const pRows = await new Promise(ok => tdbF.query('SELECT placa, wialon_name FROM placas', (e, rows) => ok(rows || [])));
+                    resolverPlaca = crearResolutorPlacas(pRows);
+                } catch (e) { /* sin placas: se usa el nombre */ }
+                // Cada unidad con hasta 3 sensores candidatos; se prueba el primero y, si no da lectura, el siguiente (en lote)
+                const pendientes = unidades.map(it => ({ it, cands: candidatosCombustible(it.sens).slice(0, 3), i: 0, sensor: null, valor: null })).filter(x => x.cands.length);
+                for (let ronda = 0; ronda < 3; ronda++) {
+                    const porHacer = pendientes.filter(x => x.valor == null && x.cands[x.i]);
+                    if (!porHacer.length) break;
+                    for (let k = 0; k < porHacer.length; k += 40) {
+                        const trozo = porHacer.slice(k, k + 40);
+                        const lote = trozo.map(x => ({ svc: 'unit/calc_last_message', params: { unitId: x.it.id, sensorId: x.cands[x.i].id, flags: 0 } }));
+                        let res2 = [];
+                        try { res2 = await (await fetch(`${baseUrl}?svc=core/batch&params=${encodeURIComponent(JSON.stringify({ params: lote, flags: 0 }))}&sid=${sid}`)).json(); } catch (e) { /* lote perdido */ }
+                        trozo.forEach((x, j) => {
+                            const sensor = x.cands[x.i];
+                            let v = Array.isArray(res2) ? res2[j] : null;
+                            v = typeof v === 'number' ? v : (v && typeof v === 'object' ? (v[sensor.id] != null ? v[sensor.id] : Object.values(v)[0]) : null);
+                            if (Array.isArray(v)) v = v[0];
+                            const enPct = String(sensor.m || '').trim() === '%';
+                            if (typeof v === 'number' && isFinite(v) && v > 0 && v > -1e5 && !(enPct && v > 100)) { x.sensor = sensor; x.valor = v; } else { x.sensor = sensor; x.i++; }
+                        });
+                    }
+                }
+                pendientes.forEach(x => {
+                    if (x.valor == null) return;
+                    const nombre = String(x.it.nm || '').toUpperCase().trim();
+                    const placa = String(resolverPlaca(nombre).placa || nombre).replace(/[^A-Z0-9]/gi, '').toUpperCase();
+                    salida.push({ placa, id: x.it.id, nivel: Math.round(x.valor * 10) / 10, unidad: String(x.sensor.m || '%').trim() || '%', nombre: x.sensor.n || '' });
+                });
+            } finally {
+                fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(() => {});
+            }
+            global.__combFlotaCache.set(claveF, { t: Date.now(), datos: salida });
+            return res.json({ data: salida });
+        } catch (e) {
+            return res.json({ data: [], error: e.message });
+        }
+    }
+
     if (metodo === 'obtenerHistorialGPS' || metodo === 'obtenerTrackGPS') {
         const payload = (req.body && req.body.args && req.body.args[0]) ? req.body.args[0] : (req.body || {});
         const placaParam = String(payload.placa || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();

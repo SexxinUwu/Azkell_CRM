@@ -76,11 +76,13 @@ interface Props {
   piloto: boolean;
   /** Capacidad del tanque de la placa (galones), si está registrada */
   capacidad: number | null;
+  /** Kilómetros por galón reales de la unidad (de sus vales), si hay datos suficientes */
+  rendimiento?: number | null;
   onCerrar: () => void;
   onHistorial: () => void;
 }
 
-export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, onCerrar, onHistorial }: Props) {
+export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, rendimiento = null, onCerrar, onHistorial }: Props) {
   const l = useLectura(motor, u.placa);
   const combustible = useCombustible(u.id).data;
   // En % directo, o en galones/litros convertidos con la capacidad del tanque; sin capacidad se muestra en galones
@@ -173,9 +175,21 @@ export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, onCerr
                   <div><small>Reserva ({RESERVA_COMBUSTIBLE_PCT} %)</small><b className="mono">{gal(detalleComb.reserva)}</b><span>no se debe usar</span></div>
                   <div><small>Tanque</small><b className="mono">{gal(detalleComb.capacidad)}</b><span>capacidad total</span></div>
                 </div>
+                {rendimiento ? (
+                  <div className="tg-comb__auto">
+                    <small>Autonomía hasta la reserva</small>
+                    <b className="mono">≈ {Math.round(detalleComb.utilizable * rendimiento).toLocaleString('es-PE')} km</b>
+                    <span>con {rendimiento.toLocaleString('es-PE', { maximumFractionDigits: 1 })} km/gal reales · hasta vaciar ≈ {Math.round(detalleComb.enTanque * rendimiento).toLocaleString('es-PE')} km</span>
+                  </div>
+                ) : (
+                  <small className="tg-cell__nota">Sin autonomía: faltan vales de combustible con kilometraje de esta unidad.</small>
+                )}
               </>
             )}
-            {nivelComb.nombre && <small className="tg-cell__nota">Sensor: {nivelComb.nombre}{!detalleComb && nivelComb.pct != null && !capacidad ? ' · sin capacidad de tanque en Placas' : ''}</small>}
+            {nivelComb.pct != null && !capacidad && (
+              <div className="tg-comb__aviso tg-comb__aviso--falta" role="status">Falta la capacidad del tanque en Placas: sin ella no se calculan galones, reserva ni autonomía.</div>
+            )}
+            {nivelComb.nombre && <small className="tg-cell__nota">Sensor: {nivelComb.nombre}</small>}
           </div>
         )}
         {celdas.map(c => (

@@ -497,3 +497,9 @@
 .tg-comb__cifras b { margin-top: 2px; font-size: 13px; font-variant-numeric: tabular-nums; }
 .tg-comb__cifras span { font-size: 10px; color: var(--label-3); }
 @media (max-width: 420px) { .tg-comb__cifras { gap: 6px; } .tg-comb__cifras span { display: none; } }
+.tg-comb__auto { display: flex; flex-direction: column; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--separator); }
+.tg-comb__auto small { font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--label-2); }
+.tg-comb__auto b { margin-top: 2px; font-size: 15px; font-variant-numeric: tabular-nums; }
+.tg-comb__auto span { font-size: 10.5px; color: var(--label-3); }
+.tg-comb__aviso--falta { color: #b86e00; background: color-mix(in srgb, #ff9f0a 14%, transparent); }
+.tg-pill--reserva { color: #ff5470; background: color-mix(in srgb, #ff5470 16%, transparent); }
