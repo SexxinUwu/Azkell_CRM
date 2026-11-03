@@ -15,15 +15,23 @@ const { htmlAPdf } = require('../services/ot_pdf');
 const { htmlMapaPosiciones } = require('../services/neumaticos_mapa_pdf');
 const { armarPosicionesUnidad } = require('../services/neumaticos_unidad');
 
-// Almacenes del ciclo de vida
-const ALMACEN = { NUEVAS: 100, REENCAUCHE: 1142, REPARADAS: 1144, SCRAP: 1148 };
+// Almacenes del ciclo de vida: cada uno guarda una sola cosa
+//   100  Nuevas      llantas nuevas listas
+//   1142 Reencauche  llantas ya reencauchadas, listas para instalar
+//   1144 Reparadas   llantas reparadas listas
+//   1146 Retén       llantas retiradas de una unidad (a la espera de decidir su destino)
+//   1148 Scrap       llantas desactivadas, de forma definitiva
+const ALMACEN = { NUEVAS: 100, REENCAUCHE: 1142, REPARADAS: 1144, RETEN: 1146, SCRAP: 1148 };
 const ALMACENES_ALTA = [ALMACEN.NUEVAS, ALMACEN.REENCAUCHE, ALMACEN.REPARADAS];
-const ALMACENES_INSTALAR = [ALMACEN.NUEVAS, ALMACEN.REENCAUCHE, ALMACEN.REPARADAS];
-const NOMBRE_ALMACEN = { 100: 'Nuevas', 1142: 'Reencauche', 1144: 'Reparadas', 1148: 'Scrap' };
+// Una llanta en_almacen de cualquiera de estos almacenes se puede instalar
+const ALMACENES_INSTALAR = [ALMACEN.NUEVAS, ALMACEN.REENCAUCHE, ALMACEN.REPARADAS, ALMACEN.RETEN];
+const NOMBRE_ALMACEN = { 100: 'Nuevas', 1142: 'Reencauche', 1144: 'Reparadas', 1146: 'Retén', 1148: 'Scrap' };
 
 // Permisos del catálogo (src/modules/sistema/permisosCatalogo.ts)
 const PERMISO_VER = 'neumaticos';
 const PERMISO_MOVER = 'neumaticos.mover';
+const PERMISO_REENCAUCHE = 'neumaticos.reencauche';
+const PERMISO_BAJA = 'neumaticos.baja';
 
 // Vida del neumático: R0 nueva; cada reencauche sube un nivel; R3 no admite más
 const VIDAS = ['R0', 'R1', 'R2', 'R3'];
@@ -36,14 +44,30 @@ const ESTADO = {
     DESECHO: { ciclo: 'desechado', operativo: 'Desecho' },
 };
 
-// Tipos de movimiento (kardex)
+// Tipos de movimiento (kardex). Al retirar de una unidad: RETIRO_RETEN (queda disponible en Retén), RETIRO_REENCAUCHE
+// (enviar para reforma) y RETIRO_DESECHO (esperando descarte); los tres dejan la llanta en el almacén 1146.
 const MOV = {
     ALTA: 'ALTA',
     INSTALACION: 'INSTALACION',
+    RETIRO_RETEN: 'RETIRO_RETEN',
     RETIRO_DESECHO: 'RETIRO_DESECHO',
     RETIRO_REENCAUCHE: 'RETIRO_REENCAUCHE',
+    MARCAR_REFORMA: 'MARCAR_REFORMA',
+    MARCAR_DESCARTE: 'MARCAR_DESCARTE',
+    DEVOLVER_RETEN: 'DEVOLVER_RETEN',
+    DESPACHO_REFORMADORA: 'DESPACHO_REFORMADORA',
+    DESACTIVACION: 'DESACTIVACION',
     RETORNO_REENCAUCHE: 'RETORNO_REENCAUCHE',
+    RECHAZO_REENCAUCHE: 'RECHAZO_REENCAUCHE',
 };
+
+// Destinos del retiro desde una unidad. 'reencauche' y 'desecho' siguen valiendo por compatibilidad.
+const DESTINO_RETIRO = {
+    reten: { almacen: ALMACEN.RETEN, estado: { ciclo: 'en_almacen', operativo: 'Stock Taller' }, mov: MOV.RETIRO_RETEN, permiso: PERMISO_MOVER, texto: 'Retén' },
+    reforma: { almacen: ALMACEN.RETEN, estado: { ciclo: 'en_reencauche', operativo: 'En Rencauche' }, mov: MOV.RETIRO_REENCAUCHE, permiso: PERMISO_REENCAUCHE, texto: 'reforma (enviar para reforma)' },
+    descarte: { almacen: ALMACEN.RETEN, estado: { ciclo: 'desechado', operativo: 'Desecho' }, mov: MOV.RETIRO_DESECHO, permiso: PERMISO_BAJA, texto: 'descarte (esperando descarte)' },
+};
+const ALIAS_DESTINO = { reencauche: 'reforma', desecho: 'descarte' };
 
 // Error con código HTTP que se devuelve tal cual al usuario (distinto de un fallo del servidor)
 const aviso = (status, msg) => Object.assign(new Error(msg), { status, aviso: true });
@@ -135,7 +159,7 @@ function filaLlanta(r) {
 // Claves del listado: "activo" suma las llantas que no están dadas de baja; las demás son situaciones exclusivas
 const CLAVES_LISTADO = ['activo', 'disponible', 'en_actividad', 'enviar_reforma', 'en_reformadora', 'esperando_descarte', 'desactivacion', 'sin_codigo', 'provisional'];
 
-// Texto legible de cada situación. "desactivacion" está reservada: el ciclo todavía no tiene un estado que la marque.
+// Texto legible de cada situación
 const SITUACION = {
     disponible: 'Disponible',
     en_actividad: 'En actividad',
@@ -149,13 +173,18 @@ const SITUACION = {
 
 // Una sola situación por llanta. Sin código de marca de fuego manda sobre el estado del ciclo.
 // Estado nuevo o sin estado: se trata como en almacén (igual que la migración al asignar estado_ciclo).
+//   en_almacen    100, 1142, 1144 o 1146  → disponible
+//   en_unidad     —                       → en_actividad
+//   en_reencauche 1146 (en el Retén)      → enviar_reforma;  sin almacén (ya despachada) → en_reformadora
+//   desechado     1146 (en el Retén)      → esperando_descarte;  1148 (Scrap) → desactivacion
 function situacionLlanta(codigoLlanta, estadoCiclo, almacenId, idNeumatico) {
     // Sin código de fuego: las provisionales (PROV-) tienen su propio estado; las nuevas esperan su secuencia
     if (!txt(codigoLlanta)) return String(idNeumatico || '').startsWith('PROV-') ? 'provisional' : 'sin_codigo';
+    const almacen = almacenId == null ? null : Number(almacenId);
     switch (estadoCiclo) {
         case 'en_unidad': return 'en_actividad';
-        case 'en_reencauche': return almacenId === ALMACEN.REENCAUCHE ? 'enviar_reforma' : 'en_reformadora';
-        case 'desechado': return 'esperando_descarte';
+        case 'en_reencauche': return almacen === ALMACEN.RETEN ? 'enviar_reforma' : 'en_reformadora';
+        case 'desechado': return almacen === ALMACEN.SCRAP ? 'desactivacion' : 'esperando_descarte';
         default: return 'disponible';
     }
 }
@@ -235,12 +264,14 @@ module.exports = function (db) {
     });
 
     // ============================================================
-    // 1b. CUATRO ALMACENES (solo lectura): la hoja de inspección muestra siempre sus conteos.
-    // Grupos disjuntos: cada llanta cae en uno solo.
-    //   disponibles    → en_almacen, almacén 100 (Nuevas) o 1142 (Reencauche), con código de fuego
-    //   reencauchadas  → en_almacen, almacén 1144 (Reparadas): regresaron del reencauche
-    //   enviar_reforma → en_reencauche, almacén 1142 (en la reformadora no entra)
-    //   desechadas     → desechado (almacén 1148 Scrap)
+    // 1b. ALMACENES DE LLANTAS (solo lectura): la hoja de inspección muestra siempre sus conteos.
+    // Grupos disjuntos: cada llanta cae en uno solo (la misma regla de situacionLlanta, con código de fuego).
+    //   disponibles.nuevas         → en_almacen, almacén 100
+    //   disponibles.reencauchadas  → en_almacen, almacén 1142
+    //   disponibles.reparadas      → en_almacen, almacén 1144
+    //   disponibles.reten          → en_almacen, almacén 1146
+    //   enviar_reforma             → en_reencauche, almacén 1146 (en la reformadora no entra)
+    //   esperando_descarte         → desechado, almacén 1146 (en Scrap ya está desactivada)
     // ============================================================
     router.get('/almacenes', async (req, res) => {
         try {
@@ -249,22 +280,36 @@ module.exports = function (db) {
                 FROM neumaticos_hoja_vida h
                 WHERE h.estado_ciclo IN ('en_almacen', 'en_reencauche', 'desechado')
                 ORDER BY h.codigo_llanta, h.id_neumatico`);
-            const almacen = f => Number(f.almacen_id);
             const fila = f => ({
                 codigo: txt(f.codigo_llanta) || txt(f.id_neumatico),
                 marca: f.marca || null,
                 modelo: f.modelo || null,
                 medida: f.medida || null,
                 estado_ciclo: f.estado_ciclo,
-                almacen_id: f.almacen_id == null ? null : almacen(f),
+                almacen_id: f.almacen_id == null ? null : Number(f.almacen_id),
             });
+            const de = clave => filas.filter(f => situacionLlanta(f.codigo_llanta, f.estado_ciclo, f.almacen_id, f.id_neumatico) === clave);
+            const disponibles = de('disponible');
+            const enAlmacen = id => disponibles.filter(f => Number(f.almacen_id) === id).map(fila);
             const grupos = {
-                disponibles: filas.filter(f => f.estado_ciclo === 'en_almacen' && [ALMACEN.NUEVAS, ALMACEN.REENCAUCHE].includes(almacen(f)) && txt(f.codigo_llanta)).map(fila),
-                reencauchadas: filas.filter(f => f.estado_ciclo === 'en_almacen' && almacen(f) === ALMACEN.REPARADAS).map(fila),
-                enviar_reforma: filas.filter(f => f.estado_ciclo === 'en_reencauche' && almacen(f) === ALMACEN.REENCAUCHE).map(fila),
-                desechadas: filas.filter(f => f.estado_ciclo === 'desechado').map(fila),
+                disponibles: {
+                    nuevas: enAlmacen(ALMACEN.NUEVAS),
+                    reencauchadas: enAlmacen(ALMACEN.REENCAUCHE),
+                    reparadas: enAlmacen(ALMACEN.REPARADAS),
+                    reten: enAlmacen(ALMACEN.RETEN),
+                },
+                enviar_reforma: de('enviar_reforma').map(fila),
+                esperando_descarte: de('esperando_descarte').map(fila),
             };
-            const conteos = Object.fromEntries(Object.entries(grupos).map(([k, v]) => [k, v.length]));
+            const conteos = {
+                disponibles: disponibles.length,
+                nuevas: grupos.disponibles.nuevas.length,
+                reencauchadas: grupos.disponibles.reencauchadas.length,
+                reparadas: grupos.disponibles.reparadas.length,
+                reten: grupos.disponibles.reten.length,
+                enviar_reforma: grupos.enviar_reforma.length,
+                esperando_descarte: grupos.esperando_descarte.length,
+            };
             res.json({ ok: true, grupos, conteos });
         } catch (err) {
             responder(res, err);
@@ -360,6 +405,52 @@ module.exports = function (db) {
     });
 
     // ============================================================
+    // Piezas comunes de los movimientos entre almacenes
+    // ============================================================
+    const situacionDe = l => situacionLlanta(l.codigo_llanta, l.estado_ciclo, l.almacen_id, l.id_neumatico);
+
+    // Exige que la llanta esté en una de las situaciones permitidas; si no, explica en qué situación está
+    function exigirSituacion(llanta, validas, accion) {
+        const actual = situacionDe(llanta);
+        if (!validas.includes(actual)) {
+            throw aviso(409, `La llanta ${txt(llanta.codigo_llanta) || llanta.id_neumatico} está en "${SITUACION[actual]}" y no se puede ${accion}`);
+        }
+    }
+
+    // Pasa la llanta a otro almacén y estado, y deja su fila en el kardex (siempre dentro de la transacción de la ruta)
+    async function pasarLlanta(conn, req, llanta, { almacen, estado, mov, observacion }) {
+        await conn.query(
+            `UPDATE neumaticos_hoja_vida SET almacen_id = ?, estado_ciclo = ?, estado_operativo = ? WHERE id_neumatico = ?`,
+            [almacen, estado.ciclo, estado.operativo, llanta.id_neumatico]);
+        await registrarMovimiento(conn, {
+            id_neumatico: llanta.id_neumatico, tipo: mov,
+            origen: llanta.almacen_id == null ? null : Number(llanta.almacen_id), destino: almacen,
+            fecha: ahoraLima(), usuario: usuarioDe(req), observacion,
+        });
+    }
+
+    // Ruta de una sola llanta: permiso, bloqueo FOR UPDATE, comprobación de situación, cambio y kardex
+    function rutaMovimiento(ruta, { permiso, desde, accion, hacia, mov, texto }) {
+        router.post(ruta, async (req, res) => {
+            try {
+                if (!tienePermiso(req, permiso, 'c')) throw aviso(403, `Sin permiso (${permiso}) para ${texto}`);
+                const b = req.body || {};
+                const codigo = mayus(b.codigo);
+                if (!codigo) throw aviso(400, 'El código de la llanta es obligatorio');
+                const observacion = txt(b.observacion) || null;
+                await conTransaccion(pool(req), async (conn) => {
+                    const llanta = await bloquearLlanta(conn, codigo);
+                    exigirSituacion(llanta, desde, accion);
+                    await pasarLlanta(conn, req, llanta, { ...hacia, mov, observacion });
+                });
+                res.json({ ok: true, data: { codigo, almacen_id: hacia.almacen, estado: hacia.estado.ciclo } });
+            } catch (err) {
+                responder(res, err);
+            }
+        });
+    }
+
+    // ============================================================
     // 4. INSTALAR: llanta de almacén a una posición de una unidad
     // ============================================================
     router.post('/instalar', async (req, res) => {
@@ -376,12 +467,9 @@ module.exports = function (db) {
             await conTransaccion(pool(req), async (conn) => {
                 const llanta = await bloquearLlanta(conn, codigo);
                 const almacenPrevio = llanta.almacen_id == null ? null : Number(llanta.almacen_id);
-                if (!ALMACENES_INSTALAR.includes(almacenPrevio)) {
-                    throw aviso(409, 'La llanta no está en un almacén disponible (Nuevas 100, Reencauche 1142 o Reparadas 1144)');
-                }
-                // Una llanta enviada a reencauche también queda en el almacén 1142, pero está fuera del taller
-                if (llanta.estado_ciclo === ESTADO.EN_REENCAUCHE.ciclo) {
-                    throw aviso(409, 'La llanta está en reencauche y no se puede instalar hasta que regrese');
+                // Solo las llantas en un almacén (no en reforma, descarte ni montadas) y de un almacén de uso
+                if (llanta.estado_ciclo !== ESTADO.ALMACEN.ciclo || !ALMACENES_INSTALAR.includes(almacenPrevio)) {
+                    throw aviso(409, 'La llanta no está disponible en un almacén (Nuevas 100, Reencauche 1142, Reparadas 1144 o Retén 1146)');
                 }
 
                 const [montada] = await conn.query(
@@ -421,7 +509,9 @@ module.exports = function (db) {
     });
 
     // ============================================================
-    // 5. RETIRAR: cierra la instalación, deja la posición libre y envía la llanta a Scrap o Reencauche
+    // 5. RETIRAR: cierra la instalación, deja la posición libre y envía la llanta al Retén (almacén 1146).
+    // destino: 'reten' (queda disponible), 'reforma' (enviar para reforma) o 'descarte' (esperando descarte).
+    // Por compatibilidad, 'reencauche' equivale a 'reforma' y 'desecho' a 'descarte'.
     // ============================================================
     router.post('/retirar', async (req, res) => {
         try {
@@ -430,22 +520,17 @@ module.exports = function (db) {
             const codigo = mayus(b.codigo);
             const placa = mayus(b.placa);
             const posicion = mayus(b.posicion);
-            const destino = txt(b.destino);
+            const pedido = txt(b.destino);
+            const destino = ALIAS_DESTINO[pedido] || pedido;
+            const dest = DESTINO_RETIRO[destino];
             if (!codigo) throw aviso(400, 'El código de la llanta es obligatorio');
             if (!placa || !posicion) throw aviso(400, 'Placa y posición son obligatorias');
-            if (destino !== 'desecho' && destino !== 'reencauche') {
-                throw aviso(400, "El destino debe ser 'desecho' o 'reencauche'");
-            }
-            const claveDestino = destino === 'desecho' ? 'neumaticos.baja' : 'neumaticos.reencauche';
-            if (!tienePermiso(req, claveDestino, 'c')) {
-                throw aviso(403, `Sin permiso (${claveDestino}) para retirar la llanta a ${destino}`);
+            if (!dest) throw aviso(400, "El destino debe ser 'reten', 'reforma' o 'descarte'");
+            if (!tienePermiso(req, dest.permiso, 'c')) {
+                throw aviso(403, `Sin permiso (${dest.permiso}) para retirar la llanta a ${dest.texto}`);
             }
             const km = Math.trunc(numeroNoNegativo(b.km, 'Kilometraje', true));
             const observacion = txt(b.observacion) || null;
-
-            const esDesecho = destino === 'desecho';
-            const almacenDestino = esDesecho ? ALMACEN.SCRAP : ALMACEN.REENCAUCHE;
-            const estado = esDesecho ? ESTADO.DESECHO : ESTADO.EN_REENCAUCHE;
 
             const resultado = await conTransaccion(pool(req), async (conn) => {
                 const llanta = await bloquearLlanta(conn, codigo);
@@ -469,19 +554,18 @@ module.exports = function (db) {
                     'UPDATE neumaticos_instalaciones SET fecha_out = ?, km_out = ?, motivo_salida = ? WHERE id = ?',
                     [fecha, km, motivo, inst.id]);
 
-                // Posición libre: sin placa ni posición actuales. La llanta pasa al almacén de destino
+                // Posición libre: sin placa ni posición actuales. La llanta pasa al Retén
                 await conn.query(
                     `UPDATE neumaticos_hoja_vida
                      SET placa_actual = NULL, posicion_actual = NULL, almacen_id = ?,
                          estado_ciclo = ?, estado_operativo = ?, km_acumulado = COALESCE(km_acumulado, 0) + ?
                      WHERE id_neumatico = ?`,
-                    [almacenDestino, estado.ciclo, estado.operativo, recorrido, llanta.id_neumatico]);
+                    [dest.almacen, dest.estado.ciclo, dest.estado.operativo, recorrido, llanta.id_neumatico]);
 
                 await registrarMovimiento(conn, {
-                    id_neumatico: llanta.id_neumatico,
-                    tipo: esDesecho ? MOV.RETIRO_DESECHO : MOV.RETIRO_REENCAUCHE,
+                    id_neumatico: llanta.id_neumatico, tipo: dest.mov,
                     origen: llanta.almacen_id == null ? null : Number(llanta.almacen_id),
-                    destino: almacenDestino,
+                    destino: dest.almacen,
                     placa, posicion, km, fecha: ahoraLima(), usuario: usuarioDe(req), observacion,
                 });
 
@@ -491,7 +575,7 @@ module.exports = function (db) {
             res.json({
                 ok: true,
                 data: {
-                    codigo, destino, almacen_id: almacenDestino, estado: estado.ciclo,
+                    codigo, destino, almacen_id: dest.almacen, estado: dest.estado.ciclo,
                     km_recorridos: resultado.recorrido,
                 },
             });
@@ -501,15 +585,73 @@ module.exports = function (db) {
     });
 
     // ============================================================
-    // 6. RETORNO DE REENCAUCHE: sube la vida, suma el costo y deja la llanta en Reparadas
+    // 5b. MOVIMIENTOS ENTRE ALMACENES (sin unidad): cada uno con transacción, FOR UPDATE, fila en el kardex y su permiso
+    // ============================================================
+    // disponible → Retén, para reforma
+    rutaMovimiento('/marcar-reforma', {
+        permiso: PERMISO_REENCAUCHE, desde: ['disponible'], accion: 'marcar para reforma', texto: 'marcar llantas para reforma',
+        hacia: { almacen: ALMACEN.RETEN, estado: ESTADO.EN_REENCAUCHE }, mov: MOV.MARCAR_REFORMA,
+    });
+    // disponible → Retén, esperando descarte
+    rutaMovimiento('/marcar-descarte', {
+        permiso: PERMISO_BAJA, desde: ['disponible'], accion: 'marcar para descarte', texto: 'marcar llantas para descarte',
+        hacia: { almacen: ALMACEN.RETEN, estado: ESTADO.DESECHO }, mov: MOV.MARCAR_DESCARTE,
+    });
+    // enviar_reforma o esperando_descarte → de nuevo disponible en el Retén
+    rutaMovimiento('/devolver-reten', {
+        permiso: PERMISO_MOVER, desde: ['enviar_reforma', 'esperando_descarte'], accion: 'devolver al Retén', texto: 'devolver llantas al Retén',
+        hacia: { almacen: ALMACEN.RETEN, estado: ESTADO.ALMACEN }, mov: MOV.DEVOLVER_RETEN,
+    });
+    // esperando_descarte → Scrap (desactivada de forma definitiva)
+    rutaMovimiento('/desactivar', {
+        permiso: PERMISO_BAJA, desde: ['esperando_descarte'], accion: 'desactivar', texto: 'desactivar llantas',
+        hacia: { almacen: ALMACEN.SCRAP, estado: ESTADO.DESECHO }, mov: MOV.DESACTIVACION,
+    });
+
+    // Despacho a la reformadora: una lista de códigos con su guía. Todo o nada: si una llanta no corresponde, no sale ninguna.
+    router.post('/despachar-reformadora', async (req, res) => {
+        try {
+            if (!tienePermiso(req, PERMISO_REENCAUCHE, 'c')) throw aviso(403, `Sin permiso (${PERMISO_REENCAUCHE}) para despachar llantas a la reformadora`);
+            const b = req.body || {};
+            const lista = Array.isArray(b.codigos) ? b.codigos : [];
+            // Orden fijo: dos despachos a la vez bloquean las llantas en el mismo orden
+            const codigos = [...new Set(lista.map(mayus).filter(Boolean))].sort();
+            if (!codigos.length) throw aviso(400, 'Indica al menos una llanta para despachar');
+            if (codigos.length > 200) throw aviso(400, 'Se pueden despachar hasta 200 llantas por guía');
+            const guia = txt(b.guia);
+            if (!guia) throw aviso(400, 'La guía de despacho es obligatoria');
+            const extra = txt(b.observacion);
+            const observacion = `Guía: ${guia}${extra ? `. ${extra}` : ''}`;
+
+            await conTransaccion(pool(req), async (conn) => {
+                for (const codigo of codigos) {
+                    const llanta = await bloquearLlanta(conn, codigo);
+                    exigirSituacion(llanta, ['enviar_reforma'], 'despachar a la reformadora');
+                    // Sale del Retén: ya no tiene almacén hasta que regrese
+                    await pasarLlanta(conn, req, llanta, { almacen: null, estado: ESTADO.EN_REENCAUCHE, mov: MOV.DESPACHO_REFORMADORA, observacion });
+                }
+            });
+            res.json({ ok: true, data: { guia, despachadas: codigos.length, codigos } });
+        } catch (err) {
+            responder(res, err);
+        }
+    });
+
+    // ============================================================
+    // 6. RETORNO DE REENCAUCHE (llantas enviar_reforma o en_reformadora).
+    //   resultado 'aprobada' (por defecto): sube la vida, suma el costo y la llanta queda en 1142, en_almacen.
+    //   resultado 'rechazada': no sube la vida ni suma costo; queda en el Retén (1146) esperando descarte.
     // ============================================================
     router.post('/retorno-reencauche', async (req, res) => {
         try {
-            if (!tienePermiso(req, 'neumaticos.reencauche', 'c')) throw aviso(403, 'Sin permiso (neumaticos.reencauche) para registrar el retorno de reencauche');
+            if (!tienePermiso(req, PERMISO_REENCAUCHE, 'c')) throw aviso(403, 'Sin permiso (neumaticos.reencauche) para registrar el retorno de reencauche');
             const b = req.body || {};
             const codigo = mayus(b.codigo);
             if (!codigo) throw aviso(400, 'El código de la llanta es obligatorio');
+            const resultado = txt(b.resultado) || 'aprobada';
+            if (resultado !== 'aprobada' && resultado !== 'rechazada') throw aviso(400, "El resultado debe ser 'aprobada' o 'rechazada'");
             const proveedor = txt(b.proveedor) || null;
+            const motivo = txt(b.observacion) || null;
             const costo = numeroNoNegativo(b.costo_servicio, 'Costo del servicio');
             const disenio = txt(b.disenio) || null;
             const remanente = (b.remanente == null || b.remanente === '')
@@ -518,8 +660,18 @@ module.exports = function (db) {
 
             const nueva = await conTransaccion(pool(req), async (conn) => {
                 const llanta = await bloquearLlanta(conn, codigo);
-                if (llanta.almacen_id == null || Number(llanta.almacen_id) !== ALMACEN.REENCAUCHE) {
-                    throw aviso(409, `La llanta no está en el almacén de reencauche (${ALMACEN.REENCAUCHE})`);
+                exigirSituacion(llanta, ['en_reformadora', 'enviar_reforma'], 'registrar su retorno de reencauche');
+
+                if (resultado === 'rechazada') {
+                    const detalleRechazo = [
+                        'Reencauche rechazado',
+                        proveedor && `Proveedor: ${proveedor}`,
+                        motivo && `Motivo: ${motivo}`,
+                    ].filter(Boolean).join('. ');
+                    await pasarLlanta(conn, req, llanta, {
+                        almacen: ALMACEN.RETEN, estado: ESTADO.DESECHO, mov: MOV.RECHAZO_REENCAUCHE, observacion: detalleRechazo,
+                    });
+                    return { rechazada: true };
                 }
 
                 const vidaActual = llanta.vida || 'R0';
@@ -537,7 +689,7 @@ module.exports = function (db) {
                      SET vida = ?, contador_reencauches = ?, costo_reencauches = ?, remanente_actual = ?,
                          almacen_id = ?, estado_ciclo = ?, estado_operativo = ?
                      WHERE id_neumatico = ?`,
-                    [vidaNueva, contador, costoTotal, remanenteFinal, ALMACEN.REPARADAS,
+                    [vidaNueva, contador, costoTotal, remanenteFinal, ALMACEN.REENCAUCHE,
                      ESTADO.ALMACEN.ciclo, ESTADO.ALMACEN.operativo, llanta.id_neumatico]);
 
                 const detalle = [
@@ -550,18 +702,24 @@ module.exports = function (db) {
 
                 await registrarMovimiento(conn, {
                     id_neumatico: llanta.id_neumatico, tipo: MOV.RETORNO_REENCAUCHE,
-                    origen: ALMACEN.REENCAUCHE, destino: ALMACEN.REPARADAS,
+                    origen: llanta.almacen_id == null ? null : Number(llanta.almacen_id), destino: ALMACEN.REENCAUCHE,
                     fecha: ahoraLima(), usuario: usuarioDe(req), observacion: detalle,
                 });
 
                 return { vida: vidaNueva, contador, costoTotal };
             });
 
+            if (nueva.rechazada) {
+                return res.json({
+                    ok: true,
+                    data: { codigo, resultado, almacen_id: ALMACEN.RETEN, estado: ESTADO.DESECHO.ciclo },
+                });
+            }
             res.json({
                 ok: true,
                 data: {
-                    codigo, vida: nueva.vida, reencauches: nueva.contador,
-                    costo_reencauches: nueva.costoTotal, almacen_id: ALMACEN.REPARADAS,
+                    codigo, resultado, vida: nueva.vida, reencauches: nueva.contador,
+                    costo_reencauches: nueva.costoTotal, almacen_id: ALMACEN.REENCAUCHE,
                     estado: ESTADO.ALMACEN.ciclo,
                 },
             });
@@ -780,9 +938,16 @@ module.exports = function (db) {
         switch (r.tipo) {
             case MOV.ALTA: detalle = `Alta en almacén ${destino || '—'}`; break;
             case MOV.INSTALACION: detalle = `Montada en ${lugar || 'la unidad'}`; break;
-            case MOV.RETIRO_DESECHO: detalle = `Retirada de ${lugar || 'la unidad'}; enviada a desecho (Scrap)`; break;
-            case MOV.RETIRO_REENCAUCHE: detalle = `Retirada de ${lugar || 'la unidad'}; enviada a reencauche`; break;
+            case MOV.RETIRO_RETEN: detalle = `Retirada de ${lugar || 'la unidad'}; quedó en el Retén`; break;
+            case MOV.RETIRO_DESECHO: detalle = `Retirada de ${lugar || 'la unidad'}; esperando descarte en el Retén`; break;
+            case MOV.RETIRO_REENCAUCHE: detalle = `Retirada de ${lugar || 'la unidad'}; enviar para reforma desde el Retén`; break;
+            case MOV.MARCAR_REFORMA: detalle = 'Marcada para reforma (Retén)'; break;
+            case MOV.MARCAR_DESCARTE: detalle = 'Marcada para descarte (Retén)'; break;
+            case MOV.DEVOLVER_RETEN: detalle = 'Devuelta a disponibles del Retén'; break;
+            case MOV.DESPACHO_REFORMADORA: detalle = 'Despachada a la reformadora'; break;
+            case MOV.DESACTIVACION: detalle = 'Desactivada (Scrap)'; break;
             case MOV.RETORNO_REENCAUCHE: detalle = `Regresó de reencauche a ${destino || 'almacén'}`; break;
+            case MOV.RECHAZO_REENCAUCHE: detalle = 'Reencauche rechazado; esperando descarte en el Retén'; break;
             default: detalle = String(r.tipo);
         }
         if (r.observacion) detalle += `. ${r.observacion}`;
@@ -995,10 +1160,24 @@ module.exports = function (db) {
                 case MOV.INSTALACION:
                     return { ...base, tipo: 'APLICACION', titulo: `Montada en ${m.placa || 'la unidad'}`,
                         detalle: m.posicion ? `Posición ${m.posicion}` : '' };
+                case MOV.RETIRO_RETEN:
+                    return { ...base, tipo: 'RETIRO', titulo: 'Retirada al Retén', detalle: m.observacion || 'Quedó disponible en el Retén' };
                 case MOV.RETIRO_DESECHO:
-                    return { ...base, tipo: 'RETIRO', titulo: 'Retirada a desecho', detalle: m.observacion || 'Enviada a desecho (Scrap)' };
+                    return { ...base, tipo: 'RETIRO', titulo: 'Esperando descarte', detalle: m.observacion || 'Retirada al Retén para descarte' };
                 case MOV.RETIRO_REENCAUCHE:
-                    return { ...base, tipo: 'RETIRO', titulo: 'Enviada a reencauche', detalle: m.observacion || 'Enviada a reencauche' };
+                    return { ...base, tipo: 'RETIRO', titulo: 'Enviar para reforma', detalle: m.observacion || 'Retirada al Retén para reforma' };
+                case MOV.MARCAR_REFORMA:
+                    return { ...base, tipo: 'REFORMA', titulo: 'Marcada para reforma', detalle: m.observacion || 'Pasó al Retén para reforma' };
+                case MOV.MARCAR_DESCARTE:
+                    return { ...base, tipo: 'RETIRO', titulo: 'Marcada para descarte', detalle: m.observacion || 'Pasó al Retén para descarte' };
+                case MOV.DEVOLVER_RETEN:
+                    return { ...base, tipo: 'OTRO', titulo: 'Devuelta al Retén', detalle: m.observacion || 'Vuelve a estar disponible en el Retén' };
+                case MOV.DESPACHO_REFORMADORA:
+                    return { ...base, tipo: 'REFORMA', titulo: 'Despachada a la reformadora', detalle: m.observacion || '' };
+                case MOV.DESACTIVACION:
+                    return { ...base, tipo: 'RETIRO', titulo: 'Desactivada', detalle: m.observacion || 'Desactivada de forma definitiva (Scrap)' };
+                case MOV.RECHAZO_REENCAUCHE:
+                    return { ...base, tipo: 'REFORMA', titulo: 'Reencauche rechazado', detalle: m.observacion || 'Esperando descarte en el Retén' };
                 case MOV.RETORNO_REENCAUCHE: {
                     // El retorno guarda "Proveedor: X. Costo servicio: N. …" (routes/neumaticos-ciclo.js, POST /retorno-reencauche)
                     const obs = m.observacion || '';
@@ -1101,3 +1280,7 @@ module.exports = function (db) {
 
     return router;
 };
+
+// Reglas puras (sin base de datos), para poder probarlas
+module.exports.situacionLlanta = situacionLlanta;
+module.exports.ALMACEN = ALMACEN;

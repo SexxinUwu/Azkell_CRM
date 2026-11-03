@@ -5,7 +5,7 @@
 export const PERMISO_VER_NEUMATICOS = 'neumaticos';            // consultar tablero, pestaña, mapa y línea de tiempo
 export const PERMISO_MOVER_NEUMATICOS = 'neumaticos.mover';    // instalar y retirar llantas de una unidad
 export const PERMISO_REENCAUCHE = 'neumaticos.reencauche';     // enviar llantas a reencauche
-export const PERMISO_BAJA = 'neumaticos.baja';                 // dar de baja (desecho / scrap)
+export const PERMISO_BAJA = 'neumaticos.baja';                 // enviar a descarte y desactivar (scrap)
 
 /** Una llanta tal como la muestra el tablero */
 export interface LlantaTablero {
@@ -39,9 +39,9 @@ export interface TableroPlaca {
   placa: string;
   configuracion: string | null;    // p. ej. "2DD-1L-2L" o "T3"; lo usa el frontend para dibujar el layout
   posiciones: PosicionTablero[];   // montadas en la unidad
-  disponibles: LlantaTablero[];    // en almacén utilizable para instalar (Nuevas 100, Reencauche 1142, Reparadas 1144)
-  reforma: LlantaTablero[];        // en reencauche
-  descarte: LlantaTablero[];       // desechadas o pendientes de descarte
+  disponibles: LlantaTablero[];    // listas para instalar: Nuevas 100, Reencauche 1142 (ya reencauchadas), Reparadas 1144 y Retén 1146
+  reforma: LlantaTablero[];        // en reencauche: por enviar (en el Retén) o ya en la reformadora
+  descarte: LlantaTablero[];       // esperando descarte (Retén 1146) o ya desactivadas (Scrap 1148)
 }
 
 /** Un evento de la línea de tiempo de una llanta (tabla neumaticos_movimientos) */
