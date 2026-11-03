@@ -667,15 +667,24 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
+    // ¿La base ya tiene la columna vida_inicial? (migración 13): sin ella, el artículo se guarda como antes
+    const tieneVidaInicial = (tdb) => new Promise(resolve => tdb.query(
+        "SHOW COLUMNS FROM neumaticos_articulo LIKE 'vida_inicial'", (err, rows) => resolve(!err && !!rows && rows.length > 0)));
+
     // Lectura de los datos de la llanta de un artículo (para el formulario de inventario)
     router.get('/neumaticos-articulo/:id', (req, res) => {
-        getDb(req).query('SELECT medida, modelo, cocada_inicial FROM neumaticos_articulo WHERE inventario_id = ?', [String(req.params.id || '')], (err, rows) => {
+        getDb(req).query('SELECT * FROM neumaticos_articulo WHERE inventario_id = ?', [String(req.params.id || '')], (err, rows) => {
             if (err) return res.status(500).json({ ok: false, error: err.message });
-            res.json({ ok: true, data: rows && rows[0] ? rows[0] : null });
+            const f = rows && rows[0];
+            res.json({
+                ok: true,
+                data: f ? { medida: f.medida, modelo: f.modelo, cocada_inicial: f.cocada_inicial, vida_inicial: f.vida_inicial || 'R0' } : null,
+            });
         });
     });
 
-    // Datos del artículo "Llanta" (familia NEUMATICOS): medida, modelo y cocada inicial, que usa la recepción para crear la llanta
+    // Datos del artículo "Llanta" (familia NEUMATICOS): medida, modelo, cocada inicial y vida al comprar (R0 nueva, R1 a R3 ya
+    // reencauchada). Los usa la recepción para crear la llanta: una reencauchada entra al almacén Reencauche con su vida.
     router.put('/neumaticos-articulo/:id', async (req, res) => {
         try {
             const inventarioId = String(req.params.id || '').trim();
@@ -686,13 +695,23 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             if (cocada !== null && (!Number.isFinite(cocada) || cocada < 0)) {
                 return res.status(400).json({ ok: false, error: 'La cocada inicial debe ser un número positivo' });
             }
-            await new Promise((resolve, reject) => getDb(req).query(
-                `INSERT INTO neumaticos_articulo (inventario_id, medida, modelo, cocada_inicial)
-                 VALUES (?, ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE medida = VALUES(medida), modelo = VALUES(modelo), cocada_inicial = VALUES(cocada_inicial)`,
-                [inventarioId, medida, modelo, cocada],
+            const vida = b.vida_inicial == null || b.vida_inicial === '' ? 'R0' : String(b.vida_inicial).trim().toUpperCase();
+            if (!['R0', 'R1', 'R2', 'R3'].includes(vida)) {
+                return res.status(400).json({ ok: false, error: 'La vida al comprar debe ser R0, R1, R2 o R3' });
+            }
+            const tdb = getDb(req);
+            const conVida = await tieneVidaInicial(tdb);
+            await new Promise((resolve, reject) => tdb.query(
+                conVida
+                    ? `INSERT INTO neumaticos_articulo (inventario_id, medida, modelo, cocada_inicial, vida_inicial)
+                       VALUES (?, ?, ?, ?, ?)
+                       ON DUPLICATE KEY UPDATE medida = VALUES(medida), modelo = VALUES(modelo), cocada_inicial = VALUES(cocada_inicial), vida_inicial = VALUES(vida_inicial)`
+                    : `INSERT INTO neumaticos_articulo (inventario_id, medida, modelo, cocada_inicial)
+                       VALUES (?, ?, ?, ?)
+                       ON DUPLICATE KEY UPDATE medida = VALUES(medida), modelo = VALUES(modelo), cocada_inicial = VALUES(cocada_inicial)`,
+                conVida ? [inventarioId, medida, modelo, cocada, vida] : [inventarioId, medida, modelo, cocada],
                 (err, r) => (err ? reject(err) : resolve(r))));
-            res.json({ ok: true, inventario_id: inventarioId, medida, modelo, cocada_inicial: cocada });
+            res.json({ ok: true, inventario_id: inventarioId, medida, modelo, cocada_inicial: cocada, vida_inicial: conVida ? vida : 'R0' });
         } catch (err) {
             res.status(500).json({ ok: false, error: err.message });
         }
@@ -3013,8 +3032,9 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     for (const { it, linea } of lineasLlanta) {
                         const art = porId.get(it.inventario_id);
                         if (!art || String(art.familia || '').trim().toUpperCase() !== 'NEUMATICOS') continue;
+                        // Solo si es de verdad una llanta (con medida y sin ser servicio); parches, válvulas y aros no crean llantas
                         await crearLlantasDeRecepcion(conn, {
-                            recepcionId, linea, inventarioId: art.id, marca: art.marca,
+                            recepcionId, linea, inventarioId: art.id, familia: art.familia, marca: art.marca,
                             cantidad: it.cantidad_recibida, costoUnitario: it.costo_unitario,
                             usuario: usuario || 'Almacén Central', fecha: fechaHoraSQL,
                         });

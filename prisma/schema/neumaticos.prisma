@@ -36,6 +36,19 @@ model CatNeumaticoModelo {
   @@map("cat_neumaticos_modelos")
 }
 
+// Datos del artículo "Llanta" (familia NEUMATICOS) con los que la recepción de compra crea la llanta.
+// vida_inicial: R0 nueva (almacén Nuevas) o R1 a R3 comprada ya reencauchada (almacén Reencauche).
+model NeumaticoArticulo {
+  inventario_id  String    @id @db.VarChar(20)
+  medida         String?   @db.VarChar(60)
+  modelo         String?   @db.VarChar(100)
+  cocada_inicial Decimal?  @db.Decimal(6, 2)
+  vida_inicial   String    @default("R0") @db.VarChar(2)
+  actualizado_en DateTime? @default(now()) @db.Timestamp(0)
+
+  @@map("neumaticos_articulo")
+}
+
 model NeumaticoHojaVida {
   id_neumatico      String                             @id @db.VarChar(50)
   codigo_dot        String?                            @db.VarChar(50)
