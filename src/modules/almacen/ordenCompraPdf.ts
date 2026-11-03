@@ -168,12 +168,14 @@ export function htmlOrdenCompra(d: OrdenCompraPdf): string {
 
   const itemsHTML = d.lineas.map((it, i) => {
     const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+    const celda = 'padding:5px 8px;border-bottom:1px solid #e2e8f0;';
     return '<tr style="background-color: ' + bg + ';">' +
-      '<td style="padding:10px 12px;text-align:center;border-bottom:1px solid #e2e8f0;font-weight:700;color:#0f172a;width:55px;">' + it.cantidad.toLocaleString('es-PE', { maximumFractionDigits: 3 }) + '</td>' +
-      '<td style="padding:10px 12px;text-align:center;border-bottom:1px solid #e2e8f0;font-weight:600;color:#475569;font-size:11px;width:65px;">' + esc(it.unidad) + '</td>' +
-      '<td style="padding:10px 12px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;font-weight:600;color:#0f172a;">' + esc(it.descripcion) + '</td>' +
-      '<td style="padding:10px 12px;text-align:right;border-bottom:1px solid #e2e8f0;color:#334155;width:95px;">' + it.costoUnitario.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + '</td>' +
-      '<td style="padding:10px 12px;text-align:right;border-bottom:1px solid #e2e8f0;font-weight:700;color:#0f172a;width:115px;">' + it.importe.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
+      '<td style="' + celda + 'text-align:left;font-weight:600;color:#475569;font-size:9.5px;white-space:nowrap;">' + esc(it.codigo) + '</td>' +
+      '<td style="' + celda + 'text-align:center;font-weight:700;color:#0f172a;">' + it.cantidad.toLocaleString('es-PE', { maximumFractionDigits: 3 }) + '</td>' +
+      '<td style="' + celda + 'text-align:center;font-weight:600;color:#475569;font-size:10px;">' + esc(it.unidad) + '</td>' +
+      '<td style="' + celda + 'text-transform:uppercase;font-weight:600;color:#0f172a;line-height:1.25;">' + esc(it.descripcion) + '</td>' +
+      '<td style="' + celda + 'text-align:right;color:#334155;">' + it.costoUnitario.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + '</td>' +
+      '<td style="' + celda + 'text-align:right;font-weight:700;color:#0f172a;">' + it.importe.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
       '</tr>';
   }).join('');
 
@@ -195,13 +197,13 @@ export function htmlOrdenCompra(d: OrdenCompraPdf): string {
   const empTelefono = emp?.telefono || '';
 
   // Header Left: Logo + Info Empresa
-  let headerLeftHtml = '<div style="display:flex;flex-direction:column;gap:3px;max-width:440px;">';
+  let headerLeftHtml = '<div style="display:flex;flex-direction:column;gap:2px;max-width:440px;">';
   if (empLogo) {
-    headerLeftHtml += '<img src="' + esc(empLogo) + '" style="max-height:52px;max-width:180px;object-fit:contain;margin-bottom:4px;display:block;" alt="Logo Empresa" />';
+    headerLeftHtml += '<img src="' + esc(empLogo) + '" style="height:40px;width:auto;margin-bottom:2px;display:block;" alt="Logo Empresa" />';
   }
-  headerLeftHtml += '<div style="font-size:16px;font-weight:900;color:#0f172a;letter-spacing:-0.3px;line-height:1.2;text-transform:uppercase;">' + esc(empNombre) + '</div>';
+  headerLeftHtml += '<div style="font-size:14px;font-weight:900;color:#0f172a;letter-spacing:-0.3px;line-height:1.2;text-transform:uppercase;">' + esc(empNombre) + '</div>';
   if (empDireccion) {
-    headerLeftHtml += '<div style="font-size:9.5px;color:#475569;line-height:1.35;text-transform:uppercase;">' + esc(empDireccion) + '</div>';
+    headerLeftHtml += '<div style="font-size:9px;color:#475569;line-height:1.3;text-transform:uppercase;">' + esc(empDireccion) + '</div>';
   }
   if (empTelefono) {
     headerLeftHtml += '<div style="font-size:9.5px;color:#475569;">' + esc(empTelefono) + '</div>';
@@ -212,10 +214,10 @@ export function htmlOrdenCompra(d: OrdenCompraPdf): string {
   headerLeftHtml += '</div>';
 
   // Header Right: Tarjeta Recuadro RUC + Tipo Documento + Correlativo
-  const headerRightHtml = '<div style="min-width:210px;max-width:260px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:12px;padding:12px 18px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">' +
-    (empRuc ? '<div style="font-size:12px;font-weight:700;color:#0284c7;letter-spacing:0.5px;margin-bottom:3px;">RUC: ' + esc(empRuc) + '</div>' : '') +
-    '<div style="font-size:15px;font-weight:900;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">' + esc(tipoDocTitle) + '</div>' +
-    '<div style="font-size:14px;font-weight:800;color:#2563eb;letter-spacing:0.5px;">N° ' + esc(numDisplay) + '</div>' +
+  const headerRightHtml = '<div style="min-width:190px;max-width:240px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:8px 14px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.02);">' +
+    (empRuc ? '<div style="font-size:11px;font-weight:700;color:#0284c7;letter-spacing:0.5px;margin-bottom:2px;">RUC: ' + esc(empRuc) + '</div>' : '') +
+    '<div style="font-size:13.5px;font-weight:900;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">' + esc(tipoDocTitle) + '</div>' +
+    '<div style="font-size:13px;font-weight:800;color:#2563eb;letter-spacing:0.5px;">N° ' + esc(numDisplay) + '</div>' +
     '</div>';
 
   // Formatear Fecha y Proveedor
@@ -228,79 +230,80 @@ export function htmlOrdenCompra(d: OrdenCompraPdf): string {
   const motivoEntrada = d.motivoEntrada || '';
 
   return '' +
-    '<div style="font-family:\'Plus Jakarta Sans\', \'Inter\', Arial, sans-serif;width:100%;margin:0 auto;padding:35px 40px;color:#0f172a;box-sizing:border-box;">' +
+    '<div style="font-family:\'Plus Jakarta Sans\', \'Inter\', Arial, sans-serif;width:100%;margin:0 auto;padding:22px 28px;color:#0f172a;box-sizing:border-box;">' +
 
       '<!-- HEADER -->' +
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #0f172a;padding-bottom:18px;margin-bottom:24px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #0f172a;padding-bottom:10px;margin-bottom:12px;">' +
         headerLeftHtml +
         headerRightHtml +
       '</div>' +
 
       '<!-- RESUMEN FECHA Y PROVEEDOR -->' +
-      '<div style="display:flex;gap:15px;margin-bottom:22px;">' +
-        '<div style="flex:0 0 30%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;">' +
-          '<div style="font-size:10px;text-transform:uppercase;color:#64748b;font-weight:700;letter-spacing:0.5px;margin-bottom:4px;">Fecha de Emisión</div>' +
-          '<div style="font-size:14px;font-weight:800;color:#0f172a;">' + esc(fechaFmt) + '</div>' +
+      '<div style="display:flex;gap:10px;margin-bottom:10px;">' +
+        '<div style="flex:0 0 30%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;">' +
+          '<div style="font-size:9px;text-transform:uppercase;color:#64748b;font-weight:700;letter-spacing:0.5px;margin-bottom:2px;">Fecha de Emisión</div>' +
+          '<div style="font-size:12.5px;font-weight:800;color:#0f172a;">' + esc(fechaFmt) + '</div>' +
         '</div>' +
-        '<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;">' +
-          '<div style="font-size:10px;text-transform:uppercase;color:#64748b;font-weight:700;letter-spacing:0.5px;margin-bottom:4px;">Proveedor</div>' +
-          '<div style="font-size:14px;font-weight:800;color:#0f172a;text-transform:uppercase;">' + esc(provNombre) + '<span style="font-weight:600;color:#475569;font-size:12px;">' + esc(provRuc) + '</span></div>' +
+        '<div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;">' +
+          '<div style="font-size:9px;text-transform:uppercase;color:#64748b;font-weight:700;letter-spacing:0.5px;margin-bottom:2px;">Proveedor</div>' +
+          '<div style="font-size:12.5px;font-weight:800;color:#0f172a;text-transform:uppercase;">' + esc(provNombre) + '<span style="font-weight:600;color:#475569;font-size:12px;">' + esc(provRuc) + '</span></div>' +
         '</div>' +
       '</div>' +
 
       '<!-- DETALLES DE LA ORDEN -->' +
-      '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:24px;overflow:hidden;">' +
-        '<div style="background:#f1f5f9;padding:9px 15px;font-size:11px;font-weight:800;color:#334155;border-bottom:1px solid #e2e8f0;text-transform:uppercase;letter-spacing:0.5px;">' +
+      '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:10px;overflow:hidden;">' +
+        '<div style="background:#f1f5f9;padding:5px 12px;font-size:10px;font-weight:800;color:#334155;border-bottom:1px solid #e2e8f0;text-transform:uppercase;letter-spacing:0.5px;">' +
           'Detalles de la Orden' +
         '</div>' +
-        '<div style="display:flex;flex-wrap:wrap;padding:14px 15px;font-size:12px;">' +
-          '<div style="width:50%;margin-bottom:12px;">' +
-            '<span style="font-size:10.5px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;font-weight:600;">Tipo de Orden</span>' +
+        '<div style="display:flex;flex-wrap:wrap;padding:8px 12px 4px;font-size:11px;">' +
+          '<div style="width:33.33%;margin-bottom:6px;">' +
+            '<span style="font-size:9px;color:#64748b;display:block;margin-bottom:1px;text-transform:uppercase;font-weight:600;">Tipo de Orden</span>' +
             '<span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + esc(d.tipoOrden || 'ORDEN DE COMPRA') + '</span>' +
           '</div>' +
-          '<div style="width:50%;margin-bottom:12px;">' +
-            '<span style="font-size:10.5px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;font-weight:600;">Condición de Pago</span>' +
+          '<div style="width:33.33%;margin-bottom:6px;">' +
+            '<span style="font-size:9px;color:#64748b;display:block;margin-bottom:1px;text-transform:uppercase;font-weight:600;">Condición de Pago</span>' +
             '<span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + esc(condPagoText) + '</span>' +
           '</div>' +
-          '<div style="width:50%;margin-bottom:12px;">' +
-            '<span style="font-size:10.5px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;font-weight:600;">Moneda</span>' +
+          '<div style="width:33.33%;margin-bottom:6px;">' +
+            '<span style="font-size:9px;color:#64748b;display:block;margin-bottom:1px;text-transform:uppercase;font-weight:600;">Moneda</span>' +
             '<span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + txtMoneda + (usd ? ' (T/C: ' + tc.toFixed(3) + ')' : '') + '</span>' +
           '</div>' +
-          '<div style="width:50%;margin-bottom:12px;">' +
-            '<span style="font-size:10.5px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;font-weight:600;">Placa / Vehículo</span>' +
+          '<div style="width:33.33%;margin-bottom:6px;">' +
+            '<span style="font-size:9px;color:#64748b;display:block;margin-bottom:1px;text-transform:uppercase;font-weight:600;">Placa / Vehículo</span>' +
             '<span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + esc(placaVehiculo) + '</span>' +
           '</div>' +
-          (solicitante ? '<div style="width:50%;margin-bottom:12px;"><span style="font-size:10.5px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;font-weight:600;">Solicitante</span><span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + esc(solicitante) + '</span></div>' : '') +
-          (d.centroCosto ? '<div style="width:50%;margin-bottom:12px;"><span style="font-size:10.5px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;font-weight:600;">Centro de Costo</span><span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + esc(d.centroCosto) + '</span></div>' : '') +
-          '<div style="width:100%;margin-top:2px;">' +
-            '<span style="font-size:10.5px;color:#64748b;display:block;margin-bottom:2px;text-transform:uppercase;font-weight:600;">Motivo</span>' +
+          (solicitante ? '<div style="width:33.33%;margin-bottom:6px;"><span style="font-size:9px;color:#64748b;display:block;margin-bottom:1px;text-transform:uppercase;font-weight:600;">Solicitante</span><span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + esc(solicitante) + '</span></div>' : '') +
+          (d.centroCosto ? '<div style="width:33.33%;margin-bottom:6px;"><span style="font-size:9px;color:#64748b;display:block;margin-bottom:1px;text-transform:uppercase;font-weight:600;">Centro de Costo</span><span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + esc(d.centroCosto) + '</span></div>' : '') +
+          '<div style="width:100%;margin-top:0;margin-bottom:4px;">' +
+            '<span style="font-size:9px;color:#64748b;display:block;margin-bottom:1px;text-transform:uppercase;font-weight:600;">Motivo</span>' +
             '<span style="font-weight:700;color:#0f172a;text-transform:uppercase;">' + esc(motivoEntrada) + '</span>' +
           '</div>' +
         '</div>' +
       '</div>' +
 
       '<!-- TABLA DE ARTÍCULOS -->' +
-      '<div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:20px;">' +
-        '<table style="width:100%;font-size:12px;border-collapse:collapse;">' +
+      '<div style="border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;margin-bottom:8px;">' +
+        '<table style="width:100%;font-size:10.5px;border-collapse:collapse;table-layout:fixed;">' +
           '<thead>' +
             '<tr style="background:#0f172a;color:#ffffff;">' +
-              '<th style="padding:11px 12px;text-align:center;width:55px;font-weight:700;letter-spacing:0.5px;">CANT</th>' +
-              '<th style="padding:11px 12px;text-align:center;width:65px;font-weight:700;letter-spacing:0.5px;">U.M.</th>' +
-              '<th style="padding:11px 12px;text-align:left;font-weight:700;letter-spacing:0.5px;">DESCRIPCIÓN</th>' +
-              '<th style="padding:11px 12px;text-align:right;width:95px;font-weight:700;letter-spacing:0.5px;">P. UNIT</th>' +
-              '<th style="padding:11px 12px;text-align:right;width:115px;font-weight:700;letter-spacing:0.5px;">IMPORTE</th>' +
+              '<th style="padding:6px 8px;font-weight:700;letter-spacing:0.3px;font-size:9.5px;line-height:1.2;text-align:left;width:68px;">CÓDIGO</th>' +
+              '<th style="padding:6px 8px;font-weight:700;letter-spacing:0.3px;font-size:9.5px;line-height:1.2;text-align:center;width:42px;">CANT</th>' +
+              '<th style="padding:6px 8px;font-weight:700;letter-spacing:0.3px;font-size:9.5px;line-height:1.2;text-align:center;width:62px;">UNIDAD DE MEDIDA</th>' +
+              '<th style="padding:6px 8px;font-weight:700;letter-spacing:0.3px;font-size:9.5px;line-height:1.2;text-align:left;">DESCRIPCIÓN</th>' +
+              '<th style="padding:6px 8px;font-weight:700;letter-spacing:0.3px;font-size:9.5px;line-height:1.2;text-align:right;width:68px;">PRECIO UNITARIO</th>' +
+              '<th style="padding:6px 8px;font-weight:700;letter-spacing:0.3px;font-size:9.5px;line-height:1.2;text-align:right;width:82px;">IMPORTE</th>' +
             '</tr>' +
           '</thead>' +
           '<tbody>' +
             itemsHTML +
           '</tbody>' +
         '</table>' +
-        '<div style="background:#f8fafc;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-top:2px solid #e2e8f0;">' +
-          '<div style="font-size:11.5px;color:#64748b;max-width:380px;">' +
+        '<div style="background:#f8fafc;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;border-top:2px solid #e2e8f0;">' +
+          '<div style="font-size:10px;color:#64748b;max-width:380px;">' +
             '<b style="color:#334155;">SON:</b> ' + numeroALetras(totalReal) + ' ' + txtMoneda +
           '</div>' +
-          '<div style="font-size:18px;color:#0f172a;">' +
-            '<span style="font-weight:700;font-size:13px;color:#64748b;margin-right:12px;text-transform:uppercase;">Total General</span>' +
+          '<div style="font-size:15px;color:#0f172a;">' +
+            '<span style="font-weight:700;font-size:11px;color:#64748b;margin-right:10px;text-transform:uppercase;">Total General</span>' +
             '<b>' + txtMonedaS + ' ' + totalText + '</b>' +
           '</div>' +
         '</div>' +
