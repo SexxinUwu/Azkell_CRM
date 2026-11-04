@@ -1210,7 +1210,7 @@ module.exports = function (db, broadcast, logAudit) {
             const valesTable = getValesTable(req);
 
             // 1. Consultar vales filtrados a máxima velocidad (índice directo)
-            const [rows] = await tdb.query(
+            const [rowsTodos] = await tdb.query(
                 `SELECT 
                     id, DATE_FORMAT(fecha, '%Y-%m-%d %H:%i:%s') AS fecha, estado, correlativo, viaje, vehiculo, conductor, ruta,
                     estacion, proveedor, tipo_combustible, kilometraje, peso_tn, galones,
@@ -1357,7 +1357,7 @@ module.exports = function (db, broadcast, logAudit) {
             });
 
             // Enriquecer ruta, peso y carreta instantáneamente sin degradar SQL
-            rows.forEach(v => {
+            rowsTodos.forEach(v => {
                 if (v.viaje) {
                     const vKey = String(v.viaje).trim();
                     const cleanV = vKey.replace(/^\d{4}-0*/, '');
@@ -1400,7 +1400,7 @@ module.exports = function (db, broadcast, logAudit) {
             };
 
             // Consultar modelo de motor, marca y configuración de las placas para enriquecer el análisis
-            const [placasRows] = await tdb.query("SELECT placa, modelo_motor, marca, modelo_uts, configuracion FROM placas");
+            const [placasRows] = await tdb.query("SELECT placa, modelo_motor, marca, modelo_uts, configuracion, sub_tipo FROM placas");
             const placaMotorMap = new Map();
             const placaMarcaMap = new Map();
             const placaConfigMap = new Map();
@@ -1412,6 +1412,13 @@ module.exports = function (db, broadcast, logAudit) {
                     placaConfigMap.set(plKey, p.configuracion || '');
                 }
             });
+
+            // Equipos de refrigeración (Thermo King, en la ficha de placas): su combustible y su odómetro son del equipo, no del tracto.
+            // Sus vales no entran al viaje: ni galones ni km fin/inicio del camión (antes el último vale del equipo se tomaba como km fin).
+            const placasTermo = new Set(placasRows
+                .filter(p => p.placa && /thermo|refrig/i.test(`${p.marca || ''} ${p.sub_tipo || ''}`))
+                .map(p => String(p.placa).trim().toUpperCase()));
+            const rows = rowsTodos.filter(v => !placasTermo.has(String(v.vehiculo || '').trim().toUpperCase()));
 
             // Carreta de cada viaje (la orden de viaje) y el camión que lo jala según sus vales. Los vales que la carreta
             // registra a su nombre son del mismo viaje: se suman al camión, no crean un viaje aparte (antes se contaban dos veces)
