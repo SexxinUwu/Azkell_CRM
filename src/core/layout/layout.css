@@ -634,3 +634,11 @@
   /* El contenedor de la transición entre módulos queda entre main y la página: debe pasar la altura de la ventana, si no la página crece con su contenido */
   .main:has(.page--fill) > .vista-transicion { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 }
+
+/* Escritorio: barra del contenido principal fina y discreta */
+/* Barra de desplazamiento fina y discreta: sigue funcionando (trackpad a dos dedos, arrastre, rueda) */
+.main { scrollbar-width: thin; scrollbar-color: rgba(60, 60, 67, 0.28) transparent; }
+.main::-webkit-scrollbar { width: 8px; height: 8px; }
+.main::-webkit-scrollbar-track { background: transparent; }
+.main::-webkit-scrollbar-thumb { background: rgba(60, 60, 67, 0.28); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+.main::-webkit-scrollbar-thumb:hover { background: rgba(60, 60, 67, 0.48); background-clip: padding-box; }
