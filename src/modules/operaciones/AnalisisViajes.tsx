@@ -134,7 +134,7 @@ const LIMITE_KM_VIAJE = 3000;
 // Tarjeta de indicador de la cabecera
 function KpiCard({ titulo, valor, detalle, color }: { titulo: string; valor: string; detalle: string; color?: string }) {
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 14, padding: 'var(--s-3)', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 14, padding: 'var(--s-3)', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 96, maxWidth: 230, flex: '0 1 auto' }}>
       <span style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--label-2)' }}>{titulo}</span>
       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.125rem', fontWeight: 800, color: color ?? 'var(--label)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{valor}</span>
       <span style={{ fontSize: '0.6875rem', lineHeight: 1.3, color: 'var(--label-2)' }}>{detalle}</span>
@@ -145,7 +145,7 @@ function KpiCard({ titulo, valor, detalle, color }: { titulo: string; valor: str
 // Un solo card con lo gastado de más (rojo) y lo ahorrado (verde) contra la matriz, en galones
 function CardContraMatriz({ exceso, ahorro, viajesExceso, viajesAhorro }: { exceso: number; ahorro: number; viajesExceso: number; viajesAhorro: number }) {
   const mitad = (etiqueta: string, valor: string, color: string, detalle: string) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <span style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--label-2)' }}>{etiqueta}</span>
       <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.125rem', fontWeight: 800, color, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{valor}</span>
       <span style={{ fontSize: '0.6875rem', color: 'var(--label-2)' }}>{detalle}</span>
@@ -153,7 +153,7 @@ function CardContraMatriz({ exceso, ahorro, viajesExceso, viajesAhorro }: { exce
   );
   const viajes = (k: number) => `${k} ${k === 1 ? 'viaje' : 'viajes'}`;
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 14, padding: 'var(--s-3)', display: 'flex', gap: 'var(--s-3)', minWidth: 0 }}
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 14, padding: 'var(--s-3)', display: 'flex', gap: 'var(--s-3)', flex: '0 0 auto' }}
       title="Suma de las diferencias en verde y en rojo de la tabla, contra el teórico de la matriz">
       {mitad('De más', `+${fmt(exceso, 2)} gl`, 'var(--red-ink)', viajes(viajesExceso))}
       <div style={{ width: 1, background: 'var(--separator)', alignSelf: 'stretch' }} />
@@ -201,7 +201,7 @@ function CardCumplimiento({ conformes, observados, pendientes }: { conformes: nu
     </span>
   );
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 14, padding: 'var(--s-3)', display: 'flex', flexDirection: 'column', gap: 4, minWidth: 190, gridColumn: 'span 2' }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 14, padding: 'var(--s-3)', display: 'flex', flexDirection: 'column', gap: 4, minWidth: 260, flex: '1 1 300px' }}>
       <span style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--label-2)' }}>Cumplimiento de revisión</span>
       <span style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.125rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color }}>
@@ -739,7 +739,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 'var(--s-2)' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', gap: 'var(--s-2)' }}>
           <KpiCard titulo="Viajes" valor={fmt(resumen.viajes, 0)} detalle={`${resumen.pendientes} sin auditar`} />
           <KpiCard titulo={urea ? 'Urea (gl)' : 'Galones'} valor={fmt(resumen.gal, 2)} color="var(--accent)"
             detalle={resumen.viajes ? `${fmt(resumen.gal / resumen.viajes, 1)} gl por viaje en promedio` : 'Sin viajes'} />
