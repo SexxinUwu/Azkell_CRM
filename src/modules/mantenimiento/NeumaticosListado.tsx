@@ -74,13 +74,14 @@ const TONO_SITUACION: Record<string, Tono> = {
   'Código provisional': 'gris',
 };
 
-const ENCABEZADOS_EXCEL = ['Neumático', 'Vida actual', 'Medida', 'Vehículo actual', 'Gastos de compra', 'Orden de compra', 'Situación'];
+const ENCABEZADOS_EXCEL = ['Neumático', 'Vida actual', 'Medida', 'Marca', 'Vehículo actual', 'Gastos de compra', 'Orden de compra', 'Situación'];
 
 const COLUMNAS: ColumnaTabla[] = [
   { id: 'sel', titulo: '', ancho: 48, minimo: 44, alinear: 'center' },
   { id: 'codigo', titulo: 'Neumático', ancho: 170 },
   { id: 'vida', titulo: 'Vida actual', ancho: 120 },
   { id: 'medida', titulo: 'Medida', ancho: 160 },
+  { id: 'marca', titulo: 'Marca', ancho: 140 },
   { id: 'vehiculo', titulo: 'Vehículo actual', ancho: 150 },
   { id: 'gastos', titulo: 'Gastos de compra', ancho: 160, alinear: 'right' },
   { id: 'orden', titulo: 'Orden de compra', ancho: 150 },
@@ -347,7 +348,7 @@ export function NeumaticosListado() {
     try {
       // Exporta lo que se ve: las filas actuales del listado (con el filtro y la búsqueda aplicados)
       await exportarExcel('Neumaticos', 'Neumáticos', ENCABEZADOS_EXCEL, filas.map(l => [
-        l.codigo, vidaTexto(l.vida), l.medida ?? '', l.placa_actual ?? '', l.gastos_compra, l.orden_compra ?? '', l.situacion,
+        l.codigo, vidaTexto(l.vida), l.medida ?? '', l.marca ?? '', l.placa_actual ?? '', l.gastos_compra, l.orden_compra ?? '', l.situacion,
       ]));
     } catch (e) {
       setErrorExcel(`No se pudo exportar: ${String(e)}`);
@@ -461,6 +462,7 @@ export function NeumaticosListado() {
               <Celda mono><span className="nl-codigo">{l.codigo}</span></Celda>
               <Celda>{vidaTexto(l.vida)}</Celda>
               <Celda mono>{l.medida || '—'}</Celda>
+              <Celda>{l.marca || '—'}</Celda>
               <Celda mono>{l.placa_actual || '—'}</Celda>
               <Celda alinear="right" mono>{gastosTexto(l.gastos_compra)}</Celda>
               <Celda mono>{l.orden_compra || '—'}</Celda>
