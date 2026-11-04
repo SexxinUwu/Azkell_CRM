@@ -13,7 +13,7 @@ import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
 import { haptic } from '../../core/lib/haptics';
 import { PanelHistorial, type Velocidad } from './UbicacionPlayback';
 import { useHistorial } from './UbicacionHistorial';
-import { estadoUnidad, useDisponibilidad, useUnidadesGps, type EstadoUnidad, type UnidadMapa } from './api';
+import { estadoUnidad, useDisponibilidad, useGeocercas, useUnidadesGps, type EstadoUnidad, type UnidadMapa } from './api';
 import { usePlacas } from '../placas/api';
 import { analizarCombustible, FUEL_CAMBIO_PCT } from './gps/combustible';
 import { factorCombustible } from './gps/unidadCombustible';
@@ -122,6 +122,9 @@ export function UbicacionPage() {
     import('./gps/motor').then(m => { if (vivo) setMotor(m.motorTelemetria()); });
     return () => { vivo = false; };
   }, []);
+
+  const geocercas = useGeocercas();
+  useEffect(() => { if (motor && geocercas.data) motor.setGeocercas(geocercas.data); }, [motor, geocercas.data]);
 
   useEffect(() => {
     const t = setInterval(() => setAhora(Date.now()), 1000);

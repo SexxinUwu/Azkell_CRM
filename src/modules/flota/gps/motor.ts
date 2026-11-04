@@ -23,7 +23,8 @@ export interface EntradaMotor {
   tPos: number | null;
 }
 
-export interface Geocerca { id: string; name: string; color: string; ring: LngLat[] }
+export interface Geocerca { id: string; name: string; color: string; ring: LngLat[]; /** [minLng, minLat, maxLng, maxLat]: descarta rápido las geocercas lejanas */ bbox?: [number, number, number, number] }
+const enGeocerca = (p: LngLat, g: Geocerca) => (!g.bbox || (p[0] >= g.bbox[0] && p[0] <= g.bbox[2] && p[1] >= g.bbox[1] && p[1] <= g.bbox[3])) && enAnillo(p, g.ring);
 export interface Alerta { id: number; placa: string; icono: string; color: string; msg: string; hora: string }
 export interface Lectura { /** Segundos desde el último mensaje del equipo GPS (null si Wialon no lo informó) */ edadS: number | null; kmh: number; rumbo: number; hist: number[]; st: ClaseEstado; geocerca: string | null }
 export interface OpcionesMapa { traffic: boolean; terrain: boolean; buildings: boolean; trails: boolean; geo: boolean; smooth: boolean; models: boolean; buildingsSat: boolean }
@@ -236,9 +237,10 @@ export class MotorTelemetria {
       m.addLayer({ id: 'trafico', type: 'raster', source: 'trafico', paint: { 'raster-opacity': .9 } });
     }
     m.addSource('geo', { type: 'geojson', data: this.datosGeo() });
-    m.addLayer({ id: 'geo-fill', type: 'fill-extrusion', source: 'geo', paint: { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': 45, 'fill-extrusion-opacity': .16 } });
-    m.addLayer({ id: 'geo-line', type: 'line', source: 'geo', paint: { 'line-color': ['get', 'color'], 'line-width': 2.5, 'line-blur': .5 } });
-    m.addLayer({ id: 'geo-label', type: 'symbol', source: 'geo', layout: { 'text-field': ['get', 'name'], 'text-font': F_BOLD, 'text-size': 11.5, 'text-letter-spacing': .06, 'text-transform': 'uppercase' }, paint: { 'text-color': ['get', 'color'], 'text-halo-color': this.tema === 'day' ? '#fff' : '#05070c', 'text-halo-width': 1.6 } });
+    // Cuadro plano de color sobre el suelo (como en Wialon): más fuerte al acercarse
+    m.addLayer({ id: 'geo-fill', type: 'fill', source: 'geo', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, .5, 14, .38, 18, .26] } });
+    m.addLayer({ id: 'geo-line', type: 'line', source: 'geo', paint: { 'line-color': ['get', 'color'], 'line-width': 2, 'line-opacity': .9 } });
+    m.addLayer({ id: 'geo-label', type: 'symbol', source: 'geo', minzoom: 13, layout: { 'text-field': ['get', 'name'], 'text-font': F_BOLD, 'text-size': 11.5, 'text-letter-spacing': .06, 'text-transform': 'uppercase' }, paint: { 'text-color': ['get', 'color'], 'text-halo-color': this.tema === 'day' ? '#fff' : '#05070c', 'text-halo-width': 1.6 } });
     // Ruta asignada: capa lista; el ERP todavía no guarda destinos de viaje, así que queda vacía
     m.addSource('route', { type: 'geojson', data: fc([]) });
     m.addLayer({ id: 'route', type: 'line', source: 'route', layout: { 'line-cap': 'round' }, paint: { 'line-color': this.tema === 'day' ? '#0a8fd6' : '#ffffff', 'line-opacity': .75, 'line-width': W([9, 2, 18, 7]) as any, 'line-dasharray': [1.2, 1.6] } });
@@ -409,7 +411,7 @@ export class MotorTelemetria {
 
   // ─── Eventos en pantalla (sin enviar nada fuera) ───
   private eventos(u: U, pos: LngLat) {
-    const g = this.geos.find(x => enAnillo(pos, x.ring));
+    const g = this.geos.find(x => enGeocerca(pos, x));
     const id = g ? g.id : null;
     if (u.geoInit && id !== u.geo) {
       if (g) this.alertar(u, '⬢', g.color, 'Entró a ' + g.name);

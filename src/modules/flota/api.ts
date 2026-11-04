@@ -427,6 +427,18 @@ export function useUbicacionesGps() {
   });
 }
 
+/** Geocercas de Wialon (polígonos y círculos como anillo [lng, lat]); cambian poco, el servidor las guarda 1 h */
+export interface GeocercaMapa { id: string; name: string; color: string; ring: [number, number][]; bbox: [number, number, number, number] }
+
+export function useGeocercas() {
+  return useQuery({
+    queryKey: ['flota', 'geocercas'],
+    queryFn: async () => (await api<{ geocercas?: GeocercaMapa[] }>('/telemetria/geocercas')).geocercas ?? [],
+    staleTime: 30 * 60_000,
+    retry: 1,
+  });
+}
+
 // ─── Unidades en el mapa (misma fuente que la versión actual: obtenerDatosWialon) ─────────
 
 export interface UnidadMapa {

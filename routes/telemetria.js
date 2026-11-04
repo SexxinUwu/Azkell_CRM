@@ -4,11 +4,19 @@
 // Lecturas posteriores usan GET /api/telemetria/:placa.
 
 const express = require('express');
+const { listarGeocercas } = require('../services/wialon_geocercas');
 
 module.exports = function(db) {
     const router = express.Router();
 
     function getDb(req) { return req.db || db; }
+
+    // ── GET /api/telemetria/geocercas — geocercas de Wialon para dibujar en el mapa (en memoria 1 h) ─
+    router.get('/geocercas', async (req, res) => {
+        const r = await listarGeocercas(getDb(req), req.tenantSlug || (req.tenantInfo && req.tenantInfo.db_name) || 'default');
+        if (!r.ok) return res.status(502).json({ error: r.error });
+        res.json({ geocercas: r.geocercas });
+    });
 
     // ── GET /api/telemetria — resumen de todas las placas (última entrada por placa) ─
     router.get('/', async (req, res) => {

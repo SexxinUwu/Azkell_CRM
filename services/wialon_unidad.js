@@ -86,4 +86,4 @@ async function datosGpsUnidad(db, placaTexto) {
   }
 }
 
-module.exports = { datosGpsUnidad, limpiarPlaca };
+module.exports = { datosGpsUnidad, limpiarPlaca, credenciales };
