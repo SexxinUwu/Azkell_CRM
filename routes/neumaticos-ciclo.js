@@ -178,8 +178,9 @@ const SITUACION = {
 //   en_reencauche 1146 (en el Retén)      → enviar_reforma;  sin almacén (ya despachada) → en_reformadora
 //   desechado     1146 (en el Retén)      → esperando_descarte;  1148 (Scrap) → desactivacion
 function situacionLlanta(codigoLlanta, estadoCiclo, almacenId, idNeumatico) {
-    // Sin código de fuego: las provisionales (PROV-) tienen su propio estado; las nuevas esperan su secuencia
-    if (!txt(codigoLlanta)) return String(idNeumatico || '').startsWith('PROV-') ? 'provisional' : 'sin_codigo';
+    // Sin código de fuego: las provisionales (PROV-) tienen su propio estado; las nuevas esperan su secuencia.
+    // Una llanta desechada (p. ej. rechazada en el reencauche) sigue su camino al descarte sin necesitar código
+    if (!txt(codigoLlanta) && estadoCiclo !== 'desechado') return String(idNeumatico || '').startsWith('PROV-') ? 'provisional' : 'sin_codigo';
     const almacen = almacenId == null ? null : Number(almacenId);
     switch (estadoCiclo) {
         case 'en_unidad': return 'en_actividad';
