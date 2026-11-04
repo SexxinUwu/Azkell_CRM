@@ -6,11 +6,12 @@ import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Badge, Notice } from '../../core/ui/Display';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { formatSoles } from '../../core/lib/format';
-import { registrarRecepcion, useAlmacenesLista, useTipoCambioSunat, type RecepcionOC } from './api';
+import { registrarRecepcion, useAlmacenesLista, useTipoCambioSunat, type ItemRecepcion, type LlantaReencauche, type RecepcionOC } from './api';
 
 /** Tipo de cambio de referencia si SUNAT no responde (igual que el clásico) */
 const TC_REFERENCIA = 3.75;
@@ -27,6 +28,13 @@ const num = (s: string | undefined) => {
 };
 const fmt = (n: number) => (n % 1 === 0 ? String(n) : n.toFixed(2));
 const esUSD = (moneda: string | null | undefined) => String(moneda ?? '').toUpperCase() === 'USD';
+
+/** Resultado de cada llanta que vuelve de la reformadora; "pendiente" = todavía no llegó (la recepción queda parcial) */
+type ResultadoLlanta = 'aprobada' | 'rechazada' | 'pendiente';
+interface DatosLlanta { resultado: ResultadoLlanta; remanente: string; banda: string; motivo: string }
+const LLANTA_INICIAL: DatosLlanta = { resultado: 'aprobada', remanente: '', banda: '', motivo: '' };
+const esReencauche = (it: ItemRecepcion) => Array.isArray(it.llantas_reencauche) && it.llantas_reencauche.length > 0;
+const claveLlanta = (it: ItemRecepcion, l: LlantaReencauche) => `${it.inventario_id}|${l.id_neumatico}`;
 
 /**
  * Registrar la entrega física (parcial o total) de una orden de compra.
@@ -51,6 +59,7 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
   const [error, setError] = useState<string | null>(null);
   const [errLinea, setErrLinea] = useState<Record<number, string | undefined>>({});
   const [errTc, setErrTc] = useState<string | undefined>();
+  const [reenc, setReenc] = useState<Record<string, DatosLlanta>>({});
 
   const usd = !!oc && esUSD(oc.moneda);
   // Una O/C en dólares ya tiene su tipo de cambio (el de la compra): la recepción valoriza con ese mismo TC
@@ -63,7 +72,7 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
   useEffect(() => {
     if (!open) return;
     setCant({}); setAlm({}); setFecha(ahoraLocal()); setObs(''); setTcEditado(null);
-    setArchivo(null); setArchivoKey(k => k + 1); setError(null); setErrLinea({}); setErrTc(undefined);
+    setArchivo(null); setArchivoKey(k => k + 1); setError(null); setErrLinea({}); setErrTc(undefined); setReenc({});
   }, [open, oc?.id]);
 
   const items = oc?.items ?? [];
@@ -75,26 +84,44 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
   }, [almacenes]);
   const almacenDefecto = nombresAlm.includes(oc?.almacen ?? '') ? (oc?.almacen as string) : (nombresAlm.includes('Principal') ? 'Principal' : nombresAlm[0]);
 
-  const total = pendientes.reduce((s, { i }) => s + num(cant[i]), 0);
+  const datosLlanta = (it: ItemRecepcion, l: LlantaReencauche): DatosLlanta => reenc[claveLlanta(it, l)] ?? LLANTA_INICIAL;
+  const cambiarLlanta = (it: ItemRecepcion, l: LlantaReencauche, cambios: Partial<DatosLlanta>) =>
+    setReenc(r => ({ ...r, [claveLlanta(it, l)]: { ...(r[claveLlanta(it, l)] ?? LLANTA_INICIAL), ...cambios } }));
+  // Una línea de reencauche recibe tantas unidades como llantas llegaron (aprobadas o rechazadas)
+  const cantidadDe = (it: ItemRecepcion, i: number) =>
+    esReencauche(it) ? (it.llantas_reencauche ?? []).filter(l => datosLlanta(it, l).resultado !== 'pendiente').length : num(cant[i]);
+
+  const total = pendientes.reduce((s, { it, i }) => s + cantidadDe(it, i), 0);
   // Valor que entra al inventario, siempre en soles (igual que el servidor: costo × TC en líneas USD)
   const valorSoles = pendientes.reduce((s, { it, i }) =>
-    s + num(cant[i]) * (Number(it.costo_unitario) || 0) * (esUSD(it.moneda) ? tcNum : 1), 0);
+    s + cantidadDe(it, i) * (Number(it.costo_unitario) || 0) * (esUSD(it.moneda) ? tcNum : 1), 0);
   const valorListo = !usd || tcNum > 0;
 
   async function enviar() {
     if (!oc) return;
     const lineasMal: Record<number, string | undefined> = {};
     for (const { it, i } of pendientes) {
-      if (num(cant[i]) > it.pendiente + 1e-9) lineasMal[i] = `No puedes recibir más del saldo pendiente (${fmt(it.pendiente)}).`;
+      if (cantidadDe(it, i) > it.pendiente + 1e-9) lineasMal[i] = `No puedes recibir más del saldo pendiente (${fmt(it.pendiente)}).`;
     }
     setErrLinea(lineasMal);
     if (Object.values(lineasMal).some(Boolean)) { haptic('warning'); return; }
 
     const envio = pendientes
-      .filter(({ i }) => num(cant[i]) > 0)
+      .filter(({ it, i }) => cantidadDe(it, i) > 0)
       .map(({ it, i }) => ({
-        inventario_id: it.inventario_id, descripcion: it.descripcion, cantidad_recibida: num(cant[i]),
+        inventario_id: it.inventario_id, descripcion: it.descripcion, cantidad_recibida: cantidadDe(it, i),
         costo_unitario: it.costo_unitario, moneda: it.moneda, almacen: alm[i] || almacenDefecto,
+        llantas_reencauche: esReencauche(it)
+          ? (it.llantas_reencauche ?? []).flatMap(l => {
+            const d = datosLlanta(it, l);
+            if (d.resultado === 'pendiente') return [];
+            return [{
+              id_neumatico: l.id_neumatico, resultado: d.resultado,
+              remanente: d.resultado === 'aprobada' && d.remanente.trim() ? num(d.remanente) : null,
+              banda: d.resultado === 'aprobada' ? d.banda.trim() : '', motivo: d.resultado === 'rechazada' ? d.motivo.trim() : '',
+            }];
+          })
+          : undefined,
       }));
     if (!envio.length) { setError('Escribe una cantidad mayor a 0 en al menos un ítem.'); return; }
     if (usd && !(tcNum > 0)) { setErrTc('Indica el tipo de cambio del día.'); haptic('warning'); return; }
@@ -148,6 +175,43 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
                 <span className="dato__valor" style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>
                   Pedido {fmt(it.pedido)} · recibido {fmt(it.recepcionado)} · pendiente <strong>{fmt(it.pendiente)}</strong> {it.unidad}
                 </span>
+                {esReencauche(it) ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+                    <p className="t-callout c-secondary" style={{ margin: 0 }}>
+                      Cada llanta vuelve aprobada (sube una vida y queda en Reencauche, con el costo de esta línea) o rechazada
+                      (queda esperando descarte). Las que no llegaron quedan en la reformadora.
+                    </p>
+                    {(it.llantas_reencauche ?? []).map(l => {
+                      const d = datosLlanta(it, l);
+                      return (
+                        <div key={l.id_neumatico} style={{ border: '1px solid var(--separator)', borderRadius: 12, padding: 'var(--s-3)', display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                            <strong className="t-numeric">{l.codigo}</strong>
+                            <span style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>{[l.medida, l.modelo, `Vida ${l.vida}`].filter(Boolean).join(' · ')}</span>
+                          </div>
+                          <SegmentedControl<ResultadoLlanta> label={`Resultado de ${l.codigo}`} value={d.resultado} block
+                            onChange={v => { setErrLinea(x => ({ ...x, [i]: undefined })); cambiarLlanta(it, l, { resultado: v }); }}
+                            options={[{ value: 'aprobada', label: 'Aprobada' }, { value: 'rechazada', label: 'Rechazada' }, { value: 'pendiente', label: 'No llegó' }]} />
+                          {d.resultado === 'aprobada' && (
+                            <div className="form-grid">
+                              <TextInput inputMode="decimal" placeholder="Remanente (mm)" aria-label={`Remanente de ${l.codigo}`}
+                                value={d.remanente} onChange={e => cambiarLlanta(it, l, { remanente: e.target.value })} />
+                              <TextInput placeholder="Banda (diseño)" aria-label={`Banda de ${l.codigo}`}
+                                value={d.banda} onChange={e => cambiarLlanta(it, l, { banda: e.target.value })} />
+                            </div>
+                          )}
+                          {d.resultado === 'rechazada' && (
+                            <TextInput placeholder="Motivo del rechazo (opcional)" aria-label={`Motivo del rechazo de ${l.codigo}`}
+                              value={d.motivo} onChange={e => cambiarLlanta(it, l, { motivo: e.target.value })} />
+                          )}
+                        </div>
+                      );
+                    })}
+                    <span className="t-numeric" style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>
+                      {cantidadDe(it, i)} de {(it.llantas_reencauche ?? []).length} llantas recibidas
+                    </span>
+                  </div>
+                ) : (
                 <div className="rec-entrada">
                   <TextInput inputMode="decimal" placeholder="0" aria-label={`Cantidad recibida de ${it.descripcion}`}
                     value={cant[i] ?? ''}
@@ -161,6 +225,7 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
                     {nombresAlm.map(n => <option key={n} value={n}>{n}</option>)}
                   </SelectInput>
                 </div>
+                )}
                 {errLinea[i] && <p role="alert" style={{ margin: 0, fontSize: 12, color: 'var(--red-ink)' }}>{errLinea[i]}</p>}
               </div>
             ) : (

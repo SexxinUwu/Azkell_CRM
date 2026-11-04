@@ -2,7 +2,7 @@ import './NeumaticosListado.css';
 import { useEffect, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Disc3, SearchX, Settings } from 'lucide-react';
+import { ChevronRight, Disc3, SearchX, Settings, Truck } from 'lucide-react';
 import { api, errorMessage } from '../../core/api/client';
 import { exportarExcel } from '../../core/lib/excel';
 import { formatSoles } from '../../core/lib/format';
@@ -15,6 +15,8 @@ import { useToast } from '../../core/ui/Toast';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { LogoArchivo } from './NeumaticosRequerimiento';
 import { vidaTexto } from './ntb-api';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { DespacharReformadoraSheet, GenerarOrdenReencaucheSheet } from './NeumaticosReencauche';
 
 // Listado de neumáticos: GET /api/neumaticos/listado (contrato en routes/neumaticos-ciclo.js).
 // Cada fila abre la ficha de la llanta (ruta mantenimiento/neumaticos-ficha/:codigo).
@@ -299,6 +301,10 @@ export function NeumaticosListado() {
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [previaAbierta, setPreviaAbierta] = useState(false);
   const [configAbierta, setConfigAbierta] = useState(false);
+  const [ordenAbierta, setOrdenAbierta] = useState(false);
+  const [despachoAbierto, setDespachoAbierto] = useState(false);
+  const { can } = useAuth();
+  const puedeReforma = can('neumaticos.reencauche');
   const qc = useQueryClient();
   const toast = useToast();
 
@@ -315,7 +321,9 @@ export function NeumaticosListado() {
   const conteos = data?.conteos;
   const hayFiltro = filtro !== 'TODOS' || q !== '';
 
-  const seleccionables = filas.filter(l => l.situacion === SIN_CODIGO).map(l => l.codigo);
+  // En el filtro «Enviar para reforma» la selección es para la orden de reencauche; en los demás, para el código de fuego
+  const modoReforma = filtro === 'enviar_reforma';
+  const seleccionables = filas.filter(l => l.situacion === (modoReforma ? 'Enviar para reforma' : SIN_CODIGO)).map(l => l.codigo);
   const todasSeleccionadas = seleccionables.length > 0 && seleccionables.every(cod => seleccion.has(cod));
 
   function alternar(codigo: string) {
@@ -355,6 +363,11 @@ export function NeumaticosListado() {
         subtitle="Llantas del ciclo de vida: almacén, unidades, reencauche y descarte"
         actions={
           <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+            {puedeReforma && (
+              <Button variant="secondary" icon={<Truck size={16} />} onClick={() => setDespachoAbierto(true)}>
+                Despachar a la reformadora
+              </Button>
+            )}
             <Button variant="secondary" icon={<Settings size={16} />} onClick={() => setConfigAbierta(true)}>
               Código de fuego
             </Button>
@@ -392,10 +405,15 @@ export function NeumaticosListado() {
         <div className="nl-barra">
           {seleccionables.length > 0 && (
             <Button variant="plain" onClick={alternarTodas}>
-              {todasSeleccionadas ? 'Quitar selección' : `Seleccionar sin código (${seleccionables.length})`}
+              {todasSeleccionadas ? 'Quitar selección' : `Seleccionar ${modoReforma ? 'para reforma' : 'sin código'} (${seleccionables.length})`}
             </Button>
           )}
-          {seleccion.size > 0 && (
+          {seleccion.size > 0 && modoReforma && puedeReforma && (
+            <Button variant="primary" icon={<Truck size={16} />} onClick={() => setOrdenAbierta(true)}>
+              Generar orden de reencauche ({seleccion.size})
+            </Button>
+          )}
+          {seleccion.size > 0 && !modoReforma && (
             <Button variant="primary" onClick={() => setPreviaAbierta(true)}>
               Generar código de fuego ({seleccion.size})
             </Button>
@@ -465,6 +483,10 @@ export function NeumaticosListado() {
           void qc.invalidateQueries({ queryKey: ['mant', 'neumaticos'] });
         }} />
       <ConfigCodigoSheet open={configAbierta} onClose={() => setConfigAbierta(false)} />
+      <GenerarOrdenReencaucheSheet open={ordenAbierta} onClose={() => setOrdenAbierta(false)}
+        llantas={filas.filter(l => seleccion.has(l.codigo)).map(l => ({ codigo: l.codigo, medida: l.medida }))}
+        onHecho={() => { setOrdenAbierta(false); setSeleccion(new Set()); }} />
+      <DespacharReformadoraSheet open={despachoAbierto} onClose={() => setDespachoAbierto(false)} onHecho={() => setDespachoAbierto(false)} />
     </Page>
   );
 }

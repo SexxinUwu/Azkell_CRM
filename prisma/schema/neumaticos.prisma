@@ -49,6 +49,27 @@ model NeumaticoArticulo {
   @@map("neumaticos_articulo")
 }
 
+// Orden de servicio de reencauche: une una orden de compra con las llantas enviadas a la reformadora.
+// abierta_id (columna generada) vale el id de la llanta solo mientras la orden está abierta; su índice único impide dos órdenes abiertas.
+model NeumaticoReencaucheOc {
+  id             Int       @id @default(autoincrement())
+  oc_id          String    @db.VarChar(20)
+  inventario_id  String    @db.VarChar(20)
+  id_neumatico   String    @db.VarChar(50)
+  estado         String    @default("pendiente") @db.VarChar(20)
+  costo          Decimal?  @db.Decimal(14, 4)
+  guia           String?   @db.VarChar(100)
+  recepcion_id   Int?
+  usuario        String?   @db.VarChar(100)
+  created_at     DateTime? @default(now()) @db.Timestamp(0)
+  despachado_en  DateTime? @db.DateTime(0)
+  resuelto_en    DateTime? @db.DateTime(0)
+  abierta_id     String?   @unique(map: "uq_reenc_abierta") @db.VarChar(50)
+
+  @@index([oc_id, estado], map: "idx_reenc_oc")
+  @@map("neumaticos_reencauche_oc")
+}
+
 model NeumaticoHojaVida {
   id_neumatico      String                             @id @db.VarChar(50)
   codigo_dot        String?                            @db.VarChar(50)

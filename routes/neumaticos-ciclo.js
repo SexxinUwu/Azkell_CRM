@@ -201,6 +201,7 @@ function surcoPromedio(r1, r2, r3) {
 }
 
 const { aviso: avisoCodigo, anioLima, formatearCodigo, asignarCodigosFuego } = require('../services/neumaticos_codigo');
+const { aplicarRetornoReencauche, sinTabla } = require('../services/neumaticos_retorno');
 
 module.exports = function (db) {
     const router = express.Router();
@@ -619,43 +620,102 @@ module.exports = function (db) {
         hacia: { almacen: ALMACEN.SCRAP, estado: ESTADO.DESECHO }, mov: MOV.DESACTIVACION,
     });
 
-    // Despacho a la reformadora: una lista de códigos con su guía. Todo o nada: si una llanta no corresponde, no sale ninguna.
+    // Órdenes de servicio de reencauche abiertas (con llantas pendientes de despacho o ya en la reformadora), para la pantalla de despacho
+    router.get('/ordenes-reencauche', async (req, res) => {
+        try {
+            if (!tienePermiso(req, PERMISO_VER, 'l')) throw aviso(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
+            const p = pool(req);
+            let filas = [];
+            try {
+                [filas] = await p.query("SELECT oc_id, estado, COUNT(*) AS n FROM neumaticos_reencauche_oc WHERE estado IN ('pendiente', 'en_reformadora') GROUP BY oc_id, estado");
+            } catch (err) {
+                if (!sinTabla(err)) throw err;
+            }
+            const ids = [...new Set(filas.map(f => f.oc_id))];
+            const ordenes = new Map();
+            if (ids.length) {
+                const [e] = await p.query('SELECT id, proveedor_nombre, estado FROM entradas_inv WHERE id IN (?)', [ids]);
+                e.forEach(x => ordenes.set(x.id, x));
+            }
+            const cuenta = (id, estado) => Number((filas.find(f => f.oc_id === id && f.estado === estado) || {}).n || 0);
+            const data = ids.map(id => {
+                const o = ordenes.get(id) || {};
+                return {
+                    oc_id: id, proveedor: o.proveedor_nombre || '', estado_oc: o.estado || '',
+                    aprobada: /^(aprobad|autorizad|procesad|pagad)/i.test(txt(o.estado)),
+                    pendientes: cuenta(id, 'pendiente'), en_reformadora: cuenta(id, 'en_reformadora'),
+                };
+            }).sort((x, y) => String(y.oc_id).localeCompare(String(x.oc_id)));
+            res.json({ ok: true, data });
+        } catch (err) {
+            responder(res, err);
+        }
+    });
+
+    // Despacho a la reformadora: exige una orden de servicio de reencauche aprobada que contenga las llantas (en "pendiente")
+    // y guarda la guía. Sin `codigos` se despachan todas las pendientes de la orden. Todo o nada.
     router.post('/despachar-reformadora', async (req, res) => {
         try {
             if (!tienePermiso(req, PERMISO_REENCAUCHE, 'c')) throw aviso(403, `Sin permiso (${PERMISO_REENCAUCHE}) para despachar llantas a la reformadora`);
             const b = req.body || {};
-            const lista = Array.isArray(b.codigos) ? b.codigos : [];
-            // Orden fijo: dos despachos a la vez bloquean las llantas en el mismo orden
-            const codigos = [...new Set(lista.map(mayus).filter(Boolean))].sort();
-            if (!codigos.length) throw aviso(400, 'Indica al menos una llanta para despachar');
-            if (codigos.length > 200) throw aviso(400, 'Se pueden despachar hasta 200 llantas por guía');
+            const ocId = txt(b.oc_id);
+            if (!ocId) throw aviso(400, 'Indica la orden de servicio de reencauche');
             const guia = txt(b.guia);
             if (!guia) throw aviso(400, 'La guía de despacho es obligatoria');
+            const pedidos = Array.isArray(b.codigos) ? [...new Set(b.codigos.map(mayus).filter(Boolean))] : [];
+            if (pedidos.length > 200) throw aviso(400, 'Se pueden despachar hasta 200 llantas por guía');
             const extra = txt(b.observacion);
-            const observacion = `Guía: ${guia}${extra ? `. ${extra}` : ''}`;
+            const observacion = `Orden ${ocId}. Guía: ${guia}${extra ? `. ${extra}` : ''}`;
 
-            await conTransaccion(pool(req), async (conn) => {
-                for (const codigo of codigos) {
-                    const llanta = await bloquearLlanta(conn, codigo);
+            const despachadas = await conTransaccion(pool(req), async (conn) => {
+                const [ent] = await conn.query('SELECT estado FROM entradas_inv WHERE id = ? LIMIT 1', [ocId]);
+                if (!ent.length) throw aviso(404, `La orden ${ocId} no existe`);
+                if (!/^(aprobad|autorizad|procesad|pagad)/i.test(txt(ent[0].estado))) {
+                    throw aviso(409, `La orden ${ocId} está "${ent[0].estado}": debe estar aprobada para despachar las llantas`);
+                }
+                let filas;
+                try {
+                    [filas] = await conn.query("SELECT * FROM neumaticos_reencauche_oc WHERE oc_id = ? AND estado = 'pendiente' ORDER BY id_neumatico FOR UPDATE", [ocId]);
+                } catch (err) {
+                    if (sinTabla(err)) throw aviso(503, 'Falta aplicar la migración 14 (neumaticos_reencauche_oc)');
+                    throw err;
+                }
+                if (!filas.length) throw aviso(409, `La orden ${ocId} no tiene llantas pendientes de despacho`);
+                const porLlanta = new Map(filas.map(f => [f.id_neumatico, f]));
+                const ids = pedidos.length ? [] : [...porLlanta.keys()];
+                // Con códigos: cada uno debe pertenecer a la orden (pendiente)
+                for (const codigo of pedidos) {
+                    const l = await bloquearLlanta(conn, codigo);
+                    if (!porLlanta.has(l.id_neumatico)) throw aviso(409, `La llanta ${codigo} no está pendiente de despacho en la orden ${ocId}`);
+                    ids.push(l.id_neumatico);
+                }
+                ids.sort();
+                for (const id of ids) {
+                    const llanta = await bloquearLlanta(conn, id);
                     exigirSituacion(llanta, ['enviar_reforma'], 'despachar a la reformadora');
                     // Sale del Retén: ya no tiene almacén hasta que regrese
                     await pasarLlanta(conn, req, llanta, { almacen: null, estado: ESTADO.EN_REENCAUCHE, mov: MOV.DESPACHO_REFORMADORA, observacion });
+                    await conn.query(
+                        "UPDATE neumaticos_reencauche_oc SET estado = 'en_reformadora', guia = ?, despachado_en = ? WHERE id = ?",
+                        [guia, ahoraLima(), porLlanta.get(id).id]);
                 }
+                return ids.length;
             });
-            res.json({ ok: true, data: { guia, despachadas: codigos.length, codigos } });
+            res.json({ ok: true, data: { oc_id: ocId, guia, despachadas } });
         } catch (err) {
             responder(res, err);
         }
     });
 
     // ============================================================
-    // 6. RETORNO DE REENCAUCHE (llantas enviar_reforma o en_reformadora).
+    // 6. RETORNO MANUAL DE REENCAUCHE (llantas enviar_reforma o en_reformadora que NO están en una orden de servicio).
+    // Las llantas de una orden se resuelven al recepcionar la orden (Almacén > Recepción de compras).
     //   resultado 'aprobada' (por defecto): sube la vida, suma el costo y la llanta queda en 1142, en_almacen.
     //   resultado 'rechazada': no sube la vida ni suma costo; queda en el Retén (1146) esperando descarte.
     // ============================================================
     router.post('/retorno-reencauche', async (req, res) => {
         try {
-            if (!tienePermiso(req, PERMISO_REENCAUCHE, 'c')) throw aviso(403, 'Sin permiso (neumaticos.reencauche) para registrar el retorno de reencauche');
+            if (!tienePermiso(req, 'neumaticos.reencauche', 'c')) throw aviso(403, 'Sin permiso (neumaticos.reencauche) para registrar el retorno de reencauche');
             const b = req.body || {};
             const codigo = mayus(b.codigo);
             if (!codigo) throw aviso(400, 'El código de la llanta es obligatorio');
@@ -672,59 +732,21 @@ module.exports = function (db) {
             const nueva = await conTransaccion(pool(req), async (conn) => {
                 const llanta = await bloquearLlanta(conn, codigo);
                 exigirSituacion(llanta, ['en_reformadora', 'enviar_reforma'], 'registrar su retorno de reencauche');
-
-                if (resultado === 'rechazada') {
-                    const detalleRechazo = [
-                        'Reencauche rechazado',
-                        proveedor && `Proveedor: ${proveedor}`,
-                        motivo && `Motivo: ${motivo}`,
-                    ].filter(Boolean).join('. ');
-                    await pasarLlanta(conn, req, llanta, {
-                        almacen: ALMACEN.RETEN, estado: ESTADO.DESECHO, mov: MOV.RECHAZO_REENCAUCHE, observacion: detalleRechazo,
-                    });
-                    return { rechazada: true };
+                let enOrden = [];
+                try {
+                    [enOrden] = await conn.query(
+                        "SELECT oc_id FROM neumaticos_reencauche_oc WHERE id_neumatico = ? AND estado IN ('pendiente', 'en_reformadora') LIMIT 1", [llanta.id_neumatico]);
+                } catch (err) {
+                    if (!sinTabla(err)) throw err;
                 }
-
-                const vidaActual = llanta.vida || 'R0';
-                const idx = VIDAS.indexOf(vidaActual);
-                if (idx < 0) throw aviso(409, `Vida desconocida: ${vidaActual}`);
-                if (idx >= VIDAS.length - 1) throw aviso(409, 'La llanta ya está en R3 y no admite más reencauches');
-                const vidaNueva = VIDAS[idx + 1];
-
-                const contador = (Number(llanta.contador_reencauches) || 0) + 1;
-                const costoTotal = (Number(llanta.costo_reencauches) || 0) + costo;
-                const remanenteFinal = remanente == null ? llanta.remanente_actual : remanente;
-
-                await conn.query(
-                    `UPDATE neumaticos_hoja_vida
-                     SET vida = ?, contador_reencauches = ?, costo_reencauches = ?, remanente_actual = ?,
-                         almacen_id = ?, estado_ciclo = ?, estado_operativo = ?
-                     WHERE id_neumatico = ?`,
-                    [vidaNueva, contador, costoTotal, remanenteFinal, ALMACEN.REENCAUCHE,
-                     ESTADO.ALMACEN.ciclo, ESTADO.ALMACEN.operativo, llanta.id_neumatico]);
-
-                const detalle = [
-                    proveedor && `Proveedor: ${proveedor}`,
-                    `Costo servicio: ${costo}`,
-                    disenio && `Diseño: ${disenio}`,
-                    remanente != null && `Remanente: ${remanente} mm`,
-                    `Vida ${vidaActual} a ${vidaNueva}`,
-                ].filter(Boolean).join('. ');
-
-                await registrarMovimiento(conn, {
-                    id_neumatico: llanta.id_neumatico, tipo: MOV.RETORNO_REENCAUCHE,
-                    origen: llanta.almacen_id == null ? null : Number(llanta.almacen_id), destino: ALMACEN.REENCAUCHE,
-                    fecha: ahoraLima(), usuario: usuarioDe(req), observacion: detalle,
-                });
-
-                return { vida: vidaNueva, contador, costoTotal };
+                if (enOrden.length) {
+                    throw aviso(409, `La llanta está en la orden ${enOrden[0].oc_id}: su retorno se registra al recepcionar esa orden (Almacén > Recepción de compras)`);
+                }
+                return aplicarRetornoReencauche(conn, llanta, { resultado, costo, proveedor, disenio, remanente, motivo, usuario: usuarioDe(req), fecha: ahoraLima() });
             });
 
             if (nueva.rechazada) {
-                return res.json({
-                    ok: true,
-                    data: { codigo, resultado, almacen_id: ALMACEN.RETEN, estado: ESTADO.DESECHO.ciclo },
-                });
+                return res.json({ ok: true, data: { codigo, resultado, almacen_id: ALMACEN.RETEN, estado: ESTADO.DESECHO.ciclo } });
             }
             res.json({
                 ok: true,
