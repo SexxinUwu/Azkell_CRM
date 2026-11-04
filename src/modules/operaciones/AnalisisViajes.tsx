@@ -12,6 +12,9 @@ import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/Ta
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
+import { ADMIN } from '../../core/auth/permisos';
+import { encolarCan, pedirCan, useCanViajes, type EstadoCan, type ItemCan } from './canLote';
+import { PanelCan } from './PanelCan';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { FILTROS_ANALISIS_VACIOS, FiltrosAnalisisSheet, cuentaFiltrosAnalisis, dentroDeRango, normalizarBusqueda, type FiltrosAnalisis, type OpcionesFiltro } from './FiltrosAnalisisSheet';
@@ -38,7 +41,7 @@ const fechaExcel = (s?: string | null): Date | string => {
   const m = /^(d{4})-(d{2})-(d{2})(?:[ T](d{2}):(d{2})(?::(d{2}))?)?/.exec(String(s ?? '').trim());
   return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] ?? 0), +(m[5] ?? 0), +(m[6] ?? 0))) : (s || '---');
 };
-interface TelemetriaWialon {
+export interface TelemetriaWialon {
   recorridoKmGps: number | null; combustibleConsumidoGps: number | null; rendimientoGps: number | null;
   velocidadMaxGps: number | null; rpmMediaGps: number | null; rpmMediaMaxGps?: number | null; rpmMaxGps: number | null; rpmMaxMaxGps?: number | null; horasMotorGps: string | number | null; consumoRalentiGps: number | null;
 }
@@ -51,12 +54,7 @@ function useTelemetriaViaje(trip: Trip | null, habilitada: boolean) {
     enabled: habilitada && !!trip?.placa,
     retry: false,
     staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const p = new URLSearchParams({ placa: trip!.placa, fechaInicio: ini, fechaFin: fin });
-      const r = await api<{ ok?: boolean; data?: TelemetriaWialon; error?: string }>(`/combustible/wialon-telemetria?${p.toString()}`);
-      if (!r.ok || !r.data) throw new Error(r.error || 'Sin telemetría para este viaje');
-      return r.data;
-    },
+    queryFn: ({ signal }) => encolarCan(signal, () => pedirCan({ viaje: trip!.viaje, placa: trip!.placa, ini, fin })),
   });
 }
 
@@ -103,14 +101,14 @@ function rangoViaje(trip: Trip) {
 }
 
 // Telemetría de la página, por número de viaje (una sola consulta al servidor: ver `gps` en AnalisisViajes)
-type LoteGps = Record<string, { data: TelemetriaWialon | null; error?: string }>;
+type LoteGps = Record<string, { data: TelemetriaWialon | null; error?: string; estado: EstadoCan }>;
 
 // Valor de una celda GPS: '—' si el CAN está apagado, '…' mientras consulta, o el dato si llegó
-function valorGps(activo: boolean, cargando: boolean, lote: LoteGps | undefined, viaje: string, campo: keyof TelemetriaWialon) {
+function valorGps(activo: boolean, lote: LoteGps | undefined, viaje: string, campo: keyof TelemetriaWialon) {
   if (!activo) return '—';
-  if (cargando) return '…';
   const fila = lote?.[viaje];
-  if (!fila) return '—';
+  if (!fila || fila.estado === 'cargando') return '…';
+  if (fila.estado === 'error') return 'Error';
   // Wialon no devolvió datos para esta placa: se avisa en vez de dejar guiones sin explicación
   if (!fila.data) return 'Sin datos';
   const x = fila.data[campo];
@@ -305,7 +303,8 @@ function ObsInput({ viaje, estado, valor, puedeAuditar, onGuardar }: {
   const [v, setV] = useState(valor);
   const [ok, setOk] = useState(false);
   useEffect(() => { setV(valor); }, [valor]);
-  const bloqueado = !puedeAuditar || estado === 'CONFORME';
+  const { permissions } = useAuth();
+  const bloqueado = !puedeAuditar || (estado === 'CONFORME' && !permissions.has(ADMIN));
   const guardar = async () => {
     if (bloqueado || v.trim() === (valor ?? '').trim()) return;
     try { await onGuardar(viaje, estado, v.trim()); setOk(true); window.setTimeout(() => setOk(false), 2000); } catch { /* el aviso lo da el hook */ }
@@ -535,22 +534,13 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const pagActual = Math.min(pagina, paginas);
   const pagina_ = useMemo(() => visibles.slice((pagActual - 1) * tamano, pagActual * tamano), [visibles, pagActual, tamano]);
 
-  // CAN (GPS): los viajes de la página van en una sola petición; el servidor consulta Wialon en secuencia
-  const lote = useMemo(() => pagina_.filter(x => x.placa).map((x, index) => {
+  // CAN (GPS): cada viaje de la página se consulta por separado y se guarda en caché (ver canLote.ts)
+  const itemsCan = useMemo<ItemCan[]>(() => pagina_.filter(x => x.placa).map(x => {
     const r = rangoViaje(x);
-    return { id: x.viaje, index, viaje: x.viaje, placa: x.placa, fechaInicio: r.ini, fechaFin: r.fin };
+    return { viaje: x.viaje, placa: x.placa, ini: r.ini, fin: r.fin };
   }), [pagina_]);
-  const gps = useQuery<LoteGps>({
-    queryKey: ['operaciones', 'wialon-lote', lote],
-    enabled: canActivo && !urea && lote.length > 0,
-    retry: false,
-    staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const r = await api<{ ok: boolean; results?: { id: string; data: TelemetriaWialon | null; error?: string }[]; error?: string }>('/combustible/wialon-telemetria-batch', { method: 'POST', body: { trips: lote } });
-      if (!r.ok) throw new Error(r.error || 'No se pudo consultar Wialon');
-      return Object.fromEntries((r.results ?? []).map(x => [String(x.id), { data: x.data, error: x.error }]));
-    },
-  });
+  const gps = useCanViajes(itemsCan, canActivo && !urea);
+  const lote: LoteGps = gps.lote;
   // Como el clásico: el recorrido es el del bloque de diésel del viaje (urea, el general)
   const kmDelViaje = (t: Trip) => (urea ? n(t.recorridoKm) : n(bloqueD2(t)?.recorridoKm ?? t.recorridoKm));
   // Regla: las tarjetas son el reflejo exacto de los viajes visibles en la tabla (fechas, búsqueda, filtros y «ocultar compras sin viaje» incluidos)
@@ -582,14 +572,14 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         const d = galViaje - a.galTeorico;
         if (d > 0) { exceso += d; viajesExceso++; } else if (d < 0) { ahorro -= d; viajesAhorro++; }
       }
-      const gpsT = gps.data?.[t.viaje]?.data;
+      const gpsT = gps.lote[t.viaje]?.data;
       if (gpsT?.combustibleConsumidoGps != null && Number.isFinite(Number(gpsT.combustibleConsumidoGps))) {
         gpsGal += Number(gpsT.combustibleConsumidoGps);
         gpsCon++;
       }
     }
     return { km, gal, kmTeo, galTeo, gpsGal, gpsCon, exceso, ahorro, viajesExceso, viajesAhorro };
-  }, [visibles, analisis, gps.data, urea]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [visibles, analisis, gps.lote, urea]); // eslint-disable-line react-hooks/exhaustive-deps
   const pieCeldas: ReactNode[] = [
     <Celda key="aud">—</Celda>,
   ];
@@ -632,6 +622,9 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const t = trips.find(x => x.viaje === abierto) ?? null;
   const Icono = urea ? Droplets : Fuel;
   const puedeAuditar = can('combustible_analisis.editar', 'combustible.editar', 'urea_analisis.editar', 'combustible_analisis.crear');
+  // Un viaje CONFORME queda bloqueado para todos menos el administrador (el servidor también lo valida)
+  const { permissions } = useAuth();
+  const esAdmin = permissions.has(ADMIN);
 
   // Columnas en el orden del clásico: auditoría, viaje, placa, carreta, estado, motor, ruta, conductor, peso, fechas, vales,
   // teórico (naranja) y GPS (celeste)
@@ -689,7 +682,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         const kmIni = s ? n(s.kmInicio) : x.kmInicio, kmFin = s ? n(s.kmFin) : x.kmFin, rec = s ? n(s.recorridoKm) : x.recorridoKm;
         const a = analisis.get(x.viaje);
         const dif = a && a.galTeorico > 0 && c.galones > 0 ? c.galones - a.galTeorico : null;
-        const g = gps.data?.[x.viaje]?.data ?? null;
+        const g = gps.lote[x.viaje]?.data ?? null;
         const gv = (v: number | null | undefined, d = 2) => (v == null ? '—' : ptoDecimal(Number(v), d));
         const vales = (s?.vouchers ?? x.vouchers ?? []).filter(v => !v.esPuntoPartida && esD2(String(v.producto ?? ''))).length;
         return [
@@ -706,7 +699,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
       });
       // Fila TOTAL al final, como el clásico: galones reales y combustible consumido por GPS
       const totGal = visibles.reduce((t, x) => t + cifrasXls(x).galones, 0);
-      const totGps = visibles.reduce((t, x) => { const v = gps.data?.[x.viaje]?.data?.combustibleConsumidoGps; return t + (v != null && !isNaN(Number(v)) ? Number(v) : 0); }, 0);
+      const totGps = visibles.reduce((t, x) => { const v = gps.lote[x.viaje]?.data?.combustibleConsumidoGps; return t + (v != null && !isNaN(Number(v)) ? Number(v) : 0); }, 0);
       const total: (string | number | Date)[] = ENCABEZADOS_EXCEL.map(() => '');
       total[2] = 'TOTAL'; total[ENCABEZADOS_EXCEL.indexOf('TOTAL GALONES (REAL)')] = ptoDecimal(totGal, 2);
       total[ENCABEZADOS_EXCEL.indexOf('COMB. CONSUMIDO (GPS CAN)')] = totGps > 0 ? ptoDecimal(totGps, 2) : '—';
@@ -794,8 +787,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
           </EmptyState>
         ) : (
           <>
-            {gps.isError && <Notice tone="error">{errorMessage(gps.error)}</Notice>}
-            {canActivo && !gps.isFetching && gps.data && Object.values(gps.data).every(f => !f.data) && <Notice>No se encontraron registros CAN para los viajes de esta página (revisa que la unidad exista en Wialon con esa placa).</Notice>}
+            {canActivo && gps.total > 0 && gps.cargando === 0 && gps.listos === 0 && <Notice>No se encontraron registros CAN para los viajes de esta página (revisa que la unidad exista en Wialon con esa placa).</Notice>}
             <TablaRedimensionable id={urea ? 'analisis-urea' : 'analisis-combustible'} columnas={columnas} ariaLabel={urea ? 'Análisis de urea por viaje' : 'Análisis de combustible por viaje'}>
               {pagina_.map((x, i) => {
                 const c = cifras(x);
@@ -805,12 +797,12 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
                 const a = analisis.get(x.viaje);
                 const abiertoFila = !urea && expandidos.has(x.viaje);
                 const color = colorAudit(x.estadoAuditoria);
-                const gpsV = (campo: keyof TelemetriaWialon) => valorGps(canActivo, gps.isFetching, gps.data, x.viaje, campo);
+                const gpsV = (campo: keyof TelemetriaWialon) => valorGps(canActivo, lote, x.viaje, campo);
                 const dif = a && a.galTeorico > 0 && c.galones > 0 ? c.galones - a.galTeorico : null;
                 const celdas: ReactNode[] = [
                   <Celda key="aud">
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      {puedeAuditar && x.estadoAuditoria !== 'CONFORME' ? (
+                      {puedeAuditar && (x.estadoAuditoria !== 'CONFORME' || esAdmin) ? (
                         <select value={x.estadoAuditoria} aria-label={`Auditoría del viaje ${x.viaje}`} onClick={e => e.stopPropagation()}
                           onChange={e => { const est = e.target.value; if (est === 'OBSERVADO') setMostrarObs(true); haptic('selection'); guardar(x.viaje, est, x.observacionAuditoria || '').catch(() => undefined); }}
                           style={{ font: 'inherit', fontSize: '0.75rem', fontWeight: 700, padding: '2px 6px', borderRadius: 999, border: '1px solid var(--separator)', background: `var(--${color}-tint)`, color: `var(--${color}-ink)`, cursor: 'pointer' }}>
@@ -896,7 +888,8 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         )}
       </div>
 
-      <DetalleViaje trip={t} urea={urea} puedeAuditar={puedeAuditar} guardar={guardar} analisis={t ? analisis.get(t.viaje) : undefined} gpsLote={gps.data?.[t?.viaje ?? '']?.data ?? null} onClose={() => setAbierto(null)} cifras={cifras} />
+      {canActivo && !urea && <PanelCan filas={gps.filas} total={gps.total} listos={gps.listos} cargando={gps.cargando} sinDatos={gps.sinDatos} errores={gps.errores} reintentar={gps.reintentar} items={itemsCan} />}
+      <DetalleViaje trip={t} urea={urea} puedeAuditar={puedeAuditar} guardar={guardar} analisis={t ? analisis.get(t.viaje) : undefined} gpsLote={gps.lote[t?.viaje ?? '']?.data ?? null} onClose={() => setAbierto(null)} cifras={cifras} />
       <FiltrosAnalisisSheet open={filtrando} onClose={() => setFiltrando(false)} filtros={filtros} onChange={setFiltros} opciones={opciones} resultado={visibles.length} urea={urea} />
     </Page>
   );
@@ -954,7 +947,8 @@ function DetalleViaje({ trip: t, urea, puedeAuditar, guardar, analisis: a, gpsLo
   useEffect(() => { if (t) { setObs(t.observacionAuditoria || ''); setGuardado(false); setPedida(false); } }, [t?.viaje]); // eslint-disable-line react-hooks/exhaustive-deps
   const telQ = useTelemetriaViaje(t, pedida);
   const estado = t?.estadoAuditoria || 'PENDIENTE';
-  const bloqueado = !puedeAuditar || estado === 'CONFORME';
+  const { permissions } = useAuth();
+  const bloqueado = !puedeAuditar || (estado === 'CONFORME' && !permissions.has(ADMIN));
 
   // Guardado en vivo: el resultado al elegirlo y la observación al salir del campo
   async function guardarAhora(est: string, texto: string) {
@@ -1004,7 +998,7 @@ function DetalleViaje({ trip: t, urea, puedeAuditar, guardar, analisis: a, gpsLo
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
           <p className="tarjeta__grupo-titulo">Auditoría</p>
-          {estado === 'CONFORME' && <span className="t-footnote c-secondary">Auditoría conforme: queda bloqueada.</span>}
+          {estado === 'CONFORME' && <span className="t-footnote c-secondary">{permissions.has(ADMIN) ? 'Auditoría conforme: solo el administrador puede cambiarla.' : 'Auditoría conforme: queda bloqueada.'}</span>}
           <Field label="Resultado">
             {p => <SelectInput {...p} value={estado} onChange={e => guardarAhora(e.target.value, obs)} disabled={bloqueado}>{AUDIT.map(a2 => <option key={a2} value={a2}>{a2}</option>)}</SelectInput>}
           </Field>

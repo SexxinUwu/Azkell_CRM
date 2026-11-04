@@ -2382,6 +2382,16 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
+    // Mismo criterio que el frontend (src/core/auth/permisos.ts): admin, fundador o el correo del fundador
+    const esAdministrador = (req) => {
+        const u = req.user || {};
+        if (String(u.correo || '').toLowerCase() === 'admin@azkell.com' || String(u.rol || '').toLowerCase() === 'fundador') return true;
+        try {
+            const p = typeof u.permisos === 'string' ? JSON.parse(u.permisos || '{}') : (u.permisos || {});
+            return p.admin === true;
+        } catch { return false; }
+    };
+
     // POST /api/combustible/auditar-viaje
     router.post('/auditar-viaje', async (req, res) => {
         try {
@@ -2407,6 +2417,12 @@ module.exports = function (db, broadcast, logAudit) {
             }
             const obs = (observacion !== undefined && observacion !== null) ? String(observacion).trim() : '';
             const usuario = (req.user && (req.user.username || req.user.nombre)) || req.body.usuario || 'Auditor';
+
+            // Un viaje CONFORME queda bloqueado: solo un administrador puede volver a cambiarlo
+            const [previa] = await tdb.query('SELECT estado_auditoria FROM combustible_auditoria_viajes WHERE modulo = ? AND viaje = ? LIMIT 1', [moduloAuditoria, rawViaje]);
+            if (previa[0] && String(previa[0].estado_auditoria).toUpperCase() === 'CONFORME' && !esAdministrador(req)) {
+                return res.status(403).json({ ok: false, error: 'Este viaje ya está CONFORME: solo un administrador puede cambiarlo.' });
+            }
 
             const sqlAudit = `
                 INSERT INTO combustible_auditoria_viajes (modulo, viaje, estado_auditoria, observacion, usuario)
