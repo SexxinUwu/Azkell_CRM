@@ -10,6 +10,7 @@ import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field'
 import { Combobox, type ComboboxOption } from '../../core/ui/Combobox';
 import { Switch } from '../../core/ui/Switch';
 import { TooltipFijo } from '../../core/ui/TooltipFijo';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
@@ -532,61 +533,62 @@ function situacionTono(s: string | null) {
   return 'gray';
 }
 
+/** Columnas de Status de rampa: se pueden alargar o acortar arrastrando el borde del encabezado (doble clic = ajustar) */
+function COLUMNAS_RAMPA(verInspeccion: boolean): ColumnaTabla[] {
+  return [
+    { id: 'rampa', titulo: 'Rampa', ancho: 130, minimo: 90 },
+    { id: 'ingreso', titulo: 'Ingreso', ancho: 96, minimo: 80 },
+    { id: 'hora', titulo: 'Hora', ancho: 64, minimo: 56 },
+    { id: 'placa', titulo: 'Placa', ancho: 124, minimo: 100 },
+    { id: 'situacion', titulo: 'Situación', ancho: 150, minimo: 110 },
+    { id: 'motivo', titulo: 'Motivo de ingreso', ancho: 280, minimo: 140 },
+    { id: 'salida', titulo: 'Salida est.', ancho: 96, minimo: 80 },
+    { id: 'hora_salida', titulo: 'Hora', ancho: 64, minimo: 56 },
+    { id: 'h_taller', titulo: 'H. taller', ancho: 84, minimo: 70 },
+    { id: 'ot', titulo: 'OT', ancho: 150, minimo: 100 },
+    { id: 'tecnicos', titulo: 'Técnicos', ancho: 170, minimo: 110 },
+    ...(verInspeccion ? [{ id: 'inspeccion', titulo: 'Inspección', ancho: 130, minimo: 100 }] : []),
+    { id: 'abrir', titulo: '', ancho: 90, minimo: 80 },
+  ];
+}
+
 function RampaTabla({ entradas, ots, tecnicosPorRampa, verInspeccion, ultimasInsp, puedeEditar, onEditar, onLiberar, onInspeccion, onAbrir }: { entradas: RampaEntrada[]; ots: OrdenTrabajo[]; tecnicosPorRampa: Map<string, string[]>; verInspeccion: boolean; ultimasInsp: Map<string, Inspeccion>; puedeEditar: boolean; onEditar: (e: RampaEntrada) => void; onLiberar: (e: RampaEntrada) => void; onInspeccion: (i: Inspeccion) => void; onAbrir: (e: RampaEntrada) => void }) {
   return (
-    <div className="rt-caja">
-      <table className="rt">
-        <colgroup>
-          {[130, 84, 50, 92, 158, undefined, 84, 50, 72, 150, 130, ...(verInspeccion ? [120] : []), 76].map((w, i) => (
-            <col key={i} style={w ? { width: w } : undefined} />
-          ))}
-        </colgroup>
-        <thead>
-          <tr>
-            <th>Rampa</th><th>Ingreso</th><th>Hora</th><th>Placa</th><th>Situación</th><th>Motivo de Ingreso</th>
-            <th>Salida est.</th><th>Hora</th><th>H. taller</th><th>OT</th><th>Técnicos</th>{verInspeccion && <th>Inspección</th>}<th aria-label="Abrir" />
+    <TablaRedimensionable id={verInspeccion ? 'status-rampa-activas-insp' : 'status-rampa-activas'} columnas={COLUMNAS_RAMPA(verInspeccion)}
+      ariaLabel="Ocupación de rampas" altoMax="70vh">
+      {entradas.map(e => {
+        const horas = horasEnRampa(e.fecha_ingreso);
+        return (
+          <tr key={rampaId(e)} className="rt__fila" tabIndex={0} onClick={() => { haptic('selection'); onAbrir(e); }}
+            onKeyDown={ev => { if (ev.key === 'Enter') onAbrir(e); }}>
+            <Celda><span className="rt__rampa">{e.rampa}</span></Celda>
+            <Celda>{soloFecha(e.fecha_ingreso)}</Celda>
+            <Celda>{soloHora(e.hora_ingreso)}</Celda>
+            <Celda>{e.placa ? <LicensePlate plate={e.placa} size="sm" /> : '—'}</Celda>
+            <Celda><span className={`rt__pill rt__pill--${situacionTono(e.situacion)}`}>{e.situacion ?? '—'}</span></Celda>
+            <Celda><span className="rt__obs-texto" title={motivoIngreso(e.observaciones)}>{motivoIngreso(e.observaciones) || '—'}</span></Celda>
+            <Celda>{soloFecha(e.salida_programada)}</Celda>
+            <Celda>{soloHora(e.hora_salida_programada)}</Celda>
+            <Celda><span className="rt__tiempo" style={{ color: tiempoColor(horas) }}>{horas > 0 ? formatTiempo(horas) : '—'}</span></Celda>
+            <Celda>{(() => {
+              const de = otsDeRampa(e, ots, entradas);
+              return de.length ? <span className="rt__ot" title={de.map(o => o.id_ot).join(', ')}>{de.length} OT · {de[0].id_ot}</span> : '—';
+            })()}</Celda>
+            <Celda>{(() => {
+              const tecs = tecnicosPorRampa.get(rampaId(e)) ?? [];
+              return tecs.length ? tecs.map(n => <span key={n} className="rt__tecnico">{nombrePersona(n)}</span>) : '—';
+            })()}</Celda>
+            {verInspeccion && <Celda><BadgeInspeccion placa={e.placa} ultimas={ultimasInsp} onAbrir={onInspeccion} /></Celda>}
+            <Celda>{e.estado === 'Libre' ? <span className="rt__ingresar">+ Ingresar</span> : puedeEditar ? (
+              <span className="rt__acciones">
+                <button type="button" className="rt__accion" title="Editar" aria-label="Editar rampa" onClick={ev => { ev.stopPropagation(); onEditar(e); }}><Pencil size={14} /></button>
+                <button type="button" className="rt__accion rt__accion--peligro" title="Liberar" aria-label="Liberar rampa" onClick={ev => { ev.stopPropagation(); onLiberar(e); }}><LogOut size={14} /></button>
+              </span>
+            ) : <ChevronRight size={16} className="rt__flecha" aria-hidden />}</Celda>
           </tr>
-        </thead>
-        <tbody>
-          {entradas.map(e => {
-            const horas = horasEnRampa(e.fecha_ingreso);
-            return (
-              <tr key={rampaId(e)} className="rt__fila" tabIndex={0} onClick={() => { haptic('selection'); onAbrir(e); }}
-                onKeyDown={ev => { if (ev.key === 'Enter') onAbrir(e); }}>
-                <td>
-                  <span className="rt__rampa">
-                    {e.rampa}
-                  </span>
-                </td>
-                <td>{soloFecha(e.fecha_ingreso)}</td>
-                <td>{soloHora(e.hora_ingreso)}</td>
-                <td>{e.placa ? <LicensePlate plate={e.placa} size="sm" /> : '—'}</td>
-                <td><span className={`rt__pill rt__pill--${situacionTono(e.situacion)}`}>{e.situacion ?? '—'}</span></td>
-                <td className="rt__obs"><span className="rt__obs-texto" title={motivoIngreso(e.observaciones)}>{motivoIngreso(e.observaciones) || '—'}</span></td>
-                <td>{soloFecha(e.salida_programada)}</td>
-                <td>{soloHora(e.hora_salida_programada)}</td>
-                <td><span className="rt__tiempo" style={{ color: tiempoColor(horas) }}>{horas > 0 ? formatTiempo(horas) : '—'}</span></td>
-                <td>{(() => {
-                  const de = otsDeRampa(e, ots, entradas);
-                  return de.length ? <span className="rt__ot" title={de.map(o => o.id_ot).join(', ')}>{de.length} OT · {de[0].id_ot}</span> : '—';
-                })()}</td>
-                <td>{(() => {
-                  const tecs = tecnicosPorRampa.get(rampaId(e)) ?? [];
-                  return tecs.length ? tecs.map(n => <span key={n} className="rt__tecnico">{nombrePersona(n)}</span>) : '—';
-                })()}</td>
-                {verInspeccion && <td><BadgeInspeccion placa={e.placa} ultimas={ultimasInsp} onAbrir={onInspeccion} /></td>}
-                <td>{e.estado === 'Libre' ? <span className="rt__ingresar">+ Ingresar</span> : puedeEditar ? (
-                  <span className="rt__acciones">
-                    <button type="button" className="rt__accion" title="Editar" aria-label="Editar rampa" onClick={ev => { ev.stopPropagation(); onEditar(e); }}><Pencil size={14} /></button>
-                    <button type="button" className="rt__accion rt__accion--peligro" title="Liberar" aria-label="Liberar rampa" onClick={ev => { ev.stopPropagation(); onLiberar(e); }}><LogOut size={14} /></button>
-                  </span>
-                ) : <ChevronRight size={16} className="rt__flecha" aria-hidden />}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+        );
+      })}
+    </TablaRedimensionable>
   );
 }
 
