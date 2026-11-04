@@ -2,7 +2,7 @@
 // - Cada viaje tiene su propia clave de caché: cambiar filtros o fechas solo pide los viajes que aún no están cargados.
 // - Las consultas van en fila (una a la vez) porque Wialon usa una sola ejecución de reporte por sesión.
 // - Un viaje sin datos o con error queda marcado con su motivo, y se puede reintentar sin tocar los demás.
-import { useQueries, useQueryClient } from '@tanstack/react-query';
+import { CancelledError, useQueries, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
 import type { TelemetriaWialon } from './AnalisisViajes';
 
@@ -23,7 +23,8 @@ let cola: Promise<unknown> = Promise.resolve();
 /** Ejecuta las consultas de una en una. Si la consulta ya no se necesita (cambió el filtro), se omite. */
 export function encolarCan<T>(signal: AbortSignal, tarea: () => Promise<T>): Promise<T> {
   const p = cola.then(() => {
-    if (signal.aborted) throw new DOMException('Consulta cancelada', 'AbortError');
+    // Cancelada (cambió el filtro): no es un error, react-query la descarta sin marcar la fila
+    if (signal.aborted) throw new CancelledError({ revert: true });
     return tarea();
   });
   cola = p.catch(() => undefined);

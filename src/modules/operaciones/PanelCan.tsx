@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import { CheckCircle2, ChevronDown, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { CheckCircle2, RefreshCw, X } from 'lucide-react';
 import { CargadorCrow } from '../../core/ui/CargadorCrow';
 import type { FilaCan, ItemCan } from './canLote';
+import '../../core/ui/cargador-crow.css';
 
 interface Props {
   filas: FilaCan[];
@@ -14,69 +16,68 @@ interface Props {
   items: ItemCan[];
 }
 
-// Ventana en la esquina inferior derecha: avance de la consulta del CAN, qué viajes cargaron y cuáles no (con el motivo)
+// Avance de la consulta del CAN, flotando sobre la tabla en la esquina inferior derecha.
+// - Se monta en <body> para que la posición fija no se mueva al hacer scroll.
+// - Si todos los viajes cargaron, se desvanece solo. Si hay viajes sin datos o con error, se queda hasta cerrarlo.
 export function PanelCan({ filas, total, listos, cargando, sinDatos, errores, reintentar, items }: Props) {
-  const [oculto, setOculto] = useState(false);
-  if (total === 0) return null;
+  const [cerrado, setCerrado] = useState(false);
+  const [desvanecido, setDesvanecido] = useState(false);
+  const enCurso = cargando > 0;
+  const todoBien = total > 0 && !enCurso && sinDatos === 0 && errores === 0;
+
+  // Una consulta nueva vuelve a mostrar el panel
+  useEffect(() => {
+    if (enCurso) { setCerrado(false); setDesvanecido(false); }
+  }, [enCurso]);
+
+  useEffect(() => {
+    if (!todoBien) return;
+    const t = window.setTimeout(() => setDesvanecido(true), 4000);
+    return () => window.clearTimeout(t);
+  }, [todoBien]);
+
+  if (total === 0 || cerrado || desvanecido) return null;
 
   const terminados = listos + sinDatos + errores;
-  const porcentaje = total ? Math.round((terminados / total) * 100) : 0;
-  const enCurso = cargando > 0;
-
-  if (oculto) {
-    return (
-      <button type="button" onClick={() => setOculto(false)} aria-label="Mostrar avance del CAN"
-        style={{ position: 'fixed', right: 16, bottom: 16, zIndex: 60, padding: '8px 14px', borderRadius: 999, border: '1px solid var(--separator)', background: 'var(--surface)', color: 'var(--label)', boxShadow: '0 8px 24px rgba(0,0,0,.18)', fontFamily: 'var(--font-mono)', fontWeight: 700, cursor: 'pointer' }}>
-        CAN {terminados}/{total}
-      </button>
-    );
-  }
-
   const filasDe = (estado: FilaCan['estado']) => filas.filter(f => f.estado === estado);
   const itemDe = (f: FilaCan) => items.find(i => i.viaje === f.viaje && i.placa === f.placa);
 
-  return (
-    <div role="region" aria-label="Avance de la consulta del CAN"
-      style={{ position: 'fixed', right: 16, bottom: 16, zIndex: 60, width: 'min(360px, calc(100vw - 32px))', maxHeight: '70vh', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 18, boxShadow: '0 16px 40px rgba(0,0,0,.22)', padding: 'var(--s-4)', display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)' }}>
+  return createPortal(
+    <div className="can-panel" role="region" aria-label="Avance de la consulta del CAN" aria-live="polite">
+      <div className="can-panel__cabecera">
         {enCurso ? <CargadorCrow texto="Consultando el CAN" /> : <CheckCircle2 size={34} color="var(--green-ink)" aria-hidden />}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <strong style={{ display: 'block', fontSize: '0.9375rem' }}>{enCurso ? 'Consultando el CAN (GPS)…' : 'CAN (GPS) listo'}</strong>
-          <span style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{listos} de {total} viajes con datos</span>
+        <div className="can-panel__titulo">
+          <strong>{enCurso ? 'Consultando el CAN (GPS)…' : 'CAN (GPS) listo'}</strong>
+          <span>{listos} de {total} viajes con datos</span>
         </div>
-        <button type="button" onClick={() => setOculto(true)} aria-label="Minimizar" title="Minimizar"
-          style={{ border: 0, background: 'transparent', color: 'var(--label-2)', cursor: 'pointer', padding: 4 }}>
-          <ChevronDown size={18} />
+        <button type="button" className="can-panel__cerrar" onClick={() => setCerrado(true)} aria-label="Cerrar avance del CAN" title="Cerrar">
+          <X size={16} />
         </button>
       </div>
 
-      <div role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={terminados}
-        style={{ height: 8, borderRadius: 999, background: 'var(--separator)', overflow: 'hidden', display: 'flex' }}>
-        <div style={{ width: `${(listos / total) * 100}%`, background: 'var(--green-ink)', transition: 'width .3s' }} />
-        <div style={{ width: `${((sinDatos + errores) / total) * 100}%`, background: 'var(--amber-ink)', transition: 'width .3s' }} />
+      <div className="can-panel__barra" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={terminados}>
+        <div style={{ width: `${(listos / total) * 100}%`, background: 'var(--green-ink)' }} />
+        <div style={{ width: `${((sinDatos + errores) / total) * 100}%`, background: 'var(--amber-ink)' }} />
       </div>
-      <span style={{ fontSize: '0.6875rem', color: 'var(--label-2)', fontFamily: 'var(--font-mono)' }}>
-        {terminados}/{total} procesados ({porcentaje}%) · {cargando} en cola
-      </span>
+      <span className="can-panel__cifra">{terminados}/{total} procesados · {cargando} en cola</span>
 
       {sinDatos > 0 && (
-        <div>
-          <strong style={{ fontSize: '0.75rem' }}>Sin datos ({sinDatos})</strong>
-          <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: '0.75rem', color: 'var(--label-2)' }}>
-            {filasDe('sin_datos').map(f => <li key={f.viaje}><span style={{ fontFamily: 'var(--font-mono)' }}>{f.placa}</span> · viaje {f.viaje}: {f.motivo}</li>)}
+        <div className="can-panel__lista">
+          <strong>Sin datos ({sinDatos})</strong>
+          <ul>
+            {filasDe('sin_datos').map(f => <li key={`${f.viaje}|${f.placa}`}><code>{f.placa}</code> · viaje {f.viaje}: {f.motivo}</li>)}
           </ul>
         </div>
       )}
 
       {errores > 0 && (
-        <div>
-          <strong style={{ fontSize: '0.75rem', color: 'var(--red-ink)' }}>Con error ({errores})</strong>
-          <ul style={{ listStyle: 'none', margin: '4px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div className="can-panel__lista">
+          <strong style={{ color: 'var(--red-ink)' }}>Con error ({errores})</strong>
+          <ul>
             {filasDe('error').map(f => (
-              <li key={f.viaje} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.75rem', color: 'var(--label-2)' }}>
-                <span style={{ flex: 1, minWidth: 0 }}><span style={{ fontFamily: 'var(--font-mono)' }}>{f.placa}</span> · viaje {f.viaje}: {f.motivo}</span>
-                <button type="button" onClick={() => { const i = itemDe(f); if (i) reintentar(i); }} aria-label={`Reintentar ${f.placa}`}
-                  style={{ border: '1px solid var(--separator)', background: 'var(--surface)', borderRadius: 8, padding: '2px 8px', cursor: 'pointer', color: 'var(--label)', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.6875rem', whiteSpace: 'nowrap' }}>
+              <li key={`${f.viaje}|${f.placa}`}>
+                <span><code>{f.placa}</code> · viaje {f.viaje}: {f.motivo}</span>
+                <button type="button" onClick={() => { const i = itemDe(f); if (i) reintentar(i); }} aria-label={`Reintentar ${f.placa}`}>
                   <RefreshCw size={12} /> Reintentar
                 </button>
               </li>
@@ -84,6 +85,7 @@ export function PanelCan({ filas, total, listos, cargando, sinDatos, errores, re
           </ul>
         </div>
       )}
-    </div>
+    </div>,
+    document.body,
   );
 }
