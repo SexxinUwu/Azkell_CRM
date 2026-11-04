@@ -1,18 +1,21 @@
 // Herramientas de Status de rampa: configurador de bahías, reporte PDF y envío por WhatsApp.
 // Las reglas del reporte (qué bahías salen) están en rampasReporte.ts.
 import { useState } from 'react';
+import { Reorder, useDragControls, useReducedMotion } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
+import { GripVertical, Plus, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { TextInput } from '../../core/ui/Field';
 import { Sheet } from '../../core/ui/Sheet';
+import { Switch } from '../../core/ui/Switch';
 import { useToast } from '../../core/ui/Toast';
 import { api, apiFetch, errorMessage } from '../../core/api/client';
 import { compartirPDF } from '../../core/lib/pdf';
 import { pdfDeHtml } from './otPdf';
 import type { CatalogosTaller } from './api';
 import { type CatRampa, enReporte } from './rampasReporte';
+import './RampasConfig.css';
 
 /** Una fila del reporte F-MAN-005 ya calculada por la pantalla (tiempos, semáforo de inspección) */
 export interface FilaPdfRampa {
@@ -136,19 +139,53 @@ export async function compartirRampasPdf(filas: FilaPdfRampa[], d: DatosPdfRampa
   return compartirPDF(blob, `Status_Rampa_${dd}${mm}${ahora.getFullYear()}.pdf`, texto);
 }
 
-/** Configurador de bahías: nombre, color, orden, en reporte, alta y baja (cat_rampas) */
+/** Muelle de la lista al soltar una rampa: sin rebote (Apple: reposicionar con amortiguación crítica) */
+const RESORTE = { type: 'spring' as const, bounce: 0, duration: 0.35 };
+const SIN_MOVIMIENTO = { duration: 0 };
+
+interface FilaRampaProps {
+  c: CatRampa; ocupado: boolean; reducir: boolean;
+  onSoltar: () => void; onReporte: (v: boolean) => void; onEliminar: () => void;
+}
+
+/** Una rampa de la lista: solo el asa inicia el arrastre, para no chocar con el resto de la fila */
+function FilaRampa({ c, ocupado, reducir, onSoltar, onReporte, onEliminar }: FilaRampaProps) {
+  const asa = useDragControls();
+  return (
+    <Reorder.Item as="li" value={c} dragListener={false} dragControls={asa} onDragEnd={onSoltar}
+      whileDrag={{ scale: 1.02, boxShadow: '0 14px 30px rgba(0, 0, 0, 0.18)' }}
+      transition={reducir ? SIN_MOVIMIENTO : RESORTE} className="rcfg__fila">
+      <button type="button" className="rcfg__asa" aria-label={`Mover ${nombreDe(c)}`} title="Arrastra para mover"
+        disabled={ocupado} onPointerDown={e => asa.start(e)}>
+        <GripVertical size={20} />
+      </button>
+      <span className="rcfg__nombre">{nombreDe(c)}</span>
+      <Switch checked={enReporte(c)} disabled={ocupado} onChange={onReporte} label="En reporte" />
+      <button type="button" className="rcfg__quitar" aria-label={`Eliminar ${nombreDe(c)}`} title="Eliminar"
+        disabled={ocupado} onClick={onEliminar}>
+        <Trash2 size={18} />
+      </button>
+    </Reorder.Item>
+  );
+}
+
+/** Configurador de bahías: arrastra cada rampa por su asa para cambiar el orden; alta, baja y "En reporte" (cat_rampas) */
 export function ConfigurarRampasSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const qc = useQueryClient();
   const toast = useToast();
+  const reducir = !!useReducedMotion();
   const [nueva, setNueva] = useState('');
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Orden mientras se arrastra y se guarda; null = el del servidor
+  const [local, setLocal] = useState<CatRampa[] | null>(null);
   const cat = useQuery<CatalogosTaller>({
     queryKey: ['mant', 'catalogos-taller'],
     queryFn: () => api<CatalogosTaller>('/catalogos_taller'),
     enabled: open,
   });
-  const lista = ordenadas((cat.data?.rampas ?? []) as CatRampa[]);
+  const delServidor = ordenadas((cat.data?.rampas ?? []) as CatRampa[]);
+  const lista = local ?? delServidor;
 
   async function accion(fn: () => Promise<unknown>, aviso?: string) {
     setOcupado(true); setError(null);
@@ -157,26 +194,23 @@ export function ConfigurarRampasSheet({ open, onClose }: { open: boolean; onClos
       await qc.invalidateQueries({ queryKey: ['mant'] });
       if (aviso) toast(aviso);
     } catch (err) { setError(errorMessage(err)); }
-    finally { setOcupado(false); }
+    finally { setLocal(null); setOcupado(false); }
   }
 
   const cambiar = (id: CatRampa['id'], cambios: Record<string, unknown>) =>
     accion(() => api(`/cat-rampas/${encodeURIComponent(String(id))}`, { method: 'PUT', body: cambios }));
 
-  async function mover(i: number, dir: -1 | 1) {
-    const j = i + dir;
-    if (j < 0 || j >= lista.length) return;
-    const a = lista[i], b = lista[j];
-    await accion(() => api('/cat-rampas/reorder', { method: 'PUT', body: [
-      { id: a.id, orden: Number(b.orden) || j },
-      { id: b.id, orden: Number(a.orden) || i },
-    ] }));
+  // Al soltar la rampa se guarda el orden completo, solo si cambió
+  async function guardarOrden(nuevo: CatRampa[]) {
+    const antes = delServidor.map(c => String(c.id)).join(',');
+    if (nuevo.map(c => String(c.id)).join(',') === antes) return;
+    await accion(() => api('/cat-rampas/reorder', { method: 'PUT', body: nuevo.map((c, i) => ({ id: c.id, orden: i + 1 })) }));
   }
 
   async function agregar() {
     const nombre = nueva.trim();
     if (!nombre) return;
-    await accion(() => api('/cat-rampas', { method: 'POST', body: { nombre_rampa: nombre, sede: 'Principal', color: '#ef4444' } }), `Rampa "${nombre}" agregada`);
+    await accion(() => api('/cat-rampas', { method: 'POST', body: { nombre_rampa: nombre, sede: 'Principal' } }), `Rampa "${nombre}" agregada`);
     setNueva('');
   }
 
@@ -188,33 +222,22 @@ export function ConfigurarRampasSheet({ open, onClose }: { open: boolean; onClos
   return (
     <Sheet open={open} onClose={onClose} title="Configurar rampas"
       footer={<Button variant="secondary" onClick={onClose}>Listo</Button>}>
-      <p className="t-callout c-secondary" style={{ marginTop: 0 }}>
-        Orden en que aparecen, color y si salen en el PDF y en el WhatsApp del reporte diario.
+      <p className="rcfg__ayuda">
+        Arrastra una rampa por su asa para cambiar el orden. Lo que apagues en "En reporte" no sale en el PDF ni en el WhatsApp.
       </p>
       {error && <Notice tone="error">{error}</Notice>}
       {cat.isLoading ? <PageLoader /> : (
-        <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 var(--s-3)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {lista.map((c, i) => (
-            <li key={String(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 12, background: 'var(--fill-subtle)' }}>
-              <input type="color" aria-label={`Color de ${nombreDe(c)}`} value={c.color ?? '#ef4444'} disabled={ocupado}
-                onChange={e => cambiar(c.id, { color: e.target.value })}
-                style={{ width: 44, height: 44, border: 0, background: 'transparent', padding: 0, cursor: 'pointer' }} />
-              <span style={{ flex: 1, fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nombreDe(c)}</span>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem', color: 'var(--label-2)', minHeight: 44 }}>
-                <input type="checkbox" checked={enReporte(c)} disabled={ocupado}
-                  onChange={e => cambiar(c.id, { en_reporte: e.target.checked })}
-                  style={{ width: 20, height: 20 }} />
-                En reporte
-              </label>
-              <Button variant="plain" iconOnly aria-label="Subir" title="Subir" icon={<ArrowUp size={18} />} disabled={ocupado || i === 0} onClick={() => mover(i, -1)} />
-              <Button variant="plain" iconOnly aria-label="Bajar" title="Bajar" icon={<ArrowDown size={18} />} disabled={ocupado || i === lista.length - 1} onClick={() => mover(i, 1)} />
-              <Button variant="plain" iconOnly aria-label={`Eliminar ${nombreDe(c)}`} title="Eliminar" icon={<Trash2 size={18} />} disabled={ocupado} onClick={() => eliminar(c)} />
-            </li>
+        <Reorder.Group as="ul" axis="y" values={lista} onReorder={setLocal} className="rcfg__lista">
+          {lista.map(c => (
+            <FilaRampa key={String(c.id)} c={c} ocupado={ocupado} reducir={reducir}
+              onSoltar={() => guardarOrden(local ?? delServidor)}
+              onReporte={v => cambiar(c.id, { en_reporte: v })}
+              onEliminar={() => eliminar(c)} />
           ))}
-        </ul>
+        </Reorder.Group>
       )}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <div style={{ flex: 1 }}>
+      <div className="rcfg__agregar">
+        <div>
           <TextInput value={nueva} onChange={e => setNueva(e.target.value)} placeholder="Nombre de la nueva rampa" aria-label="Nombre de la nueva rampa" />
         </div>
         <Button variant="primary" icon={<Plus size={16} />} onClick={agregar} disabled={!nueva.trim() || ocupado}>Agregar</Button>

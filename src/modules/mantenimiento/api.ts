@@ -526,7 +526,8 @@ export function useCatalogosTaller() {
   return useQuery<CatalogosTaller>({
     queryKey: ['mant', 'catalogos-taller'],
     queryFn: () => api<CatalogosTaller>('/catalogos_taller'),
-    staleTime: 300_000,
+    // Corto: si otra persona cambia el catálogo, el formulario de ingreso no puede ofrecer una rampa ya borrada
+    staleTime: 15_000,
   });
 }
 
@@ -538,12 +539,13 @@ export function useStatusRampa() {
       const [act, his, cat] = await Promise.all([
         api<unknown>('/taller-rampas'),
         api<unknown>('/taller-rampas?historial=1'),
-        api<CatalogosTaller>('/catalogos_taller').catch(() => ({ rampas: [], situaciones: [] }) as CatalogosTaller),
+        api<CatalogosTaller>('/catalogos_taller'),
       ]);
       const lista = (r: unknown) => (Array.isArray(r) ? r : ((r as { data?: unknown[] })?.data ?? [])) as Record<string, unknown>[];
       const nombre = (id: unknown) => {
         const c = (cat.rampas ?? []).find(x => String(x.id) === String(id));
-        return { nombre: c ? (c.nombre_rampa ?? c.nombre ?? String(id)) : String(id ?? '—'), color: c?.color ?? null };
+        // Sin catálogo para ese id: se avisa, nunca se muestra el número interno
+        return { nombre: c ? (c.nombre_rampa ?? c.nombre ?? 'Rampa sin nombre') : 'Rampa no registrada', color: c?.color ?? null };
       };
       return [...lista(act), ...lista(his)].map(row => {
         const n = nombre(row.rampa);

@@ -1318,6 +1318,16 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         fecha_salida_real: fechaDia(r.fecha_salida_real),
     });
 
+    // La rampa debe existir en el catálogo (por id o por nombre). Si no, la visita se guardaba con un id huérfano
+    // y la pantalla mostraba ese número en lugar del nombre. Si la tabla no existe en la empresa, no bloquea.
+    function rampaEnCatalogo(targetDb, rampa) {
+        return new Promise(resolve => targetDb.query(
+            'SELECT id FROM cat_rampas WHERE CAST(id AS CHAR) = ? OR LOWER(TRIM(nombre_rampa)) = LOWER(TRIM(?)) LIMIT 1',
+            [String(rampa), String(rampa)],
+            (err, rows) => resolve(err ? true : !!(rows && rows.length))));
+    }
+    const RAMPA_NO_EXISTE = 'Esa rampa ya no existe en el catálogo. Actualiza la pantalla y elige otra.';
+
     router.get(['/taller-rampas', '/rampas'], (req, res) => {
         const targetDb = req.db || db;
         const historial = req.query.historial === '1';
@@ -1368,9 +1378,10 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
-    router.post('/taller-rampas', (req, res) => {
+    router.post('/taller-rampas', async (req, res) => {
         const { rampa, placa, km, conductor, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, evidencia_url } = req.body;
         if (!rampa || !placa) return res.status(400).json({ error: 'rampa y placa son requeridos' });
+        if (!(await rampaEnCatalogo(req.db || db, rampa))) return res.status(400).json({ error: RAMPA_NO_EXISTE });
         (req.db || db).query(
             `INSERT INTO taller_rampas (rampa, placa, km, conductor, fecha_ingreso, hora_ingreso, fecha_salida, hora_salida, situacion, obs, creado_por, evidencia_url, estado)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Activo')`,
@@ -1393,8 +1404,11 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         );
     });
 
-    router.put('/taller-rampas/:id', (req, res) => {
+    router.put('/taller-rampas/:id', async (req, res) => {
         const { accion } = req.body;
+        if (accion !== 'liberar' && req.body.rampa != null && !(await rampaEnCatalogo(req.db || db, req.body.rampa))) {
+            return res.status(400).json({ error: RAMPA_NO_EXISTE });
+        }
         if (accion === 'liberar') {
             const { liberado_por, fecha_salida_real, hora_salida_real, situacion } = req.body;
             (req.db || db).query(

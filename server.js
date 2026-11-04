@@ -3243,11 +3243,20 @@ const checklistRoutes = require('./routes/checklist')(db, broadcast, logAudit);
 app.use('/api/checklist', checklistRoutes);
 app.use('/api/mantenimiento/checklist', checklistRoutes);
 
+// Agrega una columna solo si falta. Antes el catálogo corría ALTER TABLE en cada lectura: un DDL que espera
+// si otra conexión escribe en la tabla, y la pantalla de rampas se quedaba sin catálogo (nombres en números).
+function asegurarColumna(targetDb, tabla, columna, definicion, cb) {
+    targetDb.query('SELECT COUNT(*) AS n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?', [tabla, columna], (err, rows) => {
+        if (!err && rows && rows[0] && Number(rows[0].n) > 0) return cb();
+        targetDb.query(`ALTER TABLE ${tabla} ADD COLUMN ${definicion}`, () => cb());
+    });
+}
+
 function getCatRampasSafe(targetDb, cb) {
-    targetDb.query('ALTER TABLE cat_rampas ADD COLUMN color VARCHAR(50) NULL DEFAULT "#ef4444"', () => {
-        targetDb.query('ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0', () => {
+    asegurarColumna(targetDb, 'cat_rampas', 'color', 'color VARCHAR(50) NULL DEFAULT "#ef4444"', () => {
+        asegurarColumna(targetDb, 'cat_rampas', 'orden', 'orden INT NOT NULL DEFAULT 0', () => {
             // Ojito de "Configurar": si está en 0, la rampa no sale en el PDF ni en WhatsApp
-            targetDb.query('ALTER TABLE cat_rampas ADD COLUMN en_reporte TINYINT(1) NOT NULL DEFAULT 1', () => {
+            asegurarColumna(targetDb, 'cat_rampas', 'en_reporte', 'en_reporte TINYINT(1) NOT NULL DEFAULT 1', () => {
                 targetDb.query('SELECT * FROM cat_rampas ORDER BY orden ASC, id ASC', (err, rows) => {
                     if (err) {
                         targetDb.query('SELECT * FROM cat_rampas ORDER BY id ASC', (err2, rows2) => {

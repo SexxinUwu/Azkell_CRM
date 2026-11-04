@@ -9,7 +9,7 @@ import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
 import { Combobox, type ComboboxOption } from '../../core/ui/Combobox';
 import { Switch } from '../../core/ui/Switch';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import { TooltipFijo } from '../../core/ui/TooltipFijo';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
@@ -118,12 +118,14 @@ function filasPdfRampas(entradas: RampaEntrada[], catalogo: CatRampa[], tecnicos
   });
 }
 
-/** Botón solo con icono de color (sin texto), visible en la barra superior */
+/** Botón solo con icono de color (sin texto); al pasar el mouse aparece su nombre */
 function BotonAccion({ titulo, color, icono, onClick }: { titulo: string; color: string; icono: ReactNode; onClick: () => void }) {
   return (
-    <button type="button" className="btn-accion-color" style={{ color }} aria-label={titulo} title={titulo} onClick={onClick}>
-      {icono}
-    </button>
+    <TooltipFijo texto={titulo}>
+      <button type="button" className="btn-accion-color" style={{ color }} aria-label={titulo} onClick={onClick}>
+        {icono}
+      </button>
+    </TooltipFijo>
   );
 }
 
@@ -384,9 +386,7 @@ export function StatusRampaPage() {
               <BotonAccion titulo="Exportar historial a Excel" color="#15803d" icono={<FileSpreadsheet size={19} />} onClick={exportarHistorialExcel} />
               <BotonAccion titulo="Ver PDF del reporte" color="var(--red-ink)" icono={<FileText size={19} />} onClick={verPdf} />
               <BotonAccion titulo="Enviar reporte por WhatsApp" color="#16a34a" icono={<MessageCircle size={19} />} onClick={enviarWa} />
-              <MenuOtros opciones={[
-                { label: 'Configurar rampas', detalle: 'Orden, color y si sale en el reporte', icon: <Settings2 size={17} />, onSelect: () => setConfigurando(true) },
-              ]} />
+              <BotonAccion titulo="Configurar rampas" color="var(--label-2)" icono={<Settings2 size={19} />} onClick={() => setConfigurando(true)} />
               {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => { setRampaInicial(undefined); setFormulario({ entrada: null }); }}>Ingresar</Button>}
             </>
           }

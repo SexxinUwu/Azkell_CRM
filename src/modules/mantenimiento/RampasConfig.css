@@ -1,0 +1,25 @@
+/* Configurador de rampas: tarjetas suaves, asa de arrastre y sin colores (estilo Apple) */
+.rcfg__ayuda { margin: 0 0 var(--s-3); font-size: 0.875rem; color: var(--label-2); line-height: 1.45; }
+.rcfg__lista { list-style: none; padding: 0; margin: 0 0 var(--s-3); display: flex; flex-direction: column; gap: 8px; }
+.rcfg__fila {
+  display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px 8px 6px 6px;
+  border-radius: 16px; background: var(--fill-subtle); user-select: none;
+}
+.rcfg__asa {
+  display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border: 0; border-radius: 12px;
+  background: transparent; color: var(--label-3); cursor: grab; touch-action: none;
+}
+.rcfg__asa:hover { background: var(--fill); color: var(--label-2); }
+.rcfg__asa:active { cursor: grabbing; color: var(--label-1); }
+.rcfg__nombre {
+  flex: 1; min-width: 0; font-weight: 600; font-size: 1rem; letter-spacing: -0.01em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rcfg__quitar {
+  display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border: 0; border-radius: 12px;
+  background: transparent; color: var(--label-2); cursor: pointer;
+}
+.rcfg__quitar:hover { background: var(--fill); color: var(--red-ink); }
+.rcfg__asa:disabled, .rcfg__quitar:disabled { opacity: 0.4; cursor: default; }
+.rcfg__agregar { display: flex; gap: 8px; align-items: center; }
+.rcfg__agregar > div { flex: 1; min-width: 0; }
