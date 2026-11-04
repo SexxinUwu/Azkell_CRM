@@ -1,6 +1,7 @@
 const express = require('express');
 const { tipoCambioSunat } = require('../services/tipo_cambio');
-const { fechaVencimiento } = require('../services/condicion_oc');
+const { fechaVencimiento, normalizarCondicion } = require('../services/condicion_oc');
+const { resolverReencaucheDeRecepcion, prepararAnulacion, bloquearLlantasParaOrden, aviso: avisoReenc } = require('../services/neumaticos_retorno');
 const { crearLlantasDeRecepcion, borrarLlantasDeRecepcion, corregirLlantasPorInventario } = require('../services/neumaticos_codigo');
 const router = express.Router();
 
@@ -694,6 +695,10 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             const cocada = (b.cocada_inicial === '' || b.cocada_inicial == null) ? null : Number(b.cocada_inicial);
             if (cocada !== null && (!Number.isFinite(cocada) || cocada < 0)) {
                 return res.status(400).json({ ok: false, error: 'La cocada inicial debe ser un número positivo' });
+            }
+            // Con medida, la cocada inicial es obligatoria: es el remanente con el que nace cada llanta recibida
+            if (medida && !(cocada > 0)) {
+                return res.status(400).json({ ok: false, error: 'La cocada inicial (mm) es obligatoria cuando la llanta tiene medida' });
             }
             const vida = b.vida_inicial == null || b.vida_inicial === '' ? 'R0' : String(b.vida_inicial).trim().toUpperCase();
             if (!['R0', 'R1', 'R2', 'R3'].includes(vida)) {
@@ -1662,6 +1667,104 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
+    // ── Orden de servicio de reencauche: una orden de compra con una línea SERV por medida para las llantas "Enviar para reforma" ──
+    // Body: { codigos: [...], proveedor_nombre, proveedor_id?, proveedor_ruc?, precios: { '295/80R22.5': 120 }, condicion_pago?, dias_credito?, observaciones? }
+    // Sigue la aprobación normal (misma copia en ordenes_compra y aviso a Gerencia que POST /entradas).
+    router.post('/entradas/generar-oc-reencauche', async (req, res) => {
+        const tdb = getDb(req);
+        let conn = null;
+        try {
+            const u = req.user || {};
+            let permisos = {};
+            try { permisos = typeof u.permisos === 'string' ? JSON.parse(u.permisos) : (u.permisos || {}); } catch (e) { /* sin permisos legibles */ }
+            const reenc = permisos['neumaticos.reencauche'];
+            if (String(u.rol || '') !== 'Fundador' && permisos.admin !== true && !(reenc && (reenc.c === 1 || reenc.c === true))) {
+                return res.status(403).json({ error: 'Sin permiso (neumaticos.reencauche) para generar la orden de reencauche' });
+            }
+            const b = req.body || {};
+            const codigos = Array.isArray(b.codigos) ? b.codigos : [];
+            if (!codigos.length) return res.status(400).json({ error: 'Elige al menos una llanta' });
+            if (codigos.length > 200) return res.status(400).json({ error: 'Se pueden incluir hasta 200 llantas por orden' });
+            const proveedorNombre = String(b.proveedor_nombre || '').trim();
+            if (!proveedorNombre) return res.status(400).json({ error: 'Elige la reformadora (proveedor)' });
+            const precios = b.precios && typeof b.precios === 'object' ? b.precios : {};
+            const usuario = u.nombre || u.correo || b.solicitante || 'Neumáticos';
+            const cond = normalizarCondicion(b);
+            // En entradas_inv el crédito se guarda como "A crédito" (así lo reconoce Recepción); la copia en ordenes_compra usa "Crédito"
+            const condEntrada = cond.condicion_pago === 'Crédito' ? 'A crédito' : 'Al contado';
+            const anio = new Date().getFullYear();
+            const id = await new Promise((ok, no) => _generarCodigoAlmacen('ENT', anio, (e, v) => (e ? no(e) : ok(v))));
+
+            conn = await tdb.promise().getConnection();
+            await conn.beginTransaction();
+
+            const llantas = await bloquearLlantasParaOrden(conn, codigos);
+            const porMedida = new Map();
+            for (const l of llantas) {
+                const medida = String(l.medida || '').trim();
+                if (!medida) throw avisoReenc(400, `La llanta ${l.codigo_llanta || l.id_neumatico} no tiene medida`);
+                if (!porMedida.has(medida)) porMedida.set(medida, []);
+                porMedida.get(medida).push(l);
+            }
+
+            // Un servicio de reencauche por medida: se reconoce por el nombre ("Servicio de reencauche 295/80R22.5")
+            const lineas = [];
+            for (const [medida, ls] of [...porMedida].sort((x, y) => x[0].localeCompare(y[0]))) {
+                const norm = medida.replace(/\s+/g, '').toUpperCase().replace(/[%_]/g, '');
+                const [svc] = await conn.query(
+                    `SELECT id, COALESCE(descripcion, articulo) AS descripcion FROM inventario
+                     WHERE id LIKE 'SERV-%' AND activo = 1 AND UPPER(COALESCE(articulo, '')) LIKE '%REENCAUCHE%'
+                       AND REPLACE(UPPER(COALESCE(articulo, '')), ' ', '') LIKE ? ORDER BY id LIMIT 1`, [`%${norm}%`]);
+                if (!svc.length) {
+                    throw avisoReenc(409, `No existe el servicio de reencauche para la medida ${medida}. Créalo en Inventario > Catálogo servicios con el nombre "Servicio de reencauche ${medida}"`);
+                }
+                const precio = Number(precios[medida]);
+                if (!Number.isFinite(precio) || precio < 0) throw avisoReenc(400, `Indica el precio por llanta de la medida ${medida}`);
+                lineas.push({ medida, llantas: ls, servicio: svc[0], precio });
+            }
+            const total = lineas.reduce((acc, L) => acc + L.llantas.length * L.precio, 0);
+            const motivo = String(b.observaciones || '').trim() || `Reencauche de ${llantas.length} llanta${llantas.length === 1 ? '' : 's'}`;
+
+            await conn.query(
+                `INSERT INTO entradas_inv (id, fecha, proveedor_id, proveedor_nombre, moneda, tipo_cambio, total_pen, observaciones, tipo_igv,
+                    creado_por, motivo_entrada, tipo_orden, condicion_pago, dias_credito, estado, serie, numero_correlativo, dias_pagar,
+                    prioridad, solicitante, estado_factura, centro_costo)
+                 VALUES (?, ?, ?, ?, 'PEN', 1, ?, ?, ?, ?, 'Reencauche de llantas', 'Orden de compra', ?, ?, 'Registrado', ?, ?, ?, 'Normal', ?, 'Pendiente', 'CC-100')`,
+                [id, new Date().toISOString().split('T')[0], b.proveedor_id || null, proveedorNombre, total, motivo, b.tipo_igv || 'sin_igv',
+                 usuario, condEntrada, cond.dias_credito, String(anio), id, condEntrada === 'A crédito' ? cond.dias_credito : 0, usuario]);
+            for (const L of lineas) {
+                await conn.query(
+                    'INSERT INTO detalle_entradas_inv (entrada_id, inventario_id, descripcion, cantidad, costo_unitario, moneda, importe) VALUES (?,?,?,?,?,?,?)',
+                    [id, L.servicio.id, L.servicio.descripcion, L.llantas.length, L.precio, 'PEN', L.llantas.length * L.precio]);
+                for (const ll of L.llantas) {
+                    await conn.query(
+                        "INSERT INTO neumaticos_reencauche_oc (oc_id, inventario_id, id_neumatico, estado, costo, usuario) VALUES (?, ?, ?, 'pendiente', ?, ?)",
+                        [id, L.servicio.id, ll.id_neumatico, L.precio, usuario]);
+                }
+            }
+            await conn.commit();
+
+            auditar(tdb, actorDe(req), {
+                action: 'CREATE', entity: 'warehouse-entry', entityId: id,
+                summary: `Generó la orden de reencauche ${id} de ${proveedorNombre} por S/ ${total.toFixed(2)} (${llantas.length} llantas)`,
+                changes: diff({}, { proveedor: proveedorNombre, monto_pen: total, llantas: llantas.length, estado: 'Registrado' }, ['proveedor', 'monto_pen', 'llantas', 'estado']),
+            });
+            despacharAprobacionWhatsAppAlmacen(req, tdb, id, {
+                proveedor_nombre: proveedorNombre, proveedor_ruc: b.proveedor_ruc || null, moneda: 'PEN', total_pen: total,
+                motivo_entrada: 'Reencauche de llantas', observaciones: motivo, solicitante: usuario, creado_por: usuario,
+                condicion_pago: cond.condicion_pago, dias_credito: cond.dias_credito,
+                items: lineas.map(L => ({ inventario_id: L.servicio.id, descripcion: L.servicio.descripcion, cantidad: L.llantas.length, costo_unitario: L.precio, importe: L.llantas.length * L.precio })),
+            }).catch(e => console.error('[WhatsApp OC] Background error:', e));
+            res.json({ ok: true, id, total, llantas: llantas.length, lineas: lineas.map(L => ({ medida: L.medida, servicio: L.servicio.id, cantidad: L.llantas.length, precio: L.precio })) });
+        } catch (err) {
+            if (conn) { try { await conn.rollback(); } catch (e) { /* ya cerrada */ } }
+            if (!err.aviso) console.error('Error generando la orden de reencauche:', err);
+            res.status(err.aviso ? err.status : 500).json({ error: err.message });
+        } finally {
+            if (conn) conn.release();
+        }
+    });
+
     // ── Endpoint para Reenviar Notificación de Aprobación por WhatsApp ──
     router.post('/entradas/:id/reenviar-whatsapp', async (req, res) => {
         try {
@@ -1823,6 +1926,12 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         const { id } = req.params;
         const { estado, comentario, usuario } = req.body;
         if (!estado) return res.status(400).json({ error: 'Estado requerido' });
+
+        // Orden de servicio de reencauche: con llantas ya en la reformadora no se puede anular; las pendientes se sueltan
+        if (String(estado).toLowerCase().startsWith('anul')) {
+            try { await prepararAnulacion(typeof tdb.promise === 'function' ? tdb.promise() : tdb, id); }
+            catch (errReenc) { return res.status(errReenc.aviso ? errReenc.status : 500).json({ error: errReenc.message }); }
+        }
 
         // Una OC anulada no deja llantas en Neumáticos: se quitan las de sus recepciones (solo si ninguna se movió)
         if (String(estado).toLowerCase().startsWith('anul')) {
@@ -2018,10 +2127,12 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
-    router.put('/entradas/:id/anular', (req, res) => {
+    router.put('/entradas/:id/anular', async (req, res) => {
         const tdb = getDb(req);
         const { id } = req.params;
         const { motivo } = req.body;
+        try { await prepararAnulacion(typeof tdb.promise === 'function' ? tdb.promise() : tdb, id); }
+        catch (errReenc) { return res.status(errReenc.aviso ? errReenc.status : 500).json({ error: errReenc.message }); }
         tdb.query('UPDATE entradas_inv SET estado=?, motivo_anulacion=? WHERE id=?',
             ['Anulado', String(motivo || '').trim(), id], (err, result) => {
                 if (err) return res.status(500).json({ error: err.message });
@@ -2796,6 +2907,26 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                             itemsPorOC[d.oc_id].push(d);
                         });
 
+                        // Llantas en la reformadora por orden de servicio de reencauche, agrupadas por orden y servicio
+                        const llantasReenc = {};
+                        try {
+                            const [filasReenc] = await targetDb.promise().query(
+                                "SELECT oc_id, inventario_id, id_neumatico FROM neumaticos_reencauche_oc WHERE oc_id IN (?) AND estado = 'en_reformadora' ORDER BY id_neumatico", [idsOC]);
+                            if (filasReenc.length) {
+                                const [hv] = await targetDb.promise().query(
+                                    'SELECT id_neumatico, codigo_llanta, marca, modelo, medida, vida FROM neumaticos_hoja_vida WHERE id_neumatico IN (?)', [filasReenc.map(r => r.id_neumatico)]);
+                                const hojas = new Map(hv.map(h => [h.id_neumatico, h]));
+                                for (const r of filasReenc) {
+                                    const h = hojas.get(r.id_neumatico) || {};
+                                    const clave = `${r.oc_id}|${r.inventario_id}`;
+                                    (llantasReenc[clave] = llantasReenc[clave] || []).push({
+                                        id_neumatico: r.id_neumatico, codigo: h.codigo_llanta || r.id_neumatico,
+                                        marca: h.marca || null, modelo: h.modelo || null, medida: h.medida || null, vida: h.vida || 'R0',
+                                    });
+                                }
+                            }
+                        } catch (errReenc) { /* sin la migración 14 no hay órdenes de reencauche */ }
+
                         const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
 
                         // Armar lista enriquecida con estado de progreso de recepción
@@ -2825,7 +2956,9 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                                     recepcionado: recibidosItem,
                                     pendiente: pendiente,
                                     costo_unitario: parseFloat(it.costo_unitario || 0),
-                                    moneda: it.moneda || oc.moneda || 'PEN'
+                                    moneda: it.moneda || oc.moneda || 'PEN',
+                                    // Línea SERV de reencauche: las llantas por resolver (aprobada o rechazada) al recepcionar
+                                    llantas_reencauche: llantasReenc[`${oc.id}|${it.inventario_id}`] || undefined
                                 };
                             });
 
@@ -3024,6 +3157,11 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     [detalleVals]
                 );
 
+                // 2b. Orden de servicio de reencauche: cada llanta vuelve aprobada (R+1 a Reencauche, con el costo de la línea) o rechazada
+                await resolverReencaucheDeRecepcion(conn, {
+                    ocId: oc_id, recepcionId, items, usuario: usuario || 'Almacén Central', fecha: fechaHoraSQL, tipoRecepcion,
+                });
+
                 // 3. Llantas que llegan: cada unidad entra a Neumáticos como "Sin código de fuego" (flujo aprobado)
                 const lineasLlanta = items.map((it, i) => ({ it, linea: i + 1 })).filter(x => x.it.inventario_id);
                 if (lineasLlanta.length) {
@@ -3062,7 +3200,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             });
         } catch (err) {
             console.error('Error al registrar recepción de OC:', err);
-            res.status(500).json({ error: err.message });
+            res.status(err.aviso ? err.status : 500).json({ error: err.message });
         }
     });
 

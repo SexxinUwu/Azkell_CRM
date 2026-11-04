@@ -710,6 +710,11 @@ export async function eliminarProveedor(id: string | number) {
 
 // ─── Recepción de compras ────────────────────────────────────────────────────
 
+/** Llanta en la reformadora de una orden de servicio de reencauche: se resuelve al recepcionar la orden */
+export interface LlantaReencauche {
+  id_neumatico: string; codigo: string; marca: string | null; modelo: string | null; medida: string | null; vida: string;
+}
+
 export interface ItemRecepcion {
   inventario_id: string;
   descripcion: string;
@@ -719,6 +724,8 @@ export interface ItemRecepcion {
   pendiente: number;
   costo_unitario: number;
   moneda: string;
+  /** Línea SERV de reencauche: las llantas por resolver (aprobada o rechazada) */
+  llantas_reencauche?: LlantaReencauche[];
 }
 
 export interface HistorialRecepcion {
@@ -773,6 +780,8 @@ export interface RecepcionItemEnvio {
   costo_unitario: number;
   moneda: string;
   almacen: string;
+  /** Línea SERV de reencauche: resultado de cada llanta que volvió (las que no llegaron no se envían) */
+  llantas_reencauche?: Array<{ id_neumatico: string; resultado: 'aprobada' | 'rechazada'; remanente?: number | null; banda?: string; motivo?: string }>;
 }
 
 /** Tipo de cambio oficial de SUNAT del día (venta). Lo sirve el servidor con caché diaria. */

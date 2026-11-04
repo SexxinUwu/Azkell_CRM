@@ -210,6 +210,8 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
 
   async function guardar() {
     if (!articulo.trim()) { toast(servicio ? 'Ingresa el nombre del servicio' : 'Ingresa el nombre del artículo', 'error'); return; }
+    // Una llanta con medida necesita su cocada inicial: de ahí salen el remanente de cada llanta que se recibe
+    if (llanta && medida.trim() && !(Number(cocada) > 0)) { toast('La cocada inicial (mm) es obligatoria para una llanta con medida', 'error'); return; }
     setGuardando(true);
     try {
       const body = {
@@ -336,7 +338,7 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
             <Field label="Modelo">
               {p => <TextInput {...p} value={modeloLlanta} placeholder="Ej: S200" onChange={e => setModeloLlanta(e.target.value)} />}
             </Field>
-            <Field label="Cocada inicial (mm)">
+            <Field label="Cocada inicial (mm) *" hint="Obligatoria cuando la llanta tiene medida">
               {p => <TextInput {...p} type="number" min={0} value={cocada} placeholder="Ej: 20" onChange={e => setCocada(e.target.value)} />}
             </Field>
             <Field label="Vida al comprar" hint="Nueva entra al almacén Nuevas. Una llanta comprada ya reencauchada (R1, R2, R3) entra al almacén Reencauche con esa vida.">
