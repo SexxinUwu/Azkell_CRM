@@ -274,3 +274,40 @@ Marcar cuando la pantalla nueva reemplaza a la antigua. ⚠️ = posible duplica
 ## Migración: 100% CERRADA Y CONCLUIDA (2026-10-30)
 
 La app nueva (React) es la única versión. Todas las pantallas del menú están en React, sin enlaces al clásico. Guías SUNAT se emiten desde React (individual y masiva). Pendientes de operación, no de migración: pruebas en navegador de los flujos nuevos y el backlog técnico (scripts de mantenimiento y rotación de claves).
+
+## Pendientes movidos desde CLAUDE.md (2026-11-04)
+
+Lista viva. Se movió aquí lo que estaba en la guía para Claude Code, más lo que quedó abierto en las últimas semanas. Marcar `[x]` al cerrar cada punto.
+
+### Verificación (la versión clásica ya no existe, así que se revisa en React)
+- [ ] Análisis de combustible: confirmar que la auditoría avanzada del clásico (~2.200 líneas) está cubierta en `AnalisisViajes.tsx`.
+- [ ] Entrega de vehículos: croquis de daños y PDF (diagrama SVG + PDF por html2canvas) — validar visualmente.
+- [ ] Garita: PDF del registro (acta) — validar en React.
+- [ ] Probar en navegador los dashboards de Mantenimiento y Gerencia.
+- [ ] Probar Inventario: Exportar (solo lo filtrado), Importar y Descargar plantilla.
+- [ ] Probar Almacén > Otros: tarjeta Kits MP.
+- [ ] Probar Auditoría: `/api/auditoria` (columna `ip`).
+- [ ] Probar sesión: login, F5, cerrar sesión, Perfil > sesiones activas y documentos de flota (cookie HttpOnly).
+- [ ] Probar la bienvenida y la despedida en un teléfono real.
+
+### Almacén y servidor
+- [ ] Almacén de flota (`routes/almacen-flota.js`): probar con datos reales y decidir si se carga el stock inicial.
+- [ ] Almacén > Inventario: KPIs al buscar y Excel exporta solo lo filtrado.
+- [ ] `server.js`: límite general de 600 req/min ya está en el código; reiniciar el servidor para que aplique.
+
+### Seguridad
+- [ ] CSP en modo solo reporte (Helmet en `server.js`): revisar los avisos `[CSP]` de `/csp-report` y pasarla a bloqueo (quitar `reportOnly`).
+- [ ] Referencia (ya activo, no es pendiente): JWT obligatorio, cookie HttpOnly `azkell_session`, límite de login 20 cada 15 min y general 600 por minuto, Helmet (HSTS, frameguard), 2FA TOTP para Admin y Gerencia, y `log_auditoria` firmada.
+
+### Pendientes abiertos en las últimas sesiones
+- [ ] Análisis de combustible: decidir cómo mostrar el recorrido del Thermo King (BTV993). Opción recomendada: dejarlo en «—» y mostrar solo sus galones.
+- [ ] Análisis de combustible: probar con un usuario normal que un viaje CONFORME da 403, y con un administrador que sí se puede cambiar.
+- [ ] Asistente: elegir `GEMINI_MODEL` en Coolify (Flash como principal y Flash-Lite como respaldo), con nombres verificados con la clave.
+- [ ] Asistente: mejorar la comprensión (ejemplos en el prompt, glosario, memoria de la última placa, lista de preguntas de prueba y registro de preguntas sin respuesta).
+- [ ] Asistente: decidir si la voz sigue con las voces del navegador o pasa a una voz de IA desde el servidor.
+- [ ] Documentos de flota: 540 documentos sin fecha cargada.
+- [ ] Neumáticos: probar el descarte de la llanta rechazada `SFC-R395-RECH-1` (debe quedar en «Esperando descarte»).
+- [ ] Neumáticos: generar código de fuego a las 15 llantas de la OC 85 (ENT-2026-00242) y decidir el costo de la rechazada.
+- [ ] Neumáticos: la OC 85 está a 30 días de crédito; decidir si pasa a 60 días (vence el 20/12/2026).
+- [ ] Inventario: cargar cocada en INV-0263 e INV-0293, y decidir si INV-0263 se marca descontinuado.
+- [ ] Coolify: Redeploy desde `main` para que se vean los cambios de las últimas sesiones.
