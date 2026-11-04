@@ -1,5 +1,5 @@
 import './mant.css';
-import { Fragment, useMemo, useState, type CSSProperties } from 'react';
+import { Fragment, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Bus, ChevronDown, ChevronRight, Clock, Columns3, Download, FileDown, FileSpreadsheet, Gauge, History, ListChecks, MessageCircle, Pencil, Plus, SearchX, ShieldCheck, SlidersHorizontal, Trash2, Upload } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
@@ -15,7 +15,7 @@ import { exportarExcel } from '../../core/lib/excel';
 import { compartirPDF } from '../../core/lib/pdf';
 import { haptic } from '../../core/lib/haptics';
 import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import '../../core/ui/acciones-iconos.css';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import {
@@ -397,6 +397,18 @@ export function useEmpresaNombre() {
   });
 }
 
+/** Botón solo con icono de color: su nombre aparece al pasar el mouse (acciones-iconos.css) */
+function AccionIcono({ tip, color, icono, onClick, disabled = false, activo }: {
+  tip: string; color: 'verde' | 'azul' | 'violeta' | 'rojo' | 'ambar'; icono: ReactNode; onClick: () => void; disabled?: boolean; activo?: boolean;
+}) {
+  return (
+    <button type="button" className={`acciones-iconos__boton acciones-iconos__boton--${color}`} data-tip={tip}
+      aria-label={tip} aria-pressed={activo} disabled={disabled} onClick={onClick}>
+      {icono}
+    </button>
+  );
+}
+
 export function FleetrunPage() {
   const qc = useQueryClient();
   const toast = useToast();
@@ -678,7 +690,7 @@ export function FleetrunPage() {
       if (tipo === 'pdf') {
         await abrirPdfEnVisor(generar, nombreReportePreventivo());
       } else {
-        const r = await compartirPDF(await generar(), nombreReportePreventivo(), 'Estatus de mantenimientos preventivos · F-MAN-006');
+        const r = await compartirPDF(await generar(), nombreReportePreventivo(), 'Estado de mantenimiento preventivo · F-MAN-006');
         if (r === 'descargado') toast('PDF descargado. Adjúntalo en la conversación de WhatsApp.');
       }
     } catch (e) {
@@ -777,9 +789,8 @@ export function FleetrunPage() {
         subtitle="Control de kilometraje, frecuencias de servicio y alertas de flota"
         actions={
           <>
-          <MenuOtros opciones={[
-            { label: 'Descargar plantilla de importación', icon: <FileSpreadsheet size={17} />, onSelect: () => descargarPlantillaFleetrun() },
-          ]} />
+          <AccionIcono tip="Descargar plantilla de importación" color="azul" icono={<FileSpreadsheet size={18} />}
+            onClick={() => descargarPlantillaFleetrun()} />
           {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ registro: null })}>Registrar Mantenimiento</Button>}
           </>
         }
@@ -812,17 +823,13 @@ export function FleetrunPage() {
               <div className="prev-barra__buscar">
                 <SearchField value={busqueda} onChange={cambiarBusqueda} placeholder="Buscar placa" />
               </div>
-              <Button variant={historial ? 'primary' : 'secondary'} icon={<History size={16} />}
-                onClick={() => { setHistorial(h => !h); setPagina(1); setBusqueda(''); setFiltro('Todos'); }}>Historial</Button>
-              <Button variant={avanzadosActivos ? 'primary' : 'secondary'} icon={<SlidersHorizontal size={16} />}
-                onClick={() => setAvanzados(true)}>
-                {avanzadosActivos ? `Filtros (${avanzadosActivos})` : 'Filtros'}
-              </Button>
+              <AccionIcono tip="Historial" color="violeta" icono={<History size={18} />} activo={historial}
+                onClick={() => { setHistorial(h => !h); setPagina(1); setBusqueda(''); setFiltro('Todos'); }} />
+              <AccionIcono tip={avanzadosActivos ? `Filtros (${avanzadosActivos})` : 'Filtros'} color="azul" icono={<SlidersHorizontal size={18} />}
+                onClick={() => setAvanzados(true)} />
               {puedeEliminar && (
-                <Button variant="secondary" icon={<ListChecks size={16} />}
-                  onClick={() => setSeleccion(s => (s ? null : new Set()))}>
-                  {seleccion ? 'Cancelar selección' : 'Seleccionar'}
-                </Button>
+                <AccionIcono tip={seleccion ? 'Cancelar selección' : 'Seleccionar'} color="ambar" icono={<ListChecks size={18} />} activo={!!seleccion}
+                  onClick={() => setSeleccion(s => (s ? null : new Set()))} />
               )}
               {seleccion && puedeEliminar && (
                 <Button variant="danger" icon={<Trash2 size={16} />} loading={borrando} disabled={!seleccion.size}
@@ -830,13 +837,12 @@ export function FleetrunPage() {
                   Eliminar ({seleccion.size})
                 </Button>
               )}
-              {puedeCrear && <Button variant="secondary" icon={<Upload size={16} />} onClick={() => setImportando(true)}>Importar</Button>}
-              <Button variant="secondary" icon={<Download size={16} />} onClick={exportar}>Exportar</Button>
-              <Button variant="secondary" className="btn--icono" icon={<Columns3 size={17} />} aria-label="Elegir columnas" title="Elegir columnas"
-                onClick={() => setEditandoColumnas(true)} disabled={movil} />
-              <Button variant="secondary" className="btn--icono" icon={<FileDown size={17} />} aria-label="Descargar PDF del reporte" title="Descargar PDF del reporte"
+              {puedeCrear && <AccionIcono tip="Importar desde Excel" color="azul" icono={<Upload size={18} />} onClick={() => setImportando(true)} />}
+              <AccionIcono tip="Exportar Excel" color="verde" icono={<Download size={18} />} onClick={exportar} />
+              <AccionIcono tip="Elegir columnas" color="violeta" icono={<Columns3 size={18} />} onClick={() => setEditandoColumnas(true)} disabled={movil} />
+              <AccionIcono tip="Descargar PDF del reporte" color="rojo" icono={<FileDown size={18} />}
                 disabled={historial || generando !== null || !filtrados.length} onClick={() => generarReporte('pdf')} />
-              <Button variant="secondary" className="btn--icono btn--icono-whatsapp" icon={<MessageCircle size={17} />} aria-label="Enviar reporte por WhatsApp" title="Enviar reporte por WhatsApp"
+              <AccionIcono tip="Enviar reporte por WhatsApp" color="verde" icono={<MessageCircle size={18} />}
                 disabled={historial || generando !== null || !filtrados.length} onClick={() => generarReporte('whatsapp')} />
             </div>
           </div>

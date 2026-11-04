@@ -1517,7 +1517,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 emisor: String(req.body?.emisor || '').slice(0, 120),
                 logo,
             });
-            const pdf = await htmlAPdf(html, 'Estatus de Mantenimientos Preventivos - F-MAN-006', true);
+            const pdf = await htmlAPdf(html, 'Estado de mantenimiento preventivo - F-MAN-006', true);
             res.set('Content-Type', 'application/pdf').send(Buffer.from(pdf));
         } catch (err) {
             console.error('[fleetrun-pdf]', err.message);

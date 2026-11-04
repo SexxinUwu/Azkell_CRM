@@ -94,7 +94,7 @@ function htmlPdfRampas(filas: FilaPdfRampa[], empresa: string, d: DatosPdfRampa,
       <div style="display:flex;align-items:center;gap:14px">
         ${marca}
         <div>
-          <div class="titulo">Status de rampa</div>
+          <div class="titulo">Estado de rampas</div>
           <div class="sub">Control de ocupación de rampa y turnos de mantenimiento</div>
         </div>
       </div>
@@ -158,7 +158,7 @@ async function logoEmbebido(): Promise<string> {
 /** PDF oficial F-MAN-005 (horizontal) generado en el servidor con Chromium: texto real, nítido en cualquier zoom. */
 export async function generarPdfRampas(filas: FilaPdfRampa[], d: DatosPdfRampa): Promise<Blob> {
   const html = htmlPdfRampas(filas, await nombreEmpresa(), d, await logoEmbebido());
-  return pdfDeHtml(`<!doctype html><html><head><meta charset="utf-8"><title>Status de rampa</title></head><body style="margin:0">${html}</body></html>`, 'Status de rampa', true);
+  return pdfDeHtml(`<!doctype html><html><head><meta charset="utf-8"><title>Estado de rampas</title></head><body style="margin:0">${html}</body></html>`, 'Estado de rampas', true);
 }
 
 /** Abre el PDF en una pestaña nueva (enlace blob:), igual que el clásico */
