@@ -579,7 +579,7 @@ function RampaTabla({ entradas, ots, tecnicosPorRampa, verInspeccion, ultimasIns
   return (
     <div ref={caja}>
     <TablaRedimensionable id={verInspeccion ? 'status-rampa-activas-insp' : 'status-rampa-activas'} columnas={COLUMNAS_RAMPA(verInspeccion)}
-      ariaLabel="Ocupación de rampas" altoMax={alto}>
+      ariaLabel="Ocupación de rampas" altoMax={alto} className="rampa-cabecera-compacta">
       {entradas.map(e => {
         const horas = horasEnRampa(e.fecha_ingreso);
         return (

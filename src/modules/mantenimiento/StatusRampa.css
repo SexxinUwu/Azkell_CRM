@@ -106,3 +106,7 @@
 /* Inspección de la unidad: código con semáforo y días restantes; toda la celda es el botón */
 .rt__insp { display: inline-flex; align-items: center; padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
 .rt__insp-dias { font-size: 0.74rem; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Encabezados compactos de la tabla de Status de rampa: más filas a la vista */
+.rampa-cabecera-compacta thead th { padding: 4px 8px; font-size: 0.625rem; letter-spacing: 0.01em; line-height: 1.2; }
+.rampa-cabecera-compacta .tabla-redim__asa { height: 16px; }
