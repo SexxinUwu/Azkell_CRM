@@ -50,7 +50,8 @@ function parseRange(text) {
 function detectReport(message) {
   const t = strip(message);
   if (/\b(como|por que|que es|que significa|donde|puedo|quiero saber)\b/.test(t)) return null;
-  if (!/(reporte|excel|pdf|listado|lista de|descarga|exporta|genera|fleetrun|inspecciones|conductores|placas)/.test(t)) return null;
+  // Solo se arma un archivo si la frase pide uno; «placas» o «conductores» solos son una pregunta para Gemini
+  if (!/(reporte|excel|pdf|listado|lista de|descarga|exporta|genera|archivo)/.test(t)) return null;
 
   const tipo =
     /(fleetrun|mantenimiento preventivo|mant[. ]prev|tipo_mp)/.test(t) ? 'fleetrun'

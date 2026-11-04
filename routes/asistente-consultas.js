@@ -282,6 +282,60 @@ const HERRAMIENTAS = {
     },
   },
 
+  vencimientos_flota: {
+    permiso: PERMISO_DOCUMENTOS,
+    sinPermiso: 'Esta persona no tiene permiso para ver los documentos de flota. Dile que lo solicite al administrador.',
+    declaracion: {
+      name: 'vencimientos_flota',
+      description: 'Documentos de TODA la flota que están vencidos o vencen dentro de los próximos días, agrupados por placa y ordenados por urgencia. Úsala para "qué documentos tengo vencidos", "qué vence pronto", "resumen de vencimientos por placa" o "de todas las placas cuáles van a vencer". No pide placa.',
+      parameters: {
+        type: 'OBJECT',
+        properties: { dias: { type: 'INTEGER', description: 'Ventana de días para "por vencer". Por defecto 30, máximo 180.' } },
+      },
+    },
+    async ejecutar(args, db) {
+      const dias = Math.min(180, Math.max(1, Math.trunc(Number(args.dias)) || 30));
+      const DOCS = [
+        ['Tarjeta de circulación', 'tc_vencimiento'], ['SOAT', 'soat_vencimiento'], ['MATPEL', 'matpel_vencimiento'],
+        ['Revisión técnica', 'rt_vencimiento'], ['Bonificación', 'boni_vencimiento'], ['Seguro vehicular', 'sv_vencimiento'],
+        ['Seguro de carga', 'sc_vencimiento'], ['Fumigación', 'fum_vencimiento'], ['Extintor', 'ext_vencimiento'],
+      ];
+      const filas = await db_query(db,
+        `SELECT placa, ${DOCS.map(([, c]) => c).join(', ')} FROM vehiculos_flota ORDER BY placa`, []);
+      // Hoy en hora de Lima, a medianoche (para contar días completos)
+      const hoy = new Date(`${new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' })}T00:00:00`);
+
+      const vencidos = [];
+      const porVencer = [];
+      let sinFecha = 0;
+      for (const f of filas) {
+        for (const [documento, col] of DOCS) {
+          if (!f[col]) { sinFecha++; continue; }
+          const d = new Date(`${fechaCorta(f[col])}T00:00:00`);
+          if (isNaN(d.getTime())) { sinFecha++; continue; }
+          const diasRestantes = Math.round((d - hoy) / 86400000);
+          const item = { placa: f.placa, documento, vence: fechaCorta(f[col]), dias_restantes: diasRestantes };
+          if (diasRestantes < 0) vencidos.push(item);
+          else if (diasRestantes <= dias) porVencer.push(item);
+        }
+      }
+      // Lo más vencido primero y, en "por vencer", lo que vence antes
+      vencidos.sort((a, b) => a.dias_restantes - b.dias_restantes);
+      porVencer.sort((a, b) => a.dias_restantes - b.dias_restantes);
+      return {
+        fecha_hoy: fechaCorta(hoy),
+        ventana_dias: dias,
+        placas_revisadas: filas.length,
+        vencidos_total: vencidos.length,
+        por_vencer_total: porVencer.length,
+        documentos_sin_fecha_cargada: sinFecha,
+        vencidos: vencidos.slice(0, MAX_FILAS),
+        por_vencer: porVencer.slice(0, MAX_FILAS),
+        aviso: (vencidos.length > MAX_FILAS || porVencer.length > MAX_FILAS) ? `Se muestran los primeros ${MAX_FILAS} de cada grupo.` : undefined,
+      };
+    },
+  },
+
   documentos_unidad: {
     permiso: PERMISO_DOCUMENTOS,
     sinPermiso: 'Esta persona no tiene permiso para ver los documentos de flota. Dile que lo solicite al administrador.',
