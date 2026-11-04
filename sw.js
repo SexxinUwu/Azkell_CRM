@@ -1,11 +1,11 @@
 // v55: sale /app del service worker y descarta lo que quedó guardado (archivos de compilación que ya no existen)
-const CACHE_NAME = 'azkell-fleet-v61';
+const CACHE_NAME = 'azkell-fleet-v62';
 const STATIC_CACHE = 'azkell-libs-v2';
 // Fotos de artículos (S3): la URL firmada cambia en cada consulta, por eso se guardan por su ruta sin la firma
 const IMG_CACHE = 'azkell-img-v1';
 const IMG_MAX = 600;
 // Pantalla nueva (/app) para usarla sin señal: archivos con hash y una copia del HTML de la última carga
-const APP_CACHE = 'azkell-app-v2';
+const APP_CACHE = 'azkell-app-v3';
 const APP_ASSETS_MAX = 300;
 const APP_SHELL = '/app/__shell';
 
@@ -67,7 +67,9 @@ function appArchivo(request) {
   return caches.open(APP_CACHE).then(cache => cache.match(request).then(guardado => {
     if (guardado) return guardado;
     return fetch(request).then(resp => {
-      if (resp.status === 200) {
+      // Una respuesta "no-store" no es el archivo: es el aviso del servidor de que ese archivo ya no existe (script de recarga).
+      // Guardarla dejaría ese nombre envenenado aunque después sí exista.
+      if (resp.status === 200 && !/no-store/i.test(resp.headers.get('Cache-Control') || '')) {
         cache.put(request, resp.clone()).then(() => cache.keys()).then(ks => {
           if (ks.length > APP_ASSETS_MAX) return Promise.all(ks.slice(0, ks.length - APP_ASSETS_MAX).map(k => cache.delete(k)));
         }).catch(() => {});
