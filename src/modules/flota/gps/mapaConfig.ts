@@ -13,11 +13,12 @@ export const MAPA_URLS = {
     : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
 } as const;
 
-// Mapbox Satellite: una sola fuente en todos los zooms (sin saltos de color). Con VITE_MAPBOX_KEY (token público pk.…) es el satélite
-// por defecto; agregar ?satelite=esri a la dirección fuerza Esri para comparar, y ?satelite=mapbox lo contrario.
+// Mapbox Satellite (opcional): una sola fuente en todos los zooms (sin saltos de color). Con VITE_MAPBOX_KEY (token público pk.…) se activa
+// agregando ?satelite=mapbox a la dirección; por defecto se usa Esri (imágenes más recientes en el interior del país).
 const mapbox = (import.meta.env.VITE_MAPBOX_KEY as string | undefined) || '';
 const elegido = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('satelite') : null;
-export const SAT_MAPBOX = !!mapbox && elegido !== 'esri';
+// Esri es el satélite por defecto: en el campo (p. ej. Lambayeque) tiene imágenes de 2025 que Mapbox aún no trae. Mapbox solo con ?satelite=mapbox.
+export const SAT_MAPBOX = !!mapbox && elegido === 'mapbox';
 export const SAT_MAPBOX_URL = `https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=${mapbox}`;
 /** Mapbox tiene imágenes hasta el zoom 22 en zonas urbanas; más allá se agranda la última */
 export const SAT_MAPBOX_MAXZOOM = 20;
