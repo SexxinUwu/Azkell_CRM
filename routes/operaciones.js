@@ -671,7 +671,8 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             if (!previo.length) return res.status(404).json({ error: 'El tramo no existe' });
 
             const kg = Math.round(tn * 1000 * 100) / 100;
-            await tdb.query('UPDATE marsisa_ordenes_viaje_rutas SET peso_total = ? WHERE id = ?', [kg, id]);
+            // peso_manual = 1: la sincronización con MarsisaSoft ya no revierte este peso
+            await tdb.query('UPDATE marsisa_ordenes_viaje_rutas SET peso_total = ?, peso_manual = 1 WHERE id = ?', [kg, id]);
 
             const tramo = Number(previo[0].es_retorno) === 1 ? 'retorno' : 'ida';
             if (typeof logAudit === 'function') {
@@ -1535,7 +1536,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                             ruta = VALUES(ruta),
                             tipo_servicio = VALUES(tipo_servicio),
                             es_retorno = VALUES(es_retorno),
-                            peso_total = VALUES(peso_total),
+                            peso_total = IF(peso_manual = 1, peso_total, VALUES(peso_total)),
                             cantidad_total = VALUES(cantidad_total),
                             volumen_total = VALUES(volumen_total)
                     `;

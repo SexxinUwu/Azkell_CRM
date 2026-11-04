@@ -33,6 +33,7 @@ model MarsisaOrdenViajeRuta {
   tipo_servicio  String?   @db.VarChar(100)
   es_retorno     Boolean   @default(false)
   peso_total     Decimal?  @default(0.00) @db.Decimal(12, 2)
+  peso_manual    Boolean   @default(false)
   cantidad_total Decimal?  @default(0.00) @db.Decimal(12, 2)
   volumen_total  Decimal?  @default(0.000) @db.Decimal(12, 3)
   creado_en      DateTime? @default(now()) @db.Timestamp(0)
