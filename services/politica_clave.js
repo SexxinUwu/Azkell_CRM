@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 
-const LARGO_MIN = 10;
+const LARGO_MIN = 8;
 const LARGO_MAX = 128;
 const TIMEOUT_MS = 4000;
 

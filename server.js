@@ -4023,7 +4023,7 @@ async function prepararUsuario(req, conn, idActual) {
         const dupD = await consultar(conn, 'SELECT idUsuario FROM usuarios WHERE dni=? AND idUsuario<>?', [dniLimpio, idActual || '']);
         if (dupD.length) return { error: 'Ya existe un usuario con ese DNI.', codigo: 409 };
     }
-    // Clave: la misma política que "Mi cuenta" (mínimo 10, no común ni filtrada)
+    // Clave: la misma política que "Mi cuenta" (mínimo 8, no común ni filtrada)
     const clave = password && String(password).trim() ? String(password).trim() : '';
     if (!idActual && !clave) return { error: 'Escribe una contraseña para el primer acceso.', codigo: 400 };
     if (clave) {

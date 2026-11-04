@@ -403,7 +403,7 @@ export function UsuariosPage() {
             {props => (
               <PasswordInput {...props} autoComplete="new-password" value={form.password}
                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                placeholder={editando ? 'Sin cambios' : 'Mínimo 10 caracteres'} />
+                placeholder={editando ? 'Sin cambios' : 'Mínimo 8 caracteres'} />
             )}
           </Field>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-2)' }}>

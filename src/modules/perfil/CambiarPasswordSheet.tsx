@@ -8,7 +8,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 
-const LARGO_MIN = 10; // igual que el servidor (services/politica_clave.js), que vuelve a validar todo
+const LARGO_MIN = 8; // igual que el servidor (services/politica_clave.js), que vuelve a validar todo
 
 type Campo = 'actual' | 'nueva' | 'confirmar';
 

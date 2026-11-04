@@ -236,7 +236,7 @@ function EmpresaSheet({ abierto, empresa, onClose, onGuardado }: {
     if (alta) {
       const errSub = validarSubdominio(v.slug.trim().toLowerCase());
       if (errSub) { setError(errSub); haptic('warning'); return; }
-      if (v.admin_password.length < 10) { setError('La contraseña del administrador tiene al menos 10 caracteres.'); haptic('warning'); return; }
+      if (v.admin_password.length < 8) { setError('La contraseña del administrador tiene al menos 8 caracteres.'); haptic('warning'); return; }
     }
 
     setGuardando(true); setError(null);
