@@ -83,7 +83,7 @@ export function InventarioPage() {
   const [seleccionado, setSeleccionado] = useState<ArticuloInv | null>(null);
   const [abierto, setAbierto] = useState(false);
   const [cuantos, setCuantos] = useState(TARJETAS_PAGINA);
-  const [formulario, setFormulario] = useState<{ articulo: ArticuloInv | null } | null>(null);
+  const [formulario, setFormulario] = useState<{ articulo: ArticuloInv | null; servicio?: boolean } | null>(null);
   const [porEliminar, setPorEliminar] = useState<ArticuloInv | null>(null);
   const [eliminando, setEliminando] = useState(false);
   const [importando, setImportando] = useState(false);
@@ -289,8 +289,8 @@ export function InventarioPage() {
               )}
               {botonesAcciones}
               {puedeCrear && (
-                <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ articulo: null })}>
-                  Nuevo artículo
+                <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ articulo: null, servicio: pestana === 'servicios' })}>
+                  {pestana === 'servicios' ? 'Nuevo servicio' : 'Nuevo artículo'}
                 </Button>
               )}
             </div>
@@ -413,6 +413,7 @@ export function InventarioPage() {
       <InventarioFormulario
         open={!!formulario}
         articulo={formulario?.articulo ?? null}
+        inicial={formulario?.servicio ? { servicio: true } : null}
         onClose={() => setFormulario(null)}
         onGuardado={id => {
           setFormulario(null);

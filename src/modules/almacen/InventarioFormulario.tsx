@@ -10,7 +10,7 @@ import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { MultiSelect } from '../../core/ui/MultiSelect';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
-import { guardarArticulo, useAlmacenesLista, useTipoCambioSunat, type ArticuloInv, type ArticuloNuevo } from './api';
+import { guardarArticulo, useAlmacenesLista, useTipoCambioSunat, type ArticuloInv, type ArticuloNuevo, esServicio } from './api';
 import { EscanerQr } from './EscanerQr';
 import { InventarioImagen } from './InventarioImagen';
 import { NuevaOpcionSheet } from './NuevaOpcionSheet';
@@ -132,7 +132,9 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
   const [imagenUrl, setImagenUrl] = useState<string | null>(null);
   const [nuevaOpcion, setNuevaOpcion] = useState<'marca' | 'familia' | null>(null);
 
-  const llanta = familia.trim().toUpperCase() === FAMILIA_LLANTA;
+  // Servicio: alta nueva desde la pestaña de servicios o desde una orden de compra, o edición de un artículo SERV
+  const servicio = !!inicial?.servicio || (!!a && esServicio(a));
+  const llanta = !servicio && familia.trim().toUpperCase() === FAMILIA_LLANTA;
   const tcPorDefecto = Number(configQ.data?.tipo_cambio) || 3.7;
   // En dólares, el tipo de cambio es el de la SUNAT del día (se llena solo; la persona lo puede cambiar)
   const sunat = useTipoCambioSunat(open && moneda === 'USD' && !a);
@@ -207,7 +209,7 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
   const nombreGenerado = (llanta && nombreLlanta(medida, modeloLlanta, marca)) || `${articulo.trim()}${codigoArticulo.trim() ? ' ' + codigoArticulo.trim() : ''}${marcasU ? ' - ' + marcasU : ''}${marca ? ' / ' + marca : ''}`.trim();
 
   async function guardar() {
-    if (!articulo.trim()) { toast('Ingresa el nombre del artículo', 'error'); return; }
+    if (!articulo.trim()) { toast(servicio ? 'Ingresa el nombre del servicio' : 'Ingresa el nombre del artículo', 'error'); return; }
     setGuardando(true);
     try {
       const body = {
@@ -216,13 +218,13 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
         codigo_barras: codigoBarras.trim() || null,
         familia: familia.trim() || null,
         marca: marca || null,
-        marca_unidad: JSON.stringify(marcasUnidad),
-        tipo: llanta && !a ? 'Original' : (tipo || null),
+        marca_unidad: JSON.stringify(servicio ? [] : marcasUnidad),
+        tipo: servicio ? 'Servicio' : llanta && !a ? 'Original' : (tipo || null),
         sub_tipo: subTipo || null,
-        almacen: almacen || null,
+        almacen: servicio ? null : (almacen || null),
         ubicacion: ubicacion || null,
-        anaquel: anaquel.trim() || null,
-        unidad: llanta ? 'Unidades' : (unidadValor || null),
+        anaquel: servicio ? null : (anaquel.trim() || null),
+        unidad: servicio ? (unidadValor || 'Servicio') : llanta ? 'Unidades' : (unidadValor || null),
         stock_min: parseFloat(stockMin) || 0,
         stock_max: parseFloat(stockMax) || 0,
         moneda,
@@ -232,7 +234,7 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
         observaciones: observaciones.trim() || null,
         sistema: sistema || null,
         sub_sistema: subSistema || null,
-        cantidad_inicial: !a ? (parseFloat(cantidadInicial) || 0) : undefined,
+        cantidad_inicial: !a && !servicio ? (parseFloat(cantidadInicial) || 0) : undefined,
         medida: llanta ? medida : undefined,
         modelo: llanta ? modeloLlanta : undefined,
       } as Partial<ArticuloNuevo>;
@@ -249,7 +251,7 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
           toast('El artículo se guardó, pero no los datos de la llanta', 'error');
         }
       }
-      toast(a ? 'Artículo actualizado' : 'Artículo creado');
+      toast(servicio ? (a ? 'Servicio actualizado' : 'Servicio creado') : (a ? 'Artículo actualizado' : 'Artículo creado'));
       onGuardado(res?.id);
     } catch (err) {
       toast(errorMessage(err), 'error');
@@ -260,12 +262,18 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
 
   return (
     <>
-    <Sheet open={open} onClose={onClose} title={a ? 'Editar artículo' : 'Nuevo artículo'}>
+    <Sheet open={open} onClose={onClose} title={servicio ? (a ? 'Editar servicio' : 'Nuevo servicio') : (a ? 'Editar artículo' : 'Nuevo artículo')}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
+        {!servicio && (
+          <>
         <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--label-2)' }}>
           Nombre generado: <strong>{nombreGenerado || '—'}</strong>
         </p>
+          </>
+        )}
 
+        {!servicio && (
+          <>
         <Field label="Código de barras">
           {p => (
             <div style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center' }}>
@@ -284,12 +292,16 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
           onClose={() => setEscaneando(false)}
           onLeido={texto => { setCodigoBarras(texto.trim()); setEscaneando(false); }}
         />
-        <Field label="Artículo *">
-          {p => <TextInput {...p} value={articulo} placeholder="Ej: Filtro de aceite" onChange={e => setArticulo(e.target.value)} />}
+          </>
+        )}
+        <Field label={servicio ? 'Servicio *' : 'Artículo *'}>
+          {p => <TextInput {...p} value={articulo} placeholder={servicio ? 'Ej: Servicio de reencauche 295/80R22.5' : 'Ej: Filtro de aceite'} onChange={e => setArticulo(e.target.value)} />}
         </Field>
         <Field label="Código interno">
           {p => <TextInput {...p} value={codigoArticulo} placeholder="Ej: LF3000" onChange={e => setCodigoArticulo(e.target.value)} />}
         </Field>
+        {!servicio && (
+          <>
         <Field label="Marca">
           {p => (
             <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
@@ -310,6 +322,8 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
             </div>
           )}
         </Field>
+          </>
+        )}
 
         {llanta && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
@@ -331,7 +345,7 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
           </div>
         )}
 
-        {!llanta && (
+        {!llanta && !servicio && (
           <>
             <Field label="Tipo">
               {() => <ChoiceChips label="Tipo" value={tipo} onChange={v => setTipo(v === tipo ? '' : v)} options={opciones(TIPOS, tipo).map(t => ({ value: t, label: t }))} />}
@@ -342,11 +356,15 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
           </>
         )}
 
+        {!servicio && (
+          <>
         <Field label="Almacén">
           {p => <Combobox {...p} options={opc((almacenesQ.data ?? []).map(al => al.nombre), almacen)} value={almacen || null} onChange={v => setAlmacen(v ?? '')} placeholder="Elige el almacén" />}
         </Field>
+          </>
+        )}
 
-        {!llanta && (
+        {!llanta && !servicio && (
           <>
             <Field label="Anaquel">
               {p => <TextInput {...p} value={anaquel} placeholder="Ej: 6-4, A-2, etc." onChange={e => setAnaquel(e.target.value)} />}
@@ -365,7 +383,7 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
           </>
         )}
 
-        {!a && (
+        {!a && !servicio && (
           <Field label="Stock inicial / cantidad (conteo con el que ingresa)">
             {p => <TextInput {...p} type="number" min={0} step="0.0001" value={cantidadInicial} placeholder="Ej: 10" onChange={e => setCantidadInicial(e.target.value)} />}
           </Field>
@@ -397,6 +415,8 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
           </Field>
         )}
 
+        {!servicio && (
+          <>
         <Field label="Unidades compatibles">
           {() => (
             <MultiSelect
@@ -412,9 +432,11 @@ export function InventarioFormulario({ open, articulo: a, inicial, onClose, onGu
         <Field label="Foto y código QR">
           {() => <InventarioImagen articuloId={a?.id} imagenUrl={imagenUrl} onCambio={setImagenUrl} />}
         </Field>
+          </>
+        )}
 
         <Button variant="primary" loading={guardando} onClick={guardar} style={{ width: '100%' }}>
-          {a ? 'Guardar cambios' : 'Crear artículo'}
+          {a ? 'Guardar cambios' : servicio ? 'Crear servicio' : 'Crear artículo'}
         </Button>
       </div>
     </Sheet>
