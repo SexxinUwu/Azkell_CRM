@@ -1,5 +1,5 @@
 import './tabla.css';
-import { useEffect, useRef, useState, type PointerEvent as PointerReact, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as PointerReact, type ReactNode } from 'react';
 
 export interface ColumnaTabla {
   id: string;
@@ -24,6 +24,8 @@ interface Props {
   colorTextoEncabezado?: string;
   // Clase extra del contenedor con scroll (p. ej. para ocultar sus barras)
   className?: string;
+  // Cuántas columnas de la izquierda quedan fijas al desplazarse a los lados (máximo 6)
+  fijas?: number;
 }
 
 const CLAVE = (id: string) => `fleet_tabla_${id}`;
@@ -47,7 +49,7 @@ function guardarMapa(id: string, mapa: Record<string, number>) {
 
 // Tabla con columnas redimensionables como en Excel: arrastra el borde derecho del encabezado,
 // o haz doble clic para ajustar la columna al contenido más ancho.
-export function TablaRedimensionable({ id, columnas, children, altoMax = '70vh', ariaLabel, colorEncabezado, colorTextoEncabezado, className }: Props) {
+export function TablaRedimensionable({ id, columnas, children, altoMax = '70vh', ariaLabel, colorEncabezado, colorTextoEncabezado, className, fijas = 0 }: Props) {
   const [mapa, setMapa] = useState<Record<string, number>>(() => leerMapa(id));
   const tablaRef = useRef<HTMLTableElement>(null);
   const anchos = columnas.map(c => Math.max(c.minimo ?? 56, mapa[c.id] ?? c.ancho));
@@ -101,8 +103,12 @@ export function TablaRedimensionable({ id, columnas, children, altoMax = '70vh',
     fijar(columnas[i].id, Math.min(SIN_LIMITE, Math.max(columnas[i].minimo ?? 56, Math.ceil(ancho) + 28)));
   }
 
+  // Posición de cada columna fija: la suma de los anchos de las columnas fijas anteriores (variables que lee tabla.css)
+  const nFijas = Math.min(6, Math.max(0, fijas));
+  const variables = Object.fromEntries(Array.from({ length: nFijas }, (_, k) => [`--fija-${k}`, `${anchos.slice(0, k).reduce((s, x) => s + x, 0)}px`])) as CSSProperties;
+
   return (
-    <div className={`tabla-redim${className ? ` ${className}` : ''}`} style={{ maxHeight: altoMax }}>
+    <div className={`tabla-redim${className ? ` ${className}` : ''}`} style={{ maxHeight: altoMax, ...variables }} data-fijas={nFijas || undefined}>
       {/* Ocupa todo el ancho disponible: si sobra espacio, las columnas se reparten el excedente */}
       <table ref={tablaRef} aria-label={ariaLabel} className="tabla-redim__tabla" style={{ width: '100%', minWidth: total }}>
         <colgroup>{anchos.map((a, i) => <col key={columnas[i].id} style={{ width: a }} />)}</colgroup>

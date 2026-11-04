@@ -127,3 +127,34 @@
 .tabla-redim::-webkit-scrollbar-track { background: transparent; }
 .tabla-redim::-webkit-scrollbar-thumb { background: rgba(60, 60, 67, 0.28); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
 .tabla-redim::-webkit-scrollbar-thumb:hover { background: rgba(60, 60, 67, 0.48); background-clip: padding-box; }
+
+/* Columnas fijas al desplazarse a los lados: data-fijas indica cuántas columnas de la izquierda quedan fijas.
+   La posición horizontal la da --fija-N (suma de anchos anteriores) que pone TablaRedimensionable. */
+.tabla-redim tr > :nth-child(1):not([colspan]) { left: var(--fija-0, 0px); }
+.tabla-redim tr > :nth-child(2):not([colspan]) { left: var(--fija-1, 0px); }
+.tabla-redim tr > :nth-child(3):not([colspan]) { left: var(--fija-2, 0px); }
+.tabla-redim tr > :nth-child(4):not([colspan]) { left: var(--fija-3, 0px); }
+.tabla-redim tr > :nth-child(5):not([colspan]) { left: var(--fija-4, 0px); }
+.tabla-redim tr > :nth-child(6):not([colspan]) { left: var(--fija-5, 0px); }
+.tabla-redim[data-fijas='1'] tr > :nth-child(1):not([colspan]) { position: sticky; z-index: 2; background: var(--surface); box-shadow: inset -1px 0 0 var(--separator); }
+.tabla-redim[data-fijas='2'] tr > :nth-child(1):not([colspan]),
+.tabla-redim[data-fijas='2'] tr > :nth-child(2):not([colspan]) { position: sticky; z-index: 2; background: var(--surface); box-shadow: inset -1px 0 0 var(--separator); }
+.tabla-redim[data-fijas='3'] tr > :nth-child(1):not([colspan]),
+.tabla-redim[data-fijas='3'] tr > :nth-child(2):not([colspan]),
+.tabla-redim[data-fijas='3'] tr > :nth-child(3):not([colspan]) { position: sticky; z-index: 2; background: var(--surface); box-shadow: inset -1px 0 0 var(--separator); }
+.tabla-redim[data-fijas='4'] tr > :nth-child(1):not([colspan]),
+.tabla-redim[data-fijas='4'] tr > :nth-child(2):not([colspan]),
+.tabla-redim[data-fijas='4'] tr > :nth-child(3):not([colspan]),
+.tabla-redim[data-fijas='4'] tr > :nth-child(4):not([colspan]) { position: sticky; z-index: 2; background: var(--surface); box-shadow: inset -1px 0 0 var(--separator); }
+.tabla-redim[data-fijas='5'] tr > :nth-child(1):not([colspan]),
+.tabla-redim[data-fijas='5'] tr > :nth-child(2):not([colspan]),
+.tabla-redim[data-fijas='5'] tr > :nth-child(3):not([colspan]),
+.tabla-redim[data-fijas='5'] tr > :nth-child(4):not([colspan]),
+.tabla-redim[data-fijas='5'] tr > :nth-child(5):not([colspan]) { position: sticky; z-index: 2; background: var(--surface); box-shadow: inset -1px 0 0 var(--separator); }
+.tabla-redim[data-fijas='6'] tr > :nth-child(1):not([colspan]),
+.tabla-redim[data-fijas='6'] tr > :nth-child(2):not([colspan]),
+.tabla-redim[data-fijas='6'] tr > :nth-child(3):not([colspan]),
+.tabla-redim[data-fijas='6'] tr > :nth-child(4):not([colspan]),
+.tabla-redim[data-fijas='6'] tr > :nth-child(5):not([colspan]),
+.tabla-redim[data-fijas='6'] tr > :nth-child(6):not([colspan]) { position: sticky; z-index: 2; background: var(--surface); box-shadow: inset -1px 0 0 var(--separator); }
+.tabla-redim[data-fijas] thead th:nth-child(-n + 6) { z-index: 3; }

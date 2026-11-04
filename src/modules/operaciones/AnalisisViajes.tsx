@@ -788,7 +788,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         ) : (
           <>
             {canActivo && gps.total > 0 && gps.cargando === 0 && gps.listos === 0 && <Notice>No se encontraron registros CAN para los viajes de esta página (revisa que la unidad exista en Wialon con esa placa).</Notice>}
-            <TablaRedimensionable id={urea ? 'analisis-urea' : 'analisis-combustible'} columnas={columnas} ariaLabel={urea ? 'Análisis de urea por viaje' : 'Análisis de combustible por viaje'}>
+            <TablaRedimensionable id={urea ? 'analisis-urea' : 'analisis-combustible'} columnas={columnas} ariaLabel={urea ? 'Análisis de urea por viaje' : 'Análisis de combustible por viaje'} fijas={columnas.findIndex(c => c.id === 'placa') + 1}>
               {pagina_.map((x, i) => {
                 const c = cifras(x);
                 const s2 = bloqueD2(x);
