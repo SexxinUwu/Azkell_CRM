@@ -2,7 +2,7 @@ import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ChevronDown, ChevronRight, Droplets, FileSpreadsheet, Fuel, RefreshCw, SearchX, SlidersHorizontal } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, Droplets, FileSpreadsheet, Fuel, RefreshCw, SearchX, SlidersHorizontal, Pencil } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -162,30 +162,79 @@ function CardContraMatriz({ exceso, ahorro, viajesExceso, viajesAhorro }: { exce
   );
 }
 
-// Cumplimiento de la revisión: % de viajes ya revisados (conforme u observado) y barra apilada con los tres estados
+// Meta de cumplimiento de la revisión: 95 % por defecto, editable desde el card y guardada en este navegador
+const META_REVISION_CLAVE = 'fleet_meta_revision';
+const META_REVISION_DEFECTO = 95;
+function leerMetaRevision() {
+  try {
+    const v = Number(localStorage.getItem(META_REVISION_CLAVE));
+    return Number.isFinite(v) && v >= 1 && v <= 100 ? v : META_REVISION_DEFECTO;
+  } catch { return META_REVISION_DEFECTO; }
+}
+
+// Cumplimiento de la revisión: % de viajes revisados (conforme u observado) contra la meta.
+// La barra se lee de izquierda a derecha (verde conforme, ámbar observado, gris pendiente) y la marca vertical es la meta.
 function CardCumplimiento({ conformes, observados, pendientes }: { conformes: number; observados: number; pendientes: number }) {
+  const [meta, setMeta] = useState(leerMetaRevision);
+  const [editando, setEditando] = useState(false);
+  const [borrador, setBorrador] = useState('');
   const total = conformes + observados + pendientes;
   const revisados = conformes + observados;
-  const pct = total > 0 ? Math.round((revisados / total) * 100) : 0;
-  const tramo = (n: number, color: string) => (n > 0 ? <div style={{ width: `${(n / total) * 100}%`, background: color }} /> : null);
-  const dato = (n: number, texto: string, color: string) => (
+  const pct = total > 0 ? (revisados / total) * 100 : 0;
+  const cumple = total > 0 && pct >= meta;
+  // Viajes que faltan por revisar para llegar a la meta
+  const faltan = Math.max(0, Math.ceil((meta / 100) * total - 1e-9) - revisados);
+  const color = total === 0 ? 'var(--label-2)' : cumple ? 'var(--green-ink)' : pct >= meta - 15 ? 'var(--amber-ink)' : 'var(--red-ink)';
+
+  function guardarMeta() {
+    const v = Math.round(Number(borrador.replace(',', '.')));
+    if (Number.isFinite(v) && v >= 1 && v <= 100) {
+      setMeta(v);
+      try { localStorage.setItem(META_REVISION_CLAVE, String(v)); } catch { /* sin almacenamiento: queda solo en esta sesión */ }
+    }
+    setEditando(false);
+  }
+  const tramo = (n: number, c: string) => (n > 0 ? <div style={{ width: `${(n / total) * 100}%`, background: c }} /> : null);
+  const dato = (n: number, texto: string, c: string) => (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
-      <span style={{ width: 7, height: 7, borderRadius: 999, background: color }} />{n} {texto}
+      <span style={{ width: 7, height: 7, borderRadius: 999, background: c }} />{n} {texto}
     </span>
   );
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 14, padding: 'var(--s-3)', display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}
-      title="Viajes revisados (conforme u observado) frente a los que siguen pendientes">
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 14, padding: 'var(--s-3)', display: 'flex', flexDirection: 'column', gap: 4, minWidth: 190, gridColumn: 'span 2' }}>
       <span style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--label-2)' }}>Cumplimiento de revisión</span>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.125rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: pct === 100 ? 'var(--green-ink)' : 'var(--label)' }}>
-        {pct}% <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--label-2)', fontFamily: 'inherit' }}>{revisados} de {total}</span>
+      <span style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.125rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color }}>
+          {Math.round(pct)}% <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--label-2)', fontFamily: 'inherit' }}>{revisados} de {total} revisados</span>
+        </span>
+        {editando ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.6875rem', color: 'var(--label-2)' }}>
+            Meta
+            <input autoFocus inputMode="numeric" aria-label="Meta de cumplimiento en porcentaje" value={borrador}
+              onChange={e => setBorrador(e.target.value.replace(/\D/g, '').slice(0, 3))}
+              onKeyDown={e => { if (e.key === 'Enter') guardarMeta(); if (e.key === 'Escape') setEditando(false); }}
+              onBlur={guardarMeta}
+              style={{ width: 44, padding: '1px 4px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', border: '1px solid var(--separator)', borderRadius: 6, background: 'transparent', color: 'var(--label)' }} />%
+          </span>
+        ) : (
+          <button type="button" title="Cambiar la meta" aria-label={`Meta ${meta}%, cambiar`} onClick={() => { setBorrador(String(meta)); setEditando(true); }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: 0, background: 'transparent', padding: 0, cursor: 'pointer', fontSize: '0.6875rem', fontWeight: 700, color: 'var(--label-2)' }}>
+            Meta {meta}% <Pencil size={11} />
+          </button>
+        )}
       </span>
-      <div role="img" aria-label={`${conformes} conformes, ${observados} observados, ${pendientes} pendientes`}
-        style={{ display: 'flex', height: 8, borderRadius: 999, overflow: 'hidden', background: 'var(--separator)' }}>
-        {tramo(conformes, 'var(--green-ink)')}{tramo(observados, 'var(--amber-ink)')}{tramo(pendientes, 'var(--label-3)')}
+      <div style={{ position: 'relative', paddingTop: 4, paddingBottom: 4 }}>
+        <div role="img" aria-label={`${conformes} conformes, ${observados} observados, ${pendientes} pendientes; meta ${meta}%`}
+          style={{ display: 'flex', height: 10, borderRadius: 999, overflow: 'hidden', background: 'var(--separator)' }}>
+          {tramo(conformes, 'var(--green-ink)')}{tramo(observados, 'var(--amber-ink)')}{tramo(pendientes, 'var(--label-3)')}
+        </div>
+        <div aria-hidden style={{ position: 'absolute', left: `${meta}%`, top: 0, bottom: 0, width: 2, marginLeft: -1, background: 'var(--label)', borderRadius: 2 }} />
       </div>
+      <span style={{ fontSize: '0.6875rem', fontWeight: 600, color }}>
+        {total === 0 ? 'Sin viajes' : cumple ? 'Meta cumplida' : `Faltan ${faltan} ${faltan === 1 ? 'viaje' : 'viajes'} por revisar para llegar a la meta`}
+      </span>
       <span style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', fontSize: '0.6875rem', color: 'var(--label-2)' }}>
-        {dato(conformes, 'conf.', 'var(--green-ink)')}{dato(observados, 'obs.', 'var(--amber-ink)')}{dato(pendientes, 'pend.', 'var(--label-3)')}
+        {dato(conformes, 'conformes', 'var(--green-ink)')}{dato(observados, 'observados', 'var(--amber-ink)')}{dato(pendientes, 'pendientes', 'var(--label-3)')}
       </span>
     </div>
   );
