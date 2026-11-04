@@ -1,11 +1,11 @@
 // v55: sale /app del service worker y descarta lo que quedó guardado (archivos de compilación que ya no existen)
-const CACHE_NAME = 'azkell-fleet-v60';
+const CACHE_NAME = 'azkell-fleet-v61';
 const STATIC_CACHE = 'azkell-libs-v2';
 // Fotos de artículos (S3): la URL firmada cambia en cada consulta, por eso se guardan por su ruta sin la firma
 const IMG_CACHE = 'azkell-img-v1';
 const IMG_MAX = 600;
 // Pantalla nueva (/app) para usarla sin señal: archivos con hash y una copia del HTML de la última carga
-const APP_CACHE = 'azkell-app-v1';
+const APP_CACHE = 'azkell-app-v2';
 const APP_ASSETS_MAX = 300;
 const APP_SHELL = '/app/__shell';
 
