@@ -4,11 +4,26 @@
 const { tienePermiso, db_query, resolveRange, rangoParams, OT_TIPO_SQL, OT_TECNICO_SQL } = require('./asistente-reports');
 const { COSTO_OT_SQL } = require('../services/costos_taller');
 const { datosGpsUnidad, limpiarPlaca } = require('../services/wialon_unidad');
+const { STOCK_SQL } = require('../services/almacen_stock');
 
 const PERMISO_TALLER = ['ot.ver', 'status_rampa.ver', 'trabajos_ot.ver', 'reportes_ot.ver', 'sal_inv.ver'];
 const PERMISO_GPS = ['gps.ver'];
 const PERMISO_UNIDAD = ['placas.ver', 'fleet.ver', 'gps.ver'];
 const PERMISO_MANTENIMIENTO = ['fleet.ver', 'placas.ver'];
+const PERMISO_DOCUMENTOS = ['docs_flota.ver', 'placas.ver'];
+const PERMISO_VIAJES = ['op_ordenes_viaje.ver', 'seguridad_unidades.ver', 'placas.ver', 'cond.ver'];
+const PERMISO_INVENTARIO = ['inv.ver'];
+const PERMISO_NEUMATICOS = ['neumaticos.ver'];
+
+// Placa sin guiones ni espacios, para comparar sin importar cómo esté escrita en cada tabla
+const SQL_PLACA = (col) => `REPLACE(REPLACE(UPPER(${col}), '-', ''), ' ', '')`;
+function placaDeArgs(args) {
+  const placa = limpiarPlaca(args.placa);
+  if (placa.length < 5) throw new ErrorConsulta('No entendí la placa. Pídele que la repita completa (por ejemplo BSS899).');
+  return placa;
+}
+const fechaCorta = (v) => (v instanceof Date && !isNaN(v.getTime()) ? v.toISOString().slice(0, 10) : (v ? String(v).slice(0, 10) : ''));
+const texto = (v, n = 160) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
 const MAX_FILAS = 50;
 const LIMITE_POR_DEFECTO = 10;
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
@@ -225,6 +240,183 @@ const HERRAMIENTAS = {
       return {
         placa, medido_en: unidadMedida, actual, fuente_actual: actualGps ? 'GPS en vivo' : 'último mantenimiento registrado (el GPS no respondió)',
         mantenimientos,
+      };
+    },
+  },
+
+  ordenes_trabajo_unidad: {
+    permiso: PERMISO_TALLER,
+    sinPermiso: 'Esta persona no tiene permiso para ver el taller. Dile que lo solicite al administrador.',
+    declaracion: {
+      name: 'ordenes_trabajo_unidad',
+      description: 'Órdenes de trabajo (OT) de taller de una unidad por su placa: las que están abiertas ahora (en proceso o pausadas, con su situación, motivo, rampa y técnicos) y las últimas terminadas. Úsala para "¿está en taller?", "¿qué le están haciendo?" o "estado de las OT de la placa X".',
+      parameters: {
+        type: 'OBJECT',
+        properties: { placa: { type: 'STRING', description: 'Placa de la unidad, por ejemplo BSS899.' } },
+        required: ['placa'],
+      },
+    },
+    async ejecutar(args, db) {
+      const placa = placaDeArgs(args);
+      const filas = await db_query(db,
+        `SELECT COALESCE(NULLIF(o.id_ot, ''), o.ticket_entrada) AS ot, o.estado, DATE_FORMAT(o.fecha_ingreso, '%Y-%m-%d') AS ingreso,
+                DATE_FORMAT(o.fecha_hora_salida, '%Y-%m-%d') AS salida, ${OT_TIPO_SQL} AS tipo,
+                JSON_UNQUOTE(JSON_EXTRACT(o.detalles_json, '$.situacion')) AS situacion,
+                JSON_UNQUOTE(JSON_EXTRACT(o.detalles_json, '$.motivo')) AS motivo,
+                JSON_UNQUOTE(JSON_EXTRACT(o.detalles_json, '$.rampa')) AS rampa,
+                ${OT_TECNICO_SQL} AS tecnicos
+         FROM ordenes_trabajo o
+         WHERE ${SQL_PLACA('o.placa')} = ?
+         ORDER BY o.fecha_ingreso DESC LIMIT 40`, [placa]);
+      if (!filas.length) throw new ErrorConsulta(`La placa ${placa} no tiene órdenes de trabajo registradas.`);
+      const cerrada = (e) => /finaliz|anulad|cerrad/i.test(String(e || ''));
+      const fila = (r) => ({ ot: r.ot || '', estado: r.estado || '', ingreso: r.ingreso || '', salida: r.salida || '', tipo: r.tipo || '',
+        situacion: r.situacion && r.situacion !== 'null' ? r.situacion : '', motivo: texto(r.motivo), rampa: r.rampa && r.rampa !== 'null' ? r.rampa : '', tecnicos: texto(r.tecnicos, 80) });
+      return {
+        placa,
+        en_taller_ahora: filas.some(r => !cerrada(r.estado)),
+        abiertas: filas.filter(r => !cerrada(r.estado)).map(fila),
+        ultimas_terminadas: filas.filter(r => /finaliz/i.test(String(r.estado || ''))).slice(0, 3).map(fila),
+        total_registradas: filas.length,
+      };
+    },
+  },
+
+  documentos_unidad: {
+    permiso: PERMISO_DOCUMENTOS,
+    sinPermiso: 'Esta persona no tiene permiso para ver los documentos de flota. Dile que lo solicite al administrador.',
+    declaracion: {
+      name: 'documentos_unidad',
+      description: 'Documentos de una unidad por su placa con su vencimiento: tarjeta de circulación, SOAT, MATPEL, revisión técnica, bonificación, seguros (vehicular y de carga), fumigación y extintor. Indica cuáles están vencidos o por vencer. Úsala también para "¿qué documentos vencen pronto?" de una placa.',
+      parameters: {
+        type: 'OBJECT',
+        properties: { placa: { type: 'STRING', description: 'Placa de la unidad, por ejemplo BSS899.' } },
+        required: ['placa'],
+      },
+    },
+    async ejecutar(args, db) {
+      const placa = placaDeArgs(args);
+      const [v] = await db_query(db,
+        `SELECT placa, tc_vencimiento, soat_entidad, soat_vencimiento, matpel_vencimiento, rt_vencimiento, boni_vencimiento,
+                sv_entidad, sv_vencimiento, sc_entidad, sc_vencimiento, fum_vencimiento, ext_vencimiento
+         FROM vehiculos_flota WHERE ${SQL_PLACA('placa')} = ? LIMIT 1`, [placa]);
+      if (!v) throw new ErrorConsulta(`La placa ${placa} no tiene documentos cargados en Flota > Documentos.`);
+      const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+      const lista = [
+        ['Tarjeta de circulación', v.tc_vencimiento, ''], ['SOAT', v.soat_vencimiento, v.soat_entidad], ['MATPEL', v.matpel_vencimiento, ''],
+        ['Revisión técnica', v.rt_vencimiento, ''], ['Bonificación', v.boni_vencimiento, ''], ['Seguro vehicular', v.sv_vencimiento, v.sv_entidad],
+        ['Seguro de carga', v.sc_vencimiento, v.sc_entidad], ['Fumigación', v.fum_vencimiento, ''], ['Extintor', v.ext_vencimiento, ''],
+      ].map(([documento, f, entidad]) => {
+        const d = f ? new Date(`${fechaCorta(f)}T00:00:00`) : null;
+        const dias = d && !isNaN(d.getTime()) ? Math.round((d - hoy) / 86400000) : null;
+        return { documento, vence: dias == null ? 'sin fecha cargada' : fechaCorta(f), dias_restantes: dias, entidad: entidad || undefined,
+          estado: dias == null ? 'sin dato' : dias < 0 ? 'VENCIDO' : dias <= 30 ? 'por vencer (30 días o menos)' : 'vigente' };
+      });
+      lista.sort((a, b) => (a.dias_restantes ?? 1e9) - (b.dias_restantes ?? 1e9));
+      return { placa, documentos: lista };
+    },
+  },
+
+  conductor_unidad: {
+    permiso: PERMISO_VIAJES,
+    sinPermiso: 'Esta persona no tiene permiso para ver viajes ni conductores. Dile que lo solicite al administrador.',
+    declaracion: {
+      name: 'conductor_unidad',
+      description: 'Quién maneja una unidad por su placa: el conductor de sus últimos viajes (con ruta, fecha y estado) y el último registrado en el status de unidades en base y en taller. No hay una asignación fija: se informa el conductor más reciente registrado.',
+      parameters: {
+        type: 'OBJECT',
+        properties: { placa: { type: 'STRING', description: 'Placa de la unidad (tracto o remolque), por ejemplo BSS899.' } },
+        required: ['placa'],
+      },
+    },
+    async ejecutar(args, db) {
+      const placa = placaDeArgs(args);
+      const [viajes, base, taller] = await Promise.all([
+        db_query(db,
+          `SELECT viaje, conductor, DATE_FORMAT(fecha_viaje, '%Y-%m-%d') AS fecha, ruta, estado, placa_tracto, placa_remolque
+           FROM operaciones_ordenes_viaje
+           WHERE ${SQL_PLACA('placa_tracto')} = ? OR ${SQL_PLACA('placa_remolque')} = ?
+           ORDER BY fecha_viaje DESC LIMIT 3`, [placa, placa]).catch(() => []),
+        db_query(db,
+          `SELECT conductor, DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha, zona, estado
+           FROM seg_unidades_base WHERE ${SQL_PLACA('placa_camion')} = ? AND conductor IS NOT NULL AND conductor != ''
+           ORDER BY fecha DESC, id DESC LIMIT 1`, [placa]).catch(() => []),
+        db_query(db,
+          `SELECT JSON_UNQUOTE(JSON_EXTRACT(o.detalles_json, '$.conductor')) AS conductor, DATE_FORMAT(o.fecha_ingreso, '%Y-%m-%d') AS fecha
+           FROM ordenes_trabajo o WHERE ${SQL_PLACA('o.placa')} = ? ORDER BY o.fecha_ingreso DESC LIMIT 1`, [placa]).catch(() => []),
+      ]);
+      if (!viajes.length && !base.length && !(taller[0]?.conductor && taller[0].conductor !== 'null')) {
+        throw new ErrorConsulta(`No hay conductor registrado para la placa ${placa} en viajes, unidades en base ni taller.`);
+      }
+      return {
+        placa,
+        ultimos_viajes: viajes.map(r => ({ viaje: r.viaje, conductor: r.conductor || '', fecha: r.fecha, ruta: r.ruta || '', estado: r.estado || '',
+          tracto: r.placa_tracto || '', remolque: r.placa_remolque || '' })),
+        ultimo_en_unidades_base: base[0] ? { conductor: base[0].conductor, fecha: base[0].fecha, zona: base[0].zona || '', estado: base[0].estado || '' } : null,
+        ultimo_en_taller: taller[0]?.conductor && taller[0].conductor !== 'null' ? { conductor: taller[0].conductor, fecha: taller[0].fecha } : null,
+      };
+    },
+  },
+
+  stock_articulo: {
+    permiso: PERMISO_INVENTARIO,
+    sinPermiso: 'Esta persona no tiene permiso para ver el inventario. Dile que lo solicite al administrador.',
+    declaracion: {
+      name: 'stock_articulo',
+      description: 'Stock actual de artículos del almacén buscando por código (INV-0123) o por palabras de la descripción (por ejemplo "filtro de aceite" o "llanta 295"). Devuelve hasta 8 coincidencias con stock, mínimo, unidad, almacén y costo.',
+      parameters: {
+        type: 'OBJECT',
+        properties: { buscar: { type: 'STRING', description: 'Código del artículo o palabras de su descripción.' } },
+        required: ['buscar'],
+      },
+    },
+    async ejecutar(args, db) {
+      const palabras = String(args.buscar || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(w => w.length >= 2).slice(0, 5);
+      if (!palabras.length) throw new ErrorConsulta('Dime qué artículo buscar (código o palabras de su nombre).');
+      const cond = palabras.map(() => "(LOWER(i.id) LIKE ? OR LOWER(i.descripcion) LIKE ? OR LOWER(COALESCE(i.marca, '')) LIKE ?)").join(' AND ');
+      const params = palabras.flatMap(w => [`%${w}%`, `%${w}%`, `%${w}%`]);
+      // Mismo cálculo de stock que el inventario: se le agrega el filtro a su consulta
+      const sql = STOCK_SQL.replace(/WHERE i\.activo=1\s+ORDER BY i\.id/, `WHERE i.activo=1 AND ${cond} ORDER BY stock_actual DESC LIMIT 8`);
+      if (sql === STOCK_SQL) throw new Error('STOCK_SQL cambió: revisar stock_articulo');
+      const filas = await db_query(db, sql, params);
+      if (!filas.length) throw new ErrorConsulta(`No encontré artículos que coincidan con "${texto(args.buscar, 60)}".`);
+      return {
+        coincidencias: filas.length,
+        articulos: filas.map(r => ({ codigo: r.id, descripcion: r.descripcion, familia: r.familia || '', almacen: r.almacen || '', unidad: r.unidad || '',
+          stock: Number(r.stock_actual) || 0, stock_minimo: Number(r.stock_min) || 0,
+          bajo_minimo: Number(r.stock_min) > 0 && Number(r.stock_actual) <= Number(r.stock_min),
+          costo_soles: dinero(r.costo_soles), estado: r.estado_art || '' })),
+      };
+    },
+  },
+
+  llantas_unidad: {
+    permiso: PERMISO_NEUMATICOS,
+    sinPermiso: 'Esta persona no tiene permiso para ver neumáticos. Dile que lo solicite al administrador.',
+    declaracion: {
+      name: 'llantas_unidad',
+      description: 'Llantas montadas ahora en una unidad por su placa: posición, código, marca, modelo, medida, vida (R0 nueva, R1 reencauchada…), remanente en mm y km acumulado.',
+      parameters: {
+        type: 'OBJECT',
+        properties: { placa: { type: 'STRING', description: 'Placa de la unidad, por ejemplo BSS899.' } },
+        required: ['placa'],
+      },
+    },
+    async ejecutar(args, db) {
+      const placa = placaDeArgs(args);
+      const filas = await db_query(db,
+        `SELECT i.posicion, DATE_FORMAT(i.fecha_in, '%Y-%m-%d') AS desde, i.km_in, h.id_neumatico, h.codigo_llanta, h.marca, h.modelo, h.medida, h.vida,
+                h.remanente_actual, h.km_acumulado
+         FROM neumaticos_instalaciones i
+         JOIN neumaticos_hoja_vida h ON h.id_neumatico = i.id_neumatico COLLATE utf8mb4_unicode_ci
+         WHERE ${SQL_PLACA('i.placa')} = ? AND i.fecha_out IS NULL
+         ORDER BY CAST(i.posicion AS UNSIGNED), i.posicion`, [placa]);
+      if (!filas.length) throw new ErrorConsulta(`La placa ${placa} no tiene llantas montadas registradas.`);
+      return {
+        placa, llantas_montadas: filas.length,
+        llantas: filas.map(r => ({ posicion: r.posicion || '', codigo: r.codigo_llanta || r.id_neumatico, marca: r.marca || '', modelo: r.modelo || '', medida: r.medida || '',
+          vida: r.vida || '', remanente_mm: r.remanente_actual != null ? Number(r.remanente_actual) : null,
+          km_acumulado: r.km_acumulado != null ? Number(r.km_acumulado) : null, montada_desde: r.desde || '' })),
       };
     },
   },

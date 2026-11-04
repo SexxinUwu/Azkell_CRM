@@ -65,6 +65,12 @@ Sistema integral de gestión de flotas (Lima, Perú): vehículos, mantenimiento,
 - Si una sección no aparece o dice "Sin acceso", el administrador puede modificar los permisos en Usuarios.
 - Para cambiar la contraseña o ver tus permisos: Mi cuenta.
 
+## Datos que el asistente consulta (según tus permisos)
+- De una placa: ubicación en vivo y si está en marcha, kilometraje y horas de motor (GPS), ficha del vehículo, próximo mantenimiento preventivo y km que faltan, órdenes de trabajo abiertas y últimas terminadas, documentos con su vencimiento (SOAT, revisión técnica, tarjeta de circulación, seguros, etc.), último conductor registrado y llantas montadas con su remanente.
+- Del almacén: stock actual de un artículo buscando por código o nombre.
+- Del taller: OT más caras y costos por placa, mes o tipo.
+- El asistente también se puede usar con la voz: botón del micrófono para dictar y la bocina para que lea las respuestas.
+
 ## Reportes (desde este asistente)
 - Pide el reporte en el chat, por ejemplo "reporte de placas en Excel" o "inspecciones de este mes en PDF".
 - Reportes disponibles según tus permisos: placas (catálogo de vehículos), inspecciones técnicas (por fechas), directorio de conductores, datos Fleetrun (por fechas), costos de órdenes de trabajo (por fechas), órdenes de trabajo (por fechas), órdenes de compra (por fechas), inventario de almacén y neumáticos.
