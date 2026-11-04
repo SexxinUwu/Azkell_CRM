@@ -12,6 +12,7 @@ import { Switch } from '../../core/ui/Switch';
 import { useToast } from '../../core/ui/Toast';
 import { api, apiFetch, errorMessage } from '../../core/api/client';
 import { compartirPDF } from '../../core/lib/pdf';
+import { pestanaConCamion } from '../../core/ui/CargaCamion';
 import { pdfDeHtml } from './otPdf';
 import type { CatalogosTaller } from './api';
 import { type CatRampa, enReporte } from './rampasReporte';
@@ -119,6 +120,8 @@ export async function generarPdfRampas(filas: FilaPdfRampa[], d: DatosPdfRampa):
 export async function abrirPdfRampas(filas: FilaPdfRampa[], d: DatosPdfRampa) {
   const win = window.open('', '_blank');
   if (!win) throw new Error('Permite las ventanas emergentes para ver el PDF.');
+  // Mientras se genera, la pestaña muestra el camión (no una pantalla en blanco)
+  pestanaConCamion(win);
   try {
     const blob = await generarPdfRampas(filas, d);
     const url = URL.createObjectURL(blob);
