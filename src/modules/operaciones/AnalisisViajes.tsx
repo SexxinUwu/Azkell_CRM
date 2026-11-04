@@ -142,6 +142,26 @@ function KpiCard({ titulo, valor, detalle, color }: { titulo: string; valor: str
   );
 }
 
+// Un solo card con lo gastado de más (rojo) y lo ahorrado (verde) contra la matriz, en galones
+function CardContraMatriz({ exceso, ahorro, viajesExceso, viajesAhorro }: { exceso: number; ahorro: number; viajesExceso: number; viajesAhorro: number }) {
+  const mitad = (etiqueta: string, valor: string, color: string, detalle: string) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
+      <span style={{ fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--label-2)' }}>{etiqueta}</span>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.375rem', fontWeight: 800, color, fontVariantNumeric: 'tabular-nums' }}>{valor}</span>
+      <span style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{detalle}</span>
+    </div>
+  );
+  const viajes = (k: number) => `${k} ${k === 1 ? 'viaje' : 'viajes'}`;
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 16, padding: 'var(--s-4)', display: 'flex', gap: 'var(--s-4)', minWidth: 0 }}
+      title="Suma de las diferencias en verde y en rojo de la tabla, contra el teórico de la matriz">
+      {mitad('De más', `+${fmt(exceso, 2)} gl`, 'var(--red-ink)', viajes(viajesExceso))}
+      <div style={{ width: 1, background: 'var(--separator)', alignSelf: 'stretch' }} />
+      {mitad('Ahorrado', `−${fmt(ahorro, 2)} gl`, 'var(--green-ink)', viajes(viajesAhorro))}
+    </div>
+  );
+}
+
 // Pastilla de color del tema (mismos tonos que el resto de la app)
 function Pastilla({ color, children }: { color: string; children: string }) {
   return (
@@ -472,18 +492,25 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   // Fila TOTAL de la tabla, como el clásico: suma todos los viajes visibles (no solo la página)
   const pie = useMemo(() => {
     let km = 0, gal = 0, kmTeo = 0, galTeo = 0, gpsGal = 0, gpsCon = 0;
+    // Diferencia solo con los viajes que tienen teórico y galones (misma base que cada fila); separa lo gastado de más y lo ahorrado
+    let exceso = 0, ahorro = 0, viajesExceso = 0, viajesAhorro = 0;
     for (const t of visibles) {
       gal += cifras(t).galones;
       km += kmDelViaje(t);
       const a = analisis.get(t.viaje);
       if (a) { kmTeo += a.kmTeorico || 0; galTeo += a.galTeorico || 0; }
+      const galViaje = cifras(t).galones;
+      if (a && a.galTeorico > 0 && galViaje > 0) {
+        const d = galViaje - a.galTeorico;
+        if (d > 0) { exceso += d; viajesExceso++; } else if (d < 0) { ahorro -= d; viajesAhorro++; }
+      }
       const gpsT = gps.data?.[t.viaje]?.data;
       if (gpsT?.combustibleConsumidoGps != null && Number.isFinite(Number(gpsT.combustibleConsumidoGps))) {
         gpsGal += Number(gpsT.combustibleConsumidoGps);
         gpsCon++;
       }
     }
-    return { km, gal, kmTeo, galTeo, gpsGal, gpsCon };
+    return { km, gal, kmTeo, galTeo, gpsGal, gpsCon, exceso, ahorro, viajesExceso, viajesAhorro };
   }, [visibles, analisis, gps.data, urea]); // eslint-disable-line react-hooks/exhaustive-deps
   const pieCeldas: ReactNode[] = [
     <Celda key="aud">—</Celda>,
@@ -512,7 +539,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
       <Celda key="kmteo" alinear="right" mono>{pie.kmTeo > 0 ? fmt(pie.kmTeo, 1) : '—'}</Celda>,
       <Celda key="galteo" alinear="right" mono>{pie.galTeo > 0 ? fmt(pie.galTeo, 2) : '—'}</Celda>,
       <Celda key="rendteo" alinear="right" mono>{pie.galTeo > 0 && pie.kmTeo > 0 ? fmt(pie.kmTeo / pie.galTeo, 2) : '—'}</Celda>,
-      <Celda key="dif" alinear="right" mono><Diferencia valor={pie.galTeo > 0 && pie.gal > 0 ? pie.gal - pie.galTeo : null} /></Celda>,
+      <Celda key="dif" alinear="right" mono><Diferencia valor={pie.galTeo > 0 && (pie.exceso > 0 || pie.ahorro > 0) ? pie.exceso - pie.ahorro : null} /></Celda>,
       <Celda key="gps-rec" alinear="right" mono>—</Celda>,
       <Celda key="gps-comb" alinear="right" mono>
         {pie.gpsCon > 0 ? <span title={`${pie.gpsCon} de ${visibles.length} viajes con dato GPS`}>{fmt(pie.gpsGal, 2)}</span> : '—'}
@@ -644,6 +671,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
             <KpiCard titulo="Recorrido total" valor={`${fmt(resumen.km, 2)} km`} color="var(--amber-ink)"
               detalle={`${resumen.validos} de ${resumen.viajes} viajes con odómetro válido`} />
           )}
+          {!urea && <CardContraMatriz exceso={pie.exceso} ahorro={pie.ahorro} viajesExceso={pie.viajesExceso} viajesAhorro={pie.viajesAhorro} />}
           {!urea && (
             <KpiCard titulo="Km por galón" valor={fmt(resumen.kmGal, 2)} color="var(--amber-ink)"
               detalle={`Recorrido de ${resumen.razonables} viajes válidos entre ${fmt(resumen.galConKm, 2)} galones de esos viajes`} />
