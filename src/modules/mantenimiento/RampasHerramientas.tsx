@@ -23,7 +23,7 @@ export interface FilaPdfRampa {
   rampa: string; fIn: string; hIn: string; placa: string; situacion: string; situacionColor: string; obs: string;
   fOut: string; hOut: string; horas: string; horasColor: string; tecnicos: string; insp: string; inspColor: string; libre: boolean;
 }
-export interface DatosPdfRampa { fecha: string; emisor: string; total: number; ocupadas: number; espera: number; libres: number }
+export interface DatosPdfRampa { fecha: string; emisor: string; total: number; ocupadas: number; espera: number; libres: number; sinRegistrar: number }
 
 export { textoReporteRampas } from './rampasReporte';
 export type { CatRampa } from './rampasReporte';
@@ -35,54 +35,99 @@ const escHtml = (v: unknown) => String(v ?? '—').replace(/[&<>"']/g, c => ({ '
 const SEM_HEX = { verde: '#15803d', ambar: '#b45309', rojo: '#b91c1c', gris: '#64748b' };
 
 function htmlPdfRampas(filas: FilaPdfRampa[], empresa: string, d: DatosPdfRampa, logo: string): string {
-  const cuerpo = filas.map(f => `<tr style="${f.libre ? 'color:#64748b' : ''}">
-      <td style="font-weight:700">${escHtml(f.rampa)}</td>
-      <td style="text-align:center">${escHtml(f.fIn)}</td>
-      <td style="text-align:center">${escHtml(f.hIn)}</td>
-      <td style="text-align:center"><span style="display:inline-block;border:1.5px solid #000;border-radius:4px;padding:1px 6px;font-weight:700;font-family:Courier New,monospace">${escHtml(f.placa)}</span></td>
-      <td style="text-align:center;font-weight:700;color:${f.situacionColor}">${escHtml(f.situacion)}</td>
-      <td style="text-align:left;white-space:pre-line">${escHtml(f.obs)}</td>
-      <td style="text-align:center">${escHtml(f.fOut)}</td>
-      <td style="text-align:center">${escHtml(f.hOut)}</td>
-      <td style="text-align:center;font-weight:700;color:${f.horasColor}">${escHtml(f.horas)}</td>
-      <td style="text-align:left;white-space:pre-line">${escHtml(f.tecnicos)}</td>
-      <td style="text-align:center;font-weight:700;color:${f.inspColor}">${escHtml(f.insp)}</td>
-    </tr>`).join('') || '<tr><td colspan="11" style="padding:10px">Sin unidades en rampa.</td></tr>';
+  const TINTA = { verde: '#15803d', ambar: '#b45309', rojo: '#b91c1c', gris: '#64748b' };
+  const TINTA_FONDO = { verde: '#dcfce7', ambar: '#fef3c7', rojo: '#fee2e2', gris: '#f1f5f9' };
+  const tonoDe = (color: string): keyof typeof TINTA => (color === SEM_HEX.ambar ? 'ambar' : color === SEM_HEX.verde ? 'verde' : color === SEM_HEX.rojo ? 'rojo' : 'gris');
+  const pastilla = (texto: string, tono: keyof typeof TINTA) =>
+    `<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-weight:600;color:${TINTA[tono]};background:${TINTA_FONDO[tono]};white-space:nowrap">${escHtml(texto)}</span>`;
+  const cuerpo = filas.map(f => `<tr style="${f.libre ? 'color:#94a3b8' : ''}">
+      <td style="font-weight:600">${escHtml(f.rampa)}</td>
+      <td class="c">${escHtml(f.fIn)}</td>
+      <td class="c">${escHtml(f.hIn)}</td>
+      <td class="c"><span class="placa">${escHtml(f.placa)}</span></td>
+      <td class="c">${f.libre ? pastilla('Libre', 'gris') : pastilla(f.situacion, tonoDe(f.situacionColor))}</td>
+      <td class="obs">${escHtml(f.obs)}</td>
+      <td class="c">${escHtml(f.fOut)}</td>
+      <td class="c">${escHtml(f.hOut)}</td>
+      <td class="c" style="font-weight:600;color:${f.horasColor}">${escHtml(f.horas)}</td>
+      <td class="obs">${escHtml(f.tecnicos)}</td>
+      <td class="c" style="font-weight:600;color:${f.inspColor}">${escHtml(f.insp)}</td>
+    </tr>`).join('') || '<tr><td colspan="11" style="padding:12px;color:#64748b">Sin unidades en rampa.</td></tr>';
+  const marca = logo
+    ? `<img src="${logo}" alt="" style="height:40px;max-width:170px;object-fit:contain" />`
+    : `<div style="font-size:15px;font-weight:700;letter-spacing:-0.01em">${escHtml(empresa)}</div>`;
+  const tarjeta = (num: number | string, etiqueta: string, tono: keyof typeof TINTA) => `
+    <div class="kpi" style="background:${TINTA_FONDO[tono]}">
+      <div class="kpi-num" style="color:${TINTA[tono]}">${num}</div>
+      <div class="kpi-txt">${etiqueta}</div>
+    </div>`;
   return `
-  <style>.rp td,.rp th{border:1px solid #000;padding:3px 4px}</style>
-  <div style="font-family:Arial,Helvetica,sans-serif;color:#000;padding:14px;width:1040px;background:#fff">
-    <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #000;padding-bottom:8px">
-      ${logo ? `<img src="${logo}" alt="" style="height:54px" />` : ''}
-      <div style="flex:1">
-        <div style="font-size:12px;font-weight:700">${escHtml(empresa.toUpperCase())}</div>
-        <div style="font-size:20px;font-weight:800;text-align:center">ESTATUS DE UNIDADES EN TALLER</div>
-        <div style="font-size:10px;text-align:center">CONTROL DE OCUPACIÓN DE RAMPA Y TURNOS DE MANTENIMIENTO</div>
+  <style>
+    @page { size: A4 landscape; margin: 9mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .pdf { font-family: -apple-system, 'Inter', 'Helvetica Neue', Arial, sans-serif; color: #1d1d1f; width: 100%; }
+    .head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 8px; border-bottom: 1px solid #e5e5ea; }
+    .titulo { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+    .sub { font-size: 10px; color: #86868b; margin-top: 2px; }
+    .meta { font-size: 10px; color: #6e6e73; text-align: right; line-height: 1.5; }
+    .kpis { display: flex; gap: 8px; margin: 10px 0; }
+    .kpi { flex: 1; border-radius: 14px; padding: 8px 12px; display: flex; align-items: baseline; justify-content: space-between; }
+    .kpi-num { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+    .kpi-txt { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: #3a3a3c; }
+    .emisor { display: flex; justify-content: space-between; font-size: 10px; color: #6e6e73; margin-bottom: 8px; }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 9.5px; border: 1px solid #e5e5ea; border-radius: 12px; overflow: hidden; }
+    thead { display: table-header-group; }
+    th { background: #f5f5f7; color: #6e6e73; font-size: 8.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; padding: 6px 7px; text-align: left; border-bottom: 1px solid #e5e5ea; }
+    td { padding: 5px 7px; border-bottom: 1px solid #f0f0f3; vertical-align: middle; }
+    tr { break-inside: avoid; }
+    tr:last-child td { border-bottom: 0; }
+    .c { text-align: center; }
+    .obs { white-space: pre-line; line-height: 1.35; }
+    .placa { display: inline-block; border: 1px solid #d2d2d7; border-radius: 6px; padding: 1px 6px; font-weight: 700; font-family: 'SF Mono', Menlo, Consolas, monospace; letter-spacing: 0.03em; }
+    .pie { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 8.5px; color: #86868b; }
+    .leyenda span { margin-left: 10px; }
+    .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+  </style>
+  <div class="pdf">
+    <div class="head">
+      <div style="display:flex;align-items:center;gap:14px">
+        ${marca}
+        <div>
+          <div class="titulo">Status de rampa</div>
+          <div class="sub">Control de ocupación de rampa y turnos de mantenimiento</div>
+        </div>
       </div>
-      <table style="border:1px solid #000;font-size:10px;border-collapse:collapse">
-        <tr><td style="padding:3px 8px;text-align:right">CÓDIGO: F-MAN-005</td></tr>
-        <tr><td style="padding:3px 8px;text-align:right">VERSIÓN: 0</td></tr>
-        <tr><td style="padding:3px 8px;text-align:right">F. EMISIÓN: 10/11/2025</td></tr>
-      </table>
+      <div class="meta">
+        Código F-MAN-005 · Versión 0<br />
+        Emisión ${escHtml(d.fecha)}
+      </div>
     </div>
-    <div style="display:flex;gap:26px;flex-wrap:wrap;margin:10px 0;border:1px solid #000;border-radius:6px;padding:6px 10px;font-size:11px">
-      <span>EMISIÓN: <b>${escHtml(d.fecha)}</b></span>
-      <span>EMITIDO POR: <b>${escHtml(d.emisor)}</b></span>
-      <span style="margin-left:auto">TOTAL RAMPAS: <b>${d.total}</b></span>
-      <span>OCUPADAS: <b style="color:#dc2626">${d.ocupadas}</b></span>
-      <span>EN ESPERA / LAVADO: <b style="color:#b45309">${d.espera}</b></span>
-      <span>LIBRES: <b style="color:#15803d">${d.libres}</b></span>
+    <div class="emisor">
+      <span>Emitido por <b style="color:#1d1d1f">${escHtml(d.emisor || '—')}</b></span>
+      ${d.sinRegistrar ? `<span style="color:#b91c1c;font-weight:600">${d.sinRegistrar} unidad${d.sinRegistrar === 1 ? '' : 'es'} sin rampa registrada</span>` : ''}
     </div>
-    <table class="rp" style="width:100%;border-collapse:collapse;font-size:10px">
-      <thead><tr style="background:#000;color:#fff">
-        <th style="padding:5px">RAMPA</th><th>F. INGRESO</th><th>HORA</th><th>PLACA</th><th>SITUACIÓN</th>
-        <th>MOTIVO DE INGRESO</th><th>SALIDA (EST.)</th><th>HORA</th><th>H. TALLER</th><th>TÉCNICOS</th><th>INSPECCIÓN?</th>
+    <div class="kpis">
+      ${tarjeta(d.total, 'Rampas en total', 'gris')}
+      ${tarjeta(d.ocupadas, 'Ocupadas', 'rojo')}
+      ${tarjeta(d.espera, 'En espera / lavado', 'ambar')}
+      ${tarjeta(d.libres, 'Libres', 'verde')}
+    </div>
+    <table>
+      <thead><tr>
+        <th>Rampa</th><th class="c">Ingreso</th><th class="c">Hora</th><th class="c">Placa</th><th class="c">Situación</th>
+        <th>Motivo de ingreso</th><th class="c">Salida est.</th><th class="c">Hora</th><th class="c">H. taller</th><th>Técnicos</th><th class="c">Inspección</th>
       </tr></thead>
       <tbody>${cuerpo}</tbody>
     </table>
-    <div style="display:flex;justify-content:space-between;border-top:1px solid #000;margin-top:10px;padding-top:6px;font-size:9px">
-      <span>Sistema ERP Azkell Fleet · Módulo de Control de Rampa y Mantenimiento</span>
-      <span>Semáforo Inspección: <b style="color:${SEM_HEX.verde}">&gt;7d Vigente</b> <b style="color:${SEM_HEX.ambar}">0-7d Próximo</b> <b style="color:${SEM_HEX.rojo}">&lt;0d Vencido</b></span>
-      <span><b>DOCUMENTO OFICIAL · HOJA 1 DE 1</b></span>
+    <div class="pie">
+      <span>Sistema ERP Azkell Fleet · Control de rampa y mantenimiento</span>
+      <span class="leyenda">
+        <span><i class="dot" style="background:${SEM_HEX.verde}"></i>&gt;7 días</span>
+        <span><i class="dot" style="background:${SEM_HEX.ambar}"></i>0-7 días</span>
+        <span><i class="dot" style="background:${SEM_HEX.rojo}"></i>vencida</span>
+      </span>
+      <span>Documento oficial</span>
     </div>
   </div>`;
 }

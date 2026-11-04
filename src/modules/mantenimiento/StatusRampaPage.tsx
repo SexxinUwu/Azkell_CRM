@@ -23,7 +23,7 @@ import { usePersonalNombres } from './OTEditar';
 import { parseTrabajosRampa } from './trabajosRampa';
 import { SUBTIPOS_OT, TIPOS_OT } from './tipos-ot';
 import { ConfigurarRampasSheet, abrirPdfRampas, compartirRampasPdf, textoReporteRampas, type CatRampa, type DatosPdfRampa, type FilaPdfRampa } from './RampasHerramientas';
-import { enReporte, rampasDelReporte } from './rampasReporte';
+import { enReporte } from './rampasReporte';
 import type { ReactNode } from 'react';
 import { LiberarRampa, RampaFormulario } from './RampaFormulario';
 import { useInspecciones, type Inspeccion } from '../inspecciones/api';
@@ -89,10 +89,36 @@ function formatTiempo(horas: number): string {
   return hrs > 0 ? `${dias}d ${hrs}h` : `${dias}d`;
 }
 
-/** Filas del F-MAN-005 con los mismos valores que la tabla de pantalla (tiempos y semáforo de inspección) */
+/** Conteo por bahía, no por fila: cada rampa del catálogo que sale en el reporte cuenta una sola vez (aunque se llame igual que otra) */
+export function resumenRampasPdf(entradas: RampaEntrada[], catalogo: CatRampa[]) {
+  const bahias = catalogo.filter(enReporte);
+  const idsBahias = new Set(bahias.map(c => String(c.id)));
+  const unidades = new Map<string, RampaEntrada[]>();
+  let sinRegistrar = 0;
+  for (const e of entradas) {
+    if (e.estado === 'Libre') continue;
+    const id = String(e.rampaCatId);
+    if (!idsBahias.has(id)) { sinRegistrar++; continue; }
+    unidades.set(id, [...(unidades.get(id) ?? []), e]);
+  }
+  let ocupadas = 0, espera = 0, libres = 0;
+  for (const c of bahias) {
+    const us = unidades.get(String(c.id)) ?? [];
+    if (!us.length) libres++;
+    else if (us.some(u => situacionTono(u.situacion) === 'amber')) espera++;
+    else ocupadas++;
+  }
+  return { total: bahias.length, ocupadas, espera, libres, sinRegistrar };
+}
+
+/** Filas del F-MAN-005 con los mismos valores que la tabla de pantalla. Incluye las unidades sin rampa registrada. */
 function filasPdfRampas(entradas: RampaEntrada[], catalogo: CatRampa[], tecnicos: Map<string, string[]>, ultimas: Map<string, Inspeccion>): FilaPdfRampa[] {
   const HEX = { green: '#15803d', amber: '#b45309', red: '#b91c1c', gray: '#64748b' } as const;
-  return rampasDelReporte(entradas, catalogo).map(e => {
+  const enReporteIds = new Set(catalogo.filter(enReporte).map(c => String(c.id)));
+  const idsCatalogo = new Set(catalogo.map(c => String(c.id)));
+  const visibles = entradas.filter(e => enReporteIds.has(String(e.rampaCatId)) || !idsCatalogo.has(String(e.rampaCatId)));
+  return visibles.map(e => {
+
     const horas = horasEnRampa(e.fecha_ingreso);
     const dias = diasInspeccion(e.placa, ultimas);
     const insp = e.placa ? ultimas.get(clavePlaca(e.placa)) ?? null : null;
@@ -325,18 +351,17 @@ export function StatusRampaPage() {
   }
   const datosPdf: DatosPdfRampa = useMemo(() => {
     const ahora = new Date();
-    const libres = filasPdf.filter(f => f.libre).length;
-    const espera = filasPdf.filter(f => !f.libre && f.situacionColor === '#b45309').length;
-    const u = user as { nombre?: string; email?: string } | null;
+    const r = resumenRampasPdf(tablaEntradas, catRampas);
     return {
       fecha: ahora.toLocaleString('es-PE', { timeZone: 'America/Lima', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-      emisor: String(u?.nombre ?? u?.email ?? ''),
-      total: filasPdf.length,
-      ocupadas: filasPdf.length - libres - espera,
-      espera,
-      libres,
+      emisor: user?.name || user?.email || '',
+      total: r.total,
+      ocupadas: r.ocupadas,
+      espera: r.espera,
+      libres: r.libres,
+      sinRegistrar: r.sinRegistrar,
     };
-  }, [filasPdf, user]);
+  }, [tablaEntradas, catRampas, user]);
   async function exportarHistorialExcel() {
     try {
       await exportarExcel('Status-rampa', 'Rampas',
