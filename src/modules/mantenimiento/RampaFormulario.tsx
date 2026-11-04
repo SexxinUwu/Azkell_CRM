@@ -16,6 +16,7 @@ import { usePlacas } from '../placas/api';
 import { useUnidadesGps } from '../flota/api';
 import { telemetriaDe } from '../flota/telemetriaPlaca';
 import { usePersonalNombres } from './OTEditar';
+import { AlertaInspeccionRampa } from './RampaInspeccion';
 import { formatoTrabajosRampa, parseTrabajosRampa, type TrabajoRampa } from './trabajosRampa';
 import {
   actualizarRampa, ingresarRampa, liberarRampa, useCatalogosTaller, useStatusRampa,
@@ -134,6 +135,7 @@ export function RampaFormulario({ entrada, usuario, open, onClose, rampaInicial 
 
   return (
     <Sheet open={open} onClose={() => !enviando && onClose()} title={editando ? `Editar ${entrada?.placa ?? 'rampa'}` : 'Ingresar a rampa'}
+      cabeceraExtra={<AlertaInspeccionRampa placa={placa} />}
       footer={<><Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
         <Button variant="primary" onClick={guardar} loading={enviando}>{editando ? 'Guardar' : 'Ingresar'}</Button></>}>
       <div className="form-grid">

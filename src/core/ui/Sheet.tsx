@@ -18,6 +18,8 @@ interface SheetProps {
   title: string;
   children: ReactNode;
   footer?: ReactNode;
+  /** Algo a la derecha del título, junto a la X (por ejemplo, un aviso de la placa) */
+  cabeceraExtra?: ReactNode;
   /** Sube desde abajo también en escritorio, hasta una altura máxima (detalles largos) */
   anclaAbajo?: boolean;
   /** Diálogo ancho en escritorio (formularios con tablas) */
@@ -33,7 +35,7 @@ interface SheetProps {
  *   el impulso del dedo (skill apple-design §6) para decidir si cierra o vuelve.
  * Entra y sale por el mismo camino (§7). Escape cierra. El foco vuelve al disparador.
  */
-export function Sheet({ open, onClose, title, children, footer, anclaAbajo = false, ancho = false, ligera = false }: SheetProps) {
+export function Sheet({ open, onClose, title, children, footer, anclaAbajo = false, ancho = false, ligera = false, cabeceraExtra }: SheetProps) {
   const isMobile = useMediaQuery(MOBILE_QUERY);
   const titleId = useId();
   const dragControls = useDragControls();
@@ -127,6 +129,7 @@ export function Sheet({ open, onClose, title, children, footer, anclaAbajo = fal
             <div className="sheet__grabber" onPointerDown={e => dragControls.start(e)} />
             <div className="sheet__header" onPointerDown={e => abajo && dragControls.start(e)}>
               <h2 id={titleId} className="sheet__title">{title}</h2>
+              {cabeceraExtra && <div style={{ marginLeft: 'auto' }}>{cabeceraExtra}</div>}
               <button type="button" className="sheet__close pressable" onClick={onClose} aria-label="Cerrar">
                 <X size={16} strokeWidth={2.5} />
               </button>

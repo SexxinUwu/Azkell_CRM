@@ -1,0 +1,4 @@
+/* Fuente del recuadro de inspección: la misma que el PDF de la orden en parabrisas */
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700;900&display=swap');
+
+.rampa-alerta-insp { display: flex; }

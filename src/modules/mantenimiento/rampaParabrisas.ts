@@ -48,8 +48,18 @@ function srMatchOT(o: OrdenTrabajo, e: RampaEntrada): boolean {
   return false;
 }
 
+/** Recuadro "Días para inspección": el mismo markup y los mismos colores en el PDF de la orden y en el formulario de rampa */
+export function htmlRecuadroInspeccion(placa: string | null | undefined, ultimas: Map<string, Inspeccion>): string {
+  const inspInfo = srCalcularDiasInspeccion(placa, ultimas);
+  const dias = inspInfo.dias;
+  return `<div style="border:2.5px solid ${inspInfo.color}; background:${(dias ?? 0) < 0 ? '#fef2f2' : ((dias ?? 0) <= 7 ? '#fefce8' : '#f0fdf4')}; padding:4px 14px; border-radius:8px; text-align:center; min-width:150px; flex-shrink:0; box-shadow:0 2px 5px rgba(0,0,0,0.06);">
+                        <div style="font-size:8px; font-weight:900; text-transform:uppercase; letter-spacing:0.08em; color:${inspInfo.color}; line-height:1;">DÍAS PARA INSPECCIÓN</div>
+                        <div style="font-family:'Oswald', sans-serif; font-size:24px; font-weight:900; color:${inspInfo.color}; line-height:1.1; margin-top:1px;">${dias !== null && dias !== -999 ? (dias >= 0 ? '+' + dias : dias) + ' DÍAS' : 'SIN REGISTRO'}</div>
+                    </div>`;
+}
+
 /** srCalcularDiasInspeccion: días que faltan para la próxima inspección de la placa (con su color) */
-function srCalcularDiasInspeccion(placa: string | null | undefined, ultimas: Map<string, Inspeccion>): { dias: number | null; color: string } {
+export function srCalcularDiasInspeccion(placa: string | null | undefined, ultimas: Map<string, Inspeccion>): { dias: number | null; color: string } {
   if (!placa) return { dias: null, color: '#94a3b8' };
   const ult = ultimas.get(clavePlaca(placa));
   if (!ult?.fecha) return { dias: -999, color: '#dc2626' };
@@ -100,8 +110,6 @@ function leerLS(clave: string): string {
 
 /** HTML de la orden en parabrisas (plantilla del clásico, sin cambios en estilos ni marcado) */
 export function htmlOrdenParabrisas(e: RampaEntrada, ots: OrdenTrabajo[], ultimas: Map<string, Inspeccion>): string {
-  // Inspección: días para la próxima
-  const inspInfo = srCalcularDiasInspeccion(e.placa, ultimas);
 
   // Buscar todas las OTs vinculadas
   const otsPlaca = ots.filter(o => srMatchOT(o, e));
@@ -582,10 +590,7 @@ export function htmlOrdenParabrisas(e: RampaEntrada, ots: OrdenTrabajo[], ultima
                 </div>
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-top:6px; margin-bottom:4px; gap:12px;">
                     <h1 class="main-title" style="margin:0; flex:1; text-align:left;">TRABAJOS A REALIZAR</h1>
-                    <div style="border:2.5px solid ${inspInfo.color}; background:${(inspInfo.dias ?? 0) < 0 ? '#fef2f2' : ((inspInfo.dias ?? 0) <= 7 ? '#fefce8' : '#f0fdf4')}; padding:4px 14px; border-radius:8px; text-align:center; min-width:150px; flex-shrink:0; box-shadow:0 2px 5px rgba(0,0,0,0.06);">
-                        <div style="font-size:8px; font-weight:900; text-transform:uppercase; letter-spacing:0.08em; color:${inspInfo.color}; line-height:1;">DÍAS PARA INSPECCIÓN</div>
-                        <div style="font-family:'Oswald', sans-serif; font-size:24px; font-weight:900; color:${inspInfo.color}; line-height:1.1; margin-top:1px;">${inspInfo.dias !== null && inspInfo.dias !== -999 ? (inspInfo.dias >= 0 ? '+' + inspInfo.dias : inspInfo.dias) + ' DÍAS' : 'SIN REGISTRO'}</div>
-                    </div>
+                    ${htmlRecuadroInspeccion(e.placa, ultimas)}
                 </div>
             </div>
 
