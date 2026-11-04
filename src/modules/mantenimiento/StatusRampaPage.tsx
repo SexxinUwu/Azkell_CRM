@@ -1,7 +1,7 @@
 import { formatFechaPe } from '../../core/lib/format';
 import './mant.css';
 import './StatusRampa.css';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ChevronRight, Clock, FileSpreadsheet, FileText, LayoutDashboard, LogOut, MessageCircle, Pencil, Plus, RefreshCw, RotateCcw, SearchX, Settings2, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
@@ -533,6 +533,27 @@ function situacionTono(s: string | null) {
   return 'gray';
 }
 
+/** Alto de la tabla: llega hasta el borde inferior de la ventana (donde termina el menú lateral) y el scroll queda dentro */
+function useAltoHastaAbajo(ref: { current: HTMLDivElement | null }): string {
+  const [alto, setAlto] = useState('70vh');
+  useLayoutEffect(() => {
+    function medir() {
+      const el = ref.current;
+      if (!el) return;
+      const arriba = el.getBoundingClientRect().top;
+      setAlto(`${Math.max(240, Math.floor(window.innerHeight - arriba - 28))}px`);
+    }
+    medir();
+    window.addEventListener('resize', medir);
+    window.addEventListener('scroll', medir, { passive: true });
+    return () => {
+      window.removeEventListener('resize', medir);
+      window.removeEventListener('scroll', medir);
+    };
+  });
+  return alto;
+}
+
 /** Columnas de Status de rampa: se pueden alargar o acortar arrastrando el borde del encabezado (doble clic = ajustar) */
 function COLUMNAS_RAMPA(verInspeccion: boolean): ColumnaTabla[] {
   return [
@@ -553,9 +574,12 @@ function COLUMNAS_RAMPA(verInspeccion: boolean): ColumnaTabla[] {
 }
 
 function RampaTabla({ entradas, ots, tecnicosPorRampa, verInspeccion, ultimasInsp, puedeEditar, onEditar, onLiberar, onInspeccion, onAbrir }: { entradas: RampaEntrada[]; ots: OrdenTrabajo[]; tecnicosPorRampa: Map<string, string[]>; verInspeccion: boolean; ultimasInsp: Map<string, Inspeccion>; puedeEditar: boolean; onEditar: (e: RampaEntrada) => void; onLiberar: (e: RampaEntrada) => void; onInspeccion: (i: Inspeccion) => void; onAbrir: (e: RampaEntrada) => void }) {
+  const caja = useRef<HTMLDivElement>(null);
+  const alto = useAltoHastaAbajo(caja);
   return (
+    <div ref={caja}>
     <TablaRedimensionable id={verInspeccion ? 'status-rampa-activas-insp' : 'status-rampa-activas'} columnas={COLUMNAS_RAMPA(verInspeccion)}
-      ariaLabel="Ocupación de rampas" altoMax="70vh">
+      ariaLabel="Ocupación de rampas" altoMax={alto}>
       {entradas.map(e => {
         const horas = horasEnRampa(e.fecha_ingreso);
         return (
@@ -589,6 +613,7 @@ function RampaTabla({ entradas, ots, tecnicosPorRampa, verInspeccion, ultimasIns
         );
       })}
     </TablaRedimensionable>
+    </div>
   );
 }
 
