@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { errorMessage } from '../../../core/api/client';
@@ -6,13 +6,14 @@ import { useAuth } from '../../../core/auth/AuthProvider';
 import { springSnappy } from '../../../core/lib/motion';
 import { uuid } from '../../../core/lib/uuid';
 import { preguntarAsistente, useAsistenteEstado, type Turn } from '../api';
+import { useVoz } from '../voz';
 import { AsistentePanel } from './AsistentePanel';
 import '../asistente.css';
 
 const greeting = (): Turn => ({
   id: uuid(),
   role: 'assistant',
-  text: 'Hola, soy el asistente de Azkell Fleet. Te ayudo a usar el sistema y te preparo reportes en Excel o PDF.',
+  text: 'Hola, soy el asistente de Azkell Fleet. Te doy datos de tus unidades (ubicación, kilometraje, próximo mantenimiento), te ayudo a usar el sistema y te preparo reportes. Escríbeme o toca el micrófono y háblame.',
 });
 
 // Botón flotante del asistente. Solo aparece si el servidor tiene configurada la clave de Gemini.
@@ -25,6 +26,8 @@ export function AsistenteFab() {
   const [turns, setTurns] = useState<Turn[]>(() => [greeting()]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
+  const dictadoRef = useRef<(t: string) => void>(() => {});
+  const voz = useVoz(t => dictadoRef.current(t));
 
   const suggestions = useMemo(() => {
     const list: string[] = ['¿Cómo registro una incidencia en ruta?'];
@@ -37,7 +40,7 @@ export function AsistenteFab() {
 
   if (!data?.enabled) return null;
 
-  async function send(message: string, base = turns) {
+  async function send(message: string, base = turns, porVoz = false) {
     const q = message.trim();
     if (!q || busy) return;
     const history = base.slice(1).filter(t => !t.error).slice(-8).map(({ role, text }) => ({ role, text }));
@@ -47,12 +50,17 @@ export function AsistenteFab() {
     try {
       const res = await preguntarAsistente(q, history);
       setTurns(t => [...t, { id: uuid(), role: 'assistant', text: res.answer, report: res.report }]);
+      if (porVoz || voz.leerSiempre) voz.hablar(res.answer);
     } catch (err) {
       setTurns(t => [...t, { id: uuid(), role: 'assistant', text: errorMessage(err), error: true, retry: q }]);
+      if (porVoz) voz.hablar(errorMessage(err));
     } finally {
       setBusy(false);
     }
   }
+
+  // Lo que se dicta por voz se envía solo y la respuesta se lee en voz alta
+  dictadoRef.current = t => { send(t, undefined, true); };
 
   return (
     <>
@@ -85,6 +93,7 @@ export function AsistenteFab() {
           if (q) send(q, turns.slice(0, Math.max(1, i - 1)));
         }}
         suggestions={suggestions}
+        voz={voz}
       />
     </>
   );

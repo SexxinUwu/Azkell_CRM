@@ -4,9 +4,9 @@
 
 const KNOWLEDGE = `
 ## Qué es Azkell Fleet
-Sistema integral de gestión de flotas (Lima, Perú): vehículos, mantenimiento, conductores, GPS, operaciones y administración de empresas de transporte. Se usa desde el celular (pestañas inferiores) y desde la computadora (barra lateral izquierda). Hay dos versiones conviviendo: la versión nueva (React, esta app) y la versión actual (accesible desde "Abrir en la versión actual").
+Sistema integral de gestión de flotas (Lima, Perú): vehículos, mantenimiento, conductores, GPS, operaciones y administración de empresas de transporte. Se usa desde el celular (pestañas inferiores) y desde la computadora (barra lateral izquierda). Todo se hace en esta misma app: no hay otra versión a la que ir.
 
-## Pantallas de la versión nueva
+## Pantallas del sistema
 - **Inicio:** resumen del día con accesos rápidos.
 - **Placas:** catálogo de vehículos con vista en tarjetas o lista. Se puede buscar por placa, cliente o marca. Desde una placa se ven todos sus detalles (técnicos, operativos, documentos).
 - **Disponibilidad:** estado actual de cada unidad (disponible, en ruta, en taller).
@@ -18,12 +18,12 @@ Sistema integral de gestión de flotas (Lima, Perú): vehículos, mantenimiento,
 - **Auditoría:** bitácora de actividad: quién hizo cada cambio y cuándo.
 - **Mi cuenta:** cambiar contraseña, ver tus permisos y activar 2FA.
 
-## Pantallas en la versión actual (se abren con "Abrir en la versión actual")
+## Más pantallas
 - **Dashboard / Centro de Comando:** KPIs generales, gráficos de inspecciones y fleetrun.
 - **Inspecciones técnicas:** registro de inspecciones por categoría (motor, neumáticos, frenos, etc.), wizard por fases, firma digital y exportación a PDF.
 - **Fleetrun (Datos de Mantenimiento):** historial de mantenimientos preventivos por vehículo, con km, fechas y estado.
 - **Status Rampa:** resumen de inspecciones vigentes y vencidas por tipo de vehículo.
-- **Ubicación GPS:** mapa con posición en tiempo real desde Wialon (se conecta con token).
+- **GPS (Flota > GPS):** mapa con la posición en tiempo real de las unidades desde Wialon.
 - **Almacén / Inventario:** productos, familias, marcas y movimientos de stock.
 - **Combustible / D2 y Urea:** análisis de consumo con datos de telemetría CAN Bus (Wialon).
 - **Aprobación de compras y caja:** aprobar o rechazar órdenes de compra y movimientos de caja.
@@ -57,7 +57,7 @@ Sistema integral de gestión de flotas (Lima, Perú): vehículos, mantenimiento,
 ## GPS / Ubicación
 - Mapa con posición en tiempo real de las unidades vía Wialon.
 - El token de Wialon se guarda en la tabla de configuración del sistema (no en el código).
-- Se accede desde Flota → Ubicación GPS.
+- Se accede desde Flota > GPS. El asistente también puede decir dónde está una placa, sus km y horas.
 
 ## Permisos y roles
 - Los roles se definen por matrices de permisos (lectura, creación, edición, eliminación por módulo).

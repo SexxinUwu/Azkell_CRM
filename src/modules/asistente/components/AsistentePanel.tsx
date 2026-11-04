@@ -2,10 +2,11 @@ import { bloquearPagina } from '../../../core/ui/bloqueoPagina';
 import { useEffect, useRef, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useDragControls, useReducedMotion, type PanInfo } from 'motion/react';
-import { ArrowUp, SquarePen, X } from 'lucide-react';
+import { ArrowUp, Mic, Square, SquarePen, Volume2, VolumeX, X } from 'lucide-react';
 import { spring, springSnappy } from '../../../core/lib/motion';
 import { MOBILE_QUERY, useMediaQuery } from '../../../core/lib/useMediaQuery';
 import type { Turn } from '../api';
+import type { Voz } from '../voz';
 import { Markdown } from './Markdown';
 import { ReportCard } from './ReportCard';
 
@@ -20,6 +21,7 @@ interface Props {
   onReset: () => void;
   onRetry: (id: string) => void;
   suggestions: string[];
+  voz: Voz;
 }
 
 // Panel del asistente. Escritorio: flota a la derecha sin tapar la pantalla.
@@ -32,7 +34,7 @@ export function AsistentePanel(props: Props) {
   );
 }
 
-function Panel({ onClose, turns, busy, text, onText, onSend, onReset, onRetry, suggestions, isMobile }: Props & { isMobile: boolean }) {
+function Panel({ onClose, turns, busy, text, onText, onSend, onReset, onRetry, suggestions, voz, isMobile }: Props & { isMobile: boolean }) {
   const reduce = useReducedMotion();
   const dragControls = useDragControls();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -116,6 +118,17 @@ function Panel({ onClose, turns, busy, text, onText, onSend, onReset, onRetry, s
             <p className="asistente-panel__subtitle">Ayuda y reportes de Azkell Fleet</p>
           </div>
           <div className="asistente-panel__tools">
+            {voz.soporteVoz && (voz.hablando ? (
+              <button type="button" className="sheet__close" onClick={voz.detener} aria-label="Detener la lectura" title="Detener la lectura">
+                <Square size={14} fill="currentColor" />
+              </button>
+            ) : (
+              <button type="button" className="sheet__close" onClick={voz.alternarLeer} aria-pressed={voz.leerSiempre}
+                aria-label={voz.leerSiempre ? 'No leer las respuestas en voz alta' : 'Leer las respuestas en voz alta'}
+                title={voz.leerSiempre ? 'Lectura en voz alta activada' : 'Leer las respuestas en voz alta'}>
+                {voz.leerSiempre ? <Volume2 size={17} /> : <VolumeX size={17} />}
+              </button>
+            ))}
             {!onlyGreeting && (
               <button type="button" className="sheet__close" onClick={onReset} aria-label="Nueva conversación" title="Nueva conversación">
                 <SquarePen size={16} />
@@ -181,18 +194,27 @@ function Panel({ onClose, turns, busy, text, onText, onSend, onReset, onRetry, s
             <input
               ref={inputRef}
               className="asistente__input"
-              value={text}
+              value={voz.escuchando && voz.parcial ? voz.parcial : text}
               onChange={e => onText(e.target.value)}
-              placeholder="Pregunta o pide un reporte"
+              placeholder={voz.escuchando ? 'Te escucho…' : 'Pregunta o pide un reporte'}
               maxLength={500}
               aria-label="Tu pregunta"
               enterKeyHint="send"
             />
+            {voz.soporteMic && (
+              <button type="button" className={`asistente__mic${voz.escuchando ? ' asistente__mic--activo' : ''}`} disabled={busy}
+                onClick={voz.escuchando ? voz.parar : voz.escuchar} aria-pressed={voz.escuchando}
+                aria-label={voz.escuchando ? 'Dejar de escuchar' : 'Hablar con el asistente'} title={voz.escuchando ? 'Dejar de escuchar' : 'Hablar con el asistente'}>
+                {voz.escuchando ? <Square size={14} fill="currentColor" /> : <Mic size={18} />}
+              </button>
+            )}
             <button type="submit" className="asistente__send" disabled={!text.trim() || busy} aria-label="Enviar">
               <ArrowUp size={18} strokeWidth={2.2} />
             </button>
           </form>
-          <p className="asistente__nota">Solo responde sobre Azkell Fleet. Los reportes usan tus permisos.</p>
+          <p className="asistente__nota" role={voz.aviso ? 'alert' : undefined}>
+            {voz.aviso ?? 'Solo responde sobre Azkell Fleet. Los datos y reportes usan tus permisos.'}
+          </p>
         </div>
       </motion.aside>
     </>
