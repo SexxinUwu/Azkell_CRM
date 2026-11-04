@@ -3278,7 +3278,20 @@ app.get('/api/cat-rampas', (req, res) => {
     });
 });
 
-app.post('/api/cat-rampas', (req, res) => {
+// Dos rampas no pueden llamarse igual (sin importar mayúsculas ni espacios). Al renombrar, la propia rampa no cuenta.
+function nombreRampaUnico(req, res, next) {
+    if (req.body.nombre_rampa === undefined) return next();
+    const nombre = String(req.body.nombre_rampa || '').trim();
+    if (!nombre) return res.status(400).json({ error: 'El nombre de la rampa es obligatorio' });
+    db.query('SELECT id FROM cat_rampas WHERE LOWER(TRIM(nombre_rampa)) = LOWER(?) AND id <> ? LIMIT 1',
+        [nombre, req.params.id || 0], (err, rows) => {
+            if (err) return next();
+            if (rows && rows.length) return res.status(409).json({ error: `Ya existe una rampa llamada «${nombre}»` });
+            next();
+        });
+}
+
+app.post('/api/cat-rampas', nombreRampaUnico, (req, res) => {
     const { nombre_rampa, sede, color } = req.body;
     if (!nombre_rampa) return res.status(400).json({ error: 'nombre_rampa requerido' });
     db.query('ALTER TABLE cat_rampas ADD COLUMN color VARCHAR(50) NULL DEFAULT "#ef4444"', () => {
@@ -3309,7 +3322,7 @@ app.put('/api/cat-rampas/reorder', (req, res) => {
     });
 });
 
-app.put('/api/cat-rampas/:id', (req, res) => {
+app.put('/api/cat-rampas/:id', nombreRampaUnico, (req, res) => {
     const { nombre_rampa, estado, color, en_reporte } = req.body;
     const sets = [];
     const vals = [];

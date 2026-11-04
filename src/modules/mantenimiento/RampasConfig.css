@@ -23,3 +23,4 @@
 .rcfg__asa:disabled, .rcfg__quitar:disabled { opacity: 0.4; cursor: default; }
 .rcfg__agregar { display: flex; gap: 8px; align-items: center; }
 .rcfg__agregar > div { flex: 1; min-width: 0; }
+.rcfg__editor { flex: 1; min-width: 0; }

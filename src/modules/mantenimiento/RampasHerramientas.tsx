@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Reorder, useDragControls, useReducedMotion } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { GripVertical, Plus, Trash2 } from 'lucide-react';
+import { GripVertical, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { TextInput } from '../../core/ui/Field';
@@ -143,14 +143,27 @@ export async function compartirRampasPdf(filas: FilaPdfRampa[], d: DatosPdfRampa
 const RESORTE = { type: 'spring' as const, bounce: 0, duration: 0.35 };
 const SIN_MOVIMIENTO = { duration: 0 };
 
+/** Dos rampas no pueden llamarse igual, sin importar mayúsculas ni espacios */
+const mismoNombre = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
 interface FilaRampaProps {
   c: CatRampa; ocupado: boolean; reducir: boolean;
-  onSoltar: () => void; onReporte: (v: boolean) => void; onEliminar: () => void;
+  onSoltar: () => void; onRenombrar: (nombre: string) => void; onReporte: (v: boolean) => void; onEliminar: () => void;
 }
 
-/** Una rampa de la lista: solo el asa inicia el arrastre, para no chocar con el resto de la fila */
-function FilaRampa({ c, ocupado, reducir, onSoltar, onReporte, onEliminar }: FilaRampaProps) {
+/** Una rampa de la lista: solo el asa inicia el arrastre; el lápiz permite cambiar el nombre */
+function FilaRampa({ c, ocupado, reducir, onSoltar, onRenombrar, onReporte, onEliminar }: FilaRampaProps) {
   const asa = useDragControls();
+  const [editando, setEditando] = useState(false);
+  const [texto, setTexto] = useState('');
+
+  function empezarEdicion() { setTexto(nombreDe(c)); setEditando(true); }
+  function terminarEdicion(guardar: boolean) {
+    setEditando(false);
+    const nuevo = texto.trim();
+    if (guardar && nuevo && nuevo !== nombreDe(c)) onRenombrar(nuevo);
+  }
+
   return (
     <Reorder.Item as="li" value={c} dragListener={false} dragControls={asa} onDragEnd={onSoltar}
       whileDrag={{ scale: 1.02, boxShadow: '0 14px 30px rgba(0, 0, 0, 0.18)' }}
@@ -159,7 +172,20 @@ function FilaRampa({ c, ocupado, reducir, onSoltar, onReporte, onEliminar }: Fil
         disabled={ocupado} onPointerDown={e => asa.start(e)}>
         <GripVertical size={20} />
       </button>
-      <span className="rcfg__nombre">{nombreDe(c)}</span>
+      {editando ? (
+        <div className="rcfg__editor">
+          <TextInput autoFocus value={texto} aria-label={`Nombre de ${nombreDe(c)}`}
+            onChange={e => setTexto(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') terminarEdicion(true); if (e.key === 'Escape') terminarEdicion(false); }}
+            onBlur={() => terminarEdicion(true)} />
+        </div>
+      ) : (
+        <span className="rcfg__nombre">{nombreDe(c)}</span>
+      )}
+      <button type="button" className="rcfg__quitar" aria-label={`Cambiar nombre de ${nombreDe(c)}`} title="Cambiar nombre"
+        disabled={ocupado || editando} onClick={empezarEdicion}>
+        <Pencil size={18} />
+      </button>
       <Switch checked={enReporte(c)} disabled={ocupado} onChange={onReporte} label="En reporte" />
       <button type="button" className="rcfg__quitar" aria-label={`Eliminar ${nombreDe(c)}`} title="Eliminar"
         disabled={ocupado} onClick={onEliminar}>
@@ -169,7 +195,7 @@ function FilaRampa({ c, ocupado, reducir, onSoltar, onReporte, onEliminar }: Fil
   );
 }
 
-/** Configurador de bahías: arrastra cada rampa por su asa para cambiar el orden; alta, baja y "En reporte" (cat_rampas) */
+/** Configurador de bahías: arrastra cada rampa por su asa para cambiar el orden; nombre, alta, baja y "En reporte" (cat_rampas) */
 export function ConfigurarRampasSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -200,6 +226,18 @@ export function ConfigurarRampasSheet({ open, onClose }: { open: boolean; onClos
   const cambiar = (id: CatRampa['id'], cambios: Record<string, unknown>) =>
     accion(() => api(`/cat-rampas/${encodeURIComponent(String(id))}`, { method: 'PUT', body: cambios }));
 
+  // Nombre repetido: se avisa antes de llamar al servidor (el servidor también lo rechaza)
+  function nombreLibre(nombre: string, salvo?: CatRampa['id']): boolean {
+    const repetido = lista.some(x => String(x.id) !== String(salvo ?? '') && mismoNombre(nombreDe(x), nombre));
+    if (repetido) setError(`Ya existe una rampa llamada «${nombre.trim()}»`);
+    return !repetido;
+  }
+
+  function renombrar(c: CatRampa, nombre: string) {
+    if (!nombreLibre(nombre, c.id)) return;
+    cambiar(c.id, { nombre_rampa: nombre.trim() });
+  }
+
   // Al soltar la rampa se guarda el orden completo, solo si cambió
   async function guardarOrden(nuevo: CatRampa[]) {
     const antes = delServidor.map(c => String(c.id)).join(',');
@@ -209,7 +247,7 @@ export function ConfigurarRampasSheet({ open, onClose }: { open: boolean; onClos
 
   async function agregar() {
     const nombre = nueva.trim();
-    if (!nombre) return;
+    if (!nombre || !nombreLibre(nombre)) return;
     await accion(() => api('/cat-rampas', { method: 'POST', body: { nombre_rampa: nombre, sede: 'Principal' } }), `Rampa "${nombre}" agregada`);
     setNueva('');
   }
@@ -223,7 +261,7 @@ export function ConfigurarRampasSheet({ open, onClose }: { open: boolean; onClos
     <Sheet open={open} onClose={onClose} title="Configurar rampas"
       footer={<Button variant="secondary" onClick={onClose}>Listo</Button>}>
       <p className="rcfg__ayuda">
-        Arrastra una rampa por su asa para cambiar el orden. Lo que apagues en "En reporte" no sale en el PDF ni en el WhatsApp.
+        Arrastra una rampa por su asa para cambiar el orden. Cada nombre es único. Lo que apagues en "En reporte" no sale en el PDF ni en el WhatsApp.
       </p>
       {error && <Notice tone="error">{error}</Notice>}
       {cat.isLoading ? <PageLoader /> : (
@@ -231,6 +269,7 @@ export function ConfigurarRampasSheet({ open, onClose }: { open: boolean; onClos
           {lista.map(c => (
             <FilaRampa key={String(c.id)} c={c} ocupado={ocupado} reducir={reducir}
               onSoltar={() => guardarOrden(local ?? delServidor)}
+              onRenombrar={nombre => renombrar(c, nombre)}
               onReporte={v => cambiar(c.id, { en_reporte: v })}
               onEliminar={() => eliminar(c)} />
           ))}
