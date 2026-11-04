@@ -134,10 +134,10 @@ const LIMITE_KM_VIAJE = 3000;
 // Tarjeta de indicador de la cabecera
 function KpiCard({ titulo, valor, detalle, color }: { titulo: string; valor: string; detalle: string; color?: string }) {
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 16, padding: 'var(--s-4)', display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-      <span style={{ fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--label-2)' }}>{titulo}</span>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.5rem', fontWeight: 800, color: color ?? 'var(--label)', fontVariantNumeric: 'tabular-nums' }}>{valor}</span>
-      <span style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{detalle}</span>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 14, padding: 'var(--s-3)', display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+      <span style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--label-2)' }}>{titulo}</span>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.125rem', fontWeight: 800, color: color ?? 'var(--label)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{valor}</span>
+      <span style={{ fontSize: '0.6875rem', lineHeight: 1.3, color: 'var(--label-2)' }}>{detalle}</span>
     </div>
   );
 }
@@ -146,18 +146,47 @@ function KpiCard({ titulo, valor, detalle, color }: { titulo: string; valor: str
 function CardContraMatriz({ exceso, ahorro, viajesExceso, viajesAhorro }: { exceso: number; ahorro: number; viajesExceso: number; viajesAhorro: number }) {
   const mitad = (etiqueta: string, valor: string, color: string, detalle: string) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
-      <span style={{ fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--label-2)' }}>{etiqueta}</span>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.375rem', fontWeight: 800, color, fontVariantNumeric: 'tabular-nums' }}>{valor}</span>
-      <span style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{detalle}</span>
+      <span style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--label-2)' }}>{etiqueta}</span>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.125rem', fontWeight: 800, color, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{valor}</span>
+      <span style={{ fontSize: '0.6875rem', color: 'var(--label-2)' }}>{detalle}</span>
     </div>
   );
   const viajes = (k: number) => `${k} ${k === 1 ? 'viaje' : 'viajes'}`;
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 16, padding: 'var(--s-4)', display: 'flex', gap: 'var(--s-4)', minWidth: 0 }}
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 14, padding: 'var(--s-3)', display: 'flex', gap: 'var(--s-3)', minWidth: 0 }}
       title="Suma de las diferencias en verde y en rojo de la tabla, contra el teórico de la matriz">
       {mitad('De más', `+${fmt(exceso, 2)} gl`, 'var(--red-ink)', viajes(viajesExceso))}
       <div style={{ width: 1, background: 'var(--separator)', alignSelf: 'stretch' }} />
       {mitad('Ahorrado', `−${fmt(ahorro, 2)} gl`, 'var(--green-ink)', viajes(viajesAhorro))}
+    </div>
+  );
+}
+
+// Cumplimiento de la revisión: % de viajes ya revisados (conforme u observado) y barra apilada con los tres estados
+function CardCumplimiento({ conformes, observados, pendientes }: { conformes: number; observados: number; pendientes: number }) {
+  const total = conformes + observados + pendientes;
+  const revisados = conformes + observados;
+  const pct = total > 0 ? Math.round((revisados / total) * 100) : 0;
+  const tramo = (n: number, color: string) => (n > 0 ? <div style={{ width: `${(n / total) * 100}%`, background: color }} /> : null);
+  const dato = (n: number, texto: string, color: string) => (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+      <span style={{ width: 7, height: 7, borderRadius: 999, background: color }} />{n} {texto}
+    </span>
+  );
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--separator)', borderRadius: 14, padding: 'var(--s-3)', display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}
+      title="Viajes revisados (conforme u observado) frente a los que siguen pendientes">
+      <span style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--label-2)' }}>Cumplimiento de revisión</span>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.125rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: pct === 100 ? 'var(--green-ink)' : 'var(--label)' }}>
+        {pct}% <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--label-2)', fontFamily: 'inherit' }}>{revisados} de {total}</span>
+      </span>
+      <div role="img" aria-label={`${conformes} conformes, ${observados} observados, ${pendientes} pendientes`}
+        style={{ display: 'flex', height: 8, borderRadius: 999, overflow: 'hidden', background: 'var(--separator)' }}>
+        {tramo(conformes, 'var(--green-ink)')}{tramo(observados, 'var(--amber-ink)')}{tramo(pendientes, 'var(--label-3)')}
+      </div>
+      <span style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', fontSize: '0.6875rem', color: 'var(--label-2)' }}>
+        {dato(conformes, 'conf.', 'var(--green-ink)')}{dato(observados, 'obs.', 'var(--amber-ink)')}{dato(pendientes, 'pend.', 'var(--label-3)')}
+      </span>
     </div>
   );
 }
@@ -486,7 +515,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
     const conGalones = razonables.filter(t => cifras(t).galones > 0);
     const kmConGalones = conGalones.reduce((s, t) => s + kmDelViaje(t), 0);
     const galConKm = conGalones.reduce((s, t) => s + cifras(t).galones, 0);
-    return { viajes: visibles.length, gal, gasto, km: kmRazonables, validos: razonables.length, galConKm, kmGal: galConKm > 0 ? kmConGalones / galConKm : 0, razonables: conGalones.length, pendientes: visibles.filter(t => t.estadoAuditoria === 'PENDIENTE').length };
+    return { viajes: visibles.length, gal, gasto, km: kmRazonables, validos: razonables.length, galConKm, kmGal: galConKm > 0 ? kmConGalones / galConKm : 0, razonables: conGalones.length, pendientes: visibles.filter(t => t.estadoAuditoria === 'PENDIENTE').length, conformes: visibles.filter(t => t.estadoAuditoria === 'CONFORME').length, observados: visibles.filter(t => t.estadoAuditoria === 'OBSERVADO').length };
   }, [visibles, urea]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fila TOTAL de la tabla, como el clásico: suma todos los viajes visibles (no solo la página)
@@ -661,7 +690,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 'var(--s-3)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 'var(--s-2)' }}>
           <KpiCard titulo="Viajes" valor={fmt(resumen.viajes, 0)} detalle={`${resumen.pendientes} sin auditar`} />
           <KpiCard titulo={urea ? 'Urea (gl)' : 'Galones'} valor={fmt(resumen.gal, 2)} color="var(--accent)"
             detalle={resumen.viajes ? `${fmt(resumen.gal / resumen.viajes, 1)} gl por viaje en promedio` : 'Sin viajes'} />
@@ -671,11 +700,12 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
             <KpiCard titulo="Recorrido total" valor={`${fmt(resumen.km, 2)} km`} color="var(--amber-ink)"
               detalle={`${resumen.validos} de ${resumen.viajes} viajes con odómetro válido`} />
           )}
-          {!urea && <CardContraMatriz exceso={pie.exceso} ahorro={pie.ahorro} viajesExceso={pie.viajesExceso} viajesAhorro={pie.viajesAhorro} />}
           {!urea && (
             <KpiCard titulo="Km por galón" valor={fmt(resumen.kmGal, 2)} color="var(--amber-ink)"
               detalle={`Recorrido de ${resumen.razonables} viajes válidos entre ${fmt(resumen.galConKm, 2)} galones de esos viajes`} />
           )}
+          {!urea && <CardContraMatriz exceso={pie.exceso} ahorro={pie.ahorro} viajesExceso={pie.viajesExceso} viajesAhorro={pie.viajesAhorro} />}
+          <CardCumplimiento conformes={resumen.conformes} observados={resumen.observados} pendientes={resumen.pendientes} />
         </div>
 
         <SearchField value={busqueda} placeholder="Viaje, placa, ruta o conductor…"
