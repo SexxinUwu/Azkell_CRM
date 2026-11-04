@@ -318,3 +318,23 @@
   50% { box-shadow: 0 0 0 9px rgba(215, 0, 21, 0); }
 }
 @media (prefers-reduced-motion: reduce) { .asistente__mic--activo { animation: none; } }
+
+/* Selector de voz del asistente: una línea discreta bajo el encabezado */
+.asistente__voz {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 8px;
+  font-size: 0.75rem;
+  color: var(--label-2, #6e6e73);
+}
+.asistente__voz select {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--separator, rgba(0,0,0,.1));
+  background: var(--surface, #fff);
+  color: var(--label, #1d1d1f);
+  font: inherit;
+}

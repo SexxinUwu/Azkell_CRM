@@ -140,6 +140,15 @@ function Panel({ onClose, turns, busy, text, onText, onSend, onReset, onRetry, s
           </div>
         </header>
 
+        {voz.soporteVoz && voz.voces.length > 0 && (
+          <label className="asistente__voz">
+            <span>Voz</span>
+            <select value={voz.vozActiva} onChange={e => voz.setVozNombre(e.target.value)} aria-label="Voz del asistente">
+              {voz.voces.map(v => <option key={v.name} value={v.name}>{v.name.replace(/^Microsoft\s+/, '')}</option>)}
+            </select>
+          </label>
+        )}
+
         <div className="asistente-panel__log" aria-live="polite">
           {turns.map(t => (
             <motion.div

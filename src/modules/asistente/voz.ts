@@ -21,6 +21,20 @@ function constructorReconocedor(): ConstructorReconocedor | null {
 }
 
 const CLAVE_LEER = 'fleet_asistente_leer';
+const CLAVE_VOZ = 'fleet_asistente_voz';
+
+// Voces en español que trae el dispositivo. Las "naturales" o en línea suenan mucho mejor: se ponen primero.
+function vocesEspanol(): SpeechSynthesisVoice[] {
+  const puntos = (v: SpeechSynthesisVoice) =>
+    (v.lang.toLowerCase().startsWith('es-pe') ? 4 : v.lang.toLowerCase().startsWith('es') ? 2 : 0) + (/natural|online/i.test(v.name) ? 3 : /google/i.test(v.name) ? 1 : 0);
+  return window.speechSynthesis.getVoices()
+    .filter(v => v.lang.toLowerCase().startsWith('es'))
+    .sort((a, b) => puntos(b) - puntos(a) || a.name.localeCompare(b.name));
+}
+
+function leerVozGuardada(): string {
+  try { return localStorage.getItem(CLAVE_VOZ) || ''; } catch { return ''; }
+}
 
 /** Quita lo que no se debe leer (markdown, enlaces) y deletrea placas y unidades para que suenen bien. */
 export function textoParaVoz(texto: string): string {
@@ -39,12 +53,11 @@ export function textoParaVoz(texto: string): string {
     .trim();
 }
 
+// La voz que eligió la persona; si no eligió ninguna, la mejor que haya en el dispositivo
 function elegirVoz(): SpeechSynthesisVoice | null {
-  const voces = window.speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith('es'));
-  if (!voces.length) return null;
-  const puntos = (v: SpeechSynthesisVoice) =>
-    (v.lang.toLowerCase().startsWith('es-pe') ? 4 : /es-(us|mx|co|ar|cl)/i.test(v.lang) ? 2 : 0) + (/natural|google|online/i.test(v.name) ? 2 : 0);
-  return [...voces].sort((a, b) => puntos(b) - puntos(a))[0];
+  const voces = vocesEspanol();
+  const guardada = leerVozGuardada();
+  return voces.find(v => v.name === guardada) ?? voces[0] ?? null;
 }
 
 export function useVoz(onDictado: (texto: string) => void) {
@@ -57,6 +70,8 @@ export function useVoz(onDictado: (texto: string) => void) {
   const [leerSiempre, setLeerSiempre] = useState(() => {
     try { return localStorage.getItem(CLAVE_LEER) === '1'; } catch { return false; }
   });
+  const [voces, setVoces] = useState<SpeechSynthesisVoice[]>([]);
+  const [vozNombre, setVozNombreState] = useState(leerVozGuardada);
   const reconocedor = useRef<Reconocedor | null>(null);
   const dictado = useRef(onDictado);
   dictado.current = onDictado;
@@ -122,14 +137,28 @@ export function useVoz(onDictado: (texto: string) => void) {
     try { r.start(); setEscuchando(true); } catch { setAviso('No pude activar el micrófono.'); }
   }, [detener]);
 
-  // Las voces del navegador cargan de forma diferida; al cerrar el panel se corta lo que esté sonando
+  // Las voces del navegador cargan de forma diferida; se listan cuando llegan y al cerrar el panel se corta lo que esté sonando
   useEffect(() => {
     if (!soporteVoz) return;
-    window.speechSynthesis.getVoices();
-    return () => { window.speechSynthesis.cancel(); reconocedor.current?.abort(); };
+    const cargar = () => setVoces(vocesEspanol());
+    cargar();
+    window.speechSynthesis.addEventListener('voiceschanged', cargar);
+    return () => {
+      window.speechSynthesis.removeEventListener('voiceschanged', cargar);
+      window.speechSynthesis.cancel();
+      reconocedor.current?.abort();
+    };
   }, [soporteVoz]);
 
-  return { soporteMic, soporteVoz, escuchando, hablando, parcial, aviso, leerSiempre, escuchar, parar, hablar, detener, alternarLeer };
+  const setVozNombre = useCallback((nombre: string) => {
+    setVozNombreState(nombre);
+    try { localStorage.setItem(CLAVE_VOZ, nombre); } catch { /* sin almacenamiento: vale solo en esta sesión */ }
+  }, []);
+
+  // Voz activa para mostrar en el selector (la guardada, o la que usará por defecto)
+  const vozActiva = voces.find(v => v.name === vozNombre)?.name ?? voces[0]?.name ?? '';
+
+  return { soporteMic, soporteVoz, escuchando, hablando, parcial, aviso, leerSiempre, voces, vozActiva, setVozNombre, escuchar, parar, hablar, detener, alternarLeer };
 }
 
 export type Voz = ReturnType<typeof useVoz>;
