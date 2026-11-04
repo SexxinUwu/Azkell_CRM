@@ -696,6 +696,10 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             if (cocada !== null && (!Number.isFinite(cocada) || cocada < 0)) {
                 return res.status(400).json({ ok: false, error: 'La cocada inicial debe ser un número positivo' });
             }
+            // Con medida, la cocada inicial es obligatoria: es el remanente con el que nace cada llanta recibida
+            if (medida && !(cocada > 0)) {
+                return res.status(400).json({ ok: false, error: 'La cocada inicial (mm) es obligatoria cuando la llanta tiene medida' });
+            }
             const vida = b.vida_inicial == null || b.vida_inicial === '' ? 'R0' : String(b.vida_inicial).trim().toUpperCase();
             if (!['R0', 'R1', 'R2', 'R3'].includes(vida)) {
                 return res.status(400).json({ ok: false, error: 'La vida al comprar debe ser R0, R1, R2 o R3' });

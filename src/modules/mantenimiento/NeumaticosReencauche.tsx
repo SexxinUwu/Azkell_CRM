@@ -33,7 +33,7 @@ export function GenerarOrdenReencaucheSheet({ open, onClose, llantas, onHecho }:
   const proveedores = useProveedores();
   const [proveedorId, setProveedorId] = useState<string | null>(null);
   const [precios, setPrecios] = useState<Record<string, string>>({});
-  const [condicion, setCondicion] = useState<'contado' | 'credito'>('contado');
+  const [condicion, setCondicion] = useState<'contado' | 'credito'>('credito');
   const [dias, setDias] = useState('30');
   const [obs, setObs] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -41,7 +41,7 @@ export function GenerarOrdenReencaucheSheet({ open, onClose, llantas, onHecho }:
 
   useEffect(() => {
     if (!open) return;
-    setProveedorId(null); setPrecios({}); setCondicion('contado'); setDias('30'); setObs(''); setError(null);
+    setProveedorId(null); setPrecios({}); setCondicion('credito'); setDias('30'); setObs(''); setError(null);
   }, [open]);
 
   const porMedida = useMemo(() => {
