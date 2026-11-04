@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, FileSpreadsheet, Pencil, Plus, Trash2 } from 'lucide-react';
+import { CircleAlert, Download, FileSpreadsheet, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 import { Sheet, ConfirmSheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice } from '../../core/ui/Display';
@@ -11,6 +11,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { exportarExcel } from '../../core/lib/excel';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
+import '../../core/ui/acciones-iconos.css';
 
 // Matriz de rendimiento teórico (D2): consumo esperado por ruta según carga y motor.
 // Contrato del servidor: /api/combustible/matriz (GET, POST, PUT/:id, DELETE/:id, importar, vaciar-todo).
@@ -120,6 +121,14 @@ async function descargarPlantilla() {
   haptic('success');
 }
 
+// Excel con lo que se ve en la tabla (respeta la búsqueda y el filtro de sentido)
+async function exportarMatriz(filas: FilaMatriz[]) {
+  await exportarExcel('Matriz_Combustible_D2', 'Matriz_Combustible_D2',
+    ['SENTIDO', 'RUTA', 'MOTOR', 'CONFG', '0', '5', '10', '15', '20', '25', '30', 'KM'],
+    filas.map(f => [f.sentido, f.ruta, f.motor, f.confg, ...TRAMOS.map(t => (f[t] === '' || f[t] == null ? '' : num(f[t]) as string | number)), num(f.km)]));
+  haptic('success');
+}
+
 export function MatrizRendimientoPanel({ puedeEditar }: { puedeEditar: boolean }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -195,14 +204,28 @@ export function MatrizRendimientoPanel({ puedeEditar }: { puedeEditar: boolean }
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
         <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={descargarPlantilla}>Plantilla Excel</Button>
-          {puedeEditar && (
-            <>
-              <Button variant="secondary" icon={<Trash2 size={16} />} onClick={() => setVaciar(true)} disabled={!(matriz.data ?? []).length}>Vaciar</Button>
-              <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={() => setImportando(true)}>Importar Excel</Button>
-              <Button variant="primary" icon={<Plus size={16} />} onClick={() => setEditar(VACIO)}>Nueva ruta</Button>
-            </>
-          )}
+          <div className="acciones-iconos">
+            <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Exportar Excel" aria-label="Exportar Excel"
+              disabled={!visibles.length} onClick={() => { exportarMatriz(visibles).catch(err => toast(errorMessage(err), 'error')); }}>
+              <Download size={17} />
+            </button>
+            <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--violeta" data-tip="Plantilla Excel" aria-label="Plantilla Excel"
+              onClick={() => { descargarPlantilla().catch(err => toast(errorMessage(err), 'error')); }}>
+              <FileSpreadsheet size={17} />
+            </button>
+            {puedeEditar && (
+              <>
+                <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Importar Excel" aria-label="Importar Excel" onClick={() => setImportando(true)}>
+                  <Upload size={17} />
+                </button>
+                <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--rojo" data-tip="Vaciar matriz" aria-label="Vaciar matriz"
+                  disabled={!(matriz.data ?? []).length} onClick={() => setVaciar(true)}>
+                  <Trash2 size={17} />
+                </button>
+              </>
+            )}
+          </div>
+          {puedeEditar && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setEditar(VACIO)}>Nueva ruta</Button>}
         </div>
         <SearchField value={q} onChange={setQ} placeholder="Ruta, motor o configuración…" />
         <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
