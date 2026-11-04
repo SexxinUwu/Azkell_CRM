@@ -342,8 +342,6 @@ export function StatusRampaPage() {
     () => [...activas, ...libresEntradas].sort((a, b) => ordenCat(a.rampaCatId) - ordenCat(b.rampaCatId)),
     [activas, libresEntradas, catRampas],
   );
-  const filasPdf = useMemo(() => filasPdfRampas(tablaEntradas, catRampas, tecnicosPorRampa, ultimasInsp),
-    [tablaEntradas, catRampas, tecnicosPorRampa, ultimasInsp]);
   // Al tocar una bahía libre se ingresa una unidad ahí; una visita abre su detalle
   function abrirRampa(e: RampaEntrada) {
     if (e.estado === 'Libre') abrirIngresoEn(e.rampaCatId);
@@ -370,11 +368,21 @@ export function StatusRampaPage() {
           formatFechaPe(e.fecha_salida), e.situacion, e.observaciones]));
     } catch (err) { toast(errorMessage(err), 'error'); }
   }
+  // Filas del PDF con las OT y los trabajos recién consultados: los técnicos no dependen de cuándo se cargó la pantalla
+  async function filasParaPdf(): Promise<FilaPdfRampa[]> {
+    await Promise.all([
+      qc.refetchQueries({ queryKey: ['mant', 'ots'] }),
+      qc.refetchQueries({ queryKey: ['mant', 'trabajos-ot'] }),
+    ]);
+    const ots = qc.getQueryData<OrdenTrabajo[]>(['mant', 'ots']) ?? ordenes.data ?? [];
+    const trabajos = qc.getQueryData<TrabajoOT[]>(['mant', 'trabajos-ot', '', '']) ?? trabajosOT.data ?? [];
+    return filasPdfRampas(tablaEntradas, catRampas, tecnicosDeRampas(activas, ots, trabajos), ultimasInsp);
+  }
   async function verPdf() {
-    try { await abrirPdfRampas(filasPdf, datosPdf); } catch (err) { toast(errorMessage(err), 'error'); }
+    try { await abrirPdfRampas(filasParaPdf(), datosPdf); } catch (err) { toast(errorMessage(err), 'error'); }
   }
   async function enviarWa() {
-    try { await compartirRampasPdf(filasPdf, datosPdf, textoReporteRampas(activas, (catalogo.data?.rampas ?? []) as CatRampa[])); }
+    try { await compartirRampasPdf(await filasParaPdf(), datosPdf, textoReporteRampas(activas, (catalogo.data?.rampas ?? []) as CatRampa[])); }
     catch (err) { toast(errorMessage(err), 'error'); }
   }
   const [verInspeccion, setVerInspeccion] = useState(leerVerInspeccion);

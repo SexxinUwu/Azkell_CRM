@@ -162,13 +162,13 @@ export async function generarPdfRampas(filas: FilaPdfRampa[], d: DatosPdfRampa):
 }
 
 /** Abre el PDF en una pestaña nueva (enlace blob:), igual que el clásico */
-export async function abrirPdfRampas(filas: FilaPdfRampa[], d: DatosPdfRampa) {
+export async function abrirPdfRampas(filas: FilaPdfRampa[] | Promise<FilaPdfRampa[]>, d: DatosPdfRampa) {
   const win = window.open('', '_blank');
   if (!win) throw new Error('Permite las ventanas emergentes para ver el PDF.');
   // Mientras se genera, la pestaña muestra el camión (no una pantalla en blanco)
   pestanaConCamion(win);
   try {
-    const blob = await generarPdfRampas(filas, d);
+    const blob = await generarPdfRampas(await filas, d);
     const url = URL.createObjectURL(blob);
     win.location.href = url;
     setTimeout(() => URL.revokeObjectURL(url), 120_000);
