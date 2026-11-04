@@ -460,11 +460,18 @@ app.get('/api/tenant-logo', async (req, res) => {
         }
 
         if (logoRaw && (logoRaw.startsWith('http://') || logoRaw.startsWith('https://'))) {
+            // Logo guardado en S3: el servidor lo lee y lo entrega él mismo. Una redirección a S3 no sirve a la app
+            // (el navegador no puede leer esa imagen para incrustarla en los PDF: S3 no permite el acceso desde la app).
             const key = s3KeyFromUrl(logoRaw);
             if (key) {
                 try {
-                    const signedUrl = await getPresignedUrl(key, 86400);
-                    return res.redirect(signedUrl);
+                    const signedUrl = await getPresignedUrl(key, 300);
+                    const r = await fetch(signedUrl);
+                    if (r.ok) {
+                        res.setHeader('Content-Type', r.headers.get('content-type') || 'image/png');
+                        res.setHeader('Cache-Control', 'public, max-age=86400');
+                        return res.send(Buffer.from(await r.arrayBuffer()));
+                    }
                 } catch(e) {}
             }
             return res.redirect(logoRaw);
