@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Disc3, SearchX, Settings, Truck } from 'lucide-react';
 import { api, errorMessage } from '../../core/api/client';
 import { exportarExcel } from '../../core/lib/excel';
-import { formatSoles } from '../../core/lib/format';
+import { formatMoneda } from '../../core/lib/format';
 import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -35,6 +35,7 @@ export interface LlantaListado {
   almacen: string | null;
   placa_actual: string | null;
   gastos_compra: number | '';     // '' = sin dato de compra
+  moneda_compra?: string;         // moneda de la orden de compra (PEN o USD): el costo se muestra en esa moneda
   orden_compra?: string | null;   // OC de la recepción que dio de alta la llanta (si es de recepción)
   situacion: string;              // texto legible (ver TONO_SITUACION)
 }
@@ -74,7 +75,7 @@ const TONO_SITUACION: Record<string, Tono> = {
   'Código provisional': 'gris',
 };
 
-const ENCABEZADOS_EXCEL = ['Neumático', 'Vida actual', 'Medida', 'Marca', 'Vehículo actual', 'Gastos de compra', 'Orden de compra', 'Situación'];
+const ENCABEZADOS_EXCEL = ['Neumático', 'Vida actual', 'Medida', 'Marca', 'Vehículo actual', 'Gastos de compra', 'Moneda', 'Orden de compra', 'Situación'];
 
 const COLUMNAS: ColumnaTabla[] = [
   { id: 'sel', titulo: '', ancho: 48, minimo: 44, alinear: 'center' },
@@ -185,7 +186,7 @@ function useListado(filtro: Filtro, q: string) {
   });
 }
 
-const gastosTexto = (v: number | '') => (v === '' ? '—' : formatSoles(v));
+const gastosTexto = (v: number | '', moneda?: string) => (v === '' ? '—' : formatMoneda(v, moneda));
 
 function SituacionChip({ texto }: { texto: string }) {
   return <span className={`nl-situacion nl-situacion--${TONO_SITUACION[texto] ?? 'gris'}`}>{texto}</span>;
@@ -348,7 +349,7 @@ export function NeumaticosListado() {
     try {
       // Exporta lo que se ve: las filas actuales del listado (con el filtro y la búsqueda aplicados)
       await exportarExcel('Neumaticos', 'Neumáticos', ENCABEZADOS_EXCEL, filas.map(l => [
-        l.codigo, vidaTexto(l.vida), l.medida ?? '', l.marca ?? '', l.placa_actual ?? '', l.gastos_compra, l.orden_compra ?? '', l.situacion,
+        l.codigo, vidaTexto(l.vida), l.medida ?? '', l.marca ?? '', l.placa_actual ?? '', l.gastos_compra, l.moneda_compra ?? 'PEN', l.orden_compra ?? '', l.situacion,
       ]));
     } catch (e) {
       setErrorExcel(`No se pudo exportar: ${String(e)}`);
@@ -444,7 +445,7 @@ export function NeumaticosListado() {
                   </span>
                   <span className="nl-lista__sub">{[l.marca, l.modelo, l.medida].filter(Boolean).join(' · ') || 'Sin marca ni medida'}</span>
                   <span className="nl-lista__datos">
-                    Vida {vidaTexto(l.vida)} · Vehículo {l.placa_actual || '—'} · Compra {gastosTexto(l.gastos_compra)}
+                    Vida {vidaTexto(l.vida)} · Vehículo {l.placa_actual || '—'} · Compra {gastosTexto(l.gastos_compra, l.moneda_compra)}
                   </span>
                 </span>
                 <ChevronRight size={18} aria-hidden="true" className="nl-lista__flecha" />
@@ -464,7 +465,7 @@ export function NeumaticosListado() {
               <Celda mono>{l.medida || '—'}</Celda>
               <Celda>{l.marca || '—'}</Celda>
               <Celda mono>{l.placa_actual || '—'}</Celda>
-              <Celda alinear="right" mono>{gastosTexto(l.gastos_compra)}</Celda>
+              <Celda alinear="right" mono>{gastosTexto(l.gastos_compra, l.moneda_compra)}</Celda>
               <Celda mono>{l.orden_compra || '—'}</Celda>
               <Celda><SituacionChip texto={l.situacion} /></Celda>
               <Celda alinear="center">

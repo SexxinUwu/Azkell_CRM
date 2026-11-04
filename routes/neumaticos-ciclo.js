@@ -1100,6 +1100,13 @@ module.exports = function (db) {
             const [rs] = await p.query('SELECT id, oc_id FROM recepciones_oc WHERE id IN (?)', [recepciones]);
             rs.forEach(r => ocPorRecepcion.set(Number(r.id), r.oc_id));
         }
+        // Moneda de cada orden: el costo de la llanta es el de la línea de la orden, en su misma moneda (no se convierte)
+        const monedaPorOc = new Map();
+        const ordenes = [...new Set([...ocPorRecepcion.values()].filter(Boolean))];
+        if (ordenes.length) {
+            const [os] = await p.query('SELECT id, moneda FROM entradas_inv WHERE id IN (?)', [ordenes]);
+            os.forEach(o => monedaPorOc.set(o.id, String(o.moneda || 'PEN').toUpperCase()));
+        }
         return filas.map(r => {
             const mRec = /^SFC-R(\d+)-L/.exec(String(r.id_neumatico));
             const ordenCompra = mRec ? (ocPorRecepcion.get(Number(mRec[1])) || null) : null;
@@ -1119,6 +1126,7 @@ module.exports = function (db) {
                     almacen: NOMBRE_ALMACEN[almacenId] || null,
                     placa_actual: r.placa_montada || r.placa_actual || null,
                     gastos_compra: compra > 0 ? compra : '',
+                    moneda_compra: (ordenCompra && monedaPorOc.get(ordenCompra)) || 'PEN',
                     orden_compra: ordenCompra,
                     situacion: SITUACION[clave],
                 },
