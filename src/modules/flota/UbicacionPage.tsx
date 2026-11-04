@@ -426,10 +426,13 @@ export function UbicacionPage() {
 
               <div className="tg-alerts" aria-live="polite">
                 {alertas.map(a => (
-                  <button key={a.id} type="button" className="tg-alert tg-glass" onClick={() => elegir(a.placa)}>
-                    <i style={{ background: a.color + '22', color: a.color }}>{a.icono}</i>
-                    <div><b>{a.placa} · {a.msg}</b><span>{[conductorRef.current(a.placa), a.hora].filter(Boolean).join(' · ')}</span></div>
-                  </button>
+                  <div key={a.id} className="tg-alert-wrap">
+                    <button type="button" className="tg-alert tg-glass" onClick={() => elegir(a.placa)}>
+                      <i style={{ background: a.color + '22', color: a.color }}>{a.icono}</i>
+                      <div><b>{a.placa} · {a.msg}</b><span>{[conductorRef.current(a.placa), a.hora].filter(Boolean).join(' · ')}</span></div>
+                    </button>
+                    <button type="button" className="tg-alert-x" aria-label="Quitar notificación" onClick={() => setAlertas(prev => prev.filter(x => x.id !== a.id))}><X size={11} strokeWidth={3} /></button>
+                  </div>
                 ))}
               </div>
             </UbicacionMapa>
