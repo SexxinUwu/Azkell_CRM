@@ -13,6 +13,9 @@ export interface FilaCan { viaje: string; placa: string; estado: EstadoCan; moti
 /** La unidad no existe en Wialon o el reporte no trajo filas: no es un fallo, solo no hay datos */
 export class SinDatosCan extends Error {}
 
+/** Identidad de una fila: un mismo N° de viaje puede tener varias filas (una por unidad, p. ej. el Thermo King) */
+export const claveFila = (f: { viaje: string; placa: string }) => `${f.viaje}|${f.placa}`;
+
 // Misma clave que usa el detalle del viaje: así el detalle reutiliza lo que ya se cargó en la tabla
 export const claveCan = (i: ItemCan) => ['operaciones', 'wialon', i.viaje, i.placa, i.ini, i.fin] as const;
 
@@ -57,7 +60,7 @@ export function useCanViajes(items: ItemCan[], activo: boolean) {
     return { viaje: i.viaje, placa: i.placa, estado: 'cargando', data: null };
   });
 
-  const lote = Object.fromEntries(filas.map(f => [f.viaje, { data: f.data, error: f.motivo, estado: f.estado }])) as Record<string, { data: TelemetriaWialon | null; error?: string; estado: EstadoCan }>;
+  const lote = Object.fromEntries(filas.map(f => [claveFila(f), { data: f.data, error: f.motivo, estado: f.estado }])) as Record<string, { data: TelemetriaWialon | null; error?: string; estado: EstadoCan }>;
   const contar = (e: EstadoCan) => filas.filter(f => f.estado === e).length;
 
   return {

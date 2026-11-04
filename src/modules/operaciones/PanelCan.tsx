@@ -33,7 +33,7 @@ export function PanelCan({ filas, total, listos, cargando, sinDatos, errores, re
   }
 
   const filasDe = (estado: FilaCan['estado']) => filas.filter(f => f.estado === estado);
-  const itemDe = (f: FilaCan) => items.find(i => i.viaje === f.viaje);
+  const itemDe = (f: FilaCan) => items.find(i => i.viaje === f.viaje && i.placa === f.placa);
 
   return (
     <div role="region" aria-label="Avance de la consulta del CAN"

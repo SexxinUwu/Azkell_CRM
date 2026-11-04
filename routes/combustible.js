@@ -1210,7 +1210,7 @@ module.exports = function (db, broadcast, logAudit) {
             const valesTable = getValesTable(req);
 
             // 1. Consultar vales filtrados a máxima velocidad (índice directo)
-            const [rowsTodos] = await tdb.query(
+            const [rows] = await tdb.query(
                 `SELECT 
                     id, DATE_FORMAT(fecha, '%Y-%m-%d %H:%i:%s') AS fecha, estado, correlativo, viaje, vehiculo, conductor, ruta,
                     estacion, proveedor, tipo_combustible, kilometraje, peso_tn, galones,
@@ -1357,7 +1357,7 @@ module.exports = function (db, broadcast, logAudit) {
             });
 
             // Enriquecer ruta, peso y carreta instantáneamente sin degradar SQL
-            rowsTodos.forEach(v => {
+            rows.forEach(v => {
                 if (v.viaje) {
                     const vKey = String(v.viaje).trim();
                     const cleanV = vKey.replace(/^\d{4}-0*/, '');
@@ -1413,12 +1413,11 @@ module.exports = function (db, broadcast, logAudit) {
                 }
             });
 
-            // Equipos de refrigeración (Thermo King, en la ficha de placas): su combustible y su odómetro son del equipo, no del tracto.
-            // Sus vales no entran al viaje: ni galones ni km fin/inicio del camión (antes el último vale del equipo se tomaba como km fin).
+            // Equipos de refrigeración (Thermo King, en la ficha de placas): tienen su propio D2 y su propio odómetro.
+            // Cada equipo forma su fila de análisis con el mismo N° de viaje; no se suma al tracto (ni galones ni km).
             const placasTermo = new Set(placasRows
                 .filter(p => p.placa && /thermo|refrig/i.test(`${p.marca || ''} ${p.sub_tipo || ''}`))
                 .map(p => String(p.placa).trim().toUpperCase()));
-            const rows = rowsTodos.filter(v => !placasTermo.has(String(v.vehiculo || '').trim().toUpperCase()));
 
             // Carreta de cada viaje (la orden de viaje) y el camión que lo jala según sus vales. Los vales que la carreta
             // registra a su nombre son del mismo viaje: se suman al camión, no crean un viaje aparte (antes se contaban dos veces)
@@ -1437,7 +1436,7 @@ module.exports = function (db, broadcast, logAudit) {
             rows.forEach(v => {
                 let vehKey = String(v.vehiculo || 'SIN-PLACA').toUpperCase().trim();
                 const viajeK = String(v.viaje || '').trim();
-                if (viajeK && vehKey === remolquePorViaje.get(viajeK) && tractoPorViaje.has(viajeK)) vehKey = tractoPorViaje.get(viajeK);
+                if (viajeK && vehKey === remolquePorViaje.get(viajeK) && tractoPorViaje.has(viajeK) && !placasTermo.has(vehKey)) vehKey = tractoPorViaje.get(viajeK);
                 let rawTrip = String(v.viaje || '').trim();
                 let tripKey = rawTrip;
                 if (!tripKey || tripKey === '0' || tripKey.toUpperCase() === 'SIN-VIAJE' || tripKey === '-') {

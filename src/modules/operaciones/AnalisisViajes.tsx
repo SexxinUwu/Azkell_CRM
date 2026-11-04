@@ -13,7 +13,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { ADMIN } from '../../core/auth/permisos';
-import { encolarCan, pedirCan, useCanViajes, type EstadoCan, type ItemCan } from './canLote';
+import { claveFila, encolarCan, pedirCan, useCanViajes, type EstadoCan, type ItemCan } from './canLote';
 import { PanelCan } from './PanelCan';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
@@ -402,7 +402,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const [filtrando, setFiltrando] = useState(false);
   const hayFiltros = cuentaFiltrosAnalisis(filtros) > 0;
   const [orden, setOrden] = useState('trip_desc');
-  const [abierto, setAbierto] = useState<string | null>(null);
+  const [abierto, setAbierto] = useState<string | null>(null); // clave de fila: viaje|placa
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const [canActivo, setCanActivo] = useState(false);
   const [mostrarObs, setMostrarObs] = useState(false);
@@ -490,7 +490,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         pesoIda: x.pesoIda, pesoRetorno: x.pesoRetorno, pesoMaxTn: x.pesoMaxTn, kmInicio: x.kmInicio, kmFin: x.kmFin,
         vouchers: (x.vouchers ?? []).filter(v => esD2(String(v.producto ?? ''))),
       };
-      mapa.set(x.viaje, analizarViaje(viaje, matriz));
+      mapa.set(claveFila(x), analizarViaje(viaje, matriz));
     }
     return mapa;
   }, [trips, matriz, urea]);
@@ -506,7 +506,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
 
   // Orden de viaje: del más reciente al más antiguo; los "SIN-VIAJE" (vales sueltos) van al final
   // Diferencia del viaje (galones reales − teóricos); null si no hay teórico o galones
-  const difDe = (t: Trip) => { const a = analisis.get(t.viaje); const gal = cifras(t).galones; return a && a.galTeorico > 0 && gal > 0 ? gal - a.galTeorico : null; };
+  const difDe = (t: Trip) => { const a = analisis.get(claveFila(t)); const gal = cifras(t).galones; return a && a.galTeorico > 0 && gal > 0 ? gal - a.galTeorico : null; };
   const visibles = useMemo(() => trips
     .filter(t => (!filtros.auditoria.length || filtros.auditoria.includes(t.estadoAuditoria)) && (!filtros.estados.length || filtros.estados.includes(estadoDe(t))))
     .filter(t => (!filtros.placas.length || filtros.placas.includes(valorFiltro(t.placa))) && (!filtros.carretas.length || filtros.carretas.includes(valorFiltro(t.carreta))))
@@ -565,14 +565,14 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
     for (const t of visibles) {
       gal += cifras(t).galones;
       km += kmDelViaje(t);
-      const a = analisis.get(t.viaje);
+      const a = analisis.get(claveFila(t));
       if (a) { kmTeo += a.kmTeorico || 0; galTeo += a.galTeorico || 0; }
       const galViaje = cifras(t).galones;
       if (a && a.galTeorico > 0 && galViaje > 0) {
         const d = galViaje - a.galTeorico;
         if (d > 0) { exceso += d; viajesExceso++; } else if (d < 0) { ahorro -= d; viajesAhorro++; }
       }
-      const gpsT = gps.lote[t.viaje]?.data;
+      const gpsT = gps.lote[claveFila(t)]?.data;
       if (gpsT?.combustibleConsumidoGps != null && Number.isFinite(Number(gpsT.combustibleConsumidoGps))) {
         gpsGal += Number(gpsT.combustibleConsumidoGps);
         gpsCon++;
@@ -619,7 +619,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
     );
   }
 
-  const t = trips.find(x => x.viaje === abierto) ?? null;
+  const t = trips.find(x => claveFila(x) === abierto) ?? null;
   const Icono = urea ? Droplets : Fuel;
   const puedeAuditar = can('combustible_analisis.editar', 'combustible.editar', 'urea_analisis.editar', 'combustible_analisis.crear');
   // Un viaje CONFORME queda bloqueado para todos menos el administrador (el servidor también lo valida)
@@ -680,9 +680,9 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         const s = statsDe(x);
         const c = cifrasXls(x);
         const kmIni = s ? n(s.kmInicio) : x.kmInicio, kmFin = s ? n(s.kmFin) : x.kmFin, rec = s ? n(s.recorridoKm) : x.recorridoKm;
-        const a = analisis.get(x.viaje);
+        const a = analisis.get(claveFila(x));
         const dif = a && a.galTeorico > 0 && c.galones > 0 ? c.galones - a.galTeorico : null;
-        const g = gps.lote[x.viaje]?.data ?? null;
+        const g = gps.lote[claveFila(x)]?.data ?? null;
         const gv = (v: number | null | undefined, d = 2) => (v == null ? '—' : ptoDecimal(Number(v), d));
         const vales = (s?.vouchers ?? x.vouchers ?? []).filter(v => !v.esPuntoPartida && esD2(String(v.producto ?? ''))).length;
         return [
@@ -699,7 +699,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
       });
       // Fila TOTAL al final, como el clásico: galones reales y combustible consumido por GPS
       const totGal = visibles.reduce((t, x) => t + cifrasXls(x).galones, 0);
-      const totGps = visibles.reduce((t, x) => { const v = gps.lote[x.viaje]?.data?.combustibleConsumidoGps; return t + (v != null && !isNaN(Number(v)) ? Number(v) : 0); }, 0);
+      const totGps = visibles.reduce((t, x) => { const v = gps.lote[claveFila(x)]?.data?.combustibleConsumidoGps; return t + (v != null && !isNaN(Number(v)) ? Number(v) : 0); }, 0);
       const total: (string | number | Date)[] = ENCABEZADOS_EXCEL.map(() => '');
       total[2] = 'TOTAL'; total[ENCABEZADOS_EXCEL.indexOf('TOTAL GALONES (REAL)')] = ptoDecimal(totGal, 2);
       total[ENCABEZADOS_EXCEL.indexOf('COMB. CONSUMIDO (GPS CAN)')] = totGps > 0 ? ptoDecimal(totGps, 2) : '—';
@@ -794,10 +794,10 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
                 const s2 = bloqueD2(x);
                 const fIni = s2?.fechaInicio || x.fechaInicio, fFin = s2?.fechaFin || x.fechaFin;
                 const kIni = s2 ? n(s2.kmInicio) : x.kmInicio, kFin = s2 ? n(s2.kmFin) : x.kmFin, recKm = s2 ? n(s2.recorridoKm) : x.recorridoKm;
-                const a = analisis.get(x.viaje);
-                const abiertoFila = !urea && expandidos.has(x.viaje);
+                const a = analisis.get(claveFila(x));
+                const abiertoFila = !urea && expandidos.has(claveFila(x));
                 const color = colorAudit(x.estadoAuditoria);
-                const gpsV = (campo: keyof TelemetriaWialon) => valorGps(canActivo, lote, x.viaje, campo);
+                const gpsV = (campo: keyof TelemetriaWialon) => valorGps(canActivo, lote, claveFila(x), campo);
                 const dif = a && a.galTeorico > 0 && c.galones > 0 ? c.galones - a.galTeorico : null;
                 const celdas: ReactNode[] = [
                   <Celda key="aud">
@@ -822,7 +822,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
                   <Celda key="viaje" mono>
                     {!urea && (
                       <button type="button" aria-expanded={abiertoFila} aria-label={`Ver ida y retorno del viaje ${x.viaje}`}
-                        onClick={e => { e.stopPropagation(); onAlternarFila(x.viaje); }}
+                        onClick={e => { e.stopPropagation(); onAlternarFila(claveFila(x)); }}
                         style={{ background: 'none', border: 0, padding: 0, marginRight: 4, cursor: 'pointer', color: 'var(--label-2)', verticalAlign: 'middle' }}>
                         {abiertoFila ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                       </button>
@@ -863,7 +863,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
                   );
                 }
                 return (
-                  <FilaViaje key={`${x.viaje}|${x.placa}|${i}`} seleccionada={abierto === x.viaje} onAbrir={() => { haptic('selection'); setAbierto(x.viaje); }}
+                  <FilaViaje key={`${x.viaje}|${x.placa}|${i}`} seleccionada={abierto === claveFila(x)} onAbrir={() => { haptic('selection'); setAbierto(claveFila(x)); }}
                     abierta={abiertoFila} celdas={celdas}
                     tramos={abiertoFila && a ? [
                       { etiqueta: 'IDA', tramo: a.ida, x, obs: mostrarObs, orden: x.ordenIda },
@@ -889,7 +889,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
       </div>
 
       {canActivo && !urea && <PanelCan filas={gps.filas} total={gps.total} listos={gps.listos} cargando={gps.cargando} sinDatos={gps.sinDatos} errores={gps.errores} reintentar={gps.reintentar} items={itemsCan} />}
-      <DetalleViaje trip={t} urea={urea} puedeAuditar={puedeAuditar} guardar={guardar} analisis={t ? analisis.get(t.viaje) : undefined} gpsLote={gps.lote[t?.viaje ?? '']?.data ?? null} onClose={() => setAbierto(null)} cifras={cifras} />
+      <DetalleViaje trip={t} urea={urea} puedeAuditar={puedeAuditar} guardar={guardar} analisis={t ? analisis.get(claveFila(t)) : undefined} gpsLote={(t ? gps.lote[claveFila(t)] : undefined)?.data ?? null} onClose={() => setAbierto(null)} cifras={cifras} />
       <FiltrosAnalisisSheet open={filtrando} onClose={() => setFiltrando(false)} filtros={filtros} onChange={setFiltros} opciones={opciones} resultado={visibles.length} urea={urea} />
     </Page>
   );
