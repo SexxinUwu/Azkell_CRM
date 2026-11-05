@@ -11,6 +11,7 @@
     "cap:build": "npx cap sync && npx cap open android",
     "db:validate": "prisma validate && prisma validate --schema prisma/master/schema.prisma",
     "db:estado": "node scripts/prisma_empresas.js estado",
+    "db:comparar": "node scripts/comparar_local_produccion.js",
     "db:deploy": "node scripts/prisma_empresas.js deploy",
     "dev:app": "vite",
     "typecheck": "tsc --noEmit -p .",
