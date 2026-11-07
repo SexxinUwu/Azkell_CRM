@@ -896,7 +896,11 @@ label.row__main { cursor: pointer; }
   .combobox__list { position: relative; top: auto; margin-top: var(--s-2); max-height: 15rem; }
 }
 /* En hoja (enHoja): la búsqueda y la lista van en el flujo de la hoja, sin altura limitada ni sombra flotante */
-.combobox--hoja .combobox__list { position: relative; top: auto; left: auto; right: auto; max-height: none; margin: var(--s-3) 0 0; padding: 0; box-shadow: none; background: transparent; }
+.combobox--hoja .combobox__list { position: relative; top: auto; left: auto; right: auto; max-height: none; margin: var(--s-3) 0 0; padding: 0; overflow: visible; overscroll-behavior: auto; box-shadow: none; background: transparent; }
+/* Importante: la lista de la hoja NO es su propio contenedor de scroll (lo es el cuerpo de la hoja). Con overflow:auto + overscroll contain
+   Chrome no encadenaba la rueda del mouse al cuerpo de la hoja y la lista no se movía. */
+/* El buscador se queda arriba mientras se baja por la lista */
+.combobox--hoja .combobox__field { position: sticky; top: 0; z-index: 21; background: var(--surface); }
 .combobox__option {
   display: flex;
   align-items: center;
