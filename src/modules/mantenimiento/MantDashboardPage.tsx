@@ -22,7 +22,7 @@ import { resumenPreventivo, useFleetrunUmbrales, useKmVivo } from './FleetrunPag
 import { costoOT } from './tiemposTaller';
 import { fechaDMY, oracion } from '../../core/lib/texto';
 import { usePersonalCanonico } from './personalCanonico';
-import { MetasEditor, useMetas } from './MetasEditor';
+import { MetaEditor, useMeta } from './MetasEditor';
 
 // Dashboard de taller. Dos pestañas: Resumen y Ingresos a taller. El rango de fechas y la empresa
 // afectan a todo. Los estados actuales (taller, rampa, preventivo) no cambian con el rango.
@@ -127,9 +127,6 @@ const COL_DIA: ColumnaTabla[] = [
 
 type Pestana = 'resumen' | 'ingresos';
 
-const NOMBRES_INSP = ['Vigente', 'Próximo a vencer', 'No vigente', 'Sin registro'];
-const NOMBRES_PREV = ['Al día', 'Próximo a vencer', 'Vencido', 'Sin datos'];
-
 function Tarjeta({ titulo, icono, accion, children }: { titulo: ReactNode; icono?: ReactNode; accion?: ReactNode; children: ReactNode }) {
   return (
     <div className="mant-card" style={{ height: '100%' }}>
@@ -147,8 +144,8 @@ const META_PREVENTIVO = 80;
 const META_CORRECTIVO = 20;
 
 export function MantDashboardPage() {
-  const [metasInsp, setMetasInsp] = useMetas('fleet_metas_inspecciones', [80, 10, 10, 0]);
-  const [metasPrev, setMetasPrev] = useMetas('fleet_metas_preventivo', [80, 10, 10, 0]);
+  const [metaInsp, setMetaInsp] = useMeta('fleet_meta_vigentes_inspecciones', 80);
+  const [metaPrev, setMetaPrev] = useMeta('fleet_meta_al_dia_preventivo', 80);
   const [pestana, setPestana] = useState<Pestana>('resumen');
   const [desde, setDesde] = useState(() => hoyLima(29));
   const [hasta, setHasta] = useState(() => hoyLima(0));
@@ -334,22 +331,22 @@ export function MantDashboardPage() {
 
           <div className="mant-grid">
             <div className="mant-col-4">
-              <Tarjeta titulo="Inspecciones" icono={<Truck size={15} />} accion={<MetasEditor titulo="inspecciones" nombres={NOMBRES_INSP} metas={metasInsp} onGuardar={setMetasInsp} />}>
-                <AnillosGrafico centro={`${totalInspecciones ? Math.round((inspecciones.vigente / totalInspecciones) * 100) : 0}%`} subcentro="vigentes" porciones={[
-                  { nombre: ETIQUETA_ESTADO.vigente, valor: inspecciones.vigente, color: 'var(--green-ink)', meta: metasInsp[0], metaTipo: 'minimo' },
-                  { nombre: ETIQUETA_ESTADO.proximo, valor: inspecciones.proximo, color: 'var(--amber-ink)', meta: metasInsp[1], metaTipo: 'maximo' },
-                  { nombre: ETIQUETA_ESTADO.vencido, valor: inspecciones.vencido, color: 'var(--red-ink)', meta: metasInsp[2], metaTipo: 'maximo' },
-                  { nombre: ETIQUETA_ESTADO['sin-registro'], valor: inspecciones['sin-registro'], color: 'var(--label-3)', meta: metasInsp[3], metaTipo: 'maximo' },
+              <Tarjeta titulo="Inspecciones" icono={<Truck size={15} />} accion={<MetaEditor titulo="inspecciones" meta={metaInsp} onGuardar={setMetaInsp} />}>
+                <AnillosGrafico centro={`${totalInspecciones ? Math.round((inspecciones.vigente / totalInspecciones) * 100) : 0}%`} subcentro="vigentes" meta={metaInsp} porciones={[
+                  { nombre: ETIQUETA_ESTADO.vigente, valor: inspecciones.vigente, color: 'var(--green-ink)' },
+                  { nombre: ETIQUETA_ESTADO.proximo, valor: inspecciones.proximo, color: 'var(--amber-ink)' },
+                  { nombre: ETIQUETA_ESTADO.vencido, valor: inspecciones.vencido, color: 'var(--red-ink)' },
+                  { nombre: ETIQUETA_ESTADO['sin-registro'], valor: inspecciones['sin-registro'], color: 'var(--label-3)' },
                 ]} />
               </Tarjeta>
             </div>
             <div className="mant-col-4">
-              <Tarjeta titulo="Mantenimiento preventivo" icono={<Clock size={15} />} accion={<MetasEditor titulo="preventivo" nombres={NOMBRES_PREV} metas={metasPrev} onGuardar={setMetasPrev} />}>
-                <MedidorGrafico centro={`${preventivo.total ? Math.round((preventivo.vigentes / preventivo.total) * 100) : 0}%`} subcentro="al día" porciones={[
-                  { nombre: 'Al día', valor: preventivo.vigentes, color: 'var(--green-ink)', meta: metasPrev[0], metaTipo: 'minimo' },
-                  { nombre: 'Próximo a vencer', valor: preventivo.porVencer, color: 'var(--amber-ink)', meta: metasPrev[1], metaTipo: 'maximo' },
-                  { nombre: 'Vencido', valor: preventivo.vencidos, color: 'var(--red-ink)', meta: metasPrev[2], metaTipo: 'maximo' },
-                  { nombre: 'Sin datos', valor: preventivo.sinDatos, color: 'var(--label-3)', meta: metasPrev[3], metaTipo: 'maximo' },
+              <Tarjeta titulo="Mantenimiento preventivo" icono={<Clock size={15} />} accion={<MetaEditor titulo="preventivo" meta={metaPrev} onGuardar={setMetaPrev} />}>
+                <MedidorGrafico centro={`${preventivo.total ? Math.round((preventivo.vigentes / preventivo.total) * 100) : 0}%`} subcentro="al día" meta={metaPrev} porciones={[
+                  { nombre: 'Al día', valor: preventivo.vigentes, color: 'var(--green-ink)' },
+                  { nombre: 'Próximo a vencer', valor: preventivo.porVencer, color: 'var(--amber-ink)' },
+                  { nombre: 'Vencido', valor: preventivo.vencidos, color: 'var(--red-ink)' },
+                  { nombre: 'Sin datos', valor: preventivo.sinDatos, color: 'var(--label-3)' },
                 ]} />
               </Tarjeta>
             </div>

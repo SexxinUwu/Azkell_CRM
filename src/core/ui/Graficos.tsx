@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Bar, BarChart, Cell, LabelList, Legend, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-export interface Porcion { nombre: string; valor: number; color: string; meta?: number; metaTipo?: 'minimo' | 'maximo' }
+export interface Porcion { nombre: string; valor: number; color: string }
 
 // Recharts pinta con atributos SVG, que no leen var(--x): se resuelven los tokens a su valor.
 // Se vuelven a leer al cambiar el tema (data-theme o clase en <html>).
@@ -172,9 +172,7 @@ function LeyendaPorciones({ porciones, total, columnas = 1 }: { porciones: Porci
           <span aria-hidden style={{ width: 10, height: 10, borderRadius: 999, background: p.color, flexShrink: 0 }} />
           <span style={{ flex: 1, minWidth: 0, color: 'var(--label-2)', fontWeight: 600 }}>{p.nombre}</span>
           <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{p.valor}</span>
-          {p.meta !== undefined && <span style={{ fontSize: '0.6875rem', color: 'var(--label-3)' }}>meta {p.metaTipo === 'minimo' ? '≥' : '≤'}{p.meta}%</span>}
-          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: p.meta !== undefined ? 700 : 400, minWidth: 40, textAlign: 'right',
-            color: p.meta === undefined ? 'var(--label-2)' : (p.metaTipo === 'minimo' ? Math.round(total ? (p.valor / total) * 100 : 0) >= p.meta : Math.round(total ? (p.valor / total) * 100 : 0) <= p.meta) ? 'var(--green-ink)' : 'var(--red-ink)' }}>{total ? Math.round((p.valor / total) * 100) : 0}%</span>
+          <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--label-2)', minWidth: 42, textAlign: 'right' }}>{total ? Math.round((p.valor / total) * 100) : 0}%</span>
         </li>
       ))}
     </ul>
@@ -182,7 +180,7 @@ function LeyendaPorciones({ porciones, total, columnas = 1 }: { porciones: Porci
 }
 
 /** Anillos concéntricos con puntas redondeadas (uno por estado): cada anillo muestra qué parte del total es ese estado. */
-export function AnillosGrafico({ porciones, centro, subcentro, tamano = 184 }: { porciones: Porcion[]; centro: string; subcentro?: string; tamano?: number }) {
+export function AnillosGrafico({ porciones, centro, subcentro, tamano = 184, meta }: { porciones: Porcion[]; centro: string; subcentro?: string; tamano?: number; meta?: number }) {
   const { listo, transicion } = useEntrada();
   const total = porciones.reduce((s, p) => s + p.valor, 0);
   const c = tamano / 2, grosor = 11, sep = 4, r0 = c - grosor / 2 - 2;
@@ -202,6 +200,11 @@ export function AnillosGrafico({ porciones, centro, subcentro, tamano = 184 }: {
             </g>
           );
         })}
+        {meta !== undefined && (() => {
+          // Marca de la meta sobre el anillo exterior (el de «vigentes»)
+          const a = (-90 + meta * 3.6) * (Math.PI / 180), ri = r0 - grosor / 2 - 3, re = r0 + grosor / 2 + 3;
+          return <line x1={c + ri * Math.cos(a)} y1={c + ri * Math.sin(a)} x2={c + re * Math.cos(a)} y2={c + re * Math.sin(a)} strokeWidth={3} strokeLinecap="round" style={{ stroke: 'var(--label)' }} />;
+        })()}
         <text x={c} y={subcentro ? c : c + 8} textAnchor="middle" style={{ fill: 'var(--label)', fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 26 }}>{centro}</text>
         {subcentro && <text x={c} y={c + 18} textAnchor="middle" style={{ fill: 'var(--label-2)', fontSize: 11, fontWeight: 600 }}>{subcentro}</text>}
       </svg>
@@ -211,7 +214,7 @@ export function AnillosGrafico({ porciones, centro, subcentro, tamano = 184 }: {
 }
 
 /** Medidor semicircular segmentado: el arco se reparte entre los estados y el centro muestra el indicador principal. */
-export function MedidorGrafico({ porciones, centro, subcentro }: { porciones: Porcion[]; centro: string; subcentro?: string }) {
+export function MedidorGrafico({ porciones, centro, subcentro, meta }: { porciones: Porcion[]; centro: string; subcentro?: string; meta?: number }) {
   const { listo, transicion } = useEntrada();
   const total = porciones.reduce((s, p) => s + p.valor, 0);
   const cx = 110, cy = 108, r = 90, grosor = 18;
@@ -235,6 +238,11 @@ export function MedidorGrafico({ porciones, centro, subcentro }: { porciones: Po
           <path key={s.p.nombre} d={s.d} fill="none" strokeWidth={grosor} strokeLinecap="round"
             strokeDasharray={`${listo ? s.largo : 0} ${s.largo + 2}`} style={{ stroke: s.p.color, transition: transicion }} />
         ))}
+        {meta !== undefined && (() => {
+          // Marca de la meta sobre el arco, medida desde la izquierda (donde empieza «al día»)
+          const a = (180 - 180 * (meta / 100)) * (Math.PI / 180), ri = r - grosor / 2 - 3, re = r + grosor / 2 + 3;
+          return <line x1={cx + ri * Math.cos(a)} y1={cy - ri * Math.sin(a)} x2={cx + re * Math.cos(a)} y2={cy - re * Math.sin(a)} strokeWidth={3} strokeLinecap="round" style={{ stroke: 'var(--label)' }} />;
+        })()}
         <text x={cx} y={cy - 12} textAnchor="middle" style={{ fill: 'var(--label)', fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 32 }}>{centro}</text>
         {subcentro && <text x={cx} y={cy + 8} textAnchor="middle" style={{ fill: 'var(--label-2)', fontSize: 12, fontWeight: 600 }}>{subcentro}</text>}
       </svg>
