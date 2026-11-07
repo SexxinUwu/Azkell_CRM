@@ -5,7 +5,7 @@ import { Page, PageHeader, Notice, EmptyState } from '../../core/ui/Display';
 import { PageLoader } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
-import { BarrasGrafico } from '../../core/ui/Graficos';
+import { BarrasGrafico, DonaGrafico } from '../../core/ui/Graficos';
 import { MultiSelect } from '../../core/ui/MultiSelect';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { errorMessage } from '../../core/api/client';
@@ -340,12 +340,12 @@ export function MantDashboardPage() {
           <div className="mant-grid">
             <div className="mant-col-4">
               <Tarjeta titulo="Inspecciones" icono={<Truck size={15} />}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-                  <Barra etiqueta={ETIQUETA_ESTADO.vigente} valor={inspecciones.vigente} total={totalInspecciones} color="var(--green-ink)" />
-                  <Barra etiqueta={ETIQUETA_ESTADO.proximo} valor={inspecciones.proximo} total={totalInspecciones} color="var(--amber-ink)" />
-                  <Barra etiqueta={ETIQUETA_ESTADO.vencido} valor={inspecciones.vencido} total={totalInspecciones} color="var(--red-ink)" />
-                  <Barra etiqueta={ETIQUETA_ESTADO['sin-registro']} valor={inspecciones['sin-registro']} total={totalInspecciones} color="var(--label-3)" />
-                </div>
+                <DonaGrafico altura={170} centro={String(totalInspecciones)} porciones={[
+                  { nombre: ETIQUETA_ESTADO.vigente, valor: inspecciones.vigente, color: 'var(--green-ink)' },
+                  { nombre: ETIQUETA_ESTADO.proximo, valor: inspecciones.proximo, color: 'var(--amber-ink)' },
+                  { nombre: ETIQUETA_ESTADO.vencido, valor: inspecciones.vencido, color: 'var(--red-ink)' },
+                  { nombre: ETIQUETA_ESTADO['sin-registro'], valor: inspecciones['sin-registro'], color: 'var(--label-3)' },
+                ]} />
               </Tarjeta>
             </div>
             <div className="mant-col-4">
