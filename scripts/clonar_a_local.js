@@ -14,6 +14,7 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env.local') });
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+const fs = require('fs');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -34,7 +35,9 @@ const SIN_DATOS = new Set([
   ...(COMPLETO ? [] : ['log_auditoria', 'auditoria', 'seg_unidades_registros', 'seg_unidades_fotos']),
 ]);
 
-const origen = { host: process.env.DB_HOST, user: process.env.DB_USER, password: process.env.DB_PASSWORD, port: Number(process.env.DB_PORT) || 3306 };
+// El origen sale del .env (producción) leído directo: .env.local define DB_* para la app local y no debe confundir al origen
+const envOrigen = require('dotenv').parse(fs.readFileSync(path.join(__dirname, '..', '.env')));
+const origen = { host: envOrigen.DB_HOST, user: envOrigen.DB_USER, password: envOrigen.DB_PASSWORD, port: Number(envOrigen.DB_PORT) || 3306 };
 const destino = {
   host: process.env.LOCAL_DB_HOST || 'localhost', user: process.env.LOCAL_DB_USER || 'root',
   password: process.env.LOCAL_DB_PASSWORD || '', port: Number(process.env.LOCAL_DB_PORT) || 3306,
@@ -73,11 +76,16 @@ async function copiarBase(src, dst, nombre) {
     await dst.query(fila['Create Table']);
     if (SIN_DATOS.has(t)) { console.log(`  ${t.padEnd(34)} estructura (sin datos)`); continue; }
     let copiadas = 0;
+    // Las columnas generadas se calculan solas en la copia: no se insertan
+    const [gen] = await src.query("SELECT COLUMN_NAME n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND EXTRA LIKE '%GENERATED%'", [nombre, t]);
+    const generadas = new Set(gen.map(g => g.n));
     for (let desde = 0; ; desde += LOTE) {
       const [filas] = await src.query(`SELECT * FROM ${ident(nombre)}.${ident(t)} LIMIT ${LOTE} OFFSET ${desde}`);
       if (!filas.length) break;
-      const cols = Object.keys(filas[0]);
-      await dst.query(`INSERT INTO ${ident(t)} (${cols.map(ident).join(',')}) VALUES ?`, [filas.map(f => cols.map(c => f[c]))]);
+      const cols = Object.keys(filas[0]).filter(c => !generadas.has(c));
+      // Las columnas JSON llegan como arreglos u objetos: el INSERT masivo necesita texto
+      const valor = v => (v !== null && typeof v === 'object' && !(v instanceof Date) && !Buffer.isBuffer(v) ? JSON.stringify(v) : v);
+      await dst.query(`INSERT INTO ${ident(t)} (${cols.map(ident).join(',')}) VALUES ?`, [filas.map(f => cols.map(c => valor(f[c])))]);
       copiadas += filas.length;
       if (filas.length < LOTE) break;
     }
