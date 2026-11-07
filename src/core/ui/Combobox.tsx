@@ -112,13 +112,13 @@ export function Combobox({
 
   useEffect(() => { setActive(0); }, [query, open]);
 
-  // En hoja el teclado se abre UNA vez, cuando termina la animación de la hoja. Con autoFocus se abría en plena animación
-  // y el teclado cambiaba el tamaño de la pantalla varias veces (en Android eso lo dejaba al 100 % de CPU y dejaba de abrir).
+  // Escritorio: al abrir la hoja se enfoca la búsqueda (después de la animación). Celular: no se abre el teclado solo;
+  // aparece únicamente cuando la persona toca el buscador, y así no se abre ni se cierra sin que lo pida.
   useEffect(() => {
-    if (!hoja || !open) return;
+    if (!hoja || !open || esMovil) return;
     const t = window.setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 320);
     return () => window.clearTimeout(t);
-  }, [hoja, open]);
+  }, [hoja, open, esMovil]);
 
   // La opción activa siempre a la vista al moverse con las flechas
   useEffect(() => {
