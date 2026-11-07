@@ -587,13 +587,14 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         const targetDb = getDb(req);
         targetDb.query(_stockSQL, async (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
-            const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
+            const { getPresignedUrlEstable, s3KeyFromUrl } = require('../utils/s3');
             const signedRows = await Promise.all(rows.map(async (row) => {
                 if (row.imagen_url) {
                     const key = s3KeyFromUrl(row.imagen_url);
                     if (key) {
                         try {
-                            row.imagen_url = await getPresignedUrl(key, 3600);
+                            // Enlace estable por día: el navegador reutiliza la foto en vez de bajarla otra vez
+                            row.imagen_url = await getPresignedUrlEstable(key);
                         } catch (e) { }
                     }
                 }

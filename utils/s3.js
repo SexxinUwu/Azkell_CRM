@@ -56,6 +56,24 @@ async function getPresignedUrl(key, expiresIn = 3600, responseContentType = null
 }
 
 /**
+ * URL pre-firmada ESTABLE para imágenes que se muestran en listas: la firma se fecha al inicio del día (UTC),
+ * así la misma imagen devuelve el mismo enlace todo el día y el navegador la guarda en caché
+ * (con una firma nueva en cada carga, cada imagen se descargaba otra vez). Vale al menos 24 h desde la consulta.
+ */
+async function getPresignedUrlEstable(key) {
+    const mime = getMimeTypeFromKey(key);
+    const inicioDia = new Date();
+    inicioDia.setUTCHours(0, 0, 0, 0);
+    return getSignedUrl(s3, new GetObjectCommand({
+        Bucket: BUCKET,
+        Key: key,
+        ResponseContentDisposition: 'inline',
+        ResponseContentType: mime,
+        ResponseCacheControl: 'private, max-age=86400'
+    }), { expiresIn: 2 * 86400, signingDate: inicioDia });
+}
+
+/**
  * Genera una URL pre-firmada para ESCRIBIR (subir) un objeto a S3 directamente.
  * @param {string} key — Ruta destino en S3
  * @param {string} contentType — Tipo MIME (ej: image/jpeg)
@@ -110,4 +128,4 @@ function urlPublicaDeKey(key) {
     return `https://${BUCKET}.s3.${(process.env.AWS_REGION || 'us-east-2').trim()}.amazonaws.com/${key}`;
 }
 
-module.exports = { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl, getPresignedUploadUrl, urlPublicaDeKey };
+module.exports = { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl, getPresignedUrlEstable, getPresignedUploadUrl, urlPublicaDeKey };
