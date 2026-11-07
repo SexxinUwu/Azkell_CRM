@@ -221,7 +221,8 @@ export function MedidorGrafico({ porciones, centro, subcentro, meta }: { porcion
   const capGrados = ((grosor / 2) / r) * (180 / Math.PI) + 1.2; // lo que ocupan las puntas redondeadas + separación
   const punto = (grados: number) => [cx + r * Math.cos((grados * Math.PI) / 180), cy - r * Math.sin((grados * Math.PI) / 180)] as const;
   let acumulado = 0;
-  const segmentos = porciones.filter(p => p.valor > 0 && total > 0).map(p => {
+  // Solo se colorea la primera porción (lo vigente); el resto del arco queda en gris, sin completarlo con otros estados
+  const segmentos = porciones.slice(0, 1).filter(p => p.valor > 0 && total > 0).map(p => {
     const f0 = acumulado / total, f1 = (acumulado + p.valor) / total;
     acumulado += p.valor;
     let a0 = 180 - 180 * f0 - capGrados, a1 = 180 - 180 * f1 + capGrados;
@@ -233,7 +234,7 @@ export function MedidorGrafico({ porciones, centro, subcentro, meta }: { porcion
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--s-3)' }}>
       <svg width="100%" viewBox="0 0 220 128" role="img" aria-label={porciones.map(p => `${p.nombre}: ${p.valor}`).join(', ')} style={{ maxWidth: 280 }}>
-        <path d={`M ${pistaX0} ${pistaY0} A ${r} ${r} 0 0 1 ${pistaX1} ${pistaY1}`} fill="none" strokeWidth={grosor} strokeLinecap="round" style={{ stroke: 'var(--fill)' }} />
+        <path d={`M ${pistaX0} ${pistaY0} A ${r} ${r} 0 0 1 ${pistaX1} ${pistaY1}`} fill="none" strokeWidth={grosor} strokeLinecap="round" style={{ stroke: 'var(--label-3)', strokeOpacity: 0.3 }} />
         {segmentos.map(s => (
           <path key={s.p.nombre} d={s.d} fill="none" strokeWidth={grosor} strokeLinecap="round"
             strokeDasharray={`${listo ? s.largo : 0} ${s.largo + 2}`} style={{ stroke: s.p.color, transition: transicion }} />
