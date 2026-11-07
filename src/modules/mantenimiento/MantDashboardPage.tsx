@@ -5,7 +5,7 @@ import { Page, PageHeader, Notice, EmptyState } from '../../core/ui/Display';
 import { PageLoader } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
-import { AnillosGrafico, BarrasGrafico, MedidorGrafico } from '../../core/ui/Graficos';
+import { AnillosGrafico, BarrasGrafico, BarrasMetaGrafico, MedidorGrafico } from '../../core/ui/Graficos';
 import { MultiSelect } from '../../core/ui/MultiSelect';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { errorMessage } from '../../core/api/client';
@@ -22,6 +22,7 @@ import { resumenPreventivo, useFleetrunUmbrales, useKmVivo } from './FleetrunPag
 import { costoOT } from './tiemposTaller';
 import { fechaDMY, oracion } from '../../core/lib/texto';
 import { usePersonalCanonico } from './personalCanonico';
+import { MetasEditor, useMetas } from './MetasEditor';
 
 // Dashboard de taller. Dos pestañas: Resumen y Ingresos a taller. El rango de fechas y la empresa
 // afectan a todo. Los estados actuales (taller, rampa, preventivo) no cambian con el rango.
@@ -126,41 +127,28 @@ const COL_DIA: ColumnaTabla[] = [
 
 type Pestana = 'resumen' | 'ingresos';
 
-function Tarjeta({ titulo, icono, children }: { titulo: ReactNode; icono?: ReactNode; children: ReactNode }) {
+const NOMBRES_INSP = ['Vigente', 'Próximo a vencer', 'No vigente', 'Sin registro'];
+const NOMBRES_PREV = ['Al día', 'Próximo a vencer', 'Vencido', 'Sin datos'];
+
+function Tarjeta({ titulo, icono, accion, children }: { titulo: ReactNode; icono?: ReactNode; accion?: ReactNode; children: ReactNode }) {
   return (
     <div className="mant-card" style={{ height: '100%' }}>
       <div className="mant-card__header">
         <div className="mant-card__title">{icono} {titulo}</div>
+        {accion}
       </div>
       {children}
     </div>
   );
 }
 
-// Meta de la mezcla de mantenimiento: preventivo mínimo 80 %, correctivo máximo 20 % (sobre correctivo + preventivo)
+// Meta de la mezcla de mantenimiento: preventivo mínimo 80 %, correctivo máximo 20 % (sobre el total de OT del rango)
 const META_PREVENTIVO = 80;
 const META_CORRECTIVO = 20;
 
-function MetaTipo({ etiqueta, real, meta, tipo, cantidad }: { etiqueta: string; real: number; meta: number; tipo: 'minimo' | 'maximo'; cantidad: number }) {
-  const cumple = tipo === 'minimo' ? real >= meta : real <= meta;
-  const color = cumple ? 'var(--green-ink)' : 'var(--red-ink)';
-  const diferencia = Math.abs(Math.round((real - meta) * 10) / 10);
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
-        <span>{etiqueta} <span className="c-secondary">· {cantidad} OT</span></span>
-        <span className="t-numeric" style={{ color, fontWeight: 700 }}>{real}% <span className="c-secondary" style={{ fontWeight: 500 }}>meta {tipo === 'minimo' ? '≥' : '≤'} {meta}%</span></span>
-      </div>
-      <div style={{ position: 'relative', height: 8, background: 'var(--fill)', borderRadius: 999 }}>
-        <div style={{ width: `${Math.min(100, real)}%`, height: '100%', background: color, borderRadius: 999 }} />
-        <div aria-hidden style={{ position: 'absolute', left: `${meta}%`, top: -3, bottom: -3, width: 2, marginLeft: -1, background: 'var(--label)', borderRadius: 2 }} />
-      </div>
-      <span style={{ fontSize: '0.6875rem', color }}>{cumple ? 'Meta cumplida' : tipo === 'minimo' ? `Faltan ${diferencia} puntos para la meta` : `${diferencia} puntos por encima de la meta`}</span>
-    </div>
-  );
-}
-
 export function MantDashboardPage() {
+  const [metasInsp, setMetasInsp] = useMetas('fleet_metas_inspecciones', [80, 10, 10, 0]);
+  const [metasPrev, setMetasPrev] = useMetas('fleet_metas_preventivo', [80, 10, 10, 0]);
   const [pestana, setPestana] = useState<Pestana>('resumen');
   const [desde, setDesde] = useState(() => hoyLima(29));
   const [hasta, setHasta] = useState(() => hoyLima(0));
@@ -201,22 +189,13 @@ export function MantDashboardPage() {
   const tiposRango = useMemo(() => {
     const cuenta: Record<Tipo, number> = { Correctivo: 0, Preventivo: 0, Predictivo: 0, Proactivo: 0, Servicio: 0, Otros: 0 };
     otsRango.forEach(o => { cuenta[tipoOT(o)]++; });
-    const n = otsRango.length;
     const mostrados: Tipo[] = [...TIPOS, ...(cuenta.Otros ? (['Otros'] as Tipo[]) : [])];
     return mostrados.map(t => ({
-      nombre: `${t} · ${cuenta[t]} (${n ? Math.round((cuenta[t] / n) * 1000) / 10 : 0}%)`,
+      nombre: t,
       valor: cuenta[t],
       color: COLOR_TIPO[t],
+      meta: t === 'Preventivo' ? { tipo: 'minimo' as const, valor: META_PREVENTIVO } : t === 'Correctivo' ? { tipo: 'maximo' as const, valor: META_CORRECTIVO } : undefined,
     }));
-  }, [otsRango]);
-
-  // Mezcla preventivo / correctivo contra la meta 80/20 (solo cuentan las OT de esos dos tipos)
-  const mezcla = useMemo(() => {
-    let correctivo = 0, preventivo = 0;
-    otsRango.forEach(o => { const t = tipoOT(o); if (t === 'Correctivo') correctivo++; else if (t === 'Preventivo') preventivo++; });
-    const base = correctivo + preventivo;
-    const pct = (n: number) => (base ? Math.round((n / base) * 1000) / 10 : 0);
-    return { correctivo, preventivo, base, pctCorrectivo: pct(correctivo), pctPreventivo: pct(preventivo) };
   }, [otsRango]);
 
   // Estado actual (no depende del rango)
@@ -355,37 +334,28 @@ export function MantDashboardPage() {
 
           <div className="mant-grid">
             <div className="mant-col-4">
-              <Tarjeta titulo="Inspecciones" icono={<Truck size={15} />}>
+              <Tarjeta titulo="Inspecciones" icono={<Truck size={15} />} accion={<MetasEditor titulo="inspecciones" nombres={NOMBRES_INSP} metas={metasInsp} onGuardar={setMetasInsp} />}>
                 <AnillosGrafico centro={`${totalInspecciones ? Math.round((inspecciones.vigente / totalInspecciones) * 100) : 0}%`} subcentro="vigentes" porciones={[
-                  { nombre: ETIQUETA_ESTADO.vigente, valor: inspecciones.vigente, color: 'var(--green-ink)' },
-                  { nombre: ETIQUETA_ESTADO.proximo, valor: inspecciones.proximo, color: 'var(--amber-ink)' },
-                  { nombre: ETIQUETA_ESTADO.vencido, valor: inspecciones.vencido, color: 'var(--red-ink)' },
-                  { nombre: ETIQUETA_ESTADO['sin-registro'], valor: inspecciones['sin-registro'], color: 'var(--label-3)' },
+                  { nombre: ETIQUETA_ESTADO.vigente, valor: inspecciones.vigente, color: 'var(--green-ink)', meta: metasInsp[0], metaTipo: 'minimo' },
+                  { nombre: ETIQUETA_ESTADO.proximo, valor: inspecciones.proximo, color: 'var(--amber-ink)', meta: metasInsp[1], metaTipo: 'maximo' },
+                  { nombre: ETIQUETA_ESTADO.vencido, valor: inspecciones.vencido, color: 'var(--red-ink)', meta: metasInsp[2], metaTipo: 'maximo' },
+                  { nombre: ETIQUETA_ESTADO['sin-registro'], valor: inspecciones['sin-registro'], color: 'var(--label-3)', meta: metasInsp[3], metaTipo: 'maximo' },
                 ]} />
               </Tarjeta>
             </div>
             <div className="mant-col-4">
-              <Tarjeta titulo="Mantenimiento preventivo" icono={<Clock size={15} />}>
+              <Tarjeta titulo="Mantenimiento preventivo" icono={<Clock size={15} />} accion={<MetasEditor titulo="preventivo" nombres={NOMBRES_PREV} metas={metasPrev} onGuardar={setMetasPrev} />}>
                 <MedidorGrafico centro={`${preventivo.total ? Math.round((preventivo.vigentes / preventivo.total) * 100) : 0}%`} subcentro="al día" porciones={[
-                  { nombre: 'Al día', valor: preventivo.vigentes, color: 'var(--green-ink)' },
-                  { nombre: 'Próximo a vencer', valor: preventivo.porVencer, color: 'var(--amber-ink)' },
-                  { nombre: 'Vencido', valor: preventivo.vencidos, color: 'var(--red-ink)' },
-                  { nombre: 'Sin datos', valor: preventivo.sinDatos, color: 'var(--label-3)' },
+                  { nombre: 'Al día', valor: preventivo.vigentes, color: 'var(--green-ink)', meta: metasPrev[0], metaTipo: 'minimo' },
+                  { nombre: 'Próximo a vencer', valor: preventivo.porVencer, color: 'var(--amber-ink)', meta: metasPrev[1], metaTipo: 'maximo' },
+                  { nombre: 'Vencido', valor: preventivo.vencidos, color: 'var(--red-ink)', meta: metasPrev[2], metaTipo: 'maximo' },
+                  { nombre: 'Sin datos', valor: preventivo.sinDatos, color: 'var(--label-3)', meta: metasPrev[3], metaTipo: 'maximo' },
                 ]} />
               </Tarjeta>
             </div>
             <div className="mant-col-4">
               <Tarjeta titulo="OT por tipo" icono={<Wrench size={15} />}>
-                <BarrasGrafico porciones={tiposRango} altura={200} />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)', marginTop: 'var(--s-3)', paddingTop: 'var(--s-3)', borderTop: '1px solid var(--separator)' }}>
-                  <strong style={{ fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Meta 80 / 20</strong>
-                  {mezcla.base === 0 ? <span className="t-footnote c-secondary">Sin OT preventivas ni correctivas en el rango.</span> : (
-                    <>
-                      <MetaTipo etiqueta="Preventivo" real={mezcla.pctPreventivo} meta={META_PREVENTIVO} tipo="minimo" cantidad={mezcla.preventivo} />
-                      <MetaTipo etiqueta="Correctivo" real={mezcla.pctCorrectivo} meta={META_CORRECTIVO} tipo="maximo" cantidad={mezcla.correctivo} />
-                    </>
-                  )}
-                </div>
+                <BarrasMetaGrafico filas={tiposRango} />
               </Tarjeta>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Bar, BarChart, Cell, LabelList, Legend, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-export interface Porcion { nombre: string; valor: number; color: string }
+export interface Porcion { nombre: string; valor: number; color: string; meta?: number; metaTipo?: 'minimo' | 'maximo' }
 
 // Recharts pinta con atributos SVG, que no leen var(--x): se resuelven los tokens a su valor.
 // Se vuelven a leer al cambiar el tema (data-theme o clase en <html>).
@@ -172,7 +172,9 @@ function LeyendaPorciones({ porciones, total, columnas = 1 }: { porciones: Porci
           <span aria-hidden style={{ width: 10, height: 10, borderRadius: 999, background: p.color, flexShrink: 0 }} />
           <span style={{ flex: 1, minWidth: 0, color: 'var(--label-2)', fontWeight: 600 }}>{p.nombre}</span>
           <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{p.valor}</span>
-          <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--label-2)', minWidth: 42, textAlign: 'right' }}>{total ? Math.round((p.valor / total) * 1000) / 10 : 0}%</span>
+          {p.meta !== undefined && <span style={{ fontSize: '0.6875rem', color: 'var(--label-3)' }}>meta {p.metaTipo === 'minimo' ? '≥' : '≤'}{p.meta}%</span>}
+          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: p.meta !== undefined ? 700 : 400, minWidth: 40, textAlign: 'right',
+            color: p.meta === undefined ? 'var(--label-2)' : (p.metaTipo === 'minimo' ? Math.round(total ? (p.valor / total) * 100 : 0) >= p.meta : Math.round(total ? (p.valor / total) * 100 : 0) <= p.meta) ? 'var(--green-ink)' : 'var(--red-ink)' }}>{total ? Math.round((p.valor / total) * 100) : 0}%</span>
         </li>
       ))}
     </ul>
@@ -237,6 +239,43 @@ export function MedidorGrafico({ porciones, centro, subcentro }: { porciones: Po
         {subcentro && <text x={cx} y={cy + 8} textAnchor="middle" style={{ fill: 'var(--label-2)', fontSize: 12, fontWeight: 600 }}>{subcentro}</text>}
       </svg>
       <div style={{ width: '100%' }}><LeyendaPorciones porciones={porciones} total={total} columnas={2} /></div>
+    </div>
+  );
+}
+
+export type FilaMeta = { nombre: string; valor: number; color: string; meta?: { tipo: 'minimo' | 'maximo'; valor: number } };
+
+/** Barras de tipos: ancho = % del total; las filas con meta llevan una marca en su %, y su cifra se pinta según se cumpla o no. */
+export function BarrasMetaGrafico({ filas }: { filas: FilaMeta[] }) {
+  const { listo } = useEntrada();
+  const reducido = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const total = filas.reduce((s, f) => s + f.valor, 0);
+  const pct = (v: number) => (total ? Math.round((v / total) * 100) : 0);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+      {filas.map(f => {
+        const p = pct(f.valor);
+        const cumple = f.meta ? (f.meta.tipo === 'minimo' ? p >= f.meta.valor : p <= f.meta.valor) : null;
+        const colorCifra = cumple === null ? 'var(--label)' : cumple ? 'var(--green-ink)' : 'var(--red-ink)';
+        return (
+          <div key={f.nombre} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--s-2)', fontSize: '0.8125rem' }}>
+              <span style={{ flex: 1, minWidth: 0, fontWeight: 600, color: 'var(--label-2)' }}>{f.nombre}</span>
+              {f.meta && (
+                <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '1px 8px', borderRadius: 999, color: colorCifra, background: 'var(--fill)' }}>
+                  Meta {f.meta.tipo === 'minimo' ? '≥' : '≤'} {f.meta.valor}%
+                </span>
+              )}
+              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{f.valor}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, minWidth: 40, textAlign: 'right', color: colorCifra }}>{p}%</span>
+            </div>
+            <div style={{ position: 'relative', height: 10, borderRadius: 999, background: 'var(--fill)' }}>
+              <div style={{ width: `${listo ? Math.max(p, f.valor > 0 ? 2 : 0) : 0}%`, height: '100%', borderRadius: 999, background: f.color, transition: reducido ? 'none' : 'width 0.9s cubic-bezier(0.22, 1, 0.36, 1)' }} />
+              {f.meta && <div aria-hidden style={{ position: 'absolute', left: `${f.meta.valor}%`, top: -4, bottom: -4, width: 3, marginLeft: -1.5, borderRadius: 2, background: 'var(--label)', boxShadow: '0 0 0 2px var(--bg-1, transparent)' }} />}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
