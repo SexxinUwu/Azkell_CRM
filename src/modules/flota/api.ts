@@ -12,7 +12,6 @@ import type { ConfigSistemas } from './fman';
 export interface VehiculoDisponibilidad {
   id: number | null;
   /** Motivo explícito cuando la unidad está bloqueada por un viaje abierto (sin retorno) */
-  aviso_viaje?: string;
   placa_camion: string;
   placa_carreta: string;
   conductor_asignado: string;

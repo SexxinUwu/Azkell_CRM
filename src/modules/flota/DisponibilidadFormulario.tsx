@@ -95,10 +95,9 @@ export function DisponibilidadFormulario({ veh, usuario, open, onClose }: {
     };
     try {
       const r = editando
-        ? await api<{ error?: string; advertencia?: string }>(`/disponibilidad-flota/${veh!.id}`, { method: 'PUT', body })
-        : await api<{ error?: string; advertencia?: string }>('/disponibilidad-flota', { method: 'POST', body });
+        ? await api<{ error?: string }>(`/disponibilidad-flota/${veh!.id}`, { method: 'PUT', body })
+        : await api<{ error?: string }>('/disponibilidad-flota', { method: 'POST', body });
       if (r?.error) throw new Error(r.error);
-      if (r?.advertencia) toast(r.advertencia, 'error');
       haptic('success');
       toast(editando ? 'Disponibilidad actualizada' : 'Unidad registrada');
       await qc.invalidateQueries({ queryKey: ['flota', 'disponibilidad'] });
@@ -114,7 +113,6 @@ export function DisponibilidadFormulario({ veh, usuario, open, onClose }: {
         <Button variant="primary" onClick={guardar} loading={enviando}>Guardar</Button></>}>
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
-        {veh?.aviso_viaje && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{veh.aviso_viaje}</Notice></div>}
         <Field label="Placa del camión" error={errPlacas}>
           {p => <PlacaPicker {...p} value={camion} onChange={v => { setCamion(v); setErrPlacas(undefined); }} opciones={camiones} placeholder="Elige el camión" />}
         </Field>

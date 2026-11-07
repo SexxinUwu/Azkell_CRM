@@ -88,13 +88,6 @@ module.exports = function (db, logAudit) {
             `);
             const ultimoConductorTracto = {};
             const ultimoConductorRemolque = {};
-            // Viaje abierto (sin retorno) que tiene bloqueada la unidad: se explica en vez de mostrar el estado sin motivo
-            const avisoViaje = r => `Bloqueado por viaje ${r.id} en ruta (salida ${r.salida_fecha || ''} ${r.salida_hora || ''}${r.destino ? ' ' + r.destino : ''}). Requiere registrar retorno en Garita/Seguridad.`;
-            const rutaCarretaMap = {};
-            (enRutaRows || []).forEach(r => {
-                const pc = clean(r.placa_carreta);
-                if (pc && !rutaCarretaMap[pc]) rutaCarretaMap[pc] = r;
-            });
             viajesConductor.forEach(v => {
                 const pt = clean(v.placa_tracto);
                 const pr = clean(v.placa_remolque);
@@ -237,12 +230,13 @@ module.exports = function (db, logAudit) {
                                     } else if (falla && Number(falla.critica) === 1) {
                                         estado = 'En Mantenimiento';
                                         observaciones = `Falla crítica / Folio ${falla.folio || ''}`;
+                                    } else if (disp && disp.estado_unidad && disp.estado_unidad.trim() !== '' && !isMaintenanceState(disp.estado_unidad)) {
+                                        // Lo que elige el operador de flota manda: Garita ya no lo bloquea
+                                        estado = disp.estado_unidad;
+                                        observaciones = disp.observaciones || (enBase ? enBase.observacion : '');
                                     } else if (enRuta) {
                                         estado = 'En Ruta';
                                         observaciones = enRuta.destino ? `Destino: ${enRuta.destino}` : (enRuta.salida_observaciones || (disp ? disp.observaciones : ''));
-                                    } else if (disp && disp.estado_unidad && disp.estado_unidad.trim() !== '' && !isMaintenanceState(disp.estado_unidad)) {
-                                        estado = disp.estado_unidad;
-                                        observaciones = disp.observaciones || (enBase ? enBase.observacion : '');
                                     } else if (enBase) {
                                         estado = 'En Base';
                                         observaciones = enBase.observacion || (disp ? disp.observaciones : '');
@@ -280,7 +274,6 @@ module.exports = function (db, logAudit) {
                                         placa_camion: p.placa,
                                         placa_carreta: carreta,
                                         conductor_asignado: conductor,
-                                        aviso_viaje: enRuta ? avisoViaje(enRuta) : '',
                                         estado: estado,
                                         empresa: (p.cliente || (disp ? disp.flota : '') || '').trim(),
                                         cliente: (p.cliente || (disp ? disp.flota : '') || '').trim(),
@@ -312,12 +305,13 @@ module.exports = function (db, logAudit) {
                                     if (hasOT) {
                                         estado = 'En Mantenimiento';
                                         obs = (disp && disp.observaciones) ? disp.observaciones : 'En Taller / OT Activa';
+                                    } else if (disp && disp.estado_unidad && disp.estado_unidad.trim() !== '' && !isMaintenanceState(disp.estado_unidad)) {
+                                        // Lo que elige el operador de flota manda: Garita ya no lo bloquea
+                                        estado = disp.estado_unidad;
+                                        obs = disp.observaciones || '';
                                     } else if (enRuta) {
                                         estado = 'En Ruta';
                                         obs = (disp && disp.observaciones) ? disp.observaciones : '';
-                                    } else if (disp && disp.estado_unidad && disp.estado_unidad.trim() !== '' && !isMaintenanceState(disp.estado_unidad)) {
-                                        estado = disp.estado_unidad;
-                                        obs = disp.observaciones || '';
                                     } else {
                                         estado = 'En Base';
                                         obs = (disp && disp.observaciones) ? disp.observaciones : '';
@@ -334,7 +328,6 @@ module.exports = function (db, logAudit) {
                                         placa_camion: '',
                                         placa_carreta: p.placa,
                                         conductor_asignado: (disp ? disp.conductor_asignado : '') || ultimoConductorRemolque[cPlaca] || '',
-                                        aviso_viaje: rutaCarretaMap[cPlaca] ? avisoViaje(rutaCarretaMap[cPlaca]) : '',
                                         estado: estado,
                                         empresa: empCarreta,
                                         cliente: empCarreta,
@@ -511,33 +504,13 @@ module.exports = function (db, logAudit) {
         }
     });
 
-    // Si la unidad tiene un viaje abierto y se guarda otro estado, la respuesta lo indica
-    async function advertenciaViaje(tdb, body) {
-        const pDb = (tdb.promise ? tdb.promise() : tdb);
-        const estado = String(body.estado || body.estado_unidad || '').trim().toLowerCase();
-        if (!estado || estado === 'en ruta' || estado.includes('mant')) return '';
-        const cam = String(body.placa_camion || '').trim().toUpperCase() || '\u0000';
-        const car = String(body.placa_carreta || '').trim().toUpperCase() || '\u0000';
-        try {
-            const [rows] = await pDb.query(
-                "SELECT id, salida_fecha, salida_hora, destino FROM seg_unidades_registros WHERE estado = 'en_ruta' AND (placa_tracto = ? OR placa_carreta = ?) ORDER BY id DESC LIMIT 1",
-                [cam, car]);
-            if (!rows || !rows[0]) return '';
-            const r = rows[0];
-            return `Guardado, pero la unidad sigue EN RUTA: bloqueado por viaje ${r.id} (salida ${r.salida_fecha || ''} ${r.salida_hora || ''}${r.destino ? ' ' + r.destino : ''}). Requiere registrar retorno en Garita/Seguridad.`;
-        } catch (err) {
-            return '';
-        }
-    }
-
     // ── POST /api/disponibilidad-flota (Crear / Guardar registro) ───────────────
     router.post('/', async (req, res) => {
         try {
             const tdb = getDb(req);
             const targetId = await procesarGuardadoDisponibilidad(tdb, null, req.body);
             auditar(req, 'CREAR/GUARDAR', `Registro disponibilidad guardado: ${req.body.placa_camion || req.body.placa_carreta} (ID: ${targetId})`);
-            const advertencia = await advertenciaViaje(tdb, req.body);
-            res.json({ success: true, message: 'Registro guardado correctamente', id: targetId, advertencia });
+            res.json({ success: true, message: 'Registro guardado correctamente', id: targetId });
         } catch (err) {
             console.error('Error en POST /api/disponibilidad-flota:', err);
             res.status(400).json({ error: err.message || 'Error al guardar disponibilidad' });
@@ -550,8 +523,7 @@ module.exports = function (db, logAudit) {
             const tdb = getDb(req);
             const targetId = await procesarGuardadoDisponibilidad(tdb, req.params.id, req.body);
             auditar(req, 'ACTUALIZAR', `Registro disponibilidad actualizado: ${req.body.placa_camion || req.body.placa_carreta} (ID: ${targetId})`);
-            const advertencia = await advertenciaViaje(tdb, req.body);
-            res.json({ success: true, message: 'Disponibilidad actualizada exitosamente', id: targetId, advertencia });
+            res.json({ success: true, message: 'Disponibilidad actualizada exitosamente', id: targetId });
         } catch (err) {
             console.error('Error en PUT /api/disponibilidad-flota:', err);
             res.status(400).json({ error: err.message || 'Error al actualizar disponibilidad' });
