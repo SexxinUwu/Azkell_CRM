@@ -5,7 +5,7 @@ import { Page, PageHeader, Notice, EmptyState } from '../../core/ui/Display';
 import { PageLoader } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
-import { AnillosGrafico, BarrasGrafico, BarrasMetaGrafico, MedidorGrafico } from '../../core/ui/Graficos';
+import { BarraMeta, BarrasGrafico, BarrasMetaGrafico, MedidorGrafico, TortaGrafico } from '../../core/ui/Graficos';
 import { MultiSelect } from '../../core/ui/MultiSelect';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { errorMessage } from '../../core/api/client';
@@ -332,7 +332,8 @@ export function MantDashboardPage() {
           <div className="mant-grid">
             <div className="mant-col-4">
               <Tarjeta titulo="Inspecciones" icono={<Truck size={15} />} accion={<MetaEditor titulo="inspecciones" meta={metaInsp} onGuardar={setMetaInsp} />}>
-                <AnillosGrafico centro={`${totalInspecciones ? Math.round((inspecciones.vigente / totalInspecciones) * 100) : 0}%`} subcentro="vigentes" meta={metaInsp} porciones={[
+                <BarraMeta etiqueta="Vigentes" valor={totalInspecciones ? Math.round((inspecciones.vigente / totalInspecciones) * 100) : 0} meta={metaInsp} />
+                <TortaGrafico centro={`${totalInspecciones}`} subcentro="inspecciones" porciones={[
                   { nombre: ETIQUETA_ESTADO.vigente, valor: inspecciones.vigente, color: 'var(--green-ink)' },
                   { nombre: ETIQUETA_ESTADO.proximo, valor: inspecciones.proximo, color: 'var(--amber-ink)' },
                   { nombre: ETIQUETA_ESTADO.vencido, valor: inspecciones.vencido, color: 'var(--red-ink)' },

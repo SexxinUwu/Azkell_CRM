@@ -164,14 +164,14 @@ function useEntrada() {
   return { listo: listo || reducido, transicion: reducido ? 'none' : 'stroke-dasharray 0.9s cubic-bezier(0.22, 1, 0.36, 1)' };
 }
 
-function LeyendaPorciones({ porciones, total, columnas = 1 }: { porciones: Porcion[]; total: number; columnas?: 1 | 2 }) {
+function LeyendaPorciones({ porciones, total, columnas = 1, cantidad = true }: { porciones: Porcion[]; total: number; columnas?: 1 | 2; cantidad?: boolean }) {
   return (
     <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: columnas === 2 ? '1fr 1fr' : '1fr', gap: 'var(--s-2) var(--s-4)', flex: 1, minWidth: 150 }}>
       {porciones.map(p => (
         <li key={p.nombre} style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', fontSize: '0.8125rem' }}>
           <span aria-hidden style={{ width: 10, height: 10, borderRadius: 999, background: p.color, flexShrink: 0 }} />
           <span style={{ flex: 1, minWidth: 0, color: 'var(--label-2)', fontWeight: 600 }}>{p.nombre}</span>
-          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{p.valor}</span>
+          {cantidad && <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{p.valor}</span>}
           <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--label-2)', minWidth: 42, textAlign: 'right' }}>{total ? Math.round((p.valor / total) * 100) : 0}%</span>
         </li>
       ))}
@@ -285,6 +285,62 @@ export function BarrasMetaGrafico({ filas }: { filas: FilaMeta[] }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** Línea de avance con la marca de la meta: muestra cuánto llevamos y dónde está la meta. */
+export function BarraMeta({ etiqueta, valor, meta }: { etiqueta: string; valor: number; meta: number }) {
+  const { listo } = useEntrada();
+  const reducido = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const cumple = valor >= meta;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 'var(--s-4)' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--s-2)', fontSize: '0.8125rem' }}>
+        <span style={{ flex: 1, color: 'var(--label-2)', fontWeight: 600 }}>{etiqueta}</span>
+        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, color: cumple ? 'var(--green-ink)' : 'var(--red-ink)' }}>{valor}%</span>
+      </div>
+      <div style={{ position: 'relative', height: 10, borderRadius: 999, background: 'var(--fill)', marginBottom: 18 }}>
+        <div style={{ width: `${listo ? valor : 0}%`, height: '100%', borderRadius: 999, background: 'var(--green-ink)', transition: reducido ? 'none' : 'width 0.9s cubic-bezier(0.22, 1, 0.36, 1)' }} />
+        <div aria-hidden style={{ position: 'absolute', left: `${meta}%`, top: -4, bottom: -4, width: 3, marginLeft: -1.5, borderRadius: 2, background: 'var(--label)' }} />
+        <span style={{ position: 'absolute', left: `${meta}%`, top: 14, transform: meta > 80 ? 'translateX(-100%)' : 'translateX(-50%)', whiteSpace: 'nowrap', fontSize: '0.6875rem', fontWeight: 700, color: 'var(--label-2)' }}>Meta {meta}%</span>
+      </div>
+    </div>
+  );
+}
+
+/** Torta (dona) con un tramo por estado y la cantidad escrita dentro de cada tramo; la leyenda muestra solo porcentajes. */
+export function TortaGrafico({ porciones, centro, subcentro, tamano = 200 }: { porciones: Porcion[]; centro: string; subcentro?: string; tamano?: number }) {
+  const { listo, transicion } = useEntrada();
+  const total = porciones.reduce((s, p) => s + p.valor, 0);
+  const c = tamano / 2, grosor = 34, r = c - grosor / 2 - 2, circ = 2 * Math.PI * r;
+  let acumulado = 0;
+  const tramos = porciones.filter(p => p.valor > 0 && total > 0).map(p => {
+    const f = p.valor / total;
+    const ini = acumulado;
+    acumulado += f;
+    const medio = (ini + f / 2) * 2 * Math.PI - Math.PI / 2;
+    return { p, f, ini, x: c + r * Math.cos(medio), y: c + r * Math.sin(medio) };
+  });
+  const hueco = Math.min(3, circ * 0.01); // separación entre tramos
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-4)', flexWrap: 'wrap' }}>
+      <svg width={tamano} height={tamano} viewBox={`0 0 ${tamano} ${tamano}`} role="img" aria-label={porciones.map(p => `${p.nombre}: ${p.valor}`).join(', ')} style={{ flexShrink: 0 }}>
+        <circle cx={c} cy={c} r={r} fill="none" strokeWidth={grosor} style={{ stroke: 'var(--fill)' }} />
+        {tramos.map(t => {
+          const largo = Math.max(0, t.f * circ - hueco);
+          return (
+            <circle key={t.p.nombre} cx={c} cy={c} r={r} fill="none" strokeWidth={grosor} transform={`rotate(-90 ${c} ${c})`}
+              strokeDasharray={`${listo ? largo : 0} ${circ}`} strokeDashoffset={-(t.ini * circ + hueco / 2)} style={{ stroke: t.p.color, transition: transicion }} />
+          );
+        })}
+        {tramos.filter(t => t.f >= 0.045).map(t => (
+          <text key={t.p.nombre} x={t.x} y={t.y} textAnchor="middle" dominantBaseline="central" style={{ fill: '#fff', fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 13 }}>{t.p.valor}</text>
+        ))}
+        <text x={c} y={subcentro ? c - 2 : c + 8} textAnchor="middle" style={{ fill: 'var(--label)', fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 24 }}>{centro}</text>
+        {subcentro && <text x={c} y={c + 16} textAnchor="middle" style={{ fill: 'var(--label-2)', fontSize: 11, fontWeight: 600 }}>{subcentro}</text>}
+      </svg>
+      <LeyendaPorciones porciones={porciones} total={total} cantidad={false} />
     </div>
   );
 }
