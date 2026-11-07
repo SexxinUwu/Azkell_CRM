@@ -138,6 +138,29 @@ function Tarjeta({ titulo, icono, children }: { titulo: ReactNode; icono?: React
 }
 
 /** Barra con cantidad y porcentaje sobre el total */
+// Meta de la mezcla de mantenimiento: preventivo mínimo 80 %, correctivo máximo 20 % (sobre correctivo + preventivo)
+const META_PREVENTIVO = 80;
+const META_CORRECTIVO = 20;
+
+function MetaTipo({ etiqueta, real, meta, tipo, cantidad }: { etiqueta: string; real: number; meta: number; tipo: 'minimo' | 'maximo'; cantidad: number }) {
+  const cumple = tipo === 'minimo' ? real >= meta : real <= meta;
+  const color = cumple ? 'var(--green-ink)' : 'var(--red-ink)';
+  const diferencia = Math.abs(Math.round((real - meta) * 10) / 10);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
+        <span>{etiqueta} <span className="c-secondary">· {cantidad} OT</span></span>
+        <span className="t-numeric" style={{ color, fontWeight: 700 }}>{real}% <span className="c-secondary" style={{ fontWeight: 500 }}>meta {tipo === 'minimo' ? '≥' : '≤'} {meta}%</span></span>
+      </div>
+      <div style={{ position: 'relative', height: 8, background: 'var(--fill)', borderRadius: 999 }}>
+        <div style={{ width: `${Math.min(100, real)}%`, height: '100%', background: color, borderRadius: 999 }} />
+        <div aria-hidden style={{ position: 'absolute', left: `${meta}%`, top: -3, bottom: -3, width: 2, marginLeft: -1, background: 'var(--label)', borderRadius: 2 }} />
+      </div>
+      <span style={{ fontSize: '0.6875rem', color }}>{cumple ? 'Meta cumplida' : tipo === 'minimo' ? `Faltan ${diferencia} puntos para la meta` : `${diferencia} puntos por encima de la meta`}</span>
+    </div>
+  );
+}
+
 function Barra({ etiqueta, valor, total, color }: { etiqueta: string; valor: number; total: number; color: string }) {
   const pct = total ? Math.round((valor / total) * 1000) / 10 : 0;
   return (
@@ -201,6 +224,15 @@ export function MantDashboardPage() {
       valor: cuenta[t],
       color: COLOR_TIPO[t],
     }));
+  }, [otsRango]);
+
+  // Mezcla preventivo / correctivo contra la meta 80/20 (solo cuentan las OT de esos dos tipos)
+  const mezcla = useMemo(() => {
+    let correctivo = 0, preventivo = 0;
+    otsRango.forEach(o => { const t = tipoOT(o); if (t === 'Correctivo') correctivo++; else if (t === 'Preventivo') preventivo++; });
+    const base = correctivo + preventivo;
+    const pct = (n: number) => (base ? Math.round((n / base) * 1000) / 10 : 0);
+    return { correctivo, preventivo, base, pctCorrectivo: pct(correctivo), pctPreventivo: pct(preventivo) };
   }, [otsRango]);
 
   // Estado actual (no depende del rango)
@@ -361,6 +393,15 @@ export function MantDashboardPage() {
             <div className="mant-col-4">
               <Tarjeta titulo="OT por tipo" icono={<Wrench size={15} />}>
                 <BarrasGrafico porciones={tiposRango} altura={200} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)', marginTop: 'var(--s-3)', paddingTop: 'var(--s-3)', borderTop: '1px solid var(--separator)' }}>
+                  <strong style={{ fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Meta 80 / 20</strong>
+                  {mezcla.base === 0 ? <span className="t-footnote c-secondary">Sin OT preventivas ni correctivas en el rango.</span> : (
+                    <>
+                      <MetaTipo etiqueta="Preventivo" real={mezcla.pctPreventivo} meta={META_PREVENTIVO} tipo="minimo" cantidad={mezcla.preventivo} />
+                      <MetaTipo etiqueta="Correctivo" real={mezcla.pctCorrectivo} meta={META_CORRECTIVO} tipo="maximo" cantidad={mezcla.correctivo} />
+                    </>
+                  )}
+                </div>
               </Tarjeta>
             </div>
           </div>
