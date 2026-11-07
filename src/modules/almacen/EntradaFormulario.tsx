@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { CreditCard, FileText, Truck, Landmark, Package, Paperclip, Plus, ScanLine, Users, Wrench, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
@@ -249,8 +249,11 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
 
   // Artículos y servicios van juntos en cualquier orden (de compra o de servicio): cada uno se reconoce por su ícono y su etiqueta
   // Solo se ofrecen los artículos activos (no los inactivos ni los descontinuados); uno ya puesto en una línea de esta orden se conserva para que se siga viendo
-  const yaEnLineas = new Set(lineas.map(l => l.inventario_id).filter(Boolean));
-  const opcionesArticulos: ComboboxOption[] = inventario
+  // Memorizado: si se rearmara en cada tecla del formulario, el buscador recalcularía su índice de todo el catálogo cada vez
+  const idsEnLineas = lineas.map(l => l.inventario_id).filter(Boolean).join('|');
+  const opcionesArticulos: ComboboxOption[] = useMemo(() => {
+    const yaEnLineas = new Set(idsEnLineas.split('|'));
+    return inventario
     .filter(a => esVigente(a) || yaEnLineas.has(a.id))
     .map(a => ({
       value: a.id,
@@ -263,6 +266,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
         ? <img src={a.imagen_url} alt="" className="oc-opcion__foto" loading="lazy" />
         : <span className="oc-opcion__sin-foto"><Package size={15} strokeWidth={1.8} /></span>,
     }));
+  }, [inventario, idsEnLineas]);
 
   const opcionesProveedores: ComboboxOption[] = proveedores.map(p => ({
     value: p.id,

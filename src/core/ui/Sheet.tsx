@@ -125,6 +125,8 @@ export function Sheet({ open, onClose, title, children, footer, anclaAbajo = fal
             dragElastic={{ top: 0.04, bottom: 0.9 }}
             dragTransition={{ bounceStiffness: 400, bounceDamping: 32 }}
             onDragEnd={handleDragEnd}
+            // Terminada la entrada se quita el filtro: un blur(0px) dejado puesto vuelve a pintar toda la hoja en cada scroll
+            onAnimationComplete={() => { if (open && panelRef.current) panelRef.current.style.filter = 'none'; }}
           >
             <div className="sheet__grabber" onPointerDown={e => dragControls.start(e)} />
             <div className="sheet__header" onPointerDown={e => abajo && dragControls.start(e)}>

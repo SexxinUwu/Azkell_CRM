@@ -361,7 +361,8 @@ export function Combobox({
         )}
         <ChevronDown size={16} aria-hidden className="campo-picker__chevron" />
       </button>
-      <Sheet open={open} onClose={close} title={tituloHoja ?? placeholder}>
+      {/* ligera: solo opacidad y escala, sin desenfoque; la búsqueda se abre muchas veces y debe aparecer al instante */}
+      <Sheet open={open} onClose={close} title={tituloHoja ?? placeholder} ligera>
         {buscador}
       </Sheet>
     </>
