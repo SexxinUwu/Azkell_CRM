@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Check, ChevronDown, Plus, Search, X } from 'lucide-react';
-import { MOBILE_QUERY } from '../lib/useMediaQuery';
+import { MOBILE_QUERY, useMediaQuery } from '../lib/useMediaQuery';
 import { spring } from '../lib/motion';
 import { haptic } from '../lib/haptics';
 import { Sheet } from './Sheet';
@@ -75,6 +75,9 @@ export function Combobox({
   id, options, value, onChange, placeholder = 'Escribe para buscar', onCreate, createLabel = 'Registrar', creates, loading, disabled, limit = 50,
   enHoja = false, tituloHoja, ...aria
 }: ComboboxProps) {
+  // En celular la búsqueda siempre va en una hoja: la lista inline se reacomodaba con el teclado y provocaba el bucle de foco
+  const esMovil = useMediaQuery(MOBILE_QUERY);
+  const hoja = enHoja || esMovil;
   const autoId = useId();
   const inputId = id ?? autoId;
   const listId = `${inputId}-list`;
@@ -118,16 +121,9 @@ export function Combobox({
   function openList() {
     if (disabled) return;
     setOpen(true);
-    // Escritorio: si la lista no cabe debajo de la casilla dentro de su hoja o contenedor, se sube el campo
-    if (!enHoja && !window.matchMedia(MOBILE_QUERY).matches) requestAnimationFrame(subirSiNoCabe);
-    // En el celular el teclado tapa media pantalla: sube la casilla para ver los resultados
-    if (window.matchMedia(MOBILE_QUERY).matches) {
-      setTimeout(() => {
-        const input = inputRef.current;
-        // Con su etiqueta: se sube el campo completo, no solo la casilla
-        (input?.closest<HTMLElement>('.field') ?? input)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 280);
-    }
+    // Escritorio: si la lista no cabe debajo de la casilla dentro de su hoja o contenedor, se sube el campo.
+    // En celular no se desplaza nada: la hoja ocupa la pantalla y el teclado no mueve la página.
+    if (!hoja) requestAnimationFrame(subirSiNoCabe);
   }
 
   /** Alto de la lista desplegable (18rem): debe caber debajo de la casilla dentro del contenedor con scroll */
@@ -187,28 +183,29 @@ export function Combobox({
   const display = typing ? query : selected?.label ?? '';
 
   const buscador = (
-    <div className={`combobox${open ? ' combobox--open' : ''}${enHoja ? ' combobox--hoja' : ''}`}>
+    <div className={`combobox${open ? ' combobox--open' : ''}${hoja ? ' combobox--hoja' : ''}`}>
       <div className="combobox__field">
         <Search size={16} className="combobox__search" aria-hidden />
         <input
           ref={inputRef}
-          id={enHoja ? `${inputId}-buscar` : inputId}
-          autoFocus={enHoja}
+          id={hoja ? `${inputId}-buscar` : inputId}
+          autoFocus={hoja}
           className="input combobox__input"
           role="combobox"
           aria-expanded={open}
           aria-controls={listId}
           aria-autocomplete="list"
           aria-activedescendant={open && count ? `${listId}-${active}` : undefined}
-          {...(enHoja ? {} : aria)}
+          {...(hoja ? {} : aria)}
           value={display}
           placeholder={selected ? selected.label : placeholder}
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
           disabled={disabled}
-          onFocus={openList}
+          onFocus={() => { if (!open) openList(); }}
           onClick={() => { if (!open) openList(); }}
+          enterKeyHint="search"
           onChange={e => { setTyping(true); setQuery(e.target.value); if (!open) setOpen(true); }}
           onKeyDown={onKeyDown}
           onBlur={close}
@@ -286,7 +283,7 @@ export function Combobox({
     </div>
   );
 
-  if (!enHoja) return buscador;
+  if (!hoja) return buscador;
 
   // Modo hoja: el campo muestra lo elegido como el selector de placa; al tocarlo se abre la búsqueda a pantalla completa
   return (
