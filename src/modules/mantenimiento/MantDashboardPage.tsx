@@ -5,7 +5,7 @@ import { Page, PageHeader, Notice, EmptyState } from '../../core/ui/Display';
 import { PageLoader } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
-import { BarrasGrafico, DonaGrafico } from '../../core/ui/Graficos';
+import { AnillosGrafico, BarrasGrafico, MedidorGrafico } from '../../core/ui/Graficos';
 import { MultiSelect } from '../../core/ui/MultiSelect';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { errorMessage } from '../../core/api/client';
@@ -138,21 +138,6 @@ function Tarjeta({ titulo, icono, children }: { titulo: ReactNode; icono?: React
 }
 
 /** Barra con cantidad y porcentaje sobre el total */
-function Barra({ etiqueta, valor, total, color }: { etiqueta: string; valor: number; total: number; color: string }) {
-  const pct = total ? Math.round((valor / total) * 1000) / 10 : 0;
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
-        <span>{etiqueta}</span>
-        <span className="t-numeric">{valor} · {pct}%</span>
-      </div>
-      <div style={{ height: 8, background: 'var(--fill)', borderRadius: 999, overflow: 'hidden' }}>
-        <div style={{ width: `${Math.min(100, pct)}%`, height: '100%', background: color }} />
-      </div>
-    </div>
-  );
-}
-
 export function MantDashboardPage() {
   const [pestana, setPestana] = useState<Pestana>('resumen');
   const [desde, setDesde] = useState(() => hoyLima(29));
@@ -340,7 +325,7 @@ export function MantDashboardPage() {
           <div className="mant-grid">
             <div className="mant-col-4">
               <Tarjeta titulo="Inspecciones" icono={<Truck size={15} />}>
-                <DonaGrafico altura={170} centro={String(totalInspecciones)} porciones={[
+                <AnillosGrafico centro={`${totalInspecciones ? Math.round((inspecciones.vigente / totalInspecciones) * 100) : 0}%`} subcentro="vigentes" porciones={[
                   { nombre: ETIQUETA_ESTADO.vigente, valor: inspecciones.vigente, color: 'var(--green-ink)' },
                   { nombre: ETIQUETA_ESTADO.proximo, valor: inspecciones.proximo, color: 'var(--amber-ink)' },
                   { nombre: ETIQUETA_ESTADO.vencido, valor: inspecciones.vencido, color: 'var(--red-ink)' },
@@ -350,12 +335,12 @@ export function MantDashboardPage() {
             </div>
             <div className="mant-col-4">
               <Tarjeta titulo="Mantenimiento preventivo" icono={<Clock size={15} />}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-                  <Barra etiqueta="Al día" valor={preventivo.vigentes} total={preventivo.total} color="var(--green-ink)" />
-                  <Barra etiqueta="Próximo a vencer" valor={preventivo.porVencer} total={preventivo.total} color="var(--amber-ink)" />
-                  <Barra etiqueta="Vencido" valor={preventivo.vencidos} total={preventivo.total} color="var(--red-ink)" />
-                  <Barra etiqueta="Sin datos" valor={preventivo.sinDatos} total={preventivo.total} color="var(--label-3)" />
-                </div>
+                <MedidorGrafico centro={`${preventivo.total ? Math.round((preventivo.vigentes / preventivo.total) * 100) : 0}%`} subcentro="al día" porciones={[
+                  { nombre: 'Al día', valor: preventivo.vigentes, color: 'var(--green-ink)' },
+                  { nombre: 'Próximo a vencer', valor: preventivo.porVencer, color: 'var(--amber-ink)' },
+                  { nombre: 'Vencido', valor: preventivo.vencidos, color: 'var(--red-ink)' },
+                  { nombre: 'Sin datos', valor: preventivo.sinDatos, color: 'var(--label-3)' },
+                ]} />
               </Tarjeta>
             </div>
             <div className="mant-col-4">

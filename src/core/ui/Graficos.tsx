@@ -149,3 +149,94 @@ export function BarrasGrafico({ porciones, altura, onElegir }: { porciones: Porc
     </div>
   );
 }
+
+
+// ───────── Gráficos modernos del dashboard (SVG propio, con animación de entrada) ─────────
+
+/** Dibuja de 0 al valor real en el siguiente cuadro; con "reducir movimiento" aparece ya completo. */
+function useEntrada() {
+  const [listo, setListo] = useState(false);
+  const reducido = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  useEffect(() => {
+    const r = requestAnimationFrame(() => setListo(true));
+    return () => cancelAnimationFrame(r);
+  }, []);
+  return { listo: listo || reducido, transicion: reducido ? 'none' : 'stroke-dasharray 0.9s cubic-bezier(0.22, 1, 0.36, 1)' };
+}
+
+function LeyendaPorciones({ porciones, total, columnas = 1 }: { porciones: Porcion[]; total: number; columnas?: 1 | 2 }) {
+  return (
+    <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: columnas === 2 ? '1fr 1fr' : '1fr', gap: 'var(--s-2) var(--s-4)', flex: 1, minWidth: 150 }}>
+      {porciones.map(p => (
+        <li key={p.nombre} style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', fontSize: '0.8125rem' }}>
+          <span aria-hidden style={{ width: 10, height: 10, borderRadius: 999, background: p.color, flexShrink: 0 }} />
+          <span style={{ flex: 1, minWidth: 0, color: 'var(--label-2)', fontWeight: 600 }}>{p.nombre}</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{p.valor}</span>
+          <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--label-2)', minWidth: 42, textAlign: 'right' }}>{total ? Math.round((p.valor / total) * 1000) / 10 : 0}%</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Anillos concéntricos con puntas redondeadas (uno por estado): cada anillo muestra qué parte del total es ese estado. */
+export function AnillosGrafico({ porciones, centro, subcentro, tamano = 184 }: { porciones: Porcion[]; centro: string; subcentro?: string; tamano?: number }) {
+  const { listo, transicion } = useEntrada();
+  const total = porciones.reduce((s, p) => s + p.valor, 0);
+  const c = tamano / 2, grosor = 11, sep = 4, r0 = c - grosor / 2 - 2;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-4)', flexWrap: 'wrap' }}>
+      <svg width={tamano} height={tamano} viewBox={`0 0 ${tamano} ${tamano}`} role="img" aria-label={porciones.map(p => `${p.nombre}: ${p.valor}`).join(', ')} style={{ flexShrink: 0 }}>
+        {porciones.map((p, i) => {
+          const r = r0 - i * (grosor + sep);
+          const circ = 2 * Math.PI * r;
+          const frac = total ? p.valor / total : 0;
+          const visible = listo ? Math.max(frac, p.valor > 0 ? 0.02 : 0) : 0;
+          return (
+            <g key={p.nombre}>
+              <circle cx={c} cy={c} r={r} fill="none" strokeWidth={grosor} style={{ stroke: 'var(--fill)' }} />
+              <circle cx={c} cy={c} r={r} fill="none" strokeWidth={grosor} strokeLinecap="round" transform={`rotate(-90 ${c} ${c})`}
+                strokeDasharray={`${visible * circ} ${circ}`} style={{ stroke: p.color, transition: transicion }} />
+            </g>
+          );
+        })}
+        <text x={c} y={subcentro ? c : c + 8} textAnchor="middle" style={{ fill: 'var(--label)', fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 26 }}>{centro}</text>
+        {subcentro && <text x={c} y={c + 18} textAnchor="middle" style={{ fill: 'var(--label-2)', fontSize: 11, fontWeight: 600 }}>{subcentro}</text>}
+      </svg>
+      <LeyendaPorciones porciones={porciones} total={total} />
+    </div>
+  );
+}
+
+/** Medidor semicircular segmentado: el arco se reparte entre los estados y el centro muestra el indicador principal. */
+export function MedidorGrafico({ porciones, centro, subcentro }: { porciones: Porcion[]; centro: string; subcentro?: string }) {
+  const { listo, transicion } = useEntrada();
+  const total = porciones.reduce((s, p) => s + p.valor, 0);
+  const cx = 110, cy = 108, r = 90, grosor = 18;
+  const capGrados = ((grosor / 2) / r) * (180 / Math.PI) + 1.2; // lo que ocupan las puntas redondeadas + separación
+  const punto = (grados: number) => [cx + r * Math.cos((grados * Math.PI) / 180), cy - r * Math.sin((grados * Math.PI) / 180)] as const;
+  let acumulado = 0;
+  const segmentos = porciones.filter(p => p.valor > 0 && total > 0).map(p => {
+    const f0 = acumulado / total, f1 = (acumulado + p.valor) / total;
+    acumulado += p.valor;
+    let a0 = 180 - 180 * f0 - capGrados, a1 = 180 - 180 * f1 + capGrados;
+    if (a0 <= a1) { const m = (a0 + a1) / 2; a0 = m + 0.4; a1 = m - 0.4; }
+    const [x0, y0] = punto(a0), [x1, y1] = punto(a1);
+    return { p, d: `M ${x0} ${y0} A ${r} ${r} 0 0 1 ${x1} ${y1}`, largo: (Math.PI * r * (a0 - a1)) / 180 };
+  });
+  const [pistaX0, pistaY0] = punto(180 - capGrados + 1.2), [pistaX1, pistaY1] = punto(capGrados - 1.2);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--s-3)' }}>
+      <svg width="100%" viewBox="0 0 220 128" role="img" aria-label={porciones.map(p => `${p.nombre}: ${p.valor}`).join(', ')} style={{ maxWidth: 280 }}>
+        <path d={`M ${pistaX0} ${pistaY0} A ${r} ${r} 0 0 1 ${pistaX1} ${pistaY1}`} fill="none" strokeWidth={grosor} strokeLinecap="round" style={{ stroke: 'var(--fill)' }} />
+        {segmentos.map(s => (
+          <path key={s.p.nombre} d={s.d} fill="none" strokeWidth={grosor} strokeLinecap="round"
+            strokeDasharray={`${listo ? s.largo : 0} ${s.largo + 2}`} style={{ stroke: s.p.color, transition: transicion }} />
+        ))}
+        <text x={cx} y={cy - 12} textAnchor="middle" style={{ fill: 'var(--label)', fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: 32 }}>{centro}</text>
+        {subcentro && <text x={cx} y={cy + 8} textAnchor="middle" style={{ fill: 'var(--label-2)', fontSize: 12, fontWeight: 600 }}>{subcentro}</text>}
+      </svg>
+      <div style={{ width: '100%' }}><LeyendaPorciones porciones={porciones} total={total} columnas={2} /></div>
+    </div>
+  );
+}
