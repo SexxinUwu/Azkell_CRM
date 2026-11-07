@@ -162,7 +162,7 @@ export function DisponibilidadPage() {
         <DisponibilidadDetalle
           veh={seleccionado}
           onVolver={() => setSeleccionado(null)}
-          onEditar={puedeEditar && seleccionado.id ? () => setFormulario({ veh: seleccionado }) : undefined}
+          onEditar={puedeEditar ? () => setFormulario({ veh: seleccionado }) : undefined}
           onEliminar={puedeEliminar && seleccionado.id ? () => setPorEliminar(seleccionado) : undefined}
         />
         <DisponibilidadFormulario open={!!formulario} veh={formulario?.veh ?? null} usuario={user?.name ?? ''}
@@ -272,7 +272,6 @@ export function DisponibilidadPage() {
                           <td className="disp-conductor">{v.conductor_asignado || <span className="disp-sin">—</span>}</td>
                           <td>
                             <span className={`disp-estado disp-estado--${COLOR_ESTADO[cat]}`}>{v.estado || cat}</span>
-                            {v.aviso_viaje && <span className="t-caption c-secondary" style={{ display: 'block', maxWidth: 280, marginTop: 4 }}>{v.aviso_viaje}</span>}
                           </td>
                           <td>{v.marca || <span className="disp-sin">—</span>}</td>
                           <td>{v.capacidad_tanque || <span className="disp-sin">—</span>}</td>
@@ -280,7 +279,7 @@ export function DisponibilidadPage() {
                           <td className="disp-obs">{v.observaciones || <span className="disp-sin">—</span>}</td>
                           <td><GpsCelda v={v} mapa={mapaGps} /></td>
                           <td className="disp-celda-acciones"><span className="disp-botones">
-                            {puedeEditar && v.id && (
+                            {puedeEditar && (
                               <Button variant="secondary" size="sm" iconOnly icon={<Pencil size={14} />} aria-label="Editar"
                                 onClick={e => { e.stopPropagation(); setFormulario({ veh: v }); }} />
                             )}
@@ -306,13 +305,12 @@ export function DisponibilidadPage() {
                         {v.placa_camion ? <LicensePlate plate={v.placa_camion} size="sm" /> : <span className="disp-sin">—</span>}
                         {v.placa_carreta && <LicensePlate plate={v.placa_carreta} size="sm" />}
                         <span className={`disp-estado disp-estado--${COLOR_ESTADO[cat]}`}>{v.estado || cat}</span>
-                        {v.aviso_viaje && <span className="t-caption c-secondary">{v.aviso_viaje}</span>}
                       </div>
                       <strong className="disp-mcard__titulo">{v.conductor_asignado || 'Sin conductor asignado'}</strong>
                       <span className="disp-mcard__sub">{[v.marca, v.tipo_unidad, v.capacidad_tanque && `Tanque: ${v.capacidad_tanque}`].filter(Boolean).join(' • ')}</span>
                       {v.observaciones && <span className="disp-mcard__obs">{v.observaciones}</span>}
                       <GpsCelda v={v} mapa={mapaGps} />
-                      {puedeEditar && v.id && (
+                      {puedeEditar && (
                         <div className="disp-mcard__pie">
                           <Button variant="secondary" size="sm" icon={<Pencil size={14} />}
                             onClick={e => { e.stopPropagation(); setFormulario({ veh: v }); }}>Editar</Button>
