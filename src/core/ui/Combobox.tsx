@@ -112,6 +112,14 @@ export function Combobox({
 
   useEffect(() => { setActive(0); }, [query, open]);
 
+  // En hoja el teclado se abre UNA vez, cuando termina la animación de la hoja. Con autoFocus se abría en plena animación
+  // y el teclado cambiaba el tamaño de la pantalla varias veces (en Android eso lo dejaba al 100 % de CPU y dejaba de abrir).
+  useEffect(() => {
+    if (!hoja || !open) return;
+    const t = window.setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 320);
+    return () => window.clearTimeout(t);
+  }, [hoja, open]);
+
   // La opción activa siempre a la vista al moverse con las flechas
   useEffect(() => {
     if (!open) return;
@@ -189,7 +197,6 @@ export function Combobox({
         <input
           ref={inputRef}
           id={hoja ? `${inputId}-buscar` : inputId}
-          autoFocus={hoja}
           className="input combobox__input"
           role="combobox"
           aria-expanded={open}
@@ -208,7 +215,8 @@ export function Combobox({
           enterKeyHint="search"
           onChange={e => { setTyping(true); setQuery(e.target.value); if (!open) setOpen(true); }}
           onKeyDown={onKeyDown}
-          onBlur={close}
+          // En hoja no se cierra al perder el foco: el teclado lo pierde y lo recupera al cambiar de tamaño. Se cierra con la X, al elegir o con atrás.
+          onBlur={() => { if (!hoja) close(); }}
         />
         {selected && !typing ? (
           <button type="button" className="combobox__action" aria-label="Quitar selección" tabIndex={-1}
