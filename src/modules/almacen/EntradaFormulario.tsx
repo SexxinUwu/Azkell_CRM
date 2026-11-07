@@ -13,7 +13,7 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
 import { formatMoneda } from '../../core/lib/format';
 import {
-  guardarEntrada, subirCotizacion, useConfiguracionAlmacen, useCuentasProveedor, useEmpresaCuentas, useInventario,
+  esVigente, guardarEntrada, subirCotizacion, useConfiguracionAlmacen, useCuentasProveedor, useEmpresaCuentas, useInventario,
   useOrdenesTrabajoLista, usePlacasLista, useProveedores, useProximoCodigoEntrada, useTipoCambioSunat,
   type ArticuloInv, type EntradaInv, type PayloadEntrada,
 } from './api';
@@ -248,7 +248,10 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
   // ── Opciones ──────────────────────────────────────────────────────────────
 
   // Artículos y servicios van juntos en cualquier orden (de compra o de servicio): cada uno se reconoce por su ícono y su etiqueta
+  // Solo se ofrecen los artículos activos (no los inactivos ni los descontinuados); uno ya puesto en una línea de esta orden se conserva para que se siga viendo
+  const yaEnLineas = new Set(lineas.map(l => l.inventario_id).filter(Boolean));
   const opcionesArticulos: ComboboxOption[] = inventario
+    .filter(a => esVigente(a) || yaEnLineas.has(a.id))
     .map(a => ({
       value: a.id,
       label: a.descripcion || a.articulo || a.id,

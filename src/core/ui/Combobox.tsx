@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Check, ChevronDown, Plus, Search, X } from 'lucide-react';
 import { MOBILE_QUERY, useMediaQuery } from '../lib/useMediaQuery';
@@ -31,13 +31,15 @@ interface ComboboxProps {
   creates?: Array<{ label: string; onCreate: (text: string) => void; icon?: ReactNode }>;
   loading?: boolean;
   disabled?: boolean;
-  /** Cuántos resultados mostrar como máximo (el resto aparece al seguir escribiendo) */
+  /** Cuántos resultados se dibujan por tanda; al bajar por la lista se cargan más (la búsqueda siempre recorre todo) */
   limit?: number;
   /** Muestra un botón como el de placa y abre la búsqueda en una hoja (sin lista flotante que se corte) */
   enHoja?: boolean;
   /** Título de la hoja cuando `enHoja` (si no, el placeholder) */
   tituloHoja?: string;
 }
+
+const NINGUNA: string[] = [];
 
 // Sin tildes ni mayúsculas, conservando el largo (para resaltar lo encontrado en el texto original)
 const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -66,13 +68,40 @@ function Highlight({ text, words }: { text: string; words: string[] }) {
   return <>{out}</>;
 }
 
+interface FilaProps {
+  o: ComboboxOption; i: number; listId: string; activa: boolean; elegida: boolean; words: string[];
+  onActivar: (i: number) => void; onElegir: (o: ComboboxOption) => void;
+}
+
+/** Una opción de la lista. Memorizada: al mover el cursor solo se redibujan las dos filas que cambian, no toda la lista. */
+const Fila = memo(function Fila({ o, i, listId, activa, elegida, words, onActivar, onElegir }: FilaProps) {
+  return (
+    <li
+      id={`${listId}-${i}`}
+      data-index={i}
+      role="option"
+      aria-selected={elegida}
+      className={`combobox__option${activa ? ' is-active' : ''}`}
+      onPointerEnter={() => onActivar(i)}
+      onClick={() => onElegir(o)}
+    >
+      {o.icon && <span className="combobox__icon">{o.icon}</span>}
+      <span className="combobox__text">
+        <span className="combobox__label"><Highlight text={o.label} words={words} /></span>
+        {o.description && <span className="combobox__desc"><Highlight text={o.description} words={words} /></span>}
+      </span>
+      {elegida && <Check size={16} className="combobox__check" aria-hidden />}
+    </li>
+  );
+});
+
 /**
  * Casilla para elegir de una lista escribiendo: los resultados aparecen mientras se escribe
  * (sin importar tildes ni mayúsculas, en cualquier orden de palabras). Flechas + Enter con teclado.
  * Con onCreate, permite registrar lo que no está en la lista sin salir del formulario.
  */
 export function Combobox({
-  id, options, value, onChange, placeholder = 'Escribe para buscar', onCreate, createLabel = 'Registrar', creates, loading, disabled, limit = 50,
+  id, options, value, onChange, placeholder = 'Escribe para buscar', onCreate, createLabel = 'Registrar', creates, loading, disabled, limit = 30,
   enHoja = false, tituloHoja, ...aria
 }: ComboboxProps) {
   // En celular la búsqueda siempre va en una hoja: la lista inline se reacomodaba con el teclado y provocaba el bucle de foco
@@ -92,25 +121,34 @@ export function Combobox({
   const [typing, setTyping] = useState(false);
 
   const words = useMemo(() => fold(query.trim()).split(/\s+/).filter(Boolean), [query]);
+  // Texto de búsqueda de cada opción, calculado una sola vez (no en cada tecla)
+  const indice = useMemo(() => options.map(o => ({ hay: fold(`${o.label} ${o.description ?? ''} ${o.keywords ?? ''}`), etiqueta: fold(o.label) })), [options]);
+  // La búsqueda recorre TODAS las opciones; solo el dibujo va por tandas
   const results = useMemo(() => {
-    if (!typing || !words.length) return options.slice(0, limit);
-    return options
-      .filter(o => {
-        const hay = fold(`${o.label} ${o.description ?? ''} ${o.keywords ?? ''}`);
-        return words.every(w => hay.includes(w));
-      })
-      // Primero los que empiezan con lo escrito
-      .sort((a, b) => Number(fold(b.label).startsWith(words[0])) - Number(fold(a.label).startsWith(words[0])))
-      .slice(0, limit);
-  }, [options, words, typing, limit]);
+    if (!typing || !words.length) return options;
+    const empiezan: ComboboxOption[] = [];
+    const contienen: ComboboxOption[] = [];
+    options.forEach((o, i) => {
+      if (!words.every(w => indice[i].hay.includes(w))) return;
+      (indice[i].etiqueta.startsWith(words[0]) ? empiezan : contienen).push(o); // primero los que empiezan con lo escrito
+    });
+    return [...empiezan, ...contienen];
+  }, [options, indice, words, typing]);
+
+  // Se dibujan `limit` filas y, al bajar, se agregan más hasta completar todos los resultados
+  const [visibles, setVisibles] = useState(limit);
+  const mostrados = useMemo(() => results.slice(0, visibles), [results, visibles]);
+  const hayMas = visibles < results.length;
+  const centinelaRef = useRef<HTMLLIElement>(null);
+  const porTeclado = useRef(false);
 
   const text = query.trim();
   const exact = results.some(o => fold(o.label) === fold(text));
   const acciones = creates ?? (onCreate ? [{ label: createLabel, onCreate }] : []);
   const showCreate = acciones.length > 0 && !exact;
-  const count = results.length + (showCreate ? acciones.length : 0);
+  const count = mostrados.length + (showCreate ? acciones.length : 0);
 
-  useEffect(() => { setActive(0); }, [query, open]);
+  useEffect(() => { setActive(0); setVisibles(limit); }, [query, open, limit]);
 
   // Escritorio: al abrir la hoja se enfoca la búsqueda (después de la animación). Celular: no se abre el teclado solo;
   // aparece únicamente cuando la persona toca el buscador, y así no se abre ni se cierra sin que lo pida.
@@ -120,11 +158,22 @@ export function Combobox({
     return () => window.clearTimeout(t);
   }, [hoja, open, esMovil]);
 
-  // La opción activa siempre a la vista al moverse con las flechas
+  // Con las flechas la opción activa se mantiene a la vista. Con el cursor NO: si no, al pasar el mouse la lista saltaba y no dejaba bajar.
   useEffect(() => {
-    if (!open) return;
+    if (!open || !porTeclado.current) return;
+    porTeclado.current = false;
     listRef.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView({ block: 'nearest' });
-  }, [active, open]);
+    if (active >= mostrados.length - 3) setVisibles(v => v + limit);
+  }, [active, open, mostrados.length, limit]);
+
+  // Al acercarse al final se cargan más filas (sirve para cualquier contenedor con scroll, incluida la hoja)
+  useEffect(() => {
+    const el = centinelaRef.current;
+    if (!open || !hayMas || !el) return;
+    const obs = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) setVisibles(v => v + limit); }, { rootMargin: '300px' });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [open, hayMas, mostrados.length, limit]);
 
   function openList() {
     if (disabled) return;
@@ -166,17 +215,24 @@ export function Combobox({
   }
 
   function pick(index: number) {
-    if (index < results.length) choose(results[index]);
-    else if (showCreate) create(index - results.length);
+    if (index < mostrados.length) choose(mostrados[index]);
+    else if (showCreate) create(index - mostrados.length);
   }
+
+  const elegirRef = useRef(choose);
+  elegirRef.current = choose;
+  const onElegir = useCallback((o: ComboboxOption) => elegirRef.current(o), []);
+  const onActivar = useCallback((i: number) => setActive(i), []);
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
+      porTeclado.current = true;
       if (!open) openList();
       else setActive(a => Math.min(a + 1, count - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
+      porTeclado.current = true;
       setActive(a => Math.max(a - 1, 0));
     } else if (e.key === 'Enter') {
       if (open && count) { e.preventDefault(); pick(active); }
@@ -248,34 +304,20 @@ export function Combobox({
             ) : !results.length && !showCreate ? (
               <li className="combobox__empty">Sin resultados para «{text}»</li>
             ) : null}
-            {results.map((o, i) => (
-              <li
-                key={o.value}
-                id={`${listId}-${i}`}
-                data-index={i}
-                role="option"
-                aria-selected={o.value === value}
-                className={`combobox__option${i === active ? ' is-active' : ''}`}
-                onPointerEnter={() => setActive(i)}
-                onClick={() => choose(o)}
-              >
-                {o.icon && <span className="combobox__icon">{o.icon}</span>}
-                <span className="combobox__text">
-                  <span className="combobox__label"><Highlight text={o.label} words={typing ? words : []} /></span>
-                  {o.description && <span className="combobox__desc"><Highlight text={o.description} words={typing ? words : []} /></span>}
-                </span>
-                {o.value === value && <Check size={16} className="combobox__check" aria-hidden />}
-              </li>
+            {mostrados.map((o, i) => (
+              <Fila key={o.value} o={o} i={i} listId={listId} activa={i === active} elegida={o.value === value}
+                words={typing ? words : NINGUNA} onActivar={onActivar} onElegir={onElegir} />
             ))}
+            {hayMas && <li ref={centinelaRef} aria-hidden className="combobox__empty" style={{ minHeight: 40 }}><span className="spinner spinner--xs" aria-hidden /></li>}
             {showCreate && acciones.map((ac, k) => (
               <li
                 key={ac.label}
-                id={`${listId}-${results.length + k}`}
-                data-index={results.length + k}
+                id={`${listId}-${mostrados.length + k}`}
+                data-index={mostrados.length + k}
                 role="option"
                 aria-selected={false}
-                className={`combobox__option combobox__create${active === results.length + k ? ' is-active' : ''}`}
-                onPointerEnter={() => setActive(results.length + k)}
+                className={`combobox__option combobox__create${active === mostrados.length + k ? ' is-active' : ''}`}
+                onPointerEnter={() => setActive(mostrados.length + k)}
                 onClick={() => create(k)}
               >
                 <span className="combobox__icon">{ac.icon ?? <Plus size={16} strokeWidth={2.5} />}</span>
