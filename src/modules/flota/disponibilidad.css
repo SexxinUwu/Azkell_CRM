@@ -132,3 +132,10 @@
 .disp-celda-acciones { text-align: right; white-space: nowrap; }
 .disp-botones { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
 .disp-botones .btn { margin: 0; }
+
+/* Gráficos: en pantalla de relleno la página no se desplaza, así que los gráficos se desplazan dentro (barra invisible; sigue con rueda, trackpad y dedo) */
+.disp-graficos-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+.disp-graficos-scroll::-webkit-scrollbar { display: none; }
+@media (min-width: 1024px) {
+  .page--fill .disp-graficos-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+}

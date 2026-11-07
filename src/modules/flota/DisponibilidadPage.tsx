@@ -247,7 +247,9 @@ export function DisponibilidadPage() {
                 : 'No hay vehículos para los filtros actuales.'}
             </EmptyState>
           ) : vista === 'graficos' ? (
-            <DisponibilidadGraficos filas={matriz} titulo={nombreDeEmpresa || 'TOTAL FLOTA'} subtipo={subtipo} onElegirSubtipo={setSubtipo} />
+            <div className="disp-graficos-scroll">
+              <DisponibilidadGraficos filas={matriz} titulo={nombreDeEmpresa || 'TOTAL FLOTA'} subtipo={subtipo} onElegirSubtipo={setSubtipo} />
+            </div>
           ) : (
             <>
               {/* Escritorio: tabla */}
