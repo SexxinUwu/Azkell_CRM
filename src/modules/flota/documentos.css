@@ -272,7 +272,7 @@
 .doc-alquiler__chip--aviso { color: var(--amber-ink); background: color-mix(in srgb, var(--amber-ink) 14%, var(--surface)); }
 .doc-alquiler__nota { flex-basis: 100%; margin: 0; font-size: 0.8125rem; color: var(--label-2); }
 .doc-alquiler__acciones { display: flex; flex-wrap: wrap; gap: 6px; }
-.doc-pendiente { display: inline-flex; margin-left: auto; padding: 2px 10px; border-radius: 999px; font-size: 0.6875rem; font-weight: 700; color: var(--amber-ink); background: color-mix(in srgb, var(--amber-ink) 14%, transparent); white-space: nowrap; }
+.doc-pendiente { display: block; align-self: flex-start; max-width: 100%; margin: 2px 0 0; padding: 2px 10px; border-radius: 999px; font-size: 0.6875rem; font-weight: 700; color: var(--amber-ink); background: color-mix(in srgb, var(--amber-ink) 14%, transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .doc-unidad__alq { margin-left: auto; padding: 1px 7px; border-radius: 999px; font-size: 0.625rem; font-weight: 800; letter-spacing: 0.04em; color: var(--accent-ink); background: var(--accent-tint); }
 
 /* Línea de avance hacia la meta (DocMetaVigentes) */
