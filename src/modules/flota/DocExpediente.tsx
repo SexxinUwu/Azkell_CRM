@@ -1,14 +1,18 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { Eye, FileText, History, MessageCircle, Trash2, Truck } from 'lucide-react';
 import { EmptyState } from '../../core/ui/Display';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Button } from '../../core/ui/Button';
+import { useToast } from '../../core/ui/Toast';
+import { api, errorMessage } from '../../core/api/client';
 import { spring } from '../../core/lib/motion';
 import { useHistorialDocumentos, type RegistroHistorial, type VehiculoFlota } from './api';
 import {
-  COLOR_PERSONALIZADO, colorDoc, textoDias, type DocPersonalizado, type EstadoDoc, type MetaVehiculo,
+  COLOR_PERSONALIZADO, colorDoc, esMotora, textoDias, type DocPersonalizado, type EstadoDoc, type MetaVehiculo,
 } from './docsEstado';
+import { abrirPdfEntregaPorId, compartirEntregaPorId } from './ce-pdf';
 import { formatFechaPe } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
 
@@ -105,6 +109,8 @@ export function DocExpediente({ filas, placa, onElegir, puedeEditar, onCargar, o
                 onEliminar={() => onEliminar({ placa: v.placa, tipoKey: d.config.tipoKey, titulo: d.config.titulo, url: url || null })} />
             );
           })}
+          {/* Inventario de vehículos: solo unidades motoras; no vence y se toma solo del módulo Inventario de vehículos */}
+          {esMotora(v) && <TarjetaInventarioVehiculo v={v} />}
           {seleccion.m.personalizados.map(({ doc, estado }) => (
             <TarjetaDocumento key={doc.id} {...acciones}
               placa={v.placa} num={null} titulo={doc.tipo} tipoKey={doc.tipo} color={COLOR_PERSONALIZADO}
@@ -221,5 +227,87 @@ function FilaHistorial({ h, onVerArchivo }: { h: RegistroHistorial; onVerArchivo
         <Button variant="plain" size="sm" icon={<Eye size={14} />} onClick={() => onVerArchivo(h.observaciones!)}>Ver</Button>
       )}
     </li>
+  );
+}
+
+interface ActaResumen { id: string; numero_inventario: string | null; fecha: string; quien_entrega: string | null; quien_recibe: string | null; kilometraje: number | null }
+
+/**
+ * Inventario de vehículos (acta de entrega): no se carga ni se elimina aquí y nunca vence. Muestra cuándo se inventarió la
+ * unidad la última vez; «Ver archivo» abre el PDF de esa acta, así que al registrar un inventario nuevo esta tarjeta cambia sola.
+ */
+function TarjetaInventarioVehiculo({ v }: { v: VehiculoFlota }) {
+  const toast = useToast();
+  const [ocupado, setOcupado] = useState<string | null>(null);
+  const [historialAbierto, setHistorialAbierto] = useState(false);
+  const inv = v.inventario_vehiculos ?? null;
+  const color = colorDoc(9);
+  const historial = useQuery({
+    queryKey: ['flota', 'inventario-historial', v.placa],
+    enabled: historialAbierto,
+    staleTime: 30_000,
+    queryFn: () => api<{ data?: ActaResumen[] }>(`/seguridad/entrega-vehiculos/historial/${encodeURIComponent(v.placa)}`).then(r => r.data ?? []),
+  });
+
+  async function ejecutar(clave: string, accion: () => Promise<void>) {
+    haptic('selection');
+    setOcupado(clave);
+    try { await accion(); } catch (err) {
+      if (!(err instanceof Error && err.name === 'AbortError')) { toast(errorMessage(err), 'error'); haptic('warning'); }
+    } finally { setOcupado(null); }
+  }
+
+  if (!inv) {
+    return (
+      <article className="doc-card doc-card--vacia" style={{ '--doc-color': color } as React.CSSProperties}>
+        <header className="doc-card__cab">
+          <span className="doc-card__num">9</span>
+          <span className="doc-card__titulo">Inventario de vehículos</span>
+        </header>
+        <p className="doc-card__vacio">Sin inventario. Se registra solo al hacer el inventario de la unidad en Flota › Inventario de vehículos.</p>
+      </article>
+    );
+  }
+
+  return (
+    <article className="doc-card" style={{ '--doc-color': color, '--estado-color': 'var(--green-ink)' } as React.CSSProperties}>
+      <header className="doc-card__cab">
+        <span className="doc-card__num">9</span>
+        <span className="doc-card__titulo">Inventario de vehículos</span>
+      </header>
+      <dl className="doc-card__filas">
+        <div><dt>Inventariado</dt><dd>{formatFechaPe(inv.fecha)}</dd></div>
+        <div><dt>N°</dt><dd>{inv.numero}</dd></div>
+        <div><dt>Inventarios</dt><dd>{inv.total}</dd></div>
+      </dl>
+      <footer className="doc-card__pie">
+        <span className="doc-card__estado-etiqueta">Estado</span>
+        <span className="doc-card__estado" style={{ color: 'var(--green-ink)' }}>No vence</span>
+      </footer>
+      <div className="doc-card__acciones">
+        <Button variant="secondary" size="sm" icon={<Eye size={14} />} disabled={ocupado !== null} onClick={() => { void ejecutar('ver', () => abrirPdfEntregaPorId(inv.id)); }}>Ver archivo</Button>
+        <Button variant="secondary" size="sm" icon={<MessageCircle size={14} />} disabled={ocupado !== null} onClick={() => { void ejecutar('wsp', () => compartirEntregaPorId(inv.id)); }}>WhatsApp</Button>
+        <Button variant="secondary" size="sm" icon={<History size={14} />} aria-expanded={historialAbierto} onClick={() => setHistorialAbierto(a => !a)}>Historial</Button>
+      </div>
+
+      {historialAbierto && (
+        <section className="doc-hist" aria-label="Historial de inventarios">
+          {historial.isLoading ? <p className="doc-hist__vacio">Cargando…</p>
+            : historial.isError ? <p className="doc-hist__vacio">No se pudo cargar el historial.</p>
+              : (historial.data ?? []).length === 0 ? <p className="doc-hist__vacio">Sin inventarios anteriores.</p>
+                : (
+                  <ul className="doc-hist__lista">
+                    {(historial.data ?? []).map(a => (
+                      <li key={a.id} className="doc-hist__fila">
+                        <span className="doc-hist__venc">{formatFechaPe(a.fecha)} · {a.numero_inventario || a.id}</span>
+                        <span className="doc-hist__detalle">{[a.quien_recibe && `Recibió ${a.quien_recibe}`, a.kilometraje ? `${Number(a.kilometraje).toLocaleString('es-PE')} km` : ''].filter(Boolean).join(' · ')}</span>
+                        <Button variant="plain" size="sm" icon={<Eye size={14} />} disabled={ocupado !== null} onClick={() => { void ejecutar(`h${a.id}`, () => abrirPdfEntregaPorId(a.id)); }}>Ver</Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+        </section>
+      )}
+    </article>
   );
 }

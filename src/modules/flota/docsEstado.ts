@@ -99,6 +99,17 @@ export function personalizadosDe(v: VehiculoFlota): DocPersonalizado[] {
   return Array.isArray(v.docs_personalizados) ? (v.docs_personalizados as DocPersonalizado[]) : [];
 }
 
+/**
+ * Unidad motora (tracto o camión): la misma regla que usa Seguridad para contar «unidades motoras».
+ * Remolques, semirremolques, carretas, furgones, plataformas, tanques, tolvas y bateas no lo son.
+ */
+export function esMotora(v: VehiculoFlota): boolean {
+  const motora = String(v.motora ?? '').toUpperCase().trim();
+  const tipo = String(v.tipo ?? '').toUpperCase().trim();
+  if (motora.includes('NO') || motora === '0') return false;
+  return !/(SEMIREMOLQUE|SEMIRREMOLQUE|CARRETA|FURGON|PLATAFORMA|TANQUE|TOLVA|BATEA|CAMA)/.test(tipo);
+}
+
 export interface DocVehiculo {
   config: DocConfig;
   registrado: boolean;
