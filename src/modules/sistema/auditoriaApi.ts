@@ -4,10 +4,10 @@ import { api } from '../../core/api/client';
 // Auditoría para personas: eventos legibles del registro firmado (sin el ruido de las consultas automáticas),
 // anulaciones/rechazos con quién y cuándo, y detalle con antes/después. Todo viene en UTC (ISO); aquí se muestra en hora de Lima.
 
-export type CategoriaEvento = 'ingreso' | 'creo' | 'modifico' | 'elimino' | 'anulo' | 'rechazo' | 'aprobo' | 'bloqueo';
+export type CategoriaEvento = 'ingreso' | 'creo' | 'modifico' | 'elimino' | 'anulo' | 'rechazo' | 'aprobo' | 'bloqueo' | 'acceso_fallido' | 'consulta';
 
 export const ETIQUETA_CATEGORIA: Record<CategoriaEvento, string> = {
-  ingreso: 'Ingresó', creo: 'Registró', modifico: 'Modificó', elimino: 'Eliminó', anulo: 'Anuló', rechazo: 'Rechazó', aprobo: 'Aprobó', bloqueo: 'Bloqueado',
+  ingreso: 'Ingresó', creo: 'Registró', modifico: 'Modificó', elimino: 'Eliminó', anulo: 'Anuló', rechazo: 'Rechazó', aprobo: 'Aprobó', bloqueo: 'Bloqueado', acceso_fallido: 'Acceso fallido', consulta: 'Consultó',
 };
 
 export interface EventoAuditoria {
@@ -29,6 +29,10 @@ export interface EventoAuditoria {
 
 export interface DetalleEvento extends EventoAuditoria {
   firmaHash: string | null;
+  /** Campos que cambiaron respecto al registro anterior */
+  cambios: Array<{ campo: string; antes: string | null; despues: string | null }>;
+  /** Código del documento (ENT-2026-00337…) si el evento trata de uno */
+  codigo: string | null;
   cuerpo: Record<string, unknown> | string | null;
   antes: Record<string, unknown> | string | null;
   despues: Record<string, unknown> | string | null;
@@ -105,6 +109,50 @@ export function useAnulaciones(activo: boolean) {
     queryFn: () => api('/audit/anulaciones'),
     enabled: activo,
     staleTime: 30_000,
+  });
+}
+
+export interface EventoResumen { uid: string; fecha: string | null; usuario: string; descripcion: string; categoria: CategoriaEvento }
+
+export interface Alerta {
+  id: string;
+  nivel: 'alta' | 'media' | 'info';
+  titulo: string;
+  detalle: string;
+  cantidad: number;
+  eventos: EventoResumen[];
+}
+
+export interface ActividadPersona {
+  usuario: string; total: number; ultimo: string | null;
+  creo: number; modifico: number; elimino: number; anulo: number; rechazo: number; aprobo: number;
+  bloqueo: number; ingreso: number; accesoFallido: number; consulta: number;
+}
+
+export function useHistorial(codigo: string | null) {
+  return useQuery<{ codigo: string; eventos: EventoAuditoria[] }>({
+    queryKey: ['auditoria', 'historial', codigo],
+    queryFn: () => api(`/audit/historial?codigo=${encodeURIComponent(codigo ?? '')}`),
+    enabled: !!codigo,
+    staleTime: 30_000,
+  });
+}
+
+export function usePersonasAuditoria(from: string, to: string, activo: boolean) {
+  return useQuery<ActividadPersona[]>({
+    queryKey: ['auditoria', 'personas', from, to],
+    queryFn: () => api(`/audit/personas?${new URLSearchParams({ ...(from ? { from } : {}), ...(to ? { to } : {}) }).toString()}`),
+    enabled: activo,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+}
+
+export function useAlertas(dias: number) {
+  return useQuery<{ dias: number; alertas: Alerta[] }>({
+    queryKey: ['auditoria', 'alertas', dias],
+    queryFn: () => api(`/audit/alertas?dias=${dias}`),
+    staleTime: 60_000,
   });
 }
 

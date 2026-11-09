@@ -2556,8 +2556,22 @@ function _auditFirma(campos) {
         .update(Object.values(campos).join('|'))
         .digest('hex');
 }
+// Lecturas que también se registran porque exponen documentos o la propia auditoría: PDF, impresiones, archivos, exportaciones.
+const LECTURAS_AUDITADAS = /(^|\/)(ot-)?pdf(\/|$)|\/imprimir\/|\/archivo\/[^/]+\/ver$|\/exportar(\/|$)|^\/log-auditoria|^\/audit\/anulaciones/;
+// Antes de modificar o borrar estos registros se guarda cómo estaban (para mostrar «qué cambió» en Auditoría).
+// [ruta, tabla, columnas por las que se busca el id]
+const ANTES_TABLAS = [
+    [/^\/almacen\/entradas\/([^/]+)(\/|$)/, 'entradas_inv', ['id']],
+    [/^\/almacen\/salidas\/([^/]+)$/, 'salidas_inv', ['id']],
+    [/^\/almacen\/inventario\/([^/]+)(\/|$)/, 'inventario', ['id']],
+    [/^\/almacen\/proveedores\/([^/]+)$/, 'proveedores_inv', ['id']],
+    [/^\/roles\/([^/]+)$/, 'roles', ['id']],
+    [/^\/placas\/([^/]+)$/, 'placas', ['placa']],
+    [/^\/ordenes-trabajo\/+([^/]+)$/, 'ordenes_trabajo', ['id_ot', 'ticket_entrada']],
+];
 app.use('/api', (req, res, next) => {
-    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
+    const esLecturaAuditada = req.method === 'GET' && LECTURAS_AUDITADAS.test(req.path);
+    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && !esLecturaAuditada) return next();
     if (AUDIT_SKIP_PATHS.some(p => req.path.startsWith(p))) return next();
     const usuario = (req.user && (req.user.nombre || req.user.correo)) || 'Anónimo';
     const correo  = (req.user && req.user.correo) || '';
@@ -2565,7 +2579,7 @@ app.use('/api', (req, res, next) => {
     const ruta    = req.path.slice(0, 400);
     const seg     = ruta.split('/').filter(Boolean);
     const modulo  = seg[0] || 'general';
-    const accionMap = { POST: 'crear', PUT: 'editar', PATCH: 'editar', DELETE: 'eliminar' };
+    const accionMap = { POST: 'crear', PUT: 'editar', PATCH: 'editar', DELETE: 'eliminar', GET: 'ver' };
     const accion  = accionMap[req.method] || req.method.toLowerCase();
     let bodyResumen = '';
     try {
@@ -2594,7 +2608,9 @@ app.use('/api', (req, res, next) => {
     res.on('finish', () => {
         const targetDb = req.db || db;
         const antes = _resumir(req.auditAntes);
-        const despues = res.statusCode < 400 ? _resumir(despuesRaw) : null;
+        // Si el sistema rechazó la petición, se guarda el motivo que dio (para mostrarlo en Auditoría como «Bloqueado»)
+        const despues = res.statusCode < 400 ? _resumir(despuesRaw)
+            : (despuesRaw && despuesRaw.error ? _resumir({ error: String(despuesRaw.error).slice(0, 400) }) : null);
         const firmaEstado = _auditFirma({ firma, antes: antes || '', despues: despues || '' });
         targetDb.query(
             `INSERT INTO log_auditoria (fecha, usuario, correo, ip, metodo, ruta, modulo, accion, body_resumen, status_codigo, firma, antes, despues, firma_estado)
@@ -2612,7 +2628,16 @@ app.use('/api', (req, res, next) => {
             }
         );
     });
-    next();
+    // Estado anterior del registro (solo al modificar o borrar los módulos de ANTES_TABLAS); un handler puede fijar el suyo después
+    const objetivo = ['PUT', 'PATCH', 'DELETE'].includes(req.method)
+        ? ANTES_TABLAS.map(([re, tabla, cols]) => { const m = re.exec(req.path); return m ? { tabla, cols, id: decodeURIComponent(m[1]) } : null; }).find(Boolean)
+        : null;
+    if (!objetivo) return next();
+    (req.db || db).query(
+        `SELECT * FROM \`${objetivo.tabla}\` WHERE ${objetivo.cols.map(c => `\`${c}\` = ?`).join(' OR ')} LIMIT 1`,
+        objetivo.cols.map(() => objetivo.id),
+        (errA, filasA) => { if (!errA && filasA && filasA[0] && !req.auditAntes) req.auditAntes = filasA[0]; next(); }
+    );
 });
 
 // ============================================================
@@ -2720,6 +2745,10 @@ app.get('/api/ping', (req, res) => {
 app.post('/api/login', limiterLoginCuenta, (req, res) => {
     const { correo, password } = req.body;
     const loginInput = (correo || '').trim();
+    // Intento de ingreso que no prosperó: queda en Auditoría (quién lo intentó y por qué falló; nunca se guarda la contraseña)
+    const loginFallido = (motivo, usuarioId = null, nombre = null) => auditar(req.db || db,
+        { ...actorDe(req), userId: usuarioId, userName: String(nombre || loginInput || 'Desconocido').slice(0, 120) },
+        { action: 'LOGIN_FAILED', entity: 'session', entityId: usuarioId, summary: `Intento de ingreso fallido: ${motivo}` });
     const sql = `
         SELECT u.*, r.permisos_json AS rol_permisos, r.nombre AS rol_nombre,
                r.color AS rol_color, r.es_admin AS rol_es_admin, r.id AS rol_id_fk
@@ -2751,6 +2780,7 @@ app.post('/api/login', limiterLoginCuenta, (req, res) => {
 
             if (passwordValida) {
                 if (usuario.estado === 'Inactivo' && loginInput.toLowerCase() !== 'admin@azkell.com') {
+                    loginFallido('cuenta inactiva', usuario.id ?? null, usuario.nombre);
                     return res.json({ exito: false, mensaje: "Cuenta inactiva." });
                 }
 
@@ -2763,7 +2793,7 @@ app.post('/api/login', limiterLoginCuenta, (req, res) => {
                     const codigo = String(req.body.totp_code || '').replace(/\s/g, '');
                     if (!codigo) return res.json({ exito: false, requiere2fa: true, mensaje: 'Ingresa el código de tu app de autenticación.' });
                     const codigoValido = speakeasy.totp.verify({ secret: fa.totp_secret, encoding: 'base32', token: codigo, window: 1 });
-                    if (!codigoValido) return res.json({ exito: false, requiere2fa: true, mensaje: 'Código 2FA incorrecto.' });
+                    if (!codigoValido) { loginFallido('código 2FA incorrecto', usuario.id ?? null, usuario.nombre); return res.json({ exito: false, requiere2fa: true, mensaje: 'Código 2FA incorrecto.' }); }
                 }
 
                 let permisosFinales;
@@ -2839,7 +2869,7 @@ app.post('/api/login', limiterLoginCuenta, (req, res) => {
                     rol_id: usuario.rol_id || null
                 });
 
-            } else { return res.json({ exito: false, mensaje: "Contraseña incorrecta." }); }
+            } else { loginFallido('contraseña incorrecta', usuario.id ?? null, usuario.nombre); return res.json({ exito: false, mensaje: "Contraseña incorrecta." }); }
         } else {
             // SI NO EXISTE EN EL TENANT ACTUAL, BUSCAR EN LOS DEMÁS TENANTS ACTIVOS (LOGIN UNIFICADO MULTI-EMPRESA / GARITA)
             try {
@@ -2930,6 +2960,7 @@ app.post('/api/login', limiterLoginCuenta, (req, res) => {
                                 empresa_nombre: t.nombre_empresa
                             });
                         } else {
+                            loginFallido('contraseña incorrecta', null, usuario.nombre);
                             return res.json({ exito: false, mensaje: "Contraseña incorrecta." });
                         }
                     }
@@ -2938,6 +2969,7 @@ app.post('/api/login', limiterLoginCuenta, (req, res) => {
                 console.error('[Login Multi-Tenant Fallback] Error:', e);
             }
 
+            loginFallido('usuario no registrado');
             return res.json({ exito: false, mensaje: "El usuario o correo no está registrado." });
         }
     });

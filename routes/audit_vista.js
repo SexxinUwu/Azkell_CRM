@@ -39,7 +39,7 @@ module.exports = (db) => {
       if (err) return res.status(500).json({ error: err.message });
       const total = filasTotal && filasTotal[0] ? Number(filasTotal[0].total) : 0;
       pool.query(
-        `SELECT ev.uid, ev.id, ev.origen, ev.ts, ev.usuario, ev.correo, ev.ip, ev.metodo, ev.ruta, ev.body_resumen, ev.status, ev.firma_estado,
+        `SELECT ev.uid, ev.id, ev.origen, ev.sub, ev.ts, ev.usuario, ev.correo, ev.ip, ev.metodo, ev.ruta, ev.body_resumen, ev.status, ev.firma_estado, ev.despues,
                 ${vista.SEGMENTO_SQL} AS segmento
          FROM ${vista.EVENTOS_SQL}${where} ORDER BY ev.ts ${sentido}, ev.id ${sentido} LIMIT ? OFFSET ?`,
         [...params, tamano, (page - 1) * tamano],
@@ -99,8 +99,8 @@ module.exports = (db) => {
     const m = /^([LS])(\d+)$/.exec(String(req.params.uid));
     if (!m) return res.status(400).json({ error: 'Identificador inválido' });
     const sql = m[1] === 'L'
-      ? 'SELECT id, fecha AS ts, usuario, correo, ip, metodo, ruta, modulo, body_resumen, status_codigo AS status, firma, firma_estado, antes, despues FROM log_auditoria WHERE id = ?'
-      : "SELECT id, created_at AS ts, user_name AS usuario, NULL AS correo, ip, 'POST' AS metodo, '/sesion/ingreso' AS ruta, 'sesion' AS modulo, summary AS body_resumen, 200 AS status, NULL AS firma, NULL AS firma_estado, NULL AS antes, NULL AS despues FROM audit_logs WHERE id = ?";
+      ? "SELECT id, '' AS sub, fecha AS ts, usuario, correo, ip, metodo, ruta, modulo, body_resumen, status_codigo AS status, firma, firma_estado, antes, despues FROM log_auditoria WHERE id = ?"
+      : "SELECT id, action AS sub, created_at AS ts, user_name AS usuario, NULL AS correo, ip, 'POST' AS metodo, '/sesion/ingreso' AS ruta, 'sesion' AS modulo, summary AS body_resumen, 200 AS status, NULL AS firma, NULL AS firma_estado, NULL AS antes, NULL AS despues FROM audit_logs WHERE id = ?";
     pool.query(sql, [Number(m[2])], (err, filas) => {
       if (err) return res.status(500).json({ error: err.message });
       const f = filas && filas[0];
@@ -114,6 +114,9 @@ module.exports = (db) => {
         cuerpo: vista.aObjeto(f.body_resumen) || (f.body_resumen ? String(f.body_resumen) : null),
         antes: vista.aObjeto(f.antes) || (f.antes ? String(f.antes) : null),
         despues: vista.aObjeto(f.despues) || (f.despues ? String(f.despues) : null),
+        // Campos que cambiaron respecto al registro anterior (cuando se guardó cómo estaba antes)
+        cambios: vista.cambiosEntre(vista.aObjeto(f.antes), vista.aObjeto(f.body_resumen)),
+        codigo: (String(f.ruta || '').match(/[A-Z]{2,4}-[0-9]{4}-[0-9]+/) || [])[0] || null,
       });
     });
   });
@@ -166,6 +169,107 @@ module.exports = (db) => {
             );
           }
         );
+      }
+    );
+  });
+
+
+  const mapearEvento = f => {
+    const d = vista.describir(f);
+    return {
+      uid: f.uid, id: f.id, fecha: vista.aIso(f.ts), usuario: f.usuario || 'Sistema', correo: f.correo || null, ip: f.ip || null,
+      categoria: d.categoria, descripcion: d.texto, modulo: vista.ETIQUETA_MODULO[f.segmento] || f.segmento || '—', segmento: f.segmento,
+      metodo: f.metodo, ruta: f.ruta, status: f.status, firma: f.firma_estado || null,
+    };
+  };
+  const COLUMNAS_EVENTO = `ev.uid, ev.id, ev.origen, ev.sub, ev.ts, ev.usuario, ev.correo, ev.ip, ev.metodo, ev.ruta, ev.body_resumen, ev.status, ev.firma_estado, ev.despues,
+                ${vista.SEGMENTO_SQL} AS segmento`;
+
+  // GET /api/audit/historial?codigo=ENT-2026-00337: línea de tiempo de un documento (creación, aprobación, anulación, intentos bloqueados…)
+  router.get('/audit/historial', (req, res) => {
+    const codigo = String(req.query.codigo || '').trim();
+    if (!/^[A-Za-z0-9._-]{4,40}$/.test(codigo)) return res.status(400).json({ error: 'Indica el código del documento' });
+    const like = `%${codigo}%`;
+    (req.db || db).query(
+      `SELECT ${COLUMNAS_EVENTO} FROM ${vista.EVENTOS_SQL}
+       WHERE ev.origen = 'firmado' AND (ev.ruta LIKE ? OR ev.body_resumen LIKE ? OR ev.despues LIKE ?)
+       ORDER BY ev.ts ASC, ev.id ASC LIMIT 200`,
+      [like, like, like],
+      (err, filas) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ codigo, eventos: (filas || []).map(mapearEvento) });
+      }
+    );
+  });
+
+  // GET /api/audit/personas?from=&to=: actividad de cada persona en el rango (para el perfil por persona)
+  router.get('/audit/personas', (req, res) => {
+    const { where, params } = condicionesEventos({ from: req.query.from, to: req.query.to }, false);
+    (req.db || db).query(
+      `SELECT x.usuario, COUNT(*) AS total, MAX(x.ts) AS ultimo,
+              SUM(x.cat = 'creo') AS creo, SUM(x.cat = 'modifico') AS modifico, SUM(x.cat = 'elimino') AS elimino, SUM(x.cat = 'anulo') AS anulo,
+              SUM(x.cat = 'rechazo') AS rechazo, SUM(x.cat = 'aprobo') AS aprobo, SUM(x.cat = 'bloqueo') AS bloqueo,
+              SUM(x.cat = 'ingreso') AS ingreso, SUM(x.cat = 'acceso_fallido') AS acceso_fallido, SUM(x.cat = 'consulta') AS consulta
+       FROM (SELECT ev.usuario, ev.ts, (${vista.CATEGORIA_SQL}) AS cat FROM ${vista.EVENTOS_SQL}${where}) x
+       WHERE x.usuario IS NOT NULL AND x.usuario <> ''
+       GROUP BY x.usuario ORDER BY total DESC LIMIT 200`,
+      params,
+      (err, filas) => {
+        if (err) return res.status(500).json({ error: err.message });
+        const n = v => Number(v) || 0;
+        res.json((filas || []).map(f => ({
+          usuario: f.usuario, total: n(f.total), ultimo: vista.aIso(f.ultimo),
+          creo: n(f.creo), modifico: n(f.modifico), elimino: n(f.elimino), anulo: n(f.anulo), rechazo: n(f.rechazo), aprobo: n(f.aprobo),
+          bloqueo: n(f.bloqueo), ingreso: n(f.ingreso), accesoFallido: n(f.acceso_fallido), consulta: n(f.consulta),
+        })));
+      }
+    );
+  });
+
+  // GET /api/audit/alertas?dias=7: lo que merece atención en los últimos días, con los eventos que lo explican
+  router.get('/audit/alertas', (req, res) => {
+    const dias = Math.min(60, Math.max(1, parseInt(req.query.dias, 10) || 7));
+    const desde = new Date(Date.now() - dias * 86400000).toISOString().slice(0, 19).replace('T', ' ');
+    (req.db || db).query(
+      `SELECT x.* FROM (SELECT ${COLUMNAS_EVENTO}, (${vista.CATEGORIA_SQL}) AS cat FROM ${vista.EVENTOS_SQL}) x
+       WHERE x.ts >= ? AND x.cat IN ('anulo', 'rechazo', 'elimino', 'bloqueo', 'acceso_fallido') OR (x.ts >= ? AND x.segmento IN ('roles', 'usuarios', 'usuarios-v2') AND x.metodo <> 'GET' AND x.status < 400)
+       ORDER BY x.ts DESC LIMIT 3000`,
+      [desde, desde],
+      (err, filas) => {
+        if (err) return res.status(500).json({ error: err.message });
+        const eventos = (filas || []).map(f => ({ ...mapearEvento(f), cat: f.cat }));
+        const alertas = [];
+        const resumirEventos = lista => lista.slice(0, 6).map(e => ({ uid: e.uid, fecha: e.fecha, usuario: e.usuario, descripcion: e.descripcion, categoria: e.categoria }));
+        const nuevo = (id, nivel, titulo, detalle, lista) => { if (lista.length) alertas.push({ id, nivel, titulo, detalle, cantidad: lista.length, eventos: resumirEventos(lista) }); };
+
+        const anulaciones = eventos.filter(e => e.cat === 'anulo' || e.cat === 'rechazo');
+        nuevo('anulaciones', 'alta', 'Anulaciones y rechazos', `Órdenes o salidas anuladas o rechazadas en los últimos ${dias} días.`, anulaciones);
+        nuevo('eliminaciones', 'alta', 'Registros eliminados', `Se borraron registros en los últimos ${dias} días.`, eventos.filter(e => e.cat === 'elimino'));
+
+        const permisos = eventos.filter(e => ['roles', 'usuarios', 'usuarios-v2'].includes(e.segmento) && e.metodo !== 'GET' && e.cat !== 'bloqueo');
+        nuevo('permisos', 'alta', 'Cambios de roles, permisos o usuarios', 'Quién tocó la seguridad del sistema.', permisos);
+
+        // Intentos bloqueados: se agrupan por persona (3 o más = patrón a revisar)
+        const bloqueos = eventos.filter(e => e.cat === 'bloqueo');
+        const porPersona = new Map();
+        bloqueos.forEach(e => { porPersona.set(e.usuario, [...(porPersona.get(e.usuario) || []), e]); });
+        const repetidos = [...porPersona.entries()].filter(([, l]) => l.length >= 3);
+        repetidos.forEach(([persona, lista]) => nuevo(`bloqueos-${persona}`, 'media', `${persona}: ${lista.length} intentos bloqueados`, 'Acciones que el sistema no permitió (sin stock, sin permiso, datos inválidos…).', lista));
+        const sueltos = bloqueos.filter(e => (porPersona.get(e.usuario) || []).length < 3);
+        nuevo('bloqueos', 'info', 'Intentos bloqueados', 'Acciones sueltas que el sistema no permitió.', sueltos);
+
+        // Accesos fallidos: 3 o más de la misma cuenta, o cualquier intento con un usuario que no existe
+        const fallidos = eventos.filter(e => e.cat === 'acceso_fallido');
+        const porCuenta = new Map();
+        fallidos.forEach(e => { porCuenta.set(e.usuario, [...(porCuenta.get(e.usuario) || []), e]); });
+        const sospechosos = [...porCuenta.entries()].filter(([, l]) => l.length >= 3 || l.some(e => /no registrado/.test(e.descripcion)));
+        sospechosos.forEach(([cuenta, lista]) => nuevo(`acceso-${cuenta}`, 'media', `Accesos fallidos de «${cuenta}»`, `${lista.length} intento(s) de ingreso que no prosperaron.`, lista));
+        const otrosFallidos = fallidos.filter(e => !sospechosos.some(([c]) => c === e.usuario));
+        nuevo('accesos', 'info', 'Otros accesos fallidos', 'Una contraseña errada suelta suele ser un descuido.', otrosFallidos);
+
+        const orden = { alta: 0, media: 1, info: 2 };
+        alertas.sort((a, b) => orden[a.nivel] - orden[b.nivel] || b.cantidad - a.cantidad);
+        res.json({ dias, alertas });
       }
     );
   });

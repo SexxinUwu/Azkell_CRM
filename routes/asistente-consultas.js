@@ -420,13 +420,13 @@ const HERRAMIENTAS = {
     sinPermiso: 'Esta persona no tiene permiso para ver la auditoría. Dile que lo solicite al administrador.',
     declaracion: {
       name: 'actividad_auditoria',
-      description: 'Auditoría: quién hizo qué y cuándo en el sistema. Úsala para "quién anuló la orden ENT-2026-00337", "quién rechazó esa compra", "qué hizo Daniel ayer", "quién despachó la salida SAL-2026-00790" o "qué anulaciones hubo esta semana". Devuelve los eventos más recientes que coincidan, con persona, fecha y hora de Lima y descripción. Solo registra lo que cambió datos (crear, modificar, anular, eliminar, aprobar, rechazar, ingresos al sistema) y los intentos bloqueados; no registra quién solo miró una pantalla.',
+      description: 'Auditoría: quién hizo qué y cuándo en el sistema. Úsala para "quién anuló la orden ENT-2026-00337", "quién rechazó esa compra", "qué hizo Daniel ayer", "quién despachó la salida SAL-2026-00790" o "qué anulaciones hubo esta semana". Devuelve los eventos más recientes que coincidan, con persona, fecha y hora de Lima y descripción. Registra lo que cambió datos (crear, modificar, anular, eliminar, aprobar, rechazar), los ingresos y accesos fallidos, los intentos bloqueados con su motivo y quién abrió PDF o archivos; no registra quién solo miró una pantalla.',
       parameters: {
         type: 'OBJECT',
         properties: {
           persona: { type: 'STRING', description: 'Parte del nombre de la persona (por ejemplo "Daniel" o "Jenrry").' },
           texto: { type: 'STRING', description: 'Código o palabra del documento o registro (por ejemplo "ENT-2026-00337", "SAL-2026-00790", "CLX861").' },
-          accion: { type: 'STRING', description: 'Tipo de acción: creo, modifico, elimino, anulo, rechazo, aprobo, ingreso o bloqueo (intento que el sistema no permitió).' },
+          accion: { type: 'STRING', description: 'Tipo de acción: creo, modifico, elimino, anulo, rechazo, aprobo, ingreso, acceso_fallido (contraseña errada), consulta (abrió un PDF o archivo) o bloqueo (intento que el sistema no permitió, con su motivo).' },
           modulo: { type: 'STRING', description: 'Módulo: almacen, ordenes-trabajo, seguridad, disponibilidad-flota, combustible, tesoreria, neumaticos, mantenimiento, checklist, taller-rampas.' },
           desde: { type: 'STRING', description: 'Fecha inicial AAAA-MM-DD (hora de Lima).' },
           hasta: { type: 'STRING', description: 'Fecha final AAAA-MM-DD (hora de Lima).' },
@@ -435,7 +435,7 @@ const HERRAMIENTAS = {
       },
     },
     async ejecutar(args, db) {
-      const CATEGORIAS = ['ingreso', 'creo', 'modifico', 'elimino', 'anulo', 'rechazo', 'aprobo', 'bloqueo'];
+      const CATEGORIAS = ['ingreso', 'creo', 'modifico', 'elimino', 'anulo', 'rechazo', 'aprobo', 'bloqueo', 'acceso_fallido', 'consulta'];
       const accion = CATEGORIAS.includes(String(args.accion || '').toLowerCase()) ? String(args.accion).toLowerCase() : '';
       const modulo = /^[a-z0-9-]{3,40}$/.test(String(args.modulo || '')) ? String(args.modulo) : '';
       const persona = texto(args.persona, 60);
@@ -459,7 +459,7 @@ const HERRAMIENTAS = {
         `SELECT ev.id, ev.origen, ev.ts, ev.usuario, ev.metodo, ev.ruta, ev.body_resumen, ev.status, ${vistaAudit.SEGMENTO_SQL} AS segmento
          FROM ${vistaAudit.EVENTOS_SQL}${where} ORDER BY ev.ts DESC, ev.id DESC LIMIT ${limiteDeArgs(args)}`, params);
       if (!filas.length) throw new ErrorConsulta('No encontré eventos de auditoría con esos datos.');
-      const ETIQUETA = { ingreso: 'Ingresó', creo: 'Registró', modifico: 'Modificó', elimino: 'Eliminó', anulo: 'Anuló', rechazo: 'Rechazó', aprobo: 'Aprobó', bloqueo: 'Bloqueado' };
+      const ETIQUETA = { ingreso: 'Ingresó', creo: 'Registró', modifico: 'Modificó', elimino: 'Eliminó', anulo: 'Anuló', rechazo: 'Rechazó', aprobo: 'Aprobó', bloqueo: 'Bloqueado', acceso_fallido: 'Acceso fallido', consulta: 'Consultó' };
       return {
         eventos: filas.length,
         nota: 'Las horas están en hora de Lima. Un evento «Bloqueado» es un intento que el sistema no permitió: no se realizó.',

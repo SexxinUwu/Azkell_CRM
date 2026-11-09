@@ -18,6 +18,8 @@
 .aud2-cat--rechazo { color: var(--red-ink); background: color-mix(in srgb, var(--red-ink) 14%, transparent); }
 .aud2-cat--aprobo { color: #0a64d6; background: color-mix(in srgb, #007aff 14%, transparent); }
 .aud2-cat--bloqueo { color: #7c3aed; background: color-mix(in srgb, #7c3aed 14%, transparent); }
+.aud2-cat--acceso_fallido { color: var(--red-ink); background: color-mix(in srgb, var(--red-ink) 14%, transparent); }
+.aud2-cat--consulta { color: #0369a1; background: color-mix(in srgb, #0ea5e9 14%, transparent); }
 .aud2-cat--ingreso { color: var(--label-2); background: var(--fill); }
 .aud2-cat--anulada { color: #c2410c; background: color-mix(in srgb, #f97316 16%, transparent); }
 .aud2-cat--rechazada { color: var(--red-ink); background: color-mix(in srgb, var(--red-ink) 14%, transparent); }
@@ -69,3 +71,37 @@
   .aud2-tarjeta { transition: transform 0.12s ease; }
   .aud2-tarjeta:active { transform: scale(0.985); }
 }
+
+/* Línea de tiempo (historial de un documento y movimientos de una persona) */
+.aud2-linea { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--separator); display: flex; flex-direction: column; gap: var(--s-3); }
+.aud2-linea__item { position: relative; }
+.aud2-linea__item::before { content: ''; position: absolute; left: -21px; top: 14px; width: 10px; height: 10px; border-radius: 50%; background: var(--label-3); box-shadow: 0 0 0 3px var(--surface); }
+.aud2-linea__item--creo::before { background: var(--green-ink); }
+.aud2-linea__item--modifico::before { background: var(--amber-ink); }
+.aud2-linea__item--aprobo::before { background: #0a64d6; }
+.aud2-linea__item--anulo::before, .aud2-linea__item--elimino::before, .aud2-linea__item--rechazo::before, .aud2-linea__item--acceso_fallido::before { background: var(--red-ink); }
+.aud2-linea__item--bloqueo::before { background: #7c3aed; }
+.aud2-linea__cuerpo { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 0; border-radius: 12px; background: var(--fill); color: inherit; font: inherit; cursor: pointer; }
+.aud2-linea__cuerpo:hover { background: var(--fill-strong); }
+.aud2-linea__cabeza { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.aud2-linea__quien { font-size: 0.75rem; color: var(--label-2); font-weight: 600; }
+.aud2-persona-btn { border: 0; background: none; padding: 0; cursor: pointer; color: inherit; font: inherit; text-align: left; min-width: 0; }
+
+/* Alertas */
+.aud2-alertas { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr)); }
+.aud2-alerta { background: var(--surface); border-radius: var(--r-lg); padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-2); box-shadow: var(--shadow-card, 0 1px 3px rgba(0,0,0,.08)); border-left: 4px solid var(--label-3); }
+.aud2-nivel--alta { border-left-color: var(--red-ink); }
+.aud2-nivel--media { border-left-color: var(--amber-ink); }
+.aud2-nivel--info { border-left-color: #0ea5e9; }
+.aud2-alerta__cabeza { display: flex; align-items: center; gap: var(--s-2); }
+.aud2-alerta__titulo { flex: 1; margin: 0; font-size: 0.9375rem; font-weight: 700; min-width: 0; }
+.aud2-alerta__nivel { font-size: 0.625rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 8px; border-radius: 999px; background: var(--fill); color: var(--label-2); }
+.aud2-nivel--alta .aud2-alerta__nivel { color: var(--red-ink); background: color-mix(in srgb, var(--red-ink) 14%, transparent); }
+.aud2-nivel--media .aud2-alerta__nivel { color: var(--amber-ink); background: color-mix(in srgb, var(--amber-ink) 14%, transparent); }
+.aud2-alerta__n { font-family: var(--font-mono); font-weight: 800; font-size: 1.25rem; }
+.aud2-alerta__detalle { margin: 0; font-size: 0.8125rem; color: var(--label-2); }
+.aud2-alerta__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.aud2-alerta__lista button { width: 100%; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; text-align: left; padding: 8px 10px; border: 0; border-radius: 10px; background: var(--fill); color: inherit; font: inherit; cursor: pointer; }
+.aud2-alerta__lista button:hover { background: var(--fill-strong); }
+.aud2-alerta__lista .aud2-texto { grid-column: 1 / -1; }
+.aud2-alerta__quien { font-size: 0.75rem; font-weight: 600; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
