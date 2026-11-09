@@ -250,7 +250,8 @@ module.exports = (db) => {
         nuevo('permisos', 'alta', 'Cambios de roles, permisos o usuarios', 'Quién tocó la seguridad del sistema.', permisos);
 
         // Intentos bloqueados: se agrupan por persona (3 o más = patrón a revisar)
-        const bloqueos = eventos.filter(e => e.cat === 'bloqueo');
+        // Solo los que importan para el control: sin permiso (403) o en módulos de dinero y seguridad. Los 409/400 de formularios de campo (checklist duplicado…) no son alerta.
+        const bloqueos = eventos.filter(e => e.cat === 'bloqueo' && (e.status === 403 || ['almacen', 'tesoreria', 'roles', 'usuarios', 'usuarios-v2'].includes(e.segmento)));
         const porPersona = new Map();
         bloqueos.forEach(e => { porPersona.set(e.usuario, [...(porPersona.get(e.usuario) || []), e]); });
         const repetidos = [...porPersona.entries()].filter(([, l]) => l.length >= 3);
