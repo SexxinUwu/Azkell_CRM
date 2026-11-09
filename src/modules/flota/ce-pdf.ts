@@ -72,7 +72,7 @@ const CSS = `
 html, body { margin: 0; padding: 0; background: #fff; }
 body { font-family: 'Inter', 'Liberation Sans', Arial, Helvetica, sans-serif; color: #0f172a; font-size: 8.5px; line-height: 1.25;
   -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.hoja { width: 210mm; min-height: 296.5mm; padding: 7mm 9mm 5mm; display: flex; flex-direction: column; gap: 2.4mm; }
+.hoja { width: 210mm; min-height: 295mm; padding: 7mm 9mm 5mm; display: flex; flex-direction: column; gap: 2.4mm; }
 .mono { font-family: 'JetBrains Mono', 'Liberation Mono', 'Courier New', monospace; }
 .etq { font-size: 5.8px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: #64748b; }
 
@@ -106,16 +106,6 @@ body { font-family: 'Inter', 'Liberation Sans', Arial, Helvetica, sans-serif; co
 .doc b { display: block; margin-top: .6mm; font-size: 8.4px; font-weight: 700; min-height: 3.4mm; border-bottom: .2mm dotted #cbd5e1; }
 .estado { display: inline-block; margin-top: .7mm; padding: .5mm 2.4mm; border-radius: 99px; font-size: 7.4px; font-weight: 800; background: #d1fae5; color: #065f46; border: .25mm solid #6ee7b7; }
 .estado.nov { background: #ffe4e6; color: #9f1239; border-color: #fda4af; }
-
-/* Resumen */
-.resumen { display: grid; grid-template-columns: repeat(4, 1fr) 2.2fr; gap: 2mm; align-items: stretch; }
-.kpi { border: .25mm solid #e2e8f0; border-radius: 2.2mm; padding: 1.1mm 2.6mm; display: flex; align-items: baseline; gap: 2mm; }
-.kpi strong { font-size: 13px; font-weight: 800; line-height: 1; }
-.kpi span { font-size: 6px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #64748b; }
-.kpi.ok strong { color: #059669; } .kpi.reg strong { color: #d97706; } .kpi.mal strong { color: #e11d48; }
-.barra { border: .25mm solid #e2e8f0; border-radius: 2.2mm; padding: 1.1mm 2.8mm; display: flex; flex-direction: column; justify-content: center; gap: 1.2mm; }
-.barra > div { display: flex; height: 2.2mm; border-radius: 99px; overflow: hidden; background: #e2e8f0; }
-.barra i { display: block; height: 100%; }
 
 /* Ficha técnica */
 .ficha { display: grid; grid-template-columns: repeat(6, 1fr); }
@@ -182,12 +172,10 @@ export function htmlActaEntrega(r: EntregaVehiculo, grupos: CategoriaPlantilla[]
   // Densidad según el tamaño del inventario: lo ideal es una sola hoja A4; si no entra, la letra se achica hasta un límite
   // y, pasado ese límite, el resto sigue en una segunda hoja.
   const filas = resumen.total + resumen.grupos.length * 1.3;
-  const [fila, fs, diag] = filas <= 84 ? ['3.7mm', '7.8px', '46mm'] : filas <= 98 ? ['3.25mm', '7.1px', '38mm'] : filas <= 114 ? ['2.9mm', '6.7px', '33mm'] : ['3.3mm', '7.2px', '46mm'];
+  const [fila, fs, diag] = filas <= 88 ? ['3.7mm', '7.8px', '46mm'] : filas <= 104 ? ['3.3mm', '7.2px', '40mm'] : filas <= 120 ? ['3mm', '6.8px', '35mm'] : ['3.3mm', '7.2px', '46mm'];
 
   const dato = (k: string, v: unknown, clase = '', extra = '') =>
     `<div class="${clase}"><span class="etq">${k}</span><b${extra ? ` class="${extra}"` : ''}>${esc(v)}</b></div>`;
-
-  const pct = (n: number) => (resumen.total ? (n / resumen.total) * 100 : 0).toFixed(2);
 
   const categoria = (g: (typeof resumen.grupos)[number]) => `
     <section class="cat"><h3><span>${esc(g.titulo)}</span><em>${g.items.length}</em></h3>
@@ -217,15 +205,6 @@ export function htmlActaEntrega(r: EntregaVehiculo, grupos: CategoriaPlantilla[]
     <div><span class="etq">Estado</span><br><span class="estado${estado.conNovedades ? ' nov' : ''}">${estado.texto}</span></div>
     ${dato('Entregado por', r.quien_entrega, 'span3')}
     ${dato('Recibido por', r.quien_recibe, 'span3')}
-  </section>
-
-  <section class="resumen">
-    <div class="kpi"><strong>${resumen.total}</strong><span>Revisadas</span></div>
-    <div class="kpi ok"><strong>${resumen.buenos}</strong><span>Buenas</span></div>
-    <div class="kpi reg"><strong>${resumen.regulares}</strong><span>Regulares</span></div>
-    <div class="kpi mal"><strong>${resumen.malos}</strong><span>Malas</span></div>
-    <div class="barra"><span class="etq">Estado general del inventario</span>
-      <div><i style="width:${pct(resumen.buenos)}%;background:#10b981"></i><i style="width:${pct(resumen.regulares)}%;background:#f59e0b"></i><i style="width:${pct(resumen.malos)}%;background:#f43f5e"></i></div></div>
   </section>
 
   <section class="tarjeta">

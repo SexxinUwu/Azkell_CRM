@@ -22,7 +22,7 @@ async function obtenerNavegador() {
 }
 
 /** HTML del documento -> PDF (Buffer). El título queda como metadato del PDF, que es lo que muestra el visor. */
-async function htmlAPdf(html, titulo, horizontal = false) {
+async function htmlAPdf(html, titulo, horizontal = false, unaHoja = false) {
   const b = await obtenerNavegador();
   const documento = html
     .replace(/<button id="btnPrint"[\s\S]*?<\/button>/, '')
@@ -38,6 +38,22 @@ async function htmlAPdf(html, titulo, horizontal = false) {
     });
     await pagina.setContent(documento, { waitUntil: 'networkidle0', timeout: 30000 });
     await pagina.evaluate(() => document.fonts.ready);
+    // Documentos pensados para una sola hoja (.hoja): si pasan un poco, se reduce todo en proporción para que entren.
+    // Si pasan mucho (más de ~18 %), no se reduce y el resto sigue en una segunda hoja.
+    if (unaHoja) {
+        await pagina.evaluate(() => {
+            const h = document.querySelector('.hoja');
+            if (!h) return;
+            const A4 = (297 / 25.4) * 96 - 2;
+            const alto = h.scrollHeight;
+            if (alto <= A4) return;
+            const z = A4 / alto;
+            if (z < 0.82) return;
+            h.style.width = `${210 / z}mm`;
+            h.style.minHeight = `${295 / z}mm`;
+            h.style.zoom = String(z);
+        });
+    }
     return await pagina.pdf({ format: 'A4', landscape: horizontal, printBackground: true, preferCSSPageSize: false, margin: { top: '0', right: '0', bottom: '0', left: '0' } });
   } finally {
     await pagina.close();

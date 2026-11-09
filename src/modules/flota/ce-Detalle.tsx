@@ -2,7 +2,8 @@ import './ce-detalle.css';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, useReducedMotion } from 'motion/react';
-import { CalendarDays, FileText, MessageCircle, Pencil, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { CalendarDays, CarFront, Cog, FileText, Fingerprint, Gauge, Hash, Layers, MessageCircle, Palette, Pencil, ShieldAlert, ShieldCheck, Tag, Truck } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Button } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
@@ -28,13 +29,16 @@ interface Props {
   onWhatsApp: (a: EntregaVehiculo) => void;
 }
 
-/** Un dato de la ficha: etiqueta pequeña y valor; vacío si no se llenó */
-function Dato({ etiqueta, valor, mono, ancho }: { etiqueta: string; valor: unknown; mono?: boolean; ancho?: boolean }) {
+/** Una especificación de la unidad: icono, etiqueta y valor (vacío si no se llenó) */
+function Spec({ icono, etiqueta, valor, mono, ancho, destacado }: { icono: ReactNode; etiqueta: string; valor: unknown; mono?: boolean; ancho?: boolean; destacado?: boolean }) {
   const texto = String(valor ?? '').trim();
   return (
-    <div className={`ced-dato${ancho ? ' ced-dato--ancho' : ''}`}>
-      <span className="ced-dato__etq">{etiqueta}</span>
-      <span className={`ced-dato__valor${mono ? ' ced-dato__valor--mono' : ''}${texto ? '' : ' ced-dato__valor--vacio'}`}>{texto || '—'}</span>
+    <div className={`ced-spec${ancho ? ' ced-spec--ancho' : ''}${destacado ? ' ced-spec--destacado' : ''}${texto ? '' : ' ced-spec--vacio'}`}>
+      <span className="ced-spec__icono" aria-hidden>{icono}</span>
+      <div className="ced-spec__texto">
+        <span className="ced-spec__etq">{etiqueta}</span>
+        <span className={`ced-spec__valor${mono ? ' ced-spec__valor--mono' : ''}`}>{texto || 'Sin dato'}</span>
+      </div>
     </div>
   );
 }
@@ -106,12 +110,17 @@ export function CeDetalle({ acta, ocupado, puedeEditar, onClose, onEditar, onPdf
 
           <section className="ced-bloque">
             <h3 className="ced-titulo">Vehículo</h3>
-            <div className="ced-grid">
-              <Dato etiqueta="Clase" valor={acta.clase} /><Dato etiqueta="Marca" valor={acta.marca} /><Dato etiqueta="Tipo" valor={acta.tipo} />
-              <Dato etiqueta="Modelo" valor={acta.modelo} /><Dato etiqueta="Color" valor={acta.color} />
-              <Dato etiqueta="Kilometraje" valor={Number(acta.kilometraje) > 0 ? `${Number(acta.kilometraje).toLocaleString('es-PE')} km` : ''} mono />
-              <Dato etiqueta="Número del motor" valor={acta.numero_motor} mono /><Dato etiqueta="Serie / VIN" valor={acta.numero_serie} mono />
-              <Dato etiqueta="N° inventario" valor={acta.numero_inventario || acta.id} mono />
+            <div className="ced-specs">
+              <Spec icono={<Truck size={18} />} etiqueta="Clase" valor={acta.clase} />
+              <Spec icono={<Tag size={18} />} etiqueta="Marca" valor={acta.marca} />
+              <Spec icono={<Layers size={18} />} etiqueta="Tipo" valor={acta.tipo} />
+              <Spec icono={<CarFront size={18} />} etiqueta="Modelo" valor={acta.modelo} />
+              <Spec icono={<Palette size={18} />} etiqueta="Color" valor={acta.color} />
+              <Spec icono={<Gauge size={18} />} etiqueta="Kilometraje" destacado ancho
+                valor={Number(acta.kilometraje) > 0 ? `${Number(acta.kilometraje).toLocaleString('es-PE')} km` : ''} mono />
+              <Spec icono={<Hash size={18} />} etiqueta="N° inventario" valor={acta.numero_inventario || acta.id} mono />
+              <Spec icono={<Cog size={18} />} etiqueta="Número del motor" valor={acta.numero_motor} mono ancho />
+              <Spec icono={<Fingerprint size={18} />} etiqueta="Serie / VIN" valor={acta.numero_serie} mono ancho />
             </div>
           </section>
 

@@ -26,18 +26,28 @@
 .ced-titulo { margin: 0; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--label-2); }
 .ced-titulo-fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-3); }
 
-.ced-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 1px; border-radius: var(--r-lg); overflow: hidden; background: var(--separator); border: 1px solid var(--separator); }
-.ced-dato { display: flex; flex-direction: column; gap: 3px; padding: var(--s-3) var(--s-4); background: var(--surface); min-width: 0; }
-.ced-dato__etq { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--label-3); }
-.ced-dato__valor { font-size: 0.9375rem; font-weight: 600; color: var(--label); word-break: break-word; }
-.ced-dato__valor--mono { font-family: var(--font-mono); font-size: 0.875rem; }
-.ced-dato__valor--vacio { color: var(--label-3); font-weight: 400; }
+/* Especificaciones de la unidad: tarjetas con icono */
+.ced-specs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-2); }
+.ced-spec { display: flex; align-items: center; gap: var(--s-3); min-width: 0; padding: var(--s-3) var(--s-4); border-radius: 16px; background: var(--surface);
+  border: 1px solid var(--separator); transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease; }
+.ced-spec:hover { transform: translateY(-1px); box-shadow: var(--shadow-card); }
+.ced-spec--ancho { grid-column: span 2; }
+.ced-spec__icono { flex: none; width: 2.25rem; height: 2.25rem; border-radius: 11px; display: grid; place-items: center; background: var(--accent-tint, var(--fill)); color: var(--accent-ink, var(--label-2)); }
+.ced-spec__texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ced-spec__etq { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--label-3); }
+.ced-spec__valor { font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; color: var(--label); overflow-wrap: anywhere; }
+.ced-spec__valor--mono { font-family: var(--font-mono); font-size: 0.9375rem; letter-spacing: 0.01em; }
+.ced-spec--destacado { background: color-mix(in srgb, var(--green-ink) 9%, var(--surface)); border-color: color-mix(in srgb, var(--green-ink) 25%, var(--separator)); }
+.ced-spec--destacado .ced-spec__icono { background: color-mix(in srgb, var(--green-ink) 16%, transparent); color: var(--green-ink); }
+.ced-spec--destacado .ced-spec__valor { font-size: 1.25rem; color: var(--green-ink); }
+.ced-spec--vacio .ced-spec__valor { font-weight: 400; color: var(--label-3); font-style: italic; }
+.ced-spec--vacio { background: transparent; border-style: dashed; }
 
 .ced-personas { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--s-3); }
 .ced-persona { display: flex; flex-direction: column; gap: 4px; padding: var(--s-4); border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--separator); }
 .ced-persona__nombre { font-size: 1rem; text-transform: uppercase; letter-spacing: -0.01em; }
-.ced-persona__firma { height: 4.5rem; margin-top: var(--s-2); border-radius: 12px; background: var(--fill); display: grid; place-items: center; overflow: hidden; }
-.ced-persona__firma img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.ced-persona__firma { height: 7rem; margin-top: var(--s-2); border-radius: 12px; background: #fff; border: 1px solid var(--separator); display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 6px; }
+.ced-persona__firma img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .ced-persona__firma span { font-size: 0.75rem; color: var(--label-3); font-style: italic; }
 
 /* Inventario */
@@ -60,6 +70,7 @@
 .ced-obs { margin: 0; padding: var(--s-4); border-radius: var(--r-lg); background: var(--fill); font-size: 0.9375rem; line-height: 1.5; color: var(--label); }
 .ced-obs--vacia { color: var(--label-3); font-style: italic; }
 
+@media (max-width: 860px) { .ced-specs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 639px) {
   .ced-resumen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ced-hero__izq { gap: var(--s-3); }

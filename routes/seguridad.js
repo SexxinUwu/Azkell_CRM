@@ -1604,7 +1604,7 @@ module.exports = (db, logAudit) => {
         const titulo = String(req.body?.titulo || 'Inventario físico estado de vehículo').slice(0, 150);
         try {
             const { htmlAPdf } = require('../services/ot_pdf');
-            const pdf = await htmlAPdf(html, titulo, false);
+            const pdf = await htmlAPdf(html, titulo, false, true);
             res.set('Content-Type', 'application/pdf').send(Buffer.from(pdf));
         } catch (err) {
             console.error('[entrega-vehiculos/pdf]', err.message);
