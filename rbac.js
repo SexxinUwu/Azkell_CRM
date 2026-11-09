@@ -151,6 +151,8 @@ module.exports = function globalRBAC(req, res, next) {
     // Sistema › API y desarrolladores: llaves de API y webhooks (antes sin mapeo; ahora exigen administración)
     else if (path.startsWith('/sistema/api-keys') || path.startsWith('/sistema/webhooks')) mod = ['administracion'];
     else if (path.startsWith('/seguridad/asistencia')) mod = ['asist', 'seguridad'];
+    // Papeletas (Flota): su propio permiso; Tesorería también las ve y registra sus pagos
+    else if (path.startsWith('/papeletas')) { mod = ['papeletas', 'tesoreria_papeletas', 'tesoreria_caja']; if (path === '/papeletas/pdf') accion = 'l'; }
     // PDF del acta: el POST solo convierte el documento, no guarda nada; quien ve las actas puede imprimirlas
     else if (path === '/seguridad/entrega-vehiculos/pdf') { mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas', 'docs_flota']; accion = 'l'; }
     else if (path.startsWith('/seguridad/entrega-vehiculos') || path.startsWith('/flota/entrega-vehiculos')) mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas', ...(req.method === 'GET' ? ['docs_flota'] : [])];
