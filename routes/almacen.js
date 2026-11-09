@@ -218,6 +218,9 @@ function repartirRecibidoPorLinea(items, historial) {
     });
 }
 
+/** Una línea de servicio (SERV-…) no se recepciona: no entra al almacén y se asigna en la orden de trabajo. */
+const esLineaServicio = (inventarioId) => /^SERV/i.test(String(inventarioId || ''));
+
 /** El sustento de una recepción: una URL (recepciones antiguas) o una lista JSON de URLs (varias fotos o documentos) */
 function urlsDeSustento(valor) {
     if (!valor) return [];
@@ -3043,7 +3046,10 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
                         // Llantas en la reformadora por orden de servicio de reencauche, agrupadas por orden y servicio
                         const llantasReenc = {};
+                        const lineasReencauche = new Set();
                         try {
+                            const [todasReenc] = await targetDb.promise().query('SELECT DISTINCT oc_id, inventario_id FROM neumaticos_reencauche_oc WHERE oc_id IN (?)', [idsOC]);
+                            todasReenc.forEach(r => lineasReencauche.add(`${r.oc_id}|${r.inventario_id}`));
                             const [filasReenc] = await targetDb.promise().query(
                                 "SELECT oc_id, inventario_id, id_neumatico FROM neumaticos_reencauche_oc WHERE oc_id IN (?) AND estado = 'en_reformadora' ORDER BY id_neumatico", [idsOC]);
                             if (filasReenc.length) {
@@ -3066,13 +3072,17 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                         // Armar lista enriquecida con estado de progreso de recepción
                         const resultado = await Promise.all((ocs || []).map(async oc => {
                             const recInfo = recMap[oc.id] || { items_recibidos: 0, historial: [] };
-                            const itemsOC = itemsPorOC[oc.id] || [];
+                            const todasLasLineas = itemsPorOC[oc.id] || [];
+                            const lineasServicio = todasLasLineas.filter(it => esLineaServicio(it.inventario_id) && !lineasReencauche.has(`${oc.id}|${it.inventario_id}`));
+                            const itemsOC = todasLasLineas.filter(it => !lineasServicio.includes(it));
+                            // Una orden solo de servicios no tiene nada que recepcionar
+                            if (!itemsOC.length) return null;
 
                             let totalPedido = 0;
-                            let totalRecibido = recInfo.items_recibidos;
 
                             // Detalle de ítems con sus saldos de recepción (lo recibido se reparte entre las líneas del mismo artículo)
                             const recibidoPorLinea = repartirRecibidoPorLinea(itemsOC, recInfo.historial);
+                            const totalRecibido = recibidoPorLinea.reduce((a, b) => a + b, 0);
                             const itemsCalculados = itemsOC.map((it, idxLinea) => {
                                 const cantPedida = parseFloat(it.cantidad || 0);
                                 totalPedido += cantPedida;
@@ -3154,6 +3164,9 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                                 condicion_pago: oc.condicion_pago || 'Al contado',
                                 dias_credito: oc.dias_credito || null,
                                 estado_oc: (oc.estado || 'PAGADA').toUpperCase(),
+                                // Servicios de la orden: no se recepcionan, se asignan en la orden de trabajo
+                                servicios_cantidad: lineasServicio.length,
+                                servicios_importe: lineasServicio.reduce((a, it) => a + (parseFloat(it.cantidad || 0) * parseFloat(it.costo_unitario || 0)), 0),
                                 total_pedido: totalPedido,
                                 total_recibido: totalRecibido,
                                 estado_recepcion: estadoRecepcion,
@@ -3163,7 +3176,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                             };
                         }));
 
-                        res.json(resultado);
+                        res.json(resultado.filter(Boolean));
                     });
                 });
             });
@@ -3184,6 +3197,12 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             if (!items.length) return res.status(400).json({ error: 'No se recibieron productos a recepcionar' });
 
             const targetDb = req.db || db;
+
+            // Los servicios (SERV-…) no se recepcionan; solo la línea de reencauche (con sus llantas) entra en esta pantalla
+            const servicios = items.filter(it => esLineaServicio(it.inventario_id) && !(Array.isArray(it.llantas_reencauche) && it.llantas_reencauche.length));
+            if (servicios.length) {
+                return res.status(400).json({ error: 'Los servicios no se recepcionan: se asignan en la orden de trabajo. Quita: ' + servicios.map(it => it.inventario_id).join(', ') });
+            }
 
             // La evidencia es obligatoria: al menos una foto o documento (guía, factura, foto de la mercadería)
             const archivos = [...((req.files && req.files.sustentos) || []), ...((req.files && req.files.sustento) || [])];

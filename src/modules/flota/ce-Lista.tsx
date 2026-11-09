@@ -3,7 +3,7 @@ import '../../core/ui/acciones-iconos.css';
 import { useMemo, useState } from 'react';
 import { CalendarCheck, CarFront, ClipboardList, Eye, FileSpreadsheet, FileText, LayoutGrid, MessageCircle, Pencil, Plus, RefreshCw, SearchX, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
-import { TooltipFijo } from '../../core/ui/TooltipFijo';
+import { MenuFila } from '../../core/ui/MenuFila';
 import { Badge, EmptyState, Notice } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
@@ -55,7 +55,7 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'recibe', titulo: 'Quién recibe', ancho: 200 },
   { id: 'km', titulo: 'Kilometraje', ancho: 130, alinear: 'right' },
   { id: 'obs', titulo: 'Observaciones', ancho: 260 },
-  { id: 'acc', titulo: 'Acciones', ancho: 210, alinear: 'center' },
+  { id: 'acc', titulo: '', ancho: 64, minimo: 56, alinear: 'center' },
 ];
 
 /** Listado de actas de la empresa elegida: KPI, búsqueda, tabla (escritorio) o tarjetas (celular) */
@@ -184,7 +184,7 @@ export function CeLista({
       ) : (
         <TablaRedimensionable id="checklist-entrega" columnas={COLUMNAS} ariaLabel="Actas de entrega de vehículos" altoMax="calc(100dvh - 300px)" className="tabla-sin-barras">
           {visibles.map(r => (
-            <tr key={String(r.id)}>
+            <tr key={String(r.id)} className="cep-fila" onClick={e => { if (!(e.target as HTMLElement).closest('button,a')) onAccion('ver', r); }}>
               <Celda mono><span className="cep-inv">{folio(r)}</span></Celda>
               <Celda mono>{formatFechaPe(r.fecha)}</Celda>
               <Celda><span className="cep-placa">{r.placa || '—'}</span></Celda>
@@ -209,24 +209,12 @@ function Acciones({ registro, ocupado, puedeEliminar, onAccion }: {
   const n = folio(registro);
   const accion = (a: AccionFila) => () => onAccion(a, registro);
   return (
-    <div className="cep-acciones acciones-iconos" role="group" aria-label={`Acciones del acta ${n}`}>
-      <TooltipFijo texto="Ver detalle">
-        <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--azul" icon={<Eye size={16} />} aria-label={`Ver acta ${n}`} disabled={ocupado} onClick={accion('ver')} />
-      </TooltipFijo>
-      <TooltipFijo texto="Editar acta">
-        <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--ambar" icon={<Pencil size={16} />} aria-label={`Editar acta ${n}`} disabled={ocupado} onClick={accion('editar')} />
-      </TooltipFijo>
-      <TooltipFijo texto="Ver PDF">
-        <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--rojo" icon={<FileText size={16} />} aria-label={`PDF del acta ${n}`} disabled={ocupado} onClick={accion('pdf')} />
-      </TooltipFijo>
-      <TooltipFijo texto="Enviar por WhatsApp">
-        <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--verde" icon={<MessageCircle size={16} />} aria-label={`Enviar acta ${n} por WhatsApp`} disabled={ocupado} onClick={accion('whatsapp')} />
-      </TooltipFijo>
-      {puedeEliminar && (
-        <TooltipFijo texto="Eliminar acta">
-          <Button variant="plain" size="sm" iconOnly className="cep-btn-peligro acciones-iconos__boton acciones-iconos__boton--rojo" icon={<Trash2 size={16} />} aria-label={`Eliminar acta ${n}`} disabled={ocupado} onClick={accion('eliminar')} />
-        </TooltipFijo>
-      )}
-    </div>
+    <MenuFila etiqueta={`Acciones del acta ${n}`} deshabilitado={ocupado} acciones={[
+      { label: 'Ver detalle', icon: <Eye size={17} />, onSelect: accion('ver') },
+      { label: 'Editar acta', icon: <Pencil size={17} />, onSelect: accion('editar') },
+      { label: 'Ver PDF', icon: <FileText size={17} />, onSelect: accion('pdf') },
+      { label: 'Enviar por WhatsApp', icon: <MessageCircle size={17} />, onSelect: accion('whatsapp') },
+      puedeEliminar && { label: 'Eliminar acta', icon: <Trash2 size={17} />, onSelect: accion('eliminar'), destructiva: true, separada: true },
+    ]} />
   );
 }

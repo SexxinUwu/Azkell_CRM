@@ -269,3 +269,7 @@
 .cep-lista__titulo { font-size: 0.9375rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cep-lista__sub { font-size: 0.8125rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cep-lista__acciones { display: flex; justify-content: flex-end; padding: 0 var(--s-2) var(--s-2); }
+
+/* Fila de la tabla de actas: toda la fila abre el detalle */
+.cep-fila { cursor: pointer; }
+.cep-fila:hover td { background: var(--fill); }

@@ -770,6 +770,9 @@ export interface RecepcionOC {
   estado_oc: string;
   total_pedido: number;
   total_recibido: number;
+  /** Servicios de la orden: no se recepcionan (se asignan en la orden de trabajo) */
+  servicios_cantidad?: number;
+  servicios_importe?: number;
   estado_recepcion: 'PENDIENTE' | 'PARCIAL' | 'COMPLETO';
   progreso_label: string;
   items: ItemRecepcion[];

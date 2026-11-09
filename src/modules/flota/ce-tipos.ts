@@ -15,6 +15,9 @@ export type EstadoItem = string;
 /** Inventario de partes tal como lo guarda el clásico: clave plana (texto en minúsculas con _) → estado B / R / M */
 export type InventarioPartes = Record<string, EstadoItem>;
 
+/** Una foto de evidencia: `key` es la URL guardada (sirve para quitarla) y `url` el enlace para verla */
+export interface EvidenciaActa { key: string; url: string; orden: number }
+
 /** Acta de entrega tal como la devuelve /seguridad/entrega-vehiculos */
 export interface EntregaVehiculo {
   id: number | string;
@@ -41,6 +44,8 @@ export interface EntregaVehiculo {
   empresa?: string;
   firma_entrega?: string | null;
   firma_recibe?: string | null;
+  /** Fotos de evidencia del acta (enlaces de lectura vigentes); no entran en el PDF */
+  evidencias?: EvidenciaActa[];
   created_at?: string;
   [campo: string]: unknown;
 }

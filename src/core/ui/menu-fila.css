@@ -1,0 +1,21 @@
+/* Menú de tres puntos de una fila (MenuFila.tsx) */
+.menu-fila__boton { width: 2.25rem; height: 2.25rem; display: inline-grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: var(--label-2); cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease; }
+.menu-fila__boton:hover:not(:disabled) { background: var(--fill); color: var(--label); }
+.menu-fila__boton:active:not(:disabled) { transform: scale(0.92); }
+.menu-fila__boton--abierto { background: var(--fill); color: var(--label); }
+.menu-fila__boton:disabled { opacity: 0.4; cursor: default; }
+
+.menu-fila { position: fixed; z-index: 2147483000; padding: 6px; border-radius: 16px; overflow: hidden;
+  background: color-mix(in srgb, var(--surface) 82%, transparent); -webkit-backdrop-filter: saturate(180%) blur(22px); backdrop-filter: saturate(180%) blur(22px);
+  box-shadow: 0 0 0 0.5px var(--separator-strong), 0 12px 36px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08); }
+.menu-fila__item { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent;
+  color: var(--label); font: inherit; font-size: 0.9375rem; font-weight: 500; text-align: left; cursor: pointer; }
+.menu-fila__item:hover:not(:disabled), .menu-fila__item:focus-visible { background: var(--accent-tint, var(--fill)); outline: none; }
+.menu-fila__item:active:not(:disabled) { transform: scale(0.98); }
+.menu-fila__item:disabled { opacity: 0.4; cursor: default; }
+.menu-fila__icono { width: 20px; display: inline-grid; place-items: center; color: var(--label-2); flex: none; }
+.menu-fila__item--peligro, .menu-fila__item--peligro .menu-fila__icono { color: var(--red-ink); }
+.menu-fila__item--peligro:hover:not(:disabled), .menu-fila__item--peligro:focus-visible { background: var(--red-tint); }
+.menu-fila__sep { height: 1px; margin: 5px 8px; background: var(--separator); }
+@media (prefers-reduced-transparency: reduce) { .menu-fila { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; } }

@@ -253,6 +253,9 @@ export function RecepcionDetalle({ oc, puedeRecibir, puedeRevertir, onRecepciona
               <span>Recibido hasta hoy</span>
               <strong>{formatMoneda(valorRecibido, moneda)}</strong>
             </div>
+            {(oc.servicios_cantidad ?? 0) > 0 && (
+              <span className="rd-total__eq">Incluye {oc.servicios_cantidad} servicio{oc.servicios_cantidad === 1 ? '' : 's'} por {formatMoneda(oc.servicios_importe ?? 0, moneda)}: no se recepcionan, se asignan en la orden de trabajo.</span>
+            )}
             <span className="rd-garantia"><ShieldCheck size={14} /> Cada entrega queda con su evidencia y en el kardex.</span>
           </section>
         </aside>
