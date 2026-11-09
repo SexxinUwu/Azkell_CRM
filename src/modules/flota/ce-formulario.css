@@ -204,22 +204,96 @@
   white-space: nowrap;
 }
 
-/* ─── Formulario compacto (como el clásico: campos juntos, sin espacio de sobra) ─── */
-.ce-f { gap: var(--s-3); padding-bottom: calc(var(--s-5) + 56px); }
-.ce-f__tarjeta { gap: var(--s-3); padding: var(--s-3) var(--s-4); }
-.ce-f__seccion-ayuda { display: none; }
-.ce-f .form-grid { gap: var(--s-2) var(--s-3); grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* ─── Rediseño del formulario (apple-design: aire, jerarquía clara, estados visibles) ─── */
+.ce-f { gap: var(--s-4); max-width: 64rem; margin-inline: auto; width: 100%; padding-bottom: calc(var(--s-5) + 64px); }
+.ce-f__cabecera { padding: var(--s-2) 0; }
+.ce-f__titulo-pagina { font-size: 1.5rem; letter-spacing: -0.03em; }
+.ce-f__cabecera-der { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
+.ce-f__folio { font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 700; padding: 6px 12px; border-radius: 999px; background: var(--fill); color: var(--label-2); }
+
+.ce-f__tarjeta { gap: var(--s-4); padding: var(--s-5); border-radius: 22px; box-shadow: 0 0 0 0.5px var(--separator), var(--shadow-card); }
+.ce-f__seccion { align-items: flex-start; }
+.ce-f__seccion-titulo { align-items: flex-start; gap: var(--s-3); }
+.ce-f__seccion-titulo h3 { display: flex; align-items: center; gap: 8px; font-size: 1.0625rem; font-weight: 700; letter-spacing: -0.02em; text-transform: none; color: var(--label); }
+.ce-f__seccion-ayuda { display: block; margin: 2px 0 0; font-size: 0.8125rem; color: var(--label-2); line-height: 1.35; }
+.ce-f__num { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--fill); color: var(--label-2); font-size: 0.6875rem; font-weight: 800; }
+.ce-f__icono { width: 38px; height: 38px; border-radius: 12px; }
+.ce-f__icono--rosa { background: color-mix(in srgb, #ec4899 14%, transparent); color: #be185d; }
+
+.ce-f .form-grid { gap: var(--s-3) var(--s-4); grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .ce-f .form-grid > .field--wide { grid-column: span 3; }
-.ce-f .field { gap: 2px; }
-.ce-f .field__label { font-size: 0.75rem; padding-left: 2px; }
-.ce-f .field__hint { font-size: 0.7rem; padding-left: 2px; line-height: 1.3; }
-.ce-f .input, .ce-f .combobox__input { min-height: 36px; padding-top: 6px; padding-bottom: 6px; }
-.ce-f .combobox__input { padding-left: 36px; }
+.ce-f .field__label { font-size: 0.75rem; font-weight: 600; color: var(--label-2); }
+.ce-f .input, .ce-f .combobox__input { min-height: 44px; border-radius: 12px; }
+.ce-f .combobox__input { padding-left: 40px; }
 @media (max-width: 900px) {
   .ce-f .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ce-f .form-grid > .field--wide { grid-column: span 2; }
 }
 @media (max-width: 560px) {
+  .ce-f { padding-bottom: calc(var(--s-5) + 96px); }
+  .ce-f__tarjeta { padding: var(--s-4); border-radius: 18px; }
   .ce-f .form-grid { grid-template-columns: 1fr; }
   .ce-f .form-grid > .field--wide { grid-column: auto; }
 }
+
+/* Inventario: resumen, filtros y categorías */
+.ce-inv-resumen { display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-4); border-radius: 16px; background: var(--fill); }
+.ce-inv-resumen__fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2) var(--s-4); }
+.ce-inv-resumen strong { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.ce-inv-resumen strong span { font-size: 0.875rem; font-weight: 500; letter-spacing: 0; color: var(--label-2); }
+.ce-inv-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ce-chip { padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: var(--surface); color: var(--label-2); font-variant-numeric: tabular-nums; }
+.ce-chip--b { color: var(--green-ink); background: color-mix(in srgb, var(--green-ink) 14%, transparent); }
+.ce-chip--r { color: var(--amber-ink); background: color-mix(in srgb, var(--amber-ink) 16%, transparent); }
+.ce-chip--m { color: var(--red-ink); background: color-mix(in srgb, var(--red-ink) 14%, transparent); }
+.ce-inv-barra { height: 8px; border-radius: 999px; background: var(--surface); overflow: hidden; }
+.ce-inv-barra i { display: block; height: 100%; border-radius: 999px; background: var(--green-ink); transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.ce-inv-herramientas { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); }
+.ce-inv-herramientas .ce-f__buscar { flex: 1 1 16rem; }
+
+.ce-cats { display: flex; flex-direction: column; gap: var(--s-2); }
+.ce-cats .ce-sis + .ce-sis { margin-top: 0; }
+.ce-sis { border-radius: 16px; border: 1px solid var(--separator); }
+.ce-sis--completa { border-color: color-mix(in srgb, var(--green-ink) 30%, var(--separator)); }
+.ce-sis__cab { min-height: 54px; }
+.ce-sis__badge--ok { background: color-mix(in srgb, var(--green-ink) 14%, transparent); color: var(--green-ink); }
+.ce-sis__todo { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 12px; border: 0; border-top: 1px solid var(--separator); background: var(--fill);
+  color: var(--accent-ink); font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
+.ce-sis__todo:hover { background: var(--accent-tint); }
+
+.ce-item { padding: 10px var(--s-4); }
+.ce-item__nombre { display: flex; flex-direction: column; gap: 1px; font-size: 0.9375rem; }
+.ce-item__nombre em { font-style: normal; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--label-3); }
+.ce-item--pendiente .ce-item__nombre { color: var(--label-2); }
+
+/* Cantidad con − / + y estado como botones agrupados */
+.ce-cant { display: inline-flex; align-items: center; border-radius: 999px; background: var(--fill); }
+.ce-cant button { width: 30px; height: 32px; display: grid; place-items: center; border: 0; background: transparent; color: var(--label-2); cursor: pointer; border-radius: 999px; }
+.ce-cant button:hover:not(:disabled) { color: var(--label); background: var(--separator); }
+.ce-cant button:disabled { opacity: 0.35; cursor: default; }
+.ce-cant span { min-width: 22px; text-align: center; font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 700; }
+.ce-pills { padding: 3px; border-radius: 999px; background: var(--fill); gap: 2px; }
+.ce-pill { min-width: 46px; height: 30px; border: 0; background: transparent; font-size: 0.75rem; letter-spacing: 0.03em; }
+.ce-pill:not(:disabled):hover { background: var(--separator); }
+.ce-pill[aria-pressed="true"] { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+.ce-pill--b[aria-pressed="true"] { background: var(--green-ink); color: #fff; }
+.ce-pill--r[aria-pressed="true"] { background: var(--amber-ink); color: #fff; }
+.ce-pill--m[aria-pressed="true"] { background: var(--red-ink); color: #fff; }
+
+/* Evidencias guardadas */
+.ce-fotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: var(--s-2); }
+.ce-fotos__item { position: relative; aspect-ratio: 4 / 3; border-radius: 14px; overflow: hidden; background: var(--fill); }
+.ce-fotos__ver { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+.ce-fotos__ver img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.ce-fotos__ver:hover img { transform: scale(1.04); }
+.ce-fotos__quitar { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55); color: #fff; cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.ce-fotos__quitar:hover:not(:disabled) { background: var(--red-ink); }
+.ce-fotos__quitar:disabled { opacity: 0.5; cursor: default; }
+
+/* Barra inferior fija: progreso y acciones, translúcida */
+.ce-f__barra-acciones { align-items: center; padding: var(--s-3) var(--s-4); border-radius: 20px; background: color-mix(in srgb, var(--surface) 84%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); }
+.ce-f__barra-info { margin-right: auto; font-size: 0.8125rem; color: var(--label-2); font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) { .ce-f__barra-info { display: none; } .ce-f__barra-acciones .btn { flex: 1; } }
+@media (prefers-reduced-motion: reduce) { .ce-inv-barra i, .ce-fotos__ver img { transition: none; } }

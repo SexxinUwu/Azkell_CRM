@@ -1,16 +1,21 @@
 // Formulario del acta de entrega de vehículos (crear, editar, ver). Portado de modulos/flota/entrega-vehiculos/logica.js
 // (evAbrirNuevoFormulario, evCargarRegistroEnFormulario, evOnPlacaInput, evObtenerKmGps, evGuardarFormulario).
 import './ce-formulario.css';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, CheckCheck, ChevronDown, CircleAlert, FileText, ListChecks, NotebookPen, PenLine, Search, Truck } from 'lucide-react';
+import { ArrowLeft, Camera, CheckCheck, ChevronDown, CircleAlert, FileText, ListChecks, Minus, NotebookPen, PenLine, Plus, Search, Trash2, Truck } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { CargaCamion } from '../../core/ui/CargaCamion';
 import { EmptyState, Notice } from '../../core/ui/Display';
+import { EvidenciasArchivos } from '../../core/ui/EvidenciasArchivos';
 import { Field, TextInput } from '../../core/ui/Field';
 import { Combobox } from '../../core/ui/Combobox';
+import { LicensePlate } from '../../core/ui/LicensePlate';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { ConfirmSheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
+import { VisorFotos } from '../../core/ui/VisorFotos';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
@@ -19,12 +24,13 @@ import { CeCroquis, type CroquisValor } from './ce-croquis';
 import { FirmaPad, type FirmaHandle } from './ce-firmas';
 import { abrirPdfEntrega } from './ce-pdf';
 import { PLANTILLA_FABRICA, cargarPlantilla, claveItem, leerPartes } from './ce-plantilla';
-import type { CategoriaPlantilla, EntregaVehiculo } from './ce-tipos';
+import type { CategoriaPlantilla, EntregaVehiculo, EvidenciaActa } from './ce-tipos';
 
 type Calificacion = 'B' | 'R' | 'M';
 type EstiloCabina = 'chata' | 'trompa';
 type EstiloCarroceria = 'furgon' | 'plataforma';
 type OrigenKm = 'gps' | 'registro';
+type FiltroInventario = 'todas' | 'pendientes' | 'novedades';
 
 interface Campos {
   numero_inventario: string;
@@ -62,10 +68,10 @@ const CAMPOS_VACIOS: Campos = {
   marca: '', modelo: '', color: '', numero_motor: '', numero_serie: '', observaciones: '',
 };
 
-const ESTADOS: Array<{ valor: Calificacion; titulo: string }> = [
-  { valor: 'B', titulo: 'Bueno' },
-  { valor: 'R', titulo: 'Regular' },
-  { valor: 'M', titulo: 'Malo' },
+const ESTADOS: Array<{ valor: Calificacion; texto: string; titulo: string }> = [
+  { valor: 'B', texto: 'OK', titulo: 'Bueno' },
+  { valor: 'R', texto: 'REG', titulo: 'Regular' },
+  { valor: 'M', texto: 'MAL', titulo: 'Malo' },
 ];
 
 const MOTIVO = 'ENTREGA DE UNIDAD';
@@ -90,6 +96,12 @@ interface FilaWialon {
 
 const limpiaPlaca = (s: string | null | undefined) => String(s ?? '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
 const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+/**
+ * Clave de una parte dentro de su categoría. Antes la clave era solo el nombre ("Emblemas"), así que las partes con el mismo
+ * nombre en categorías distintas (Emblemas, Direccionales, Vidrios laterales…) compartían la marca: calificar una calificaba las otras.
+ */
+const claveParte = (g: CategoriaPlantilla, item: string) => `${g.id}|${item}`;
 
 /** Odómetro GPS de Wialon para una placa (null si no hay dato). Igual que evObtenerKmGps del clásico. */
 async function kmDesdeGps(placa: string): Promise<number | null> {
@@ -152,6 +164,7 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
     fecha: nuevo ? dayKey(new Date()) : '',
     quien_entrega: nuevo ? nombreUsuario : '',
   }));
+  // Estado de cada parte por su clave "categoría|parte"; lo que no aparece aquí está sin calificar
   const [partes, setPartes] = useState<Record<string, Calificacion>>({});
   const [cantidades, setCantidades] = useState<Record<string, string>>({});
   const [croquis, setCroquis] = useState<Croquis>({ configuracion: 'T3', estiloCabina: 'chata', estiloCarroceria: 'furgon' });
@@ -162,8 +175,15 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
   const [enviando, setEnviando] = useState(false);
   const [generandoPdf, setGenerandoPdf] = useState(false);
   const [buscar, setBuscar] = useState('');
+  const [filtro, setFiltro] = useState<FiltroInventario>('todas');
   const [abiertos, setAbiertos] = useState<Record<string, boolean>>({});
+  const [confirmarTodo, setConfirmarTodo] = useState(false);
   const [cargado, setCargado] = useState(nuevo);
+  // Evidencias: las nuevas (archivos por subir) y las que el acta ya tiene guardadas
+  const [fotosNuevas, setFotosNuevas] = useState<File[]>([]);
+  const [fotosGuardadas, setFotosGuardadas] = useState<EvidenciaActa[]>([]);
+  const [visor, setVisor] = useState<number | null>(null);
+  const [quitando, setQuitando] = useState<string | null>(null);
   const firmaEntrega = useRef<FirmaHandle>(null);
   const firmaRecibe = useRef<FirmaHandle>(null);
   const timerPlaca = useRef<number | undefined>(undefined);
@@ -205,6 +225,8 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
   const grupos: CategoriaPlantilla[] = plantilla.data ?? PLANTILLA_FABRICA;
   const placasOpciones = recursos.data?.placas ?? [];
   const conductores = recursos.data?.conductores ?? [];
+  // La plantilla vigente tiene que estar lista antes de cargar las partes de un acta (si no, se leerían con la de fábrica)
+  const plantillaLista = plantilla.isSuccess || plantilla.isError;
 
   // Nuevo: correlativo sugerido (si el servidor no responde, el mismo respaldo del clásico)
   useEffect(() => {
@@ -217,7 +239,7 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
   // Editar / ver: carga el acta una sola vez (evita que un refetch pise lo que la persona escribe)
   useEffect(() => {
     const r = detalle.data;
-    if (!r || cargado) return;
+    if (!r || cargado || !plantillaLista) return;
     setCampos({
       numero_inventario: r.numero_inventario || String(r.id),
       fecha: r.fecha ? String(r.fecha).slice(0, 10) : '',
@@ -233,15 +255,33 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
       numero_serie: r.numero_serie ?? '',
       observaciones: r.observaciones ?? '',
     });
-    setPartes(normalizarPartes(leerPartes(r.inventario_partes_json)));
+    // Las actas guardadas antes usan la clave por nombre: se pasan a la clave por categoría
+    const crudo = leerPartes(r.inventario_partes_json);
+    const estados = normalizarPartes(crudo);
+    const porParte: Record<string, Calificacion> = {};
+    const cants: Record<string, string> = {};
+    for (const g of grupos) {
+      for (const it of g.items) {
+        const k = claveParte(g, it) in estados ? claveParte(g, it) : claveItem(it);
+        const est = estados[k];
+        if (!est) continue;
+        porParte[claveParte(g, it)] = est;
+        const v = crudo[k];
+        const c = v && typeof v === 'object' ? Number((v as { cantidad?: unknown }).cantidad) : 1;
+        if (c > 1) cants[claveParte(g, it)] = String(c);
+      }
+    }
+    setPartes(porParte);
+    setCantidades(cants);
     setCroquis({
       configuracion: configuracionDeVehiculo(r),
       estiloCabina: r.estilo_cabina === 'trompa' ? 'trompa' : 'chata',
       estiloCarroceria: r.estilo_carroceria === 'plataforma' ? 'plataforma' : 'furgon',
     });
     setFirmasGuardadas({ entrega: r.firma_entrega || null, recibe: r.firma_recibe || null });
+    setFotosGuardadas(r.evidencias ?? []);
     setCargado(true);
-  }, [detalle.data, cargado]);
+  }, [detalle.data, cargado, plantillaLista, grupos]);
 
   useEffect(() => () => window.clearTimeout(timerPlaca.current), []);
 
@@ -299,7 +339,7 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
   }
 
   // ── Inventario de partes ─────────────────────────────────────────────
-  // Igual que el clásico: un toque en el estado ya marcado lo quita; "todo bueno" solo marca B
+  // Un toque en el estado ya marcado lo quita (la parte vuelve a "sin calificar")
   function fijarEstado(clave: string, valor: Calificacion) {
     setPartes(p => {
       const n = { ...p };
@@ -310,21 +350,61 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
     haptic('selection');
   }
 
-  function marcarTodoBueno() {
+  function cambiarCantidad(clave: string, delta: number) {
+    setCantidades(c => {
+      const actual = Math.max(1, Number(c[clave]) || 1);
+      return { ...c, [clave]: String(Math.min(99, Math.max(1, actual + delta))) };
+    });
+    haptic('selection');
+  }
+
+  /** Marca como buenas solo las partes que todavía no se calificaron (nunca pisa un regular o un malo) */
+  function marcarPendientesBuenos(lista: CategoriaPlantilla[]) {
     setPartes(p => {
       const n = { ...p };
-      grupos.forEach(g => g.items.forEach(it => { n[claveItem(it)] = 'B'; }));
+      lista.forEach(g => g.items.forEach(it => { if (!n[claveParte(g, it)]) n[claveParte(g, it)] = 'B'; }));
       return n;
     });
     haptic('success');
   }
 
+  const totalPartes = useMemo(() => grupos.reduce((s, g) => s + g.items.length, 0), [grupos]);
+  const conteo = useMemo(() => {
+    let b = 0, r = 0, m = 0;
+    grupos.forEach(g => g.items.forEach(it => {
+      const e = partes[claveParte(g, it)];
+      if (e === 'B') b++; else if (e === 'R') r++; else if (e === 'M') m++;
+    }));
+    return { b, r, m, calificadas: b + r + m, pendientes: totalPartes - (b + r + m) };
+  }, [grupos, partes, totalPartes]);
+
   const q = sinTildes(buscar.trim());
-  const todasLasClaves = new Set(grupos.flatMap(g => g.items.map(claveItem)));
-  const calificados = [...todasLasClaves].filter(k => partes[k]).length;
   const filas = grupos
-    .map((g, idx) => ({ g, idx, items: q ? g.items.filter(it => sinTildes(it).includes(q)) : g.items }))
-    .filter(f => !q || f.items.length > 0);
+    .map((g, idx) => ({
+      g, idx,
+      items: g.items.filter(it => {
+        if (q && !sinTildes(it).includes(q)) return false;
+        const e = partes[claveParte(g, it)];
+        return filtro === 'todas' || (filtro === 'pendientes' && !e) || (filtro === 'novedades' && (e === 'R' || e === 'M'));
+      }),
+    }))
+    .filter(f => f.items.length > 0);
+
+  // ── Evidencias ───────────────────────────────────────────────────────
+  async function quitarFoto(f: EvidenciaActa) {
+    if (!idRegistro) return;
+    setQuitando(f.key);
+    try {
+      const r = await api<{ evidencias?: EvidenciaActa[] }>(`/seguridad/entrega-vehiculos/${encodeURIComponent(idRegistro)}/evidencias`, { method: 'DELETE', body: { key: f.key } });
+      setFotosGuardadas(r.evidencias ?? fotosGuardadas.filter(x => x.key !== f.key));
+      haptic('success');
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+      haptic('warning');
+    } finally {
+      setQuitando(null);
+    }
+  }
 
   // ── Firmas y guardado ────────────────────────────────────────────────
   function validar(): Partial<Record<CampoNombre, string>> {
@@ -350,6 +430,16 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
     haptic('selection');
     setGenerandoPdf(true);
     try { await descargarActa(r); } finally { setGenerandoPdf(false); }
+  }
+
+  /** Lo calificado, con la cantidad cuando no es 1 (si no, basta la letra) */
+  function partesParaGuardar(): Record<string, unknown> {
+    const out: Record<string, unknown> = {};
+    for (const [k, est] of Object.entries(partes)) {
+      const c = Number(cantidades[k]) || 1;
+      out[k] = c > 1 ? { estado: est, cantidad: c } : est;
+    }
+    return out;
   }
 
   async function guardar() {
@@ -380,7 +470,7 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
       configuracion: croquis.configuracion,
       estilo_cabina: croquis.estiloCabina,
       estilo_carroceria: croquis.estiloCarroceria,
-      inventario_partes_json: partes,
+      inventario_partes_json: partesParaGuardar(),
       observaciones: campos.observaciones,
       doc_entrega: entrega,
       doc_recibe: recibe,
@@ -396,6 +486,18 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
       );
       if (r.ok === false) throw new Error(r.error || 'No se pudo guardar el acta');
       const idFinal = nuevo ? String(r.id ?? '') : (idRegistro ?? '');
+
+      // Evidencias: el acta ya quedó guardada; si las fotos fallan se avisa sin perder lo demás
+      if (fotosNuevas.length > 0 && idFinal) {
+        try {
+          const f = new FormData();
+          fotosNuevas.forEach(a => f.append('fotos', a));
+          await api(`/seguridad/entrega-vehiculos/${encodeURIComponent(idFinal)}/evidencias`, { method: 'POST', body: f });
+        } catch (errFotos) {
+          toast(`El acta se guardó, pero las imágenes no se subieron: ${errorMessage(errFotos)}`, 'error');
+        }
+      }
+
       // Se vuelve a leer el acta para entregar el registro completo a la página
       const guardado = await api<{ data?: EntregaVehiculo }>(`/seguridad/entrega-vehiculos/${encodeURIComponent(idFinal)}`)
         .then(x => x.data)
@@ -440,21 +542,37 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
 
   const titulo = nuevo
     ? 'Nueva entrega de vehículo'
-    : `${soloLectura ? 'Detalle de entrega' : 'Editar entrega'}: ${campos.numero_inventario || idRegistro || ''}`;
-  const subtitulo = !nuevo && cargado
-    ? `Placa ${campos.placa || '—'} • Conductor ${campos.quien_recibe || '—'}`
-    : 'Formato: inventario físico estado de vehículo';
+    : `${soloLectura ? 'Detalle de entrega' : 'Editar entrega'}`;
+  const subtitulo = 'Inventario físico estado de vehículo · F-SEG-004';
+
+  /** Cabecera de una sección: número, icono, título y una línea de ayuda */
+  const seccion = (n: number, icono: ReactNode, tono: string, id: string, texto: string, ayuda: string, derecha?: ReactNode) => (
+    <div className="ce-f__seccion">
+      <div className="ce-f__seccion-titulo">
+        <span className={`ce-f__icono ce-f__icono--${tono}`}>{icono}</span>
+        <div>
+          <h3 id={id}><span className="ce-f__num">{n}</span>{texto}</h3>
+          <p className="ce-f__seccion-ayuda">{ayuda}</p>
+        </div>
+      </div>
+      {derecha}
+    </div>
+  );
 
   const cabecera = (
-    <div className="ce-f__cabecera">
+    <header className="ce-f__cabecera">
       <div className="ce-f__cabecera-izq">
-        <Button variant="plain" size="sm" icon={<ArrowLeft size={18} />} onClick={onCerrar}>Volver a la lista</Button>
+        <Button variant="plain" size="sm" iconOnly icon={<ArrowLeft size={18} />} aria-label="Volver a la lista" onClick={onCerrar} />
         <div>
           <h2 className="ce-f__titulo-pagina">{titulo}</h2>
           <p className="ce-f__subtitulo">{subtitulo}</p>
         </div>
       </div>
-    </div>
+      <div className="ce-f__cabecera-der">
+        {campos.placa ? <LicensePlate plate={campos.placa} size="lg" /> : null}
+        {campos.numero_inventario && <span className="ce-f__folio">{campos.numero_inventario}</span>}
+      </div>
+    </header>
   );
 
   if (!nuevo && !cargado) {
@@ -468,6 +586,8 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
     );
   }
 
+  const pct = totalPartes ? (conteo.calificadas / totalPartes) * 100 : 0;
+
   return (
     <div className="ce-f">
       {cabecera}
@@ -476,14 +596,9 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
       <datalist id="ce-dl-placas">{placasOpciones.map(p => <option key={p} value={p} />)}</datalist>
       <datalist id="ce-dl-conductores">{conductores.map(c => <option key={c} value={c} />)}</datalist>
 
-      {/* Datos del acta */}
+      {/* 1 · Datos del acta */}
       <section className="ce-f__tarjeta" aria-labelledby="ce-sec-datos">
-        <div className="ce-f__seccion">
-          <div className="ce-f__seccion-titulo">
-            <span className="ce-f__icono ce-f__icono--azul"><FileText size={16} aria-hidden /></span>
-            <h3 id="ce-sec-datos">Datos del acta</h3>
-          </div>
-        </div>
+        {seccion(1, <FileText size={17} aria-hidden />, 'azul', 'ce-sec-datos', 'Datos del acta', 'Quién entrega, quién recibe y la fecha')}
         <div className="form-grid">
           {campo('numero_inventario', 'N° de inventario', { solo: true, mono: true, placeholder: 'Calculando…', hint: nuevo ? 'Correlativo sugerido' : undefined })}
           <Field label="Fecha del acta">
@@ -491,11 +606,11 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
               ? <TextInput {...p} readOnly value={formatFechaPe(campos.fecha)} />
               : <TextInput {...p} type="date" value={campos.fecha} onChange={e => cambiar('fecha', e.target.value)} />}
           </Field>
-          <Field label="Motivo" wide>
+          <Field label="Motivo">
             {p => <TextInput {...p} readOnly value={MOTIVO} />}
           </Field>
           {campo('quien_entrega', 'Quien entrega', { solo: true, hint: 'Usuario que realiza la entrega' })}
-          <Field label="Quien recibe (conductor)" error={errores.quien_recibe} hint="Se puede elegir de la lista o escribir">
+          <Field label="Quien recibe (conductor)" error={errores.quien_recibe} hint="Elige de la lista o escribe">
             {p => (
               <Combobox
                 id={p.id}
@@ -513,19 +628,14 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
         </div>
       </section>
 
-      {/* Ficha técnica */}
+      {/* 2 · Vehículo */}
       <section className="ce-f__tarjeta" aria-labelledby="ce-sec-ficha">
-        <div className="ce-f__seccion">
-          <div className="ce-f__seccion-titulo">
-            <span className="ce-f__icono ce-f__icono--verde"><Truck size={16} aria-hidden /></span>
-            <h3 id="ce-sec-ficha">Ficha técnica del vehículo</h3>
-          </div>
-        </div>
+        {seccion(2, <Truck size={17} aria-hidden />, 'verde', 'ce-sec-ficha', 'Vehículo', nuevo ? 'Elige la placa: se completan los datos y el kilometraje GPS' : 'Datos técnicos de la unidad')}
         <div className="form-grid">
           <Field
             label="Placa principal (tracto)"
             error={errores.placa}
-            hint={nuevo ? 'Al escribirla se completan los datos y el kilometraje GPS' : (!soloLectura ? 'La placa no cambia al editar el acta' : undefined)}
+            hint={!nuevo && !soloLectura ? 'La placa no cambia al editar el acta' : undefined}
           >
             {p => (
               <PlacaPicker
@@ -564,54 +674,65 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
         </div>
       </section>
 
-      {/* Inventario de partes y accesorios */}
+      {/* 3 · Inventario de partes y accesorios */}
       <section className="ce-f__tarjeta" aria-labelledby="ce-sec-inventario">
-        <div className="ce-f__seccion">
-          <div className="ce-f__seccion-titulo">
-            <span className="ce-f__icono ce-f__icono--ambar"><ListChecks size={16} aria-hidden /></span>
-            <div>
-              <h3 id="ce-sec-inventario">Inventario de partes y accesorios</h3>
-              <p className="ce-f__seccion-ayuda">Califica cada componente: B bueno, R regular, M malo.</p>
+        {seccion(3, <ListChecks size={17} aria-hidden />, 'ambar', 'ce-sec-inventario', 'Inventario de partes', 'Califica cada componente: OK, regular o mal. Lo que no revises queda sin calificar',
+          !soloLectura && (
+            <Button variant="secondary" size="sm" icon={<CheckCheck size={16} />} disabled={conteo.pendientes === 0} onClick={() => setConfirmarTodo(true)}>
+              Marcar pendientes como buenos
+            </Button>
+          ))}
+
+        <div className="ce-inv-resumen" aria-live="polite">
+          <div className="ce-inv-resumen__fila">
+            <strong>{conteo.calificadas}<span> de {totalPartes} calificadas</span></strong>
+            <div className="ce-inv-chips">
+              <span className="ce-chip ce-chip--b">{conteo.b} OK</span>
+              <span className="ce-chip ce-chip--r">{conteo.r} REG</span>
+              <span className="ce-chip ce-chip--m">{conteo.m} MAL</span>
+              <span className="ce-chip">{conteo.pendientes} pendientes</span>
             </div>
           </div>
-          {!soloLectura && (
-            <Button variant="secondary" size="sm" icon={<CheckCheck size={16} />} onClick={marcarTodoBueno}>Todo en Buen Estado (B)</Button>
-          )}
+          <div className="ce-inv-barra" role="progressbar" aria-valuemin={0} aria-valuemax={totalPartes} aria-valuenow={conteo.calificadas}>
+            <i style={{ width: `${pct}%` }} />
+          </div>
         </div>
 
-        <div className="ce-f__buscar">
-          <Search size={16} aria-hidden />
-          <TextInput
-            type="search"
-            placeholder="Buscar componente (ej. batería, espejo, extintor)"
-            aria-label="Buscar componente"
-            value={buscar}
-            onChange={e => setBuscar(e.target.value)}
-          />
+        <div className="ce-inv-herramientas">
+          <div className="ce-f__buscar">
+            <Search size={16} aria-hidden />
+            <TextInput type="search" placeholder="Buscar componente (batería, espejo, extintor…)" aria-label="Buscar componente" value={buscar} onChange={e => setBuscar(e.target.value)} />
+          </div>
+          <SegmentedControl<FiltroInventario> label="Qué partes ver" value={filtro} onChange={setFiltro}
+            options={[
+              { value: 'todas', label: 'Todas' },
+              { value: 'pendientes', label: `Pendientes (${conteo.pendientes})` },
+              { value: 'novedades', label: `Con novedades (${conteo.r + conteo.m})` },
+            ]} />
         </div>
-        <div className="ce-f__resumen" aria-live="polite">{calificados} de {todasLasClaves.size} calificados</div>
 
         {filas.length === 0 ? (
-          <EmptyState icon={<Search size={20} />} title="Ningún componente coincide">Prueba con otra palabra.</EmptyState>
+          <EmptyState icon={<Search size={20} />} title="Ninguna parte coincide">{filtro === 'pendientes' ? 'No quedan partes por calificar.' : 'Prueba con otra palabra o filtro.'}</EmptyState>
         ) : (
-          <div>
+          <div className="ce-cats">
             {filas.map(({ g, idx, items }) => {
-              const abierto = q ? true : (abiertos[g.id] ?? idx === 0);
-              const marcadosGrupo = g.items.filter(it => partes[claveItem(it)]).length;
+              const filtrando = !!q || filtro !== 'todas';
+              const abierto = filtrando ? true : (abiertos[g.id] ?? idx === 0);
+              const calificadasG = g.items.filter(it => partes[claveParte(g, it)]).length;
+              const completa = calificadasG === g.items.length;
               return (
-                <div key={g.id} className="ce-sis">
+                <div key={g.id} className={`ce-sis${completa ? ' ce-sis--completa' : ''}`}>
                   <button
                     type="button"
                     className="ce-sis__cab"
                     aria-expanded={abierto}
                     aria-controls={`ce-sis-${g.id}`}
-                    disabled={!!q}
+                    disabled={filtrando}
                     onClick={() => setAbiertos(a => ({ ...a, [g.id]: !abierto }))}
                   >
                     <span className="ce-sis__nombre">{g.titulo}</span>
                     <span className="ce-sis__meta">
-                      {marcadosGrupo > 0 && <span className="ce-sis__badge">{marcadosGrupo}/{g.items.length} calificados</span>}
-                      <span className="ce-sis__conteo">{g.items.length} ítems</span>
+                      <span className={`ce-sis__badge${completa ? ' ce-sis__badge--ok' : ''}`}>{calificadasG}/{g.items.length}</span>
                       <ChevronDown size={18} aria-hidden className={`ce-sis__flecha${abierto ? ' ce-sis__flecha--abierta' : ''}`} />
                     </span>
                   </button>
@@ -619,23 +740,18 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
                   {abierto && (
                     <div id={`ce-sis-${g.id}`} className="ce-sis__cuerpo">
                       {items.map(it => {
-                        const k = claveItem(it);
+                        const k = claveParte(g, it);
                         const estado = partes[k];
+                        const cant = Math.max(1, Number(cantidades[k]) || 1);
                         return (
-                          <div key={it} className="ce-item">
-                            <span className="ce-item__nombre">{it}</span>
+                          <div key={it} className={`ce-item${estado ? '' : ' ce-item--pendiente'}`}>
+                            <span className="ce-item__nombre">{it}{!estado && <em>Sin calificar</em>}</span>
                             <div className="ce-item__controles">
-                              <label className="ce-item__cant">
-                                <span>Cant.</span>
-                                <input
-                                  type="number"
-                                  min={1}
-                                  max={99}
-                                  value={cantidades[k] ?? '1'}
-                                  disabled={soloLectura}
-                                  onChange={e => setCantidades(c => ({ ...c, [k]: e.target.value }))}
-                                />
-                              </label>
+                              <div className="ce-cant" role="group" aria-label={`Cantidad de ${it}`}>
+                                <button type="button" aria-label="Menos" disabled={soloLectura || cant <= 1} onClick={() => cambiarCantidad(k, -1)}><Minus size={14} /></button>
+                                <span>{cant}</span>
+                                <button type="button" aria-label="Más" disabled={soloLectura || cant >= 99} onClick={() => cambiarCantidad(k, 1)}><Plus size={14} /></button>
+                              </div>
                               <div className="ce-pills" role="group" aria-label={`Estado de ${it}`}>
                                 {ESTADOS.map(s => (
                                   <button
@@ -647,7 +763,7 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
                                     disabled={soloLectura}
                                     onClick={() => fijarEstado(k, s.valor)}
                                   >
-                                    {s.valor}
+                                    {s.texto}
                                   </button>
                                 ))}
                               </div>
@@ -655,6 +771,11 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
                           </div>
                         );
                       })}
+                      {!soloLectura && !filtrando && !completa && (
+                        <button type="button" className="ce-sis__todo" onClick={() => marcarPendientesBuenos([g])}>
+                          <CheckCheck size={15} /> Marcar los pendientes de esta categoría como buenos
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -664,14 +785,36 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
         )}
       </section>
 
-      {/* Observaciones y croquis */}
-      <section className="ce-f__tarjeta" aria-labelledby="ce-sec-obs">
-        <div className="ce-f__seccion">
-          <div className="ce-f__seccion-titulo">
-            <span className="ce-f__icono ce-f__icono--gris"><NotebookPen size={16} aria-hidden /></span>
-            <h3 id="ce-sec-obs">Observaciones y croquis</h3>
+      {/* 4 · Evidencias fotográficas */}
+      <section className="ce-f__tarjeta" aria-labelledby="ce-sec-fotos">
+        {seccion(4, <Camera size={17} aria-hidden />, 'rosa', 'ce-sec-fotos', 'Evidencias fotográficas', 'Todas las fotos que quieras. Sirven de respaldo y no salen en el PDF')}
+        {fotosGuardadas.length > 0 && (
+          <div className="ce-fotos">
+            {fotosGuardadas.map((f, i) => (
+              <div key={f.key} className="ce-fotos__item">
+                <button type="button" className="ce-fotos__ver" aria-label={`Ver evidencia ${i + 1}`} onClick={() => setVisor(i)}>
+                  <img src={f.url} alt={`Evidencia ${i + 1}`} loading="lazy" />
+                </button>
+                {!soloLectura && (
+                  <button type="button" className="ce-fotos__quitar" aria-label={`Quitar evidencia ${i + 1}`} disabled={quitando === f.key} onClick={() => { void quitarFoto(f); }}>
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
+        )}
+        {!soloLectura && (
+          <EvidenciasArchivos archivos={fotosNuevas} onCambio={setFotosNuevas} soloImagenes max={30} titulo={fotosGuardadas.length ? 'Agregar más fotos' : 'Fotos de la unidad'}
+            ayuda="Toma fotos con la cámara o elige varias de tu galería" disabled={enviando} />
+        )}
+        <VisorFotos open={visor !== null} indiceInicial={visor ?? 0} onClose={() => setVisor(null)} titulo={`Evidencias · ${campos.placa}`}
+          fotos={fotosGuardadas.map((f, i) => ({ url: f.url, titulo: `Evidencia ${i + 1}` }))} />
+      </section>
+
+      {/* 5 · Observaciones y croquis */}
+      <section className="ce-f__tarjeta" aria-labelledby="ce-sec-obs">
+        {seccion(5, <NotebookPen size={17} aria-hidden />, 'gris', 'ce-sec-obs', 'Observaciones y croquis', 'Novedades generales y configuración del dibujo de la unidad')}
         <Field label="Observaciones generales de la entrega">
           {p => (
             <textarea
@@ -694,14 +837,9 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
         />
       </section>
 
-      {/* Firmas */}
+      {/* 6 · Firmas */}
       <section className="ce-f__tarjeta" aria-labelledby="ce-sec-firmas">
-        <div className="ce-f__seccion">
-          <div className="ce-f__seccion-titulo">
-            <span className="ce-f__icono ce-f__icono--azul"><PenLine size={16} aria-hidden /></span>
-            <h3 id="ce-sec-firmas">Firmas</h3>
-          </div>
-        </div>
+        {seccion(6, <PenLine size={17} aria-hidden />, 'azul', 'ce-sec-firmas', 'Firmas', 'Quien entrega y quien recibe firman en pantalla')}
         <div className="ce-firmas">
           <FirmaPad
             ref={firmaEntrega}
@@ -721,6 +859,9 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
       </section>
 
       <div className="ce-f__barra-acciones">
+        {!soloLectura && (
+          <span className="ce-f__barra-info">{conteo.calificadas}/{totalPartes} partes · {fotosGuardadas.length + fotosNuevas.length} fotos</span>
+        )}
         {soloLectura ? (
           <>
             <Button variant="secondary" icon={<FileText size={16} />} loading={generandoPdf} onClick={pdfDelRegistro}>Generar PDF</Button>
@@ -735,6 +876,15 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
           </>
         )}
       </div>
+
+      <ConfirmSheet
+        open={confirmarTodo}
+        onClose={() => setConfirmarTodo(false)}
+        onConfirm={() => { marcarPendientesBuenos(grupos); setConfirmarTodo(false); }}
+        title="Marcar pendientes como buenos"
+        message={`${conteo.pendientes} partes sin calificar pasarán a «OK». Hazlo solo si revisaste la unidad completa: el acta dirá que esas partes se entregaron en buen estado. Las que ya marcaste como regular o mal no cambian.`}
+        confirmLabel="Marcar como buenos"
+      />
     </div>
   );
 }

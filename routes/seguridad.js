@@ -1612,6 +1612,69 @@ module.exports = (db, logAudit) => {
         }
     });
 
+    // ── Evidencias fotográficas del acta (varias fotos; no entran al PDF) ─────────────
+    // Se guardan en seg_entrega_vehiculos.evidencias_json (migración 17) como lista de URLs de S3. Sin la columna, el acta sigue funcionando sin fotos.
+    async function hayColumnaEvidencias(tdb) {
+        const [r] = await tdb.promise().query("SELECT COUNT(*) AS n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'seg_entrega_vehiculos' AND COLUMN_NAME = 'evidencias_json'");
+        return Number(r[0] && r[0].n) > 0;
+    }
+    const leerEvidencias = (txt) => { try { const v = JSON.parse(txt || '[]'); return Array.isArray(v) ? v.filter(u => typeof u === 'string') : []; } catch (e) { return []; } };
+    async function evidenciasFirmadas(urls) {
+        const { getPresignedUrlEstable } = require('../utils/s3');
+        return Promise.all(urls.map(async (u, i) => {
+            const key = s3KeyFromUrl(u);
+            let url = u;
+            if (key) { try { url = await getPresignedUrlEstable(key); } catch (e) { /* queda la URL guardada */ } }
+            return { key: u, url, orden: i + 1 };
+        }));
+    }
+
+    router.post('/seguridad/entrega-vehiculos/:id/evidencias', upload.array('fotos', 30), async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!(await hayColumnaEvidencias(tdb))) return res.status(409).json({ error: 'Las evidencias aún no están habilitadas en la base de datos (falta la migración 17).' });
+            const id = String(req.params.id);
+            const archivos = (req.files || []).filter(f => /^image\//.test(f.mimetype));
+            if (!archivos.length) return res.status(400).json({ error: 'Adjunta al menos una imagen.' });
+            const [filas] = await tdb.promise().query('SELECT evidencias_json FROM seg_entrega_vehiculos WHERE id = ?', [id]);
+            if (!filas.length) return res.status(404).json({ error: 'Acta no encontrada.' });
+            const marca = Date.now();
+            const nuevas = await Promise.all(archivos.map((a, i) => {
+                const ext = (String(a.originalname || '').split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+                return uploadToS3(a.buffer, `seguridad/entrega-vehiculos/${id}/${marca}_${i + 1}.${ext}`, a.mimetype);
+            }));
+            const todas = [...leerEvidencias(filas[0].evidencias_json), ...nuevas];
+            await tdb.promise().query('UPDATE seg_entrega_vehiculos SET evidencias_json = ? WHERE id = ?', [JSON.stringify(todas), id]);
+            if (typeof logAudit === 'function') logAudit((req.user && (req.user.nombre || req.user.correo)) || 'sistema', 'entrega-vehiculos', 'MODIFICÓ', `evidencias del acta ${id}: +${nuevas.length}`);
+            res.json({ ok: true, evidencias: await evidenciasFirmadas(todas) });
+        } catch (err) {
+            console.error('[entrega-vehiculos/evidencias]', err.message);
+            res.status(500).json({ error: 'No se pudieron guardar las imágenes.' });
+        }
+    });
+
+    router.delete('/seguridad/entrega-vehiculos/:id/evidencias', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!(await hayColumnaEvidencias(tdb))) return res.status(409).json({ error: 'Las evidencias aún no están habilitadas.' });
+            const id = String(req.params.id);
+            const quitar = String((req.body && req.body.key) || '');
+            const [filas] = await tdb.promise().query('SELECT evidencias_json FROM seg_entrega_vehiculos WHERE id = ?', [id]);
+            if (!filas.length) return res.status(404).json({ error: 'Acta no encontrada.' });
+            const actuales = leerEvidencias(filas[0].evidencias_json);
+            if (!actuales.includes(quitar)) return res.status(404).json({ error: 'Esa imagen no pertenece al acta.' });
+            const restantes = actuales.filter(u => u !== quitar);
+            await tdb.promise().query('UPDATE seg_entrega_vehiculos SET evidencias_json = ? WHERE id = ?', [JSON.stringify(restantes), id]);
+            const k = s3KeyFromUrl(quitar);
+            if (k) await deleteFromS3(k).catch(() => { });
+            if (typeof logAudit === 'function') logAudit((req.user && (req.user.nombre || req.user.correo)) || 'sistema', 'entrega-vehiculos', 'MODIFICÓ', `evidencias del acta ${id}: -1`);
+            res.json({ ok: true, evidencias: await evidenciasFirmadas(restantes) });
+        } catch (err) {
+            console.error('[entrega-vehiculos/evidencias]', err.message);
+            res.status(500).json({ error: 'No se pudo quitar la imagen.' });
+        }
+    });
+
     // ── GET /seguridad/entrega-vehiculos/next-folio ───────────────
     router.get('/seguridad/entrega-vehiculos/next-folio', (req, res) => {
         const year = new Date().getFullYear();
@@ -1803,7 +1866,11 @@ module.exports = (db, logAudit) => {
             if (!r.configuracion && r.placa_configuracion) {
                 r.configuracion = r.placa_configuracion;
             }
-            res.json({ ok: true, data: r });
+            (async () => {
+                try { r.evidencias = await evidenciasFirmadas(leerEvidencias(r.evidencias_json)); } catch (e) { r.evidencias = []; }
+                delete r.evidencias_json;
+                res.json({ ok: true, data: r });
+            })();
         });
     });
 

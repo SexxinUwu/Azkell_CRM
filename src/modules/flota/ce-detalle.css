@@ -70,6 +70,14 @@
 .ced-obs { margin: 0; padding: var(--s-4); border-radius: var(--r-lg); background: var(--fill); font-size: 0.9375rem; line-height: 1.5; color: var(--label); }
 .ced-obs--vacia { color: var(--label-3); font-style: italic; }
 
+/* Evidencias */
+.ced-galeria { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: var(--s-2); }
+.ced-galeria__foto { position: relative; aspect-ratio: 4 / 3; border: 0; padding: 0; border-radius: 14px; overflow: hidden; background: var(--fill); cursor: zoom-in;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease; }
+.ced-galeria__foto:hover { transform: scale(1.025); box-shadow: var(--shadow-card); }
+.ced-galeria__foto:active { transform: scale(0.98); }
+.ced-galeria__foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
 @media (max-width: 860px) { .ced-specs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 639px) {
   .ced-resumen { grid-template-columns: repeat(2, minmax(0, 1fr)); }

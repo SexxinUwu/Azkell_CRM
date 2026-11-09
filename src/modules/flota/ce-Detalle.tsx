@@ -8,6 +8,7 @@ import { Button } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Sheet } from '../../core/ui/Sheet';
+import { VisorFotos } from '../../core/ui/VisorFotos';
 import { formatFechaPe } from '../../core/lib/format';
 import { spring } from '../../core/lib/motion';
 import { CeCroquis } from './ce-croquis';
@@ -59,6 +60,7 @@ function Persona({ rol, nombre, firma }: { rol: string; nombre: string; firma?: 
 export function CeDetalle({ acta, ocupado, puedeEditar, onClose, onEditar, onPdf, onWhatsApp }: Props) {
   const reducir = useReducedMotion();
   const [filtro, setFiltro] = useState<Filtro>('todas');
+  const [visor, setVisor] = useState<number | null>(null);
   const plantillaQ = useQuery({ queryKey: ['flota', 'ce-plantilla'], queryFn: cargarPlantilla, staleTime: 5 * 60_000, enabled: !!acta });
   const grupos = plantillaQ.data ?? PLANTILLA_FABRICA;
 
@@ -167,6 +169,21 @@ export function CeDetalle({ acta, ocupado, puedeEditar, onClose, onEditar, onPdf
             <CeCroquis configuracion={normalizarConfig(codigoConfiguracion(acta))} estiloCabina={acta.estilo_cabina === 'trompa' ? 'trompa' : 'chata'}
               estiloCarroceria={acta.estilo_carroceria === 'plataforma' ? 'plataforma' : 'furgon'} editable={false} onChange={() => undefined} />
           </section>
+
+          {(acta.evidencias?.length ?? 0) > 0 && (
+            <section className="ced-bloque">
+              <h3 className="ced-titulo">Evidencias fotográficas ({acta.evidencias?.length})</h3>
+              <div className="ced-galeria">
+                {acta.evidencias?.map((f, i) => (
+                  <button key={f.key} type="button" className="ced-galeria__foto" aria-label={`Ver evidencia ${i + 1}`} onClick={() => setVisor(i)}>
+                    <img src={f.url} alt={`Evidencia ${i + 1}`} loading="lazy" />
+                  </button>
+                ))}
+              </div>
+              <VisorFotos open={visor !== null} indiceInicial={visor ?? 0} onClose={() => setVisor(null)} titulo={`Evidencias · ${acta.placa}`}
+                fotos={(acta.evidencias ?? []).map((f, i) => ({ url: f.url, titulo: `Evidencia ${i + 1}` }))} />
+            </section>
+          )}
 
           <section className="ced-bloque">
             <h3 className="ced-titulo">Observaciones</h3>
