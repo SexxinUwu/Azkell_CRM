@@ -311,3 +311,7 @@ Lista viva. Se movió aquí lo que estaba en la guía para Claude Code, más lo 
 - [ ] Neumáticos: la OC 85 está a 30 días de crédito; decidir si pasa a 60 días (vence el 20/12/2026).
 - [ ] Inventario: cargar cocada en INV-0263 e INV-0293, y decidir si INV-0263 se marca descontinuado.
 - [ ] Coolify: Redeploy desde `main` para que se vean los cambios de las últimas sesiones.
+- [ ] Almacén (Marsisa): stock negativo en 14 artículos. 13 tienen una OC con mercadería por recepcionar (INV-1029, 1031, 1038, 0839, 0662, 0925, 1018, 1020, 1021, 0118, 0119, 0137, 1016): almacén debe recepcionarlas. INV-1017 (−13) queda en −1 aunque se recepcione ENT-2026-00334 (solo trae 12): pendiente de decidir.
+- [ ] Almacén: cambiar el default de `salidas_inv.estado` de «Despachado» a «Pendiente» (migración en las 4 empresas, con OK). El servidor ya valida el stock al crear y editar salidas.
+- [ ] Almacén: revisar los negativos de las otras 3 empresas (solo se revisó Marsisa). Los 5 artículos de Marsisa sin OC se regularizaron a 0 el 09/11/2026 (respaldo en `respaldos-azkell/marsisa_inventario_grupoC_*.sql`).
+
