@@ -17,6 +17,9 @@ import { abrirPdfEntregaPorId, compartirEntregaPorId } from './ce-pdf';
 import { formatFechaPe } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
 
+/** Nombre de empresa sin «S.A.C.» y similares, para etiquetas cortas */
+const empresaCorta = (n: string) => n.replace(/\s+(S\.?\s?A\.?\s?C\.?|S\.?\s?A\.?|S\.?\s?R\.?\s?L\.?|E\.?\s?I\.?\s?R\.?\s?L\.?)\s*$/i, '').trim();
+
 /** AAAA-MM-DD → DD/MM/AAAA; cualquier otro texto se muestra igual */
 const fechaLegible = (t: string) => (/^\d{4}-\d{2}-\d{2}/.test(t) ? formatFechaPe(t) : t);
 const esUrl = (t: string | null | undefined): t is string => !!t && /^https?:\/\//.test(t);
@@ -195,8 +198,8 @@ function TarjetaDocumento(p: TarjetaProps) {
         <header className="doc-card__cab">
           <span className="doc-card__num">{p.num}</span>
           <span className="doc-card__titulo">{p.titulo}</span>
-          {p.pendienteDe && <span className="doc-pendiente">Pendiente de {p.pendienteDe}</span>}
         </header>
+        {p.pendienteDe && <span className="doc-pendiente" title={`Pendiente de ${p.pendienteDe}`}>Pendiente de {empresaCorta(p.pendienteDe)}</span>}
         <p className="doc-card__vacio">Sin registrar</p>
         {p.puedeEditar && <Button variant="secondary" size="sm" onClick={p.onActualizar}>Cargar</Button>}
       </article>
@@ -210,8 +213,8 @@ function TarjetaDocumento(p: TarjetaProps) {
       <header className="doc-card__cab">
         <span className="doc-card__num">{p.num ?? <FileText size={12} aria-hidden />}</span>
         <span className="doc-card__titulo">{p.titulo}</span>
-        {p.pendienteDe && p.estado.score <= 2 && p.estado.score >= 0 && <span className="doc-pendiente">Pendiente de {p.pendienteDe}</span>}
       </header>
+      {p.pendienteDe && p.estado.score <= 2 && p.estado.score >= 0 && <span className="doc-pendiente" title={`Pendiente de ${p.pendienteDe}`}>Pendiente de {empresaCorta(p.pendienteDe)}</span>}
       <dl className="doc-card__filas">
         {p.datos.map(x => (
           <div key={x.etiqueta}><dt>{x.etiqueta}</dt><dd>{x.valor}</dd></div>
