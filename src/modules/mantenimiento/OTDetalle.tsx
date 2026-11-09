@@ -611,13 +611,15 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                   <span className="t-numeric" style={{ fontWeight: 800, fontSize: '0.95rem' }}>{soles(Number(sal.total_pen))}</span>
                   {puedeEditar && (
                     <>
-                      {/* Ya despachado: las cantidades no se editan (el stock ya salió del almacén) */}
+                      {/* Ya despachado: ni se editan las cantidades ni se elimina (el stock ya salió del almacén) */}
                       {sal.estado !== 'Despachado' && (
-                        <Button size="sm" variant="plain" iconOnly icon={<Pencil size={14} />} aria-label={`Editar cantidades de ${sal.id}`} className="btn-tip btn-tip--azul" data-tip="Editar cantidades"
-                          onClick={() => setSolicitudEdit(sal)} />
+                        <>
+                          <Button size="sm" variant="plain" iconOnly icon={<Pencil size={14} />} aria-label={`Editar cantidades de ${sal.id}`} className="btn-tip btn-tip--azul" data-tip="Editar cantidades"
+                            onClick={() => setSolicitudEdit(sal)} />
+                          <Button size="sm" variant="plain" iconOnly icon={<Trash2 size={14} />} aria-label={`Eliminar solicitud ${sal.id}`} className="btn-tip btn-tip--rojo" data-tip="Eliminar solicitud"
+                            onClick={() => setSolicitudBorrar(sal)} />
+                        </>
                       )}
-                      <Button size="sm" variant="plain" iconOnly icon={<Trash2 size={14} />} aria-label={`Eliminar solicitud ${sal.id}`} className="btn-tip btn-tip--rojo" data-tip="Eliminar solicitud"
-                        onClick={() => setSolicitudBorrar(sal)} />
                     </>
                   )}
                 </div>
