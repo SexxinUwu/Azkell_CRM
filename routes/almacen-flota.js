@@ -29,7 +29,8 @@ const num = v => Number(v) || 0;
 const aviso = msg => Object.assign(new Error(msg), { aviso: true });
 
 module.exports = function registrarAlmacenFlota(router, ctx) {
-    const { getDb, logAudit } = ctx;
+    const { getDb, logAudit, multer } = ctx;
+    const subida = multer.single('imagen');
 
     const promesa = (tdb) => (tdb.promise ? tdb.promise() : tdb);
 
@@ -107,6 +108,29 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
         return `${prefijo}-${String(doc.insertId).padStart(6, '0')}`;
     }
 
+    // La foto vive en flota_articulos.imagen_url (migración 16). Sin la columna, el módulo sigue funcionando sin fotos.
+    async function hayColumnaImagen(p) {
+        const [r] = await p.query("SELECT COUNT(*) AS n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'flota_articulos' AND COLUMN_NAME = 'imagen_url'");
+        return num(r[0] && r[0].n) > 0;
+    }
+
+    // Enlace de lectura estable por día (el navegador reutiliza la foto)
+    async function urlDeFoto(url) {
+        if (!url) return null;
+        try {
+            const { getPresignedUrlEstable, s3KeyFromUrl } = require('../utils/s3');
+            const key = s3KeyFromUrl(url);
+            return key ? await getPresignedUrlEstable(key) : url;
+        } catch (e) { return null; }
+    }
+
+    // Sube la foto a S3 y devuelve su URL
+    async function subirFoto(file, articuloRef) {
+        const { uploadToS3 } = require('../utils/s3');
+        const ext = (String(file.originalname || '').split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+        return uploadToS3(file.buffer, `almacen/flota/articulos/${articuloRef}_${Date.now()}.${ext}`, file.mimetype);
+    }
+
     // ── Artículos ─────────────────────────────────────────────────────────
 
     // Lista de artículos con stock en almacén, en unidades y dónde están (placas)
@@ -122,7 +146,7 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
                 lista.push({ placa: u.placa, cantidad: u.saldo });
                 porArticulo.set(u.articulo_id, lista);
             });
-            const articulos = arts.map(a => {
+            const articulos = await Promise.all(arts.map(async a => {
                 const id = Number(a.id);
                 const placas = (porArticulo.get(id) ?? []).sort((x, y) => y.cantidad - x.cantidad || x.placa.localeCompare(y.placa));
                 const almacen = enAlmacen.get(id) ?? 0;
@@ -131,8 +155,9 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
                     id, descripcion: a.descripcion, unidad: a.unidad, familia: a.familia,
                     costo_referencial: num(a.costo_referencial), stock_minimo: num(a.stock_minimo),
                     almacen, en_unidades: unidades, total: almacen + unidades, placas,
+                    imagen_url: await urlDeFoto(a.imagen_url),
                 };
-            });
+            }));
             res.json({ ok: true, articulos });
         } catch (err) {
             console.error('Error almacén de flota (artículos):', err);
@@ -194,10 +219,14 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
         };
     }
 
-    router.post('/flota/articulos', async (req, res) => {
+    router.post('/flota/articulos', subida, async (req, res) => {
         try {
             const p = promesa(getDb(req));
             const datos = datosArticulo(req.body || {});
+            if (await hayColumnaImagen(p)) {
+                if (!req.file) throw aviso('Sube o toma una foto del artículo.');
+                datos.imagen_url = await subirFoto(req.file, 'nuevo');
+            }
             const [r] = await p.query('INSERT INTO flota_articulos SET ?', [datos]);
             if (typeof logAudit === 'function') logAudit(req.body?.usuario || 'sistema', 'almacen', 'CREÓ ARTÍCULO (FLOTA)', datos.descripcion);
             res.json({ ok: true, id: r.insertId, mensaje: `Artículo "${datos.descripcion}" creado.` });
@@ -208,10 +237,24 @@ module.exports = function registrarAlmacenFlota(router, ctx) {
         }
     });
 
-    router.put('/flota/articulos/:id', async (req, res) => {
+    router.put('/flota/articulos/:id', subida, async (req, res) => {
         try {
             const p = promesa(getDb(req));
             const datos = datosArticulo(req.body || {});
+            if (await hayColumnaImagen(p)) {
+                const [previo] = await p.query('SELECT imagen_url FROM flota_articulos WHERE id = ?', [numero(req.params.id)]);
+                if (!previo.length) return res.status(404).json({ ok: false, error: 'Artículo no encontrado.' });
+                // Un artículo sin foto no se puede guardar sin subirla; si ya tiene, la nueva la reemplaza
+                if (!req.file && !previo[0].imagen_url) throw aviso('Sube o toma una foto del artículo.');
+                if (req.file) {
+                    datos.imagen_url = await subirFoto(req.file, numero(req.params.id));
+                    try {
+                        const { deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
+                        const vieja = previo[0].imagen_url && s3KeyFromUrl(previo[0].imagen_url);
+                        if (vieja) await deleteFromS3(vieja).catch(() => { });
+                    } catch (e) { /* la foto vieja queda huérfana, no es grave */ }
+                }
+            }
             const [r] = await p.query('UPDATE flota_articulos SET ? WHERE id = ?', [datos, numero(req.params.id)]);
             if (!r.affectedRows) return res.status(404).json({ ok: false, error: 'Artículo no encontrado.' });
             if (typeof logAudit === 'function') logAudit(req.body?.usuario || 'sistema', 'almacen', 'EDITÓ ARTÍCULO (FLOTA)', `${req.params.id}: ${datos.descripcion}`);

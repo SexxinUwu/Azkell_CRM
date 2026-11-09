@@ -14,6 +14,8 @@ export interface ArticuloBase {
   familia: string | null;
   costo_referencial: number;
   stock_minimo: number;
+  /** Foto del artículo (enlace de lectura); null si aún no tiene */
+  imagen_url?: string | null;
 }
 
 export interface ArticuloFlota extends ArticuloBase {
@@ -149,10 +151,14 @@ export function useHistorialFlota(f: FiltrosHistorial) {
 // Respuesta común de las escrituras
 interface RespuestaEscritura { ok: boolean; codigo?: string; mensaje?: string }
 
-export const guardarArticulo = (id: number | null, datos: DatosArticulo, usuario: string) =>
-  id == null
-    ? api<RespuestaEscritura>('/almacen/flota/articulos', { method: 'POST', body: { ...datos, usuario } })
-    : api<RespuestaEscritura>(`/almacen/flota/articulos/${id}`, { method: 'PUT', body: { ...datos, usuario } });
+export function guardarArticulo(id: number | null, datos: DatosArticulo, usuario: string, imagen: File | null) {
+  const f = new FormData();
+  Object.entries({ ...datos, usuario }).forEach(([k, v]) => f.append(k, String(v)));
+  if (imagen) f.append('imagen', imagen);
+  return id == null
+    ? api<RespuestaEscritura>('/almacen/flota/articulos', { method: 'POST', body: f })
+    : api<RespuestaEscritura>(`/almacen/flota/articulos/${id}`, { method: 'PUT', body: f });
+}
 
 export const ingresarAFlota = (items: LineaCantidad[], fecha: string, referencia: string, observaciones: string, usuario: string) =>
   api<RespuestaEscritura>('/almacen/flota/ingreso', { method: 'POST', body: { items, fecha, referencia, observaciones, usuario } });

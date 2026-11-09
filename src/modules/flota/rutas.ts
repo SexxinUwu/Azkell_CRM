@@ -30,7 +30,7 @@ export const RUTAS: RutaModulo[] = [
     path: 'flota/almacen-flota/*',
     permisos: ['inv.ver', 'sal_inv.ver', 'ent_inv.ver', 'admin'],
     Page: lazy(() => import('./AlmacenFlotaPage').then(m => ({ default: m.AlmacenFlotaPage }))),
-    nav: { key: 'almacen-flota', label: 'Almacén de flota', to: '/flota/almacen-flota', icon: 'Warehouse', permisos: ['inv.ver', 'sal_inv.ver', 'ent_inv.ver'] },
+    nav: { key: 'almacen-flota', label: 'Almacén', to: '/flota/almacen-flota', icon: 'Warehouse', permisos: ['inv.ver', 'sal_inv.ver', 'ent_inv.ver'] },
   },
   {
     path: 'flota/checklist/*',
