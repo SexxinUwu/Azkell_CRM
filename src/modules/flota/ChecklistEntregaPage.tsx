@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Page } from '../../core/ui/Display';
-import { ConfirmSheet } from '../../core/ui/Sheet';
+import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -17,7 +17,7 @@ import { exportarEntregasExcel } from './ce-excel';
 import { cargarPlantilla } from './ce-plantilla';
 import type { EntregaVehiculo } from './ce-tipos';
 
-type Vista = 'portal' | 'lista' | 'formulario';
+type Vista = 'portal' | 'lista';
 type ModoForm = 'nuevo' | 'editar' | 'ver';
 
 // La misma clave que usa el clásico y Garita: la empresa elegida se recuerda en el navegador
@@ -92,7 +92,6 @@ export function ChecklistEntregaPage() {
 
   function nuevaEntrega() {
     setFormulario({ registro: null, modo: 'nuevo' });
-    setVista('formulario');
   }
 
   function refrescarListado() {
@@ -119,7 +118,6 @@ export function ChecklistEntregaPage() {
         setDetalleActa(d);
       } else if (a === 'editar') {
         setFormulario({ registro: d, modo: 'editar' });
-        setVista('formulario');
       } else if (a === 'pdf') {
         await abrirPdfEntrega(d);
         haptic('success');
@@ -215,28 +213,33 @@ export function ChecklistEntregaPage() {
         />
       )}
 
-      {vista === 'formulario' && formulario && (
-        <CeFormulario
-          registro={formulario.registro}
-          empresa={empresa}
-          modo={formulario.modo}
-          onCerrar={() => { setFormulario(null); setVista('lista'); }}
-          onGuardado={() => {
-            haptic('success');
-            toast('Acta guardada');
-            setFormulario(null);
-            setVista('lista');
-            void refrescarListado();
-          }}
-        />
-      )}
+      {/* Registrar o editar: una ventana sobre el listado, no otra pantalla */}
+      <Sheet open={!!formulario} onClose={() => setFormulario(null)} ancho anclaAbajo ligera
+        title={formulario?.modo === 'nuevo' ? 'Nueva entrega de vehículo' : formulario?.modo === 'editar' ? `Editar acta ${formulario.registro?.numero_inventario || formulario.registro?.id || ''}` : 'Acta de entrega'}>
+        {formulario && (
+          <CeFormulario
+            key={formulario.registro ? String(formulario.registro.id) : 'nuevo'}
+            hoja
+            registro={formulario.registro}
+            empresa={empresa}
+            modo={formulario.modo}
+            onCerrar={() => setFormulario(null)}
+            onGuardado={() => {
+              haptic('success');
+              toast('Acta guardada');
+              setFormulario(null);
+              void refrescarListado();
+            }}
+          />
+        )}
+      </Sheet>
 
       <CeDetalle
         acta={detalleActa}
         ocupado={ocupadoDetalle}
         puedeEditar
         onClose={() => setDetalleActa(null)}
-        onEditar={a => { setDetalleActa(null); setFormulario({ registro: a, modo: 'editar' }); setVista('formulario'); }}
+        onEditar={a => { setDetalleActa(null); setFormulario({ registro: a, modo: 'editar' }); }}
         onPdf={a => { void salidaDesdeDetalle('pdf', a); }}
         onWhatsApp={a => { void salidaDesdeDetalle('whatsapp', a); }}
       />

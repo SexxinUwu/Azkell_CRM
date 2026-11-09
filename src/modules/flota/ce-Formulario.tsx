@@ -59,6 +59,8 @@ export interface CeFormularioProps {
   registro: EntregaVehiculo | null;
   empresa: string;
   modo: 'nuevo' | 'editar' | 'ver';
+  /** Dentro de una ventana: la ventana ya trae el título y el cierre */
+  hoja?: boolean;
   onCerrar: () => void;
   onGuardado: (r: EntregaVehiculo) => void;
 }
@@ -151,7 +153,7 @@ function normalizarPartes(raw: Record<string, unknown>): Record<string, Califica
   return out;
 }
 
-export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: CeFormularioProps) {
+export function CeFormulario({ registro, empresa, modo, hoja, onCerrar, onGuardado }: CeFormularioProps) {
   const toast = useToast();
   const { user } = useAuth();
   const nuevo = modo === 'nuevo';
@@ -561,13 +563,15 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
 
   const cabecera = (
     <header className="ce-f__cabecera">
-      <div className="ce-f__cabecera-izq">
-        <Button variant="plain" size="sm" iconOnly icon={<ArrowLeft size={18} />} aria-label="Volver a la lista" onClick={onCerrar} />
-        <div>
-          <h2 className="ce-f__titulo-pagina">{titulo}</h2>
-          <p className="ce-f__subtitulo">{subtitulo}</p>
+      {hoja ? <p className="ce-f__subtitulo">{subtitulo}</p> : (
+        <div className="ce-f__cabecera-izq">
+          <Button variant="plain" size="sm" iconOnly icon={<ArrowLeft size={18} />} aria-label="Volver a la lista" onClick={onCerrar} />
+          <div>
+            <h2 className="ce-f__titulo-pagina">{titulo}</h2>
+            <p className="ce-f__subtitulo">{subtitulo}</p>
+          </div>
         </div>
-      </div>
+      )}
       <div className="ce-f__cabecera-der">
         {campos.placa ? <LicensePlate plate={campos.placa} size="lg" /> : null}
         {campos.numero_inventario && <span className="ce-f__folio">{campos.numero_inventario}</span>}
@@ -577,7 +581,7 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
 
   if (!nuevo && !cargado) {
     return (
-      <div className="ce-f">
+      <div className={`ce-f${hoja ? ' ce-f--hoja' : ''}`}>
         {cabecera}
         {detalle.isError
           ? <Notice tone="error" icon={<CircleAlert size={16} />}>{errorMessage(detalle.error)}</Notice>
@@ -589,7 +593,7 @@ export function CeFormulario({ registro, empresa, modo, onCerrar, onGuardado }: 
   const pct = totalPartes ? (conteo.calificadas / totalPartes) * 100 : 0;
 
   return (
-    <div className="ce-f">
+    <div className={`ce-f${hoja ? ' ce-f--hoja' : ''}`}>
       {cabecera}
       {errorGeneral && <Notice tone="error" icon={<CircleAlert size={16} />}>{errorGeneral}</Notice>}
 
