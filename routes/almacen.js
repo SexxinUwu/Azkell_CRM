@@ -3008,9 +3008,10 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 // 2. Obtener todas las recepciones registradas agrupadas por OC
                 const sqlRecs = `
                 SELECT r.id AS recepcion_id, dr.id AS detalle_id, TIMESTAMPDIFF(MINUTE, r.created_at, NOW()) AS minutos_desde_registro, r.oc_id, r.fecha_recepcion, r.usuario, r.almacen, r.sustento_url, r.observacion, r.tipo_recepcion,
-                       dr.inventario_id, dr.descripcion, dr.cantidad_recibida, dr.costo_unitario, dr.moneda
+                       dr.inventario_id, COALESCE(i.descripcion, dr.descripcion) AS descripcion, dr.cantidad_recibida, dr.costo_unitario, dr.moneda
                 FROM recepciones_oc r
                 JOIN detalle_recepciones_oc dr ON dr.recepcion_id = r.id
+                LEFT JOIN inventario i ON i.id = dr.inventario_id
                 WHERE r.oc_id IN (?)
                 ORDER BY r.fecha_recepcion ASC
             `;

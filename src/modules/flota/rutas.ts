@@ -39,10 +39,10 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'checklist', label: 'Reporte de fallas', to: '/flota/checklist', icon: 'ClipboardCheck', permisos: ['checklist.ver'] },
   },
   {
-    // Entrega de vehículos (CheckList por empresa): el menú "Entrega de vehículos" abre esta pantalla
+    // Entrega de vehículos (CheckList por empresa): el menú "Inventario de vehículos" abre esta pantalla
     path: 'flota/checklist-entrega/*',
     permisos: ['entrega_vehiculos.ver', 'seguridad_unidades.ver', 'placas.ver', 'admin'],
     Page: lazy(() => import('./ChecklistEntregaPage').then(m => ({ default: m.ChecklistEntregaPage }))),
-    nav: { key: 'entrega', label: 'Entrega de vehículos', to: '/flota/checklist-entrega', icon: 'ClipboardList', permisos: ['entrega_vehiculos.ver', 'seguridad_unidades.ver', 'placas.ver'] },
+    nav: { key: 'entrega', label: 'Inventario de vehículos', to: '/flota/checklist-entrega', icon: 'ClipboardList', permisos: ['entrega_vehiculos.ver', 'seguridad_unidades.ver', 'placas.ver'] },
   },
 ];

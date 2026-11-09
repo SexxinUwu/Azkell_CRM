@@ -3,11 +3,12 @@ import './recepcionDetalle.css';
 import '../../core/ui/botonesIcono.css';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronLeft, CircleDot, FileText, Lock, PackageCheck, PackagePlus, ShieldCheck, Trash2, Truck } from 'lucide-react';
+import { Check, CircleDot, FileText, Lock, PackageCheck, PackagePlus, ShieldCheck, Trash2, Truck } from 'lucide-react';
 import { BotonTip } from '../../core/ui/BotonTip';
 import { Button } from '../../core/ui/Button';
-import { ConfirmSheet } from '../../core/ui/Sheet';
+import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
+import { VisorFotos } from '../../core/ui/VisorFotos';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { ADMIN } from '../../core/auth/permisos';
@@ -46,30 +47,51 @@ function Dato({ etiqueta, valor, extra }: { etiqueta: string; valor: ReactNode; 
   );
 }
 
-function Evidencias({ urls }: { urls: string[] }) {
+/** Evidencias de una entrega: las fotos se abren en el visor (con zoom y deslizar) y los PDF en su pestaña */
+function Evidencias({ urls, onFoto }: { urls: string[]; onFoto: (url: string) => void }) {
   if (!urls.length) return <span className="rd-sin">Sin evidencia adjunta</span>;
   return (
     <div className="rd-evid">
       {urls.map((u, k) => esPdf(u)
         ? <a key={k} href={u} target="_blank" rel="noreferrer" className="rd-evid__doc"><FileText size={18} /><span>Documento {k + 1}</span></a>
-        : <a key={k} href={u} target="_blank" rel="noreferrer" className="rd-evid__foto" aria-label={`Abrir foto ${k + 1}`}><img src={u} alt={`Evidencia ${k + 1}`} loading="lazy" /></a>)}
+        : <button key={k} type="button" className="rd-evid__foto" aria-label={`Ver foto ${k + 1}`} onClick={() => onFoto(u)}><img src={u} alt={`Evidencia ${k + 1}`} loading="lazy" /></button>)}
     </div>
   );
 }
 
+interface Props {
+  /** La orden a mostrar; null mantiene la ventana cerrada */
+  oc: RecepcionOC | null;
+  puedeRecibir: boolean;
+  puedeRevertir: boolean;
+  onRecepcionar: () => void;
+  onClose: () => void;
+}
+
 /**
- * Detalle de una orden en recepción: estado y avance de un vistazo, línea de vida, artículos con su progreso
- * y las entregas registradas con sus evidencias (fotos y documentos).
+ * Detalle de una orden en recepción, en una ventana sobre el listado: estado y avance de un vistazo, línea de vida,
+ * artículos con su progreso y las entregas registradas con sus evidencias (fotos y documentos).
  */
-export function RecepcionDetalle({ oc, puedeRecibir, puedeRevertir, onRecepcionar, onVolver }: {
-  oc: RecepcionOC; puedeRecibir: boolean; puedeRevertir: boolean; onRecepcionar: () => void; onVolver: () => void;
-}) {
+export function RecepcionDetalle({ oc, puedeRecibir, puedeRevertir, onRecepcionar, onClose }: Props) {
+  const pendiente = oc ? Math.max(0, oc.total_pedido - oc.total_recibido) : 0;
+  return (
+    <Sheet open={!!oc} onClose={onClose} ancho anclaAbajo ligera title={oc ? `Orden ${String(oc.id)}` : ''}
+      footer={oc && puedeRecibir && pendiente > 0 ? (
+        <Button variant="primary" icon={<PackagePlus size={16} />} onClick={onRecepcionar}>Recepcionar</Button>
+      ) : undefined}>
+      {oc && <Contenido oc={oc} puedeRevertir={puedeRevertir} />}
+    </Sheet>
+  );
+}
+
+function Contenido({ oc, puedeRevertir }: { oc: RecepcionOC; puedeRevertir: boolean }) {
   const { user, permissions } = useAuth();
   const esAdmin = permissions.has(ADMIN);
   const qc = useQueryClient();
   const toast = useToast();
   const [porRevertir, setPorRevertir] = useState<HistorialRecepcion | null>(null);
   const [revirtiendo, setRevirtiendo] = useState(false);
+  const [visor, setVisor] = useState<number | null>(null);
 
   const moneda = String(oc.moneda).toUpperCase() === 'USD' ? 'USD' : 'PEN';
   const tc = Number(oc.tipo_cambio) || 0;
@@ -88,6 +110,10 @@ export function RecepcionDetalle({ oc, puedeRecibir, puedeRevertir, onRecepciona
     }
     return [...m.values()].reverse();
   }, [oc.historial_recepciones]);
+
+  const urlsDe = (cab: HistorialRecepcion) => (cab.sustentos?.length ? cab.sustentos : cab.sustento_url_presigned ? [cab.sustento_url_presigned] : []);
+  // Todas las fotos de todas las entregas, en orden, para pasar de una a otra en el visor
+  const fotos = useMemo(() => entregas.flatMap(e => urlsDe(e.cab).filter(u => !esPdf(u))), [entregas]);
 
   const banner = oc.estado_recepcion === 'COMPLETO'
     ? { clase: 'oc-banner--verde', titulo: 'RECEPCIÓN COMPLETA', texto: 'Toda la mercadería ingresó al almacén.' }
@@ -121,16 +147,7 @@ export function RecepcionDetalle({ oc, puedeRecibir, puedeRevertir, onRecepciona
   }
 
   return (
-    <div className="rd">
-      <div className="rd-barra">
-        <button type="button" className="rd-volver" onClick={onVolver}><ChevronLeft size={18} /> Recepciones</button>
-        <div className="rd-barra__acciones">
-          {puedeRecibir && pendiente > 0 && (
-            <Button variant="primary" icon={<PackagePlus size={16} />} onClick={onRecepcionar}>Recepcionar</Button>
-          )}
-        </div>
-      </div>
-
+    <div className="rd rd--hoja">
       {/* Cabecera: quién, cuánto y cómo va */}
       <header className={`rd-hero rd-hero--${tono}`}>
         <div className="rd-hero__texto">
@@ -167,99 +184,99 @@ export function RecepcionDetalle({ oc, puedeRecibir, puedeRevertir, onRecepciona
         ))}
       </ol>
 
-      <div className="rd-columnas">
-        <div className="rd-col">
-          {/* Artículos con su progreso */}
-          <section className="rd-panel">
-            <h3 className="rd-panel__titulo">Artículos <span>{oc.items.length}</span></h3>
-            <ul className="rd-items">
-              {oc.items.map((it, i) => {
-                const p = it.pedido > 0 ? Math.min(100, Math.round((it.recepcionado / it.pedido) * 100)) : 0;
-                return (
-                  <li key={i} className="rd-item">
-                    <span className="rd-item__n">{i + 1}</span>
-                    <div className="rd-item__cuerpo">
-                      <span className="rd-item__nombre">{it.descripcion}</span>
-                      <span className="rd-item__meta">{it.inventario_id ? <b>{it.inventario_id}</b> : null}{it.inventario_id ? ' · ' : ''}{it.unidad || 'UND'}</span>
-                      <span className="rd-item__barra" aria-hidden><span style={{ width: `${p}%` }} /></span>
+      {/* Artículos con su progreso (nombre completo del inventario) */}
+      <section className="rd-panel">
+        <h3 className="rd-panel__titulo">Artículos <span>{oc.items.length}</span></h3>
+        <ul className="rd-items">
+          {oc.items.map((it, i) => {
+            const p = it.pedido > 0 ? Math.min(100, Math.round((it.recepcionado / it.pedido) * 100)) : 0;
+            return (
+              <li key={i} className="rd-item">
+                <span className="rd-item__n">{i + 1}</span>
+                <div className="rd-item__cuerpo">
+                  <span className="rd-item__nombre">{it.descripcion}</span>
+                  <span className="rd-item__meta">{it.inventario_id ? <b>{it.inventario_id}</b> : null}{it.inventario_id ? ' · ' : ''}{it.unidad || 'UND'}</span>
+                  <span className="rd-item__barra" aria-hidden><span style={{ width: `${p}%` }} /></span>
+                </div>
+                <div className="rd-item__cifras">
+                  <span><b>{fmt(it.recepcionado)}</b> / {fmt(it.pedido)}</span>
+                  {it.pendiente > 0 ? <span className="rd-item__falta">Faltan {fmt(it.pendiente)}</span> : <span className="rd-item__ok">Completo</span>}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      {/* Entregas */}
+      <section className="rd-panel">
+        <h3 className="rd-panel__titulo">Entregas registradas <span>{entregas.length}</span></h3>
+        {entregas.length === 0 ? (
+          <p className="rd-vacio">Todavía no se registró ninguna entrega.</p>
+        ) : (
+          <ol className="rd-entregas">
+            {entregas.map(({ cab, lineas }) => {
+              const urls = urlsDe(cab);
+              return (
+                <li key={cab.recepcion_id} className="rd-entrega">
+                  <div className="rd-entrega__cab">
+                    <div>
+                      <strong className="rd-entrega__fecha">{formatFechaHoraPe(cab.fecha_recepcion)}</strong>
+                      <span className="rd-entrega__quien">{[cab.usuario, cab.almacen].filter(Boolean).join(' · ')}</span>
                     </div>
-                    <div className="rd-item__cifras">
-                      <span><b>{fmt(it.recepcionado)}</b> / {fmt(it.pedido)}</span>
-                      {it.pendiente > 0 ? <span className="rd-item__falta">Faltan {fmt(it.pendiente)}</span> : <span className="rd-item__ok">Completo</span>}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
+                    <span className={`rd-chip ${cab.tipo_recepcion === 'TOTAL' ? 'rd-chip--green' : 'rd-chip--amber'}`}>{cab.tipo_recepcion === 'TOTAL' ? 'Total' : 'Parcial'}</span>
+                    {puedeRevertir && (esAdmin || (cab.minutos_desde_registro ?? 0) <= 24 * 60) && (
+                      <BotonTip tip="Revertir esta entrega" className="rd-revertir" onClick={() => setPorRevertir(cab)}><Trash2 size={16} /></BotonTip>
+                    )}
+                    {puedeRevertir && !esAdmin && (cab.minutos_desde_registro ?? 0) > 24 * 60 && (
+                      <span className="rd-bloqueada" title="Pasó más de un día: ya no se puede revertir. Recepciona lo que falte y pide a Sistemas que corrija el error."><Lock size={13} /> Cerrada</span>
+                    )}
+                  </div>
+                  <ul className="rd-entrega__lineas">
+                    {lineas.map(l => <li key={l.detalle_id}><b>+{fmt(l.cantidad_recibida)}</b> {l.descripcion ?? 'Artículo'}</li>)}
+                  </ul>
+                  {cab.observacion && <p className="rd-entrega__obs">“{cab.observacion}”</p>}
+                  <Evidencias urls={urls} onFoto={u => setVisor(Math.max(0, fotos.indexOf(u)))} />
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </section>
 
-          {/* Entregas */}
-          <section className="rd-panel">
-            <h3 className="rd-panel__titulo">Entregas registradas <span>{entregas.length}</span></h3>
-            {entregas.length === 0 ? (
-              <p className="rd-vacio">Todavía no se registró ninguna entrega.</p>
-            ) : (
-              <ol className="rd-entregas">
-                {entregas.map(({ cab, lineas }) => {
-                  const urls = cab.sustentos?.length ? cab.sustentos : cab.sustento_url_presigned ? [cab.sustento_url_presigned] : [];
-                  return (
-                    <li key={cab.recepcion_id} className="rd-entrega">
-                      <div className="rd-entrega__cab">
-                        <div>
-                          <strong className="rd-entrega__fecha">{formatFechaHoraPe(cab.fecha_recepcion)}</strong>
-                          <span className="rd-entrega__quien">{[cab.usuario, cab.almacen].filter(Boolean).join(' · ')}</span>
-                        </div>
-                        <span className={`rd-chip ${cab.tipo_recepcion === 'TOTAL' ? 'rd-chip--green' : 'rd-chip--amber'}`}>{cab.tipo_recepcion === 'TOTAL' ? 'Total' : 'Parcial'}</span>
-                        {puedeRevertir && (esAdmin || (cab.minutos_desde_registro ?? 0) <= 24 * 60) && (
-                          <BotonTip tip="Revertir esta entrega" className="rd-revertir" onClick={() => setPorRevertir(cab)}><Trash2 size={16} /></BotonTip>
-                        )}
-                        {puedeRevertir && !esAdmin && (cab.minutos_desde_registro ?? 0) > 24 * 60 && (
-                          <span className="rd-bloqueada" title="Pasó más de un día: ya no se puede revertir. Recepciona lo que falte y pide a Sistemas que corrija el error."><Lock size={13} /> Cerrada</span>
-                        )}
-                      </div>
-                      <ul className="rd-entrega__lineas">
-                        {lineas.map(l => <li key={l.detalle_id}><b>+{fmt(l.cantidad_recibida)}</b> {l.descripcion ?? 'Artículo'}</li>)}
-                      </ul>
-                      {cab.observacion && <p className="rd-entrega__obs">“{cab.observacion}”</p>}
-                      <Evidencias urls={urls} />
-                    </li>
-                  );
-                })}
-              </ol>
-            )}
-          </section>
-        </div>
+      {/* Datos y valorización, lado a lado */}
+      <div className="rd-lado">
+        <section className="rd-panel">
+          <h3 className="rd-panel__titulo">Datos de la orden</h3>
+          <div className="rd-datos">
+            <Dato etiqueta="Fecha de emisión" valor={oc.fecha || '—'} />
+            <Dato etiqueta="Solicitante" valor={oc.solicitante || '—'} />
+            <Dato etiqueta="Autoriza" valor={oc.autoriza || '—'} />
+            <Dato etiqueta="Almacén de destino" valor={oc.almacen || 'Principal'} />
+            <Dato etiqueta="Condición de pago" valor={esCredito(oc.condicion_pago) ? `Crédito${oc.dias_credito ? ` (${oc.dias_credito} días)` : ''}` : 'Contado'} />
+          </div>
+        </section>
 
-        <aside className="rd-col rd-col--lado">
-          <section className="rd-panel">
-            <h3 className="rd-panel__titulo">Datos de la orden</h3>
-            <div className="rd-datos">
-              <Dato etiqueta="Fecha de emisión" valor={oc.fecha || '—'} />
-              <Dato etiqueta="Solicitante" valor={oc.solicitante || '—'} />
-              <Dato etiqueta="Autoriza" valor={oc.autoriza || '—'} />
-              <Dato etiqueta="Almacén de destino" valor={oc.almacen || 'Principal'} />
-              <Dato etiqueta="Condición de pago" valor={esCredito(oc.condicion_pago) ? `Crédito${oc.dias_credito ? ` (${oc.dias_credito} días)` : ''}` : 'Contado'} />
-            </div>
-          </section>
-
-          <section className="rd-panel rd-panel--total">
-            <h3 className="rd-panel__titulo">Valorización</h3>
-            <div className="rd-total">
-              <span>Importe de la orden</span>
-              <strong>{formatMoneda(importe, moneda)}</strong>
-            </div>
-            {moneda === 'USD' && tc > 0 && <span className="rd-total__eq">Equivale a {formatSoles(oc.importe)} · TC {tc.toFixed(3)}</span>}
-            <div className="rd-total rd-total--suave">
-              <span>Recibido hasta hoy</span>
-              <strong>{formatMoneda(valorRecibido, moneda)}</strong>
-            </div>
-            {(oc.servicios_cantidad ?? 0) > 0 && (
-              <span className="rd-total__eq">Incluye {oc.servicios_cantidad} servicio{oc.servicios_cantidad === 1 ? '' : 's'} por {formatMoneda(oc.servicios_importe ?? 0, moneda)}: no se recepcionan, se asignan en la orden de trabajo.</span>
-            )}
-            <span className="rd-garantia"><ShieldCheck size={14} /> Cada entrega queda con su evidencia y en el kardex.</span>
-          </section>
-        </aside>
+        <section className="rd-panel rd-panel--total">
+          <h3 className="rd-panel__titulo">Valorización</h3>
+          <div className="rd-total">
+            <span>Importe de la orden</span>
+            <strong>{formatMoneda(importe, moneda)}</strong>
+          </div>
+          {moneda === 'USD' && tc > 0 && <span className="rd-total__eq">Equivale a {formatSoles(oc.importe)} · TC {tc.toFixed(3)}</span>}
+          <div className="rd-total rd-total--suave">
+            <span>Recibido hasta hoy</span>
+            <strong>{formatMoneda(valorRecibido, moneda)}</strong>
+          </div>
+          {(oc.servicios_cantidad ?? 0) > 0 && (
+            <span className="rd-total__eq">Incluye {oc.servicios_cantidad} servicio{oc.servicios_cantidad === 1 ? '' : 's'} por {formatMoneda(oc.servicios_importe ?? 0, moneda)}: no se recepcionan, se asignan en la orden de trabajo.</span>
+          )}
+          <span className="rd-garantia"><ShieldCheck size={14} /> Cada entrega queda con su evidencia y en el kardex.</span>
+        </section>
       </div>
+
+      <VisorFotos open={visor !== null} indiceInicial={visor ?? 0} onClose={() => setVisor(null)} titulo={`Evidencias · ${String(oc.id)}`}
+        fotos={fotos.map((u, i) => ({ url: u, titulo: `Evidencia ${i + 1}` }))} />
 
       <ConfirmSheet
         open={!!porRevertir}
