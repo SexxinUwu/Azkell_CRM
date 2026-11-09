@@ -4,10 +4,10 @@ import { api } from '../../core/api/client';
 // Auditoría para personas: eventos legibles del registro firmado (sin el ruido de las consultas automáticas),
 // anulaciones/rechazos con quién y cuándo, y detalle con antes/después. Todo viene en UTC (ISO); aquí se muestra en hora de Lima.
 
-export type CategoriaEvento = 'ingreso' | 'creo' | 'modifico' | 'elimino' | 'anulo' | 'rechazo' | 'aprobo';
+export type CategoriaEvento = 'ingreso' | 'creo' | 'modifico' | 'elimino' | 'anulo' | 'rechazo' | 'aprobo' | 'bloqueo';
 
 export const ETIQUETA_CATEGORIA: Record<CategoriaEvento, string> = {
-  ingreso: 'Ingresó', creo: 'Registró', modifico: 'Modificó', elimino: 'Eliminó', anulo: 'Anuló', rechazo: 'Rechazó', aprobo: 'Aprobó',
+  ingreso: 'Ingresó', creo: 'Registró', modifico: 'Modificó', elimino: 'Eliminó', anulo: 'Anuló', rechazo: 'Rechazó', aprobo: 'Aprobó', bloqueo: 'Bloqueado',
 };
 
 export interface EventoAuditoria {

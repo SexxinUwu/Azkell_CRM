@@ -134,7 +134,7 @@ module.exports = (db) => {
             // Quién y cuándo: última petición que anuló (o que dejó «Rechazado») cada documento
             pool.query(
               `SELECT id, fecha, usuario, metodo, ruta, body_resumen FROM log_auditoria
-               WHERE metodo IN ('PUT', 'PATCH', 'POST')
+               WHERE metodo IN ('PUT', 'PATCH', 'POST') AND (status_codigo IS NULL OR status_codigo < 400)
                  AND (ruta REGEXP '/almacen/entradas/[^/]+/(anular|estado)$' OR ruta REGEXP '/almacen/salidas/[^/]+$')
                ORDER BY id`,
               (err3, auds) => {

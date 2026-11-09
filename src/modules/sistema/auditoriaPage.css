@@ -17,6 +17,7 @@
 .aud2-cat--anulo { color: #c2410c; background: color-mix(in srgb, #f97316 16%, transparent); }
 .aud2-cat--rechazo { color: var(--red-ink); background: color-mix(in srgb, var(--red-ink) 14%, transparent); }
 .aud2-cat--aprobo { color: #0a64d6; background: color-mix(in srgb, #007aff 14%, transparent); }
+.aud2-cat--bloqueo { color: #7c3aed; background: color-mix(in srgb, #7c3aed 14%, transparent); }
 .aud2-cat--ingreso { color: var(--label-2); background: var(--fill); }
 .aud2-cat--anulada { color: #c2410c; background: color-mix(in srgb, #f97316 16%, transparent); }
 .aud2-cat--rechazada { color: var(--red-ink); background: color-mix(in srgb, var(--red-ink) 14%, transparent); }

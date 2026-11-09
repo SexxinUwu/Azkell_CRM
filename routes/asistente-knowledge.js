@@ -15,7 +15,7 @@ Sistema integral de gestión de flotas (Lima, Perú): vehículos, mantenimiento,
 - **Órdenes de Trabajo:** panel de taller, OTs abiertas, pendientes y en rampa.
 - **Conductores:** directorio de conductores con DNI, licencia, teléfono y estado.
 - **Usuarios:** gestión de cuentas del sistema (solo administradores).
-- **Auditoría:** bitácora de actividad: quién hizo cada cambio y cuándo.
+- **Auditoría:** quién hizo cada cambio y cuándo, en hora de Lima. Tiene tres vistas: Actividad (lo que hizo cada persona), Anulaciones y rechazos (órdenes y salidas con quién y a qué hora) y Registro firmado. Solo registra lo que cambia datos y los intentos bloqueados, no quién solo miró una pantalla. Para preguntas como «quién anuló tal orden» se usa la consulta de auditoría.
 - **Mi cuenta:** cambiar contraseña, ver tus permisos y activar 2FA.
 
 ## Más pantallas

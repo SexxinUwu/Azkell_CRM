@@ -5,6 +5,8 @@ const { tienePermiso, db_query, resolveRange, rangoParams, OT_TIPO_SQL, OT_TECNI
 const { COSTO_OT_SQL } = require('../services/costos_taller');
 const { datosGpsUnidad, limpiarPlaca } = require('../services/wialon_unidad');
 const { STOCK_SQL } = require('../services/almacen_stock');
+const vistaAudit = require('../services/auditoria_vista');
+const { rangoLima } = require('../services/auditoria');
 
 const PERMISO_TALLER = ['ot.ver', 'status_rampa.ver', 'trabajos_ot.ver', 'reportes_ot.ver', 'sal_inv.ver'];
 const PERMISO_GPS = ['gps.ver'];
@@ -14,6 +16,7 @@ const PERMISO_DOCUMENTOS = ['docs_flota.ver', 'placas.ver'];
 const PERMISO_VIAJES = ['op_ordenes_viaje.ver', 'seguridad_unidades.ver', 'placas.ver', 'cond.ver'];
 const PERMISO_INVENTARIO = ['inv.ver'];
 const PERMISO_NEUMATICOS = ['neumaticos.ver'];
+const PERMISO_AUDITORIA = ['mod_auditoria.ver'];
 
 // Placa sin guiones ni espacios, para comparar sin importar cómo esté escrita en cada tabla
 const SQL_PLACA = (col) => `REPLACE(REPLACE(UPPER(${col}), '-', ''), ' ', '')`;
@@ -408,6 +411,65 @@ const HERRAMIENTAS = {
           tracto: r.placa_tracto || '', remolque: r.placa_remolque || '' })),
         ultimo_en_unidades_base: base[0] ? { conductor: base[0].conductor, fecha: base[0].fecha, zona: base[0].zona || '', estado: base[0].estado || '' } : null,
         ultimo_en_taller: taller[0]?.conductor && taller[0].conductor !== 'null' ? { conductor: taller[0].conductor, fecha: taller[0].fecha } : null,
+      };
+    },
+  },
+
+  actividad_auditoria: {
+    permiso: PERMISO_AUDITORIA,
+    sinPermiso: 'Esta persona no tiene permiso para ver la auditoría. Dile que lo solicite al administrador.',
+    declaracion: {
+      name: 'actividad_auditoria',
+      description: 'Auditoría: quién hizo qué y cuándo en el sistema. Úsala para "quién anuló la orden ENT-2026-00337", "quién rechazó esa compra", "qué hizo Daniel ayer", "quién despachó la salida SAL-2026-00790" o "qué anulaciones hubo esta semana". Devuelve los eventos más recientes que coincidan, con persona, fecha y hora de Lima y descripción. Solo registra lo que cambió datos (crear, modificar, anular, eliminar, aprobar, rechazar, ingresos al sistema) y los intentos bloqueados; no registra quién solo miró una pantalla.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          persona: { type: 'STRING', description: 'Parte del nombre de la persona (por ejemplo "Daniel" o "Jenrry").' },
+          texto: { type: 'STRING', description: 'Código o palabra del documento o registro (por ejemplo "ENT-2026-00337", "SAL-2026-00790", "CLX861").' },
+          accion: { type: 'STRING', description: 'Tipo de acción: creo, modifico, elimino, anulo, rechazo, aprobo, ingreso o bloqueo (intento que el sistema no permitió).' },
+          modulo: { type: 'STRING', description: 'Módulo: almacen, ordenes-trabajo, seguridad, disponibilidad-flota, combustible, tesoreria, neumaticos, mantenimiento, checklist, taller-rampas.' },
+          desde: { type: 'STRING', description: 'Fecha inicial AAAA-MM-DD (hora de Lima).' },
+          hasta: { type: 'STRING', description: 'Fecha final AAAA-MM-DD (hora de Lima).' },
+          limite: { type: 'INTEGER', description: 'Cuántos eventos devolver (1 a 50, por defecto 10).' },
+        },
+      },
+    },
+    async ejecutar(args, db) {
+      const CATEGORIAS = ['ingreso', 'creo', 'modifico', 'elimino', 'anulo', 'rechazo', 'aprobo', 'bloqueo'];
+      const accion = CATEGORIAS.includes(String(args.accion || '').toLowerCase()) ? String(args.accion).toLowerCase() : '';
+      const modulo = /^[a-z0-9-]{3,40}$/.test(String(args.modulo || '')) ? String(args.modulo) : '';
+      const persona = texto(args.persona, 60);
+      const buscar = texto(args.texto, 60);
+      const desde = typeof args.desde === 'string' && DATE_KEY.test(args.desde) ? args.desde : '';
+      const hasta = typeof args.hasta === 'string' && DATE_KEY.test(args.hasta) ? args.hasta : '';
+      if (!persona && !buscar && !accion && !modulo && !desde && !hasta) {
+        throw new ErrorConsulta('Dime qué buscar: una persona, un código de documento, un tipo de acción o un rango de fechas.');
+      }
+      const cond = [];
+      const params = [];
+      if (persona) { cond.push('ev.usuario LIKE ?'); params.push(`%${persona}%`); }
+      if (buscar) { cond.push('(ev.ruta LIKE ? OR ev.body_resumen LIKE ?)'); params.push(`%${buscar}%`, `%${buscar}%`); }
+      if (modulo) { cond.push(`${vistaAudit.SEGMENTO_SQL} = ?`); params.push(modulo); }
+      if (accion) { cond.push(`(${vistaAudit.CATEGORIA_SQL}) = ?`); params.push(accion); }
+      const rango = rangoLima(desde, hasta);
+      if (rango.desde) { cond.push('ev.ts >= ?'); params.push(rango.desde); }
+      if (rango.hastaExclusivo) { cond.push('ev.ts < ?'); params.push(rango.hastaExclusivo); }
+      const where = cond.length ? ` WHERE ${cond.join(' AND ')}` : '';
+      const filas = await db_query(db,
+        `SELECT ev.id, ev.origen, ev.ts, ev.usuario, ev.metodo, ev.ruta, ev.body_resumen, ev.status, ${vistaAudit.SEGMENTO_SQL} AS segmento
+         FROM ${vistaAudit.EVENTOS_SQL}${where} ORDER BY ev.ts DESC, ev.id DESC LIMIT ${limiteDeArgs(args)}`, params);
+      if (!filas.length) throw new ErrorConsulta('No encontré eventos de auditoría con esos datos.');
+      const ETIQUETA = { ingreso: 'Ingresó', creo: 'Registró', modifico: 'Modificó', elimino: 'Eliminó', anulo: 'Anuló', rechazo: 'Rechazó', aprobo: 'Aprobó', bloqueo: 'Bloqueado' };
+      return {
+        eventos: filas.length,
+        nota: 'Las horas están en hora de Lima. Un evento «Bloqueado» es un intento que el sistema no permitió: no se realizó.',
+        registros: filas.map(r => {
+          const d = vistaAudit.describir(r);
+          const iso = vistaAudit.aIso(r.ts);
+          return { fecha_hora_lima: new Date(new Date(iso).getTime() - 5 * 3600 * 1000).toISOString().slice(0, 19).replace('T', ' '),
+            persona: r.usuario || 'Sistema', accion: ETIQUETA[d.categoria] || d.categoria,
+            modulo: vistaAudit.ETIQUETA_MODULO[r.segmento] || r.segmento || '', detalle: texto(d.texto, 220) };
+        }),
       };
     },
   },

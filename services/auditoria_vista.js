@@ -10,6 +10,7 @@ const CODIGO = '[A-Z]{2,4}-[0-9]{4}-[0-9]+';
 /** Categoría de un evento: se calcula en SQL (para filtrar y contar) y se repite en JS (para mostrar) con las mismas reglas */
 const CATEGORIA_SQL = `CASE
     WHEN ev.origen = 'sesion' THEN 'ingreso'
+    WHEN ev.status >= 400 THEN 'bloqueo'
     WHEN ev.ruta REGEXP '/entradas/[^/]+/anular$' THEN 'anulo'
     WHEN ev.ruta REGEXP '/salidas/[^/]+$' AND ev.body_resumen LIKE '%"accion":"anular"%' THEN 'anulo'
     WHEN ev.ruta REGEXP '/entradas/[^/]+/estado$' AND ev.body_resumen LIKE '%"estado":"Rechazado"%' THEN 'rechazo'
@@ -74,8 +75,21 @@ const NOMBRE_OBJETO = [
   [/^\/combustible\/auditar-viaje/, 'la auditoría de un viaje'], [/^\/neumaticos/, 'neumáticos'], [/^\/checklist|^\/mantenimiento\/checklist/, 'un checklist'],
 ];
 
-/** Categoría y texto legible de un evento (misma lógica que CATEGORIA_SQL) */
+const INFINITIVO = { 'Anuló': 'anular', 'Despachó': 'despachar', 'Aprobó': 'aprobar', 'Rechazó': 'rechazar', 'Registró': 'registrar', 'Modificó': 'modificar',
+  'Eliminó': 'eliminar', 'Editó': 'editar', 'Recepcionó': 'recepcionar', 'Cambió': 'cambiar' };
+
+/** Categoría y texto legible de un evento (misma lógica que CATEGORIA_SQL). Un intento que el sistema rechazó (HTTP 400 o más) se muestra como bloqueado. */
 function describir(e) {
+  const d = describirHecho(e);
+  if (e.origen !== 'sesion' && Number(e.status) >= 400) {
+    const [verbo, ...resto] = d.texto.split(' ');
+    const motivo = Number(e.status) === 403 ? 'sin permiso' : 'el sistema lo bloqueó';
+    return { categoria: 'bloqueo', texto: `Intentó ${INFINITIVO[verbo] || verbo.toLowerCase()} ${resto.join(' ')} · No se realizó (${motivo})` };
+  }
+  return d;
+}
+
+function describirHecho(e) {
   const ruta = String(e.ruta || '');
   const metodo = String(e.metodo || '').toUpperCase();
   const body = aObjeto(e.body_resumen) || {};
