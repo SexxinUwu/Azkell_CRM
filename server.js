@@ -4422,7 +4422,8 @@ app.get('/api/vehiculos-flota', async (req, res) => {
             vf.boni_emision, vf.boni_vencimiento, vf.sv_entidad, vf.sv_asesor, vf.sv_vencimiento,
             vf.sc_entidad, vf.sc_asesor, vf.sc_vencimiento, vf.fum_emision, vf.fum_vencimiento,
             vf.ext_emision, vf.ext_vencimiento, vf.ext_cantidad,
-            vf.tc_url, vf.soat_url, vf.matpel_url, vf.rt_url, vf.boni_url, vf.sv_url, vf.sc_url, vf.fum_url, vf.ext_url, vf.wialon_name, p.motora
+            vf.tc_url, vf.soat_url, vf.matpel_url, vf.rt_url, vf.boni_url, vf.sv_url, vf.sc_url, vf.fum_url, vf.ext_url, vf.wialon_name, p.motora,
+            p.alquilada_a, p.alquiler_desde, p.docs_responsable, p.alquiler_nota
         FROM placas p
         LEFT JOIN vehiculos_flota vf ON CONVERT(p.placa USING utf8mb4) = CONVERT(vf.placa USING utf8mb4)
         ORDER BY p.placa ASC
@@ -4505,10 +4506,55 @@ app.get('/api/vehiculos-flota', async (req, res) => {
                     });
                 }
                 vehiculos.forEach(r => { r.inventario_vehiculos = porPlaca.get(limpia(r.placa)) || null; });
-                res.json(vehiculos);
+                tdb.query('SELECT placa, empresa, solicitado_por, created_at FROM docs_solicitudes ORDER BY id DESC LIMIT 3000', (errSol, sols) => {
+                    const ult = new Map();
+                    if (!errSol && Array.isArray(sols)) sols.forEach(x => { const k = limpia(x.placa); if (k && !ult.has(k)) ult.set(k, { empresa: x.empresa, por: x.solicitado_por, fecha: x.created_at }); });
+                    vehiculos.forEach(r => { r.ultima_solicitud = ult.get(limpia(r.placa)) || null; });
+                    res.json(vehiculos);
+                });
             });
         });
     });
+});
+
+// ── PUT /api/documentos-flota/alquiler/:placa — marca la unidad como alquilada (o quita el alquiler) ──
+// Quién actualiza los documentos (PROPIA = nosotros, ARRENDATARIA = la empresa que alquila) queda según el convenio.
+app.put('/api/documentos-flota/alquiler/:placa', (req, res) => {
+    const placa = String(req.params.placa || '').toUpperCase().trim();
+    if (!placa) return res.status(400).json({ error: 'Placa requerida' });
+    const b = req.body || {};
+    const empresa = String(b.alquilada_a || '').trim().slice(0, 150);
+    const tdb = (req && req.db) ? req.db : db;
+    const alquilada = !!empresa;
+    const desde = alquilada && /^\d{4}-\d{2}-\d{2}/.test(String(b.alquiler_desde || '')) ? String(b.alquiler_desde).slice(0, 10) : null;
+    const responsable = alquilada ? (String(b.docs_responsable).toUpperCase() === 'ARRENDATARIA' ? 'ARRENDATARIA' : 'PROPIA') : null;
+    const nota = alquilada ? (String(b.alquiler_nota || '').trim().slice(0, 500) || null) : null;
+    tdb.query(
+        'UPDATE placas SET alquilada_a = ?, alquiler_desde = ?, docs_responsable = ?, alquiler_nota = ? WHERE placa = ?',
+        [alquilada ? empresa : null, desde, responsable, nota, placa],
+        (err, r) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!r.affectedRows) return res.status(404).json({ error: 'Unidad no encontrada' });
+            res.json({ ok: true, mensaje: alquilada ? `${placa} alquilada a ${empresa}` : `Alquiler de ${placa} quitado` });
+        }
+    );
+});
+
+// ── POST /api/documentos-flota/solicitudes — deja registrado que se le pidió a una empresa actualizar los documentos ──
+app.post('/api/documentos-flota/solicitudes', (req, res) => {
+    const b = req.body || {};
+    const placa = String(b.placa || '').toUpperCase().trim();
+    if (!placa) return res.status(400).json({ error: 'Placa requerida' });
+    const tdb = (req && req.db) ? req.db : db;
+    const por = String((req.user && (req.user.nombre || req.user.correo)) || b.usuario || 'sistema').slice(0, 150);
+    tdb.query(
+        'INSERT INTO docs_solicitudes (placa, empresa, detalle, canal, solicitado_por) VALUES (?, ?, ?, ?, ?)',
+        [placa, String(b.empresa || '').slice(0, 150) || null, String(b.detalle || '').slice(0, 4000) || null, 'WHATSAPP', por],
+        err => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ ok: true });
+        }
+    );
 });
 
 // ── POST /api/vehiculos-flota — UPSERT vehículo ───────────────────────────────

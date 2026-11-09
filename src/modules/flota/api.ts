@@ -82,6 +82,14 @@ export interface VehiculoFlota {
   motora?: string | null;
   /** Último inventario de vehículos (acta de entrega) de la unidad; no se carga a mano ni vence */
   inventario_vehiculos?: { id: string; numero: string; fecha: string; total: number } | null;
+  /** Empresa a la que está alquilada la unidad (vacío = no está alquilada); el alquiler es indefinido */
+  alquilada_a?: string | null;
+  alquiler_desde?: string | null;
+  /** Quién actualiza los documentos según el convenio: PROPIA (nosotros) o ARRENDATARIA (la empresa que alquila) */
+  docs_responsable?: 'PROPIA' | 'ARRENDATARIA' | null;
+  alquiler_nota?: string | null;
+  /** Última vez que se le pidió a la empresa responsable actualizar los documentos */
+  ultima_solicitud?: { empresa: string | null; por: string | null; fecha: string } | null;
   [key: string]: unknown;
 }
 
@@ -146,6 +154,16 @@ export function docEstadoLabel(doc: DocumentoFlota): string {
   if (c === 'amber') return 'Por vencer';
   return 'Vigente';
 }
+
+export interface DatosAlquiler { alquilada_a: string; alquiler_desde: string; docs_responsable: 'PROPIA' | 'ARRENDATARIA'; alquiler_nota: string }
+
+/** Marca la unidad como alquilada (o quita el alquiler si `alquilada_a` va vacío) */
+export const guardarAlquiler = (placa: string, d: DatosAlquiler) =>
+  api<{ ok: boolean; mensaje?: string }>(`/documentos-flota/alquiler/${encodeURIComponent(placa)}`, { method: 'PUT', body: d });
+
+/** Deja registrado que se le pidió a una empresa actualizar los documentos de una unidad */
+export const registrarSolicitudDocs = (d: { placa: string; empresa: string; detalle: string }) =>
+  api<{ ok: boolean }>('/documentos-flota/solicitudes', { method: 'POST', body: d });
 
 export function useVehiculosFlota() {
   return useQuery<VehiculoFlota[]>({

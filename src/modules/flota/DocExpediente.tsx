@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ClipboardList, Eye, FileText, History, MessageCircle, Trash2, Truck } from 'lucide-react';
+import { ClipboardList, Eye, FileText, Handshake, History, MessageCircle, Send, Trash2, Truck } from 'lucide-react';
 import { EmptyState } from '../../core/ui/Display';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Button } from '../../core/ui/Button';
@@ -11,7 +11,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { spring } from '../../core/lib/motion';
 import { useHistorialDocumentos, type RegistroHistorial, type VehiculoFlota } from './api';
 import {
-  COLOR_PERSONALIZADO, colorDoc, esMotora, textoDias, type DocPersonalizado, type EstadoDoc, type MetaVehiculo,
+  COLOR_PERSONALIZADO, colorDoc, esAlquilada, esMotora, responsableExterno, textoDias, type DocPersonalizado, type EstadoDoc, type MetaVehiculo,
 } from './docsEstado';
 import { abrirPdfEntregaPorId, compartirEntregaPorId } from './ce-pdf';
 import { formatFechaPe } from '../../core/lib/format';
@@ -43,10 +43,14 @@ interface Props {
   onVerArchivo: (url: string) => void;
   onCompartir: (url: string, titulo: string, placa: string) => void;
   onEliminar: (doc: EliminarDocumento) => void;
+  /** Abre la hoja para marcar o quitar el alquiler de la unidad */
+  onAlquiler: (placa: string) => void;
+  /** Arma el aviso para la empresa responsable y lo manda por WhatsApp */
+  onPedirActualizacion: (placa: string) => void;
 }
 
 // Expediente de la unidad: la lista a la izquierda y las tarjetas de sus documentos a la derecha
-export function DocExpediente({ filas, placa, onElegir, puedeEditar, onCargar, onEditarPersonalizado, onVerArchivo, onCompartir, onEliminar }: Props) {
+export function DocExpediente({ filas, placa, onElegir, puedeEditar, onCargar, onEditarPersonalizado, onVerArchivo, onCompartir, onEliminar, onAlquiler, onPedirActualizacion }: Props) {
   const seleccion = filas.find(f => f.v.placa === placa) ?? filas[0] ?? null;
 
   if (!seleccion) {
@@ -54,7 +58,8 @@ export function DocExpediente({ filas, placa, onElegir, puedeEditar, onCargar, o
   }
 
   const { v } = seleccion;
-  const acciones = { puedeEditar, onVerArchivo, onCompartir };
+  const pendienteDe = responsableExterno(v);
+  const acciones = { puedeEditar, onVerArchivo, onCompartir, pendienteDe };
 
   return (
     <div className="doc-expediente">
@@ -66,6 +71,7 @@ export function DocExpediente({ filas, placa, onElegir, puedeEditar, onCargar, o
               <button type="button" className={`doc-unidad pressable${activa ? ' doc-unidad--activa' : ''}`} onClick={() => { haptic('selection'); onElegir(u.placa); }} aria-current={activa}>
                 <span className="doc-unidad__icono" style={{ background: `color-mix(in srgb, ${m.peor.color} 12%, transparent)`, color: m.peor.color }} aria-hidden><FileText size={17} strokeWidth={1.9} /></span>
                 <LicensePlate plate={u.placa} size="sm" />
+                {esAlquilada(u) && <span className="doc-unidad__alq" title={`Alquilada a ${u.alquilada_a}`}>ALQ.</span>}
                 <span className="doc-punto" style={{ background: m.peor.color }} title={m.peor.texto} aria-hidden />
               </button>
             </li>
@@ -94,6 +100,31 @@ export function DocExpediente({ filas, placa, onElegir, puedeEditar, onCargar, o
             <strong>{seleccion.m.salud}%</strong>
           </div>
         </header>
+
+        {/* Alquiler: a quién y quién actualiza los documentos según el convenio */}
+        {(esAlquilada(v) || puedeEditar) && (
+          <div className="doc-alquiler">
+            <div className="doc-alquiler__chips">
+              {esAlquilada(v) ? (
+                <>
+                  <span className="doc-alquiler__chip"><Handshake size={14} aria-hidden /> Alquilada a {v.alquilada_a}</span>
+                  <span className={`doc-alquiler__chip${pendienteDe ? ' doc-alquiler__chip--aviso' : ''}`}>{pendienteDe ? `Actualiza ${pendienteDe}` : 'Actualizamos nosotros'}</span>
+                  {v.alquiler_desde && <span className="doc-alquiler__chip">Desde {formatFechaPe(v.alquiler_desde)}</span>}
+                  {v.ultima_solicitud && pendienteDe && <span className="doc-alquiler__chip">Última solicitud {formatFechaPe(v.ultima_solicitud.fecha)}{v.ultima_solicitud.por ? ` · ${v.ultima_solicitud.por}` : ''}</span>}
+                </>
+              ) : <span className="doc-alquiler__chip">Unidad propia, sin alquiler</span>}
+            </div>
+            <div className="doc-alquiler__acciones">
+              {pendienteDe && puedeEditar && (
+                <Button variant="secondary" size="sm" icon={<Send size={14} />} onClick={() => onPedirActualizacion(v.placa)}>Pedir actualización</Button>
+              )}
+              {puedeEditar && (
+                <Button variant="secondary" size="sm" icon={<Handshake size={14} />} onClick={() => onAlquiler(v.placa)}>{esAlquilada(v) ? 'Editar alquiler' : 'Marcar como alquilada'}</Button>
+              )}
+            </div>
+            {esAlquilada(v) && v.alquiler_nota && <p className="doc-alquiler__nota">{v.alquiler_nota}</p>}
+          </div>
+        )}
 
         <div className="doc-tarjetas">
           {seleccion.m.docs.map(d => {
@@ -148,6 +179,8 @@ interface TarjetaProps {
   onEliminar: () => void;
   onVerArchivo: (url: string) => void;
   onCompartir: (url: string, titulo: string, placa: string) => void;
+  /** Empresa que debe actualizarlo según el convenio de alquiler (si lo dejó pendiente) */
+  pendienteDe?: string | null;
 }
 
 // Tarjeta de un documento (estándar o personalizado): datos, estado, archivo, WhatsApp, historial y eliminar
@@ -162,6 +195,7 @@ function TarjetaDocumento(p: TarjetaProps) {
         <header className="doc-card__cab">
           <span className="doc-card__num">{p.num}</span>
           <span className="doc-card__titulo">{p.titulo}</span>
+          {p.pendienteDe && <span className="doc-pendiente">Pendiente de {p.pendienteDe}</span>}
         </header>
         <p className="doc-card__vacio">Sin registrar</p>
         {p.puedeEditar && <Button variant="secondary" size="sm" onClick={p.onActualizar}>Cargar</Button>}
@@ -176,6 +210,7 @@ function TarjetaDocumento(p: TarjetaProps) {
       <header className="doc-card__cab">
         <span className="doc-card__num">{p.num ?? <FileText size={12} aria-hidden />}</span>
         <span className="doc-card__titulo">{p.titulo}</span>
+        {p.pendienteDe && p.estado.score <= 2 && p.estado.score >= 0 && <span className="doc-pendiente">Pendiente de {p.pendienteDe}</span>}
       </header>
       <dl className="doc-card__filas">
         {p.datos.map(x => (
