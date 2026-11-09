@@ -1,7 +1,7 @@
 import { Building2, Globe2, MapPin, PackageOpen, RefreshCw, ShieldCheck, Truck, Eye } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
-import { initials } from '../../core/lib/format';
+import { AvatarSaludo } from '../perfil/AvatarPropio';
 import { useEmpresasStats, type EmpresaStats } from './garitaBase';
 
 // Paletas por posición, igual que el clásico (azul, verde, ámbar, rosa)
@@ -30,7 +30,7 @@ export function GaritaEmpresas({ usuario, empresaActiva, nombreEmpresaSesion, on
     <div className="gar">
       <div className="gar-hero">
         <div className="gar-hero__izq">
-          <div className="gar-avatar" aria-hidden>{initials(nombre)}</div>
+          <AvatarSaludo name={nombre} className="gar-avatar" />
           <div>
             <span className="gar-modulo">MÓDULO SEGURIDAD</span>
             <h2>¡Hola, {nombre}! 👋</h2>
