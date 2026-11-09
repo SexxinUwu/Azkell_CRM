@@ -1,0 +1,67 @@
+/* Detalle del acta de entrega (ce-Detalle.tsx). Prefijo ced- */
+
+.ced { display: flex; flex-direction: column; gap: var(--s-5); }
+
+.ced-hero { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.ced-hero__izq { display: flex; align-items: center; gap: var(--s-4); min-width: 0; flex-wrap: wrap; }
+.ced-hero__texto { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ced-hero__unidad { font-size: 1.125rem; font-weight: 700; letter-spacing: -0.02em; color: var(--label); }
+.ced-hero__sub { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; color: var(--label-2); }
+.ced-estado { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; font-size: 0.8125rem; font-weight: 700;
+  color: var(--green-ink); background: color-mix(in srgb, var(--green-ink) 14%, transparent); }
+.ced-estado--nov { color: var(--red-ink); background: color-mix(in srgb, var(--red-ink) 14%, transparent); }
+
+/* Resumen */
+.ced-resumen { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-2); }
+.ced-kpi { display: flex; flex-direction: column; gap: 2px; padding: var(--s-3) var(--s-4); border-radius: var(--r-lg); background: var(--fill); }
+.ced-kpi strong { font-size: 1.5rem; font-weight: 800; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.ced-kpi span { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--label-2); }
+.ced-kpi--ok strong { color: var(--green-ink); } .ced-kpi--reg strong { color: var(--amber-ink); } .ced-kpi--mal strong { color: var(--red-ink); }
+.ced-barra { grid-column: 1 / -1; display: flex; height: 8px; border-radius: 999px; overflow: hidden; background: var(--fill); }
+.ced-barra i { display: block; height: 100%; }
+.ced-barra__ok { background: var(--green-ink); } .ced-barra__reg { background: var(--amber-ink); } .ced-barra__mal { background: var(--red-ink); }
+
+/* Bloques */
+.ced-bloque { display: flex; flex-direction: column; gap: var(--s-3); }
+.ced-titulo { margin: 0; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--label-2); }
+.ced-titulo-fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-3); }
+
+.ced-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 1px; border-radius: var(--r-lg); overflow: hidden; background: var(--separator); border: 1px solid var(--separator); }
+.ced-dato { display: flex; flex-direction: column; gap: 3px; padding: var(--s-3) var(--s-4); background: var(--surface); min-width: 0; }
+.ced-dato__etq { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--label-3); }
+.ced-dato__valor { font-size: 0.9375rem; font-weight: 600; color: var(--label); word-break: break-word; }
+.ced-dato__valor--mono { font-family: var(--font-mono); font-size: 0.875rem; }
+.ced-dato__valor--vacio { color: var(--label-3); font-weight: 400; }
+
+.ced-personas { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--s-3); }
+.ced-persona { display: flex; flex-direction: column; gap: 4px; padding: var(--s-4); border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--separator); }
+.ced-persona__nombre { font-size: 1rem; text-transform: uppercase; letter-spacing: -0.01em; }
+.ced-persona__firma { height: 4.5rem; margin-top: var(--s-2); border-radius: 12px; background: var(--fill); display: grid; place-items: center; overflow: hidden; }
+.ced-persona__firma img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.ced-persona__firma span { font-size: 0.75rem; color: var(--label-3); font-style: italic; }
+
+/* Inventario */
+.ced-cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: var(--s-3); align-items: start; }
+.ced-cat { border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--separator); overflow: hidden; }
+.ced-cat h4 { margin: 0; display: flex; justify-content: space-between; align-items: center; gap: var(--s-2); padding: 8px var(--s-4); background: var(--fill);
+  font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--label-2); }
+.ced-cat h4 em { font-style: normal; color: var(--label-3); }
+.ced-cat ul { list-style: none; margin: 0; padding: 0; }
+.ced-cat li { display: flex; align-items: center; gap: var(--s-2); padding: 7px var(--s-4); font-size: 0.8125rem; color: var(--label); }
+.ced-cat li + li { border-top: 1px solid var(--separator); }
+.ced-cat li > span:first-child { flex: 1; min-width: 0; }
+.ced-cat li small { color: var(--label-3); font-weight: 700; }
+.ced-pill { min-width: 2.75rem; text-align: center; padding: 2px 8px; border-radius: 999px; font-size: 0.6875rem; font-weight: 800; }
+.ced-pill--B { color: var(--green-ink); background: color-mix(in srgb, var(--green-ink) 14%, transparent); }
+.ced-pill--R { color: var(--amber-ink); background: color-mix(in srgb, var(--amber-ink) 16%, transparent); }
+.ced-pill--M { color: var(--red-ink); background: color-mix(in srgb, var(--red-ink) 14%, transparent); }
+.ced-vacio { margin: 0; padding: var(--s-5); text-align: center; border-radius: var(--r-lg); background: var(--fill); color: var(--label-2); font-size: 0.875rem; }
+
+.ced-obs { margin: 0; padding: var(--s-4); border-radius: var(--r-lg); background: var(--fill); font-size: 0.9375rem; line-height: 1.5; color: var(--label); }
+.ced-obs--vacia { color: var(--label-3); font-style: italic; }
+
+@media (max-width: 639px) {
+  .ced-resumen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ced-hero__izq { gap: var(--s-3); }
+}
+@media (prefers-reduced-motion: reduce) { .ced-barra i { transition: none; } }
