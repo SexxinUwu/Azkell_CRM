@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
-import { SelectInput } from '../../core/ui/Field';
+import { Field } from '../../core/ui/Field';
+import { Combobox } from '../../core/ui/Combobox';
 import { Notice } from '../../core/ui/Display';
 import { costoSolesArticulo, useKitsVehiculo, usePlacasSalida, type ArticuloInv, type ItemSalida, type KitItemSalida } from './api';
 
@@ -100,15 +101,14 @@ export function SalidaKitSheet({ open, onClose, placa, inventario, onAgregar }: 
           <Notice tone="error">No hay kits configurados para esta marca y modelo. Se configuran en el módulo Kits de Mantenimiento.</Notice>
         ) : (
           <>
-            <label className="field">
-              <span className="field__label">Kit o tipo de servicio ({grupos.size} disponibles)</span>
-              <SelectInput value={tipo} onChange={e => setTipo(e.target.value)}>
-                <option value="">Seleccionar kit…</option>
-                {[...grupos.entries()].map(([nombre, lista]) => (
-                  <option key={nombre} value={nombre}>{nombre} ({lista.length} {lista.length === 1 ? 'ítem' : 'ítems'})</option>
-                ))}
-              </SelectInput>
-            </label>
+            <Field label={`Kit o tipo de servicio (${grupos.size} disponibles)`}>
+              {p => (
+                <Combobox {...p} value={tipo || null} onChange={v => setTipo(v ?? '')} placeholder="Seleccionar kit…"
+                  options={[...grupos.entries()].map(([nombre, lista]) => ({
+                    value: nombre, label: nombre, description: `${lista.length} ${lista.length === 1 ? 'ítem' : 'ítems'}`,
+                  }))} />
+              )}
+            </Field>
 
             {seleccion.length > 0 && (
               <div className="sal-kit-lista">
@@ -117,7 +117,7 @@ export function SalidaKitSheet({ open, onClose, placa, inventario, onAgregar }: 
                   const art = articuloDeNombre(k.item_nombre, inventario);
                   return (
                     <div key={k.id} className="sal-kit-fila">
-                      <span className="sal-kit-fila__nombre">{k.item_nombre || '—'}</span>
+                      <span className="sal-kit-fila__nombre">{art ? (art.descripcion || art.articulo) : (k.item_nombre || '—')}</span>
                       <span className="sal-kit-fila__cant">{Number(k.cantidad).toLocaleString('es-PE', { maximumFractionDigits: 3 })} {k.unidad_medida || 'UND'}</span>
                       <StockBadge stock={stockDeArticulo(art)} requerido={Number(k.cantidad) || 1} unidad={art?.unidad} />
                     </div>

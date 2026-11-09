@@ -1,9 +1,12 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, Plus, Trash2, X } from 'lucide-react';
+import { Layers, ListPlus, PackageSearch, Plus, Trash2, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
+import './kits.css';
+import { BotonTip } from '../../core/ui/BotonTip';
 import { Field, TextInput } from '../../core/ui/Field';
+import { formatSoles } from '../../core/lib/format';
 import { Combobox } from '../../core/ui/Combobox';
 import { SeleccionMultiple, type OpcionSeleccion } from '../../core/ui/SeleccionMultiple';
 import { useToast } from '../../core/ui/Toast';
@@ -11,6 +14,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { useInventario } from '../almacen/api';
 import { usePlacas } from '../placas/api';
 import { useTiposPreventivo } from './fleetrunApi';
+import { claseMp } from './KitTarjeta';
 import {
   buscarItemAlmacen, codigoDeArticulo, conFormatoInv, mapearAlmacen, marcasDisponibles, modelosDeMarca,
   type ArticuloKit, type KitGrupo, type KitItem,
@@ -52,33 +56,6 @@ function crearFila(lista: ArticuloKit[], key: string, it?: KitItem): FilaKit {
     costo,
     vinculo: inv ? { stock: inv.stock, unidad: inv.unidad } : null,
   };
-}
-
-function Seccion({ numero, titulo, derecha, children }: { numero: number; titulo: string; derecha?: ReactNode; children: ReactNode }) {
-  return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: 'var(--accent)', fontSize: '0.8rem', fontWeight: 700 }}>{numero}</span>
-          {titulo}
-        </h3>
-        {derecha}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-/** Casilla de modelos: muestra lo elegido y abre la hoja de casillas (mismo diseño que el de placa) */
-function CampoModelos({ id, describedBy, resumen, abrir }: { id: string; describedBy?: string; resumen: string; abrir: () => void }) {
-  return (
-    <button type="button" id={id} className="campo-picker" aria-haspopup="dialog" aria-describedby={describedBy} onClick={abrir}>
-      {resumen
-        ? <span className="campo-picker__detalle" style={{ textAlign: 'left' }}>{resumen}</span>
-        : <span className="campo-picker__vacio">TODOS LOS MODELOS (o elija varios)</span>}
-      <ChevronDown size={16} aria-hidden className="campo-picker__chevron" />
-    </button>
-  );
 }
 
 export function KitFormulario({ kit, kitsExistentes, open, onClose, onPedirEliminar }: {
@@ -261,6 +238,10 @@ export function KitFormulario({ kit, kitsExistentes, open, onClose, onPedirElimi
     }
   }
 
+  // Resumen del kit: ítems y costo estimado (cantidad × costo de almacén)
+  const totalKit = filas.reduce((n, f) => n + (parseFloat(f.cantidad) || 0) * (f.costo || 0), 0);
+  const nuevoItem = () => setFilas(prev => [...prev, crearFila(listaRef.current, nuevaKey())]);
+
   return (
     <Sheet
       open={open}
@@ -274,80 +255,79 @@ export function KitFormulario({ kit, kitsExistentes, open, onClose, onPedirElimi
               Eliminar kit
             </Button>
           )}
-          <span style={{ flex: 1 }} />
+          <span className="kf-pie">{filas.length} {filas.length === 1 ? 'ítem' : 'ítems'} · <b className="t-numeric">{formatSoles(totalKit)}</b></span>
           <Button variant="secondary" onClick={onClose} disabled={guardando}>Cancelar</Button>
           <Button variant="primary" onClick={guardar} loading={guardando} disabled={!inventarioListo}>Guardar kit</Button>
         </>
       }
     >
       {!inventarioListo ? <PageLoader /> : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-5)' }}>
-          <p className="field__hint" style={{ margin: 0 }}>
+        <div className="kf">
+          <p className="kf-intro">
             {editando
-              ? 'Modifique los repuestos, cantidades o modelos asignados al kit'
-              : 'Configure el vehículo, tipo de preventivo y agregue repuestos requeridos'}
+              ? 'Modifique los repuestos, cantidades o modelos asignados al kit.'
+              : 'Elija el vehículo y el tipo de preventivo, y agregue los repuestos que lleva el kit.'}
           </p>
 
-          <Seccion numero={1} titulo="Vehículo y tipo de preventivo">
-            <div className="form-grid">
+          {/* 1 · Vehículo */}
+          <section className="kf-seccion" aria-labelledby={`${idModelos}-s1`}>
+            <header className="kf-seccion__cab">
+              <span className="kf-num">1</span>
+              <div><h3 id={`${idModelos}-s1`}>Vehículo y tipo de preventivo</h3><p>A qué unidades se aplica este kit</p></div>
+            </header>
+
+            <div className="kf-grid">
               <Field label="Marca">
-                {p => (
-                  <Combobox {...p} options={opcionesMarca} value={marca} onChange={cambiarMarca} placeholder="Seleccione marca…" />
-                )}
+                {p => <Combobox {...p} options={opcionesMarca} value={marca} onChange={cambiarMarca} placeholder="Seleccione marca…" />}
               </Field>
-              <Field label="Tipo de preventivo">
-                {p => (
-                  <Combobox {...p} options={opcionesTipo} value={tipo} onChange={setTipo} placeholder="Seleccione tipo…" />
-                )}
+              <Field label="Nombre del kit (opcional)">
+                {p => <TextInput {...p} value={alias} onChange={e => setAlias(e.target.value)} placeholder="Ej. Filtros y aceite de motor" />}
               </Field>
 
-              <div className="field field--wide">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                  <label className="field__label" htmlFor={idModelos}>Modelos</label>
-                  <span style={{ display: 'flex', gap: 4 }}>
-                    <Button variant="plain" size="sm" disabled={!hayModelosMarca}
-                      onClick={() => setModelos(modelosOpciones)}>Todos</Button>
-                    <Button variant="plain" size="sm" disabled={!modelos.length}
-                      onClick={() => setModelos([])}>Limpiar</Button>
-                  </span>
+              <div className="field kf-ancho">
+                <span className="field__label">Tipo de preventivo</span>
+                <div className="kf-tipos" role="radiogroup" aria-label="Tipo de preventivo">
+                  {opcionesTipo.map(t => (
+                    <button key={t.value} type="button" role="radio" aria-checked={tipo === t.value} className={`kt-mp kf-tipo ${claseMp(t.value)}`} onClick={() => setTipo(t.value)}>{t.label}</button>
+                  ))}
                 </div>
-                <CampoModelos id={idModelos} resumen={modelos.join(' · ')} abrir={() => setAbiertoModelos(true)}
-                  describedBy={!hayModelosMarca && marcaTxt ? `${idModelos}-ayuda` : undefined} />
-                {modelos.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {modelos.map(m => (
-                      <span key={m} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 4px 2px 10px', borderRadius: 999,
-                        background: 'var(--accent-tint)', color: 'var(--accent)', fontSize: '0.8rem', fontWeight: 600 }}>
-                        {m}
-                        <button type="button" aria-label={`Quitar ${m}`} onClick={() => alternarModelo(m)}
-                          style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', minWidth: 28, minHeight: 28,
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <X size={14} aria-hidden />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <span id={`${idModelos}-ayuda`} className="field__hint">
-                  {!modelos.length && 'Sin modelos elegidos: el kit se aplica a "TODOS LOS MODELOS".'}
-                  {!hayModelosMarca && marcaTxt && (
-                    <> No hay modelos específicos registrados para <strong>{marcaTxt}</strong>. Se aplicará a "TODOS LOS MODELOS".</>
-                  )}
-                </span>
               </div>
 
-              <Field label="Nombre / alias descriptivo del kit (opcional)" wide>
-                {p => (
-                  <TextInput {...p} value={alias} onChange={e => setAlias(e.target.value)}
-                    placeholder="Ej: Kit Completo Filtros y Aceite Motor 15W-40" />
-                )}
-              </Field>
+              <div className="field kf-ancho">
+                <div className="kf-modelos__cab">
+                  <label className="field__label" htmlFor={idModelos}>Modelos</label>
+                  <span className="kf-modelos__acciones">
+                    <Button variant="plain" size="sm" disabled={!hayModelosMarca} onClick={() => setModelos(modelosOpciones)}>Todos</Button>
+                    <Button variant="plain" size="sm" disabled={!modelos.length} onClick={() => setModelos([])}>Limpiar</Button>
+                  </span>
+                </div>
+                <div className="kf-modelos">
+                  {modelos.map(m => (
+                    <span key={m} className="kf-chip">
+                      {m}
+                      <button type="button" aria-label={`Quitar ${m}`} onClick={() => alternarModelo(m)}><X size={13} aria-hidden /></button>
+                    </span>
+                  ))}
+                  <button type="button" id={idModelos} className="kf-agregar-modelo" onClick={() => setAbiertoModelos(true)} disabled={!hayModelosMarca}>
+                    <Layers size={14} aria-hidden /> {modelos.length ? 'Cambiar modelos' : 'Elegir modelos'}
+                  </button>
+                </div>
+                <span id={`${idModelos}-ayuda`} className="field__hint">
+                  {!modelos.length && 'Sin modelos elegidos: el kit se aplica a «TODOS LOS MODELOS».'}
+                  {!hayModelosMarca && marcaTxt && <> No hay modelos específicos registrados para <strong>{marcaTxt}</strong>.</>}
+                </span>
+              </div>
             </div>
-          </Seccion>
+          </section>
 
-          <Seccion numero={2} titulo="Repuestos, lubricantes y materiales del kit"
-            derecha={<Button variant="secondary" size="sm" icon={<Plus size={15} />}
-              onClick={() => setFilas(prev => [...prev, crearFila(listaRef.current, nuevaKey())])}>Agregar ítem</Button>}>
+          {/* 2 · Repuestos */}
+          <section className="kf-seccion" aria-labelledby={`${idModelos}-s2`}>
+            <header className="kf-seccion__cab">
+              <span className="kf-num">2</span>
+              <div><h3 id={`${idModelos}-s2`}>Repuestos, lubricantes y materiales</h3><p>Se vinculan en tiempo real con el inventario de Almacén</p></div>
+              <Button variant="secondary" size="sm" icon={<Plus size={15} />} onClick={nuevoItem}>Agregar ítem</Button>
+            </header>
+
             <datalist id={dlCodigos}>
               {lista.map((a, i) => <option key={`c${i}`} value={codigoDeArticulo(a)}>{a.nombre}</option>)}
             </datalist>
@@ -355,45 +335,39 @@ export function KitFormulario({ kit, kitsExistentes, open, onClose, onPedirElimi
               {lista.map((a, i) => <option key={`n${i}`} value={a.nombre}>{codigoDeArticulo(a)}</option>)}
             </datalist>
 
-            {filas.map(f => (
-              <div key={f.key} style={{ border: '1px solid var(--separator)', borderRadius: 12, padding: 12, background: 'var(--fill-1)',
-                display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div className="form-grid">
-                  <Field label="Código artículo">
-                    {p => (
-                      <TextInput {...p} list={dlCodigos} autoComplete="off" placeholder="CÓDIGO…" value={f.codigo}
-                        className="font-mono" onChange={e => cambiarCodigo(f.key, e.target.value)} />
-                    )}
-                  </Field>
-                  <Field label="Cantidad">
-                    {p => (
-                      <TextInput {...p} type="number" inputMode="decimal" step="0.01" min="0.01" value={f.cantidad}
-                        onChange={e => editarFila(f.key, { cantidad: e.target.value })} />
-                    )}
-                  </Field>
-                  <Field label="Repuesto / lubricante / material" wide>
-                    {p => (
-                      <TextInput {...p} list={dlNombres} autoComplete="off" placeholder="Escriba o elija del inventario…" value={f.nombre}
-                        onChange={e => cambiarNombre(f.key, e.target.value)} />
-                    )}
-                  </Field>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                  <span className="field__hint">
-                    {f.vinculo
-                      ? <>Stock Almacén: <strong>{f.vinculo.stock}</strong> {f.vinculo.unidad}</>
-                      : 'Ingrese código o nombre para vincular a Almacén'}
-                  </span>
-                  <Button variant="plain" iconOnly icon={<Trash2 size={16} />} title="Quitar ítem" aria-label="Quitar ítem"
-                    onClick={() => setFilas(prev => prev.filter(x => x.key !== f.key))} />
-                </div>
+            <div className="kf-items">
+              <div className="kf-items__cab" aria-hidden>
+                <span>Código</span><span>Repuesto</span><span>Cant.</span><span>Stock</span><span />
               </div>
-            ))}
-
-            <div className="field__hint">
-              {filas.length} {filas.length === 1 ? 'Ítem' : 'Ítems'} · Los códigos y descripciones se vinculan en tiempo real al catálogo oficial de Almacén
+              {filas.map((f, idx) => {
+                const req = parseFloat(f.cantidad) || 0;
+                const stockClase = !f.vinculo ? 'kt-stock--sin' : f.vinculo.stock >= req ? 'kt-stock--ok' : f.vinculo.stock > 0 ? 'kt-stock--bajo' : 'kt-stock--no';
+                return (
+                  <div key={f.key} className="kf-fila">
+                    <span className="kf-fila__n" aria-hidden>{idx + 1}</span>
+                    <TextInput list={dlCodigos} autoComplete="off" placeholder="Código" value={f.codigo} aria-label={`Código del ítem ${idx + 1}`}
+                      className="kf-cod font-mono" onChange={e => cambiarCodigo(f.key, e.target.value)} />
+                    <TextInput list={dlNombres} autoComplete="off" placeholder="Escriba o elija del inventario…" value={f.nombre} aria-label={`Repuesto del ítem ${idx + 1}`}
+                      className="kf-nom" onChange={e => cambiarNombre(f.key, e.target.value)} />
+                    <span className="kf-cant">
+                      <TextInput type="number" inputMode="decimal" step="0.01" min="0.01" value={f.cantidad} aria-label={`Cantidad del ítem ${idx + 1}`}
+                        onChange={e => editarFila(f.key, { cantidad: e.target.value })} />
+                      <small>{f.unidad}</small>
+                    </span>
+                    <span className={`kt-stock ${stockClase} kf-stock`}>
+                      {f.vinculo ? (f.vinculo.stock >= req ? `${f.vinculo.stock}` : f.vinculo.stock > 0 ? `${f.vinculo.stock} · bajo` : 'Sin stock') : 'Sin vincular'}
+                    </span>
+                    <BotonTip tip="Quitar ítem" className="btn btn--plain btn--icono btn-tip btn-tip--rojo" aria-label={`Quitar ítem ${idx + 1}`}
+                      onClick={() => setFilas(prev => prev.filter(x => x.key !== f.key))}><Trash2 size={16} /></BotonTip>
+                  </div>
+                );
+              })}
+              {filas.length === 0 && (
+                <div className="kf-vacio"><PackageSearch size={22} aria-hidden /><span>Todavía no hay repuestos.</span>
+                  <Button variant="secondary" size="sm" icon={<ListPlus size={15} />} onClick={nuevoItem}>Agregar el primero</Button></div>
+              )}
             </div>
-          </Seccion>
+          </section>
         </div>
       )}
 

@@ -1,17 +1,22 @@
 import './mant.css';
+import './kits.css';
 import { useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, Download, FileSpreadsheet, PackageCheck, Pencil, Plus, SearchX, Trash2, Upload } from 'lucide-react';
+import { ChevronsDownUp, ChevronsUpDown, Download, FileSpreadsheet, PackageCheck, Plus, SearchX, Upload } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
+import { BotonTip } from '../../core/ui/BotonTip';
 import { ConfirmSheet } from '../../core/ui/Sheet';
-import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField } from '../../core/ui/Field';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import { EmptyState, Notice, Page } from '../../core/ui/Display';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
+import { formatSoles } from '../../core/lib/format';
+import { haptic } from '../../core/lib/haptics';
+import { useInventario } from '../almacen/api';
 import { descargarPlantillaKits, exportarKitsExcel, importarKitsExcel } from './kitsExcel';
 import { KitFormulario } from './KitFormulario';
-import type { KitGrupo, KitItem } from './kitsFormulario';
+import { KitsArbol, type NodoMarca, type SeleccionKits } from './KitsArbol';
+import { KitTarjeta } from './KitTarjeta';
+import { mapearAlmacen, type KitGrupo, type KitItem } from './kitsFormulario';
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
@@ -60,9 +65,12 @@ export function KitsMpPage() {
   const toast = useToast();
 
   const { data, isLoading, isError, error } = useKitsMp();
+  const inv = useInventario();
   const items = data ?? [];
+  const inventario = useMemo(() => mapearAlmacen(inv.data ?? []), [inv.data]);
 
   const [busqueda, setBusqueda]               = useState('');
+  const [seleccion, setSeleccion]             = useState<SeleccionKits>({ marca: null, modelo: null });
   const [abiertos, setAbiertos]               = useState<Set<string>>(new Set());
   const [confirmEliminar, setConfirmEliminar] = useState<KitGrupo | null>(null);
   const [eliminando, setEliminando]           = useState(false);
@@ -70,50 +78,61 @@ export function KitsMpPage() {
   const [kitEditando, setKitEditando]         = useState<KitGrupo | null>(null);
   const inputExcel                            = useRef<HTMLInputElement>(null);
 
-  // Agrupar todos los kits
   const grupos = useMemo(() => agruparKits(items), [items]);
-
-  // Stats
   const marcasUnicas  = useMemo(() => new Set(grupos.map(g => g.marca)).size, [grupos]);
   const modelosUnicos = useMemo(() => new Set(grupos.map(g => `${g.marca}__${g.modelo}`)).size, [grupos]);
 
-  // Filtrar por búsqueda
-  const gruposFiltrados = useMemo(() => {
-    if (!busqueda) return grupos;
-    const q = busqueda.toUpperCase();
+  // La búsqueda recorta la lista lateral y los kits de la derecha
+  const gruposBuscados = useMemo(() => {
+    const q = busqueda.trim().toUpperCase();
+    if (!q) return grupos;
     return grupos.filter(g =>
-      g.marca.toUpperCase().includes(q) ||
-      g.modelo.toUpperCase().includes(q) ||
-      g.tipo_mp.toUpperCase().includes(q) ||
-      g.nombre_kit.toUpperCase().includes(q) ||
-      g.items.some(i => String(i.item_nombre ?? '').toUpperCase().includes(q) ||
-                        String(i.item_codigo ?? '').toUpperCase().includes(q))
-    );
+      g.marca.toUpperCase().includes(q) || g.modelo.toUpperCase().includes(q) || g.tipo_mp.toUpperCase().includes(q) || g.nombre_kit.toUpperCase().includes(q) ||
+      g.items.some(i => String(i.item_nombre ?? '').toUpperCase().includes(q) || String(i.item_codigo ?? '').toUpperCase().includes(q)));
   }, [grupos, busqueda]);
 
-  // Ítems visibles (con la búsqueda aplicada), para exportar lo que se ve
-  const itemsVisibles = useMemo(() => gruposFiltrados.reduce((n, g) => n + g.items.length, 0), [gruposFiltrados]);
-
-  // Exporta lo que se ve (filtrado), con las mismas columnas del clásico (kitsExportarExcel)
-  async function exportar() {
-    if (!itemsVisibles) { window.alert('No hay datos para exportar.'); return; }
-    const filas = gruposFiltrados.flatMap(g => g.items.map(it => ({
-      'Marca': g.marca,
-      'Modelo': g.modelo,
-      'Tipo MP': g.tipo_mp,
-      'Alias Kit': g.nombre_kit || '',
-      'Repuesto / Ítem': it.item_nombre,
-      'Cantidad': it.cantidad,
-      'Unidad': it.unidad_medida,
-      'Costo Unitario (S/)': it.costo_unitario,
-      'Costo Total (S/)': it.costo_total,
-      'Observaciones': '',
-    })));
-    try {
-      await exportarKitsExcel(filas);
-    } catch (e) {
-      window.alert(errorMessage(e));
+  // Lista lateral: marcas con sus modelos y cuántos kits tiene cada uno
+  const arbol = useMemo<NodoMarca[]>(() => {
+    const m = new Map<string, Map<string, number>>();
+    for (const g of gruposBuscados) {
+      if (!m.has(g.marca)) m.set(g.marca, new Map());
+      const mod = m.get(g.marca)!;
+      mod.set(g.modelo, (mod.get(g.modelo) ?? 0) + 1);
     }
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([marca, mods]) => ({
+      marca,
+      kits: [...mods.values()].reduce((s, n) => s + n, 0),
+      modelos: [...mods.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([modelo, kits]) => ({ modelo, kits })),
+    }));
+  }, [gruposBuscados]);
+
+  // Kits de lo elegido (todos, una marca o un modelo), por modelo
+  const visibles = useMemo(
+    () => gruposBuscados.filter(g => (!seleccion.marca || g.marca === seleccion.marca) && (!seleccion.modelo || g.modelo === seleccion.modelo)),
+    [gruposBuscados, seleccion],
+  );
+  const porModelo = useMemo(() => {
+    const m = new Map<string, KitGrupo[]>();
+    for (const g of [...visibles].sort((a, b) => a.marca.localeCompare(b.marca) || a.modelo.localeCompare(b.modelo) || a.tipo_mp.localeCompare(b.tipo_mp))) {
+      const k = `${g.marca}__${g.modelo}`;
+      if (!m.has(k)) m.set(k, []);
+      m.get(k)!.push(g);
+    }
+    return [...m.entries()];
+  }, [visibles]);
+  const totalItems = useMemo(() => visibles.reduce((n, g) => n + g.items.length, 0), [visibles]);
+  const costoTotal = useMemo(() => visibles.reduce((n, g) => n + g.costoTotal, 0), [visibles]);
+
+  const titulo = seleccion.modelo ? seleccion.modelo : seleccion.marca ? seleccion.marca : 'Todos los kits';
+
+  async function exportar() {
+    if (!totalItems) { toast('No hay datos para exportar.', 'error'); return; }
+    const filas = visibles.flatMap(g => g.items.map(it => ({
+      'Marca': g.marca, 'Modelo': g.modelo, 'Tipo MP': g.tipo_mp, 'Alias Kit': g.nombre_kit || '',
+      'Repuesto / Ítem': it.item_nombre, 'Cantidad': it.cantidad, 'Unidad': it.unidad_medida,
+      'Costo Unitario (S/)': it.costo_unitario, 'Costo Total (S/)': it.costo_total, 'Observaciones': '',
+    })));
+    try { await exportarKitsExcel(filas); } catch (e) { toast(errorMessage(e), 'error'); }
   }
 
   // Importación directa, como el clásico (kitsImportarExcel): sin vista previa, con sus avisos
@@ -126,23 +145,9 @@ export function KitsMpPage() {
     }
   }
 
-  // Agrupar por marca para la vista
-  const porMarca = useMemo(() => {
-    const mapa = new Map<string, KitGrupo[]>();
-    for (const g of gruposFiltrados) {
-      if (!mapa.has(g.marca)) mapa.set(g.marca, []);
-      mapa.get(g.marca)!.push(g);
-    }
-    return mapa;
-  }, [gruposFiltrados]);
-
-  function toggleGrupo(key: string) {
-    setAbiertos(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
-  }
+  const alternarKit = (key: string) => setAbiertos(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+  const expandirTodo = () => { haptic('selection'); setAbiertos(new Set(visibles.map(g => g.key))); };
+  const contraerTodo = () => { haptic('selection'); setAbiertos(new Set()); };
 
   async function eliminarGrupo() {
     if (!confirmEliminar) return;
@@ -150,12 +155,7 @@ export function KitsMpPage() {
     try {
       await api('/mantenimiento-kits/eliminarGrupo', {
         method: 'POST',
-        body: {
-          marca: confirmEliminar.marca,
-          modelo: confirmEliminar.modelo,
-          tipo_mp: confirmEliminar.tipo_mp,
-          nombre_kit: confirmEliminar.nombre_kit,
-        },
+        body: { marca: confirmEliminar.marca, modelo: confirmEliminar.modelo, tipo_mp: confirmEliminar.tipo_mp, nombre_kit: confirmEliminar.nombre_kit },
       });
       toast('Kit eliminado');
       setConfirmEliminar(null);
@@ -167,161 +167,67 @@ export function KitsMpPage() {
     }
   }
 
-  // ─── Render ───────────────────────────────────────────────────────────────
-
   return (
-    <Page>
-      <PageHeader
-        eyebrow="Mantenimiento"
-        title="Kits de mantenimiento"
-        subtitle={isLoading ? 'Cargando…' : `${grupos.length} kits · ${marcasUnicas} marcas · ${modelosUnicos} modelos`}
-        actions={
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <Button variant="primary" size="sm" icon={<Plus size={15} />}
-              onClick={() => { setKitEditando(null); setFormAbierto(true); }}>
-              Nuevo kit
-            </Button>
-            <MenuOtros opciones={[
-              { label: '1. Descargar Plantilla', icon: <FileSpreadsheet size={17} />,
-                onSelect: () => descargarPlantillaKits() },
-              { label: '2. Subir Excel', icon: <Upload size={17} />, onSelect: () => inputExcel.current?.click() },
-              { label: 'Exportar Excel', icon: <Download size={17} />, onSelect: exportar },
-            ]} />
-          </div>
-        }
-      />
+    <Page wide>
+      <header className="kt-cabecera">
+        <div className="kt-cabecera__titulo">
+          <span className="t-eyebrow">Mantenimiento</span>
+          <h1 className="kt-h1">Kits de mantenimiento</h1>
+          <p className="kt-sub">{isLoading ? 'Cargando…' : `${grupos.length} kits · ${marcasUnicas} marcas · ${modelosUnicos} modelos`}</p>
+        </div>
+        <div className="kt-cabecera__acciones">
+          <BotonTip tip="Descargar plantilla Excel" className="btn btn--secondary btn--icon btn-tip btn-tip--verde" onClick={() => { void descargarPlantillaKits(); }}><FileSpreadsheet size={17} /></BotonTip>
+          <BotonTip tip="Subir Excel" className="btn btn--secondary btn--icon btn-tip btn-tip--celeste" onClick={() => inputExcel.current?.click()}><Upload size={17} /></BotonTip>
+          <BotonTip tip="Exportar Excel" className="btn btn--secondary btn--icon btn-tip btn-tip--violeta" onClick={() => { void exportar(); }}><Download size={17} /></BotonTip>
+          <Button variant="primary" icon={<Plus size={16} />} onClick={() => { setKitEditando(null); setFormAbierto(true); }}>Nuevo kit</Button>
+        </div>
+      </header>
 
       {isError && <Notice tone="error">{errorMessage(error)}</Notice>}
 
-      <SearchField value={busqueda} onChange={v => { setBusqueda(v); }} placeholder="Marca, modelo, tipo MP o ítem…" />
-
-      {isLoading ? <PageLoader /> : gruposFiltrados.length === 0 ? (
-        <EmptyState icon={busqueda ? <SearchX size={22} /> : <PackageCheck size={22} />}
-          title={busqueda ? 'Sin coincidencias' : 'Sin kits configurados'}>
-          {busqueda
-            ? <button type="button" className="placas-limpiar" onClick={() => setBusqueda('')}>Quitar búsqueda</button>
-            : 'Los kits de mantenimiento preventivo aparecerán aquí.'}
-        </EmptyState>
+      {isLoading ? <PageLoader /> : grupos.length === 0 ? (
+        <EmptyState icon={<PackageCheck size={22} />} title="Sin kits configurados">Los kits de mantenimiento preventivo aparecerán aquí.</EmptyState>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)', marginTop: 'var(--s-3)' }}>
-          {Array.from(porMarca.entries()).map(([marca, kitsDelModelo]) => (
-            <div key={marca}>
-              {/* Cabecera de marca */}
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--label-3)', letterSpacing: '0.06em',
-                textTransform: 'uppercase', padding: '6px 4px 4px', marginTop: 8 }}>
-                {marca}
+        <div className="kt-cuerpo">
+          <KitsArbol marcas={arbol} total={gruposBuscados.length} seleccion={seleccion} onSeleccion={s => { setSeleccion(s); setAbiertos(new Set()); }} busqueda={busqueda} onBusqueda={setBusqueda} />
+
+          <section className="kt-detalle" aria-label={`Kits de ${titulo}`}>
+            <div className="kt-detalle__cab">
+              <div className="kt-detalle__tit">
+                <nav className="kt-ruta" aria-label="Ubicación">
+                  <button type="button" onClick={() => setSeleccion({ marca: null, modelo: null })}>Todos</button>
+                  {seleccion.marca && <><span aria-hidden>›</span><button type="button" onClick={() => setSeleccion({ marca: seleccion.marca, modelo: null })}>{seleccion.marca}</button></>}
+                  {seleccion.modelo && <><span aria-hidden>›</span><span>{seleccion.modelo}</span></>}
+                </nav>
+                <h2>{titulo}</h2>
               </div>
-
-              {/* Kits agrupados por modelo → tipo_mp */}
-              {kitsDelModelo.map(g => {
-                const abierto = abiertos.has(g.key);
-                return (
-                  <div key={g.key} style={{
-                    background: 'var(--fill-1)', border: '1px solid var(--separator)',
-                    borderRadius: 10, overflow: 'hidden', marginBottom: 4,
-                  }}>
-                    {/* Fila cabecera del kit */}
-                    <div
-                      onClick={() => toggleGrupo(g.key)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '10px 14px', cursor: 'pointer', userSelect: 'none',
-                        background: abierto ? 'var(--fill-2)' : undefined,
-                      }}
-                    >
-                      <span style={{ color: 'var(--label-3)', flexShrink: 0 }}>
-                        {abierto ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-                      </span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.875rem' }}>
-                          {g.modelo}
-                          <span style={{ fontWeight: 500, color: 'var(--label-2)', marginLeft: 6 }}>— {g.tipo_mp}</span>
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--label-2)', marginTop: 1 }}>
-                          {g.items.length} ítems · S/ {g.costoTotal.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                        </div>
-                      </div>
-                      {/* Badge tipo */}
-                      <span style={{
-                        fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px', borderRadius: 5,
-                        background: 'var(--accent-tint)', color: 'var(--accent)',
-                        border: '1px solid var(--accent)', whiteSpace: 'nowrap', flexShrink: 0,
-                      }}>
-                        {g.tipo_mp}
-                      </span>
-                      {/* Editar (formulario del kit, como el chevron del clásico) */}
-                      <button type="button" title="Editar kit" aria-label={`Editar kit ${g.nombre_kit}`}
-                        onClick={e => { e.stopPropagation(); setKitEditando(g); setFormAbierto(true); }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px',
-                          color: 'var(--label-3)', flexShrink: 0, lineHeight: 1 }}>
-                        <Pencil size={15} />
-                      </button>
-                      {/* Eliminar */}
-                      <button type="button" title="Eliminar kit"
-                        onClick={e => { e.stopPropagation(); setConfirmEliminar(g); }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px',
-                          color: 'var(--label-3)', flexShrink: 0, lineHeight: 1 }}
-                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--red-ink)')}
-                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--label-3)')}>
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-
-                    {/* Detalle de ítems */}
-                    {abierto && (
-                      <div style={{ borderTop: '1px solid var(--separator)', overflowX: 'auto' }}>
-                        <table className="inv-kardex" style={{ minWidth: '32rem' }}>
-                          <thead>
-                            <tr>
-                              <th style={{ width: 24 }}>#</th>
-                              <th>Código</th>
-                              <th>Ítem / Repuesto</th>
-                              <th style={{ textAlign: 'right' }}>Cant.</th>
-                              <th>Unidad</th>
-                              <th style={{ textAlign: 'right' }}>C. Unit.</th>
-                              <th style={{ textAlign: 'right' }}>C. Total</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {g.items.map((it, idx) => (
-                              <tr key={String(it.id)}>
-                                <td style={{ color: 'var(--label-3)', fontSize: '0.8rem' }}>{idx + 1}</td>
-                                <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--accent)' }}>
-                                  {it.item_codigo || '—'}
-                                </td>
-                                <td style={{ fontWeight: 500, fontSize: '0.875rem' }}>{it.item_nombre || '—'}</td>
-                                <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.875rem' }}>
-                                  {Number(it.cantidad).toLocaleString('es-PE')}
-                                </td>
-                                <td style={{ color: 'var(--label-2)', fontSize: '0.8rem' }}>
-                                  {it.unidad_medida || 'UND'}
-                                </td>
-                                <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.8125rem', color: 'var(--label-2)' }}>
-                                  {Number(it.costo_unitario) > 0 ? `S/ ${Number(it.costo_unitario).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : '—'}
-                                </td>
-                                <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '0.875rem', fontWeight: 600 }}>
-                                  {Number(it.costo_total) > 0 ? `S/ ${Number(it.costo_total).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : '—'}
-                                </td>
-                              </tr>
-                            ))}
-                            {/* Subtotal */}
-                            <tr style={{ background: 'var(--fill-2)' }}>
-                              <td colSpan={6} style={{ textAlign: 'right', fontWeight: 700, fontSize: '0.875rem', paddingRight: 12 }}>
-                                Total del kit:
-                              </td>
-                              <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)' }}>
-                                S/ {g.costoTotal.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              <div className="kt-cifras">
+                <span className="kt-cifra"><b className="t-numeric">{visibles.length}</b> kits</span>
+                <span className="kt-cifra"><b className="t-numeric">{totalItems}</b> ítems</span>
+                <span className="kt-cifra"><b className="t-numeric">{formatSoles(costoTotal)}</b> en total</span>
+              </div>
+              <span className="kt-detalle__botones">
+                <BotonTip tip="Expandir todos" className="btn btn--plain btn--icono btn-tip btn-tip--azul" onClick={expandirTodo}><ChevronsUpDown size={17} /></BotonTip>
+                <BotonTip tip="Contraer todos" className="btn btn--plain btn--icono btn-tip btn-tip--azul" onClick={contraerTodo}><ChevronsDownUp size={17} /></BotonTip>
+              </span>
             </div>
-          ))}
+
+            {visibles.length === 0 ? (
+              <EmptyState icon={<SearchX size={22} />} title="Sin coincidencias">
+                <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setSeleccion({ marca: null, modelo: null }); }}>Quitar filtros</button>
+              </EmptyState>
+            ) : porModelo.map(([k, kits]) => (
+              <div key={k} className="kt-grupo">
+                {(!seleccion.modelo) && (
+                  <h3 className="kt-grupo__tit">{!seleccion.marca && <span>{kits[0].marca}</span>}{kits[0].modelo}<em>{kits.length} {kits.length === 1 ? 'kit' : 'kits'}</em></h3>
+                )}
+                {kits.map(g => (
+                  <KitTarjeta key={g.key} kit={g} inventario={inventario} abierto={abiertos.has(g.key)} onAlternar={() => alternarKit(g.key)} puedeEditar
+                    onEditar={() => { setKitEditando(g); setFormAbierto(true); }} onEliminar={() => setConfirmEliminar(g)} />
+                ))}
+              </div>
+            ))}
+          </section>
         </div>
       )}
 
