@@ -254,7 +254,13 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
                     <div className="rec-entrada">
                       <TextInput inputMode="decimal" placeholder="0" aria-label={`Cantidad recibida de ${it.descripcion}`}
                         value={cant[i] ?? ''}
-                        onChange={e => { setCant(c => ({ ...c, [i]: e.target.value })); setErrLinea(l => ({ ...l, [i]: undefined })); }} />
+                        onChange={e => {
+                          // Nunca más que el saldo: si escriben 8 y faltan 2, queda 2
+                          const v = e.target.value;
+                          const n = num(v);
+                          setCant(c => ({ ...c, [i]: n > it.pendiente ? String(it.pendiente) : v }));
+                          setErrLinea(l => ({ ...l, [i]: undefined }));
+                        }} />
                       <button type="button" className="rec2-todo" title={`Llenar con el saldo (${fmt(it.pendiente)})`}
                         onClick={() => { haptic('selection'); setCant(c => ({ ...c, [i]: String(it.pendiente) })); }}>
                         Todo ({fmt(it.pendiente)})
