@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Eye, FileText, History, MessageCircle, Trash2, Truck } from 'lucide-react';
+import { ClipboardList, Eye, FileText, History, MessageCircle, Trash2, Truck } from 'lucide-react';
 import { EmptyState } from '../../core/ui/Display';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Button } from '../../core/ui/Button';
@@ -238,6 +239,7 @@ interface ActaResumen { id: string; numero_inventario: string | null; fecha: str
  */
 function TarjetaInventarioVehiculo({ v }: { v: VehiculoFlota }) {
   const toast = useToast();
+  const navigate = useNavigate();
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [historialAbierto, setHistorialAbierto] = useState(false);
   const inv = v.inventario_vehiculos ?? null;
@@ -257,14 +259,22 @@ function TarjetaInventarioVehiculo({ v }: { v: VehiculoFlota }) {
     } finally { setOcupado(null); }
   }
 
+  // Motora sin inventario: alerta. No se carga aquí: solo se registra desde su módulo.
   if (!inv) {
     return (
-      <article className="doc-card doc-card--vacia" style={{ '--doc-color': color } as React.CSSProperties}>
+      <article className="doc-card" style={{ '--doc-color': color, '--estado-color': 'var(--amber-ink)' } as React.CSSProperties}>
         <header className="doc-card__cab">
           <span className="doc-card__num">9</span>
           <span className="doc-card__titulo">Inventario de vehículos</span>
         </header>
-        <p className="doc-card__vacio">Sin inventario. Se registra solo al hacer el inventario de la unidad en Flota › Inventario de vehículos.</p>
+        <p className="doc-card__vacio">Esta unidad no tiene ningún inventario registrado.</p>
+        <footer className="doc-card__pie">
+          <span className="doc-card__estado-etiqueta">Estado</span>
+          <span className="doc-card__estado" style={{ color: 'var(--amber-ink)' }}>Alerta · falta inventariarla</span>
+        </footer>
+        <div className="doc-card__acciones">
+          <Button variant="secondary" size="sm" icon={<ClipboardList size={14} />} onClick={() => { haptic('selection'); navigate('/flota/checklist-entrega'); }}>Ir a Inventario de vehículos</Button>
+        </div>
       </article>
     );
   }

@@ -121,7 +121,12 @@ export interface PersonalizadoVehiculo {
   estado: EstadoDoc;
 }
 
+/** Alerta de una unidad motora que todavía no tiene ningún inventario de vehículos (solo se registra desde su módulo) */
+export const SIN_INVENTARIO: EstadoDoc = { clave: 'alerta', texto: 'Sin inventario', score: 2, color: COLOR_CLAVE.alerta, dias: null };
+
 export interface MetaVehiculo {
+  /** Unidad motora sin inventario de vehículos: cuenta como alerta */
+  sinInventario: boolean;
   docs: DocVehiculo[];
   personalizados: PersonalizadoVehiculo[];
   registrados: number;
@@ -138,13 +143,17 @@ export function metaDeVehiculo(v: VehiculoFlota): MetaVehiculo {
   }));
   const personalizados = personalizadosDe(v).map(doc => ({ doc, estado: estadoPersonalizado(doc) }));
   const estados = [...docs.filter(d => d.registrado).map(d => d.estado), ...personalizados.map(p => p.estado)];
+  const registrados = estados.length;
+  // El inventario nunca vence, pero una motora que no lo tiene está en alerta. Una unidad sin ningún documento sigue siendo «sin documentos».
+  const sinInventario = esMotora(v) && !v.inventario_vehiculos;
+  if (sinInventario && estados.length > 0) estados.push(SIN_INVENTARIO);
   const vigentes = estados.filter(e => e.score === 3).length;
   let peor: EstadoDoc = SIN_INFO;
   for (const e of estados) {
     if (e.score !== -1 && (peor.score === -1 || e.score < peor.score)) peor = e;
   }
   return {
-    docs, personalizados, registrados: estados.length,
+    sinInventario, docs, personalizados, registrados,
     salud: estados.length ? Math.round((vigentes / estados.length) * 100) : 0, peor,
   };
 }
