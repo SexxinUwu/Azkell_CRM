@@ -38,3 +38,23 @@
   .af-acciones { justify-content: stretch; width: 100%; }
   .af-acciones > * { flex: 1 1 auto; }
 }
+
+/* Foto del artículo: miniatura en tablas y listas */
+.af-foto { display: inline-grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 10px; overflow: hidden; background: var(--fill); color: var(--label-3); flex-shrink: 0; border: 0; padding: 0; }
+.af-foto--grande { width: 3.25rem; height: 3.25rem; border-radius: 12px; }
+.af-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.af-foto--boton { cursor: zoom-in; transition: transform 0.15s ease; }
+.af-foto--boton:hover { transform: scale(1.06); }
+.af-foto-actual { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-3); font-size: 0.8125rem; }
+.af-chip--boton { background: none; border: 0; padding: 2px 4px; border-radius: 8px; cursor: pointer; }
+.af-chip--boton:hover { background: var(--fill); }
+.af-chips { margin-top: 0; }
+
+/* Lista en celular */
+.af-fila { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) var(--s-4); }
+.af-fila + .af-fila { border-top: 1px solid var(--separator); }
+.af-fila__abrir { display: flex; align-items: center; gap: var(--s-3); width: 100%; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; color: inherit; }
+.af-fila__cuerpo { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.af-fila__titulo { font-weight: 700; font-size: 0.9375rem; }
+.af-fila__sub { font-size: 0.75rem; color: var(--label-2); }
+.af-pie-total { margin-right: auto; font-size: 0.8125rem; color: var(--label-2); }

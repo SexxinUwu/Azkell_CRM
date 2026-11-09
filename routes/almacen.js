@@ -3435,7 +3435,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     // ============================================================
     // ALMACÉN DE FLOTA — almacén virtual por unidad (asignar / devolver)
     // ============================================================
-    require('./almacen-flota')(router, { getDb, logAudit, generarCodigo: _generarCodigoAlmacen, stockSQL: _stockSQL });
+    require('./almacen-flota')(router, { getDb, logAudit, generarCodigo: _generarCodigoAlmacen, stockSQL: _stockSQL, multer: _multerInv });
 
     router.use((err, req, res, next) => {
         console.error('Almacen Router Error:', err);

@@ -13,6 +13,8 @@ interface Props {
   /** Muestra el aviso en rojo (por ejemplo, tras intentar guardar sin evidencia) */
   mostrarError?: boolean;
   max?: number;
+  /** Solo fotos (sin PDF). Con max=1 la galería elige una sola */
+  soloImagenes?: boolean;
   disabled?: boolean;
 }
 
@@ -20,7 +22,7 @@ interface Props {
  * Evidencias: tomar foto con la cámara o abrir la galería / archivos (varias fotos o PDF a la vez), con miniaturas y contador.
  * Las fotos se reducen antes de quedar en la lista (se suben más rápido). Con `obligatorio` avisa que falta adjuntar.
  */
-export function EvidenciasArchivos({ archivos, onCambio, titulo = 'Evidencias', ayuda = 'Fotos de la mercadería, guía de remisión o factura', obligatorio, mostrarError, max = 12, disabled }: Props) {
+export function EvidenciasArchivos({ archivos, onCambio, titulo = 'Evidencias', ayuda = 'Fotos de la mercadería, guía de remisión o factura', obligatorio, mostrarError, max = 12, soloImagenes, disabled }: Props) {
   const [urls, setUrls] = useState<Array<string | null>>([]);
   const [procesando, setProcesando] = useState(false);
   const camara = useRef<HTMLInputElement>(null);
@@ -39,7 +41,8 @@ export function EvidenciasArchivos({ archivos, onCambio, titulo = 'Evidencias', 
     setProcesando(true);
     try {
       const listas = await Promise.all(nuevas.map(prepararEvidencia));
-      onCambio([...archivos, ...listas].slice(0, max));
+      // Con un solo lugar, la foto nueva reemplaza a la anterior
+      onCambio(max === 1 ? listas.slice(0, 1) : [...archivos, ...listas].slice(0, max));
     } finally {
       setProcesando(false);
     }
@@ -57,14 +60,14 @@ export function EvidenciasArchivos({ archivos, onCambio, titulo = 'Evidencias', 
       </div>
 
       <div className="evid__botones">
-        <button type="button" className="btn btn--primary" disabled={disabled || procesando || archivos.length >= max} onClick={() => camara.current?.click()}>
+        <button type="button" className="btn btn--primary" disabled={disabled || procesando || (max > 1 && archivos.length >= max)} onClick={() => camara.current?.click()}>
           <Camera size={16} /> Tomar foto
         </button>
-        <button type="button" className="btn btn--secondary" disabled={disabled || procesando || archivos.length >= max} onClick={() => galeria.current?.click()}>
+        <button type="button" className="btn btn--secondary" disabled={disabled || procesando || (max > 1 && archivos.length >= max)} onClick={() => galeria.current?.click()}>
           <Images size={16} /> Galería o archivos
         </button>
         <input ref={camara} type="file" accept="image/*" capture="environment" hidden onChange={agregar} />
-        <input ref={galeria} type="file" accept="image/*,application/pdf" multiple hidden onChange={agregar} />
+        <input ref={galeria} type="file" accept={soloImagenes ? 'image/*' : 'image/*,application/pdf'} multiple={max > 1} hidden onChange={agregar} />
       </div>
 
       {archivos.length === 0 ? (
