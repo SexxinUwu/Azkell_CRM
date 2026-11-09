@@ -3230,6 +3230,28 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 // Valorización: costo promedio ponderado en soles, tipo de cambio del día y vencimiento de la cuenta por pagar
                 const [ocRows] = await conn.query('SELECT id, codigo, moneda, condicion_pago, dias_credito, estado FROM ordenes_compra WHERE codigo = ? LIMIT 1 FOR UPDATE', [oc_id]);
                 const oc = ocRows[0] || null;
+
+                // Nunca se recibe más de lo pedido: por artículo, lo de ahora + lo ya recibido no puede pasar de la cantidad de la orden
+                if (oc) {
+                    const [lineasOC] = await conn.query('SELECT inventario_id, descripcion, cantidad FROM detalle_entradas_inv WHERE entrada_id = ?', [oc.codigo]);
+                    const [yaRecibido] = await conn.query('SELECT inventario_id, descripcion, SUM(cantidad_recibida) AS recibido FROM detalle_recepciones_oc WHERE oc_id = ? GROUP BY inventario_id, descripcion', [oc_id]);
+                    const claveLinea = x => String(x.inventario_id || x.descripcion || '');
+                    const pedidoPor = new Map();
+                    (lineasOC || []).forEach(l => pedidoPor.set(claveLinea(l), (pedidoPor.get(claveLinea(l)) || 0) + (parseFloat(l.cantidad) || 0)));
+                    const recibidoPor = new Map();
+                    (yaRecibido || []).forEach(r => recibidoPor.set(claveLinea(r), (recibidoPor.get(claveLinea(r)) || 0) + (parseFloat(r.recibido) || 0)));
+                    const ahoraPor = new Map();
+                    items.forEach(it => ahoraPor.set(claveLinea(it), (ahoraPor.get(claveLinea(it)) || 0) + (parseFloat(it.cantidad_recibida) || 0)));
+                    for (const [k, ahora] of ahoraPor) {
+                        if (!pedidoPor.has(k)) continue;
+                        const saldo = pedidoPor.get(k) - (recibidoPor.get(k) || 0);
+                        if (ahora > saldo + 1e-9) {
+                            await conn.rollback();
+                            return res.status(400).json({ error: `No se puede recepcionar más de lo pedido: de «${(items.find(it => claveLinea(it) === k) || {}).descripcion || k}» queda por recibir ${Math.max(0, saldo)} y se intentó ${ahora}.` });
+                        }
+                    }
+                }
+
                 const esUSD = oc ? oc.moneda === 'USD' : items.some(it => String(it.moneda || '').toUpperCase() === 'USD');
                 let tipoCambio = parseFloat(req.body.tipo_cambio) || 0;
                 // Si la compra en dólares tiene su propio TC (el de la entrada que generó la OC), la recepción usa ese:
