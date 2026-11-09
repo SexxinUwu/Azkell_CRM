@@ -497,6 +497,50 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     // ============================================================
     const _stockSQL = require('../services/almacen_stock').STOCK_SQL;
 
+    // Un artículo sin existencias no puede salir: el stock nunca debe quedar negativo.
+    // Revisa lo pedido contra el stock actual (mismo cálculo del inventario). Al editar una salida ya despachada,
+    // sus propias cantidades se devuelven antes de comparar. cb(err, faltan[]): faltan = líneas de aviso, vacío si todo alcanza.
+    function validarStockSalida(tdb, items, excluirSalidaId, cb) {
+        const lista = (Array.isArray(items) ? items : []).filter(d => d && (d.inventario_id || d.descripcion));
+        const sinId = lista.filter(d => !d.inventario_id).map(d => d.descripcion);
+        const resolver = (next) => {
+            if (!sinId.length) return next({});
+            tdb.query('SELECT id, descripcion FROM inventario WHERE descripcion IN (?) AND activo = 1', [sinId], (e, rows) => {
+                const m = {};
+                (rows || []).forEach(r => { m[r.descripcion] = r.id; });
+                next(m);
+            });
+        };
+        resolver(mapa => {
+            const pedido = new Map();
+            lista.forEach(d => {
+                const id = d.inventario_id || mapa[d.descripcion];
+                if (!id) return;
+                pedido.set(String(id), (pedido.get(String(id)) || 0) + (parseFloat(d.cantidad) || 0));
+            });
+            if (!pedido.size) return cb(null, []);
+            const sql = _stockSQL.replace(/WHERE i\.activo=1\s*ORDER BY i\.id\s*$/, 'WHERE i.activo=1 AND i.id IN (?) ORDER BY i.id');
+            tdb.query(sql, [[...pedido.keys()]], (err, rows) => {
+                if (err) return cb(err);
+                const devueltas = (next) => {
+                    if (!excluirSalidaId) return next(new Map());
+                    tdb.query(`SELECT ds.inventario_id, SUM(ds.cantidad) AS c FROM detalle_salidas_inv ds JOIN salidas_inv s ON s.id = ds.salida_id
+                               WHERE ds.salida_id = ? AND s.estado = 'Despachado' GROUP BY ds.inventario_id`, [excluirSalidaId],
+                        (e2, r2) => next(new Map((r2 || []).map(x => [String(x.inventario_id), Number(x.c) || 0]))));
+                };
+                devueltas(propias => {
+                    const faltan = [];
+                    (rows || []).forEach(r => {
+                        const pide = pedido.get(String(r.id)) || 0;
+                        const disp = (Number(r.stock_actual) || 0) + (propias.get(String(r.id)) || 0);
+                        if (pide > disp) faltan.push(`"${r.descripcion || r.id}" (${r.id}): pedido ${pide}, disponible ${disp <= 0 ? 0 : disp}`);
+                    });
+                    cb(null, faltan);
+                });
+            });
+        });
+    }
+
     // Quiebre de stock: cuando un despacho deja un artículo en su stock mínimo o debajo, se abre una O/C en BORRADOR.
     // No notifica ni aprueba nada, y no abre otra si ya hay una O/C abierta para el mismo artículo.
     function abrirOcPorQuiebre(tdbQ, inventarioIds) {
@@ -2475,17 +2519,23 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             return res.status(400).json({ error: 'Solo se pueden solicitar artículos (INV). Quita los servicios: ' + servicios.map(d => d.inventario_id).join(', ') });
         }
 
-        // La OT debe existir en la base de esta empresa
-        if (ticket_ot) {
-            targetDb.query('SELECT estado FROM ordenes_trabajo WHERE id_ot = ?', [ticket_ot], (errOT, rowsOT) => {
-                if (errOT) return res.status(500).json({ error: errOT.message });
-                if (!rowsOT.length) return res.status(400).json({ error: 'La OT ' + ticket_ot + ' no existe' });
-                // Bloqueo removido: Permitir salidas a OT cerradas para regularizaciones de almacén
+        // Sin existencias no sale nada (la salida nace ya despachada, así que aquí es el único control de stock)
+        validarStockSalida(targetDb, items, null, (errStk, faltan) => {
+            if (errStk) return res.status(500).json({ error: errStk.message });
+            if (faltan.length) return res.status(400).json({ error: 'No hay stock suficiente en almacén para esta salida:\n• ' + faltan.join('\n• ') });
+
+            // La OT debe existir en la base de esta empresa
+            if (ticket_ot) {
+                targetDb.query('SELECT estado FROM ordenes_trabajo WHERE id_ot = ?', [ticket_ot], (errOT, rowsOT) => {
+                    if (errOT) return res.status(500).json({ error: errOT.message });
+                    if (!rowsOT.length) return res.status(400).json({ error: 'La OT ' + ticket_ot + ' no existe' });
+                    // Bloqueo removido: Permitir salidas a OT cerradas para regularizaciones de almacén
+                    crearSalida();
+                });
+            } else {
                 crearSalida();
-            });
-        } else {
-            crearSalida();
-        }
+            }
+        });
 
         // Costo promedio ponderado del inventario para cada repuesto (S/); luego se crea la salida con ese costo
         function costearItemsSalida(lista, cb) {
@@ -2735,6 +2785,10 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             const { fecha, tipo_destino, placa, responsable, ticket_ot, observaciones, items, moneda, tipo_cambio } = req.body;
             const tc = parseFloat(tipo_cambio) || 1;
             const total_pen = _calcularTotalPen(items || [], tc, moneda);
+            // Al editar tampoco puede quedar stock negativo (sus propias cantidades ya despachadas se devuelven antes de comparar)
+            return validarStockSalida(getDb(req), items, id, (errStk, faltan) => {
+              if (errStk) return res.status(500).json({ error: errStk.message });
+              if (faltan.length) return res.status(400).json({ error: 'No hay stock suficiente en almacén para esta salida:\n• ' + faltan.join('\n• ') });
             getDb(req).query(`UPDATE salidas_inv SET fecha=?, tipo_destino=?, placa=?, responsable=?, ticket_ot=?, observaciones=?, moneda=?, tipo_cambio=?, total_pen=? WHERE id=?`,
                 [fecha || null, tipo_destino || null, placa || null, responsable || null, ticket_ot || null, observaciones || null, moneda || 'PEN', tc, total_pen, id],
                 (err) => {
@@ -2757,6 +2811,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                         });
                     });
                 });
+            });
         } else {
             res.status(400).json({ error: 'Acción no válida' });
         }
