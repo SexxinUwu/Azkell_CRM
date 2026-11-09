@@ -11,7 +11,7 @@ import { MenuOtros, type OpcionOtros } from '../../core/ui/MenuOtros';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { useToast } from '../../core/ui/Toast';
 import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
-import { errorMessage } from '../../core/api/client';
+import { ApiError, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
 import { descargarArchivo } from '../../core/lib/pdf';
@@ -23,6 +23,7 @@ import {
   useInventario, useSalidas, type EstadoSalida, type ItemSalida, type SalidaInv,
 } from './api';
 import { SalidaFormulario } from './SalidaFormulario';
+import { SinStockDialogo, sinStockDe, type ArticuloSinStock } from './SinStockDialogo';
 import { nombreSolicitante, SalidaDetalle } from './SalidaDetalle';
 import { AnularDialogo, DespacharDialogo } from './SalidaDialogos';
 import { pdfSalida } from './salidaPdf';
@@ -104,6 +105,7 @@ export function SalidasPage() {
   const [formulario, setFormulario] = useState<{ salida: SalidaInv | null } | null>(null);
   const [despacho, setDespacho] = useState<{ id: number; itemIds: number[]; mensaje: ReactNode } | null>(null);
   const [despachando, setDespachando] = useState(false);
+  const [sinStock, setSinStock] = useState<ArticuloSinStock[] | null>(null);
   const [anulandoId, setAnulandoId] = useState<number | null>(null);
   const [anulando, setAnulando] = useState(false);
   const [porEliminar, setPorEliminar] = useState<SalidaInv | null>(null);
@@ -211,7 +213,9 @@ export function SalidasPage() {
       setDespacho(null);
       await refrescar();
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      // Sin existencias: aviso con los artículos y las compras que faltan recepcionar
+      const faltantes = err instanceof ApiError ? sinStockDe(err.data) : null;
+      if (faltantes) { haptic('warning'); setDespacho(null); setSinStock(faltantes); } else toast(errorMessage(err), 'error');
     } finally {
       setDespachando(false);
     }
@@ -504,6 +508,8 @@ export function SalidasPage() {
         onClose={() => setDespacho(null)}
         onConfirmar={confirmarDespacho}
       />
+
+      <SinStockDialogo articulos={sinStock} onClose={() => setSinStock(null)} alDespachar />
 
       <AnularDialogo
         open={anulandoId != null}

@@ -484,6 +484,11 @@ export async function guardarSalida(data: Partial<SalidaInv> & { items: ItemSali
   return api('/almacen/salidas', { method: 'POST', body: data });
 }
 
+/** Solicitud de repuestos desde una OT: queda «Pendiente» y NO exige stock (el control de existencias ocurre cuando almacén despacha) */
+export async function solicitarMateriales(data: Partial<SalidaInv> & { items: ItemSalida[] }) {
+  return api('/taller/ot-materiales', { method: 'POST', body: data });
+}
+
 /** Despacha los ítems indicados (o todos si la lista va vacía). Lo no despachado pasa a una salida pendiente nueva. */
 export async function despacharSalida(id: number, itemIds: number[], usuario: string) {
   return api<{ ok?: boolean; parcial?: boolean; nuevo_pendiente_id?: string | number }>(`/almacen/salidas/${id}`, {

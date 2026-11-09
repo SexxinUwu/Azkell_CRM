@@ -500,6 +500,23 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     // Un artículo sin existencias no puede salir: el stock nunca debe quedar negativo.
     // Revisa lo pedido contra el stock actual (mismo cálculo del inventario). Al editar una salida ya despachada,
     // sus propias cantidades se devuelven antes de comparar. cb(err, faltan[]): faltan = líneas de aviso, vacío si todo alcanza.
+    // ¿Falta recepcionar alguna orden de compra de estos artículos? (así el almacén sabe qué ingresar para tener stock)
+    function ocsPorRecibir(tdb, faltan, listo) {
+        tdb.query(`SELECT de.inventario_id, e.id AS oc, e.estado, SUM(de.cantidad) AS pedida,
+                          (SELECT COALESCE(SUM(dr.cantidad_recibida), 0) FROM detalle_recepciones_oc dr JOIN recepciones_oc r ON r.id = dr.recepcion_id
+                            WHERE r.oc_id = e.id AND dr.inventario_id = de.inventario_id) AS recibida
+                   FROM detalle_entradas_inv de JOIN entradas_inv e ON e.id = de.entrada_id
+                   WHERE de.inventario_id IN (?) AND e.tipo_orden = 'Orden de compra'
+                     AND (e.estado IS NULL OR (LOWER(e.estado) NOT LIKE '%anul%' AND LOWER(e.estado) NOT LIKE '%rechaz%'))
+                   GROUP BY de.inventario_id, e.id, e.estado`, [faltan.map(f => f.id)], (e3, ocRows) => {
+            (ocRows || []).forEach(o => {
+                const porRecibir = (Number(o.pedida) || 0) - (Number(o.recibida) || 0);
+                const f = faltan.find(x => String(x.id) === String(o.inventario_id));
+                if (f && porRecibir > 0) f.ocs.push({ oc: o.oc, estado: o.estado, por_recibir: porRecibir });
+            });
+            listo();
+        });
+    }
     function respuestaSinStock(faltan) {
         const lineas = faltan.map(f => {
             const base = `"${f.descripcion}" (${f.id}): pedido ${f.pedido}, disponible ${f.disponible}`;
@@ -543,21 +560,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                         if (pide > disp) faltan.push({ id: r.id, descripcion: r.descripcion || r.id, pedido: pide, disponible: disp <= 0 ? 0 : disp, ocs: [] });
                     });
                     if (!faltan.length) return cb(null, faltan);
-                    // ¿Falta recepcionar alguna orden de compra de estos artículos? (así el almacén sabe qué ingresar para tener stock)
-                    tdb.query(`SELECT de.inventario_id, e.id AS oc, e.estado, SUM(de.cantidad) AS pedida,
-                                      (SELECT COALESCE(SUM(dr.cantidad_recibida), 0) FROM detalle_recepciones_oc dr JOIN recepciones_oc r ON r.id = dr.recepcion_id
-                                        WHERE r.oc_id = e.id AND dr.inventario_id = de.inventario_id) AS recibida
-                               FROM detalle_entradas_inv de JOIN entradas_inv e ON e.id = de.entrada_id
-                               WHERE de.inventario_id IN (?) AND e.tipo_orden = 'Orden de compra'
-                                 AND (e.estado IS NULL OR (LOWER(e.estado) NOT LIKE '%anul%' AND LOWER(e.estado) NOT LIKE '%rechaz%'))
-                               GROUP BY de.inventario_id, e.id, e.estado`, [faltan.map(f => f.id)], (e3, ocRows) => {
-                        (ocRows || []).forEach(o => {
-                            const porRecibir = (Number(o.pedida) || 0) - (Number(o.recibida) || 0);
-                            const f = faltan.find(x => String(x.id) === String(o.inventario_id));
-                            if (f && porRecibir > 0) f.ocs.push({ oc: o.oc, estado: o.estado, por_recibir: porRecibir });
-                        });
-                        cb(null, faltan);
-                    });
+                    ocsPorRecibir(tdb, faltan, () => cb(null, faltan));
                 });
             });
         });
@@ -2714,14 +2717,15 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     const stockDisp = it.stock_actual != null ? parseFloat(it.stock_actual) : 0;
                     const cantReq = parseFloat(it.cantidad || 0);
                     if (cantReq > stockDisp) {
-                        sinStock.push(`"${it.descripcion || it.inv_desc || it.inventario_id}" (Requerido: ${cantReq}, Disponible: ${stockDisp <= 0 ? 0 : stockDisp})`);
+                        sinStock.push({ id: it.inv_id || it.inventario_id || '', descripcion: it.descripcion || it.inv_desc || it.inventario_id || '', pedido: cantReq, disponible: stockDisp <= 0 ? 0 : stockDisp, ocs: [] });
                     }
                 });
 
                 if (sinStock.length > 0) {
-                    return res.status(400).json({
-                        error: `No se puede despachar la salida porque no cuenta con stock suficiente en almacén:\n• ${sinStock.join('\n• ')}`
-                    });
+                    // El aviso dice qué falta y, si hay compras sin recepcionar, con sus códigos
+                    const conId = sinStock.filter(f => f.id);
+                    const responder = () => res.status(400).json(respuestaSinStock(sinStock));
+                    return conId.length ? ocsPorRecibir(targetDb, conId, responder) : responder();
                 }
 
                 // Proceder con el despacho

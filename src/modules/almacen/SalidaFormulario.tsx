@@ -12,7 +12,7 @@ import { haptic } from '../../core/lib/haptics';
 import { formatSoles } from '../../core/lib/format';
 import { useOrdenesTrabajoData } from '../mantenimiento/api';
 import {
-  costoSolesArticulo, ETIQUETA_DESTINO, guardarSalida, TIPO_ORDEN_AJUSTE, TIPO_ORDEN_SALIDA, TIPOS_DESTINO,
+  costoSolesArticulo, ETIQUETA_DESTINO, guardarSalida, solicitarMateriales, TIPO_ORDEN_AJUSTE, TIPO_ORDEN_SALIDA, TIPOS_DESTINO,
   useInventario, usePlacasSalida, type ArticuloInv, type ItemSalida, type SalidaInv,
 } from './api';
 import { ArticuloSelector, SolicitanteSelector, usePersonalSolicitante } from './SelectoresSalida';
@@ -33,13 +33,15 @@ interface Props {
   salida: SalidaInv | null;
   onClose: () => void;
   onGuardado: () => void;
+  /** Desde el detalle de una OT: solo se SOLICITA el repuesto (queda pendiente, sin exigir stock); el almacén lo despacha después */
+  comoSolicitud?: boolean;
   /** Valores iniciales de una salida nueva (p. ej. desde una OT); no se aplican al editar */
   preset?: Partial<Pick<SalidaInv, 'placa' | 'ticket_ot' | 'responsable' | 'tipo_destino'>>;
 }
 
 const itemVacio = (uid: number): Fila => ({ uid, inventario_id: null, descripcion: '', cantidad: 1, costo_unitario: 0, moneda: 'PEN', importe: 0 });
 
-export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset }: Props) {
+export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset, comoSolicitud = false }: Props) {
   const toast = useToast();
   const { user } = useAuth();
   const { data: inventarioTodo } = useInventario();
@@ -219,8 +221,9 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
 
     setGuardando(true);
     try {
-      await guardarSalida(cuerpo, s?.id);
-      toast(s ? 'Salida actualizada' : 'Salida registrada');
+      if (comoSolicitud && !s) await solicitarMateriales(cuerpo);
+      else await guardarSalida(cuerpo, s?.id);
+      toast(s ? 'Salida actualizada' : comoSolicitud ? 'Solicitud enviada a almacén' : 'Salida registrada');
       onGuardado();
     } catch (err) {
       // Sin existencias: se explica qué falta y, si hay compras sin recepcionar, con sus códigos

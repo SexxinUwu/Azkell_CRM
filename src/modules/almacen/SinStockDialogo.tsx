@@ -23,7 +23,7 @@ const num = (n: number) => Number(n).toLocaleString('es-PE', { maximumFractionDi
  * Aviso cuando una salida se bloquea por falta de stock. Dice qué artículos no alcanzan y, si hay compras
  * por recepcionar, avisa con los códigos de los artículos y de las órdenes para que almacén las ingrese.
  */
-export function SinStockDialogo({ articulos, onClose }: { articulos: ArticuloSinStock[] | null; onClose: () => void }) {
+export function SinStockDialogo({ articulos, onClose, alDespachar = false }: { articulos: ArticuloSinStock[] | null; onClose: () => void; /** true: el aviso sale al despachar una solicitud pendiente */ alDespachar?: boolean }) {
   const lista = articulos ?? [];
   const porRecepcionar = lista.filter(a => a.ocs.length > 0);
   return (
@@ -31,7 +31,9 @@ export function SinStockDialogo({ articulos, onClose }: { articulos: ArticuloSin
       footer={<Button variant="primary" onClick={onClose}>Entendido</Button>}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
         <p className="t-callout c-secondary" style={{ margin: 0 }}>
-          La salida no se registró: estos artículos no tienen existencias en almacén y el stock no puede quedar en negativo.
+          {alDespachar
+            ? 'La salida no se despachó: estos artículos no tienen existencias en almacén y el stock no puede quedar en negativo. Abre la solicitud y desmárcalos para despachar solo los que sí tienen stock.'
+            : 'La salida no se registró: estos artículos no tienen existencias en almacén y el stock no puede quedar en negativo.'}
         </p>
 
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>

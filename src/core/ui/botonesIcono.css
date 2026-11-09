@@ -1,0 +1,27 @@
+/* Botones de solo icono con color propio y nombre al pasar el mouse (o al enfocar con teclado).
+   Uso: <Button iconOnly className="btn-tip btn-tip--azul" data-tip="Editar OT" aria-label="Editar OT" /> */
+.btn-tip { position: relative; }
+.btn-tip::after {
+  content: attr(data-tip); position: absolute; top: calc(100% + 8px); left: 50%;
+  transform: translate(-50%, -4px); padding: 5px 10px; border-radius: 8px;
+  background: #1d1d1f; color: #fff; font-size: 0.75rem; font-weight: 600; white-space: nowrap;
+  pointer-events: none; opacity: 0; transition: opacity 0.15s ease, transform 0.15s ease; z-index: 30;
+}
+.btn-tip:hover::after,
+.btn-tip:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { .btn-tip::after { transition: none; } }
+
+.btn-tip.btn-tip--azul { color: #0a64d6; background: rgba(0, 122, 255, 0.14); }
+.btn-tip.btn-tip--celeste { color: #0369a1; background: rgba(14, 165, 233, 0.16); }
+.btn-tip.btn-tip--violeta { color: #6d28d9; background: rgba(124, 58, 237, 0.14); }
+.btn-tip.btn-tip--verde { color: #15803d; background: rgba(52, 199, 89, 0.16); }
+.btn-tip.btn-tip--ambar { color: #a16207; background: rgba(245, 158, 11, 0.18); }
+.btn-tip.btn-tip--naranja { color: #c2410c; background: rgba(249, 115, 22, 0.16); }
+.btn-tip.btn-tip--rojo { color: #b91c1c; background: rgba(239, 68, 68, 0.14); }
+.btn-tip.btn-tip--azul:hover:not(:disabled) { background: rgba(0, 122, 255, 0.24); }
+.btn-tip.btn-tip--celeste:hover:not(:disabled) { background: rgba(14, 165, 233, 0.26); }
+.btn-tip.btn-tip--violeta:hover:not(:disabled) { background: rgba(124, 58, 237, 0.24); }
+.btn-tip.btn-tip--verde:hover:not(:disabled) { background: rgba(52, 199, 89, 0.26); }
+.btn-tip.btn-tip--ambar:hover:not(:disabled) { background: rgba(245, 158, 11, 0.28); }
+.btn-tip.btn-tip--naranja:hover:not(:disabled) { background: rgba(249, 115, 22, 0.26); }
+.btn-tip.btn-tip--rojo:hover:not(:disabled) { background: rgba(239, 68, 68, 0.24); }

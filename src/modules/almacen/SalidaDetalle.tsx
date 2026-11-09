@@ -6,7 +6,6 @@ import { Badge } from '../../core/ui/Display';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { formatFechaHoraPe, formatSoles } from '../../core/lib/format';
 import { ETIQUETA_DESTINO, estadoSalida, type ArticuloInv, type ItemSalida, type SalidaInv } from './api';
-import { AvisoSheet } from './SalidaDialogos';
 
 // Ficha de una salida (clásico: panel de detalle). Pendiente: se marcan los repuestos a despachar
 // (los que no tienen stock aparecen sin marcar) y se despacha la selección. El stock lo descuenta el servidor.
@@ -65,7 +64,6 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
 
   // Selección de despacho: al abrir, los ítems con stock quedan marcados (como el clásico)
   const [marcados, setMarcados] = useState<Set<number>>(new Set());
-  const [avisoStock, setAvisoStock] = useState<string[] | null>(null);
   useEffect(() => {
     if (!open) return;
     setMarcados(new Set(filas.filter(f => f.it.id != null && f.alcanza).map(f => f.idx)));
@@ -86,11 +84,7 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
   function despachar() {
     const elegidas = seleccionadas.filter(f => f.it.id != null);
     if (!elegidas.length) return;
-    const sinStock = elegidas.filter(f => f.stock !== null && f.stock < f.cant);
-    if (sinStock.length) {
-      setAvisoStock(sinStock.map(f => `${f.it.descripcion || f.it.inventario_id || '—'} (Req: ${cantidad(f.cant)}, Disp: ${Math.max(0, f.stock ?? 0)})`));
-      return;
-    }
+    // El stock lo valida el servidor al despachar: si falta, avisa qué artículos y qué compras faltan recepcionar
     const mensaje = parcial
       ? <>¿Despachar <strong>{elegidas.length} de {items.length}</strong> repuestos seleccionados de la salida <strong>{salida.id}</strong>?<br /><span style={{ color: 'var(--accent-ink)', fontWeight: 600 }}>El resto de repuestos quedará como pendiente en una nueva salida.</span></>
       : <>¿Despachar los repuestos de la salida <strong>{salida.id}</strong>?<br />El stock del inventario de almacén será descontado inmediatamente.</>;
@@ -214,14 +208,6 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
           </div>
         </div>
       </div>
-
-      <AvisoSheet open={avisoStock !== null} onClose={() => setAvisoStock(null)} titulo="Stock insuficiente">
-        <p style={{ margin: 0 }}>No se puede despachar porque los siguientes repuestos seleccionados no cuentan con stock disponible en almacén:</p>
-        <ul className="sal-aviso-lista">
-          {(avisoStock ?? []).map(l => <li key={l}>{l}</li>)}
-        </ul>
-        <p style={{ margin: 0, color: 'var(--label-2)' }}>Desmárcalos para despachar solo los que tienen stock disponible.</p>
-      </AvisoSheet>
     </Sheet>
   );
 }

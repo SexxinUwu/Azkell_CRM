@@ -20,6 +20,7 @@ import {
   type AccionOT, type MaterialSalida, type OrdenTrabajo, type PausaOT, type TrabajoOT,
 } from './api';
 import { CerrarOTSheet, PausarOTSheet } from './OTAcciones';
+import '../../core/ui/botonesIcono.css';
 import { TrabajoOTSheet } from './TrabajoOTSheet';
 import { OTServiciosTerceros } from './OTServiciosTerceros';
 import { OTNeumaticos } from './OTNeumaticos';
@@ -351,21 +352,21 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
         {/* Las demás acciones son íconos: el nombre aparece al pasar el mouse (y lo lee el lector de pantalla) */}
         {puedeEditar && (
           <>
-            <Button variant="secondary" iconOnly icon={<Pencil size={17} />} title="Editar OT" aria-label="Editar OT" onClick={() => setEditandoOT(true)} />
-            <Button variant="secondary" iconOnly icon={<CalendarDays size={17} />} title="Fechas" aria-label="Fechas" onClick={() => setEditandoFechas(true)} />
-            <Button variant="secondary" iconOnly icon={<Gauge size={17} />} title="Kilometraje" aria-label="Kilometraje" onClick={() => setEditandoKm(true)} />
+            <Button variant="secondary" iconOnly icon={<Pencil size={17} />} className="btn-tip btn-tip--azul" data-tip="Editar OT" aria-label="Editar OT" onClick={() => setEditandoOT(true)} />
+            <Button variant="secondary" iconOnly icon={<CalendarDays size={17} />} className="btn-tip btn-tip--violeta" data-tip="Fechas" aria-label="Fechas" onClick={() => setEditandoFechas(true)} />
+            <Button variant="secondary" iconOnly icon={<Gauge size={17} />} className="btn-tip btn-tip--celeste" data-tip="Kilometraje" aria-label="Kilometraje" onClick={() => setEditandoKm(true)} />
           </>
         )}
-        <Button variant="secondary" iconOnly icon={<Download size={17} />} title="Descargar PDF" aria-label="Descargar PDF" onClick={() => exportar('descargar')} disabled={exportando || loadMat || loadTra} />
-        <Button variant="secondary" iconOnly icon={<Share2 size={17} />} title="Compartir por WhatsApp" aria-label="Compartir por WhatsApp" onClick={() => exportar('whatsapp')} disabled={exportando || loadMat || loadTra} />
+        <Button variant="secondary" iconOnly icon={<Download size={17} />} className="btn-tip btn-tip--ambar" data-tip="Descargar PDF" aria-label="Descargar PDF" onClick={() => exportar('descargar')} disabled={exportando || loadMat || loadTra} />
+        <Button variant="secondary" iconOnly icon={<Share2 size={17} />} className="btn-tip btn-tip--verde" data-tip="Compartir por WhatsApp" aria-label="Compartir por WhatsApp" onClick={() => exportar('whatsapp')} disabled={exportando || loadMat || loadTra} />
         {puedeEditar && acciones.includes('reactivar') && (
-          <Button variant="secondary" iconOnly icon={<RotateCcw size={17} />} title="Reactivar OT" aria-label="Reactivar OT" onClick={() => onAccion('reactivar')} />
+          <Button variant="secondary" iconOnly icon={<RotateCcw size={17} />} className="btn-tip btn-tip--verde" data-tip="Reactivar OT" aria-label="Reactivar OT" onClick={() => onAccion('reactivar')} />
         )}
         {puedeEditar && acciones.includes('anular') && (
-          <Button variant="secondary" iconOnly icon={<Ban size={17} />} title="Anular OT" aria-label="Anular OT" onClick={() => onAccion('anular')} />
+          <Button variant="secondary" iconOnly icon={<Ban size={17} />} className="btn-tip btn-tip--naranja" data-tip="Anular OT" aria-label="Anular OT" onClick={() => onAccion('anular')} />
         )}
         {puedeEliminar && (
-          <Button variant="danger" iconOnly icon={<Trash2 size={17} />} title="Eliminar OT" aria-label="Eliminar OT" onClick={onEliminar} />
+          <Button variant="danger" iconOnly icon={<Trash2 size={17} />} className="btn-tip btn-tip--rojo" data-tip="Eliminar OT" aria-label="Eliminar OT" onClick={onEliminar} />
         )}
         {idsInspeccion.map(id => (
           <button key={id} type="button" className="ot-enlace" onClick={() => setInspeccionAbierta(id)}>
@@ -610,9 +611,12 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                   <span className="t-numeric" style={{ fontWeight: 800, fontSize: '0.95rem' }}>{soles(Number(sal.total_pen))}</span>
                   {puedeEditar && (
                     <>
-                      <Button size="sm" variant="plain" iconOnly icon={<Pencil size={14} />} aria-label={`Editar cantidades de ${sal.id}`} title="Editar cantidades"
-                        onClick={() => setSolicitudEdit(sal)} />
-                      <Button size="sm" variant="plain" iconOnly icon={<Trash2 size={14} />} aria-label={`Eliminar solicitud ${sal.id}`} title="Eliminar solicitud"
+                      {/* Ya despachado: las cantidades no se editan (el stock ya salió del almacén) */}
+                      {sal.estado !== 'Despachado' && (
+                        <Button size="sm" variant="plain" iconOnly icon={<Pencil size={14} />} aria-label={`Editar cantidades de ${sal.id}`} className="btn-tip btn-tip--azul" data-tip="Editar cantidades"
+                          onClick={() => setSolicitudEdit(sal)} />
+                      )}
+                      <Button size="sm" variant="plain" iconOnly icon={<Trash2 size={14} />} aria-label={`Eliminar solicitud ${sal.id}`} className="btn-tip btn-tip--rojo" data-tip="Eliminar solicitud"
                         onClick={() => setSolicitudBorrar(sal)} />
                     </>
                   )}
@@ -700,11 +704,12 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
       <CerrarOTSheet ot={ot} open={cerrando} onClose={() => setCerrando(false)} usuario={usuario} />
       <TrabajoOTSheet ot={ot} trabajo={trabajoSel} open={trabajoAbierto} onClose={() => setTrabajoAbierto(false)} usuario={usuario} />
       <SalidaFormulario
+        comoSolicitud
         open={solicitando}
         salida={null}
         onClose={() => setSolicitando(false)}
         onGuardado={() => {
-          // El repuesto ya descontó stock: se refrescan los materiales de la OT, su costo y el almacén
+          // Es una solicitud (queda pendiente hasta que almacén despache): se refrescan los materiales de la OT, su costo y el almacén
           setSolicitando(false);
           qc.invalidateQueries({ queryKey: ['mant', 'ot-materiales', idOt] });
           qc.invalidateQueries({ queryKey: ['mant', 'ots'] });
