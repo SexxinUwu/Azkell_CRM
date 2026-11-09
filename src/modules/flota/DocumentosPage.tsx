@@ -33,7 +33,7 @@ import { esAlquilada, grupoDe, metaDeVehiculo, pendientesDeDocs, repartirPorcent
 
 type Vista = 'expediente' | 'matriz' | 'calendario' | 'alquiler';
 type Grupo = 'todos' | 'vigente' | 'alerta' | 'vencido' | 'sin';
-type FiltroAlquiler = 'todas' | 'alquiladas' | 'externa';
+type FiltroAlquiler = 'todas' | 'alquiladas' | 'propias' | 'externa';
 interface Formulario { placa: string | null; prefijo: string | null; personalizado: DocPersonalizado | null }
 
 const VISTAS: Array<{ value: Vista; label: string }> = [
@@ -81,9 +81,15 @@ export function DocumentosPage() {
   const delFiltro = useMemo(() => {
     const q = busqueda.trim().toUpperCase();
     return delEmpresa.filter(f =>
-      (alquiler === 'todas' || (alquiler === 'alquiladas' ? esAlquilada(f.v) : !!responsableExterno(f.v)))
+      (alquiler === 'todas' || (alquiler === 'alquiladas' ? esAlquilada(f.v) : alquiler === 'propias' ? !esAlquilada(f.v) : !!responsableExterno(f.v)))
       && (!q || [f.v.placa, f.v.tipo, f.v.marca, f.v.chasis].some(t => String(t ?? '').toUpperCase().includes(q))));
   }, [delEmpresa, alquiler, busqueda]);
+
+  // Cuántas unidades tiene la empresa elegida, con y sin las que alquila a otras (no depende del filtro de alquiler)
+  const conteoAlquiler = useMemo(() => {
+    const alquiladas = delEmpresa.filter(f => esAlquilada(f.v)).length;
+    return { total: delEmpresa.length, alquiladas, propias: delEmpresa.length - alquiladas };
+  }, [delEmpresa]);
 
   const cifras = useMemo(() => {
     const c = { total: delFiltro.length, vigente: 0, alerta: 0, vencido: 0, sin: 0 };
@@ -192,7 +198,7 @@ export function DocumentosPage() {
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : (
         <div className="doc-pagina">
-          <DocMetaVigentes vigentes={cifras.vigente} total={cifras.total} pct={pctDe.vigente} />
+          <DocMetaVigentes vigentes={cifras.vigente} total={cifras.total} pct={pctDe.vigente} conteo={conteoAlquiler} alquiler={alquiler} onAlquiler={a => { haptic('selection'); setAlquiler(a); }} />
           <div className="disp-kpis">
             {kpis.map(k => (
               <button key={k.clave} type="button" className={`disp-kpi pressable disp-kpi--${k.tono === 'amber' ? 'amber' : k.tono}`}
@@ -231,7 +237,7 @@ export function DocumentosPage() {
             </GrupoFiltro>
             <GrupoFiltro titulo="Alquiler">
               <ChoiceChips label="Alquiler" value={alquiler} onChange={v => setAlquiler(v as FiltroAlquiler)} options={[
-                { value: 'todas', label: 'Todas' }, { value: 'alquiladas', label: 'Alquiladas' }, { value: 'externa', label: 'Las actualiza otra empresa' },
+                { value: 'todas', label: 'Todas' }, { value: 'alquiladas', label: 'Alquiladas' }, { value: 'propias', label: 'No alquiladas' }, { value: 'externa', label: 'Las actualiza otra empresa' },
               ]} />
             </GrupoFiltro>
             <GrupoFiltro titulo="Estado del documento">

@@ -295,4 +295,10 @@
 .doc-alq__cifra strong { font-size: 1.375rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .doc-alq__cifra span { font-size: 0.75rem; font-weight: 600; color: var(--label-2); }
 .doc-alq__resumen .segmented { margin-left: auto; }
+.doc-meta__flota { display: flex; flex-wrap: wrap; gap: 6px; }
+.doc-meta__chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border: 0; border-radius: 999px; background: var(--fill); color: var(--label-2); font: inherit; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: background 0.15s ease, color 0.15s ease; }
+.doc-meta__chip b { color: var(--label); font-size: 0.875rem; }
+.doc-meta__chip:hover { background: var(--separator); }
+.doc-meta__chip[aria-pressed="true"] { background: var(--label); color: var(--surface); }
+.doc-meta__chip[aria-pressed="true"] b { color: var(--surface); }
 
