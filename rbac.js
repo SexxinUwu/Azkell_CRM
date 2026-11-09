@@ -152,8 +152,8 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/sistema/api-keys') || path.startsWith('/sistema/webhooks')) mod = ['administracion'];
     else if (path.startsWith('/seguridad/asistencia')) mod = ['asist', 'seguridad'];
     // PDF del acta: el POST solo convierte el documento, no guarda nada; quien ve las actas puede imprimirlas
-    else if (path === '/seguridad/entrega-vehiculos/pdf') { mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas']; accion = 'l'; }
-    else if (path.startsWith('/seguridad/entrega-vehiculos') || path.startsWith('/flota/entrega-vehiculos')) mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas'];
+    else if (path === '/seguridad/entrega-vehiculos/pdf') { mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas', 'docs_flota']; accion = 'l'; }
+    else if (path.startsWith('/seguridad/entrega-vehiculos') || path.startsWith('/flota/entrega-vehiculos')) mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas', ...(req.method === 'GET' ? ['docs_flota'] : [])];
     else if (path.startsWith('/seguridad')) mod = ['seguridad_unidades', 'seguridad', 'checklist', 'placas', 'unid'];
     else if (path.startsWith('/configuracion-flota')) mod = 'cfg_mant';
     // RRHH: cada pantalla con su permiso (antes no estaba mapeado y solo entraban administradores)

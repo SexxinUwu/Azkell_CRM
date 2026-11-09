@@ -2,7 +2,7 @@
 // El documento es HTML + CSS que el servidor convierte con Chromium: sale como PDF de texto real (se puede seleccionar y
 // buscar, nítido en cualquier zoom), no como una foto de la pantalla. Está pensado para una hoja A4; si el inventario es
 // muy largo pasa a una segunda hoja sin partir ninguna categoría.
-import { apiFetch } from '../../core/api/client';
+import { api, apiFetch } from '../../core/api/client';
 import { compartirPDF } from '../../core/lib/pdf';
 import { CargaCamion, pestanaConCamion } from '../../core/ui/CargaCamion';
 import { createElement } from 'react';
@@ -300,4 +300,31 @@ export async function abrirPdfEntrega(r: EntregaVehiculo): Promise<void> {
 export async function compartirEntregaWhatsApp(r: EntregaVehiculo): Promise<void> {
   const blob = await generarPdfEntrega(r);
   await compartirPDF(blob, nombrePdfEntrega(r), `Entrega de vehículo ${r.placa}`);
+}
+
+/** El acta completa por su id (el listado no trae firmas ni todos los campos) */
+async function cargarActa(id: string | number): Promise<EntregaVehiculo> {
+  const r = await api<{ data?: EntregaVehiculo }>(`/seguridad/entrega-vehiculos/${encodeURIComponent(String(id))}`);
+  if (!r.data) throw new Error('No se encontró el acta');
+  return r.data;
+}
+
+/** Abre el PDF de un acta guardada por su id (lo usa Documentos de flota). La pestaña se abre antes de pedir los datos. */
+export async function abrirPdfEntregaPorId(id: string | number): Promise<void> {
+  const ventana = window.open('', '_blank');
+  pestanaConCamion(ventana);
+  try {
+    const blob = await generarPdfEntrega(await cargarActa(id));
+    const url = URL.createObjectURL(blob);
+    if (ventana) ventana.location.href = url;
+    else window.open(url, '_blank');
+  } catch (err) {
+    ventana?.close();
+    throw err;
+  }
+}
+
+/** Envía por WhatsApp el PDF de un acta guardada por su id */
+export async function compartirEntregaPorId(id: string | number): Promise<void> {
+  await compartirEntregaWhatsApp(await cargarActa(id));
 }

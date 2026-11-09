@@ -78,6 +78,10 @@ export interface VehiculoFlota {
   fum_vencimiento: string | null;
   ext_vencimiento: string | null;
   soat_entidad: string | null;
+  /** MOTORA o NO (tabla placas): solo las unidades motoras llevan inventario de vehículos */
+  motora?: string | null;
+  /** Último inventario de vehículos (acta de entrega) de la unidad; no se carga a mano ni vence */
+  inventario_vehiculos?: { id: string; numero: string; fecha: string; total: number } | null;
   [key: string]: unknown;
 }
 

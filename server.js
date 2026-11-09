@@ -4422,7 +4422,7 @@ app.get('/api/vehiculos-flota', async (req, res) => {
             vf.boni_emision, vf.boni_vencimiento, vf.sv_entidad, vf.sv_asesor, vf.sv_vencimiento,
             vf.sc_entidad, vf.sc_asesor, vf.sc_vencimiento, vf.fum_emision, vf.fum_vencimiento,
             vf.ext_emision, vf.ext_vencimiento, vf.ext_cantidad,
-            vf.tc_url, vf.soat_url, vf.matpel_url, vf.rt_url, vf.boni_url, vf.sv_url, vf.sc_url, vf.fum_url, vf.ext_url, vf.wialon_name
+            vf.tc_url, vf.soat_url, vf.matpel_url, vf.rt_url, vf.boni_url, vf.sv_url, vf.sc_url, vf.fum_url, vf.ext_url, vf.wialon_name, p.motora
         FROM placas p
         LEFT JOIN vehiculos_flota vf ON CONVERT(p.placa USING utf8mb4) = CONVERT(vf.placa USING utf8mb4)
         ORDER BY p.placa ASC
@@ -4490,7 +4490,23 @@ app.get('/api/vehiculos-flota', async (req, res) => {
                 r.docs_personalizados = customDocs;
             });
 
-            res.json(vehiculos);
+            // Inventario de vehículos (acta de entrega): no es un documento que se cargue ni que venza; el último de cada unidad
+            // se toma solo del módulo Inventario de vehículos, así que se actualiza apenas se registra uno nuevo.
+            const limpia = x => String(x || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            tdb.query('SELECT id, numero_inventario, placa, fecha FROM seg_entrega_vehiculos ORDER BY fecha DESC, id DESC LIMIT 5000', (errInv, actas) => {
+                const porPlaca = new Map();
+                if (!errInv && Array.isArray(actas)) {
+                    actas.forEach(a => {
+                        const k = limpia(a.placa);
+                        if (!k) return;
+                        const previo = porPlaca.get(k);
+                        if (!previo) porPlaca.set(k, { id: a.id, numero: a.numero_inventario || a.id, fecha: a.fecha, total: 1 });
+                        else previo.total += 1;
+                    });
+                }
+                vehiculos.forEach(r => { r.inventario_vehiculos = porPlaca.get(limpia(r.placa)) || null; });
+                res.json(vehiculos);
+            });
         });
     });
 });

@@ -1675,6 +1675,23 @@ module.exports = (db, logAudit) => {
         }
     });
 
+    // ── GET /seguridad/entrega-vehiculos/historial/:placa — inventarios de una unidad (liviano, para Documentos de flota) ──
+    router.get('/seguridad/entrega-vehiculos/historial/:placa', (req, res) => {
+        const limpia = String(req.params.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (!limpia) return res.json({ ok: true, data: [] });
+        getDb(req).query(
+            `SELECT id, numero_inventario, placa, fecha, quien_entrega, quien_recibe, kilometraje
+             FROM seg_entrega_vehiculos
+             WHERE REPLACE(REPLACE(UPPER(placa), '-', ''), ' ', '') = ?
+             ORDER BY fecha DESC, id DESC LIMIT 100`,
+            [limpia],
+            (err, rows) => {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ ok: true, data: rows || [] });
+            }
+        );
+    });
+
     // ── GET /seguridad/entrega-vehiculos/next-folio ───────────────
     router.get('/seguridad/entrega-vehiculos/next-folio', (req, res) => {
         const year = new Date().getFullYear();
