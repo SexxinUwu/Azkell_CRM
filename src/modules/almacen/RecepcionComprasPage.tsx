@@ -192,8 +192,7 @@ export function RecepcionComprasPage() {
 
   return (
     <Page>
-      {!detalle && (
-        <PageHeader
+      <PageHeader
           eyebrow="Almacén"
           title="Recepción de compras"
           subtitle={isLoading ? 'Cargando…' : `${ocs.length} órdenes · ${ocs.filter(o => o.estado_recepcion === 'PENDIENTE').length} pendientes · ${ocs.filter(o => o.estado_recepcion === 'PARCIAL').length} en recepción`}
@@ -203,19 +202,10 @@ export function RecepcionComprasPage() {
               <BotonTip tip="Actualizar" className="btn btn--secondary btn--icon btn-tip btn-tip--celeste" onClick={actualizar}><RefreshCw size={17} /></BotonTip>
             </div>
           }
-        />
-      )}
+      />
 
       {isLoading ? <PageLoader /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
-      ) : detalle ? (
-        <RecepcionDetalle
-          oc={detalle}
-          puedeRecibir={puedeRecibir}
-          puedeRevertir={puedeRevertir}
-          onRecepcionar={() => recepcionar(detalle.id)}
-          onVolver={() => setDetalleId(null)}
-        />
       ) : (
         <div>
           <div className="inv-kpis" style={{ marginBottom: 'var(--s-4)' }}>
@@ -307,7 +297,15 @@ export function RecepcionComprasPage() {
         </div>
       )}
 
-      {/* El formulario de recepción vive aparte del detalle: se abre solo, desde el listado o desde el detalle */}
+      {/* El detalle es una ventana sobre el listado; el formulario de recepción se abre aparte (desde el listado o desde el detalle) */}
+      <RecepcionDetalle
+        oc={detalle}
+        puedeRecibir={puedeRecibir}
+        puedeRevertir={puedeRevertir}
+        onRecepcionar={() => { if (detalle) recepcionar(detalle.id); }}
+        onClose={() => setDetalleId(null)}
+      />
+
       <RegistrarRecepcion oc={recibiendo} usuario={user?.name ?? ''} open={!!recibiendo} onClose={() => setRecibiendoId(null)} />
     </Page>
   );

@@ -94,7 +94,7 @@ export function CeLista({
           <span className="cep-header__icono" aria-hidden><CarFront size={22} /></span>
           <div>
             <h2 className="cep-header__titulo">
-              CheckList de entrega de vehículos
+              Inventario de vehículos
               <Badge>{empresa === 'TODAS' ? 'Todas' : empresa}</Badge>
             </h2>
             <p className="cep-header__sub">Inventario físico y actas oficiales de entrega y recepción del estado de la flota</p>
