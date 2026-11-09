@@ -71,6 +71,7 @@
 .rd-entrega__obs { margin: 0; font-size: 0.8125rem; font-style: italic; color: var(--label-2); }
 .rd-revertir { border: 0; width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center; cursor: pointer; color: var(--red-ink); background: color-mix(in srgb, var(--red-ink) 12%, transparent); }
 .rd-revertir:hover { background: color-mix(in srgb, var(--red-ink) 22%, transparent); }
+.rd-bloqueada { display: inline-flex; align-items: center; gap: 4px; font-size: 0.6875rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--fill); color: var(--label-3); white-space: nowrap; cursor: help; }
 .rd-sin { font-size: 0.75rem; color: var(--label-3); font-style: italic; }
 .rd-evid { display: flex; flex-wrap: wrap; gap: 8px; }
 .rd-evid__foto { width: 72px; height: 72px; border-radius: 12px; overflow: hidden; display: block; background: var(--surface); box-shadow: 0 0 0 0.5px var(--separator); transition: transform 0.15s ease; }

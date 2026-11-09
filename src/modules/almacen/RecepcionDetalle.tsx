@@ -3,13 +3,14 @@ import './recepcionDetalle.css';
 import '../../core/ui/botonesIcono.css';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronLeft, CircleDot, FileText, PackageCheck, PackagePlus, ShieldCheck, Trash2, Truck } from 'lucide-react';
+import { Check, ChevronLeft, CircleDot, FileText, Lock, PackageCheck, PackagePlus, ShieldCheck, Trash2, Truck } from 'lucide-react';
 import { BotonTip } from '../../core/ui/BotonTip';
 import { Button } from '../../core/ui/Button';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
+import { ADMIN } from '../../core/auth/permisos';
 import { haptic } from '../../core/lib/haptics';
 import { formatFechaHoraPe, formatMoneda, formatSoles } from '../../core/lib/format';
 import { eliminarRecepcion, type HistorialRecepcion, type RecepcionOC } from './api';
@@ -63,7 +64,8 @@ function Evidencias({ urls }: { urls: string[] }) {
 export function RecepcionDetalle({ oc, puedeRecibir, puedeRevertir, onRecepcionar, onVolver }: {
   oc: RecepcionOC; puedeRecibir: boolean; puedeRevertir: boolean; onRecepcionar: () => void; onVolver: () => void;
 }) {
-  const { user } = useAuth();
+  const { user, permissions } = useAuth();
+  const esAdmin = permissions.has(ADMIN);
   const qc = useQueryClient();
   const toast = useToast();
   const [porRevertir, setPorRevertir] = useState<HistorialRecepcion | null>(null);
@@ -208,8 +210,11 @@ export function RecepcionDetalle({ oc, puedeRecibir, puedeRevertir, onRecepciona
                           <span className="rd-entrega__quien">{[cab.usuario, cab.almacen].filter(Boolean).join(' · ')}</span>
                         </div>
                         <span className={`rd-chip ${cab.tipo_recepcion === 'TOTAL' ? 'rd-chip--green' : 'rd-chip--amber'}`}>{cab.tipo_recepcion === 'TOTAL' ? 'Total' : 'Parcial'}</span>
-                        {puedeRevertir && (
+                        {puedeRevertir && (esAdmin || (cab.minutos_desde_registro ?? 0) <= 24 * 60) && (
                           <BotonTip tip="Revertir esta entrega" className="rd-revertir" onClick={() => setPorRevertir(cab)}><Trash2 size={16} /></BotonTip>
+                        )}
+                        {puedeRevertir && !esAdmin && (cab.minutos_desde_registro ?? 0) > 24 * 60 && (
+                          <span className="rd-bloqueada" title="Pasó más de un día: ya no se puede revertir. Recepciona lo que falte y pide a Sistemas que corrija el error."><Lock size={13} /> Cerrada</span>
                         )}
                       </div>
                       <ul className="rd-entrega__lineas">
@@ -260,7 +265,7 @@ export function RecepcionDetalle({ oc, puedeRecibir, puedeRevertir, onRecepciona
         loading={revirtiendo}
         title="¿Revertir esta entrega?"
         message={porRevertir
-          ? `Se descuenta del inventario lo que ingresó la entrega del ${formatFechaHoraPe(porRevertir.fecha_recepcion)} y el saldo vuelve a quedar disponible en la orden.`
+          ? `Se descuenta del inventario lo que ingresó la entrega del ${formatFechaHoraPe(porRevertir.fecha_recepcion)} y el saldo vuelve a quedar disponible en la orden. Solo se puede revertir durante las primeras 24 horas.`
           : ''}
         confirmLabel="Revertir"
       />

@@ -746,6 +746,8 @@ export interface HistorialRecepcion {
   descripcion: string | null;
   cantidad_recibida: number;
   sustento_url_presigned?: string | null;
+  /** Minutos desde que se registró la entrega (reloj del servidor): la norma de las 24 horas para revertirla */
+  minutos_desde_registro?: number | null;
   /** Todas las evidencias (fotos o documentos) de la entrega, con enlace firmado */
   sustentos?: string[];
 }

@@ -176,6 +176,48 @@ async function despacharAprobacionWhatsAppAlmacen(req, tdb, entradaId, bodyData)
     }
 }
 
+/** Una entrega solo se puede revertir durante las primeras 24 horas desde que se registró (después, lo corrige Sistemas) */
+const HORAS_PARA_REVERTIR_RECEPCION = 24;
+
+/** Administrador de la empresa o Fundador: misma regla que el resto del servidor */
+function esAdminDeSesion(req) {
+    const u = (req && req.user) || {};
+    if (String(u.rol || '') === 'Fundador') return true;
+    try {
+        const p = typeof u.permisos === 'string' ? JSON.parse(u.permisos || '{}') : (u.permisos || {});
+        return p.admin === true;
+    } catch (e) { return false; }
+}
+
+/**
+ * Cuánto se recibió de cada línea de una orden. Lo recibido se cuenta por artículo (o por descripción) y se reparte entre las
+ * líneas de ese artículo en orden: a cada una hasta lo que pidió; lo que sobre queda en la última. Así dos líneas del mismo artículo
+ * (p. ej. 2 + 2 unidades) no muestran las 4 recibidas en cada una.
+ */
+function repartirRecibidoPorLinea(items, historial) {
+    const clave = it => String(it.inventario_id || it.descripcion || '');
+    const totales = new Map();
+    const ultima = new Map();
+    items.forEach((it, i) => {
+        const k = clave(it);
+        if (!totales.has(k)) {
+            totales.set(k, (historial || [])
+                .filter(h => (h.inventario_id && h.inventario_id === it.inventario_id) || (h.descripcion && h.descripcion === it.descripcion))
+                .reduce((acc, h) => acc + (parseFloat(h.cantidad_recibida) || 0), 0));
+        }
+        ultima.set(k, i);
+    });
+    const resto = new Map(totales);
+    return items.map((it, i) => {
+        const k = clave(it);
+        const pedida = parseFloat(it.cantidad || 0);
+        const disponible = resto.get(k) || 0;
+        const asignado = i === ultima.get(k) ? disponible : Math.min(pedida, disponible);
+        resto.set(k, disponible - asignado);
+        return asignado;
+    });
+}
+
 /** El sustento de una recepción: una URL (recepciones antiguas) o una lista JSON de URLs (varias fotos o documentos) */
 function urlsDeSustento(valor) {
     if (!valor) return [];
@@ -2962,7 +3004,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
                 // 2. Obtener todas las recepciones registradas agrupadas por OC
                 const sqlRecs = `
-                SELECT r.id AS recepcion_id, dr.id AS detalle_id, r.oc_id, r.fecha_recepcion, r.usuario, r.almacen, r.sustento_url, r.observacion, r.tipo_recepcion,
+                SELECT r.id AS recepcion_id, dr.id AS detalle_id, TIMESTAMPDIFF(MINUTE, r.created_at, NOW()) AS minutos_desde_registro, r.oc_id, r.fecha_recepcion, r.usuario, r.almacen, r.sustento_url, r.observacion, r.tipo_recepcion,
                        dr.inventario_id, dr.descripcion, dr.cantidad_recibida, dr.costo_unitario, dr.moneda
                 FROM recepciones_oc r
                 JOIN detalle_recepciones_oc dr ON dr.recepcion_id = r.id
@@ -3029,15 +3071,14 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                             let totalPedido = 0;
                             let totalRecibido = recInfo.items_recibidos;
 
-                            // Detalle de ítems con sus saldos de recepción
-                            const itemsCalculados = itemsOC.map(it => {
+                            // Detalle de ítems con sus saldos de recepción (lo recibido se reparte entre las líneas del mismo artículo)
+                            const recibidoPorLinea = repartirRecibidoPorLinea(itemsOC, recInfo.historial);
+                            const itemsCalculados = itemsOC.map((it, idxLinea) => {
                                 const cantPedida = parseFloat(it.cantidad || 0);
                                 totalPedido += cantPedida;
 
-                                // Cuánto se ha recibido de este ítem
-                                const recibidosItem = recInfo.historial
-                                    .filter(h => (h.inventario_id && h.inventario_id === it.inventario_id) || (h.descripcion === it.descripcion))
-                                    .reduce((acc, h) => acc + parseFloat(h.cantidad_recibida || 0), 0);
+                                // Cuánto se ha recibido de esta línea
+                                const recibidosItem = recibidoPorLinea[idxLinea];
 
                                 const pendiente = Math.max(0, cantPedida - recibidosItem);
                                 return {
@@ -3316,12 +3357,17 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         const targetDb = req.db || db;
 
         try {
-            targetDb.query('SELECT * FROM recepciones_oc WHERE id = ?', [id], async (err, rows) => {
+            targetDb.query('SELECT *, TIMESTAMPDIFF(MINUTE, created_at, NOW()) AS minutos_desde_registro FROM recepciones_oc WHERE id = ?', [id], async (err, rows) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (!rows || rows.length === 0) return res.status(404).json({ error: 'Registro de recepción no encontrado' });
 
                 const rec = rows[0];
                 const oc_id = rec.oc_id;
+
+                // Norma: pasadas 24 horas la entrega ya no se revierte (ni parcial ni total). Se recepciona lo que falta y Sistemas corrige el error.
+                if (Number(rec.minutos_desde_registro) > HORAS_PARA_REVERTIR_RECEPCION * 60 && !esAdminDeSesion(req)) {
+                    return res.status(403).json({ error: 'Pasó más de un día desde que se registró esta entrega, así que ya no se puede revertir. Recepciona lo que falte y pide a Sistemas que corrija el error.' });
+                }
 
                 // Llantas que dio de alta esta recepción: se quitan solo si ninguna se ha movido
                 try {
