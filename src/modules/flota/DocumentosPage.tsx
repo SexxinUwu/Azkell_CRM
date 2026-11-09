@@ -9,6 +9,7 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { Notice, Page } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
+import { BotonTip } from '../../core/ui/BotonTip';
 import { MenuFila } from '../../core/ui/MenuFila';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ChoiceChips } from '../../core/ui/Chips';
@@ -190,10 +191,10 @@ export function DocumentosPage() {
           {((empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (alquiler !== 'todas' ? 1 : 0)) > 0 && <span className="placas-filtros__n t-numeric">{((empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (alquiler !== 'todas' ? 1 : 0))}</span>}
         </Button>
         <div className="doc-cab__acciones">
-          <Button variant="plain" className="btn--icono btn--icono-acento" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar"
-            disabled={isFetching} onClick={() => qc.invalidateQueries({ queryKey: ['flota', 'vehiculos'] })} />
-          <Button variant="plain" className="btn--icono btn--icono-acento" icon={<Settings2 size={18} />} aria-label="Configurar placas"
-            title={seleccion ? `Placas a mostrar: ${seleccion.size} de ${todas.length}` : 'Configurar placas a mostrar'} onClick={() => setConfigurando(true)} />
+          <BotonTip tip="Actualizar" className="btn btn--plain btn--icono btn--icono-acento" disabled={isFetching}
+            onClick={() => qc.invalidateQueries({ queryKey: ['flota', 'vehiculos'] })}><RefreshCw size={18} /></BotonTip>
+          <BotonTip tip={seleccion ? `Placas a mostrar: ${seleccion.size} de ${todas.length}` : 'Configurar placas a mostrar'} className="btn btn--plain btn--icono btn--icono-acento"
+            onClick={() => setConfigurando(true)}><Settings2 size={18} /></BotonTip>
           {seleccion && <span className="doc-conf__insignia" title="Hay un filtro de placas activo">{seleccion.size}/{todas.length}</span>}
           <MenuFila etiqueta="Más acciones" acciones={[
             { label: 'Descargar plantilla Excel', icon: <Download size={17} />, onSelect: () => { descargarPlantilla().catch(aviso); } },

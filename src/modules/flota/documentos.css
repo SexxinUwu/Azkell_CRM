@@ -303,7 +303,7 @@
 .doc-meta__chip[aria-pressed="true"] b { color: var(--surface); }
 
 /* Cabecera compacta de Documentos de flota */
-.doc-cab { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); }
+.doc-cab { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); margin-bottom: var(--s-4); }
 .doc-cab__titulo { display: flex; flex-direction: column; min-width: 0; margin-right: var(--s-2); }
 .doc-cab__h1 { margin: 0; font-size: 1.375rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; white-space: nowrap; }
 .doc-cab__buscar { flex: 1 1 13rem; min-width: 11rem; }

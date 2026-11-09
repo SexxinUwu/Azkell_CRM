@@ -1,4 +1,5 @@
 import './menu-fila.css';
+import '../ui/botonesIcono.css';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
@@ -29,6 +30,12 @@ export function MenuFila({ acciones, etiqueta = 'Acciones', deshabilitado }: { a
   const boton = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number; arriba: boolean } | null>(null);
+  // Nombre del botón al pasar el mouse (se dibuja fuera de la tabla, como en BotonTip)
+  const [tip, setTip] = useState<{ x: number; y: number } | null>(null);
+  const mostrarTip = () => {
+    const r = boton.current?.getBoundingClientRect();
+    if (r) setTip({ x: Math.min(window.innerWidth - 70, Math.max(70, r.left + r.width / 2)), y: r.bottom + 8 });
+  };
 
   const cerrar = useCallback(() => { setPos(null); boton.current?.focus({ preventScroll: true }); }, []);
 
@@ -80,9 +87,11 @@ export function MenuFila({ acciones, etiqueta = 'Acciones', deshabilitado }: { a
   return (
     <>
       <button ref={boton} type="button" className={`menu-fila__boton${pos ? ' menu-fila__boton--abierto' : ''}`} aria-label={etiqueta} aria-haspopup="menu" aria-expanded={!!pos}
-        disabled={deshabilitado} onClick={e => { e.stopPropagation(); if (pos) cerrar(); else abrir(); }}>
+        disabled={deshabilitado} onMouseEnter={mostrarTip} onFocus={mostrarTip} onMouseLeave={() => setTip(null)} onBlur={() => setTip(null)}
+        onClick={e => { e.stopPropagation(); setTip(null); if (pos) cerrar(); else abrir(); }}>
         <Ellipsis size={18} />
       </button>
+      {tip && !pos && createPortal(<span role="tooltip" className="tip-flotante" style={{ left: tip.x, top: tip.y }}>{etiqueta}</span>, document.body)}
       {createPortal(
         <AnimatePresence>
           {pos && (
