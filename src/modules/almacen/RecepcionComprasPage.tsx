@@ -1,42 +1,42 @@
 import './almacen.css';
+import './entradas.css';
 import './recepcion.css';
 import '../../core/ui/botonesIcono.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleCheck, Clock, Eye, FileSpreadsheet, FileText, Hourglass, ImageIcon, PackagePlus, RefreshCw, SearchX, Trash2 } from 'lucide-react';
+import { CircleCheck, Clock, Eye, FileSpreadsheet, FileText, Hourglass, ImageIcon, PackagePlus, RefreshCw, SearchX } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField } from '../../core/ui/Field';
+import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
 import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
-import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
-import { useMediaQuery } from '../../core/lib/useMediaQuery';
+import { BotonTip } from '../../core/ui/BotonTip';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
-import { ConfirmSheet } from '../../core/ui/Sheet';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { formatDolares, formatFechaHoraPe, formatFechaPe, formatSoles } from '../../core/lib/format';
-import { eliminarRecepcion, useRecepcionesOC, type HistorialRecepcion, type RecepcionOC } from './api';
+import { useMediaQuery } from '../../core/lib/useMediaQuery';
+import { formatDolares, formatFechaPe, formatSoles } from '../../core/lib/format';
+import { useRecepcionesOC, type RecepcionOC } from './api';
 import { RegistrarRecepcion } from './RegistrarRecepcion';
+import { RecepcionDetalle } from './RecepcionDetalle';
+import { hoyLima } from './entradaReglas';
 
 type FiltroEstado = 'TODOS' | 'PENDIENTE' | 'PARCIAL' | 'COMPLETO';
+type Vista = 'ordenes' | 'articulos';
 type Tono = 'red' | 'amber' | 'green';
 
 // Mismos estados y nombres que el clásico (pendiente / en recepción / finalizada)
-const OPCIONES_FILTRO: Array<{ value: FiltroEstado; label: string }> = [
-  { value: 'TODOS', label: 'Todas' },
-  { value: 'PENDIENTE', label: 'Pendientes' },
-  { value: 'PARCIAL', label: 'En recepción' },
-  { value: 'COMPLETO', label: 'Finalizadas' },
+const KPIS: Array<{ filtro: FiltroEstado; etiqueta: string; sub: string; icono: ReactNode; tono?: 'ok' | 'warning' }> = [
+  { filtro: 'TODOS', etiqueta: 'Total órdenes', sub: 'Del filtro seleccionado', icono: <FileText size={18} /> },
+  { filtro: 'PENDIENTE', etiqueta: 'Pendientes', sub: 'Sin recibir nada', icono: <Clock size={18} />, tono: 'warning' },
+  { filtro: 'PARCIAL', etiqueta: 'En recepción', sub: 'Entregas incompletas', icono: <Hourglass size={18} />, tono: 'warning' },
+  { filtro: 'COMPLETO', etiqueta: 'Finalizadas', sub: 'Recibidas por completo', icono: <CircleCheck size={18} />, tono: 'ok' },
 ];
-const KPIS: Array<{ filtro: FiltroEstado; etiqueta: string; icono: ReactNode; tono?: 'ok' | 'warning' | 'critical' }> = [
-  { filtro: 'TODOS', etiqueta: 'Total órdenes', icono: <FileText size={18} /> },
-  { filtro: 'PENDIENTE', etiqueta: 'Pendientes', icono: <Clock size={18} />, tono: 'critical' },
-  { filtro: 'PARCIAL', etiqueta: 'En recepción', icono: <Hourglass size={18} />, tono: 'warning' },
-  { filtro: 'COMPLETO', etiqueta: 'Finalizadas', icono: <CircleCheck size={18} />, tono: 'ok' },
-];
+const ETIQUETA_FILTRO: Record<FiltroEstado, string> = { TODOS: 'Todas', PENDIENTE: 'Pendientes', PARCIAL: 'En recepción', COMPLETO: 'Finalizadas' };
+
 const TABLA_QUERY = '(min-width: 768px)';
 const COLUMNAS: ColumnaTabla[] = [
   { id: 'acciones', titulo: 'Acciones', ancho: 96, minimo: 84, alinear: 'center' },
@@ -49,6 +49,18 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'importe', titulo: 'Importe', ancho: 130, alinear: 'right' },
   { id: 'avance', titulo: 'Avance', ancho: 150 },
   { id: 'sustentos', titulo: 'Evidencias', ancho: 130, alinear: 'center' },
+];
+const COLUMNAS_ART: ColumnaTabla[] = [
+  { id: 'acciones', titulo: 'Acciones', ancho: 96, minimo: 84, alinear: 'center' },
+  { id: 'fecha', titulo: 'Fecha', ancho: 110 },
+  { id: 'orden', titulo: 'Orden de compra', ancho: 140 },
+  { id: 'estado', titulo: 'Recepción', ancho: 116, alinear: 'center' },
+  { id: 'proveedor', titulo: 'Proveedor', ancho: 220 },
+  { id: 'codigo', titulo: 'Cód. art.', ancho: 104 },
+  { id: 'articulo', titulo: 'Artículo', ancho: 280 },
+  { id: 'pedido', titulo: 'Pedido', ancho: 84, alinear: 'right' },
+  { id: 'recibido', titulo: 'Recibido', ancho: 90, alinear: 'right' },
+  { id: 'pendiente', titulo: 'Pendiente', ancho: 96, alinear: 'right' },
 ];
 const TONO_ESTADO: Record<string, Tono> = { PENDIENTE: 'red', PARCIAL: 'amber', COMPLETO: 'green' };
 const ETIQUETA_ESTADO: Record<string, string> = { PENDIENTE: 'Pendiente', PARCIAL: 'Parcial', COMPLETO: 'Completo' };
@@ -73,6 +85,15 @@ const avance = (oc: RecepcionOC) => ({
   ped: oc.total_pedido,
   pct: oc.total_pedido > 0 ? Math.min(100, Math.round((oc.total_recibido / oc.total_pedido) * 100)) : 0,
 });
+
+/** Mismo día del mes anterior (28/10 → 28/09); si el mes anterior es más corto, el último día de ese mes */
+function mesAtras(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const anio = m === 1 ? y - 1 : y;
+  const mes = m === 1 ? 12 : m - 1;
+  const ultimo = new Date(Date.UTC(anio, mes, 0)).getUTCDate();
+  return `${anio}-${String(mes).padStart(2, '0')}-${String(Math.min(d, ultimo)).padStart(2, '0')}`;
+}
 
 /**
  * Importe de la O/C. El servidor manda `importe` siempre en soles (total_pen). En dólares se muestra
@@ -101,29 +122,53 @@ export function RecepcionComprasPage() {
   const { user, can } = useAuth();
   const [filtro, setFiltro] = useState<FiltroEstado>('TODOS');
   const [busqueda, setBusqueda] = useState('');
-  const [seleccionadaId, setSeleccionadaId] = useState<string | number | null>(null);
-  const [registrando, setRegistrando] = useState(false);
+  const [desde, setDesde] = useState(() => mesAtras(hoyLima()));
+  const [hasta, setHasta] = useState(() => hoyLima());
+  const [vista, setVista] = useState<Vista>('ordenes');
+  // Detalle y recepción son cosas distintas: «Recepcionar» abre solo el formulario, sin pasar por el detalle
+  const [detalleId, setDetalleId] = useState<string | number | null>(null);
+  const [recibiendoId, setRecibiendoId] = useState<string | number | null>(null);
   const esTabla = useMediaQuery(TABLA_QUERY);
 
   const puedeRecibir = can('rec_compras.crear', 'ent_inv.crear');
   const puedeRevertir = can('rec_compras.eliminar', 'ent_inv.eliminar');
 
   const ocs = data ?? [];
-  // Se busca por id para que el detalle se actualice solo tras registrar o revertir
-  const seleccionada = seleccionadaId == null ? null : ocs.find(o => String(o.id) === String(seleccionadaId)) ?? null;
-
-  const cuenta = useMemo<Record<FiltroEstado, number>>(() => {
-    const lista = data ?? [];
-    return {
-      TODOS: lista.length,
-      PENDIENTE: lista.filter(o => o.estado_recepcion === 'PENDIENTE').length,
-      PARCIAL: lista.filter(o => o.estado_recepcion === 'PARCIAL').length,
-      COMPLETO: lista.filter(o => o.estado_recepcion === 'COMPLETO').length,
-    };
-  }, [data]);
+  // Se busca por id para que el detalle y el formulario se actualicen solos tras registrar o revertir
+  const detalle = detalleId == null ? null : ocs.find(o => String(o.id) === String(detalleId)) ?? null;
+  const recibiendo = recibiendoId == null ? null : ocs.find(o => String(o.id) === String(recibiendoId)) ?? null;
 
   const q = busqueda.trim().toUpperCase();
-  const visibles = ocs.filter(o => (filtro === 'TODOS' || o.estado_recepcion === filtro) && coincide(o, q));
+  // Búsqueda y fechas valen para todo (conteos, tarjetas y tabla); el estado solo para la tabla
+  const delRango = useMemo(() => ocs.filter(o => {
+    if (desde || hasta) {
+      const dia = o.fecha_iso ?? '';
+      if (desde && dia < desde) return false;
+      if (hasta && dia > hasta) return false;
+    }
+    return coincide(o, q);
+  }), [ocs, desde, hasta, q]);
+
+  const cuenta = useMemo<Record<FiltroEstado, number>>(() => ({
+    TODOS: delRango.length,
+    PENDIENTE: delRango.filter(o => o.estado_recepcion === 'PENDIENTE').length,
+    PARCIAL: delRango.filter(o => o.estado_recepcion === 'PARCIAL').length,
+    COMPLETO: delRango.filter(o => o.estado_recepcion === 'COMPLETO').length,
+  }), [delRango]);
+
+  const visibles = useMemo(() => delRango.filter(o => filtro === 'TODOS' || o.estado_recepcion === filtro), [delRango, filtro]);
+
+  /** Filas de la vista «Por artículo»: un renglón por artículo de cada orden (con la búsqueda aplicada a los artículos) */
+  const filasArticulo = useMemo(() => {
+    const filas: Array<{ oc: RecepcionOC; it: RecepcionOC['items'][number] | null; k: string }> = [];
+    for (const oc of visibles) {
+      const cabecera = !q || [oc.id, oc.proveedor, oc.solicitante, oc.estado_oc].some(v => String(v ?? '').toUpperCase().includes(q));
+      const items = oc.items.filter(it => cabecera || `${it.descripcion} ${it.inventario_id}`.toUpperCase().includes(q));
+      if (!items.length) filas.push({ oc, it: null, k: `${oc.id}-0` });
+      items.forEach((it, i) => filas.push({ oc, it, k: `${oc.id}-${i}` }));
+    }
+    return filas;
+  }, [visibles, q]);
 
   function actualizar() {
     haptic('selection');
@@ -141,23 +186,21 @@ export function RecepcionComprasPage() {
     } catch (err) { toast(errorMessage(err), 'error'); }
   }
 
-  function abrirOC(id: string | number, registrar: boolean) {
-    haptic('selection');
-    setSeleccionadaId(id);
-    setRegistrando(registrar);
-  }
+  const verDetalle = (id: string | number) => { haptic('selection'); setDetalleId(id); };
+  const recepcionar = (id: string | number) => { haptic('selection'); setRecibiendoId(id); };
+  const quitarFiltros = () => { setBusqueda(''); setDesde(''); setHasta(''); setFiltro('TODOS'); };
 
   return (
     <Page>
-      {!seleccionada && (
+      {!detalle && (
         <PageHeader
           eyebrow="Almacén"
           title="Recepción de compras"
-          subtitle={isLoading ? 'Cargando…' : `${ocs.length} órdenes · ${cuenta.PENDIENTE} pendientes · ${cuenta.PARCIAL} en recepción`}
+          subtitle={isLoading ? 'Cargando…' : `${ocs.length} órdenes · ${ocs.filter(o => o.estado_recepcion === 'PENDIENTE').length} pendientes · ${ocs.filter(o => o.estado_recepcion === 'PARCIAL').length} en recepción`}
           actions={
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" className="btn btn--secondary btn--icon btn-tip btn-tip--verde" data-tip="Exportar a Excel" aria-label="Exportar a Excel" onClick={exportar}><FileSpreadsheet size={17} /></button>
-              <button type="button" className="btn btn--secondary btn--icon btn-tip btn-tip--celeste" data-tip="Actualizar" aria-label="Actualizar" onClick={actualizar}><RefreshCw size={17} /></button>
+              <BotonTip tip="Exportar a Excel" className="btn btn--secondary btn--icon btn-tip btn-tip--verde" onClick={exportar}><FileSpreadsheet size={17} /></BotonTip>
+              <BotonTip tip="Actualizar" className="btn btn--secondary btn--icon btn-tip btn-tip--celeste" onClick={actualizar}><RefreshCw size={17} /></BotonTip>
             </div>
           }
         />
@@ -165,60 +208,58 @@ export function RecepcionComprasPage() {
 
       {isLoading ? <PageLoader /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
-      ) : seleccionada ? (
-        <>
-          <RecepcionDetalle
-            oc={seleccionada}
-            puedeRecibir={puedeRecibir}
-            puedeRevertir={puedeRevertir}
-            onRecepcionar={() => setRegistrando(true)}
-            onVolver={() => { setRegistrando(false); setSeleccionadaId(null); }}
-          />
-          <RegistrarRecepcion oc={seleccionada} usuario={user?.name ?? ''} open={registrando} onClose={() => setRegistrando(false)} />
-        </>
+      ) : detalle ? (
+        <RecepcionDetalle
+          oc={detalle}
+          puedeRecibir={puedeRecibir}
+          puedeRevertir={puedeRevertir}
+          onRecepcionar={() => recepcionar(detalle.id)}
+          onVolver={() => setDetalleId(null)}
+        />
       ) : (
         <div>
           <div className="inv-kpis" style={{ marginBottom: 'var(--s-4)' }}>
             {KPIS.map(k => (
-              <KpiTarjeta key={k.filtro} etiqueta={k.etiqueta} valor={String(cuenta[k.filtro])} icono={k.icono} tono={k.tono === 'critical' ? undefined : k.tono}
-                sub={k.filtro === 'TODOS' ? 'Órdenes de compra' : k.filtro === 'PENDIENTE' ? 'Sin recibir nada' : k.filtro === 'PARCIAL' ? 'Entregas incompletas' : 'Recibidas por completo'}
+              <KpiTarjeta key={k.filtro} etiqueta={k.etiqueta} valor={String(cuenta[k.filtro])} sub={k.sub} icono={k.icono} tono={k.tono}
                 onClick={() => { haptic('selection'); setFiltro(k.filtro); }} activo={filtro === k.filtro} />
             ))}
           </div>
 
-          <div className="aud2-filtros" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)', marginBottom: 'var(--s-4)' }}>
+          {/* Filtros: igual que Órdenes de compra */}
+          <div className="oc-filtros" style={{ marginBottom: 'var(--s-4)' }}>
             <SearchField value={busqueda} onChange={setBusqueda} placeholder="Orden, proveedor, solicitante o artículo…" />
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)', alignItems: 'center' }}>
-              <SegmentedControl label="Filtrar por estado" value={filtro} onChange={setFiltro} options={OPCIONES_FILTRO.map(o => ({ ...o, label: `${o.label} (${cuenta[o.value]})` }))} />
-              <span className="badge" style={{ marginLeft: 'auto' }}>{visibles.length} {visibles.length === 1 ? 'orden' : 'órdenes'}</span>
+            <div className="oc-filtros__fila">
+              <div className="oc-fechas">
+                <TextInput type="date" aria-label="Desde" value={desde} max={hasta || undefined} onChange={ev => setDesde(ev.target.value)} />
+                <span className="t-footnote c-secondary">a</span>
+                <TextInput type="date" aria-label="Hasta" value={hasta} min={desde || undefined} onChange={ev => setHasta(ev.target.value)} />
+                <button type="button" className="oc-cotizacion__quitar" aria-label="Quitar fechas" onClick={() => { setDesde(''); setHasta(''); }}>×</button>
+              </div>
+              <SegmentedControl<Vista> label="Ver por" value={vista} onChange={setVista}
+                options={[{ value: 'ordenes', label: 'Por orden de compra' }, { value: 'articulos', label: 'Por artículo' }]} />
+              <SelectInput aria-label="Estado de la recepción" value={filtro} onChange={ev => setFiltro(ev.target.value as FiltroEstado)} style={{ width: 'auto' }}>
+                {(Object.keys(ETIQUETA_FILTRO) as FiltroEstado[]).map(f => <option key={f} value={f}>{ETIQUETA_FILTRO[f]} ({cuenta[f]})</option>)}
+              </SelectInput>
+              <span className="badge" style={{ marginLeft: 'auto' }}>{visibles.length} {visibles.length === 1 ? 'registro' : 'registros'}</span>
             </div>
           </div>
 
           {visibles.length === 0 ? (
-            <EmptyState icon={busqueda ? <SearchX size={22} /> : <PackagePlus size={22} />}
-              title={busqueda ? 'Sin coincidencias' : 'Sin órdenes para este filtro'}>
-              {busqueda && <button type="button" className="placas-limpiar" onClick={() => setBusqueda('')}>Quitar búsqueda</button>}
+            <EmptyState icon={busqueda ? <SearchX size={22} /> : <PackagePlus size={22} />} title="Ninguna orden coincide">
+              <button type="button" className="placas-limpiar" onClick={quitarFiltros}>Quitar filtros</button>
             </EmptyState>
-          ) : esTabla ? (
+          ) : esTabla && vista === 'ordenes' ? (
             <TablaRedimensionable id="almacen-recepciones" columnas={COLUMNAS} ariaLabel="Recepción de compras" altoMax="68vh">
               {visibles.map(oc => {
                 const tono = TONO_ESTADO[oc.estado_recepcion] ?? 'amber';
                 const av = avance(oc);
                 const imp = importeOC(oc);
-                const falta = oc.estado_recepcion !== 'COMPLETO';
                 const ev = totalEvidencias(oc);
                 return (
                   <tr key={String(oc.id)}>
-                    <Celda alinear="center">
-                      <div style={{ display: 'inline-flex', gap: 6 }}>
-                        <button type="button" className="btn btn--secondary btn--icon btn--sm btn-tip btn-tip--azul" data-tip="Ver detalle" aria-label={`Ver ${String(oc.id)}`} onClick={() => abrirOC(oc.id, false)}><Eye size={16} /></button>
-                        {falta && puedeRecibir && (
-                          <button type="button" className="btn btn--secondary btn--icon btn--sm btn-tip btn-tip--verde" data-tip="Recepcionar" aria-label={`Recepcionar ${String(oc.id)}`} onClick={() => abrirOC(oc.id, true)}><PackagePlus size={16} /></button>
-                        )}
-                      </div>
-                    </Celda>
+                    <Celda alinear="center"><AccionesFila oc={oc} puedeRecibir={puedeRecibir} onVer={verDetalle} onRecepcionar={recepcionar} /></Celda>
                     <Celda>{fechaTexto(oc.fecha)}</Celda>
-                    <Celda><button type="button" className="oc-codigo" style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent-ink)', background: 'none', border: 0, padding: 0, cursor: 'pointer' }} onClick={() => abrirOC(oc.id, false)}>{String(oc.id)}</button></Celda>
+                    <Celda><button type="button" className="rec-codigo" onClick={() => verDetalle(oc.id)}>{String(oc.id)}</button></Celda>
                     <Celda alinear="center"><span className={`rec-estado rec-estado--${tono}`}>{ETIQUETA_ESTADO[oc.estado_recepcion] ?? oc.estado_recepcion}</span></Celda>
                     <Celda>{oc.proveedor}</Celda>
                     <Celda>{oc.solicitante}</Celda>
@@ -235,17 +276,55 @@ export function RecepcionComprasPage() {
                 );
               })}
             </TablaRedimensionable>
+          ) : esTabla ? (
+            <TablaRedimensionable id="almacen-recepciones-articulos" columnas={COLUMNAS_ART} ariaLabel="Recepción de compras por artículo" altoMax="68vh">
+              {filasArticulo.map(({ oc, it, k }) => {
+                const tono = TONO_ESTADO[oc.estado_recepcion] ?? 'amber';
+                return (
+                  <tr key={k}>
+                    <Celda alinear="center"><AccionesFila oc={oc} puedeRecibir={puedeRecibir} onVer={verDetalle} onRecepcionar={recepcionar} /></Celda>
+                    <Celda>{fechaTexto(oc.fecha)}</Celda>
+                    <Celda><button type="button" className="rec-codigo" onClick={() => verDetalle(oc.id)}>{String(oc.id)}</button></Celda>
+                    <Celda alinear="center"><span className={`rec-estado rec-estado--${tono}`}>{ETIQUETA_ESTADO[oc.estado_recepcion] ?? oc.estado_recepcion}</span></Celda>
+                    <Celda>{oc.proveedor}</Celda>
+                    <Celda mono>{it?.inventario_id || '—'}</Celda>
+                    <Celda>{it?.descripcion ?? 'Sin artículos'}</Celda>
+                    <Celda alinear="right">{it ? fmt(it.pedido) : '—'}</Celda>
+                    <Celda alinear="right">{it ? <span style={{ color: 'var(--green-ink)' }}>{fmt(it.recepcionado)}</span> : '—'}</Celda>
+                    <Celda alinear="right">{it ? <strong style={{ color: it.pendiente > 0 ? 'var(--amber-ink)' : 'var(--label-3)' }}>{fmt(it.pendiente)}</strong> : '—'}</Celda>
+                  </tr>
+                );
+              })}
+            </TablaRedimensionable>
           ) : (
             <div className="tarjeta__lista">
               {visibles.map(oc => (
                 <FilaOC key={String(oc.id)} oc={oc} puedeRecibir={puedeRecibir}
-                  onAbrir={() => abrirOC(oc.id, false)} onRecepcionar={() => abrirOC(oc.id, true)} />
+                  onAbrir={() => verDetalle(oc.id)} onRecepcionar={() => recepcionar(oc.id)} />
               ))}
             </div>
           )}
         </div>
       )}
+
+      {/* El formulario de recepción vive aparte del detalle: se abre solo, desde el listado o desde el detalle */}
+      <RegistrarRecepcion oc={recibiendo} usuario={user?.name ?? ''} open={!!recibiendo} onClose={() => setRecibiendoId(null)} />
     </Page>
+  );
+}
+
+/** Acciones de una fila de la tabla: ver detalle y recepcionar, cada una con su nombre al pasar el mouse */
+function AccionesFila({ oc, puedeRecibir, onVer, onRecepcionar }: {
+  oc: RecepcionOC; puedeRecibir: boolean; onVer: (id: string | number) => void; onRecepcionar: (id: string | number) => void;
+}) {
+  const falta = oc.estado_recepcion !== 'COMPLETO';
+  return (
+    <div style={{ display: 'inline-flex', gap: 6 }}>
+      <BotonTip tip="Ver detalle" className="btn btn--secondary btn--icon btn--sm btn-tip btn-tip--azul" aria-label={`Ver ${String(oc.id)}`} onClick={() => onVer(oc.id)}><Eye size={16} /></BotonTip>
+      {falta && puedeRecibir && (
+        <BotonTip tip="Recepcionar" className="btn btn--secondary btn--icon btn--sm btn-tip btn-tip--verde" aria-label={`Recepcionar ${String(oc.id)}`} onClick={() => onRecepcionar(oc.id)}><PackagePlus size={16} /></BotonTip>
+      )}
+    </div>
   );
 }
 
@@ -282,170 +361,6 @@ function FilaOC({ oc, puedeRecibir, onAbrir, onRecepcionar }: {
         <Button variant="primary" size="sm" iconOnly icon={<PackagePlus size={16} />} title="Recepcionar"
           aria-label={`Recepcionar ${String(oc.id)}`} onClick={onRecepcionar} />
       )}
-    </div>
-  );
-}
-
-function RecepcionDetalle({ oc, puedeRecibir, puedeRevertir, onRecepcionar, onVolver }: {
-  oc: RecepcionOC; puedeRecibir: boolean; puedeRevertir: boolean; onRecepcionar: () => void; onVolver: () => void;
-}) {
-  const { user } = useAuth();
-  const qc = useQueryClient();
-  const toast = useToast();
-  const [porRevertir, setPorRevertir] = useState<HistorialRecepcion | null>(null);
-  const [revirtiendo, setRevirtiendo] = useState(false);
-
-  const tono = TONO_ESTADO[oc.estado_recepcion] ?? 'amber';
-  const pendiente = Math.max(0, oc.total_pedido - oc.total_recibido);
-  const av = avance(oc);
-  const imp = importeOC(oc);
-
-  async function revertir() {
-    if (!porRevertir) return;
-    setRevirtiendo(true);
-    try {
-      const r = await eliminarRecepcion(porRevertir.recepcion_id, user?.name ?? '');
-      if (r.ok === false) throw new Error(r.error || 'No se pudo revertir la entrega');
-      haptic('success');
-      toast('Entrega revertida: el stock volvió a su valor anterior');
-      setPorRevertir(null);
-      await qc.invalidateQueries({ queryKey: ['almacen'] });
-    } catch (err) {
-      toast(errorMessage(err), 'error');
-      haptic('warning');
-    } finally {
-      setRevirtiendo(false);
-    }
-  }
-
-  // El historial viene por renglón: se agrupa por entrega (recepcion_id)
-  const entregas = useMemo(() => {
-    const m = new Map<number, { cab: HistorialRecepcion; lineas: HistorialRecepcion[] }>();
-    for (const h of oc.historial_recepciones) {
-      if (!m.has(h.recepcion_id)) m.set(h.recepcion_id, { cab: h, lineas: [] });
-      m.get(h.recepcion_id)!.lineas.push(h);
-    }
-    return [...m.values()].reverse();
-  }, [oc.historial_recepciones]);
-
-  return (
-    <div className="inv-ficha">
-      <div className="tarjeta__barra">
-        <button type="button" className="tarjeta__volver" onClick={onVolver}>
-          <span style={{ fontSize: '1.2rem' }}>‹</span> Recepciones
-        </button>
-        <div className="tarjeta__barra-acciones">
-          {puedeRecibir && pendiente > 0 && (
-            <Button variant="primary" icon={<PackagePlus size={16} />} onClick={onRecepcionar}>Recepcionar</Button>
-          )}
-        </div>
-      </div>
-
-      <div className="inv-ficha__hero" style={{ paddingTop: 'var(--s-2)' }}>
-        <div className="inv-ficha__imagen-vacia"><PackagePlus size={28} /></div>
-        <span className="inv-ficha__id">{String(oc.id)}</span>
-        <h2 className="inv-ficha__nombre">{oc.proveedor}</h2>
-        <Badge tone={tono}>{ETIQUETA_ESTADO[oc.estado_recepcion] ?? oc.estado_recepcion}</Badge>
-      </div>
-
-      <div className="inv-metricas">
-        <div className="inv-metrica"><span className="inv-metrica__num">{fmt(oc.total_pedido)}</span><span className="inv-metrica__label">Pedido</span></div>
-        <div className="inv-metrica"><span className="inv-metrica__num" style={{ color: 'var(--green-ink)' }}>{fmt(oc.total_recibido)}</span><span className="inv-metrica__label">Recibido</span></div>
-        <div className="inv-metrica"><span className={`inv-metrica__num${pendiente > 0 ? ' inv-metrica__num--warning' : ''}`}>{fmt(pendiente)}</span><span className="inv-metrica__label">Pendiente</span></div>
-      </div>
-      <div className="rec-progreso rec-progreso--ancho" role="progressbar" aria-label={`${av.pct}% recibido`}
-        aria-valuemin={0} aria-valuemax={100} aria-valuenow={av.pct}>
-        <span className="rec-progreso__barra" style={{ width: `${av.pct}%` }} />
-      </div>
-
-      <div>
-        <p className="tarjeta__grupo-titulo">Datos de la orden</p>
-        <div className="tarjeta__lista">
-          <div className="dato"><span className="dato__label">Solicitante</span><span className="dato__valor">{oc.solicitante}</span></div>
-          <div className="dato"><span className="dato__label">Autoriza</span><span className="dato__valor">{oc.autoriza}</span></div>
-          <div className="dato"><span className="dato__label">Condición de pago</span><span className="dato__valor">{condicionTexto(oc)}</span></div>
-          <div className="dato"><span className="dato__label">Almacén</span><span className="dato__valor">{oc.almacen}</span></div>
-          <div className="dato"><span className="dato__label">Fecha OC</span><span className="dato__valor dato__valor--mono">{fechaTexto(oc.fecha)}</span></div>
-          <div className="dato"><span className="dato__label">Estado OC</span><span className="dato__valor">{estadoOcTexto(oc.estado_oc)}</span></div>
-          <div className="dato">
-            <span className="dato__label">Importe</span>
-            <span className="dato__valor" style={{ fontWeight: 700 }}>{imp.principal}</span>
-            {imp.detalle && <span className="dato__valor" style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{imp.detalle}</span>}
-          </div>
-        </div>
-      </div>
-
-      {oc.items.length > 0 && (
-        <div>
-          <p className="tarjeta__grupo-titulo">Artículos ({oc.items.length})</p>
-          <div className="tarjeta__lista">
-            {oc.items.map((it, i) => (
-              <div key={i} className="dato">
-                <span className="dato__label" style={{ fontSize: '0.9375rem', fontWeight: 600 }}>{it.descripcion}</span>
-                {it.inventario_id && <span className="dato__valor dato__valor--mono" style={{ fontSize: '0.75rem', color: 'var(--accent-ink)' }}>{it.inventario_id}</span>}
-                <span className="dato__valor" style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>
-                  Pedido {fmt(it.pedido)} · recibido <span style={{ color: 'var(--green-ink)' }}>{fmt(it.recepcionado)}</span> · pendiente{' '}
-                  <strong style={{ color: it.pendiente > 0 ? 'var(--amber-ink)' : 'var(--label-3)' }}>{fmt(it.pendiente)}</strong> {it.unidad}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {entregas.length > 0 && (
-        <div>
-          <p className="tarjeta__grupo-titulo">Entregas registradas ({entregas.length})</p>
-          <div className="tarjeta__lista">
-            {entregas.map(({ cab, lineas }) => (
-              <div key={cab.recepcion_id} className="dato" style={{ gap: 'var(--s-1)' }}>
-                <div className="rec-entregas">
-                  <span className="rec-entregas__titulo">
-                    {formatFechaHoraPe(cab.fecha_recepcion)} · {cab.tipo_recepcion ?? 'ENTREGA'}
-                  </span>
-                  {(cab.sustentos?.length ? cab.sustentos : cab.sustento_url_presigned ? [cab.sustento_url_presigned] : []).length ? (
-                    <span className="rec-sustentos">
-                      {(cab.sustentos?.length ? cab.sustentos : [cab.sustento_url_presigned as string]).map((u, k) => (
-                        <a key={k} href={u} target="_blank" rel="noreferrer" className="rec-sustento" aria-label={`Ver evidencia ${k + 1}`}>
-                          {/\.pdf(\?|$)/i.test(u) ? <FileText size={13} /> : <ImageIcon size={13} />} {/\.pdf(\?|$)/i.test(u) ? 'Documento' : 'Foto'} {k + 1}
-                        </a>
-                      ))}
-                    </span>
-                  ) : (
-                    <span className="rec-sustento rec-sustento--sin">Sin archivos</span>
-                  )}
-                  {puedeRevertir && (
-                    <button type="button" className="placas-limpiar" style={{ color: 'var(--red-ink)' }}
-                      onClick={() => setPorRevertir(cab)} aria-label="Revertir esta entrega">
-                      <Trash2 size={15} style={{ verticalAlign: '-3px' }} /> Revertir
-                    </button>
-                  )}
-                </div>
-                {lineas.map(l => (
-                  <span key={l.detalle_id} className="dato__valor" style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>
-                    +{fmt(l.cantidad_recibida)} {l.descripcion ?? 'Artículo'}
-                  </span>
-                ))}
-                <span className="dato__valor" style={{ fontSize: '0.75rem', color: 'var(--label-3)' }}>
-                  {[cab.usuario, cab.almacen, cab.observacion].filter(Boolean).join(' · ')}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <ConfirmSheet
-        open={!!porRevertir}
-        onClose={() => !revirtiendo && setPorRevertir(null)}
-        onConfirm={revertir}
-        loading={revirtiendo}
-        title="¿Revertir esta entrega?"
-        message={porRevertir
-          ? `Se descuenta del inventario lo que ingresó la entrega del ${formatFechaHoraPe(porRevertir.fecha_recepcion)} y el saldo vuelve a quedar disponible en la orden.`
-          : ''}
-        confirmLabel="Revertir"
-      />
     </div>
   );
 }

@@ -25,3 +25,12 @@
 .btn-tip.btn-tip--ambar:hover:not(:disabled) { background: rgba(245, 158, 11, 0.28); }
 .btn-tip.btn-tip--naranja:hover:not(:disabled) { background: rgba(249, 115, 22, 0.26); }
 .btn-tip.btn-tip--rojo:hover:not(:disabled) { background: rgba(239, 68, 68, 0.24); }
+
+/* Rótulo flotante de BotonTip (fuera de la tabla, nunca recortado) */
+.tip-flotante {
+  position: fixed; transform: translateX(-50%); z-index: 400; padding: 5px 10px; border-radius: 8px;
+  background: #1d1d1f; color: #fff; font-size: 0.75rem; font-weight: 600; white-space: nowrap; pointer-events: none;
+  animation: tip-entra 0.12s ease-out;
+}
+@keyframes tip-entra { from { opacity: 0; transform: translate(-50%, -3px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { .tip-flotante { animation: none; } }

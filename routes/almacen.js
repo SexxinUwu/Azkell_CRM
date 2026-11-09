@@ -3090,9 +3090,17 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                                 }
                             }
 
+                            // Día de la orden en hora de Lima (AAAA-MM-DD): sirve para filtrar por fechas
+                            let fechaIso = null;
+                            try {
+                                const dIso = new Date(String(raw).includes('T') ? raw : String(raw).replace(' ', 'T'));
+                                if (!isNaN(dIso.getTime())) fechaIso = dIso.toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+                            } catch (e) { fechaIso = null; }
+
                             return {
                                 id: oc.id,
                                 fecha: fechaOCFinal,
+                                fecha_iso: fechaIso,
                                 proveedor: oc.proveedor_nombre || 'PROVEEDOR GENERAL',
                                 solicitante: oc.solicitante || oc.autoriza || 'ALMACÉN / MANTENIMIENTO',
                                 usuario_creacion: oc.creado_por || 'SISTEMA',

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Ban, CircleSlash, Eye, FileSpreadsheet, History, ListTree, RefreshCw, ShieldCheck, ShieldAlert, Trash2, UserRound, Users } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, PageLoader } from '../../core/ui/Button';
+import { BotonTip } from '../../core/ui/BotonTip';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
 import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
@@ -320,7 +321,7 @@ function Actividad({ esTabla, inicial, onHistorial }: { esTabla: boolean; inicia
               <Celda><EtiquetaCategoria c={e.categoria} /></Celda>
               <Celda>{e.modulo}</Celda>
               <Celda><span className="aud2-texto" title={e.descripcion}>{e.descripcion}</span><span className="aud2-ruta">{e.metodo} {e.ruta}</span></Celda>
-              <Celda alinear="center"><button type="button" className="aud2-ver btn-tip" data-tip="Ver detalle" aria-label={`Ver detalle del evento ${e.uid}`} onClick={() => setDetalle(e.uid)}><Eye size={16} /></button></Celda>
+              <Celda alinear="center"><BotonTip tip="Ver detalle" className="aud2-ver" aria-label={`Ver detalle del evento ${e.uid}`} onClick={() => setDetalle(e.uid)}><Eye size={16} /></BotonTip></Celda>
             </tr>
           ))}
         </TablaRedimensionable>

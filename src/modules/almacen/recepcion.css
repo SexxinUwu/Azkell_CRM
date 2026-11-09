@@ -42,6 +42,8 @@
 .rec-estado--red { color: var(--red-ink); background: color-mix(in srgb, var(--red-ink) 14%, transparent); }
 .rec-estado--amber { color: var(--amber-ink); background: color-mix(in srgb, var(--amber-ink) 14%, transparent); }
 .rec-estado--green { color: var(--green-ink); background: color-mix(in srgb, var(--green-ink) 14%, transparent); }
+.rec-codigo { font-family: var(--font-mono); font-weight: 700; font-size: 0.875rem; color: var(--accent-ink); background: none; border: 0; padding: 0; cursor: pointer; }
+.rec-codigo:hover { text-decoration: underline; }
 .rec-avance { display: flex; flex-direction: column; gap: 4px; min-width: 7rem; }
 .rec-avance__barra { height: 6px; border-radius: 999px; background: var(--fill); overflow: hidden; }
 .rec-avance__barra > span { display: block; height: 100%; background: var(--green-ink); border-radius: 999px; }

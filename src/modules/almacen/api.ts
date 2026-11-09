@@ -753,6 +753,8 @@ export interface HistorialRecepcion {
 export interface RecepcionOC {
   id: string | number;
   fecha: string | null;
+  /** Día de la orden (AAAA-MM-DD, hora de Lima) para filtrar por fechas */
+  fecha_iso?: string | null;
   proveedor: string;
   solicitante: string;
   autoriza: string;
