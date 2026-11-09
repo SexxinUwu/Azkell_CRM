@@ -3288,6 +3288,8 @@ app.use('/api/taller', tallerRoutes);
 // ============================================================
 const seguridadRoutes = require('./routes/seguridad')(db, logAudit);
 app.use('/api', seguridadRoutes);
+// Papeletas (Flota): papeletas, multas y actas de control de las unidades
+app.use('/api', require('./routes/papeletas')(db, logAudit));
 
 const mantenimientoRoutes = require('./routes/mantenimiento')(db, logAudit);
 app.use('/api/mantenimiento', mantenimientoRoutes);

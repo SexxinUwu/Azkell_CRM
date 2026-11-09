@@ -21,6 +21,12 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'documentos', label: 'Documentos', to: '/flota/documentos', icon: 'FileText', permisos: ['docs_flota.ver'] },
   },
   {
+    path: 'flota/papeletas/*',
+    permisos: ['papeletas.ver', 'admin'],
+    Page: lazy(() => import('./PapeletasPage').then(m => ({ default: m.PapeletasPage }))),
+    nav: { key: 'papeletas', label: 'Papeletas', to: '/flota/papeletas', icon: 'Gavel', permisos: ['papeletas.ver'] },
+  },
+  {
     // Lista de actas simple (pantalla anterior). Ya no está en el menú: el menú abre el checklist completo.
     path: 'flota/entrega-vehiculos/*',
     permisos: ['entrega_vehiculos.ver', 'seguridad_unidades.ver', 'placas.ver'],
