@@ -2392,7 +2392,7 @@ const sseClients = new Map();
 // ============================================================
 function verifyTokenBase(req, res, next) {
     const PUBLIC_PATHS = [
-        '/login', '/ping', '/eventos',
+        '/login', '/ping', '/version', '/eventos',
         '/whatsapp/qr', '/approvals/oc', '/approvals/oc/action'
     ];
     if (
@@ -2549,7 +2549,7 @@ function tokenDeSesion(req) {
 // ── Middleware de Audit Trail criptográfico ───────────────────────
 // Registra en log_auditoria toda mutación (POST/PUT/PATCH/DELETE) con firma HMAC.
 // Se ejecuta DESPUÉS de verifyToken para tener req.user disponible.
-const AUDIT_SKIP_PATHS = ['/login', '/logout', '/2fa', '/ping', '/eventos', '/tv'];
+const AUDIT_SKIP_PATHS = ['/login', '/logout', '/2fa', '/ping', '/version', '/eventos', '/tv'];
 function _auditFirma(campos) {
     return crypto
         .createHmac('sha256', process.env.JWT_SECRET || 'audit')
@@ -2727,6 +2727,20 @@ app.post('/api/logout', (req, res) => {
         }
     } catch (_) { /* sin estado activo */ }
     res.json({ ok: true });
+});
+
+// Versión publicada de la app: cambia con cada despliegue. Las pestañas abiertas la consultan y, si cambió, se recargan
+// antes de pedir módulos que ya no existen (así no aparecen errores al navegar mientras se publica una versión).
+const _versionApp = (() => {
+    try {
+        const crypto = require('crypto');
+        const indice = path.join(__dirname, 'dist', 'app', 'index.html');
+        if (fs.existsSync(indice)) return crypto.createHash('sha1').update(fs.readFileSync(indice)).digest('hex').slice(0, 12);
+    } catch (e) { /* sin compilar */ }
+    return process.env.SOURCE_COMMIT ? String(process.env.SOURCE_COMMIT).slice(0, 12) : 'dev';
+})();
+app.get('/api/version', (req, res) => {
+    res.set('Cache-Control', 'no-store').json({ version: _versionApp });
 });
 
 app.get('/api/ping', (req, res) => {

@@ -110,6 +110,20 @@ export function esMotora(v: VehiculoFlota): boolean {
   return !/(SEMIREMOLQUE|SEMIRREMOLQUE|CARRETA|FURGON|PLATAFORMA|TANQUE|TOLVA|BATEA|CAMA)/.test(tipo);
 }
 
+/**
+ * Reparte porcentajes enteros que suman exactamente 100 (método del mayor resto): 53.8 pasa a 54 y los demás se ajustan
+ * para que el total no se pase ni quede corto. Con total 0 devuelve ceros.
+ */
+export function repartirPorcentajes(valores: number[], total: number): number[] {
+  if (total <= 0) return valores.map(() => 0);
+  const exactos = valores.map(v => (v / total) * 100);
+  const base = exactos.map(Math.floor);
+  let faltan = 100 - base.reduce((a, b) => a + b, 0);
+  const orden = exactos.map((x, i) => ({ i, resto: x - Math.floor(x) })).sort((a, b) => b.resto - a.resto);
+  for (const { i } of orden) { if (faltan <= 0) break; base[i] += 1; faltan -= 1; }
+  return base;
+}
+
 /** ¿La unidad está alquilada a otra empresa? */
 export const esAlquilada = (v: VehiculoFlota) => !!String(v.alquilada_a ?? '').trim();
 

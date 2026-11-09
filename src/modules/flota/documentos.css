@@ -274,3 +274,25 @@
 .doc-alquiler__acciones { display: flex; flex-wrap: wrap; gap: 6px; }
 .doc-pendiente { display: inline-flex; margin-left: auto; padding: 2px 10px; border-radius: 999px; font-size: 0.6875rem; font-weight: 700; color: var(--amber-ink); background: color-mix(in srgb, var(--amber-ink) 14%, transparent); white-space: nowrap; }
 .doc-unidad__alq { margin-left: auto; padding: 1px 7px; border-radius: 999px; font-size: 0.625rem; font-weight: 800; letter-spacing: 0.04em; color: var(--accent-ink); background: var(--accent-tint); }
+
+/* Línea de avance hacia la meta (DocMetaVigentes) */
+.doc-meta { display: flex; flex-direction: column; gap: 8px; padding: var(--s-4) var(--s-5); border-radius: 20px; background: var(--surface); box-shadow: 0 0 0 0.5px var(--separator), 0 12px 28px -22px rgba(15, 23, 42, 0.3); }
+.doc-meta__cab { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); }
+.doc-meta__titulo { font-size: 0.9375rem; font-weight: 700; color: var(--label); }
+.doc-meta__titulo em { font-style: normal; font-weight: 500; color: var(--label-3); }
+.doc-meta__pct { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.doc-meta__pista { position: relative; height: 12px; border-radius: 999px; background: var(--fill); overflow: hidden; }
+.doc-meta__relleno { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; }
+.doc-meta__marca { position: absolute; right: 0; top: 0; bottom: 0; width: 3px; background: var(--label); opacity: 0.55; }
+.doc-meta__pie { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px var(--s-4); font-size: 0.8125rem; color: var(--label-2); }
+.doc-meta__pie b { color: var(--label); }
+.doc-meta__meta { margin-left: 8px; padding: 1px 8px; border-radius: 999px; font-size: 0.6875rem; font-weight: 700; background: var(--fill); color: var(--label-2); }
+
+/* Apartado de alquiler */
+.doc-alq { display: flex; flex-direction: column; gap: var(--s-3); }
+.doc-alq__resumen { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); }
+.doc-alq__cifra { display: flex; align-items: baseline; gap: 8px; padding: var(--s-2) var(--s-4); border-radius: 14px; background: var(--surface); box-shadow: 0 0 0 0.5px var(--separator); }
+.doc-alq__cifra strong { font-size: 1.375rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.doc-alq__cifra span { font-size: 0.75rem; font-weight: 600; color: var(--label-2); }
+.doc-alq__resumen .segmented { margin-left: auto; }
+
