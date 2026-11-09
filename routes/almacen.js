@@ -3093,7 +3093,8 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                                 const pendiente = Math.max(0, cantPedida - recibidosItem);
                                 return {
                                     inventario_id: it.inventario_id || '',
-                                    descripcion: it.descripcion || it.inv_nombre || 'Ítem sin descripción',
+                                    // Nombre completo del inventario (con código, unidades y marca); la línea de la orden solo guarda el nombre corto
+                                    descripcion: it.inv_nombre || it.descripcion || 'Ítem sin descripción',
                                     unidad: it.unidad || 'UND',
                                     pedido: cantPedida,
                                     recepcionado: recibidosItem,
