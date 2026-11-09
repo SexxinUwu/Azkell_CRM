@@ -176,6 +176,16 @@ async function despacharAprobacionWhatsAppAlmacen(req, tdb, entradaId, bodyData)
     }
 }
 
+/** El sustento de una recepción: una URL (recepciones antiguas) o una lista JSON de URLs (varias fotos o documentos) */
+function urlsDeSustento(valor) {
+    if (!valor) return [];
+    const t = String(valor).trim();
+    if (t.startsWith('[')) {
+        try { const a = JSON.parse(t); return Array.isArray(a) ? a.filter(u => typeof u === 'string' && u) : []; } catch (e) { return []; }
+    }
+    return [t];
+}
+
 module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     const { audit: auditar, actorFrom: actorDe, diff } = require('../services/auditoria');
 
@@ -3046,16 +3056,14 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
                             // Firmar URLs de fotos de sustento en S3 para el historial
                             const historialFirmado = await Promise.all((recInfo.historial || []).map(async h => {
-                                let urlFirmada = h.sustento_url;
-                                if (h.sustento_url) {
-                                    const k = s3KeyFromUrl(h.sustento_url);
-                                    if (k) {
-                                        urlFirmada = await getPresignedUrl(k, 3600).catch(() => h.sustento_url);
-                                    }
-                                }
+                                const firmadas = await Promise.all(urlsDeSustento(h.sustento_url).map(async u => {
+                                    const k = s3KeyFromUrl(u);
+                                    return k ? await getPresignedUrl(k, 3600).catch(() => u) : u;
+                                }));
                                 return {
                                     ...h,
-                                    sustento_url_presigned: urlFirmada
+                                    sustento_url_presigned: firmadas[0] || null,
+                                    sustentos: firmadas
                                 };
                             }));
 
@@ -3117,7 +3125,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     });
 
     // Registrar entrega / recepción (parcial o completa) de una OC
-    router.post('/recepciones-oc/registrar', _multerInv.single('sustento'), async (req, res) => {
+    router.post('/recepciones-oc/registrar', _multerInv.fields([{ name: 'sustentos', maxCount: 12 }, { name: 'sustento', maxCount: 1 }]), async (req, res) => {
         try {
             const { oc_id, fecha_recepcion, usuario, almacen, observacion, items_json } = req.body;
             if (!oc_id) return res.status(400).json({ error: 'N° de Orden de Compra requerido' });
@@ -3127,15 +3135,21 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             if (!items.length) return res.status(400).json({ error: 'No se recibieron productos a recepcionar' });
 
             const targetDb = req.db || db;
-            let sustentoUrl = null;
 
-            // Subir sustento / foto a AWS S3 si fue adjuntado
-            if (req.file) {
-                const { uploadToS3 } = require('../utils/s3');
-                const ext = req.file.originalname.split('.').pop() || 'jpg';
-                const s3Key = `almacen/recepciones_oc/${oc_id}/${Date.now()}.${ext}`;
-                sustentoUrl = await uploadToS3(req.file.buffer, s3Key, req.file.mimetype);
+            // La evidencia es obligatoria: al menos una foto o documento (guía, factura, foto de la mercadería)
+            const archivos = [...((req.files && req.files.sustentos) || []), ...((req.files && req.files.sustento) || [])];
+            if (!archivos.length) {
+                return res.status(400).json({ error: 'Adjunta al menos una foto o documento de sustento de la recepción (guía, factura o foto de la mercadería).' });
             }
+
+            // Todas las evidencias a AWS S3; la cabecera guarda la lista de URLs
+            const { uploadToS3 } = require('../utils/s3');
+            const marca = Date.now();
+            const urlsSustento = await Promise.all(archivos.map((arch, i) => {
+                const ext = (arch.originalname.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+                return uploadToS3(arch.buffer, `almacen/recepciones_oc/${oc_id}/${marca}_${i + 1}.${ext}`, arch.mimetype);
+            }));
+            const sustentoUrl = JSON.stringify(urlsSustento);
 
             let fechaHoraSQL;
             if (fecha_recepcion) {
@@ -3278,7 +3292,8 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 ok: true,
                 mensaje: 'Recepción registrada y stock actualizado con éxito',
                 recepcion_id: recepcionId,
-                sustento_url: sustentoUrl
+                sustento_url: sustentoUrl,
+                sustentos: urlsSustento
             });
         } catch (err) {
             console.error('Error al registrar recepción de OC:', err);
@@ -3311,8 +3326,10 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 if (rec.sustento_url) {
                     try {
                         const { deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
-                        const key = s3KeyFromUrl(rec.sustento_url);
-                        if (key) await deleteFromS3(key);
+                        for (const u of urlsDeSustento(rec.sustento_url)) {
+                            const key = s3KeyFromUrl(u);
+                            if (key) await deleteFromS3(key);
+                        }
                     } catch (eS3) {
                         console.warn('Error al borrar sustento de S3:', eS3.message);
                     }

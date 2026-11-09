@@ -746,6 +746,8 @@ export interface HistorialRecepcion {
   descripcion: string | null;
   cantidad_recibida: number;
   sustento_url_presigned?: string | null;
+  /** Todas las evidencias (fotos o documentos) de la entrega, con enlace firmado */
+  sustentos?: string[];
 }
 
 export interface RecepcionOC {
@@ -802,10 +804,10 @@ export function useTipoCambioSunat(enabled: boolean) {
   });
 }
 
-/** Registra una entrega (parcial o total) de una OC. Multipart: lleva la foto de sustento. */
+/** Registra una entrega (parcial o total) de una OC. Multipart: lleva las fotos o documentos de sustento (obligatorio al menos uno). */
 export async function registrarRecepcion(d: {
   oc_id: string | number; fecha_recepcion: string; usuario: string; observacion: string;
-  almacen: string; tipo_recepcion: 'TOTAL' | 'PARCIAL'; items: RecepcionItemEnvio[]; sustento?: File | null;
+  almacen: string; tipo_recepcion: 'TOTAL' | 'PARCIAL'; items: RecepcionItemEnvio[]; sustentos: File[];
   /** Solo O/C en dólares: S/ por USD del día de recepción */
   tipo_cambio?: number;
 }) {
@@ -817,7 +819,7 @@ export async function registrarRecepcion(d: {
   f.append('almacen', d.almacen);
   f.append('tipo_recepcion', d.tipo_recepcion);
   f.append('items_json', JSON.stringify(d.items));
-  if (d.sustento) f.append('sustento', d.sustento);
+  d.sustentos.forEach(a => f.append('sustentos', a));
   if (d.tipo_cambio) f.append('tipo_cambio', String(d.tipo_cambio));
   return api<{ ok?: boolean }>('/almacen/recepciones-oc/registrar', { method: 'POST', body: f });
 }

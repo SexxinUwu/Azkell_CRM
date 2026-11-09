@@ -1,11 +1,15 @@
 import './almacen.css';
+import './recepcion.css';
+import '../../core/ui/botonesIcono.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleCheck, Clock, FileSpreadsheet, FileText, Hourglass, ImageIcon, PackagePlus, RefreshCw, SearchX, Trash2 } from 'lucide-react';
+import { CircleCheck, Clock, Eye, FileSpreadsheet, FileText, Hourglass, ImageIcon, PackagePlus, RefreshCw, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
+import { useMediaQuery } from '../../core/lib/useMediaQuery';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
@@ -33,8 +37,23 @@ const KPIS: Array<{ filtro: FiltroEstado; etiqueta: string; icono: ReactNode; to
   { filtro: 'PARCIAL', etiqueta: 'En recepción', icono: <Hourglass size={18} />, tono: 'warning' },
   { filtro: 'COMPLETO', etiqueta: 'Finalizadas', icono: <CircleCheck size={18} />, tono: 'ok' },
 ];
+const TABLA_QUERY = '(min-width: 768px)';
+const COLUMNAS: ColumnaTabla[] = [
+  { id: 'acciones', titulo: 'Acciones', ancho: 96, minimo: 84, alinear: 'center' },
+  { id: 'fecha', titulo: 'Fecha', ancho: 110 },
+  { id: 'orden', titulo: 'Orden de compra', ancho: 140 },
+  { id: 'estado', titulo: 'Recepción', ancho: 116, alinear: 'center' },
+  { id: 'proveedor', titulo: 'Proveedor', ancho: 240 },
+  { id: 'solicitante', titulo: 'Solicitante', ancho: 150 },
+  { id: 'condicion', titulo: 'Condición', ancho: 120 },
+  { id: 'importe', titulo: 'Importe', ancho: 130, alinear: 'right' },
+  { id: 'avance', titulo: 'Avance', ancho: 150 },
+  { id: 'sustentos', titulo: 'Evidencias', ancho: 130, alinear: 'center' },
+];
 const TONO_ESTADO: Record<string, Tono> = { PENDIENTE: 'red', PARCIAL: 'amber', COMPLETO: 'green' };
 const ETIQUETA_ESTADO: Record<string, string> = { PENDIENTE: 'Pendiente', PARCIAL: 'Parcial', COMPLETO: 'Completo' };
+/** Evidencias de una OC: cuántos archivos tienen en total sus entregas */
+const totalEvidencias = (oc: RecepcionOC) => oc.historial_recepciones.reduce((s, h, i, a) => (a.findIndex(x => x.recepcion_id === h.recepcion_id) === i ? s + (h.sustentos?.length ?? (h.sustento_url_presigned ? 1 : 0)) : s), 0);
 
 const fmt = (n: number) => (n % 1 === 0 ? String(n) : n.toFixed(2));
 const esCredito = (c: string | null | undefined) => /cr[eé]dito/i.test(c ?? '');
@@ -84,6 +103,7 @@ export function RecepcionComprasPage() {
   const [busqueda, setBusqueda] = useState('');
   const [seleccionadaId, setSeleccionadaId] = useState<string | number | null>(null);
   const [registrando, setRegistrando] = useState(false);
+  const esTabla = useMediaQuery(TABLA_QUERY);
 
   const puedeRecibir = can('rec_compras.crear', 'ent_inv.crear');
   const puedeRevertir = can('rec_compras.eliminar', 'ent_inv.eliminar');
@@ -135,10 +155,10 @@ export function RecepcionComprasPage() {
           title="Recepción de compras"
           subtitle={isLoading ? 'Cargando…' : `${ocs.length} órdenes · ${cuenta.PENDIENTE} pendientes · ${cuenta.PARCIAL} en recepción`}
           actions={
-            <MenuOtros opciones={[
-              { label: 'Actualizar', detalle: 'Trae las recepciones del servidor', icon: <RefreshCw size={17} />, onSelect: actualizar },
-              { label: 'Exportar Excel', detalle: `${visibles.length} órdenes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-            ]} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="btn btn--secondary btn--icon btn-tip btn-tip--verde" data-tip="Exportar a Excel" aria-label="Exportar a Excel" onClick={exportar}><FileSpreadsheet size={17} /></button>
+              <button type="button" className="btn btn--secondary btn--icon btn-tip btn-tip--celeste" data-tip="Actualizar" aria-label="Actualizar" onClick={actualizar}><RefreshCw size={17} /></button>
+            </div>
           }
         />
       )}
@@ -157,41 +177,71 @@ export function RecepcionComprasPage() {
           <RegistrarRecepcion oc={seleccionada} usuario={user?.name ?? ''} open={registrando} onClose={() => setRegistrando(false)} />
         </>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-          <div className="rec-kpis">
+        <div>
+          <div className="inv-kpis" style={{ marginBottom: 'var(--s-4)' }}>
             {KPIS.map(k => (
-              <button key={k.filtro} type="button" className="rec-kpi pressable" aria-pressed={filtro === k.filtro}
-                onClick={() => { haptic('selection'); setFiltro(k.filtro); }}>
-                <span className="rec-kpi__cuerpo">
-                  <span className="inv-kpi__etiqueta">{k.etiqueta}</span>
-                  <span className={`inv-kpi__valor${k.tono ? ` inv-kpi__valor--${k.tono}` : ''}`}>{cuenta[k.filtro]}</span>
-                </span>
-                <span className={`inv-kpi__icono${k.tono ? ` inv-kpi__icono--${k.tono}` : ''}`}>{k.icono}</span>
-              </button>
+              <KpiTarjeta key={k.filtro} etiqueta={k.etiqueta} valor={String(cuenta[k.filtro])} icono={k.icono} tono={k.tono === 'critical' ? undefined : k.tono}
+                sub={k.filtro === 'TODOS' ? 'Órdenes de compra' : k.filtro === 'PENDIENTE' ? 'Sin recibir nada' : k.filtro === 'PARCIAL' ? 'Entregas incompletas' : 'Recibidas por completo'}
+                onClick={() => { haptic('selection'); setFiltro(k.filtro); }} activo={filtro === k.filtro} />
             ))}
           </div>
 
-          <SegmentedControl label="Filtrar por estado" block value={filtro} onChange={setFiltro} options={OPCIONES_FILTRO} />
-
-          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Orden, proveedor, solicitante o artículo…" />
+          <div className="aud2-filtros" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)', marginBottom: 'var(--s-4)' }}>
+            <SearchField value={busqueda} onChange={setBusqueda} placeholder="Orden, proveedor, solicitante o artículo…" />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)', alignItems: 'center' }}>
+              <SegmentedControl label="Filtrar por estado" value={filtro} onChange={setFiltro} options={OPCIONES_FILTRO.map(o => ({ ...o, label: `${o.label} (${cuenta[o.value]})` }))} />
+              <span className="badge" style={{ marginLeft: 'auto' }}>{visibles.length} {visibles.length === 1 ? 'orden' : 'órdenes'}</span>
+            </div>
+          </div>
 
           {visibles.length === 0 ? (
             <EmptyState icon={busqueda ? <SearchX size={22} /> : <PackagePlus size={22} />}
               title={busqueda ? 'Sin coincidencias' : 'Sin órdenes para este filtro'}>
               {busqueda && <button type="button" className="placas-limpiar" onClick={() => setBusqueda('')}>Quitar búsqueda</button>}
             </EmptyState>
+          ) : esTabla ? (
+            <TablaRedimensionable id="almacen-recepciones" columnas={COLUMNAS} ariaLabel="Recepción de compras" altoMax="68vh">
+              {visibles.map(oc => {
+                const tono = TONO_ESTADO[oc.estado_recepcion] ?? 'amber';
+                const av = avance(oc);
+                const imp = importeOC(oc);
+                const falta = oc.estado_recepcion !== 'COMPLETO';
+                const ev = totalEvidencias(oc);
+                return (
+                  <tr key={String(oc.id)}>
+                    <Celda alinear="center">
+                      <div style={{ display: 'inline-flex', gap: 6 }}>
+                        <button type="button" className="btn btn--secondary btn--icon btn--sm btn-tip btn-tip--azul" data-tip="Ver detalle" aria-label={`Ver ${String(oc.id)}`} onClick={() => abrirOC(oc.id, false)}><Eye size={16} /></button>
+                        {falta && puedeRecibir && (
+                          <button type="button" className="btn btn--secondary btn--icon btn--sm btn-tip btn-tip--verde" data-tip="Recepcionar" aria-label={`Recepcionar ${String(oc.id)}`} onClick={() => abrirOC(oc.id, true)}><PackagePlus size={16} /></button>
+                        )}
+                      </div>
+                    </Celda>
+                    <Celda>{fechaTexto(oc.fecha)}</Celda>
+                    <Celda><button type="button" className="oc-codigo" style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent-ink)', background: 'none', border: 0, padding: 0, cursor: 'pointer' }} onClick={() => abrirOC(oc.id, false)}>{String(oc.id)}</button></Celda>
+                    <Celda alinear="center"><span className={`rec-estado rec-estado--${tono}`}>{ETIQUETA_ESTADO[oc.estado_recepcion] ?? oc.estado_recepcion}</span></Celda>
+                    <Celda>{oc.proveedor}</Celda>
+                    <Celda>{oc.solicitante}</Celda>
+                    <Celda><Badge tone={esCredito(oc.condicion_pago) ? 'accent' : 'green'}>{condicionTexto(oc)}</Badge></Celda>
+                    <Celda alinear="right"><strong>{imp.principal}</strong></Celda>
+                    <Celda>
+                      <div className="rec-avance">
+                        <span className="rec-avance__barra" aria-hidden><span style={{ width: `${av.pct}%` }} /></span>
+                        <span className="rec-avance__texto" style={{ color: `var(--${tono}-ink)` }}>{fmt(av.rec)} / {fmt(av.ped)}</span>
+                      </div>
+                    </Celda>
+                    <Celda alinear="center">{ev > 0 ? <span className="rec-sustento"><ImageIcon size={13} /> {ev}</span> : <span className="rec-sustento rec-sustento--sin">{av.rec > 0 ? 'Sin archivos' : '—'}</span>}</Celda>
+                  </tr>
+                );
+              })}
+            </TablaRedimensionable>
           ) : (
-            <>
-              <div className="tarjeta__lista">
-                {visibles.map(oc => (
-                  <FilaOC key={String(oc.id)} oc={oc} puedeRecibir={puedeRecibir}
-                    onAbrir={() => abrirOC(oc.id, false)} onRecepcionar={() => abrirOC(oc.id, true)} />
-                ))}
-              </div>
-              <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--label-2)' }}>
-                Mostrando {visibles.length} de {ocs.length} órdenes
-              </p>
-            </>
+            <div className="tarjeta__lista">
+              {visibles.map(oc => (
+                <FilaOC key={String(oc.id)} oc={oc} puedeRecibir={puedeRecibir}
+                  onAbrir={() => abrirOC(oc.id, false)} onRecepcionar={() => abrirOC(oc.id, true)} />
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -353,12 +403,16 @@ function RecepcionDetalle({ oc, puedeRecibir, puedeRevertir, onRecepcionar, onVo
                   <span className="rec-entregas__titulo">
                     {formatFechaHoraPe(cab.fecha_recepcion)} · {cab.tipo_recepcion ?? 'ENTREGA'}
                   </span>
-                  {cab.sustento_url_presigned ? (
-                    <a href={cab.sustento_url_presigned} target="_blank" rel="noreferrer" aria-label="Ver sustento" className="placas-limpiar">
-                      <ImageIcon size={15} style={{ verticalAlign: '-3px' }} /> Ver sustento
-                    </a>
+                  {(cab.sustentos?.length ? cab.sustentos : cab.sustento_url_presigned ? [cab.sustento_url_presigned] : []).length ? (
+                    <span className="rec-sustentos">
+                      {(cab.sustentos?.length ? cab.sustentos : [cab.sustento_url_presigned as string]).map((u, k) => (
+                        <a key={k} href={u} target="_blank" rel="noreferrer" className="rec-sustento" aria-label={`Ver evidencia ${k + 1}`}>
+                          {/\.pdf(\?|$)/i.test(u) ? <FileText size={13} /> : <ImageIcon size={13} />} {/\.pdf(\?|$)/i.test(u) ? 'Documento' : 'Foto'} {k + 1}
+                        </a>
+                      ))}
+                    </span>
                   ) : (
-                    <span style={{ fontSize: '0.75rem', color: 'var(--label-3)' }}>Sin archivo</span>
+                    <span className="rec-sustento rec-sustento--sin">Sin archivos</span>
                   )}
                   {puedeRevertir && (
                     <button type="button" className="placas-limpiar" style={{ color: 'var(--red-ink)' }}
