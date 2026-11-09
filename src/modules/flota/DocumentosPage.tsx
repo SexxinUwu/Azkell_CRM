@@ -4,13 +4,15 @@ import './disponibilidad.css';
 import './documentos.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Briefcase, CircleAlert, Clock, Download, FileSpreadsheet, FileText, Plus, RefreshCw, SlidersHorizontal, Wrench } from 'lucide-react';
+import { Briefcase, CircleAlert, Clock, Download, FileSpreadsheet, FileText, Plus, RefreshCw, Settings2, SlidersHorizontal, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
-import { Notice, Page, PageHeader } from '../../core/ui/Display';
+import { Notice, Page } from '../../core/ui/Display';
+import { SearchField } from '../../core/ui/Field';
+import { MenuFila } from '../../core/ui/MenuFila';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ChoiceChips } from '../../core/ui/Chips';
-import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
+import { GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
@@ -174,62 +176,53 @@ export function DocumentosPage() {
 
   return (
     <Page wide fill>
-      <PageHeader
-        eyebrow="Flota"
-        title="Documentos de flota"
-        subtitle="Control y gestión de documentación vehicular"
-        actions={
-          <>
-            <Button variant="plain" className="btn--icono btn--icono-acento" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar"
-              disabled={isFetching} onClick={() => qc.invalidateQueries({ queryKey: ['flota', 'vehiculos'] })} />
-            <Button variant="plain" className="btn--icono btn--icono-acento" icon={<SlidersHorizontal size={18} />} aria-label="Configurar placas"
-              title={seleccion ? `Placas a mostrar: ${seleccion.size} de ${todas.length}` : 'Configurar placas a mostrar'} onClick={() => setConfigurando(true)} />
-            {seleccion && <span className="doc-conf__insignia" title="Hay un filtro de placas activo">{seleccion.size}/{todas.length}</span>}
-            <Button variant="secondary" icon={<Download size={16} />} onClick={() => descargarPlantilla().catch(aviso)}>Descargar plantilla Excel</Button>
-            {puedeEditar && <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={() => setImportando(true)}>Importar documentos</Button>}
-            {puedeEditar && (
-              <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ placa: null, prefijo: null, personalizado: null })}>Nuevo documento</Button>
-            )}
-          </>
-        }
-      />
+      {/* Cabecera compacta: título, búsqueda, vistas, filtros y acciones en una sola fila (deja el resto de la pantalla a la información) */}
+      <header className="doc-cab">
+        <div className="doc-cab__titulo">
+          <span className="t-eyebrow">Flota</span>
+          <h1 className="doc-cab__h1">Documentos de flota</h1>
+        </div>
+        <div className="doc-cab__buscar"><SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar placa, tipo o marca…" /></div>
+        <SegmentedControl label="Vista" value={vista} onChange={setVista} options={VISTAS} />
+        <Button variant="secondary" icon={<SlidersHorizontal size={16} />} onClick={() => setFiltrando(true)}
+          aria-label={((empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (alquiler !== 'todas' ? 1 : 0)) ? `Filtros, ${((empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (alquiler !== 'todas' ? 1 : 0))} activos` : 'Filtros'}>
+          <span className="placas-filtros__texto">Filtros</span>
+          {((empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (alquiler !== 'todas' ? 1 : 0)) > 0 && <span className="placas-filtros__n t-numeric">{((empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (alquiler !== 'todas' ? 1 : 0))}</span>}
+        </Button>
+        <div className="doc-cab__acciones">
+          <Button variant="plain" className="btn--icono btn--icono-acento" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar"
+            disabled={isFetching} onClick={() => qc.invalidateQueries({ queryKey: ['flota', 'vehiculos'] })} />
+          <Button variant="plain" className="btn--icono btn--icono-acento" icon={<Settings2 size={18} />} aria-label="Configurar placas"
+            title={seleccion ? `Placas a mostrar: ${seleccion.size} de ${todas.length}` : 'Configurar placas a mostrar'} onClick={() => setConfigurando(true)} />
+          {seleccion && <span className="doc-conf__insignia" title="Hay un filtro de placas activo">{seleccion.size}/{todas.length}</span>}
+          <MenuFila etiqueta="Más acciones" acciones={[
+            { label: 'Descargar plantilla Excel', icon: <Download size={17} />, onSelect: () => { descargarPlantilla().catch(aviso); } },
+            puedeEditar && { label: 'Importar documentos', icon: <FileSpreadsheet size={17} />, onSelect: () => setImportando(true) },
+          ]} />
+          {puedeEditar && (
+            <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ placa: null, prefijo: null, personalizado: null })}>Nuevo documento</Button>
+          )}
+        </div>
+      </header>
 
       {isLoading ? <PageLoader variante="camion" /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : (
         <div className="doc-pagina">
-          <DocMetaVigentes vigentes={cifras.vigente} total={cifras.total} pct={pctDe.vigente} conteo={conteoAlquiler} alquiler={alquiler} onAlquiler={a => { haptic('selection'); setAlquiler(a); }} />
-          <div className="disp-kpis">
+          <DocMetaVigentes vigentes={cifras.vigente} total={cifras.total} pct={pctDe.vigente} conteo={conteoAlquiler} alquiler={alquiler} onAlquiler={a => { haptic('selection'); setAlquiler(a); }}>
             {kpis.map(k => (
-              <button key={k.clave} type="button" className={`disp-kpi pressable disp-kpi--${k.tono === 'amber' ? 'amber' : k.tono}`}
-                aria-pressed={grupo === k.clave}
+              <button key={k.clave} type="button" className={`doc-tile pressable disp-kpi--${k.tono}`} aria-pressed={grupo === k.clave}
                 onClick={() => { haptic('selection'); setGrupo(g => (g === k.clave && k.clave !== 'todos' ? 'todos' : k.clave)); }}>
-                <span>
-                  <span className="disp-kpi__label">{k.label}</span>
-                  <AnimatedNumber value={k.valor} className="disp-kpi__valor t-numeric" />
-                  {(() => {
-                    // Enteros que suman 100; en Vigentes también cuánto falta para el 100 %
-                    const pct = pctDe[k.clave];
-                    return (
-                      <span className="disp-kpi__pct">
-                        <span className="t-numeric">{pct}%</span>{' '}
-                        {k.clave === 'vigente' ? <span>· falta {100 - pct}%</span> : <span>de la flota</span>}
-                        <span aria-hidden style={{ display: 'block', height: 4, borderRadius: 999, background: 'var(--fill, rgba(0,0,0,0.08))', overflow: 'hidden', marginTop: 4 }}>
-                          <span style={{ display: 'block', height: '100%', width: pct + '%', background: 'currentColor', borderRadius: 999 }} />
-                        </span>
-                      </span>
-                    );
-                  })()}
+                <span className="doc-tile__icono" aria-hidden>{k.icono}</span>
+                <span className="doc-tile__txt">
+                  <span className="doc-tile__k">{k.label}</span>
+                  {/* Enteros que suman 100; en Vigentes también cuánto falta para el 100 % */}
+                  <span className="doc-tile__v"><AnimatedNumber value={k.valor} className="t-numeric" /><small>{pctDe[k.clave]}%{k.clave === 'vigente' ? ` · falta ${100 - pctDe[k.clave]}%` : ''}</small></span>
                 </span>
-                <span className="disp-kpi__icono" aria-hidden>{k.icono}</span>
               </button>
             ))}
-          </div>
+          </DocMetaVigentes>
 
-          <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar placa, tipo o marca…"
-            activos={(empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (alquiler !== 'todas' ? 1 : 0)} onAbrirFiltros={() => setFiltrando(true)}>
-            <SegmentedControl label="Vista" value={vista} onChange={setVista} options={VISTAS} />
-          </BarraFiltros>
           <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={(empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (alquiler !== 'todas' ? 1 : 0)}
             onLimpiar={() => { setEmpresa('TODAS'); setGrupo('todos'); setAlquiler('todas'); }} resultado={filas.length} unidad="documento">
             <GrupoFiltro titulo="Empresa">
