@@ -110,6 +110,31 @@ export function esMotora(v: VehiculoFlota): boolean {
   return !/(SEMIREMOLQUE|SEMIRREMOLQUE|CARRETA|FURGON|PLATAFORMA|TANQUE|TOLVA|BATEA|CAMA)/.test(tipo);
 }
 
+/** ¿La unidad está alquilada a otra empresa? */
+export const esAlquilada = (v: VehiculoFlota) => !!String(v.alquilada_a ?? '').trim();
+
+/** Empresa que se comprometió a actualizar los documentos (solo si el convenio lo dice), o null si los actualizamos nosotros */
+export const responsableExterno = (v: VehiculoFlota): string | null =>
+  esAlquilada(v) && v.docs_responsable === 'ARRENDATARIA' ? String(v.alquilada_a).trim() : null;
+
+const fechaLarga = (f: string) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(f); return m ? `${m[3]}/${m[2]}/${m[1]}` : f; };
+
+/** Lo que necesita atención en la unidad: documentos vencidos, por vencer o sin registrar (para pedir su actualización) */
+export function pendientesDeDocs(v: VehiculoFlota, m: MetaVehiculo): string[] {
+  const lineas: string[] = [];
+  for (const d of m.docs) {
+    const f = String(v[d.config.vencimiento] ?? '').trim();
+    if (!d.registrado) lineas.push(`• ${d.config.titulo}: sin registrar`);
+    else if (d.estado.clave === 'vencido') lineas.push(`• ${d.config.titulo}: venció el ${fechaLarga(f)}`);
+    else if (d.estado.clave === 'critico' || d.estado.clave === 'alerta') lineas.push(`• ${d.config.titulo}: vence el ${fechaLarga(f)}${d.estado.dias != null ? ` (en ${d.estado.dias} días)` : ''}`);
+  }
+  for (const p of m.personalizados) {
+    if (p.estado.clave === 'vencido') lineas.push(`• ${p.doc.tipo}: venció el ${fechaLarga(String(p.doc.vencimiento ?? ''))}`);
+    else if (p.estado.clave === 'critico' || p.estado.clave === 'alerta') lineas.push(`• ${p.doc.tipo}: vence el ${fechaLarga(String(p.doc.vencimiento ?? ''))}`);
+  }
+  return lineas;
+}
+
 export interface DocVehiculo {
   config: DocConfig;
   registrado: boolean;

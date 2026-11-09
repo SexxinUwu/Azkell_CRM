@@ -17,7 +17,8 @@ import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
 import { haptic } from '../../core/lib/haptics';
-import { compartirDocumento, eliminarDocumento, urlTemporalDocumento, useVehiculosFlota } from './api';
+import { compartirDocumento, eliminarDocumento, registrarSolicitudDocs, urlTemporalDocumento, useVehiculosFlota } from './api';
+import { DocAlquilerSheet } from './DocAlquilerSheet';
 import { DocumentoFormulario } from './DocumentoFormulario';
 import { DocExpediente, type EliminarDocumento, type FilaExpediente } from './DocExpediente';
 import { DocMatriz } from './DocMatriz';
@@ -26,10 +27,11 @@ import { DocMiniCalendario } from './DocMiniCalendario';
 import { ConfigurarPlacasSheet, guardarSeleccion, leerSeleccion } from './ConfigurarPlacasSheet';
 import { ImportarDocumentosSheet } from './ImportarDocumentosSheet';
 import { descargarPlantilla } from './documentosExcel';
-import { grupoDe, metaDeVehiculo, type DocPersonalizado } from './docsEstado';
+import { esAlquilada, grupoDe, metaDeVehiculo, pendientesDeDocs, responsableExterno, type DocPersonalizado } from './docsEstado';
 
 type Vista = 'expediente' | 'matriz' | 'calendario';
 type Grupo = 'todos' | 'vigente' | 'alerta' | 'vencido' | 'sin';
+type FiltroAlquiler = 'todas' | 'alquiladas' | 'externa';
 interface Formulario { placa: string | null; prefijo: string | null; personalizado: DocPersonalizado | null }
 
 const VISTAS: Array<{ value: Vista; label: string }> = [
@@ -46,6 +48,8 @@ export function DocumentosPage() {
   const [empresa, setEmpresa] = useState('TODAS');
   const [filtrando, setFiltrando] = useState(false);
   const [grupo, setGrupo] = useState<Grupo>('todos');
+  const [alquiler, setAlquiler] = useState<FiltroAlquiler>('todas');
+  const [editandoAlquiler, setEditandoAlquiler] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState('');
   const [placa, setPlaca] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<Formulario | null>(null);
@@ -80,10 +84,32 @@ export function DocumentosPage() {
     const q = busqueda.trim().toUpperCase();
     return delEmpresa.filter(f =>
       (grupo === 'todos' || grupoDe(f.m) === grupo)
+      && (alquiler === 'todas' || (alquiler === 'alquiladas' ? esAlquilada(f.v) : !!responsableExterno(f.v)))
       && (!q || [f.v.placa, f.v.tipo, f.v.marca, f.v.chasis].some(t => String(t ?? '').toUpperCase().includes(q))));
-  }, [delEmpresa, grupo, busqueda]);
+  }, [delEmpresa, grupo, alquiler, busqueda]);
 
   const aviso = (err: unknown) => toast(errorMessage(err), 'error');
+  const nombresEmpresa = useMemo(() => empresas.map(e => e.nombre), [empresas]);
+  const vehiculoAlquiler = editandoAlquiler ? vehiculos.find(v => v.placa === editandoAlquiler) ?? null : null;
+
+  /** Arma el aviso para la empresa responsable con lo vencido, por vencer o sin registrar, lo deja registrado y abre WhatsApp */
+  async function pedirActualizacion(placaPedida: string) {
+    const fila = todas.find(f => f.v.placa === placaPedida);
+    const empresaResp = fila ? responsableExterno(fila.v) : null;
+    if (!fila || !empresaResp) return;
+    const lineas = pendientesDeDocs(fila.v, fila.m);
+    if (lineas.length === 0) { toast('Esta unidad no tiene documentos vencidos, por vencer ni sin registrar.'); return; }
+    let nuestra = '';
+    try { nuestra = localStorage.getItem('fleet_empresa_nombre') ?? ''; } catch { /* sin almacenamiento */ }
+    const texto = `Hola, ${nuestra ? `de ${nuestra} ` : ''}les escribimos por la unidad ${fila.v.placa}, alquilada a ${empresaResp}. Según el convenio, ustedes actualizan sus documentos y hoy tiene pendiente:\n\n${lineas.join('\n')}\n\nPor favor envíennos los documentos actualizados. Gracias.`;
+    haptic('selection');
+    // La ventana se abre en el mismo toque (si no, el navegador la bloquea); el registro de la solicitud va después
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank', 'noopener,noreferrer');
+    try {
+      await registrarSolicitudDocs({ placa: fila.v.placa, empresa: empresaResp, detalle: lineas.join('\n') });
+      await qc.invalidateQueries({ queryKey: ['flota', 'vehiculos'] });
+    } catch (err) { aviso(err); }
+  }
   const verArchivo = (url: string) => {
     haptic('selection');
     urlTemporalDocumento(url).then(u => window.open(u, '_blank', 'noopener,noreferrer')).catch(aviso);
@@ -175,13 +201,18 @@ export function DocumentosPage() {
           </div>
 
           <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar placa, tipo o marca…"
-            activos={(empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0)} onAbrirFiltros={() => setFiltrando(true)}>
+            activos={(empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (alquiler !== 'todas' ? 1 : 0)} onAbrirFiltros={() => setFiltrando(true)}>
             <SegmentedControl label="Vista" value={vista} onChange={setVista} options={VISTAS} />
           </BarraFiltros>
-          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={(empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0)}
-            onLimpiar={() => { setEmpresa('TODAS'); setGrupo('todos'); }} resultado={filas.length} unidad="documento">
+          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={(empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (alquiler !== 'todas' ? 1 : 0)}
+            onLimpiar={() => { setEmpresa('TODAS'); setGrupo('todos'); setAlquiler('todas'); }} resultado={filas.length} unidad="documento">
             <GrupoFiltro titulo="Empresa">
               <ChoiceChips label="Empresa" value={empresa} onChange={setEmpresa} options={[{ value: 'TODAS', label: 'Todas' }, ...empresas.map(e => ({ value: e.clave, label: e.nombre }))]} />
+            </GrupoFiltro>
+            <GrupoFiltro titulo="Alquiler">
+              <ChoiceChips label="Alquiler" value={alquiler} onChange={v => setAlquiler(v as FiltroAlquiler)} options={[
+                { value: 'todas', label: 'Todas' }, { value: 'alquiladas', label: 'Alquiladas' }, { value: 'externa', label: 'Las actualiza otra empresa' },
+              ]} />
             </GrupoFiltro>
             <GrupoFiltro titulo="Estado del documento">
               <ChoiceChips label="Estado del documento" value={grupo} onChange={v => setGrupo(v as Grupo)} options={[
@@ -194,7 +225,8 @@ export function DocumentosPage() {
             <DocExpediente filas={filas} placa={placa} onElegir={setPlaca} puedeEditar={puedeEditar}
               onCargar={(p, prefijo) => setFormulario({ placa: p, prefijo, personalizado: null })}
               onEditarPersonalizado={(p, doc) => setFormulario({ placa: p, prefijo: null, personalizado: doc })}
-              onVerArchivo={verArchivo} onCompartir={compartir} onEliminar={setAEliminar} />
+              onVerArchivo={verArchivo} onCompartir={compartir} onEliminar={setAEliminar}
+              onAlquiler={setEditandoAlquiler} onPedirActualizacion={p => { void pedirActualizacion(p); }} />
           )}
           {vista === 'matriz' && (
             <div className="doc-matriz-con-mini">
@@ -210,6 +242,8 @@ export function DocumentosPage() {
 
       <DocumentoFormulario open={!!formulario} placa={formulario?.placa ?? null} prefijo={formulario?.prefijo ?? null}
         personalizado={formulario?.personalizado ?? null} usuario={user?.name ?? ''} onClose={cerrarFormulario} />
+
+      <DocAlquilerSheet vehiculo={vehiculoAlquiler} empresas={nombresEmpresa} onClose={() => setEditandoAlquiler(null)} onHecho={refrescar} />
 
       <ConfigurarPlacasSheet open={configurando} onClose={() => setConfigurando(false)} opciones={opcionesPlacas} seleccion={seleccion} onAplicar={aplicarSeleccion} />
       <ImportarDocumentosSheet open={importando} onClose={() => { setImportando(false); refrescar(); }} placasConocidas={todas.map(f => f.v.placa)} />
