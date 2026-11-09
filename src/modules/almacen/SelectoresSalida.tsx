@@ -13,7 +13,8 @@ import { EscanerCodigo } from './EscanerCodigo';
 // artículo con código, marca, sistema, costo en soles y stock) y con la foto de cada artículo.
 // Las fotos vienen de S3 con una URL firmada; el service worker las guarda por su ruta sin la firma.
 
-const MAX_FILAS = 80;
+// Filas que se dibujan por tanda; al llegar al final de la lista se agregan más hasta completar los resultados
+const MAX_FILAS = 60;
 
 function usePopover(abierto: boolean, cerrar: () => void) {
   const raiz = useRef<HTMLDivElement>(null);
@@ -130,18 +131,39 @@ function textoBusqueda(a: ArticuloInv) {
 
 /** Artículo del almacén: el campo muestra el elegido; al tocarlo se abre una hoja con buscador y la lista
  *  (foto, código, marca, sistema, costo en soles y stock). El botón QR lee el código con la cámara. */
-export function ArticuloSelector({ value, articulos, onSelect, invalido, id }: {
+export function ArticuloSelector({ value, articulos, onSelect, invalido, id, conEscaner = true, servicioDe, onCrear }: {
   value: string; articulos: ArticuloInv[]; onSelect: (a: ArticuloInv) => void; invalido?: boolean; id?: string;
+  /** false: sin botones QR (la pantalla ya tiene el suyo) */
+  conEscaner?: boolean;
+  /** Marca los artículos que en realidad son servicios (no llevan stock) */
+  servicioDe?: (a: ArticuloInv) => boolean;
+  /** Ofrece registrar lo escrito como artículo nuevo o como servicio */
+  onCrear?: (texto: string, servicio: boolean) => void;
 }) {
   const [abierto, setAbierto] = useState(false);
   const [escaneando, setEscaneando] = useState(false);
   const [q, setQ] = useState('');
+  const [cuantas, setCuantas] = useState(MAX_FILAS);
+  const listaRef = useRef<HTMLDivElement>(null);
+  const centinelaRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
-  const { visibles, total } = useMemo(() => {
+  // La búsqueda recorre TODO el catálogo; solo el dibujo va por tandas
+  const { resultados, total } = useMemo(() => {
     const n = q.trim().toUpperCase();
     const lista = n ? articulos.filter(a => textoBusqueda(a).includes(n)) : articulos;
-    return { visibles: lista.slice(0, MAX_FILAS), total: lista.length };
+    return { resultados: lista, total: lista.length };
   }, [articulos, q]);
+  const visibles = useMemo(() => resultados.slice(0, cuantas), [resultados, cuantas]);
+  const hayMas = cuantas < total;
+
+  useEffect(() => { setCuantas(MAX_FILAS); }, [q, abierto]);
+  useEffect(() => {
+    const el = centinelaRef.current;
+    if (!abierto || !hayMas || !el) return;
+    const obs = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) setCuantas(c => c + MAX_FILAS); }, { root: listaRef.current, rootMargin: '200px' });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [abierto, hayMas, visibles.length]);
 
   function elegir(a: ArticuloInv) {
     onSelect(a);
@@ -163,26 +185,37 @@ export function ArticuloSelector({ value, articulos, onSelect, invalido, id }: {
         style={{ textAlign: 'left', fontSize: '0.875rem', minHeight: '2.5rem', width: '100%', minWidth: 0, cursor: 'pointer', color: value ? 'var(--label)' : 'var(--label-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {value || 'Elegir artículo…'}
       </button>
-      <button type="button" className="sal-escanear" onClick={() => setEscaneando(true)} aria-label="Escanear código de barras o QR" title="Escanear código de barras o QR">
-        <QrCode size={18} />
-      </button>
+      {conEscaner && (
+        <button type="button" className="sal-escanear" onClick={() => setEscaneando(true)} aria-label="Escanear código de barras o QR" title="Escanear código de barras o QR">
+          <QrCode size={18} />
+        </button>
+      )}
       <Sheet open={abierto} onClose={() => setAbierto(false)} title="Buscar artículo">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
           <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
             <input className="input" autoFocus value={q} onChange={e => setQ(e.target.value)}
               placeholder="Código, código de barras, nombre, marca…" style={{ fontSize: '1rem', minHeight: 44, flex: 1 }} />
-            <button type="button" className="sal-escanear" style={{ width: 44, height: 44 }} onClick={() => { setAbierto(false); setEscaneando(true); }} aria-label="Escanear código">
-              <QrCode size={18} />
-            </button>
+            {conEscaner && (
+              <button type="button" className="sal-escanear" style={{ width: 44, height: 44 }} onClick={() => { setAbierto(false); setEscaneando(true); }} aria-label="Escanear código">
+                <QrCode size={18} />
+              </button>
+            )}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>
-            {total} artículo(s){total > visibles.length ? ` · mostrando ${visibles.length}, escribe para afinar` : ''}
+            {total} artículo(s)
           </div>
-          <div role="listbox" className="sal-art-lista">
+          {onCrear && q.trim() && (
+            <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+              <button type="button" className="btn btn--secondary btn--sm" onClick={() => { setAbierto(false); onCrear(q.trim(), false); }}>Registrar artículo «{q.trim()}»</button>
+              <button type="button" className="btn btn--secondary btn--sm" onClick={() => { setAbierto(false); onCrear(q.trim(), true); }}>Registrar servicio «{q.trim()}»</button>
+            </div>
+          )}
+          <div role="listbox" className="sal-art-lista" ref={listaRef}>
             {visibles.length === 0 && <div style={{ padding: 16, color: 'var(--label-2)', fontSize: '0.875rem' }}>Sin resultados para “{q}”.</div>}
             {visibles.map(a => {
               const costo = costoSolesArticulo(a);
               const stock = Number(a.stock_actual) || 0;
+              const esServicio = !!servicioDe?.(a);
               return (
                 <button key={a.id} type="button" role="option" aria-selected={a.articulo === value}
                   onClick={() => elegir(a)} className="sal-art-opcion" data-seleccionado={a.articulo === value || undefined}>
@@ -193,8 +226,8 @@ export function ArticuloSelector({ value, articulos, onSelect, invalido, id }: {
                       {a.codigo_articulo || a.id}{a.marca ? ` · ${a.marca}` : ''}{a.sistema ? ` · ${a.sistema}` : ''}
                     </span>
                     <span className="sal-art-opcion__meta">
-                      <span className={stock > 0 ? 'sal-stock sal-stock--ok' : 'sal-stock sal-stock--no'}>
-                        {stock > 0 ? `Stock: ${Number(stock).toLocaleString('es-PE', { maximumFractionDigits: 2 })}${a.unidad ? ` ${a.unidad}` : ''}` : 'Sin stock'}
+                      <span className={esServicio || stock > 0 ? 'sal-stock sal-stock--ok' : 'sal-stock sal-stock--no'}>
+                        {esServicio ? 'Servicio' : stock > 0 ? `Stock: ${Number(stock).toLocaleString('es-PE', { maximumFractionDigits: 2 })}${a.unidad ? ` ${a.unidad}` : ''}` : 'Sin stock'}
                       </span>
                       <span className="sal-art-opcion__costo">{formatSoles(costo)}</span>
                     </span>
@@ -202,6 +235,7 @@ export function ArticuloSelector({ value, articulos, onSelect, invalido, id }: {
                 </button>
               );
             })}
+            {hayMas && <div ref={centinelaRef} aria-hidden style={{ minHeight: 40 }} />}
           </div>
         </div>
       </Sheet>

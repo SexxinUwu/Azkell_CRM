@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ArticuloSelector } from './SelectoresSalida';
 import { useQueryClient } from '@tanstack/react-query';
-import { CreditCard, FileText, Truck, Landmark, Package, Paperclip, Plus, ScanLine, Users, Wrench, X } from 'lucide-react';
+import { CreditCard, FileText, Truck, Landmark, Package, Paperclip, Plus, ScanLine, Users, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Field, TextInput } from '../../core/ui/Field';
@@ -247,25 +248,12 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
 
   // ── Opciones ──────────────────────────────────────────────────────────────
 
-  // Artículos y servicios van juntos en cualquier orden (de compra o de servicio): cada uno se reconoce por su ícono y su etiqueta
-  // Solo se ofrecen los artículos activos (no los inactivos ni los descontinuados); uno ya puesto en una línea de esta orden se conserva para que se siga viendo
-  // Memorizado: si se rearmara en cada tecla del formulario, el buscador recalcularía su índice de todo el catálogo cada vez
+  // Artículos y servicios van juntos. Solo se ofrecen los activos (no inactivos ni descontinuados); uno ya puesto en una línea de esta orden se conserva.
+  // Memorizado: el selector no debe recalcular su búsqueda en cada tecla del formulario.
   const idsEnLineas = lineas.map(l => l.inventario_id).filter(Boolean).join('|');
-  const opcionesArticulos: ComboboxOption[] = useMemo(() => {
+  const articulosOC = useMemo(() => {
     const yaEnLineas = new Set(idsEnLineas.split('|'));
-    return inventario
-    .filter(a => esVigente(a) || yaEnLineas.has(a.id))
-    .map(a => ({
-      value: a.id,
-      label: a.descripcion || a.articulo || a.id,
-      description: [esArticuloServicio(a) ? 'Servicio' : 'Artículo', a.id, a.marca, a.familia].filter(Boolean).join(' · '),
-      keywords: [a.codigo_articulo, a.codigo_barras, a.articulo].filter(Boolean).join(' '),
-      icon: esArticuloServicio(a)
-        ? <span className="oc-opcion__sin-foto"><Wrench size={15} strokeWidth={1.8} /></span>
-        : a.imagen_url
-        ? <img src={a.imagen_url} alt="" className="oc-opcion__foto" loading="lazy" />
-        : <span className="oc-opcion__sin-foto"><Package size={15} strokeWidth={1.8} /></span>,
-    }));
+    return inventario.filter(a => esVigente(a) || yaEnLineas.has(a.id));
   }, [inventario, idsEnLineas]);
 
   const opcionesProveedores: ComboboxOption[] = proveedores.map(p => ({
@@ -366,15 +354,6 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       if (modoIgv === 'mas_igv') return calcularLinea({ ...base, vu: (ref / (1 + TASA_IGV)).toFixed(4) }, 'vu', modoIgv);
       return calcularLinea({ ...base, pu: ref.toFixed(2) }, 'pu', modoIgv);
     }));
-  }
-
-  function elegirArticulo(key: string, id: string | null) {
-    if (!id) {
-      setLineas(prev => prev.map(l => (l.key === key ? { ...l, inventario_id: null, descripcion: '', refCosto: null, unidad: null } : l)));
-      return;
-    }
-    const art = inventario.find(a => a.id === id);
-    if (art) asignarArticulo(key, art);
   }
 
   function quitarLinea(key: string) {
@@ -739,20 +718,15 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
                   <article key={l.key} className={`oc-linea${alerta ? (alerta.subio ? ' oc-linea--sube' : ' oc-linea--baja') : ''}`}>
                     <div className="oc-linea__fila">
                       <div className="oc-linea__articulo">
-                        <Combobox
+                        <ArticuloSelector
                           id={`oc-art-${l.key}`}
-                          options={opcionesArticulos}
-                          value={l.inventario_id}
-                          onChange={id => elegirArticulo(l.key, id)}
-                          placeholder="Busca un artículo o un servicio…"
-                          enHoja
-                          tituloHoja="Buscar artículo o servicio"
-                          loading={inventarioQ.isLoading}
-                          creates={[
-                            { label: 'Registrar artículo', onCreate: texto => setAltaArticulo({ key: l.key, texto: texto.trim(), servicio: false }), icon: <Package size={16} strokeWidth={2} /> },
-                            { label: 'Registrar servicio', onCreate: texto => setAltaArticulo({ key: l.key, texto: texto.trim(), servicio: true }), icon: <Wrench size={16} strokeWidth={2} /> },
-                          ]}
-                          aria-invalid={!!mostrar(error ?? undefined) || undefined}
+                          value={l.descripcion}
+                          articulos={articulosOC}
+                          onSelect={art => asignarArticulo(l.key, art)}
+                          invalido={!!mostrar(error ?? undefined)}
+                          conEscaner={false}
+                          servicioDe={esArticuloServicio}
+                          onCrear={(texto, servicio) => setAltaArticulo({ key: l.key, texto, servicio })}
                         />
                       </div>
                       {(
