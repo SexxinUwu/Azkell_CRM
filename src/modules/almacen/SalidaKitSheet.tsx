@@ -72,7 +72,7 @@ export function SalidaKitSheet({ open, onClose, placa, inventario, onAgregar }: 
       const cantidad = Number(k.cantidad) || 1;
       return {
         inventario_id: art?.id ?? null,
-        descripcion: art ? (art.articulo || art.descripcion) : k.item_nombre,
+        descripcion: art ? (art.descripcion || art.articulo) : k.item_nombre,
         cantidad,
         costo_unitario: costo,
         moneda: 'PEN',

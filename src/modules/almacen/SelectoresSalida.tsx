@@ -218,11 +218,11 @@ export function ArticuloSelector({ value, articulos, onSelect, invalido, id, con
               const stock = Number(a.stock_actual) || 0;
               const esServicio = !!servicioDe?.(a);
               return (
-                <button key={a.id} type="button" role="option" aria-selected={a.articulo === value}
-                  onClick={() => elegir(a)} className="sal-art-opcion" data-seleccionado={a.articulo === value || undefined}>
+                <button key={a.id} type="button" role="option" aria-selected={(a.descripcion || a.articulo) === value}
+                  onClick={() => elegir(a)} className="sal-art-opcion" data-seleccionado={(a.descripcion || a.articulo) === value || undefined}>
                   <Miniatura url={a.imagen_url} nombre={a.articulo} />
                   <span className="sal-art-opcion__texto">
-                    <span className="sal-art-opcion__nombre">{a.articulo || a.descripcion}</span>
+                    <span className="sal-art-opcion__nombre">{a.descripcion || a.articulo}</span>
                     <span className="sal-art-opcion__meta">
                       {a.codigo_articulo || a.id}{a.marca ? ` · ${a.marca}` : ''}{a.sistema ? ` · ${a.sistema}` : ''}
                     </span>

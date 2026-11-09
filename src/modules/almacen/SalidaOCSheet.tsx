@@ -136,7 +136,7 @@ export function SalidaOCSheet({ open, onClose, inventario, onAgregar }: {
         const costo = art ? costoSolesArticulo(art) : numero(it.precio_unitario || it.costo_unitario);
         return {
           inventario_id: art?.id ?? null,
-          descripcion: art ? (art.articulo || art.descripcion) : nombre,
+          descripcion: art ? (art.descripcion || art.articulo) : nombre,
           cantidad,
           costo_unitario: costo,
           moneda: 'PEN',

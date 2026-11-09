@@ -971,14 +971,16 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             const salidaIds = (rows || []).map(r => r.id);
             if (!salidaIds.length) return res.json([]);
 
-            targetDb.query('SELECT * FROM detalle_salidas_inv WHERE salida_id IN (?) ORDER BY id ASC', [salidaIds], (errItems, itemRows) => {
+            // El nombre completo sale del inventario (código, medidas, marca…); la línea de la salida guarda solo el nombre corto
+            targetDb.query(`SELECT d.*, i.descripcion AS inv_nombre FROM detalle_salidas_inv d LEFT JOIN inventario i ON i.id = d.inventario_id
+                            WHERE d.salida_id IN (?) ORDER BY d.id ASC`, [salidaIds], (errItems, itemRows) => {
                 const itemsMap = {};
                 (itemRows || []).forEach(d => {
                     if (!itemsMap[d.salida_id]) itemsMap[d.salida_id] = [];
                     itemsMap[d.salida_id].push({
                         id: d.id,
                         inventario_id: d.inventario_id || null,
-                        descripcion: d.descripcion || '',
+                        descripcion: d.inv_nombre ? `${d.inventario_id} — ${d.inv_nombre}` : (d.descripcion || ''),
                         cantidad: parseFloat(d.cantidad) || 0,
                         costo_unitario: parseFloat(d.costo_unitario) || 0,
                         moneda: d.moneda || 'PEN',
