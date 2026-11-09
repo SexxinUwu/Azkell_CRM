@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { ChevronRight, Layers } from 'lucide-react';
 import { SearchField } from '../../core/ui/Field';
@@ -21,21 +21,19 @@ export function KitsArbol({ marcas, total, seleccion, onSeleccion, busqueda, onB
   onBusqueda: (v: string) => void;
 }) {
   const reducir = useReducedMotion();
-  const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
-  // Con una búsqueda activa se muestran abiertas las marcas que coinciden (así se ven sus modelos)
-  const estaAbierta = (m: string) => !!busqueda.trim() || abiertas.has(m) || seleccion.marca === m;
-
-  const alternar = (m: string) => setAbiertas(prev => {
-    const n = new Set(prev);
-    if (estaAbierta(m)) { n.delete(m); if (seleccion.marca === m && !busqueda.trim()) { /* se queda elegida pero cerrada */ } } else n.add(m);
-    return n;
-  });
+  // Una sola marca abierta a la vez (como un acordeón): al abrir otra, la anterior se cierra
+  // undefined = automático: con una búsqueda que deja una sola marca, se abre para ver sus modelos; cualquier toque fija la elección
+  const [abierta, setAbierta] = useState<string | null | undefined>(seleccion.marca ?? undefined);
+  const unicaPorBusqueda = busqueda.trim() && marcas.length === 1 ? marcas[0].marca : null;
+  const estaAbierta = (m: string) => (abierta === undefined ? unicaPorBusqueda === m : abierta === m);
+  // Al cambiar el texto de búsqueda vuelve el modo automático
+  useEffect(() => { if (busqueda.trim()) setAbierta(undefined); }, [busqueda]);
 
   return (
     <aside className="kt-lado" aria-label="Marcas y modelos">
       <SearchField value={busqueda} onChange={onBusqueda} placeholder="Marca, modelo o ítem…" />
       <nav className="kt-arbol">
-        <button type="button" className="kt-todos" aria-current={!seleccion.marca} onClick={() => { haptic('selection'); onSeleccion({ marca: null, modelo: null }); }}>
+        <button type="button" className="kt-todos" aria-current={!seleccion.marca} onClick={() => { haptic('selection'); setAbierta(null); onSeleccion({ marca: null, modelo: null }); }}>
           <Layers size={16} aria-hidden /> <span>Todos los kits</span> <em>{total}</em>
         </button>
 
@@ -46,11 +44,11 @@ export function KitsArbol({ marcas, total, seleccion, onSeleccion, busqueda, onB
             <div key={m.marca} className="kt-marca">
               <div className={`kt-marca__fila${marcaElegida ? ' kt-marca__fila--sel' : ''}`}>
                 <button type="button" className="kt-marca__flecha" aria-label={abierta ? `Contraer ${m.marca}` : `Expandir ${m.marca}`} aria-expanded={abierta}
-                  onClick={() => { haptic('selection'); alternar(m.marca); }}>
+                  onClick={() => { haptic('selection'); setAbierta(estaAbierta(m.marca) ? null : m.marca); }}>
                   <ChevronRight size={15} className={abierta ? 'kt-giro' : undefined} />
                 </button>
                 <button type="button" className="kt-marca__nombre" aria-current={marcaElegida}
-                  onClick={() => { haptic('selection'); onSeleccion({ marca: m.marca, modelo: null }); setAbiertas(p => new Set(p).add(m.marca)); }}>
+                  onClick={() => { haptic('selection'); onSeleccion({ marca: m.marca, modelo: null }); setAbierta(m.marca); }}>
                   <span>{m.marca}</span><em>{m.kits}</em>
                 </button>
               </div>
