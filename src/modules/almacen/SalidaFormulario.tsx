@@ -158,7 +158,7 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset,
       if (it.uid !== uid) return it;
       const cu = costoSolesArticulo(art);
       const cant = Number(it.cantidad) || 1;
-      return { ...it, inventario_id: art.id, descripcion: art.articulo || art.descripcion, costo_unitario: cu, moneda: 'PEN', cantidad: cant, importe: cant * cu };
+      return { ...it, inventario_id: art.id, descripcion: art.descripcion || art.articulo, costo_unitario: cu, moneda: 'PEN', cantidad: cant, importe: cant * cu };
     }));
   }
 

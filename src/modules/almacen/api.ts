@@ -540,7 +540,11 @@ export interface PlacaSalida {
 export function usePlacasSalida() {
   return useQuery<PlacaSalida[]>({
     queryKey: ['almacen', 'placas-salida'],
-    queryFn: async () => (await api<{ data?: PlacaSalida[] }>('/placas-lista')).data ?? [],
+    // El servidor devuelve la lista directa; se acepta también { data } por si cambia
+    queryFn: async () => {
+      const r = await api<PlacaSalida[] | { data?: PlacaSalida[] }>('/placas-lista');
+      return Array.isArray(r) ? r : (r.data ?? []);
+    },
     staleTime: 5 * 60_000,
   });
 }
