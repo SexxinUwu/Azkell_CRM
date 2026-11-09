@@ -1,0 +1,15 @@
+/* Selector de artículos (hoja con buscador y lista con foto). Lo usan Salidas y Órdenes de compra: por eso vive aparte de salidas.css */
+.sal-escanear { flex-shrink: 0; width: 2.5rem; min-height: 2.5rem; display: grid; place-items: center; border-radius: var(--r-sm); border: 1px solid var(--separator); background: var(--surface); color: var(--accent-ink); cursor: pointer; }
+.sal-art-lista { display: flex; flex-direction: column; overflow-y: auto; max-height: min(60dvh, 520px); border: 1px solid var(--separator); border-radius: var(--r-md); }
+.sal-art-opcion { display: flex; align-items: center; gap: var(--s-3); width: 100%; text-align: left; min-height: 64px; padding: 8px 12px; border: 0; border-bottom: 1px solid var(--separator); background: transparent; color: var(--label); cursor: pointer; }
+.sal-art-opcion:last-child { border-bottom: 0; }
+.sal-art-opcion[data-seleccionado] { background: var(--accent-tint); }
+.sal-art-opcion:hover { background: var(--fill-subtle); }
+.sal-art-opcion__texto { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 2px; }
+.sal-art-opcion__nombre { font-weight: 700; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sal-art-opcion__meta { display: flex; justify-content: space-between; align-items: center; gap: var(--s-2); font-size: 0.75rem; color: var(--label-2); min-width: 0; overflow: hidden; }
+.sal-art-opcion__meta > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sal-art-opcion__costo { font-weight: 700; color: var(--accent-ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sal-stock { font-weight: 700; white-space: nowrap; }
+.sal-stock--ok { color: var(--green-ink); }
+.sal-stock--no { color: var(--red-ink); }

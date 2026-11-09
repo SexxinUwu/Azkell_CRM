@@ -6,7 +6,7 @@ import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { Combobox } from '../../core/ui/Combobox';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { useToast } from '../../core/ui/Toast';
-import { errorMessage } from '../../core/api/client';
+import { ApiError, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
 import { formatSoles } from '../../core/lib/format';
@@ -18,6 +18,7 @@ import {
 import { ArticuloSelector, SolicitanteSelector, usePersonalSolicitante } from './SelectoresSalida';
 import { SalidaKitSheet } from './SalidaKitSheet';
 import { SalidaOCSheet } from './SalidaOCSheet';
+import { SinStockDialogo, sinStockDe, type ArticuloSinStock } from './SinStockDialogo';
 import './salidas.css';
 
 // Solicitud de salida (alta y edición). Como el clásico: cabecera (fecha, tipo de orden, OT, destino, placa,
@@ -195,6 +196,8 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
     setKitAbierto(true);
   }
 
+  const [sinStock, setSinStock] = useState<ArticuloSinStock[] | null>(null);
+
   async function guardar() {
     setIntento(true);
     if (!fecha) { haptic('warning'); toast('La fecha es requerida', 'error'); return; }
@@ -220,7 +223,9 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
       toast(s ? 'Salida actualizada' : 'Salida registrada');
       onGuardado();
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      // Sin existencias: se explica qué falta y, si hay compras sin recepcionar, con sus códigos
+      const faltantes = err instanceof ApiError ? sinStockDe(err.data) : null;
+      if (faltantes) { haptic('warning'); setSinStock(faltantes); } else toast(errorMessage(err), 'error');
     } finally {
       setGuardando(false);
     }
@@ -361,6 +366,8 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset 
           toast(`Se agregaron ${nuevas.length} productos de la orden de compra ${codigo}`);
         }}
       />
+
+      <SinStockDialogo articulos={sinStock} onClose={() => setSinStock(null)} />
     </Sheet>
   );
 }

@@ -1,11 +1,13 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { FileText, PackageMinus, Plus, SearchX, Trash2 } from 'lucide-react';
+import { CircleCheck, ClipboardList, Coins, Eye, FileDown, FileSpreadsheet, FileText, PackageCheck, PackageMinus, Plus, RefreshCw, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { Field, SearchField, TextInput } from '../../core/ui/Field';
+import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { ConfirmSheet } from '../../core/ui/Sheet';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import { MenuOtros, type OpcionOtros } from '../../core/ui/MenuOtros';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { useToast } from '../../core/ui/Toast';
 import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
@@ -15,6 +17,7 @@ import { haptic } from '../../core/lib/haptics';
 import { descargarArchivo } from '../../core/lib/pdf';
 import { exportarExcel } from '../../core/lib/excel';
 import { formatFechaPe, formatSoles } from '../../core/lib/format';
+import { hoyLima } from './entradaReglas';
 import {
   anularSalida, despacharSalida, eliminarSalida, estadoSalida, TIPO_ORDEN_AJUSTE,
   useInventario, useSalidas, type EstadoSalida, type ItemSalida, type SalidaInv,
@@ -24,16 +27,43 @@ import { nombreSolicitante, SalidaDetalle } from './SalidaDetalle';
 import { AnularDialogo, DespacharDialogo } from './SalidaDialogos';
 import { pdfSalida } from './salidaPdf';
 import './salidas.css';
+import './entradas.css';
+import './almacen.css';
 
 // Órdenes de salida: pestañas Pendientes / Despachadas / Anuladas, búsqueda y filtros, detalle con
 // despacho parcial, anulación, edición, comprobante PDF y exportación a Excel (mismo flujo que el clásico).
 
 type Pestana = 'pend' | 'desp' | 'anulado';
-const POR_PAGINA = 25;
+type FiltroEstado = 'todas' | Pestana;
+/** Por defecto una fila por salida (sin duplicados); «Por artículo» muestra cada artículo, igual que en Órdenes de compra */
+type Vista = 'salidas' | 'articulos';
+const POR_PAGINA = 20;
 const ESTADO_DE_PESTANA: Record<Pestana, EstadoSalida> = { pend: 'Pendiente', desp: 'Despachado', anulado: 'Anulado' };
 
-interface Filtros { ot: string; placa: string; mes: string; desde: string; hasta: string }
-const SIN_FILTROS: Filtros = { ot: '', placa: '', mes: '', desde: '', hasta: '' };
+const COLUMNAS: ColumnaTabla[] = [
+  { id: 'acciones', titulo: 'Acciones', ancho: 72, minimo: 64, alinear: 'center' },
+  { id: 'fecha', titulo: 'Fecha', ancho: 110 },
+  { id: 'tipo', titulo: 'Tipo de orden', ancho: 140 },
+  { id: 'folio', titulo: 'N° de salida', ancho: 140 },
+  { id: 'estado', titulo: 'Estado', ancho: 120, alinear: 'center' },
+  { id: 'ot', titulo: 'N° OT', ancho: 130 },
+  { id: 'placa', titulo: 'Placa', ancho: 96 },
+  { id: 'responsable', titulo: 'Responsable', ancho: 210 },
+  { id: 'codigo', titulo: 'Cód. art.', ancho: 104 },
+  { id: 'articulo', titulo: 'Artículo', ancho: 260 },
+  { id: 'cant', titulo: 'Cant.', ancho: 76, alinear: 'right' },
+  { id: 'costo', titulo: 'Costo unit.', ancho: 104, alinear: 'right' },
+  { id: 'total', titulo: 'Total (S/)', ancho: 120, alinear: 'right' },
+];
+
+/** Mismo día del mes anterior (28/10 → 28/09); si el mes anterior es más corto, el último día de ese mes */
+function mesAtras(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const anio = m === 1 ? y - 1 : y;
+  const mes = m === 1 ? 12 : m - 1;
+  const ultimo = new Date(Date.UTC(anio, mes, 0)).getUTCDate();
+  return `${anio}-${String(mes).padStart(2, '0')}-${String(Math.min(d, ultimo)).padStart(2, '0')}`;
+}
 
 /** Descripción sin el código del artículo al inicio (como el clásico) */
 function descripcionLimpia(desc: string | null | undefined, invId: string | null | undefined): string {
@@ -62,10 +92,11 @@ export function SalidasPage() {
   const salidas = useMemo(() => data ?? [], [data]);
   const articulos = inventario ?? [];
 
-  const [pestana, setPestana] = useState<Pestana>('desp');
+  const [estadoFiltro, setEstadoFiltro] = useState<FiltroEstado>('todas');
   const [busqueda, setBusqueda] = useState('');
-  const [filtros, setFiltros] = useState<Filtros>(SIN_FILTROS);
-  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
+  const [desde, setDesde] = useState(() => mesAtras(hoyLima()));
+  const [hasta, setHasta] = useState(() => hoyLima());
+  const [vista, setVista] = useState<Vista>('salidas');
   const [pagina, setPagina] = useState(1);
 
   const [detalleId, setDetalleId] = useState<number | null>(null);
@@ -84,43 +115,51 @@ export function SalidasPage() {
     qc.invalidateQueries({ queryKey: ['almacen', 'inventario'] }),
   ]);
 
-  // Conteos y KPIs (el clásico los calcula de la misma forma)
-  const conteo = useMemo(() => {
-    const c = { pend: 0, desp: 0, anulado: 0, ots: new Set<string>() };
-    for (const s of salidas) {
-      const e = estadoSalida(s);
-      if (e === 'Pendiente') c.pend++; else if (e === 'Despachado') c.desp++; else c.anulado++;
-      const ot = String(s.ticket_ot ?? '').trim();
-      if (ot) c.ots.add(ot);
-    }
-    return c;
-  }, [salidas]);
-
-  const filtradas = useMemo(() => {
+  /** Salidas del rango de fechas y la búsqueda (sin el filtro de estado: sirve para los conteos del selector) */
+  const delRango = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
-    const ot = filtros.ot.trim().toLowerCase();
-    const placa = filtros.placa.trim().toUpperCase();
     return salidas.filter(s => {
-      if (estadoSalida(s) !== ESTADO_DE_PESTANA[pestana]) return false;
-      if (ot && !String(s.ticket_ot ?? '').toLowerCase().includes(ot)) return false;
-      if (placa && !String(s.placa ?? '').toUpperCase().includes(placa)) return false;
       const fecha = soloFecha(s);
-      if (filtros.mes && !fecha.startsWith(filtros.mes)) return false;
-      if (filtros.desde && fecha < filtros.desde) return false;
-      if (filtros.hasta && fecha > filtros.hasta) return false;
+      if (desde && fecha < desde) return false;
+      if (hasta && fecha > hasta) return false;
       if (q) {
-        const texto = [s.id, s.ticket_ot, s.placa, s.responsable, (s.items ?? []).map(i => i.descripcion ?? '').join(' ')].join(' ').toLowerCase();
+        const texto = [s.id, s.ticket_ot, s.placa, s.responsable, nombreSolicitante(s.creado_por), (s.items ?? []).map(i => `${i.inventario_id ?? ''} ${i.descripcion ?? ''}`).join(' ')].join(' ').toLowerCase();
         if (!texto.includes(q)) return false;
       }
       return true;
     });
-  }, [salidas, pestana, busqueda, filtros]);
+  }, [salidas, busqueda, desde, hasta]);
+
+  const conteoRango = useMemo(() => {
+    const c = { todas: delRango.length, pend: 0, desp: 0, anulado: 0 };
+    for (const s of delRango) {
+      const e = estadoSalida(s);
+      if (e === 'Pendiente') c.pend++; else if (e === 'Despachado') c.desp++; else c.anulado++;
+    }
+    return c;
+  }, [delRango]);
+
+  const filtradas = useMemo(
+    () => (estadoFiltro === 'todas' ? delRango : delRango.filter(s => estadoSalida(s) === ESTADO_DE_PESTANA[estadoFiltro])),
+    [delRango, estadoFiltro],
+  );
+
+  const kpis = useMemo(() => {
+    const ots = new Set<string>();
+    let monto = 0;
+    for (const s of filtradas) {
+      if (estadoSalida(s) === 'Anulado') continue;
+      monto += Number(s.total_pen) || 0;
+      const ot = String(s.ticket_ot ?? '').trim();
+      if (ot) ots.add(ot);
+    }
+    return { total: filtradas.length, monto, ots: ots.size };
+  }, [filtradas]);
 
   const totalPaginas = Math.max(1, Math.ceil(filtradas.length / POR_PAGINA));
   const pag = Math.min(pagina, totalPaginas);
   const visiblesPagina = filtradas.slice((pag - 1) * POR_PAGINA, pag * POR_PAGINA);
 
-  const filtrosActivos = Object.values(filtros).filter(Boolean).length;
   const detalle = detalleId == null ? null : salidas.find(s => s.id === detalleId) ?? null;
   const salidaAnulando = anulandoId == null ? null : salidas.find(s => s.id === anulandoId) ?? null;
 
@@ -140,9 +179,22 @@ export function SalidasPage() {
     setDetalleAbierto(true);
   }
 
-  function cambiarPestana(p: Pestana) {
-    setPestana(p);
+  function cambiarEstado(e: FiltroEstado) {
+    setEstadoFiltro(e);
     setPagina(1);
+  }
+
+  function limpiarFiltros() {
+    setBusqueda(''); setDesde(''); setHasta(''); setEstadoFiltro('todas'); setPagina(1);
+  }
+
+  /** Opciones del menú de acciones de una fila */
+  function menuDe(s: SalidaInv): Array<OpcionOtros | false | null | undefined> {
+    return [
+      { label: 'Ver detalle', icon: <Eye size={17} />, onSelect: () => abrirDetalle(s) },
+      { label: 'Imprimir PDF', icon: <FileDown size={17} />, onSelect: () => { void pdf(s, false); } },
+      estadoSalida(s) === 'Pendiente' && puedeEliminar && { label: 'Anular', icon: <Trash2 size={17} />, destructiva: true, separado: true, onSelect: () => setAnulandoId(s.id) },
+    ];
   }
 
   // ─── Acciones ──────────────────────────────────────────────────────────────
@@ -238,7 +290,7 @@ export function SalidasPage() {
       .catch(err => toast(errorMessage(err), 'error'));
   }
 
-  const subtitulo = isLoading ? 'Cargando…' : `${salidas.length} salidas registradas`;
+  const subtitulo = isLoading ? 'Cargando…' : `${salidas.length} salidas registradas${conteoRango.pend ? ` · ${conteoRango.pend} pendientes` : ''}`;
 
   return (
     <Page>
@@ -248,10 +300,14 @@ export function SalidasPage() {
         subtitle={subtitulo}
         actions={
           <>
-            <MenuOtros opciones={[
-              { label: 'Exportar a Excel', onSelect: exportar, detalle: 'Lo que se ve con los filtros actuales' },
-              { label: 'Actualizar', onSelect: () => { void refetch(); } },
-            ]} />
+            <div className="oc-acciones">
+              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--verde" data-tip="Exportar a Excel" aria-label="Exportar a Excel" onClick={exportar}>
+                <FileSpreadsheet size={17} />
+              </button>
+              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--celeste" data-tip="Actualizar" aria-label="Actualizar" onClick={() => { void refetch(); }}>
+                <RefreshCw size={17} />
+              </button>
+            </div>
             {puedeCrear && (
               <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ salida: null })}>
                 Nueva salida
@@ -268,48 +324,43 @@ export function SalidasPage() {
           {puedeCrear ? <>Registra la primera salida con <strong>Nueva salida</strong>.</> : 'Cuando se registren salidas, aparecerán aquí.'}
         </EmptyState>
       ) : (
-        <div className="sal-pagina">
-          <div className="sal-kpis">
-            <KpiSalida titulo="Total" valor={salidas.length} tono="neutral" />
-            <KpiSalida titulo="Pendientes" valor={conteo.pend} tono="amber" activo={pestana === 'pend'} onClick={() => cambiarPestana('pend')} />
-            <KpiSalida titulo="Despachadas" valor={conteo.desp} tono="green" activo={pestana === 'desp'} onClick={() => cambiarPestana('desp')} />
-            <KpiSalida titulo="OTs atendidas" valor={conteo.ots.size} tono="accent" onClick={() => cambiarPestana('desp')} />
+        <div>
+          {/* Totales del filtro */}
+          <div className="inv-kpis" style={{ marginBottom: 'var(--s-4)' }}>
+            <KpiTarjeta etiqueta="Salidas" valor={String(kpis.total)} sub="Del filtro seleccionado" icono={<ClipboardList size={18} />} />
+            <KpiTarjeta etiqueta="Monto total (S/)" valor={formatSoles(kpis.monto)} sub="Sin contar anuladas" icono={<Coins size={18} />} tono="valor" />
+            <KpiTarjeta etiqueta="Pendientes" valor={String(conteoRango.pend)} sub="Por despachar" icono={<CircleCheck size={18} />} tono="warning"
+              onClick={() => cambiarEstado(estadoFiltro === 'pend' ? 'todas' : 'pend')} activo={estadoFiltro === 'pend'} />
+            <KpiTarjeta etiqueta="OTs atendidas" valor={String(kpis.ots)} sub="En el filtro" icono={<PackageCheck size={18} />} />
           </div>
 
-          <div className="sal-barra">
-            <div className="sal-barra__busqueda">
-              <SearchField value={busqueda} onChange={v => { setBusqueda(v); setPagina(1); }} placeholder="Folio, placa, OT, responsable o artículo" />
-              <Button variant="secondary" onClick={() => setFiltrosAbiertos(v => !v)} aria-expanded={filtrosAbiertos}>
-                Filtros{filtrosActivos ? ` (${filtrosActivos})` : ''}
-              </Button>
+          {/* Filtros: todo en una sola fila, igual que Órdenes de compra */}
+          <div className="oc-filtros" style={{ marginBottom: 'var(--s-4)' }}>
+            <SearchField value={busqueda} onChange={v => { setBusqueda(v); setPagina(1); }} placeholder="Folio, placa, OT, responsable o artículo" />
+            <div className="oc-filtros__fila">
+              <div className="oc-fechas">
+                <TextInput type="date" aria-label="Desde" value={desde} onChange={ev => { setDesde(ev.target.value); setPagina(1); }} />
+                <span className="t-footnote c-secondary">a</span>
+                <TextInput type="date" aria-label="Hasta" value={hasta} onChange={ev => { setHasta(ev.target.value); setPagina(1); }} />
+                <button type="button" className="oc-cotizacion__quitar" aria-label="Quitar fechas" onClick={() => { setDesde(''); setHasta(''); setPagina(1); }}>×</button>
+              </div>
+              <SegmentedControl<Vista> label="Ver por" value={vista} onChange={v => { setVista(v); setPagina(1); }}
+                options={[{ value: 'salidas', label: 'Por salida' }, { value: 'articulos', label: 'Por artículo' }]} />
+              <SelectInput aria-label="Estado de la salida" value={estadoFiltro} onChange={ev => cambiarEstado(ev.target.value as FiltroEstado)} style={{ width: 'auto' }}>
+                <option value="todas">Todas ({conteoRango.todas})</option>
+                <option value="pend">Pendientes ({conteoRango.pend})</option>
+                <option value="desp">Despachadas ({conteoRango.desp})</option>
+                <option value="anulado">Anuladas ({conteoRango.anulado})</option>
+              </SelectInput>
+              <span className="badge" style={{ marginLeft: 'auto' }}>
+                {filtradas.length} {filtradas.length === 1 ? 'registro' : 'registros'}
+              </span>
             </div>
-            <SegmentedControl<Pestana>
-              label="Estado de las salidas"
-              block={movil}
-              value={pestana}
-              onChange={cambiarPestana}
-              options={[
-                { value: 'pend', label: `Pendientes (${conteo.pend})` },
-                { value: 'desp', label: `Despachadas (${conteo.desp})` },
-                { value: 'anulado', label: `Anuladas (${conteo.anulado})` },
-              ]}
-            />
           </div>
-
-          {filtrosAbiertos && (
-            <div className="sal-filtros">
-              <Field label="N° OT">{p => <TextInput {...p} value={filtros.ot} placeholder="OT-…" onChange={e => { setFiltros(f => ({ ...f, ot: e.target.value })); setPagina(1); }} />}</Field>
-              <Field label="Placa">{p => <TextInput {...p} value={filtros.placa} placeholder="ABC-123" onChange={e => { setFiltros(f => ({ ...f, placa: e.target.value.toUpperCase() })); setPagina(1); }} />}</Field>
-              <Field label="Mes">{p => <TextInput {...p} type="month" value={filtros.mes} onChange={e => { setFiltros(f => ({ ...f, mes: e.target.value })); setPagina(1); }} />}</Field>
-              <Field label="Desde">{p => <TextInput {...p} type="date" value={filtros.desde} onChange={e => { setFiltros(f => ({ ...f, desde: e.target.value })); setPagina(1); }} />}</Field>
-              <Field label="Hasta">{p => <TextInput {...p} type="date" value={filtros.hasta} onChange={e => { setFiltros(f => ({ ...f, hasta: e.target.value })); setPagina(1); }} />}</Field>
-              {filtrosActivos > 0 && <Button variant="plain" onClick={() => { setFiltros(SIN_FILTROS); setPagina(1); }}>Limpiar filtros</Button>}
-            </div>
-          )}
 
           {filtradas.length === 0 ? (
-            <EmptyState icon={<SearchX size={22} />} title={pestana === 'pend' ? 'Sin solicitudes pendientes' : pestana === 'anulado' ? 'Sin salidas anuladas' : 'Sin salidas despachadas'}>
-              {busqueda || filtrosActivos ? <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setFiltros(SIN_FILTROS); }}>Quitar búsqueda y filtros</button> : null}
+            <EmptyState icon={<SearchX size={22} />} title="Ninguna salida coincide">
+              <button type="button" className="placas-limpiar" onClick={limpiarFiltros}>Quitar filtros</button>
             </EmptyState>
           ) : movil ? (
             <div className="sal-tarjetas">
@@ -349,73 +400,68 @@ export function SalidasPage() {
               })}
             </div>
           ) : (
-            <div className="sal-tabla-wrap">
-              <table className="sal-tabla">
-                <thead>
-                  <tr>
-                    <th>Folio · fecha</th>
-                    <th>Tipo de orden</th>
-                    <th>N° OT</th>
-                    <th>Placa</th>
-                    <th>Responsable</th>
-                    <th>Código</th>
-                    <th>Artículo</th>
-                    <th className="num">Cant.</th>
-                    <th className="num">Costo unit.</th>
-                    <th className="num">Total</th>
-                    <th>Estado</th>
+            <TablaRedimensionable id="almacen-salidas" columnas={COLUMNAS} ariaLabel="Salidas de almacén" altoMax="68vh">
+              {visiblesPagina.flatMap(s => {
+                const estado = estadoSalida(s);
+                const items = itemsVisibles(s);
+                const todos = s.items ?? [];
+                const cantTotal = todos.reduce((a, i) => a + (Number(i.cantidad) || 0), 0);
+                const cabecera = [
+                  <Celda key="acc" alinear="center"><MenuOtros soloIcono label="Acciones" opciones={menuDe(s)} /></Celda>,
+                  <Celda key="fecha">{fechaCorta(s)}</Celda>,
+                  <Celda key="tipo"><TipoOrdenBadge tipo={s.tipo_orden} /></Celda>,
+                  <Celda key="folio"><button type="button" className="oc-codigo" onClick={() => abrirDetalle(s)} title="Ver detalle">{s.id}</button></Celda>,
+                  <Celda key="estado" alinear="center"><EstadoBadge estado={estado} /></Celda>,
+                  <Celda key="ot" mono>{s.ticket_ot || '—'}</Celda>,
+                  <Celda key="placa" mono>{s.placa || '—'}</Celda>,
+                  <Celda key="resp"><span className="sal-resp">{s.responsable || '—'}</span><span className="sal-sub">{nombreSolicitante(s.creado_por)}</span></Celda>,
+                ];
+                const total = <Celda key="total" alinear="right"><strong className="oc-importe">{formatSoles(s.total_pen ?? 0)}</strong></Celda>;
+
+                if (vista === 'salidas') {
+                  const primera = todos[0] ? descripcionLimpia(todos[0].descripcion, todos[0].inventario_id) : '';
+                  const descripcion = todos.length === 0 ? 'Sin artículos' : todos.length === 1 ? primera : `${primera} · +${todos.length - 1} más`;
+                  return [(
+                    <tr key={s.id}>
+                      {cabecera}
+                      <Celda key="codigo">{todos.length} {todos.length === 1 ? 'ítem' : 'ítems'}</Celda>
+                      <Celda key="articulo">{descripcion}</Celda>
+                      <Celda key="cant" alinear="right">{cantidad(cantTotal)} u.</Celda>
+                      <Celda key="costo" alinear="right">—</Celda>
+                      {total}
+                    </tr>
+                  )];
+                }
+
+                // Por artículo: una fila por artículo de la salida (con la búsqueda aplicada a los artículos)
+                if (!items.length) {
+                  return [(
+                    <tr key={`${s.id}-0`}>
+                      {cabecera}
+                      <Celda key="codigo" mono>—</Celda>
+                      <Celda key="articulo">Sin artículos</Celda>
+                      <Celda key="cant" alinear="right">—</Celda>
+                      <Celda key="costo" alinear="right">—</Celda>
+                      {total}
+                    </tr>
+                  )];
+                }
+                return items.map((it, i) => (
+                  <tr key={`${s.id}-${it.id ?? i}-${i}`}>
+                    {cabecera}
+                    <Celda key="codigo" mono>{it.inventario_id || '—'}</Celda>
+                    <Celda key="articulo">{descripcionLimpia(it.descripcion, it.inventario_id)}</Celda>
+                    <Celda key="cant" alinear="right">{cantidad(Number(it.cantidad) || 0)}</Celda>
+                    <Celda key="costo" alinear="right">{formatSoles(Number(it.costo_unitario) || 0)}</Celda>
+                    {total}
                   </tr>
-                </thead>
-                <tbody>
-                  {visiblesPagina.flatMap(s => {
-                    const items = itemsVisibles(s);
-                    const estado = estadoSalida(s);
-                    const span = Math.max(1, items.length);
-                    const cabecera = (
-                      <>
-                        <td rowSpan={span}><span className="sal-folio">{s.id}</span><span className="sal-fecha">{fechaCorta(s)}</span></td>
-                        <td rowSpan={span}><TipoOrdenBadge tipo={s.tipo_orden} /></td>
-                        <td rowSpan={span} className="mono">{s.ticket_ot || '—'}</td>
-                        <td rowSpan={span} className="mono">{s.placa || '—'}</td>
-                        <td rowSpan={span}>
-                          <span className="sal-resp">{s.responsable || '—'}</span>
-                          <span className="sal-sub">{nombreSolicitante(s.creado_por)}</span>
-                        </td>
-                      </>
-                    );
-                    const pie = (
-                      <>
-                        <td rowSpan={span} className="num sal-total-celda">{formatSoles(s.total_pen ?? 0)}</td>
-                        <td rowSpan={span}><EstadoBadge estado={estado} /></td>
-                      </>
-                    );
-                    if (!items.length) {
-                      return [(
-                        <tr key={s.id} onClick={() => abrirDetalle(s)} className="sal-fila">
-                          {cabecera}
-                          <td colSpan={3} className="sal-muted">Sin artículos</td>
-                          {pie}
-                        </tr>
-                      )];
-                    }
-                    return items.map((it, i) => (
-                      <tr key={`${s.id}-${it.id ?? i}`} onClick={() => abrirDetalle(s)} className={`sal-fila${i > 0 ? ' sal-fila--sub' : ''}`}>
-                        {i === 0 && cabecera}
-                        <td className="mono sal-muted">{it.inventario_id || '—'}</td>
-                        <td className="sal-articulo">{descripcionLimpia(it.descripcion, it.inventario_id)}</td>
-                        <td className="num">{cantidad(Number(it.cantidad) || 0)}</td>
-                        <td className="num">{formatSoles(Number(it.costo_unitario) || 0)}</td>
-                        {i === 0 && pie}
-                      </tr>
-                    ));
-                  })}
-                </tbody>
-              </table>
-            </div>
+                ));
+              })}
+            </TablaRedimensionable>
           )}
 
           {filtradas.length > POR_PAGINA && (
-            <nav className="sal-paginacion" aria-label="Páginas">
+            <nav className="sal-paginacion" aria-label="Páginas" style={{ marginTop: 'var(--s-3)' }}>
               <Button size="sm" variant="secondary" disabled={pag <= 1} onClick={() => setPagina(pag - 1)}>‹ Anterior</Button>
               <span className="sal-paginacion__pos">Pág. <b>{pag}</b> / {totalPaginas}</span>
               <Button size="sm" variant="secondary" disabled={pag >= totalPaginas} onClick={() => setPagina(pag + 1)}>Siguiente ›</Button>
@@ -481,23 +527,6 @@ export function SalidasPage() {
 }
 
 // ─── Piezas pequeñas ───────────────────────────────────────────────────────────
-
-function KpiSalida({ titulo, valor, tono, activo, onClick }: {
-  titulo: string; valor: number; tono: 'neutral' | 'amber' | 'green' | 'accent'; activo?: boolean; onClick?: () => void;
-}) {
-  const cuerpo = (
-    <>
-      <span className="sal-kpi__titulo">{titulo}</span>
-      <span className="sal-kpi__valor">{valor.toLocaleString('es-PE')}</span>
-    </>
-  );
-  if (!onClick) return <div className={`sal-kpi sal-kpi--${tono}`}>{cuerpo}</div>;
-  return (
-    <button type="button" className={`sal-kpi sal-kpi--${tono} sal-kpi--boton${activo ? ' sal-kpi--activo' : ''}`} onClick={onClick} aria-pressed={activo}>
-      {cuerpo}
-    </button>
-  );
-}
 
 function EstadoBadge({ estado }: { estado: EstadoSalida }) {
   if (estado === 'Despachado') return <Badge tone="green">Despachado</Badge>;

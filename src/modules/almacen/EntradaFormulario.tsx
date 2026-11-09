@@ -113,6 +113,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
 
   const [tipoOrden, setTipoOrden] = useState<string>('Orden de compra');
   const [moneda, setMoneda] = useState<'PEN' | 'USD'>('PEN');
+  const [confirmar, setConfirmar] = useState<{ aviso: string | null } | null>(null);
   const [tipoCambio, setTipoCambio] = useState('');
   const [placa, setPlaca] = useState('');
   const [otId, setOtId] = useState<string | null>(null);
@@ -434,9 +435,46 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
 
   // ── Guardar ───────────────────────────────────────────────────────────────
 
-  async function guardar() {
+  /** Moneda de las cuentas del proveedor: la de la cuenta elegida o, si no hay ninguna elegida, las que tiene registradas */
+  const normalizarMoneda = (m: string | null | undefined): 'PEN' | 'USD' | null => {
+    const t = String(m ?? '').toUpperCase();
+    if (t.includes('DOL') || t.includes('USD')) return 'USD';
+    if (t.includes('SOL') || t.includes('PEN')) return 'PEN';
+    return null;
+  };
+  const NOMBRE_MONEDA = { PEN: 'soles (S/)', USD: 'dólares (US$)' } as const;
+
+  /** Aviso si la moneda de la orden no coincide con la de la cuenta del proveedor */
+  function advertenciaMoneda(): string | null {
+    const cuentas = cuentasProvDeLista.length ? cuentasProvDeLista : (cuentasProvFallback.data ?? []);
+    if (!cuentas.length) return null;
+    const elegida = cuentaProv ? cuentas.find(c => etiquetaCuentaProveedor(c) === cuentaProv) : null;
+    const monedaElegida = normalizarMoneda(elegida?.moneda);
+    if (elegida && monedaElegida && monedaElegida !== moneda) {
+      return `Estás registrando una OC en ${NOMBRE_MONEDA[moneda]}, pero la cuenta elegida del proveedor está en ${NOMBRE_MONEDA[monedaElegida]}.`;
+    }
+    if (!elegida) {
+      const monedas = new Set(cuentas.map(c => normalizarMoneda(c.moneda)).filter(Boolean));
+      if (monedas.size && !monedas.has(moneda)) {
+        const otra = moneda === 'PEN' ? 'USD' : 'PEN';
+        return `Estás registrando una OC en ${NOMBRE_MONEDA[moneda]}, pero el proveedor solo tiene cuentas en ${NOMBRE_MONEDA[otra]}.`;
+      }
+    }
+    return null;
+  }
+
+  /** Valida y pide confirmar la moneda antes de generar la orden */
+  function guardar() {
     setIntento(true);
     if (hayErrores) { haptic('warning'); return; }
+    const aviso = advertenciaMoneda();
+    // Al editar solo se pregunta si hay una incoherencia; al generar una orden nueva siempre se confirma la moneda
+    if (e && !aviso) { void enviar(); return; }
+    setConfirmar({ aviso });
+  }
+
+  async function enviar() {
+    setConfirmar(null);
     const provSel = proveedor;
     const payload: PayloadEntrada = {
       fecha: e ? (e.fecha?.split('T')[0] ?? hoyLocal()) : hoyLocal(),
@@ -514,14 +552,39 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       <div className="oc-pie__acciones">
         <Button variant="secondary" onClick={onClose} disabled={guardando}>Cancelar</Button>
         <Button variant="primary" loading={guardando} onClick={guardar} style={{ flex: 1 }}>
-          {e ? 'Guardar cambios' : 'Confirmar ingreso'}
+          {e ? 'Guardar cambios' : (servicio ? 'Generar orden de servicio' : 'Generar orden de compra')}
         </Button>
       </div>
     </div>
   );
 
+  const nombreOrden = servicio ? 'orden de servicio' : 'orden de compra';
+  const dialogoMoneda = (
+    <Sheet open={!!confirmar} onClose={() => setConfirmar(null)} title={e ? 'Revisa la moneda' : `Generar ${nombreOrden}`}
+      footer={
+        <div style={{ display: 'flex', gap: 'var(--s-2)', justifyContent: 'flex-end', width: '100%' }}>
+          <Button variant="secondary" onClick={() => setConfirmar(null)}>Revisar</Button>
+          <Button variant="primary" onClick={() => { void enviar(); }}>Sí, continuar</Button>
+        </div>
+      }>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
+        {confirmar?.aviso && (
+          <div role="alert" style={{ padding: 'var(--s-4)', borderRadius: 12, background: 'color-mix(in srgb, var(--amber-ink) 14%, transparent)' }}>
+            <strong style={{ display: 'block', marginBottom: 4 }}>Revisa la moneda</strong>
+            <span>{confirmar.aviso}</span>
+          </div>
+        )}
+        <p className="t-callout" style={{ margin: 0 }}>
+          La orden se está generando en <strong>{NOMBRE_MONEDA[moneda]}</strong> por un total de <strong>{dinero(total)}</strong>.
+        </p>
+        <p className="t-callout c-secondary" style={{ margin: 0 }}>¿Deseas continuar?</p>
+      </div>
+    </Sheet>
+  );
+
   return (
     <>
+      {dialogoMoneda}
       <Sheet open={open} onClose={onClose} title={tituloSheet} ancho footer={pie}>
         <div className="oc-form">
 

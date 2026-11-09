@@ -8,6 +8,7 @@ import { useToast } from '../../core/ui/Toast';
 import { formatSoles } from '../../core/lib/format';
 import { costoSolesArticulo, type ArticuloInv } from './api';
 import { EscanerCodigo } from './EscanerCodigo';
+import './selectorArticulo.css';
 
 // Selectores buscables de la Solicitud de Salida: calcados de los del clásico (solicitante con buscador,
 // artículo con código, marca, sistema, costo en soles y stock) y con la foto de cada artículo.

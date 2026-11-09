@@ -500,6 +500,13 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     // Un artículo sin existencias no puede salir: el stock nunca debe quedar negativo.
     // Revisa lo pedido contra el stock actual (mismo cálculo del inventario). Al editar una salida ya despachada,
     // sus propias cantidades se devuelven antes de comparar. cb(err, faltan[]): faltan = líneas de aviso, vacío si todo alcanza.
+    function respuestaSinStock(faltan) {
+        const lineas = faltan.map(f => {
+            const base = `"${f.descripcion}" (${f.id}): pedido ${f.pedido}, disponible ${f.disponible}`;
+            return f.ocs.length ? `${base}. Falta recepcionar: ${f.ocs.map(o => `${o.oc} (${o.por_recibir})`).join(', ')}` : base;
+        });
+        return { error: 'No hay stock suficiente en almacén para esta salida:\n• ' + lineas.join('\n• '), sin_stock: faltan };
+    }
     function validarStockSalida(tdb, items, excluirSalidaId, cb) {
         const lista = (Array.isArray(items) ? items : []).filter(d => d && (d.inventario_id || d.descripcion));
         const sinId = lista.filter(d => !d.inventario_id).map(d => d.descripcion);
@@ -533,9 +540,24 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     (rows || []).forEach(r => {
                         const pide = pedido.get(String(r.id)) || 0;
                         const disp = (Number(r.stock_actual) || 0) + (propias.get(String(r.id)) || 0);
-                        if (pide > disp) faltan.push(`"${r.descripcion || r.id}" (${r.id}): pedido ${pide}, disponible ${disp <= 0 ? 0 : disp}`);
+                        if (pide > disp) faltan.push({ id: r.id, descripcion: r.descripcion || r.id, pedido: pide, disponible: disp <= 0 ? 0 : disp, ocs: [] });
                     });
-                    cb(null, faltan);
+                    if (!faltan.length) return cb(null, faltan);
+                    // ¿Falta recepcionar alguna orden de compra de estos artículos? (así el almacén sabe qué ingresar para tener stock)
+                    tdb.query(`SELECT de.inventario_id, e.id AS oc, e.estado, SUM(de.cantidad) AS pedida,
+                                      (SELECT COALESCE(SUM(dr.cantidad_recibida), 0) FROM detalle_recepciones_oc dr JOIN recepciones_oc r ON r.id = dr.recepcion_id
+                                        WHERE r.oc_id = e.id AND dr.inventario_id = de.inventario_id) AS recibida
+                               FROM detalle_entradas_inv de JOIN entradas_inv e ON e.id = de.entrada_id
+                               WHERE de.inventario_id IN (?) AND e.tipo_orden = 'Orden de compra'
+                                 AND (e.estado IS NULL OR (LOWER(e.estado) NOT LIKE '%anul%' AND LOWER(e.estado) NOT LIKE '%rechaz%'))
+                               GROUP BY de.inventario_id, e.id, e.estado`, [faltan.map(f => f.id)], (e3, ocRows) => {
+                        (ocRows || []).forEach(o => {
+                            const porRecibir = (Number(o.pedida) || 0) - (Number(o.recibida) || 0);
+                            const f = faltan.find(x => String(x.id) === String(o.inventario_id));
+                            if (f && porRecibir > 0) f.ocs.push({ oc: o.oc, estado: o.estado, por_recibir: porRecibir });
+                        });
+                        cb(null, faltan);
+                    });
                 });
             });
         });
@@ -2522,7 +2544,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         // Sin existencias no sale nada (la salida nace ya despachada, así que aquí es el único control de stock)
         validarStockSalida(targetDb, items, null, (errStk, faltan) => {
             if (errStk) return res.status(500).json({ error: errStk.message });
-            if (faltan.length) return res.status(400).json({ error: 'No hay stock suficiente en almacén para esta salida:\n• ' + faltan.join('\n• ') });
+            if (faltan.length) return res.status(400).json(respuestaSinStock(faltan));
 
             // La OT debe existir en la base de esta empresa
             if (ticket_ot) {
@@ -2788,7 +2810,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             // Al editar tampoco puede quedar stock negativo (sus propias cantidades ya despachadas se devuelven antes de comparar)
             return validarStockSalida(getDb(req), items, id, (errStk, faltan) => {
               if (errStk) return res.status(500).json({ error: errStk.message });
-              if (faltan.length) return res.status(400).json({ error: 'No hay stock suficiente en almacén para esta salida:\n• ' + faltan.join('\n• ') });
+              if (faltan.length) return res.status(400).json(respuestaSinStock(faltan));
             getDb(req).query(`UPDATE salidas_inv SET fecha=?, tipo_destino=?, placa=?, responsable=?, ticket_ot=?, observaciones=?, moneda=?, tipo_cambio=?, total_pen=? WHERE id=?`,
                 [fecha || null, tipo_destino || null, placa || null, responsable || null, ticket_ot || null, observaciones || null, moneda || 'PEN', tc, total_pen, id],
                 (err) => {
