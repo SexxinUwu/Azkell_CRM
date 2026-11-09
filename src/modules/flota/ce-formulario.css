@@ -297,3 +297,8 @@
 .ce-f__barra-info { margin-right: auto; font-size: 0.8125rem; color: var(--label-2); font-variant-numeric: tabular-nums; }
 @media (max-width: 560px) { .ce-f__barra-info { display: none; } .ce-f__barra-acciones .btn { flex: 1; } }
 @media (prefers-reduced-motion: reduce) { .ce-inv-barra i, .ce-fotos__ver img { transition: none; } }
+
+/* Dentro de una ventana (Sheet): sin ancho máximo propio y con la barra de acciones pegada al borde inferior */
+.ce-f--hoja { max-width: none; padding-bottom: 0; gap: var(--s-4); }
+.ce-f--hoja .ce-f__cabecera { padding: 0; }
+.ce-f--hoja .ce-f__barra-acciones { bottom: 0; margin-inline: calc(var(--s-1) * -1); }
