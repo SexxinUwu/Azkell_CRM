@@ -19,6 +19,8 @@ import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
 import { haptic } from '../../core/lib/haptics';
 import { compartirDocumento, eliminarDocumento, registrarSolicitudDocs, urlTemporalDocumento, useVehiculosFlota } from './api';
 import { DocAlquilerSheet } from './DocAlquilerSheet';
+import { DocAlquileres } from './DocAlquileres';
+import { DocMetaVigentes } from './DocMetaVigentes';
 import { DocumentoFormulario } from './DocumentoFormulario';
 import { DocExpediente, type EliminarDocumento, type FilaExpediente } from './DocExpediente';
 import { DocMatriz } from './DocMatriz';
@@ -27,15 +29,15 @@ import { DocMiniCalendario } from './DocMiniCalendario';
 import { ConfigurarPlacasSheet, guardarSeleccion, leerSeleccion } from './ConfigurarPlacasSheet';
 import { ImportarDocumentosSheet } from './ImportarDocumentosSheet';
 import { descargarPlantilla } from './documentosExcel';
-import { esAlquilada, grupoDe, metaDeVehiculo, pendientesDeDocs, responsableExterno, type DocPersonalizado } from './docsEstado';
+import { esAlquilada, grupoDe, metaDeVehiculo, pendientesDeDocs, repartirPorcentajes, responsableExterno, type DocPersonalizado } from './docsEstado';
 
-type Vista = 'expediente' | 'matriz' | 'calendario';
+type Vista = 'expediente' | 'matriz' | 'calendario' | 'alquiler';
 type Grupo = 'todos' | 'vigente' | 'alerta' | 'vencido' | 'sin';
 type FiltroAlquiler = 'todas' | 'alquiladas' | 'externa';
 interface Formulario { placa: string | null; prefijo: string | null; personalizado: DocPersonalizado | null }
 
 const VISTAS: Array<{ value: Vista; label: string }> = [
-  { value: 'expediente', label: 'Expediente' }, { value: 'matriz', label: 'Matriz general' }, { value: 'calendario', label: 'Calendario' },
+  { value: 'expediente', label: 'Expediente' }, { value: 'matriz', label: 'Matriz general' }, { value: 'calendario', label: 'Calendario' }, { value: 'alquiler', label: 'Alquiler' },
 ];
 
 // Documentos de la flota: estado de cada unidad, expediente, matriz de vencimientos y calendario
@@ -139,6 +141,17 @@ export function DocumentosPage() {
     finally { setEliminando(false); }
   };
 
+  // Porcentajes enteros que suman 100 entre vigentes, alerta, vencidos y sin documentos (53.8 → 54, y los demás se ajustan)
+  const pcts = repartirPorcentajes([cifras.vigente, cifras.alerta, cifras.vencido, cifras.sin], cifras.total);
+  const pctDe: Record<Grupo, number> = { todos: cifras.total > 0 ? 100 : 0, vigente: pcts[0], alerta: pcts[1], vencido: pcts[2], sin: pcts[3] };
+
+  // Una vista por búsqueda y estado, sin el filtro de alquiler (el apartado Alquiler tiene el suyo)
+  const filasBase = useMemo(() => {
+    const q = busqueda.trim().toUpperCase();
+    return delEmpresa.filter(f => (grupo === 'todos' || grupoDe(f.m) === grupo)
+      && (!q || [f.v.placa, f.v.tipo, f.v.marca, f.v.chasis].some(t => String(t ?? '').toUpperCase().includes(q))));
+  }, [delEmpresa, grupo, busqueda]);
+
   const kpis: Array<{ clave: Grupo; label: string; valor: number; tono: string; icono: React.ReactNode }> = [
     { clave: 'todos', label: 'Flota total', valor: cifras.total, tono: 'blue', icono: <Briefcase size={18} strokeWidth={1.9} /> },
     { clave: 'vigente', label: 'Vigentes', valor: cifras.vigente, tono: 'green', icono: <Clock size={18} strokeWidth={1.9} /> },
@@ -173,6 +186,7 @@ export function DocumentosPage() {
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : (
         <div className="doc-pagina">
+          <DocMetaVigentes vigentes={cifras.vigente} total={cifras.total} pct={pctDe.vigente} />
           <div className="disp-kpis">
             {kpis.map(k => (
               <button key={k.clave} type="button" className={`disp-kpi pressable disp-kpi--${k.tono === 'amber' ? 'amber' : k.tono}`}
@@ -182,12 +196,12 @@ export function DocumentosPage() {
                   <span className="disp-kpi__label">{k.label}</span>
                   <AnimatedNumber value={k.valor} className="disp-kpi__valor t-numeric" />
                   {(() => {
-                    // Porcentaje sobre la flota total; en Vigentes también cuánto falta para el 100 %
-                    const pct = cifras.total > 0 ? Math.round((k.valor / cifras.total) * 1000) / 10 : 0;
+                    // Enteros que suman 100; en Vigentes también cuánto falta para el 100 %
+                    const pct = pctDe[k.clave];
                     return (
                       <span className="disp-kpi__pct">
                         <span className="t-numeric">{pct}%</span>{' '}
-                        {k.clave === 'vigente' ? <span>· falta {Math.round((100 - pct) * 10) / 10}%</span> : <span>de la flota</span>}
+                        {k.clave === 'vigente' ? <span>· falta {100 - pct}%</span> : <span>de la flota</span>}
                         <span aria-hidden style={{ display: 'block', height: 4, borderRadius: 999, background: 'var(--fill, rgba(0,0,0,0.08))', overflow: 'hidden', marginTop: 4 }}>
                           <span style={{ display: 'block', height: '100%', width: pct + '%', background: 'currentColor', borderRadius: 999 }} />
                         </span>
@@ -233,6 +247,11 @@ export function DocumentosPage() {
               <DocMatriz filas={filas} />
               <DocMiniCalendario filas={filas} />
             </div>
+          )}
+          {vista === 'alquiler' && (
+            <DocAlquileres filas={filasBase} puedeEditar={puedeEditar} onAlquiler={setEditandoAlquiler}
+              onPedirActualizacion={p => { void pedirActualizacion(p); }}
+              onVerDocumentos={p => { setPlaca(p); setVista('expediente'); }} />
           )}
           {vista === 'calendario' && (
             <DocCalendario filas={filas} onElegir={p => { setPlaca(p); setVista('expediente'); }} />

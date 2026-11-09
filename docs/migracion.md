@@ -315,3 +315,8 @@ Lista viva. Se movió aquí lo que estaba en la guía para Claude Code, más lo 
 - [ ] Almacén: cambiar el default de `salidas_inv.estado` de «Despachado» a «Pendiente» (migración en las 4 empresas, con OK). El servidor ya valida el stock al crear y editar salidas.
 - [ ] Almacén: revisar los negativos de las otras 3 empresas (solo se revisó Marsisa). Los 5 artículos de Marsisa sin OC (INV-0112, 0214, 0224, 0230, 0840) se regularizaron el 09/11/2026 con la regularización colocada ANTES de sus salidas (stock regularizado = lo que faltaba, fecha anterior a la primera salida), de modo que las salidas siguen en el historial y el stock queda en 0. Respaldos en `respaldos-azkell/marsisa_inventario_grupoC_*.sql`. Regla: nunca fijar la fecha de regularización en «hoy» si hay salidas anteriores que deban verse.
 
+## Pendiente: unidades alquiladas, fase 2 (2026-11-09)
+La fase 1 está hecha (marcar alquiler, quién actualiza, pendientes a nombre de esa empresa, apartado «Alquiler», «Pedir actualización» por WhatsApp con registro en `docs_solicitudes`). Queda para cuando se use un tiempo:
+- Enlace temporal y seguro para que la empresa que alquila suba el documento sin cuenta; se aprueba antes de actualizar la unidad.
+- Recordatorios automáticos a la empresa responsable a los 30, 15 y 7 días del vencimiento.
+- Guardar el WhatsApp de contacto de cada empresa para enviar directo (hoy se abre WhatsApp y se elige el chat).
