@@ -3,7 +3,8 @@ import { Building2, Eye, Globe2, MapPin, PackageOpen, RefreshCw, Truck, Clipboar
 import { Button } from '../../core/ui/Button';
 import { Badge, Notice } from '../../core/ui/Display';
 import { errorMessage } from '../../core/api/client';
-import { formatQuantity, initials } from '../../core/lib/format';
+import { formatQuantity } from '../../core/lib/format';
+import { AvatarSaludo } from '../perfil/AvatarPropio';
 import { haptic } from '../../core/lib/haptics';
 import { TarjetaVolteable } from '../../core/ui/TarjetaVolteable';
 
@@ -51,7 +52,7 @@ export function CePortal({ usuario, stats, cargando, error, actualizando, onEleg
     <div className="cep-vista">
       <header className="cep-hero">
         <div className="cep-hero__izq">
-          <span className="cep-hero__avatar" aria-hidden>{initials(nombre)}</span>
+          <AvatarSaludo name={nombre} className="cep-hero__avatar" />
           <div>
             <span className="cep-eyebrow">Módulo flota</span>
             <h2 className="cep-hero__titulo">¡Hola, {nombre}! 👋</h2>

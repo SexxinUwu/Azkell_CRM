@@ -5,13 +5,14 @@ import '../almacen/recepcion.css';
 import '../../core/ui/botonesIcono.css';
 import './almacenFlota.css';
 import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowDownToLine, ArrowUpFromLine, Boxes, CircleAlert, Coins, Eye, ImageOff, Package, Pencil, Plus, RefreshCw, SearchX, Truck, Warehouse,
+  ArrowDownToLine, ArrowUpFromLine, Boxes, CircleAlert, Coins, Eye, ImageOff, Package, Pencil, Plus, RefreshCw, SearchX, Truck, Warehouse, X,
 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { BotonTip } from '../../core/ui/BotonTip';
+import { Combobox } from '../../core/ui/Combobox';
 import { EvidenciasArchivos } from '../../core/ui/EvidenciasArchivos';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
 import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
@@ -21,7 +22,7 @@ import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Sheet } from '../../core/ui/Sheet';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
-import { errorMessage } from '../../core/api/client';
+import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
 import { useMediaQuery } from '../../core/lib/useMediaQuery';
@@ -50,6 +51,27 @@ function detalleMov(m: { tipo: TipoMov; placa?: string | null; referencia?: stri
   if (m.tipo === 'ASIGNACION') return m.placa ? `a ${m.placa}` : '—';
   if (m.tipo === 'REINGRESO') return m.placa ? `desde ${m.placa}` : '—';
   return m.referencia ? `Ref. ${m.referencia}` : '—';
+}
+
+// Unidades de medida más usadas (siempre disponibles); se suman las que la empresa tenga en Configuración → Unidades de medida
+const UNIDADES_COMUNES = [
+  'Unidades', 'Pares', 'Juegos', 'Kit', 'Docena', 'Caja', 'Paquete', 'Bolsa', 'Rollo', 'Balde', 'Tambor', 'Cilindro', 'Saco',
+  'Kilogramos', 'Gramos', 'Toneladas', 'Libras', 'Onzas',
+  'Litros', 'Mililitros', 'Galones', 'Metros', 'Centímetros', 'Milímetros', 'Pulgadas', 'Pies', 'Yardas',
+  'Metros cuadrados', 'Metros cúbicos', 'Servicio',
+];
+const DEFECTO_UNIDAD = 'Unidades';
+
+function useUnidadesMedida() {
+  const q = useQuery<Array<{ nombre: string; descripcion: string | null }>>({
+    queryKey: ['almacen', 'catalogo', 'unidades'],
+    queryFn: () => api<Array<{ nombre: string; descripcion: string | null }>>('/almacen/unidades').then(r => (Array.isArray(r) ? r : [])),
+    staleTime: 5 * 60_000,
+  });
+  return useMemo(() => {
+    const propias = (q.data ?? []).map(u => (u.descripcion || u.nombre).trim()).filter(Boolean);
+    return [...new Set([...UNIDADES_COMUNES, ...propias])];
+  }, [q.data]);
 }
 
 type Vista = 'articulos' | 'unidades' | 'historial';
@@ -566,23 +588,19 @@ interface OpcionArticulo { id: number; nombre: string; detalle: string; max: num
 function SelectorCantidades({ opciones, cantidades, onCambio }: {
   opciones: OpcionArticulo[]; cantidades: Record<number, number>; onCambio: (c: Record<number, number>) => void;
 }) {
-  const [filtro, setFiltro] = useState('');
-  const lista = useMemo(() => {
-    const f = filtro.trim().toUpperCase();
-    return (f ? opciones.filter(a => a.nombre.toUpperCase().includes(f)) : opciones).slice(0, 80);
-  }, [opciones, filtro]);
-  const set = (id: number, v: number) => {
-    const nx = { ...cantidades };
-    if (v > 0) nx[id] = v; else delete nx[id];
-    onCambio(nx);
-  };
+  const elegidos = opciones.filter(a => cantidades[a.id] != null);
+  const disponibles = opciones.filter(a => cantidades[a.id] == null);
+  const set = (id: number, v: number) => onCambio({ ...cantidades, [id]: v });
+  const quitar = (id: number) => { const nx = { ...cantidades }; delete nx[id]; onCambio(nx); };
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
-      <SearchField value={filtro} onChange={setFiltro} placeholder="Buscar artículo…" />
-      <div className="tarjeta__lista">
-        {lista.map(a => {
-          const sel = cantidades[a.id] ?? 0;
-          return (
+      {/* La lista no se muestra de entrada: sale mientras se escribe, y cada artículo elegido pasa a la lista de abajo */}
+      <Combobox value={null} placeholder="Escribe para buscar y agregar un artículo…"
+        options={disponibles.map(a => ({ value: String(a.id), label: a.nombre, description: a.detalle, keywords: a.detalle }))}
+        onChange={v => { if (v) { haptic('selection'); set(Number(v), 1); } }} />
+      {elegidos.length > 0 && (
+        <div className="tarjeta__lista">
+          {elegidos.map(a => (
             <div key={a.id} className="dato" style={{ alignItems: 'center', gap: 'var(--s-3)' }}>
               {a.imagen !== undefined && <Miniatura url={a.imagen} nombre={a.nombre} />}
               <div style={{ minWidth: 0, flex: 1 }}>
@@ -590,14 +608,14 @@ function SelectorCantidades({ opciones, cantidades, onCambio }: {
                 <div style={{ fontSize: '0.72rem', color: 'var(--label-2)' }}>{a.detalle}</div>
               </div>
               <input type="number" min={0} max={a.max ?? undefined} step="any" aria-label={`Cantidad de ${a.nombre}`}
-                value={sel || ''} placeholder="0"
+                value={cantidades[a.id] || ''} placeholder="0"
                 onChange={e => set(a.id, Math.min(Number(e.target.value) || 0, a.max ?? Number.MAX_SAFE_INTEGER))}
                 style={{ width: 72, height: 32, textAlign: 'center', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)' }} />
+              <BotonTip tip="Quitar" className="btn btn--secondary btn--icon btn--sm btn-tip btn-tip--rojo" aria-label={`Quitar ${a.nombre}`} onClick={() => quitar(a.id)}><X size={16} /></BotonTip>
             </div>
-          );
-        })}
-        {lista.length === 0 && <div className="dato"><span className="dato__valor" style={{ color: 'var(--label-2)' }}>Sin artículos con ese nombre.</span></div>}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -605,7 +623,8 @@ function SelectorCantidades({ opciones, cantidades, onCambio }: {
 function ArticuloSheet({ open, articulo, usuario, onClose, onHecho, toast }: {
   open: boolean; articulo: ArticuloBase | null; usuario: string; onClose: () => void; onHecho: () => unknown; toast: Toast;
 }) {
-  const vacio = { descripcion: '', familia: '', unidad: '', costo: '', minimo: '' };
+  const vacio = { descripcion: '', familia: '', unidad: DEFECTO_UNIDAD, costo: '', minimo: '' };
+  const unidadesMedida = useUnidadesMedida();
   const [form, setForm] = useState(vacio);
   const [fotos, setFotos] = useState<File[]>([]);
   const [intento, setIntento] = useState(false);
@@ -615,7 +634,7 @@ function ArticuloSheet({ open, articulo, usuario, onClose, onHecho, toast }: {
   if (open && !abiertoPara) {
     setAbiertoPara(true);
     setForm(articulo ? {
-      descripcion: articulo.descripcion, familia: articulo.familia ?? '', unidad: articulo.unidad ?? '',
+      descripcion: articulo.descripcion, familia: articulo.familia ?? '', unidad: articulo.unidad || DEFECTO_UNIDAD,
       costo: String(num(articulo.costo_referencial)), minimo: String(num(articulo.stock_minimo)),
     } : vacio);
     setFotos([]); setIntento(false); setError(null);
@@ -663,7 +682,13 @@ function ArticuloSheet({ open, articulo, usuario, onClose, onHecho, toast }: {
 
         <Field label="Descripción" wide>{p => <TextInput {...p} value={form.descripcion} onChange={set('descripcion')} placeholder="Ej. Trinca de 3/8" />}</Field>
         <Field label="Familia">{p => <TextInput {...p} value={form.familia} onChange={set('familia')} placeholder="Ej. Herramientas" />}</Field>
-        <Field label="Unidad de medida">{p => <TextInput {...p} value={form.unidad} onChange={set('unidad')} placeholder="UND, LT, KG…" />}</Field>
+        <Field label="Unidad de medida">
+          {p => (
+            <Combobox {...p} value={form.unidad || null} onChange={v => setForm(prev => ({ ...prev, unidad: v ?? DEFECTO_UNIDAD }))}
+              options={(form.unidad && !unidadesMedida.includes(form.unidad) ? [form.unidad, ...unidadesMedida] : unidadesMedida).map(v => ({ value: v, label: v }))}
+              placeholder="Unidades" />
+          )}
+        </Field>
         <Field label="Costo referencial (S/)">{p => <TextInput {...p} inputMode="decimal" value={form.costo} onChange={set('costo')} placeholder="0.00" />}</Field>
         <Field label="Stock mínimo">{p => <TextInput {...p} inputMode="decimal" value={form.minimo} onChange={set('minimo')} placeholder="0" />}</Field>
       </div>
@@ -718,7 +743,7 @@ function MovimientoSheet({ open, modo, placaInicial, usuario, onClose, onHecho, 
 
   async function guardar() {
     setError(null);
-    const items: LineaCantidad[] = Object.entries(cantidades).map(([id, c]) => ({ articulo_id: Number(id), cantidad: c }));
+    const items: LineaCantidad[] = Object.entries(cantidades).filter(([, c]) => c > 0).map(([id, c]) => ({ articulo_id: Number(id), cantidad: c }));
     if (modo !== 'ingreso' && !placa) { setError('Elige la unidad.'); return; }
     if (!items.length) { setError('Elige al menos un artículo con cantidad.'); return; }
     setEnviando(true);
