@@ -76,19 +76,25 @@ export function DocumentosPage() {
   const opcionesPlacas = useMemo(() => todas.map(f => ({ placa: f.v.placa, detalle: [f.v.tipo, f.v.empresa].filter(Boolean).join(' · ') })), [todas]);
   const aplicarSeleccion = (s: Set<string> | null) => { setSeleccion(s); guardarSeleccion(s); };
 
-  const cifras = useMemo(() => {
-    const c = { total: delEmpresa.length, vigente: 0, alerta: 0, vencido: 0, sin: 0 };
-    for (const f of delEmpresa) c[grupoDe(f.m)]++;
-    return c;
-  }, [delEmpresa]);
-
-  const filas = useMemo(() => {
+  // Las tarjetas y la línea de avance reaccionan a la empresa, al alquiler y a la búsqueda. El estado del documento no las recorta:
+  // las propias tarjetas son ese estado (si no, al elegir «Vencidos» todas las demás quedarían en cero).
+  const delFiltro = useMemo(() => {
     const q = busqueda.trim().toUpperCase();
     return delEmpresa.filter(f =>
-      (grupo === 'todos' || grupoDe(f.m) === grupo)
-      && (alquiler === 'todas' || (alquiler === 'alquiladas' ? esAlquilada(f.v) : !!responsableExterno(f.v)))
+      (alquiler === 'todas' || (alquiler === 'alquiladas' ? esAlquilada(f.v) : !!responsableExterno(f.v)))
       && (!q || [f.v.placa, f.v.tipo, f.v.marca, f.v.chasis].some(t => String(t ?? '').toUpperCase().includes(q))));
-  }, [delEmpresa, grupo, alquiler, busqueda]);
+  }, [delEmpresa, alquiler, busqueda]);
+
+  const cifras = useMemo(() => {
+    const c = { total: delFiltro.length, vigente: 0, alerta: 0, vencido: 0, sin: 0 };
+    for (const f of delFiltro) c[grupoDe(f.m)]++;
+    return c;
+  }, [delFiltro]);
+
+  const filas = useMemo(
+    () => delFiltro.filter(f => grupo === 'todos' || grupoDe(f.m) === grupo),
+    [delFiltro, grupo],
+  );
 
   const aviso = (err: unknown) => toast(errorMessage(err), 'error');
   const nombresEmpresa = useMemo(() => empresas.map(e => e.nombre), [empresas]);
