@@ -116,7 +116,8 @@ module.exports = function globalRBAC(req, res, next) {
 
     // APROBACIONES DE GERENCIA: aprobar o anular lo revisa el permiso de Gerencia (no el de Almacén ni el de Tesorería).
     // O/C: solo Gerencia. Caja: Gerencia, y Tesorería como hasta ahora (su pantalla aprueba y anula caja).
-    const esAprobacionOc = req.method === 'PUT' && /^\/almacen\/entradas\/[^/]+\/estado$/.test(path);
+    // Anular una O/C (ya registrada o aprobada) es una decisión de Gerencia, igual que aprobar o rechazar: Almacén ya no puede anularlas.
+    const esAprobacionOc = req.method === 'PUT' && /^\/almacen\/entradas\/[^/]+\/(estado|anular)$/.test(path);
     const esAprobacionCaja = req.method === 'POST' && /^\/tesoreria\/caja\/[^/]+\/(aprobar|anular)$/.test(path);
     // CAJA CHICA: asignación, gastos y reposición los aprueban Tesorería y Gerencia; el descuento, cualquiera de los dos
     const aprobGerenciaChica = req.method === 'POST' && /^\/tesoreria\/caja-chica\/.+\/aprobar-gerencia$/.test(path);

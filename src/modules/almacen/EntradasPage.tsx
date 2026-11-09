@@ -221,6 +221,8 @@ export function EntradasPage() {
   const puedeCrear = can('ent_inv.crear');
   const puedeEditar = can('ent_inv.editar');
   const puedeEliminar = can('ent_inv.eliminar');
+  // Anular una orden es decisión de Gerencia (como aprobar o rechazar): sin ese permiso el botón no aparece y el servidor lo bloquea
+  const puedeAnular = can('gerencia_aprobaciones_oc.editar', 'gerencia_aprobaciones_oc.crear');
   // Pagar es un acto de Tesorería: mismos permisos que Pago de requerimientos
   const puedePagar = can('tesoreria_caja.ver', 'tesoreria_pago_req.ver');
 
@@ -478,7 +480,7 @@ export function EntradasPage() {
           onEditar={puedeEditar && estadoEditable(seleccionada.estado) ? () => setFormulario({ entrada: seleccionada }) : undefined}
           onAdjuntos={() => setAdjuntosId(seleccionada.id)}
           onConfirmarPago={puedePagar ? () => setPagar(p => ({ entrada: seleccionada, abierto: true, sesion: p.sesion + 1 })) : undefined}
-          onAnular={puedeEditar && !String(seleccionada.estado ?? '').toLowerCase().includes('anul') ? () => setAnulando(seleccionada) : undefined}
+          onAnular={puedeAnular && !String(seleccionada.estado ?? '').toLowerCase().includes('anul') ? () => setAnulando(seleccionada) : undefined}
           onEliminar={puedeEliminar && estadoEditable(seleccionada.estado) ? () => setPorEliminar(seleccionada) : undefined}
           onPdf={() => { void verPdf(seleccionada, false); }}
           onVistaPrevia={() => { void verPdf(seleccionada, true); }}

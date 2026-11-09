@@ -2947,6 +2947,7 @@ const perfilRoutes = require('./routes/perfil')(db, logAudit);
 app.use('/api', perfilRoutes);
 const auditoriaRoutes = require('./routes/audit')(db);
 app.use('/api', auditoriaRoutes);
+app.use('/api', require('./routes/audit_vista')(db));
 const notificacionesRoutes = require('./routes/notificaciones')(db);
 app.use('/api', notificacionesRoutes);
 // Avisos en el teléfono (Web Push): cada usuario gestiona sus propios dispositivos

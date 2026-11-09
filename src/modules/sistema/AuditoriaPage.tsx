@@ -1,481 +1,443 @@
-import '../mantenimiento/mant.css';
-import './auditoria.css';
-import './auditoria-clasico.css';
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import { Eye, LogIn, ShieldCheck } from 'lucide-react';
-import { PageLoader } from '../../core/ui/Button';
+import './auditoriaPage.css';
+import '../../core/ui/botonesIcono.css';
+import { useEffect, useMemo, useState } from 'react';
+import { Ban, CircleSlash, Eye, FileSpreadsheet, History, RefreshCw, ShieldCheck, ShieldAlert, Trash2, Users } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField, SelectInput } from '../../core/ui/Field';
+import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
-import { SlideUpModal } from '../../core/ui/SlideUpModal';
+import { Sheet } from '../../core/ui/Sheet';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
+import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { useToast } from '../../core/ui/Toast';
-import { formatFechaHoraPe } from '../../core/lib/format';
+import { formatSoles } from '../../core/lib/format';
+import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
 import { useLogFirmado, type LogFirmado } from './api';
 import {
-  etiquetaAccion, etiquetaCampo, etiquetaEntidad, useActividadAudit, useAuditoriaEnVivo, usePersonasAudit, useResumenAudit, useTotalAuditSinFiltros, todosLosEventosAudit,
-  ENTIDAD_LABELS, ACCION_LABELS, TAMANOS_AUDIT, TAMANO_AUDIT_DEFAULT, type CategoriaAudit, type EventoAudit, type FiltrosAudit, type OrdenAudit, type ResumenAudit,
-} from './auditoriaActividad';
+  diaLima, ETIQUETA_CATEGORIA, fechaLima, haceCuanto, todosLosEventos, useAnulaciones, useDetalleEvento, useEventos, useFiltrosEventos, useResumenEventos,
+  type Anulacion, type CategoriaEvento, type FiltrosEventos,
+} from './auditoriaApi';
 
-type Vista = 'actividad' | 'firmado';
+// Sistema › Auditoría: quién hizo qué y cuándo. Solo lectura. Tres vistas:
+//  · Actividad: lo que hicieron las personas, en lenguaje claro (sin el ruido de las consultas automáticas).
+//  · Anulaciones y rechazos: órdenes y salidas anuladas o rechazadas, con quién y a qué hora (hora de Lima).
+//  · Registro firmado: cada petición que modificó datos, con su firma de integridad.
 
-const FILTROS_VACIOS: FiltrosAudit = { q: '', entity: '', action: '', userId: '', from: '', to: '', categoria: '' };
+type Vista = 'actividad' | 'anulaciones' | 'firmado';
+const TABLA_QUERY = '(min-width: 768px)';
+const TAMANOS = [25, 50, 100];
 
-// Tarjetas de resumen del clásico (mismos colores, íconos y textos)
-const TARJETAS_AUDIT: { categoria: CategoriaAudit; clave: keyof ResumenAudit; etiqueta: string; icono: string; color: string; fondo: string }[] = [
-  { categoria: '', clave: 'total', etiqueta: 'Total eventos', icono: 'bi-layers-fill', color: '#6366f1', fondo: 'rgba(99,102,241,0.12)' },
-  { categoria: 'creo', clave: 'creo', etiqueta: 'Creaciones', icono: 'bi-plus-circle-fill', color: '#16a34a', fondo: 'rgba(34,197,94,0.12)' },
-  { categoria: 'modifico', clave: 'modifico', etiqueta: 'Modificaciones', icono: 'bi-pencil-square', color: '#d97706', fondo: 'rgba(245,158,11,0.12)' },
-  { categoria: 'elimino', clave: 'elimino', etiqueta: 'Eliminaciones', icono: 'bi-trash3-fill', color: '#dc2626', fondo: 'rgba(239,68,68,0.12)' },
+const COLORES = ['#6366f1', '#10b981', '#06b6d4', '#f59e0b', '#8b5cf6', '#ef4444', '#ec4899', '#0284c7', '#14b8a6', '#e11d48'];
+const colorDe = (s: string) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) & 0xffffff; return COLORES[Math.abs(h) % COLORES.length]; };
+const iniciales = (s: string) => { const p = s.trim().split(/[\s@._-]+/).filter(Boolean); return (p.length >= 2 ? p[0][0] + p[1][0] : (p[0] || 'A').slice(0, 2)).toUpperCase(); };
+
+const COL_ACTIVIDAD: ColumnaTabla[] = [
+  { id: 'fecha', titulo: 'Fecha y hora', ancho: 168 },
+  { id: 'usuario', titulo: 'Usuario', ancho: 220 },
+  { id: 'accion', titulo: 'Acción', ancho: 116 },
+  { id: 'modulo', titulo: 'Módulo', ancho: 150 },
+  { id: 'detalle', titulo: 'Qué hizo', ancho: 460 },
+  { id: 'ver', titulo: 'Ver', ancho: 64, minimo: 56, alinear: 'center' },
+];
+const COL_ANULACIONES: ColumnaTabla[] = [
+  { id: 'doc', titulo: 'Documento', ancho: 150 },
+  { id: 'tipo', titulo: 'Tipo', ancho: 140 },
+  { id: 'estado', titulo: 'Estado', ancho: 110, alinear: 'center' },
+  { id: 'contraparte', titulo: 'Proveedor / destino', ancho: 220 },
+  { id: 'total', titulo: 'Total (S/)', ancho: 112, alinear: 'right' },
+  { id: 'quien', titulo: 'Anulada / rechazada por', ancho: 220 },
+  { id: 'cuando', titulo: 'Fecha y hora', ancho: 168 },
+  { id: 'motivo', titulo: 'Motivo o comentario', ancho: 280 },
+  { id: 'creada', titulo: 'Creada por', ancho: 200 },
+];
+const COL_FIRMADO: ColumnaTabla[] = [
+  { id: 'fecha', titulo: 'Fecha y hora', ancho: 168 },
+  { id: 'usuario', titulo: 'Usuario', ancho: 210 },
+  { id: 'metodo', titulo: 'Método', ancho: 86 },
+  { id: 'ruta', titulo: 'Ruta', ancho: 420 },
+  { id: 'http', titulo: 'HTTP', ancho: 70, alinear: 'center' },
+  { id: 'firma', titulo: 'Firma', ancho: 130 },
 ];
 
-// ── Helpers copiados del clásico (modulos/sistema/auditoria/logica.js) ──
-
-const AVATAR_COLORES = ['#6366f1', '#10b981', '#06b6d4', '#f59e0b', '#8b5cf6', '#ef4444', '#ec4899', '#0284c7', '#14b8a6', '#e11d48'];
-
-/** _getAuditUserColor */
-function colorUsuario(str: string): string {
-  const s = String(str || 'A');
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) & 0xFFFFFF;
-  return AVATAR_COLORES[Math.abs(h) % AVATAR_COLORES.length];
+function EtiquetaCategoria({ c }: { c: CategoriaEvento }) {
+  return <span className={`aud2-cat aud2-cat--${c}`}>{ETIQUETA_CATEGORIA[c]}</span>;
 }
 
-/** _getAuditUserInitials */
-function inicialesUsuario(str: string): string {
-  const raw = String(str || 'A').trim();
-  const partes = raw.split(/[@.\s_-]+/).filter(Boolean);
-  if (partes.length >= 2) return (partes[0][0] + partes[1][0]).toUpperCase();
-  return (partes[0] || 'AD').slice(0, 2).toUpperCase();
-}
-
-/** _formatAuditDate: "dd/mm/aaaa hh:mm:ss" + antigüedad relativa */
-function formatoFechaAudit(dateStr: string): { full: string; rel: string } {
-  if (!dateStr) return { full: '—', rel: '' };
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return { full: String(dateStr), rel: '' };
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const hours = String(d.getHours()).padStart(2, '0');
-  const mins = String(d.getMinutes()).padStart(2, '0');
-  const secs = String(d.getSeconds()).padStart(2, '0');
-  const full = `${day}/${month}/${d.getFullYear()} ${hours}:${mins}:${secs}`;
-  let rel = '';
-  const m = Math.floor((Date.now() - d.getTime()) / 60000);
-  if (m < 1) rel = 'ahora';
-  else if (m < 60) rel = `hace ${m}m`;
-  else {
-    const h = Math.floor(m / 60);
-    if (h < 24) rel = `hace ${h}h`;
-    else {
-      const dias = Math.floor(h / 24);
-      if (dias < 7) rel = `hace ${dias}d`;
-    }
-  }
-  return { full, rel };
-}
-
-/**
- * _getAccionBadge. La clasificación usa la acción original (CREATE, UPDATE…);
- * el texto que se muestra es la etiqueta en español.
- */
-function badgeAccion(raw: string, label: string): { clase: string; icono: string; estilo?: CSSProperties; texto: string } {
-  const a = String(raw || '').toUpperCase();
-  if (a.includes('CRE') || a.includes('INSERT') || a.includes('NUEV') || a.includes('REGISTR'))
-    return { clase: 'audit-badge-action audit-badge-cre', icono: 'bi-plus-circle-fill', texto: label || 'CREÓ' };
-  if (a.includes('MODIF') || a.includes('ACTUALIZ') || a.includes('EDIT') || a.includes('CAMBIO'))
-    return { clase: 'audit-badge-action audit-badge-mod', icono: 'bi-pencil-square', texto: label || 'MODIFICÓ' };
-  if (a.includes('ELIMIN') || a.includes('ANUL') || a.includes('CANCEL') || a.includes('DELETE'))
-    return { clase: 'audit-badge-action audit-badge-del', icono: 'bi-trash3-fill', texto: label || 'ELIMINÓ' };
-  if (a.includes('SYNC') || a.includes('SINCRONIZ'))
-    return { clase: 'audit-badge-action audit-badge-sync', icono: 'bi-cloud-arrow-down-fill', texto: label || 'SINCRONIZÓ' };
-  return {
-    clase: 'audit-badge-action audit-badge-mod', icono: 'bi-activity', texto: label || 'MODIFICÓ',
-    estilo: { background: 'rgba(99,102,241,0.12)', color: '#4f46e5', borderColor: 'rgba(99,102,241,0.3)' },
-  };
-}
-
-/** Números de página de renderAuditPagination: ventana de 5 con primera/última y «…» */
-function ventanaPaginas(actual: number, totalPaginas: number): (number | '…')[] {
-  const numeros: (number | '…')[] = [];
-  let inicio = Math.max(1, actual - 2);
-  const fin = Math.min(totalPaginas, inicio + 5 - 1);
-  if (fin - inicio < 5 - 1) inicio = Math.max(1, fin - 5 + 1);
-  if (inicio > 1) {
-    numeros.push(1);
-    if (inicio > 2) numeros.push('…');
-  }
-  for (let p = inicio; p <= fin; p++) numeros.push(p);
-  if (fin < totalPaginas) {
-    if (fin < totalPaginas - 1) numeros.push('…');
-    numeros.push(totalPaginas);
-  }
-  return numeros;
-}
-
-// Estilos de los botones y campos del clásico (Bootstrap no está cargado en React)
-const BTN_PAG: CSSProperties = { borderRadius: 8, fontSize: '0.75rem', padding: '4px 8px', border: '1px solid #6c757d', background: 'transparent', color: '#6c757d', minWidth: 32, cursor: 'pointer' };
-const BTN_PAG_ACTIVA: CSSProperties = { ...BTN_PAG, background: '#0d6efd', borderColor: '#0d6efd', color: '#fff', fontWeight: 700 };
-const BTN_PAG_OFF: CSSProperties = { ...BTN_PAG, opacity: 0.65, cursor: 'default' };
-const BADGE_MONITOREO: CSSProperties = { fontSize: '0.68rem', display: 'inline-flex', alignItems: 'center', gap: 2, padding: '0.35em 0.65em', borderRadius: 50, background: '#d1e7dd', color: '#198754', border: '1px solid #a3cfbb', fontWeight: 600 };
-const BTN_EXCEL: CSSProperties = { borderRadius: 10, fontWeight: 600, fontSize: '0.875rem', padding: '0.25rem 0.5rem', border: '1px solid #198754', background: 'transparent', color: '#198754', display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', boxShadow: '0 .125rem .25rem rgba(0,0,0,.075)' };
-const BTN_ACTUALIZAR: CSSProperties = { borderRadius: 10, fontWeight: 600, fontSize: '0.875rem', padding: '0.25rem 0.5rem', border: '1px solid #0d6efd', background: '#0d6efd', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', boxShadow: '0 .125rem .25rem rgba(0,0,0,.075)' };
-const CAMPO_CLASICO: CSSProperties = { fontSize: '0.8rem', borderRadius: 10, minWidth: 150, height: 31, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' };
-const FECHA_CLASICA: CSSProperties = { width: 130, fontSize: '0.78rem', height: 31, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', color: 'var(--text)', padding: '0 6px' };
-const ETIQUETA_FILTRO: CSSProperties = { fontSize: '0.75rem', fontWeight: 600, color: 'var(--subtext)' };
-
-/** Valor legible para la tabla de cambios */
-function valorLegible(v: unknown): string {
-  if (v === null || v === undefined || v === '') return '—';
-  if (typeof v === 'boolean') return v ? 'Sí' : 'No';
-  if (Array.isArray(v)) return v.length ? v.join(', ') : '—';
-  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v)) return formatFechaHoraPe(v);
-  return String(v);
-}
-
-/** Detalle del clásico (verDetalleAudit). Módulo y Sub-Módulo no existen en audit_logs. */
-function DetalleEvento({ e }: { e: EventoAudit }) {
-  const fecha = formatoFechaAudit(e.created_at);
-  const badge = badgeAccion(e.action, etiquetaAccion(e.action));
-  const cambios = e.changes ? Object.entries(e.changes) : [];
-  const fila: CSSProperties = { display: 'flex', marginBottom: '0.75rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.6rem' };
-  const rotulo: CSSProperties = { width: 140, fontWeight: 700, color: 'var(--subtext)', fontSize: '0.8rem', textTransform: 'uppercase' };
-  const valor: CSSProperties = { flex: 1, fontSize: '0.88rem', color: 'var(--text)', wordBreak: 'break-word' };
+function Persona({ nombre }: { nombre: string }) {
   return (
-    <div className="audit-detail-modal-card">
-      <div className="audit-detail-row" style={fila}><div className="audit-detail-label" style={rotulo}>ID Evento:</div><div className="audit-detail-val" style={valor}><span className="audit-id-badge">#{e.id}</span></div></div>
-      <div className="audit-detail-row" style={fila}><div className="audit-detail-label" style={rotulo}>Fecha y Hora:</div><div className="audit-detail-val" style={valor}>{fecha.full} {fecha.rel && <span style={{ fontSize: '0.71rem', color: 'var(--subtext)', marginLeft: 6 }}>{fecha.rel}</span>}</div></div>
-      <div className="audit-detail-row" style={fila}><div className="audit-detail-label" style={rotulo}>Usuario:</div><div className="audit-detail-val" style={{ ...valor, fontWeight: 600 }}>{e.user_name || 'Administrador'}</div></div>
-      <div className="audit-detail-row" style={fila}><div className="audit-detail-label" style={rotulo}>Acción:</div><div className="audit-detail-val" style={valor}><span className={badge.clase} style={badge.estilo}><i className={`bi ${badge.icono}`} /> {badge.texto}</span></div></div>
-      <div className="audit-detail-row" style={{ ...fila, borderBottom: 'none' }}>
-        <div className="audit-detail-label" style={rotulo}>Descripción / Detalle:</div>
-        <div className="audit-detail-val" style={valor}>
-          <div style={{ padding: '0.75rem', background: 'var(--bg)', borderRadius: 8, border: '1px solid var(--border)', marginTop: 8 }}>{e.summary || 'Sin detalle adicional'}</div>
-          {cambios.length > 0 && (
-            <table className="aud-cambios" style={{ marginTop: 8 }}>
-              <thead><tr><th>Campo</th><th>Antes</th><th>Después</th></tr></thead>
-              <tbody>
-                {cambios.map(([campo, c]) => (
-                  <tr key={campo}><td>{etiquetaCampo(campo)}</td><td>{valorLegible(c.from)}</td><td>{valorLegible(c.to)}</td></tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
+    <div className="aud2-usuario">
+      <span className="aud2-avatar" style={{ background: colorDe(nombre) }} aria-hidden>{iniciales(nombre)}</span>
+      <span className="aud2-nombre" title={nombre}>{nombre}</span>
     </div>
   );
 }
 
-/** Actividad: tabla del clásico (ordenar por ID, tamaño de página y paginación numerada) */
-function ActividadAuditoria() {
+function Fecha({ iso }: { iso: string | null }) {
+  const rel = haceCuanto(iso);
+  return <span className="aud2-fecha">{fechaLima(iso)}{rel && <span className="aud2-rel">{rel}</span>}</span>;
+}
+
+/** Valor legible dentro del antes/después */
+function valor(v: unknown): string {
+  if (v === null || v === undefined || v === '') return '—';
+  if (typeof v === 'object') return JSON.stringify(v);
+  return String(v);
+}
+
+function Cambios({ antes, despues }: { antes: Record<string, unknown> | string | null; despues: Record<string, unknown> | string | null }) {
+  if (!antes && !despues) return null;
+  if (typeof antes === 'object' && antes && typeof despues === 'object' && despues) {
+    const claves = [...new Set([...Object.keys(antes), ...Object.keys(despues)])].filter(k => valor(antes[k]) !== valor(despues[k]));
+    if (claves.length) {
+      return (
+        <table className="aud2-diff">
+          <thead><tr><th>Campo</th><th>Antes</th><th>Después</th></tr></thead>
+          <tbody>{claves.map(k => <tr key={k}><td>{k}</td><td>{valor(antes[k])}</td><td>{valor(despues[k])}</td></tr>)}</tbody>
+        </table>
+      );
+    }
+  }
+  const txt = (v: unknown) => (typeof v === 'string' ? v : JSON.stringify(v, null, 2));
+  return (
+    <div style={{ display: 'grid', gap: 'var(--s-3)' }}>
+      {antes ? <div><strong className="t-footnote">Antes</strong><pre className="aud2-pre">{txt(antes)}</pre></div> : null}
+      {despues ? <div><strong className="t-footnote">Después</strong><pre className="aud2-pre">{txt(despues)}</pre></div> : null}
+    </div>
+  );
+}
+
+function DetalleSheet({ uid, onClose }: { uid: string | null; onClose: () => void }) {
+  const q = useDetalleEvento(uid);
+  const e = q.data;
+  const firmaOk = e?.firma ? !/inv|mal|alter|fall/i.test(e.firma) : null;
+  return (
+    <Sheet open={!!uid} onClose={onClose} title={e ? ETIQUETA_CATEGORIA[e.categoria] + ' · ' + e.modulo : 'Detalle del evento'}>
+      {q.isLoading ? <PageLoader /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : e && (
+        <div style={{ display: 'grid', gap: 'var(--s-4)' }}>
+          <p className="t-callout" style={{ margin: 0, fontWeight: 600 }}>{e.descripcion}</p>
+          <div className="aud2-campos">
+            <div className="aud2-campo"><span className="aud2-campo__k">Fecha y hora (Lima)</span><span className="aud2-campo__v">{fechaLima(e.fecha)}</span></div>
+            <div className="aud2-campo"><span className="aud2-campo__k">Usuario</span><span className="aud2-campo__v">{e.usuario}</span></div>
+            <div className="aud2-campo"><span className="aud2-campo__k">Correo / documento</span><span className="aud2-campo__v">{e.correo || '—'}</span></div>
+            <div className="aud2-campo"><span className="aud2-campo__k">Dirección IP</span><span className="aud2-campo__v">{e.ip || '—'}</span></div>
+            <div className="aud2-campo"><span className="aud2-campo__k">Petición</span><span className="aud2-campo__v" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>{e.metodo} {e.ruta}</span></div>
+            <div className="aud2-campo"><span className="aud2-campo__k">Resultado</span><span className="aud2-campo__v">{e.status && e.status >= 400 ? `Con error (HTTP ${e.status})` : 'Correcto'}</span></div>
+          </div>
+          {e.firma && (
+            <span className={`aud2-firma ${firmaOk ? 'aud2-firma--ok' : 'aud2-firma--mal'}`}>
+              {firmaOk ? <ShieldCheck size={16} /> : <ShieldAlert size={16} />} Firma {e.firma}{e.firmaHash ? ` · ${e.firmaHash}` : ''}
+            </span>
+          )}
+          {(e.antes || e.despues) && <div><h3 className="t-headline" style={{ margin: '0 0 var(--s-2)' }}>Qué cambió</h3><Cambios antes={e.antes} despues={e.despues} /></div>}
+          {e.cuerpo && <div><h3 className="t-headline" style={{ margin: '0 0 var(--s-2)' }}>Datos enviados</h3><pre className="aud2-pre">{typeof e.cuerpo === 'string' ? e.cuerpo : JSON.stringify(e.cuerpo, null, 2)}</pre></div>}
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
+function Paginacion({ pagina, total, tamano, onPagina, onTamano }: { pagina: number; total: number; tamano: number; onPagina: (p: number) => void; onTamano: (n: number) => void }) {
+  const paginas = Math.max(1, Math.ceil(total / tamano));
+  const desde = total === 0 ? 0 : (pagina - 1) * tamano + 1;
+  const hasta = Math.min(pagina * tamano, total);
+  return (
+    <nav className="aud2-pag" aria-label="Páginas">
+      <span>Mostrando {desde}–{hasta} de {total.toLocaleString('es-PE')}</span>
+      <div className="aud2-pag__botones">
+        <SelectInput aria-label="Filas por página" value={tamano} onChange={e => onTamano(Number(e.target.value))} style={{ width: 'auto' }}>
+          {TAMANOS.map(n => <option key={n} value={n}>{n} por página</option>)}
+        </SelectInput>
+        <Button size="sm" variant="secondary" disabled={pagina <= 1} onClick={() => onPagina(pagina - 1)}>‹ Anterior</Button>
+        <span>Pág. <b>{pagina}</b> / {paginas}</span>
+        <Button size="sm" variant="secondary" disabled={pagina >= paginas} onClick={() => onPagina(pagina + 1)}>Siguiente ›</Button>
+      </div>
+    </nav>
+  );
+}
+
+// ───────── Actividad ─────────
+
+const FILTROS_INICIALES = (): FiltrosEventos => ({ q: '', modulo: '', usuario: '', categoria: '', from: diaLima(-6), to: diaLima(0) });
+
+function Actividad({ esTabla }: { esTabla: boolean }) {
   const toast = useToast();
-  const [filtros, setFiltros] = useState<FiltrosAudit>(FILTROS_VACIOS);
+  const [f, setF] = useState<FiltrosEventos>(FILTROS_INICIALES);
   const [pagina, setPagina] = useState(1);
-  const [tamano, setTamano] = useState<number>(TAMANO_AUDIT_DEFAULT);
-  const [ascOrden, setAscOrden] = useState(false);       // window._auditSortAsc
-  const [ordenTocado, setOrdenTocado] = useState(false); // el clásico muestra la flecha neutra hasta el primer clic
-  const [detalle, setDetalle] = useState<EventoAudit | null>(null);
-  useAuditoriaEnVivo();
-  const orden: OrdenAudit = ascOrden ? 'asc' : 'desc';
-  const actividad = useActividadAudit(filtros, pagina, tamano, orden);
-  const sinFiltros = useTotalAuditSinFiltros();
-  const resumen = useResumenAudit(filtros);
-  const personas = usePersonasAudit();
-  const eventos = actividad.data?.items ?? [];
-  const total = actividad.data?.total ?? 0;
-  const totalPaginas = Math.max(1, Math.ceil(total / tamano));
-  // Si el total baja, vuelve a la última página válida (renderAuditTable clampa _auditPage)
-  useEffect(() => { if (actividad.data && pagina > totalPaginas) setPagina(totalPaginas); }, [actividad.data, pagina, totalPaginas]);
+  const [tamano, setTamano] = useState(25);
+  const [detalle, setDetalle] = useState<string | null>(null);
+  const eventos = useEventos(f, pagina, tamano);
+  const resumen = useResumenEventos(f);
+  const filtros = useFiltrosEventos();
+  const qc = useQueryClient();
+  const set = <K extends keyof FiltrosEventos>(k: K, v: FiltrosEventos[K]) => { setF(a => ({ ...a, [k]: v })); setPagina(1); };
+  const items = eventos.data?.items ?? [];
+  const total = eventos.data?.total ?? 0;
+  const por = resumen.data?.por ?? {};
 
-  // Mismo ícono de encabezado que el clásico, cargado solo en esta pantalla
-  useEffect(() => {
-    const id = 'libs-bootstrap-icons';
-    if (document.getElementById(id)) return;
-    const link = document.createElement('link');
-    link.id = id; link.rel = 'stylesheet'; link.href = '/libs/bootstrap-icons.css';
-    document.head.appendChild(link);
-    return () => { document.getElementById(id)?.remove(); };
-  }, []);
-
-  // Cambiar un filtro vuelve a la página 1 (filtrarAuditFeed)
-  const set = (k: keyof FiltrosAudit) => (v: string) => { setFiltros(f => ({ ...f, [k]: v })); setPagina(1); };
-  const inicioIdx = (pagina - 1) * tamano;
-  const desde = total === 0 ? 0 : inicioIdx + 1;
-  const hasta = Math.min(inicioIdx + tamano, total);
-  const totalSinFiltros = sinFiltros.data?.total;
-  const subtitulo = actividad.isLoading
-    ? 'Cargando registros...'
-    : `${total} evento${total !== 1 ? 's' : ''}${totalSinFiltros !== undefined && totalSinFiltros !== total ? ` filtrados (de ${totalSinFiltros} totales)` : ''}`;
-  const iconoOrden = !ordenTocado ? 'bi-arrow-down-up' : ascOrden ? 'bi-sort-numeric-up' : 'bi-sort-numeric-down';
-
-  // Exporta todos los registros que cumplen los filtros (no solo la página), con fecha y hora de Lima
   async function exportar() {
     try {
-      const todos = await todosLosEventosAudit(filtros, orden);
-      const aLima = (iso: string) => new Date(iso).toLocaleString('sv-SE', { timeZone: 'America/Lima' });
-      await exportarExcel('Auditoria', 'Auditoría', ['ID Evento', 'Fecha y hora', 'Usuario', 'Registro', 'Acción', 'Resumen', 'IP'],
-        todos.map(e => [e.id, aLima(e.created_at), e.user_name || '—', ENTIDAD_LABELS[e.entity] ?? e.entity,
-          ACCION_LABELS[e.action] ?? e.action, e.summary || '—', e.ip ?? '']));
+      const todos = await todosLosEventos(f);
+      await exportarExcel('Auditoria', 'Actividad', ['ID', 'Fecha y hora (Lima)', 'Usuario', 'Acción', 'Módulo', 'Qué hizo', 'IP'],
+        todos.map(e => [e.uid, fechaLima(e.fecha), e.usuario, ETIQUETA_CATEGORIA[e.categoria], e.modulo, e.descripcion, e.ip ?? '']));
       haptic('success');
     } catch (err) { toast(errorMessage(err), 'error'); }
   }
 
-  function renderPaginacion() {
-    const botones: ReactNode[] = [];
-    botones.push(
-      <button key="ant" type="button" style={pagina <= 1 ? BTN_PAG_OFF : BTN_PAG} disabled={pagina <= 1}
-        onClick={() => setPagina(pagina - 1)} aria-label="Página anterior"><i className="bi bi-chevron-left" /></button>,
-    );
-    ventanaPaginas(pagina, totalPaginas).forEach((n, i) => botones.push(
-      n === '…'
-        ? <span key={`p-${i}`} style={{ padding: '0 4px', color: 'var(--subtext)' }}>...</span>
-        : <button key={n} type="button" style={n === pagina ? BTN_PAG_ACTIVA : BTN_PAG} onClick={() => setPagina(n)}>{n}</button>,
-    ));
-    botones.push(
-      <button key="sig" type="button" style={pagina >= totalPaginas ? BTN_PAG_OFF : BTN_PAG} disabled={pagina >= totalPaginas}
-        onClick={() => setPagina(pagina + 1)} aria-label="Página siguiente"><i className="bi bi-chevron-right" /></button>,
-    );
-    return botones;
+  return (
+    <>
+      <div className="inv-kpis" style={{ marginBottom: 'var(--s-4)' }}>
+        <KpiTarjeta etiqueta="Eventos" valor={(resumen.data?.total ?? 0).toLocaleString('es-PE')} sub="En el filtro" icono={<History size={18} />}
+          onClick={() => set('categoria', '')} activo={f.categoria === ''} />
+        <KpiTarjeta etiqueta="Anulaciones y rechazos" valor={String((por.anulo ?? 0) + (por.rechazo ?? 0))} sub="Requieren revisión" icono={<Ban size={18} />} tono="warning"
+          onClick={() => set('categoria', f.categoria === 'anulo' ? '' : 'anulo')} activo={f.categoria === 'anulo'} />
+        <KpiTarjeta etiqueta="Eliminaciones" valor={String(por.elimino ?? 0)} sub="Registros borrados" icono={<Trash2 size={18} />}
+          onClick={() => set('categoria', f.categoria === 'elimino' ? '' : 'elimino')} activo={f.categoria === 'elimino'} />
+        <KpiTarjeta etiqueta="Personas activas" valor={String(resumen.data?.personas ?? 0)} sub="Con actividad en el filtro" icono={<Users size={18} />} tono="valor" />
+      </div>
+
+      <div className="aud2-filtros">
+        <SearchField value={f.q} onChange={v => set('q', v)} placeholder="Buscar por persona, código (ENT-2026-…), módulo o detalle" />
+        <div className="aud2-fila">
+          <div className="aud2-fechas">
+            <TextInput type="date" aria-label="Desde" value={f.from} max={f.to || undefined} onChange={e => set('from', e.target.value)} />
+            <span className="t-footnote c-secondary">a</span>
+            <TextInput type="date" aria-label="Hasta" value={f.to} min={f.from || undefined} onChange={e => set('to', e.target.value)} />
+            <button type="button" className="aud2-quitar" aria-label="Quitar fechas" onClick={() => { setF(a => ({ ...a, from: '', to: '' })); setPagina(1); }}>×</button>
+          </div>
+          <SelectInput aria-label="Módulo" value={f.modulo} onChange={e => set('modulo', e.target.value)}>
+            <option value="">Todos los módulos</option>
+            {(filtros.data?.modulos ?? []).map(m => <option key={m.valor} value={m.valor}>{m.etiqueta} ({m.n})</option>)}
+          </SelectInput>
+          <SelectInput aria-label="Persona" value={f.usuario} onChange={e => set('usuario', e.target.value)}>
+            <option value="">Todas las personas</option>
+            {(filtros.data?.personas ?? []).map(p => <option key={p.valor} value={p.valor}>{p.valor} ({p.n})</option>)}
+          </SelectInput>
+          <SelectInput aria-label="Acción" value={f.categoria} onChange={e => set('categoria', e.target.value as FiltrosEventos['categoria'])}>
+            <option value="">Todas las acciones</option>
+            {(Object.keys(ETIQUETA_CATEGORIA) as CategoriaEvento[]).map(c => <option key={c} value={c}>{ETIQUETA_CATEGORIA[c]}</option>)}
+          </SelectInput>
+          <span className="badge aud2-contador">{total.toLocaleString('es-PE')} {total === 1 ? 'evento' : 'eventos'}</span>
+          <div className="oc-acciones" style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className="btn btn--secondary btn--icon btn-tip btn-tip--verde" data-tip="Exportar a Excel" aria-label="Exportar a Excel" onClick={exportar} disabled={total === 0}><FileSpreadsheet size={17} /></button>
+            <button type="button" className="btn btn--secondary btn--icon btn-tip btn-tip--celeste" data-tip="Actualizar" aria-label="Actualizar"
+              onClick={() => { void qc.invalidateQueries({ queryKey: ['auditoria'] }); }}><RefreshCw size={17} /></button>
+          </div>
+        </div>
+      </div>
+
+      {eventos.isLoading ? <PageLoader /> : eventos.isError ? <Notice tone="error">{errorMessage(eventos.error)}</Notice> : items.length === 0 ? (
+        <EmptyState icon={<CircleSlash size={22} />} title="Ningún evento coincide">
+          <Button variant="plain" onClick={() => { setF({ q: '', modulo: '', usuario: '', categoria: '', from: '', to: '' }); setPagina(1); }}>Quitar filtros</Button>
+        </EmptyState>
+      ) : esTabla ? (
+        <TablaRedimensionable id="auditoria-actividad" columnas={COL_ACTIVIDAD} ariaLabel="Actividad del sistema" altoMax="64vh">
+          {items.map(e => (
+            <tr key={e.uid}>
+              <Celda><Fecha iso={e.fecha} /></Celda>
+              <Celda><Persona nombre={e.usuario} /></Celda>
+              <Celda><EtiquetaCategoria c={e.categoria} /></Celda>
+              <Celda>{e.modulo}</Celda>
+              <Celda><span className="aud2-texto" title={e.descripcion}>{e.descripcion}</span><span className="aud2-ruta">{e.metodo} {e.ruta}</span></Celda>
+              <Celda alinear="center"><button type="button" className="aud2-ver btn-tip" data-tip="Ver detalle" aria-label={`Ver detalle del evento ${e.uid}`} onClick={() => setDetalle(e.uid)}><Eye size={16} /></button></Celda>
+            </tr>
+          ))}
+        </TablaRedimensionable>
+      ) : (
+        <div className="aud2-tarjetas">
+          {items.map(e => (
+            <button key={e.uid} type="button" className="aud2-tarjeta pressable" onClick={() => setDetalle(e.uid)}>
+              <div className="aud2-tarjeta__cabeza"><EtiquetaCategoria c={e.categoria} /><Fecha iso={e.fecha} /></div>
+              <span className="aud2-texto" style={{ WebkitLineClamp: 3 }}>{e.descripcion}</span>
+              <div className="aud2-tarjeta__pie"><Persona nombre={e.usuario} /><span>{e.modulo}</span></div>
+            </button>
+          ))}
+        </div>
+      )}
+      {total > 0 && <Paginacion pagina={pagina} total={total} tamano={tamano} onPagina={setPagina} onTamano={n => { setTamano(n); setPagina(1); }} />}
+      <DetalleSheet uid={detalle} onClose={() => setDetalle(null)} />
+    </>
+  );
+}
+
+// ───────── Anulaciones y rechazos ─────────
+
+function Anulaciones({ esTabla }: { esTabla: boolean }) {
+  const toast = useToast();
+  const q = useAnulaciones(true);
+  const [busqueda, setBusqueda] = useState('');
+  const [tipo, setTipo] = useState('');
+  const [estado, setEstado] = useState('');
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+  const [pagina, setPagina] = useState(1);
+  const [tamano, setTamano] = useState(25);
+  const qc = useQueryClient();
+
+  const filas = useMemo(() => {
+    const t = busqueda.trim().toLowerCase();
+    return (q.data ?? []).filter(a => {
+      if (tipo && a.tipo !== tipo) return false;
+      if (estado && a.estado !== estado) return false;
+      const dia = (a.cuando ?? a.creadaEn ?? '').slice(0, 10);
+      if (desde && dia < desde) return false;
+      if (hasta && dia > hasta) return false;
+      if (t && ![a.codigo, a.contraparte, a.porQuien, a.creadoPor, a.motivo].join(' ').toLowerCase().includes(t)) return false;
+      return true;
+    });
+  }, [q.data, busqueda, tipo, estado, desde, hasta]);
+  useEffect(() => { setPagina(1); }, [busqueda, tipo, estado, desde, hasta]);
+
+  const pag = filas.slice((pagina - 1) * tamano, pagina * tamano);
+  const kpis = useMemo(() => ({
+    anuladas: filas.filter(a => a.estado === 'Anulada').length,
+    rechazadas: filas.filter(a => a.estado === 'Rechazada').length,
+    monto: filas.reduce((s, a) => s + a.total, 0),
+    sinRegistro: filas.filter(a => !a.conRegistro).length,
+  }), [filas]);
+
+  async function exportar() {
+    try {
+      await exportarExcel('Anulaciones_y_rechazos', 'Anulaciones y rechazos',
+        ['Documento', 'Tipo', 'Estado', 'Proveedor / destino', 'Total (S/)', 'Anulada o rechazada por', 'Fecha y hora (Lima)', 'Motivo o comentario', 'Creada por'],
+        filas.map(a => [a.codigo, a.tipo, a.estado, a.contraparte, a.total, a.porQuien ?? 'Sin registro', a.cuando ? fechaLima(a.cuando) : 'Sin registro', a.motivo, a.creadoPor]));
+      haptic('success');
+    } catch (err) { toast(errorMessage(err), 'error'); }
   }
 
+  const Quien = ({ a }: { a: Anulacion }) => (a.porQuien ? <Persona nombre={a.porQuien} /> : <span className="aud2-sin">Sin registro</span>);
+  const Cuando = ({ a }: { a: Anulacion }) => (a.cuando ? <Fecha iso={a.cuando} /> : <span className="aud2-sin">Sin registro</span>);
+  const Estado = ({ a }: { a: Anulacion }) => <span className={`aud2-cat aud2-cat--${a.estado === 'Anulada' ? 'anulada' : 'rechazada'}`}>{a.estado}</span>;
+
   return (
-    <div id="moduloAuditoria" style={{ '--bg': '#f2f2f7', '--surface': '#ffffff', '--text': '#000000', '--subtext': '#8e8e93', '--border': '#e5e5ea' } as CSSProperties}>
-      {/* Encabezado principal (clásico) */}
-      <div className="audit-top-header">
-        <div className="audit-title-area">
-          <div className="audit-icon-box"><i className="bi bi-shield-check" /></div>
-          <div>
-            <h4 className="mb-0 fw-bold" style={{ fontSize: '1.15rem', color: 'var(--text)', margin: 0, fontWeight: 700 }}>Auditoría y Registro de Actividad</h4>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-              <span id="audit-subtitle" style={{ fontSize: '0.78rem', color: 'var(--subtext)' }}>{subtitulo}</span>
-              <span style={BADGE_MONITOREO}><i className="bi bi-dot" /> Monitoreo Activo</span>
-            </div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button type="button" style={BTN_EXCEL} onClick={exportar} disabled={total === 0} title="Descargar reporte en formato Excel (.xlsx)">
-            <i className="bi bi-file-earmark-excel-fill" /> Exportar Excel
-          </button>
-          <button type="button" style={BTN_ACTUALIZAR} onClick={() => { actividad.refetch(); sinFiltros.refetch(); resumen.refetch(); }} title="Recargar eventos">
-            <i className={`bi bi-arrow-clockwise${actividad.isFetching ? ' bi-spin' : ''}`} /> Actualizar
-          </button>
-        </div>
+    <>
+      <div className="inv-kpis" style={{ marginBottom: 'var(--s-4)' }}>
+        <KpiTarjeta etiqueta="Anuladas" valor={String(kpis.anuladas)} sub="En el filtro" icono={<Ban size={18} />} tono="warning" onClick={() => setEstado(estado === 'Anulada' ? '' : 'Anulada')} activo={estado === 'Anulada'} />
+        <KpiTarjeta etiqueta="Rechazadas" valor={String(kpis.rechazadas)} sub="Por Gerencia" icono={<CircleSlash size={18} />} onClick={() => setEstado(estado === 'Rechazada' ? '' : 'Rechazada')} activo={estado === 'Rechazada'} />
+        <KpiTarjeta etiqueta="Monto involucrado (S/)" valor={formatSoles(kpis.monto)} sub="Suma de los documentos" icono={<History size={18} />} tono="valor" />
+        <KpiTarjeta etiqueta="Sin registro de quién" valor={String(kpis.sinRegistro)} sub="Anteriores a la auditoría" icono={<ShieldAlert size={18} />} />
       </div>
 
-      {/* Tarjetas de resumen (clásico): cada una filtra por su categoría; «Total» quita el filtro */}
-      <div className="audit-kpi-grid">
-        {TARJETAS_AUDIT.map(t => {
-          const activa = filtros.categoria === t.categoria;
-          const valor = resumen.data?.[t.clave];
-          return (
-            <button key={t.categoria || 'todas'} type="button" className={`audit-kpi-card${activa ? ' active' : ''}`} aria-pressed={activa}
-              onClick={() => { setFiltros(f => ({ ...f, categoria: t.categoria })); setPagina(1); }}
-              style={{ cursor: 'pointer', textAlign: 'left', font: 'inherit', color: 'inherit', width: '100%' }}>
-              <div className="audit-kpi-icon" style={{ background: t.fondo, color: t.color }}><i className={`bi ${t.icono}`} /></div>
-              <div>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--subtext)', textTransform: 'uppercase' }}>{t.etiqueta}</div>
-                <div className="fw-bold" style={{ fontSize: '1.25rem', color: t.categoria ? t.color : 'var(--text)' }}>
-                  {valor === undefined ? '…' : valor.toLocaleString('es-PE')}
-                </div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Barra de herramientas y filtros (clásico) + filtros que ya existían en React */}
-      <div className="audit-toolbar">
-        <div className="audit-toolbar-row">
-          <div className="audit-search-input">
-            <i className="bi bi-search" />
-            <input type="text" className="form-control form-control-sm" id="auditSearch" value={filtros.q}
-              placeholder="Buscar por ID, usuario, módulo, sub-módulo, detalle..."
-              onChange={e => set('q')(e.target.value)} />
+      <div className="aud2-filtros">
+        <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar por documento, proveedor, persona o motivo" />
+        <div className="aud2-fila">
+          <div className="aud2-fechas">
+            <TextInput type="date" aria-label="Desde" value={desde} onChange={e => setDesde(e.target.value)} />
+            <span className="t-footnote c-secondary">a</span>
+            <TextInput type="date" aria-label="Hasta" value={hasta} onChange={e => setHasta(e.target.value)} />
+            <button type="button" className="aud2-quitar" aria-label="Quitar fechas" onClick={() => { setDesde(''); setHasta(''); }}>×</button>
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={ETIQUETA_FILTRO}>Desde:</span>
-              <input type="date" id="auditFechaDesde" style={FECHA_CLASICA} value={filtros.from} max={filtros.to || undefined}
-                onChange={e => set('from')(e.target.value)} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={ETIQUETA_FILTRO}>Hasta:</span>
-              <input type="date" id="auditFechaHasta" style={FECHA_CLASICA} value={filtros.to} min={filtros.from || undefined}
-                onChange={e => set('to')(e.target.value)} />
-            </div>
-            <button type="button" title="Limpiar fechas" style={BTN_PAG}
-              onClick={() => { setFiltros(f => ({ ...f, from: '', to: '' })); setPagina(1); }}>
-              <i className="bi bi-x-circle" />
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <SelectInput value={filtros.entity} onChange={e => set('entity')(e.target.value)} aria-label="Módulo" style={CAMPO_CLASICO}>
-              <option value="">Todos los módulos</option>
-              {Object.keys(ENTIDAD_LABELS).map(k => <option key={k} value={k}>{ENTIDAD_LABELS[k]}</option>)}
-            </SelectInput>
-            <SelectInput value={filtros.action} onChange={e => set('action')(e.target.value)} aria-label="Acción" style={CAMPO_CLASICO}>
-              <option value="">Todas las acciones</option>
-              {Object.keys(ACCION_LABELS).map(k => <option key={k} value={k}>{ACCION_LABELS[k]}</option>)}
-            </SelectInput>
-            {(personas.data?.length ?? 0) > 0 && (
-              <SelectInput value={filtros.userId} onChange={e => set('userId')(e.target.value)} aria-label="Persona" style={CAMPO_CLASICO}>
-                <option value="">Todas las personas</option>
-                {personas.data!.map(p => <option key={p.user_id} value={String(p.user_id)}>{p.user_name}</option>)}
-              </SelectInput>
-            )}
+          <SelectInput aria-label="Tipo de documento" value={tipo} onChange={e => setTipo(e.target.value)}>
+            <option value="">Todos los tipos</option><option>Orden de compra</option><option>Orden de servicio</option><option>Salida</option>
+          </SelectInput>
+          <SelectInput aria-label="Estado" value={estado} onChange={e => setEstado(e.target.value)}>
+            <option value="">Anuladas y rechazadas</option><option value="Anulada">Solo anuladas</option><option value="Rechazada">Solo rechazadas</option>
+          </SelectInput>
+          <span className="badge aud2-contador">{filas.length} {filas.length === 1 ? 'documento' : 'documentos'}</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className="btn btn--secondary btn--icon btn-tip btn-tip--verde" data-tip="Exportar a Excel" aria-label="Exportar a Excel" onClick={exportar} disabled={!filas.length}><FileSpreadsheet size={17} /></button>
+            <button type="button" className="btn btn--secondary btn--icon btn-tip btn-tip--celeste" data-tip="Actualizar" aria-label="Actualizar" onClick={() => { void qc.invalidateQueries({ queryKey: ['auditoria', 'anulaciones'] }); }}><RefreshCw size={17} /></button>
           </div>
         </div>
       </div>
 
-      {/* Tabla (clásico) */}
-      <div className="audit-table-card">
-        <div className="audit-table-responsive">
-          <table className="audit-table" id="auditTable">
-            <thead>
-              <tr>
-                <th style={{ width: 75, cursor: 'pointer' }} onClick={() => { setAscOrden(a => !a); setOrdenTocado(true); }} title="Clic para ordenar">
-                  # ID <i className={`bi ${iconoOrden} ms-1`} id="audit-sort-icon" style={{ marginLeft: 4 }} />
-                </th>
-                <th style={{ width: 165 }}>Fecha y Hora</th>
-                <th style={{ width: 210 }}>Usuario</th>
-                <th style={{ width: 130 }}>Acción</th>
-                <th style={{ width: 150 }}>Módulo</th>
-                <th>Detalle de la Operación</th>
-                <th style={{ width: 70, textAlign: 'center' }}>Ver</th>
-              </tr>
-            </thead>
-            <tbody id="auditTableBody">
-              {actividad.isLoading ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--subtext)' }}>Cargando historial de auditoría...</td></tr>
-              ) : actividad.isError ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '3rem 0', color: '#dc3545' }}>
-                  <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: '1.75rem', display: 'block', marginBottom: 8 }} />
-                  Error al cargar registros: {errorMessage(actividad.error)}
-                </td></tr>
-              ) : eventos.length === 0 ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--subtext)' }}>
-                  <i className="bi bi-inbox" style={{ fontSize: '2rem', opacity: 0.25, display: 'block', marginBottom: 8 }} />
-                  No se encontraron eventos con los filtros seleccionados.
-                </td></tr>
-              ) : eventos.map(r => {
-                const fecha = formatoFechaAudit(r.created_at);
-                const uName = r.user_name || 'Administrador';
-                const badge = badgeAccion(r.action, etiquetaAccion(r.action));
-                return (
-                  <tr key={r.id}>
-                    <td><span className="audit-id-badge">#{r.id}</span></td>
-                    <td>
-                      <div style={{ fontWeight: 600, whiteSpace: 'nowrap', fontSize: '0.83rem' }}>{fecha.full}</div>
-                      {fecha.rel && <div style={{ fontSize: '0.71rem', color: 'var(--subtext)' }}>{fecha.rel}</div>}
-                    </td>
-                    <td>
-                      <div className="audit-user-cell">
-                        <div className="audit-avatar-circle" style={{ background: colorUsuario(uName) }} title={uName}>{inicialesUsuario(uName)}</div>
-                        <div className="audit-user-name" title={uName}>{uName}</div>
-                      </div>
-                    </td>
-                    <td><span className={badge.clase} style={badge.estilo}><i className={`bi ${badge.icono}`} /> {badge.texto}</span></td>
-                    <td>{etiquetaEntidad(r.entity)}</td>
-                    <td><div className="audit-detail-cell">{r.summary || '—'}</div></td>
-                    <td style={{ textAlign: 'center' }}>
-                      <button type="button" title="Ver detalle completo" onClick={() => setDetalle(r)}
-                        style={{ borderRadius: 6, fontSize: '0.75rem', padding: '4px 8px', border: '1px solid #0d6efd', background: 'transparent', color: '#0d6efd', cursor: 'pointer' }}>
-                        <i className="bi bi-eye" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      {q.isLoading ? <PageLoader /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : filas.length === 0 ? (
+        <EmptyState icon={<CircleSlash size={22} />} title="Ningún documento coincide">Prueba quitando algún filtro.</EmptyState>
+      ) : esTabla ? (
+        <TablaRedimensionable id="auditoria-anulaciones" columnas={COL_ANULACIONES} ariaLabel="Anulaciones y rechazos" altoMax="64vh">
+          {pag.map(a => (
+            <tr key={a.codigo}>
+              <Celda><span className="aud2-codigo">{a.codigo}</span></Celda>
+              <Celda>{a.tipo}</Celda>
+              <Celda alinear="center"><Estado a={a} /></Celda>
+              <Celda>{a.contraparte || '—'}</Celda>
+              <Celda alinear="right"><span className="aud2-importe">{formatSoles(a.total)}</span></Celda>
+              <Celda><Quien a={a} /></Celda>
+              <Celda><Cuando a={a} /></Celda>
+              <Celda><span className="aud2-texto" title={a.motivo}>{a.motivo || '—'}</span></Celda>
+              <Celda>{a.creadoPor || '—'}</Celda>
+            </tr>
+          ))}
+        </TablaRedimensionable>
+      ) : (
+        <div className="aud2-tarjetas">
+          {pag.map(a => (
+            <article key={a.codigo} className="aud2-tarjeta" style={{ cursor: 'default' }}>
+              <div className="aud2-tarjeta__cabeza"><span className="aud2-codigo">{a.codigo}</span><Estado a={a} /></div>
+              <span className="t-footnote c-secondary">{a.tipo}{a.contraparte ? ` · ${a.contraparte}` : ''} · <b>{formatSoles(a.total)}</b></span>
+              {a.motivo && <span className="aud2-texto" style={{ WebkitLineClamp: 3 }}>{a.motivo}</span>}
+              <div className="aud2-tarjeta__pie"><Quien a={a} /><Cuando a={a} /></div>
+            </article>
+          ))}
         </div>
-
-        {/* Pie: tamaño de página, rango y paginación numerada (clásico) */}
-        <div className="audit-table-footer">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>Mostrar</span>
-            <select className="form-select form-select-sm" id="auditPageSize" value={tamano}
-              style={{ width: 75, fontSize: '0.78rem', height: 31, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
-              onChange={e => { setTamano(Number(e.target.value)); setPagina(1); }}>
-              {TAMANOS_AUDIT.map(n => <option key={n} value={n}>{n}</option>)}
-            </select>
-            <span id="audit-pagination-info">{total > 0 ? `Mostrando ${desde} - ${hasta} de ${total}` : 'Mostrando 0 de 0'}</span>
-          </div>
-          <div id="audit-pagination-controls" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {renderPaginacion()}
-          </div>
-        </div>
-      </div>
-
-      <SlideUpModal open={detalle !== null} onClose={() => setDetalle(null)} title={detalle ? `Detalle de Auditoría #${detalle.id}` : ''}>
-        {detalle && <DetalleEvento e={detalle} />}
-      </SlideUpModal>
-    </div>
+      )}
+      {filas.length > 0 && <Paginacion pagina={pagina} total={filas.length} tamano={tamano} onPagina={setPagina} onTamano={n => { setTamano(n); setPagina(1); }} />}
+    </>
   );
 }
 
-function FilaFirmada({ f }: { f: LogFirmado }) {
-  const { Icono, tono } = f.accion?.toUpperCase().includes('LOGIN') ? { Icono: LogIn, tono: 'verde' } : { Icono: Eye, tono: 'gris' };
-  const fecha = new Date(f.created_at);
+// ───────── Registro firmado ─────────
+
+function RegistroFirmado({ esTabla }: { esTabla: boolean }) {
+  const [busqueda, setBusqueda] = useState('');
+  const [pagina, setPagina] = useState(1);
+  const [tamano, setTamano] = useState(25);
+  const q = useLogFirmado(busqueda || undefined, true);
+  const filas: LogFirmado[] = q.data ?? [];
+  useEffect(() => { setPagina(1); }, [busqueda]);
+  const pag = filas.slice((pagina - 1) * tamano, pagina * tamano);
+  const firmaOk = (f: LogFirmado) => !/inv|mal|alter|fall/i.test(String(f.firma_estado ?? 'ok'));
   return (
-    <article className="aud-evento">
-      <span className={`aud-evento__icono aud-evento__icono--${tono}`}><Icono size={17} strokeWidth={2} /></span>
-      <div className="aud-evento__cuerpo">
-        <div className="aud-evento__texto">{f.usuario || 'Sistema'} · {f.metodo} {f.ruta}</div>
-        <div className="aud-evento__meta">
-          {[f.accion, formatFechaHoraPe(fecha), f.ip, f.status_codigo ? `HTTP ${f.status_codigo}` : ''].filter(Boolean).join(' · ')}
+    <>
+      <div className="aud2-filtros"><SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar en el registro firmado (persona, ruta…)" /></div>
+      {q.isLoading ? <PageLoader /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : filas.length === 0 ? (
+        <EmptyState icon={<ShieldCheck size={22} />} title="Sin registros">No hay mutaciones registradas.</EmptyState>
+      ) : esTabla ? (
+        <TablaRedimensionable id="auditoria-firmado" columnas={COL_FIRMADO} ariaLabel="Registro firmado" altoMax="64vh">
+          {pag.map(f => (
+            <tr key={f.id}>
+              <Celda><Fecha iso={f.created_at ? `${String(f.created_at).replace(' ', 'T')}${/Z|[+-]\d\d:?\d\d$/.test(String(f.created_at)) ? '' : 'Z'}` : null} /></Celda>
+              <Celda><Persona nombre={f.usuario || 'Sistema'} /></Celda>
+              <Celda mono>{f.metodo}</Celda>
+              <Celda mono>{f.ruta}</Celda>
+              <Celda alinear="center">{f.status_codigo ?? '—'}</Celda>
+              <Celda><span className={`aud2-firma ${firmaOk(f) ? 'aud2-firma--ok' : 'aud2-firma--mal'}`}>{firmaOk(f) ? <ShieldCheck size={15} /> : <ShieldAlert size={15} />}{firmaOk(f) ? 'Íntegra' : 'Revisar'}</span></Celda>
+            </tr>
+          ))}
+        </TablaRedimensionable>
+      ) : (
+        <div className="aud2-tarjetas">
+          {pag.map(f => (
+            <article key={f.id} className="aud2-tarjeta" style={{ cursor: 'default' }}>
+              <div className="aud2-tarjeta__cabeza"><span className="aud2-fecha">{f.metodo}</span><span className={`aud2-firma ${firmaOk(f) ? 'aud2-firma--ok' : 'aud2-firma--mal'}`}>{firmaOk(f) ? 'Íntegra' : 'Revisar'}</span></div>
+              <span className="aud2-ruta" style={{ whiteSpace: 'normal' }}>{f.ruta}</span>
+              <div className="aud2-tarjeta__pie"><Persona nombre={f.usuario || 'Sistema'} /><span>HTTP {f.status_codigo ?? '—'}</span></div>
+            </article>
+          ))}
         </div>
-        {(f.antes || f.despues || f.detalle) && (
-          <details className="aud-evento__detalle">
-            <summary>Antes / después</summary>
-            <div><strong>Antes</strong><pre>{f.antes || '—'}</pre></div>
-            <div><strong>Después</strong><pre>{f.despues || f.detalle || '—'}</pre></div>
-            <code title={f.firma_estado ?? f.firma}>Firma {(f.firma_estado ?? f.firma).slice(0, 12)}</code>
-          </details>
-        )}
-      </div>
-    </article>
+      )}
+      {filas.length > 0 && <Paginacion pagina={pagina} total={filas.length} tamano={tamano} onPagina={setPagina} onTamano={n => { setTamano(n); setPagina(1); }} />}
+    </>
   );
 }
 
-function RegistroFirmado({ q }: { q: string }) {
-  const log = useLogFirmado(q || undefined, true);
-  if (log.isLoading) return <PageLoader />;
-  if (log.isError) return <Notice tone="error">{errorMessage(log.error)}</Notice>;
-  const filas: LogFirmado[] = log.data ?? [];
-  return filas.length === 0 ? (
-    <EmptyState icon={<ShieldCheck size={22} />} title="Sin registros">No hay mutaciones registradas.</EmptyState>
-  ) : (
-    <div className="aud-dia"><div className="aud-lista">{filas.map(f => <FilaFirmada key={f.id} f={f} />)}</div></div>
-  );
-}
-
-// Sistema › Auditoría: quién hizo qué y cuándo. Solo lectura.
 export function AuditoriaPage() {
   const [vista, setVista] = useState<Vista>('actividad');
-  const [busqueda, setBusqueda] = useState('');
-  const selector = (
-    <div className="aud-filtros">
-      <SegmentedControl<Vista> label="Vista" value={vista} onChange={setVista}
-        options={[{ value: 'actividad', label: 'Actividad' }, { value: 'firmado', label: 'Registro firmado' }]} />
-    </div>
-  );
-  if (vista === 'actividad') return <>{selector}<ActividadAuditoria /></>;
+  const esTabla = useMediaQuery(TABLA_QUERY);
+  const movil = useMediaQuery(MOBILE_QUERY);
   return (
     <Page>
-      <PageHeader
-        eyebrow="Sistema"
-        title="Auditoría"
-        subtitle="Quién hizo qué y cuándo. Los registros no se pueden editar ni borrar."
-      />
-      {selector}
-      <div className="aud-filtros"><SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar en el registro firmado" /></div>
-      <RegistroFirmado q={busqueda} />
+      <PageHeader eyebrow="Sistema" title="Auditoría" subtitle="Quién hizo qué y cuándo, en hora de Lima. Los registros no se pueden editar ni borrar." />
+      <div style={{ marginBottom: 'var(--s-4)' }}>
+        <SegmentedControl<Vista> label="Vista de auditoría" block={movil} value={vista} onChange={setVista}
+          options={[{ value: 'actividad', label: 'Actividad' }, { value: 'anulaciones', label: 'Anulaciones y rechazos' }, { value: 'firmado', label: 'Registro firmado' }]} />
+      </div>
+      {vista === 'actividad' && <Actividad esTabla={esTabla} />}
+      {vista === 'anulaciones' && <Anulaciones esTabla={esTabla} />}
+      {vista === 'firmado' && <RegistroFirmado esTabla={esTabla} />}
     </Page>
   );
 }
