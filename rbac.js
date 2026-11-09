@@ -151,6 +151,8 @@ module.exports = function globalRBAC(req, res, next) {
     // Sistema › API y desarrolladores: llaves de API y webhooks (antes sin mapeo; ahora exigen administración)
     else if (path.startsWith('/sistema/api-keys') || path.startsWith('/sistema/webhooks')) mod = ['administracion'];
     else if (path.startsWith('/seguridad/asistencia')) mod = ['asist', 'seguridad'];
+    // PDF del acta: el POST solo convierte el documento, no guarda nada; quien ve las actas puede imprimirlas
+    else if (path === '/seguridad/entrega-vehiculos/pdf') { mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas']; accion = 'l'; }
     else if (path.startsWith('/seguridad/entrega-vehiculos') || path.startsWith('/flota/entrega-vehiculos')) mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas'];
     else if (path.startsWith('/seguridad')) mod = ['seguridad_unidades', 'seguridad', 'checklist', 'placas', 'unid'];
     else if (path.startsWith('/configuracion-flota')) mod = 'cfg_mant';

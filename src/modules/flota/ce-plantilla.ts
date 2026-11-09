@@ -104,3 +104,33 @@ export function calificacionDe(
     cantidad: Number.isFinite(n) && n > 0 ? n : 1,
   };
 }
+
+// ── Resumen de un acta (lo usan el detalle y el PDF) ─────────────────────────
+
+export interface ItemCalificado { nombre: string; estado: Calificacion; cantidad: number }
+export interface GrupoCalificado { id: string; titulo: string; items: ItemCalificado[] }
+export interface ResumenActa {
+  /** Solo las categorías con al menos un ítem calificado, y en ellas solo los calificados */
+  grupos: GrupoCalificado[];
+  total: number;
+  buenos: number;
+  regulares: number;
+  malos: number;
+}
+
+/** Ítems calificados del acta, agrupados por categoría de la plantilla, con sus conteos */
+export function resumenActa(partes: Record<string, unknown>, grupos: CategoriaPlantilla[]): ResumenActa {
+  const lista: GrupoCalificado[] = [];
+  let buenos = 0, regulares = 0, malos = 0;
+  for (const g of grupos) {
+    const items: ItemCalificado[] = [];
+    for (const nombre of g.items) {
+      const { estado, cantidad } = calificacionDe(partes, g, nombre);
+      if (!estado) continue;
+      items.push({ nombre, estado, cantidad });
+      if (estado === 'B') buenos++; else if (estado === 'R') regulares++; else malos++;
+    }
+    if (items.length) lista.push({ id: g.id, titulo: g.titulo, items });
+  }
+  return { grupos: lista, total: buenos + regulares + malos, buenos, regulares, malos };
+}

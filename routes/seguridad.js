@@ -1595,6 +1595,23 @@ module.exports = (db, logAudit) => {
         });
     });
 
+    // ── POST /seguridad/entrega-vehiculos/pdf ─────────────────────
+    // Acta de entrega en PDF de texto real (vectorial) con el Chromium del servidor. El cliente arma el HTML del acta;
+    // aquí solo se convierte (sin JavaScript y sin red salvo la fuente), no se guarda nada.
+    router.post('/seguridad/entrega-vehiculos/pdf', async (req, res) => {
+        const html = typeof req.body?.html === 'string' ? req.body.html : '';
+        if (!html.includes('<html')) return res.status(400).json({ error: 'Documento no válido' });
+        const titulo = String(req.body?.titulo || 'Inventario físico estado de vehículo').slice(0, 150);
+        try {
+            const { htmlAPdf } = require('../services/ot_pdf');
+            const pdf = await htmlAPdf(html, titulo, false);
+            res.set('Content-Type', 'application/pdf').send(Buffer.from(pdf));
+        } catch (err) {
+            console.error('[entrega-vehiculos/pdf]', err.message);
+            res.status(500).json({ error: 'No se pudo generar el PDF' });
+        }
+    });
+
     // ── GET /seguridad/entrega-vehiculos/next-folio ───────────────
     router.get('/seguridad/entrega-vehiculos/next-folio', (req, res) => {
         const year = new Date().getFullYear();

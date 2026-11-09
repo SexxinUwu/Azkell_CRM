@@ -10,6 +10,7 @@ import { haptic } from '../../core/lib/haptics';
 import { CePortal, type StatsEntrega } from './ce-Portal';
 import { CeLista, type AccionFila, type CifrasLista } from './ce-Lista';
 import { CeFormulario } from './ce-Formulario';
+import { CeDetalle } from './ce-Detalle';
 import { CePlantilla } from './ce-PlantillaEditor';
 import { abrirPdfEntrega, compartirEntregaWhatsApp } from './ce-pdf';
 import { exportarEntregasExcel } from './ce-excel';
@@ -45,6 +46,9 @@ export function ChecklistEntregaPage() {
   const [porEliminar, setPorEliminar] = useState<EntregaVehiculo | null>(null);
   const [eliminando, setEliminando] = useState(false);
   const [ocupadoId, setOcupadoId] = useState<string | null>(null);
+  // Detalle del acta: una ventana sobre el listado (no cambia de pantalla)
+  const [detalleActa, setDetalleActa] = useState<EntregaVehiculo | null>(null);
+  const [ocupadoDetalle, setOcupadoDetalle] = useState(false);
 
   const statsQ = useQuery<StatsEntrega>({
     queryKey: ['flota', 'ce-stats'],
@@ -111,8 +115,10 @@ export function ChecklistEntregaPage() {
     setOcupadoId(String(r.id));
     try {
       const d = await detalle(r.id);
-      if (a === 'ver' || a === 'editar') {
-        setFormulario({ registro: d, modo: a === 'ver' ? 'ver' : 'editar' });
+      if (a === 'ver') {
+        setDetalleActa(d);
+      } else if (a === 'editar') {
+        setFormulario({ registro: d, modo: 'editar' });
         setVista('formulario');
       } else if (a === 'pdf') {
         await abrirPdfEntrega(d);
@@ -127,6 +133,21 @@ export function ChecklistEntregaPage() {
       haptic('warning');
     } finally {
       setOcupadoId(null);
+    }
+  }
+
+  /** PDF o WhatsApp desde la ventana de detalle (el acta ya está cargada completa) */
+  async function salidaDesdeDetalle(a: 'pdf' | 'whatsapp', d: EntregaVehiculo) {
+    haptic('selection');
+    setOcupadoDetalle(true);
+    try {
+      if (a === 'pdf') { await abrirPdfEntrega(d); haptic('success'); } else await compartirEntregaWhatsApp(d);
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return;
+      toast(errorMessage(err), 'error');
+      haptic('warning');
+    } finally {
+      setOcupadoDetalle(false);
     }
   }
 
@@ -209,6 +230,16 @@ export function ChecklistEntregaPage() {
           }}
         />
       )}
+
+      <CeDetalle
+        acta={detalleActa}
+        ocupado={ocupadoDetalle}
+        puedeEditar
+        onClose={() => setDetalleActa(null)}
+        onEditar={a => { setDetalleActa(null); setFormulario({ registro: a, modo: 'editar' }); setVista('formulario'); }}
+        onPdf={a => { void salidaDesdeDetalle('pdf', a); }}
+        onWhatsApp={a => { void salidaDesdeDetalle('whatsapp', a); }}
+      />
 
       <CePlantilla abierta={plantillaAbierta} onCerrar={() => setPlantillaAbierta(false)} />
 
