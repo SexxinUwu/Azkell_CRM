@@ -32,7 +32,7 @@ module.exports = function (db, logAudit) {
 
             // 1. Placas maestras (Solo placas activas y en uso del maestro oficial)
             const placas = await safeQuery(`
-                SELECT placa, cliente, marca, tipo, sub_tipo, combustible, uts, carga_util, capacidad_tanque, motora 
+                SELECT placa, cliente, alquilada_a, marca, tipo, sub_tipo, combustible, uts, carga_util, capacidad_tanque, motora 
                 FROM placas 
                 WHERE (estado = 'Activa' OR estado IS NULL OR estado = '')
                   AND (en_uso != 'No' AND en_uso != 'NO' OR en_uso IS NULL OR en_uso = '')
@@ -256,6 +256,7 @@ module.exports = function (db, logAudit) {
                                     // Obtener metadata exacta de la carreta acoplada desde el maestro de placas
                                     let subTipoCarreta = '';
                                     let empresaCarreta = '';
+                                    let alquiladaCarreta = '';
                                     let marcaCarreta = '';
                                     let estadoCarreta = estado;
 
@@ -263,6 +264,7 @@ module.exports = function (db, logAudit) {
                                         const pCarretaData = placasMap[clean(carreta)];
                                         subTipoCarreta = pCarretaData ? (pCarretaData.sub_tipo || pCarretaData.tipo || 'Carreta') : 'Carreta';
                                         empresaCarreta = pCarretaData ? (pCarretaData.cliente || p.cliente || '').trim() : (p.cliente || '').trim();
+                                        alquiladaCarreta = pCarretaData ? String(pCarretaData.alquilada_a || '').trim() : '';
                                         marcaCarreta = pCarretaData ? (pCarretaData.marca || '') : '';
                                         if (otSet.has(clean(carreta))) {
                                             estadoCarreta = 'En Mantenimiento';
@@ -283,6 +285,11 @@ module.exports = function (db, logAudit) {
                                         sub_tipo: p.sub_tipo || p.tipo || 'Camión',
                                         sub_tipo_carreta: subTipoCarreta,
                                         empresa_carreta: empresaCarreta,
+                                        // Empresa que usa la unidad: si está alquilada, la arrendataria; si no, la dueña
+                                        alquilada_a: String(p.alquilada_a || '').trim(),
+                                        alquilada_a_carreta: alquiladaCarreta,
+                                        operadora: String(p.alquilada_a || '').trim() || (p.cliente || (disp ? disp.flota : '') || '').trim(),
+                                        operadora_carreta: alquiladaCarreta || empresaCarreta,
                                         marca_carreta: marcaCarreta,
                                         estado_carreta: estadoCarreta,
                                         observaciones: observaciones,
@@ -337,6 +344,10 @@ module.exports = function (db, logAudit) {
                                         sub_tipo: stCarreta,
                                         sub_tipo_carreta: stCarreta,
                                         empresa_carreta: empCarreta,
+                                        alquilada_a: '',
+                                        alquilada_a_carreta: String(p.alquilada_a || '').trim(),
+                                        operadora: String(p.alquilada_a || '').trim() || empCarreta,
+                                        operadora_carreta: String(p.alquilada_a || '').trim() || empCarreta,
                                         marca_carreta: p.marca || '',
                                         estado_carreta: estado,
                                         observaciones: obs,

@@ -49,9 +49,25 @@ const nombreEmpresa = (s: string | null | undefined) => {
   return t && t !== '-' && t.toUpperCase() !== 'CLIENTE' ? t : '';
 };
 
-// Empresa del vehículo: la del camión o la de la carreta, sin distinguir escritura
-const coincideEmpresa = (v: VehiculoDisponibilidad, clave: string) =>
-  claveEmpresa(v.empresa || v.cliente) === clave || claveEmpresa(v.empresa_carreta) === clave;
+// Cada placa pertenece a la empresa que la usa: si está alquilada, a la arrendataria; si no, a su dueña.
+const empresaCamion = (v: VehiculoDisponibilidad) => nombreEmpresa(v.operadora) || nombreEmpresa(v.empresa || v.cliente);
+const empresaCarreta = (v: VehiculoDisponibilidad) => nombreEmpresa(v.operadora_carreta) || nombreEmpresa(v.empresa_carreta) || nombreEmpresa(v.empresa || v.cliente);
+
+/** Deja en cada fila solo las placas de la empresa elegida; si no queda ninguna, la fila sale. Las cifras salen de lo que queda. */
+function soloDeLaEmpresa(vehiculos: VehiculoDisponibilidad[], clave: string): VehiculoDisponibilidad[] {
+  if (clave === 'TODAS') return vehiculos;
+  const salida: VehiculoDisponibilidad[] = [];
+  for (const v of vehiculos) {
+    const camion = !!v.placa_camion && claveEmpresa(empresaCamion(v)) === clave;
+    const carreta = !!v.placa_carreta && claveEmpresa(empresaCarreta(v)) === clave;
+    if (!camion && !carreta) continue;
+    salida.push({ ...v, placa_camion: camion ? v.placa_camion : '', placa_carreta: carreta ? v.placa_carreta : '', origen: v });
+  }
+  return salida;
+}
+
+/** La fila tal como está guardada (con las dos placas): es la que se edita, para no borrar la otra placa al guardar */
+const completa = (v: VehiculoDisponibilidad): VehiculoDisponibilidad => (v.origen as VehiculoDisponibilidad | undefined) ?? v;
 
 const placaLimpia = (s: string) => s.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
 
@@ -81,11 +97,11 @@ export function DisponibilidadPage() {
   const mapaGps = gps.data ?? new Map<string, UbicacionGps>();
 
   // Empresas como botones (la forma más usada de cada una)
-  const empresas = useMemo(() => agruparEmpresas(vehiculos.flatMap(v => [nombreEmpresa(v.empresa || v.cliente), nombreEmpresa(v.empresa_carreta)])), [vehiculos]);
+  const empresas = useMemo(() => agruparEmpresas(vehiculos.flatMap(v => [v.placa_camion ? empresaCamion(v) : '', v.placa_carreta ? empresaCarreta(v) : ''])), [vehiculos]);
   const nombreDeEmpresa = empresas.find(e => e.clave === empresa)?.nombre ?? '';
 
   // Cifras y tabla se calculan sobre la empresa elegida. Cada placa cuenta como una unidad (igual que la versión actual)
-  const delEmpresa = useMemo(() => vehiculos.filter(v => empresa === 'TODAS' || coincideEmpresa(v, empresa)), [vehiculos, empresa]);
+  const delEmpresa = useMemo(() => soloDeLaEmpresa(vehiculos, empresa), [vehiculos, empresa]);
   const q = busqueda.trim().toUpperCase();
   const delBusqueda = useMemo(() => delEmpresa.filter(v => coincideBusqueda(v, q)), [delEmpresa, q]);
   const cifras = useMemo(() => cifrasDisponibilidad(delBusqueda), [delBusqueda]);
@@ -162,7 +178,7 @@ export function DisponibilidadPage() {
         <DisponibilidadDetalle
           veh={seleccionado}
           onVolver={() => setSeleccionado(null)}
-          onEditar={puedeEditar ? () => setFormulario({ veh: seleccionado }) : undefined}
+          onEditar={puedeEditar ? () => setFormulario({ veh: completa(seleccionado) }) : undefined}
           onEliminar={puedeEliminar && seleccionado.id ? () => setPorEliminar(seleccionado) : undefined}
         />
         <DisponibilidadFormulario open={!!formulario} veh={formulario?.veh ?? null} usuario={user?.name ?? ''}
@@ -269,8 +285,8 @@ export function DisponibilidadPage() {
                       return (
                         <tr key={`${v.id ?? i}-${v.placa_camion}`} className="disp-fila pressable" onClick={() => { haptic('selection'); setSeleccionado(v); }}>
                           <td className="disp-num">{i + 1}</td>
-                          <td>{v.placa_camion ? <LicensePlate plate={v.placa_camion} size="sm" /> : <span className="disp-sin">—</span>}</td>
-                          <td>{v.placa_carreta ? <LicensePlate plate={v.placa_carreta} size="sm" /> : <span className="disp-sin">—</span>}</td>
+                          <td>{v.placa_camion ? <><LicensePlate plate={v.placa_camion} size="sm" />{v.alquilada_a && <small className="disp-alq">Alq. a {v.alquilada_a}</small>}</> : <span className="disp-sin">—</span>}</td>
+                          <td>{v.placa_carreta ? <><LicensePlate plate={v.placa_carreta} size="sm" />{v.alquilada_a_carreta && <small className="disp-alq">Alq. a {v.alquilada_a_carreta}</small>}</> : <span className="disp-sin">—</span>}</td>
                           <td className="disp-conductor">{v.conductor_asignado || <span className="disp-sin">—</span>}</td>
                           <td>
                             <span className={`disp-estado disp-estado--${COLOR_ESTADO[cat]}`}>{v.estado || cat}</span>
@@ -283,7 +299,7 @@ export function DisponibilidadPage() {
                           <td className="disp-celda-acciones"><span className="disp-botones">
                             {puedeEditar && (
                               <Button variant="secondary" size="sm" iconOnly icon={<Pencil size={14} />} aria-label="Editar"
-                                onClick={e => { e.stopPropagation(); setFormulario({ veh: v }); }} />
+                                onClick={e => { e.stopPropagation(); setFormulario({ veh: completa(v) }); }} />
                             )}
                             {puedeEliminar && v.id && (
                               <Button variant="secondary" size="sm" iconOnly icon={<Trash2 size={14} />} aria-label="Eliminar"
@@ -315,7 +331,7 @@ export function DisponibilidadPage() {
                       {puedeEditar && (
                         <div className="disp-mcard__pie">
                           <Button variant="secondary" size="sm" icon={<Pencil size={14} />}
-                            onClick={e => { e.stopPropagation(); setFormulario({ veh: v }); }}>Editar</Button>
+                            onClick={e => { e.stopPropagation(); setFormulario({ veh: completa(v) }); }}>Editar</Button>
                         </div>
                       )}
                     </article>

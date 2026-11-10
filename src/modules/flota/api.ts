@@ -24,6 +24,11 @@ export interface VehiculoDisponibilidad {
   sub_tipo: string;
   sub_tipo_carreta: string;
   empresa_carreta: string;
+  /** Empresa a la que está alquilada cada placa (vacío si no lo está) y empresa que la usa (la arrendataria o, si no, la dueña) */
+  alquilada_a?: string;
+  alquilada_a_carreta?: string;
+  operadora?: string;
+  operadora_carreta?: string;
   marca_carreta: string;
   estado_carreta: string;
   observaciones: string;

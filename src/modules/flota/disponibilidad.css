@@ -139,3 +139,5 @@
 @media (min-width: 1024px) {
   .page--fill .disp-graficos-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 }
+
+.disp-alq { display: block; margin-top: 2px; font-size: 0.6875rem; font-weight: 600; color: var(--label-secondary); white-space: nowrap; }
