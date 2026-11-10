@@ -113,6 +113,9 @@ export function DisponibilidadPage() {
     [delBusqueda, filtro],
   );
 
+  // Cada placa es una unidad: «Ver N unidades» coincide con el total de arriba (no con las filas, que juntan camión y carreta)
+  const unidadesVisibles = filtro === 'Todos' ? cifras.total : filtro === 'En Base' ? cifras.base : filtro === 'En Ruta' ? cifras.ruta : cifras.mantenimiento;
+
   const matriz = useMemo(() => {
     const m = new Map<string, { total: number; base: number; ruta: number; mantenimiento: number }>();
     for (const v of visibles) for (const u of unidadesDe(v)) {
@@ -247,7 +250,7 @@ export function DisponibilidadPage() {
             </div>
           </BarraFiltros>
           <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={(empresa !== 'TODAS' ? 1 : 0) + (filtro !== 'Todos' ? 1 : 0)}
-            onLimpiar={() => { setEmpresa('TODAS'); setFiltro('Todos'); }} resultado={visibles.length} unidad="unidad">
+            onLimpiar={() => { setEmpresa('TODAS'); setFiltro('Todos'); }} resultado={unidadesVisibles} unidad="unidad">
             <GrupoFiltro titulo="Empresa">
               <ChoiceChips label="Empresa" value={empresa} onChange={setEmpresa} options={[{ value: 'TODAS', label: 'Todas' }, ...empresas.map(e => ({ value: e.clave, label: e.nombre }))]} />
             </GrupoFiltro>
@@ -298,14 +301,14 @@ export function DisponibilidadPage() {
                           <td>{v.tipo_unidad || <span className="disp-sin">—</span>}</td>
                           <td className="disp-obs">{v.observaciones || <span className="disp-sin">—</span>}</td>
                           <td><GpsCelda v={v} mapa={mapaGps} /></td>
-                          <td className="disp-celda-acciones"><span className="disp-botones">
+                          <td className="disp-celda-acciones"><span className="disp-botones acciones-iconos acciones-iconos--sinfondo">
                             {puedeEditar && (
-                              <Button variant="secondary" size="sm" iconOnly icon={<Pencil size={14} />} aria-label="Editar"
-                                onClick={e => { e.stopPropagation(); setFormulario({ veh: completa(v) }); }} />
+                              <button type="button" className="acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Editar" title="Editar" aria-label="Editar"
+                                onClick={e => { e.stopPropagation(); setFormulario({ veh: completa(v) }); }}><Pencil size={18} /></button>
                             )}
                             {puedeEliminar && v.id && (
-                              <Button variant="secondary" size="sm" iconOnly icon={<Trash2 size={14} />} aria-label="Eliminar"
-                                onClick={e => { e.stopPropagation(); setPorEliminar(v); }} />
+                              <button type="button" className="acciones-iconos__boton acciones-iconos__boton--rojo" data-tip="Eliminar" title="Eliminar" aria-label="Eliminar"
+                                onClick={e => { e.stopPropagation(); setPorEliminar(v); }}><Trash2 size={18} /></button>
                             )}
                           </span></td>
                         </tr>
@@ -332,8 +335,14 @@ export function DisponibilidadPage() {
                       <GpsCelda v={v} mapa={mapaGps} />
                       {puedeEditar && (
                         <div className="disp-mcard__pie">
-                          <Button variant="secondary" size="sm" icon={<Pencil size={14} />}
-                            onClick={e => { e.stopPropagation(); setFormulario({ veh: completa(v) }); }}>Editar</Button>
+                          <div className="acciones-iconos acciones-iconos--sinfondo">
+                            <button type="button" className="acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Editar" aria-label="Editar"
+                              onClick={e => { e.stopPropagation(); setFormulario({ veh: completa(v) }); }}><Pencil size={18} /></button>
+                            {puedeEliminar && v.id && (
+                              <button type="button" className="acciones-iconos__boton acciones-iconos__boton--rojo" data-tip="Eliminar" aria-label="Eliminar"
+                                onClick={e => { e.stopPropagation(); setPorEliminar(v); }}><Trash2 size={18} /></button>
+                            )}
+                          </div>
                         </div>
                       )}
                     </article>
