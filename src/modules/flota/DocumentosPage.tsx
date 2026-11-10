@@ -14,6 +14,7 @@ import { BotonTip } from '../../core/ui/BotonTip';
 import { MenuFila } from '../../core/ui/MenuFila';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ChoiceChips } from '../../core/ui/Chips';
+import { Combobox } from '../../core/ui/Combobox';
 import { GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
@@ -34,7 +35,7 @@ import { DocMiniCalendario } from './DocMiniCalendario';
 import { ConfigurarPlacasSheet, guardarSeleccion, leerSeleccion } from './ConfigurarPlacasSheet';
 import { ImportarDocumentosSheet } from './ImportarDocumentosSheet';
 import { descargarPlantilla } from './documentosExcel';
-import { esAlquilada, grupoDe, metaDeVehiculo, pendientesDeDocs, repartirPorcentajes, responsableExterno, type DocPersonalizado } from './docsEstado';
+import { DOCS, esAlquilada, grupoDe, metaDeVehiculo, pendientesDeDocs, personalizadosDe, repartirPorcentajes, responsableExterno, type DocPersonalizado, type MetaVehiculo } from './docsEstado';
 
 type Vista = 'expediente' | 'matriz' | 'calendario' | 'alquiler';
 type Grupo = 'todos' | 'vigente' | 'alerta' | 'vencido' | 'sin';
@@ -55,6 +56,8 @@ export function DocumentosPage() {
   const [empresa, setEmpresa] = useState('TODAS');
   const [filtrando, setFiltrando] = useState(false);
   const [grupo, setGrupo] = useState<Grupo>('todos');
+  // Tipo de documento al que se aplica el filtro de estado ('' = el peor estado de la unidad, como siempre)
+  const [tipoDoc, setTipoDoc] = useState('');
   const [alquiler, setAlquiler] = useState<FiltroAlquiler>('todas');
   const [editandoAlquiler, setEditandoAlquiler] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState('');
@@ -84,6 +87,25 @@ export function DocumentosPage() {
     () => todas.filter(f => (!seleccion || seleccion.has(f.v.placa)) && (empresa === 'TODAS' || claveEmpresa(f.v.empresa) === empresa)),
     [todas, empresa, seleccion],
   );
+  // Tipos de documento: los estándar y todos los personalizados que ya existen en alguna unidad
+  const opcionesTipoDoc = useMemo(() => {
+    const o = DOCS.map(d => ({ value: d.clave, label: d.titulo }));
+    const vistos = new Set(DOCS.map(d => d.titulo.toLowerCase()));
+    for (const v of vehiculos) for (const p of personalizadosDe(v)) {
+      const n = p.tipo.trim(), k = n.toLowerCase();
+      if (n && !vistos.has(k)) { vistos.add(k); o.push({ value: 'custom:' + n, label: n }); }
+    }
+    return o;
+  }, [vehiculos]);
+  // Estado de la unidad: el del documento elegido, o el peor de todos si no se eligió tipo
+  const grupoFila = (m: MetaVehiculo): Grupo => {
+    if (!tipoDoc) return grupoDe(m);
+    const sc = tipoDoc.startsWith('custom:')
+      ? m.personalizados.find(p => p.doc.tipo.trim().toLowerCase() === tipoDoc.slice(7).toLowerCase())?.estado.score
+      : (() => { const d = m.docs.find(x => x.config.clave === tipoDoc); return d?.registrado ? d.estado.score : undefined; })();
+    if (sc == null || sc === -1) return 'sin';
+    return sc === 0 ? 'vencido' : sc <= 2 ? 'alerta' : 'vigente';
+  };
   const opcionesPlacas = useMemo(() => todas.map(f => ({ placa: f.v.placa, detalle: [f.v.tipo, f.v.empresa].filter(Boolean).join(' · ') })), [todas]);
   const aplicarSeleccion = (s: Set<string> | null) => { setSeleccion(s); guardarSeleccion(s); };
 
@@ -104,13 +126,13 @@ export function DocumentosPage() {
 
   const cifras = useMemo(() => {
     const c = { total: delFiltro.length, vigente: 0, alerta: 0, vencido: 0, sin: 0 };
-    for (const f of delFiltro) c[grupoDe(f.m)]++;
+    for (const f of delFiltro) { const g = grupoFila(f.m); if (g !== 'todos') c[g]++; }
     return c;
-  }, [delFiltro]);
+  }, [delFiltro, tipoDoc]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filas = useMemo(
-    () => delFiltro.filter(f => grupo === 'todos' || grupoDe(f.m) === grupo),
-    [delFiltro, grupo],
+    () => delFiltro.filter(f => grupo === 'todos' || grupoFila(f.m) === grupo),
+    [delFiltro, grupo, tipoDoc], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const aviso = (err: unknown) => toast(errorMessage(err), 'error');
@@ -171,9 +193,9 @@ export function DocumentosPage() {
   // Una vista por búsqueda y estado, sin el filtro de alquiler (el apartado Alquiler tiene el suyo)
   const filasBase = useMemo(() => {
     const q = busqueda.trim().toUpperCase();
-    return delEmpresa.filter(f => (grupo === 'todos' || grupoDe(f.m) === grupo)
+    return delEmpresa.filter(f => (grupo === 'todos' || grupoFila(f.m) === grupo)
       && (!q || [f.v.placa, f.v.tipo, f.v.marca, f.v.chasis].some(t => String(t ?? '').toUpperCase().includes(q))));
-  }, [delEmpresa, grupo, busqueda]);
+  }, [delEmpresa, grupo, busqueda, tipoDoc]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const kpis: Array<{ clave: Grupo; label: string; valor: number; tono: string; icono: React.ReactNode }> = [
     { clave: 'todos', label: 'Flota total', valor: cifras.total, tono: 'blue', icono: <Briefcase size={18} strokeWidth={1.9} /> },
@@ -238,8 +260,8 @@ export function DocumentosPage() {
             ))}
           </DocMetaVigentes>
 
-          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={(empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (alquiler !== 'todas' ? 1 : 0)}
-            onLimpiar={() => { setEmpresa('TODAS'); setGrupo('todos'); setAlquiler('todas'); }} resultado={filas.length} unidad="documento">
+          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={(empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (alquiler !== 'todas' ? 1 : 0) + (tipoDoc ? 1 : 0)}
+            onLimpiar={() => { setEmpresa('TODAS'); setGrupo('todos'); setAlquiler('todas'); setTipoDoc(''); }} resultado={filas.length} unidad="documento">
             <GrupoFiltro titulo="Empresa">
               <ChoiceChips label="Empresa" value={empresa} onChange={setEmpresa} options={[{ value: 'TODAS', label: 'Todas' }, ...empresas.map(e => ({ value: e.clave, label: e.nombre }))]} />
             </GrupoFiltro>
@@ -248,9 +270,13 @@ export function DocumentosPage() {
                 { value: 'todas', label: 'Todas' }, { value: 'alquiladas', label: 'Alquiladas' }, { value: 'propias', label: 'No alquiladas' }, { value: 'externa', label: 'Las actualiza otra empresa' },
               ]} />
             </GrupoFiltro>
-            <GrupoFiltro titulo="Estado del documento">
+            <GrupoFiltro titulo="Tipo de documento">
+              <Combobox options={opcionesTipoDoc} value={tipoDoc || null} onChange={v => setTipoDoc(v ?? '')} enHoja compacta
+                placeholder="Todos los tipos" tituloHoja="Tipo de documento" />
+            </GrupoFiltro>
+            <GrupoFiltro titulo={tipoDoc ? 'Estado de ese documento' : 'Estado del documento'}>
               <ChoiceChips label="Estado del documento" value={grupo} onChange={v => setGrupo(v as Grupo)} options={[
-                { value: 'todos', label: 'Todos' }, { value: 'vigente', label: 'Vigentes' }, { value: 'alerta', label: 'En alerta' }, { value: 'vencido', label: 'Vencidos' }, { value: 'sin', label: 'Sin documentos' },
+                { value: 'todos', label: 'Todos' }, { value: 'vigente', label: 'Vigentes' }, { value: 'alerta', label: 'En alerta' }, { value: 'vencido', label: 'Vencidos' }, { value: 'sin', label: tipoDoc ? 'Sin registrar' : 'Sin documentos' },
               ]} />
             </GrupoFiltro>
           </HojaFiltros>
