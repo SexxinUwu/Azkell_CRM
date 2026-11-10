@@ -320,3 +320,13 @@ La fase 1 está hecha (marcar alquiler, quién actualiza, pendientes a nombre de
 - Enlace temporal y seguro para que la empresa que alquila suba el documento sin cuenta; se aprueba antes de actualizar la unidad.
 - Recordatorios automáticos a la empresa responsable a los 30, 15 y 7 días del vencimiento.
 - Guardar el WhatsApp de contacto de cada empresa para enviar directo (hoy se abre WhatsApp y se elige el chat).
+
+## Papeletas (2026-11-09 / 2026-11-10)
+Hecho: módulo en Flota > Papeletas y Tesorería > Papeletas (migración `19_papeletas`, rutas `routes/papeletas.js`, lectura de foto con Gemini en `services/papeleta_ia.js`). Catálogo de infracciones cargado en las 4 empresas con `scripts/cargar_infracciones_sat.js` (tránsito y carga de Lima del SAT, más SUTRAN: RNAT Anexo 2 y pesos y medidas). Carga inicial desde Excel con `scripts/cargar_papeletas_2026.js`. El asistente tiene la herramienta `papeletas_flota` y Documentos de flota muestra un aviso de papeletas por pagar.
+Pendiente:
+- **Consulta automática por placa (SUTRAN, SAT, PNP): no es viable hoy.** No hay API pública y usan captcha; por eso las papeletas se registran a mano, con foto o por Excel.
+- Impuesto vehicular del SAT (33 cuotas): vista aparte con cuotas por placa; no es una papeleta.
+- Papeletas de SAT de Rosymar sin número ni fecha (S/ 99 y las multas de S/ 2,761 y S/ 83,063): cargarlas cuando se consulten en el SAT.
+- Completar lo cargado desde el Excel: fecha real de pago de CFA910, BSS899 y CJJ736, y la placa de los 3 documentos de Rosymar ("SINPLACA").
+- Catálogo sin monto donde la tabla del PDF era ambigua (S.1.b, S.1.c, F.2 a F.5, F.8, S.7, S.9, I.3.c, I.3.d, I.5, I.6, I.8, I.9, P.15, P.27, P.1 y P.4). La norma de SUTRAN usada es de 2020: contrastar con la vigente.
+- Configurar los plazos de cada entidad (días de descargo, descuento y pago, % de descuento) y `GEMINI_API_KEY`.

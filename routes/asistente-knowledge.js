@@ -24,6 +24,7 @@ Sistema integral de gestión de flotas (Lima, Perú): vehículos, mantenimiento,
 - **Fleetrun (Datos de Mantenimiento):** historial de mantenimientos preventivos por vehículo, con km, fechas y estado.
 - **Status Rampa:** resumen de inspecciones vigentes y vencidas por tipo de vehículo.
 - **GPS (Flota > GPS):** mapa con la posición en tiempo real de las unidades desde Wialon.
+- **Papeletas (Flota > Papeletas):** registro de papeletas y multas de SUTRAN, SAT, PNP y otras entidades. Con la placa se completan la unidad y el conductor; con el código de infracción, la descripción, la gravedad y la multa. Se puede subir una foto y se leen los datos (hay que revisarlos). Controla descargo, plazos de descuento y de pago, pagos, anulación y reembolso. Tesorería las paga desde Tesorería > Papeletas y se crea el egreso en Caja. Se pueden importar desde Excel y sacar PDF.
 - **Almacén / Inventario:** productos, familias, marcas y movimientos de stock.
 - **Combustible / D2 y Urea:** análisis de consumo con datos de telemetría CAN Bus (Wialon).
 - **Aprobación de compras y caja:** aprobar o rechazar órdenes de compra y movimientos de caja.
@@ -66,6 +67,7 @@ Sistema integral de gestión de flotas (Lima, Perú): vehículos, mantenimiento,
 - Para cambiar la contraseña o ver tus permisos: Mi cuenta.
 
 ## Datos que el asistente consulta (según tus permisos)
+- Papeletas y multas (SUTRAN, SAT, PNP...): lo que falta por pagar, plazos de descuento y de pago, vencidas y las de una placa.
 - De toda la flota: documentos vencidos y por vencer (SOAT, revisión técnica, tarjeta, seguros, etc.) agrupados por placa.
 - De una placa: ubicación en vivo y si está en marcha, kilometraje y horas de motor (GPS), ficha del vehículo, próximo mantenimiento preventivo y km que faltan, órdenes de trabajo abiertas y últimas terminadas, documentos con su vencimiento (SOAT, revisión técnica, tarjeta de circulación, seguros, etc.), último conductor registrado y llantas montadas con su remanente.
 - Del almacén: stock actual de un artículo buscando por código o nombre.

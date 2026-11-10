@@ -102,11 +102,12 @@ export interface LecturaIA {
 
 const RAIZ = ['flota', 'papeletas'] as const;
 
-export function usePapeletas() {
+export function usePapeletas(activo = true) {
   return useQuery({
     queryKey: [...RAIZ, 'lista'],
     queryFn: () => api<{ hoy: string; data: Papeleta[] }>('/papeletas'),
     staleTime: 30_000,
+    enabled: activo,
   });
 }
 

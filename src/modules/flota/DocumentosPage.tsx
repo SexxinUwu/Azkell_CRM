@@ -4,7 +4,8 @@ import './disponibilidad.css';
 import './documentos.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Briefcase, CircleAlert, Clock, Download, FileSpreadsheet, FileText, Plus, RefreshCw, Settings2, SlidersHorizontal, Wrench } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Briefcase, CircleAlert, Clock, Download, FileSpreadsheet, FileText, Gavel, Plus, RefreshCw, Settings2, SlidersHorizontal, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { Notice, Page } from '../../core/ui/Display';
@@ -21,6 +22,7 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
 import { haptic } from '../../core/lib/haptics';
 import { compartirDocumento, eliminarDocumento, registrarSolicitudDocs, urlTemporalDocumento, useVehiculosFlota } from './api';
+import { usePapeletas } from './pap-api';
 import { DocAlquilerSheet } from './DocAlquilerSheet';
 import { DocAlquileres } from './DocAlquileres';
 import { DocMetaVigentes } from './DocMetaVigentes';
@@ -65,6 +67,11 @@ export function DocumentosPage() {
   const [aEliminar, setAEliminar] = useState<EliminarDocumento | null>(null);
   const [eliminando, setEliminando] = useState(false);
   const puedeEditar = can('docs_flota.crear', 'docs_flota.editar');
+  const navegar = useNavigate();
+  const verPapeletas = can('papeletas.ver');
+  const papeletas = usePapeletas(verPapeletas);
+  const papPendientes = (papeletas.data?.data ?? []).filter(x => ['PENDIENTE', 'EN_DESCARGO'].includes(x.estado) && x.saldo > 0);
+  const papVencidas = papPendientes.filter(x => x.vencida).length;
 
   const vehiculos = data ?? [];
   const empresas = useMemo(() => agruparEmpresas(vehiculos.map(v => v.empresa)), [vehiculos]);
@@ -191,6 +198,12 @@ export function DocumentosPage() {
           {((empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (alquiler !== 'todas' ? 1 : 0)) > 0 && <span className="placas-filtros__n t-numeric">{((empresa !== 'TODAS' ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (alquiler !== 'todas' ? 1 : 0))}</span>}
         </Button>
         <div className="doc-cab__acciones">
+          {verPapeletas && papPendientes.length > 0 && (
+            <button type="button" className={`doc-pap-chip${papVencidas ? ' doc-pap-chip--rojo' : ''}`} onClick={() => navegar('/flota/papeletas')}
+              title={papVencidas ? `${papVencidas} con el plazo de pago vencido` : 'Ver papeletas pendientes'}>
+              <Gavel size={14} aria-hidden /> Papeletas <b className="t-numeric">{papPendientes.length}</b>
+            </button>
+          )}
           <BotonTip tip="Actualizar" className="btn btn--plain btn--icono btn--icono-acento" disabled={isFetching}
             onClick={() => qc.invalidateQueries({ queryKey: ['flota', 'vehiculos'] })}><RefreshCw size={18} /></BotonTip>
           <BotonTip tip={seleccion ? `Placas a mostrar: ${seleccion.size} de ${todas.length}` : 'Configurar placas a mostrar'} className="btn btn--plain btn--icono btn--icono-acento"

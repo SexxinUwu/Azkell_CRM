@@ -13,6 +13,7 @@ const PERMISO_GPS = ['gps.ver'];
 const PERMISO_UNIDAD = ['placas.ver', 'fleet.ver', 'gps.ver'];
 const PERMISO_MANTENIMIENTO = ['fleet.ver', 'placas.ver'];
 const PERMISO_DOCUMENTOS = ['docs_flota.ver', 'placas.ver'];
+const PERMISO_PAPELETAS = ['papeletas.ver', 'tesoreria_papeletas.ver'];
 const PERMISO_VIAJES = ['op_ordenes_viaje.ver', 'seguridad_unidades.ver', 'placas.ver', 'cond.ver'];
 const PERMISO_INVENTARIO = ['inv.ver'];
 const PERMISO_NEUMATICOS = ['neumaticos.ver'];
@@ -335,6 +336,67 @@ const HERRAMIENTAS = {
         vencidos: vencidos.slice(0, MAX_FILAS),
         por_vencer: porVencer.slice(0, MAX_FILAS),
         aviso: (vencidos.length > MAX_FILAS || porVencer.length > MAX_FILAS) ? `Se muestran los primeros ${MAX_FILAS} de cada grupo.` : undefined,
+      };
+    },
+  },
+
+  papeletas_flota: {
+    permiso: PERMISO_PAPELETAS,
+    sinPermiso: 'Esta persona no tiene permiso para ver las papeletas. Dile que lo solicite al administrador.',
+    declaracion: {
+      name: 'papeletas_flota',
+      description: 'Papeletas y multas de la flota (SUTRAN, SAT, PNP, etc.) con lo que falta por pagar, el próximo plazo de descuento o de pago y las que ya vencieron. Úsala para "qué papeletas tengo pendientes", "cuánto debo en papeletas", "papeletas de la placa X", "cuáles vencen pronto" o "papeletas vencidas". La placa es opcional.',
+      parameters: {
+        type: 'OBJECT',
+        properties: {
+          placa: { type: 'STRING', description: 'Placa de la unidad (opcional). Sin placa se revisa toda la flota.' },
+          estado: { type: 'STRING', description: 'por_pagar (por defecto: pendientes y en descargo con saldo), vencidas, pagadas o todas.' },
+          dias: { type: 'INTEGER', description: 'Con estado por_pagar, solo las que tienen un plazo (descuento o pago) dentro de estos días. Opcional.' },
+        },
+      },
+    },
+    async ejecutar(args, db) {
+      const estado = ['por_pagar', 'vencidas', 'pagadas', 'todas'].includes(args.estado) ? args.estado : 'por_pagar';
+      const placa = args.placa ? placaDeArgs(args) : null;
+      const dias = Number.isFinite(Number(args.dias)) && Number(args.dias) > 0 ? Math.min(365, Math.trunc(Number(args.dias))) : null;
+      const hoyTxt = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+      const hoy = new Date(`${hoyTxt}T00:00:00`);
+      const filas = await db_query(db,
+        `SELECT p.codigo, p.entidad_codigo, p.numero, p.placa, p.estado, p.moneda, p.monto, p.recargos, p.descuento_monto, p.infraccion_codigo, p.infraccion_desc,
+                DATE_FORMAT(p.fecha_infraccion, '%Y-%m-%d') AS fecha, DATE_FORMAT(p.fecha_limite_descuento, '%Y-%m-%d') AS limite_descuento,
+                DATE_FORMAT(p.fecha_limite_pago, '%Y-%m-%d') AS limite_pago, p.quien_asume,
+                COALESCE((SELECT SUM(g.monto) FROM papeletas_pagos g WHERE g.papeleta_id = p.id), 0) AS pagado
+         FROM papeletas p WHERE p.estado <> 'ANULADA' ${placa ? `AND ${SQL_PLACA('p.placa')} = ?` : ''} ORDER BY p.fecha_infraccion DESC`, placa ? [placa] : []);
+      const diasHasta = (f) => (f ? Math.round((new Date(`${f}T00:00:00`) - hoy) / 86400000) : null);
+      const items = filas.map((r) => {
+        const conDescuento = dinero(r.descuento_monto) > 0 && r.limite_descuento && diasHasta(r.limite_descuento) >= 0;
+        const total = dinero(Number(r.monto) + Number(r.recargos) - (conDescuento ? Number(r.descuento_monto) : 0));
+        const saldo = Math.max(0, dinero(total - Number(r.pagado)));
+        const dDesc = conDescuento ? diasHasta(r.limite_descuento) : null;
+        const dPago = diasHasta(r.limite_pago);
+        return {
+          codigo: r.codigo, entidad: r.entidad_codigo, numero: r.numero, placa: r.placa, fecha: r.fecha, infraccion: texto(`${r.infraccion_codigo || ''} ${r.infraccion_desc || ''}`, 120),
+          moneda: r.moneda, total_vigente: total, pagado: dinero(r.pagado), saldo, estado: r.estado, asume: r.quien_asume,
+          descuento_vigente_hasta: conDescuento ? r.limite_descuento : undefined, dias_para_descuento: dDesc ?? undefined,
+          limite_pago: r.limite_pago || undefined, dias_para_pago: dPago ?? undefined, vencida: saldo > 0 && dPago != null && dPago < 0,
+        };
+      });
+      const porPagar = (x) => ['PENDIENTE', 'EN_DESCARGO'].includes(x.estado) && x.saldo > 0;
+      let lista = items;
+      if (estado === 'por_pagar') lista = items.filter(porPagar);
+      else if (estado === 'vencidas') lista = items.filter((x) => x.vencida);
+      else if (estado === 'pagadas') lista = items.filter((x) => x.estado === 'PAGADA');
+      if (dias && estado === 'por_pagar') lista = lista.filter((x) => (x.dias_para_descuento != null && x.dias_para_descuento <= dias) || (x.dias_para_pago != null && x.dias_para_pago >= 0 && x.dias_para_pago <= dias));
+      const deuda = items.filter(porPagar);
+      return {
+        fecha_hoy: hoyTxt,
+        filtro: { estado, placa: placa || 'toda la flota', dias: dias ?? undefined },
+        coincidencias: lista.length,
+        por_pagar_total: deuda.length,
+        saldo_por_pagar_soles: dinero(deuda.filter((x) => x.moneda === 'PEN').reduce((t, x) => t + x.saldo, 0)),
+        vencidas_total: items.filter((x) => x.vencida).length,
+        papeletas: lista.slice(0, MAX_FILAS),
+        aviso: lista.length > MAX_FILAS ? `Se muestran las primeras ${MAX_FILAS}.` : undefined,
       };
     },
   },
