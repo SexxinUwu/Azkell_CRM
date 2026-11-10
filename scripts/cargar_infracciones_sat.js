@@ -1,9 +1,12 @@
-// Carga el catálogo de infracciones de tránsito (DS 016-2009-MTC) y de transporte de carga de Lima (Ordenanza 1682),
-// tomado de las tablas oficiales del SAT (sat.gob.pe, "Tabla de infracciones", UIT 2026 = S/ 5,500).
+// Carga el catálogo de infracciones: tránsito (DS 016-2009-MTC) y carga de Lima (Ordenanza 1682) del SAT (UIT 2026 = S/ 5,500)
+// y SUTRAN (RNAT DS 017-2009-MTC Anexo 2 y RNV DS 058-2003-MTC Anexo IV). Ver datos_infracciones_sutran.js.
 // Por defecto solo simula; con --aplicar escribe, una transacción por empresa. Repetirlo actualiza, no duplica.
 require('dotenv').config({ quiet: true });
 const mysql = require('mysql2/promise');
-const filas = require('./datos_infracciones_sat.json');
+// Alias sin letra: así se escriben en las papeletas M20 y G18 (el SAT los publica como M20A-D y G18A-B)
+const alias = [{ entidad_codigo: '', codigo: 'M20', descripcion: 'No respetar el límite máximo o mínimo de velocidad (ver M20A a M20D según el exceso)', gravedad: 'MUY_GRAVE', puntos: null, multa_uit: null, multa_soles: null, medida: null },
+  { entidad_codigo: '', codigo: 'G18', descripcion: 'Conducir sin ambas manos sobre el volante o usando un dispositivo móvil (G18A y G18B)', gravedad: 'GRAVE', puntos: 30, multa_uit: 0.08, multa_soles: 440, medida: null }];
+const filas = [...require('./datos_infracciones_sat.json'), ...alias, ...require('./datos_infracciones_sutran.js')];
 const APLICAR = process.argv.includes('--aplicar');
 const TENANTS = ['marsisa', 'rosymarperu', 'yoguitransport', 'trahesa'].map(s => `azkell_tenant_${s}`);
 const UIT = '5500';
