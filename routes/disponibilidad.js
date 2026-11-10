@@ -515,6 +515,20 @@ module.exports = function (db, logAudit) {
         }
     });
 
+    // ── POST /api/disponibilidad-flota/pdf ── el cliente arma el HTML del reporte y el servidor lo convierte con Chromium (texto real). No guarda nada.
+    router.post('/pdf', async (req, res) => {
+        const html = typeof (req.body && req.body.html) === 'string' ? req.body.html : '';
+        if (!html.includes('<html')) return res.status(400).json({ error: 'Documento no válido' });
+        try {
+            const { htmlAPdf } = require('../services/ot_pdf');
+            const pdf = await htmlAPdf(html, String(req.body.titulo || 'Disponibilidad de flota').slice(0, 150), true, false);
+            res.set('Content-Type', 'application/pdf').send(Buffer.from(pdf));
+        } catch (err) {
+            console.error('Error en POST /api/disponibilidad-flota/pdf:', err.message);
+            res.status(500).json({ error: 'No se pudo generar el PDF' });
+        }
+    });
+
     // ── POST /api/disponibilidad-flota (Crear / Guardar registro) ───────────────
     router.post('/', async (req, res) => {
         try {

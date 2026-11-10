@@ -19,6 +19,7 @@
 .acciones-iconos__boton.acciones-iconos__boton--azul { color: #0a64d6; background: rgba(0, 122, 255, 0.14); }
 .acciones-iconos__boton.acciones-iconos__boton--violeta { color: #6d28d9; background: rgba(124, 58, 237, 0.14); }
 .acciones-iconos__boton.acciones-iconos__boton--rojo { color: var(--red-ink); background: rgba(255, 59, 48, 0.12); }
+.acciones-iconos__boton.acciones-iconos__boton--whatsapp { color: #128c7e; background: rgba(37, 211, 102, 0.16); }
 .acciones-iconos__boton.acciones-iconos__boton--ambar { color: #b45309; background: rgba(245, 158, 11, 0.16); }
 
 /* Nombre de la acción en la página (TooltipFijo.tsx): no lo recorta ninguna tabla con scroll */

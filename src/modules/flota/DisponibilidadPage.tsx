@@ -22,7 +22,8 @@ import { spring } from '../../core/lib/motion';
 import { DisponibilidadGraficos } from './DisponibilidadGraficos';
 import { estadoDispColor, useDisponibilidad, useUbicacionesGps, type UbicacionGps, type VehiculoDisponibilidad } from './api';
 import { DisponibilidadFormulario } from './DisponibilidadFormulario';
-import { compartirDisponibilidadPDF, descargarDisponibilidadPDF } from './disponibilidadReporte';
+import { abrirDisponibilidadPDF, compartirDisponibilidadPDF } from './disponibilidadReporte';
+import '../../core/ui/acciones-iconos.css';
 import { cifrasDisponibilidad, estadoDeTexto, unidadesDe, type Estado } from './disponibilidadCifras';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 
@@ -161,13 +162,12 @@ export function DisponibilidadPage() {
   };
   const pdf = async () => {
     try {
-      await descargarDisponibilidadPDF(visibles, cifras, criterios, user?.companyName ?? '');
-      toast('PDF descargado');
+      await abrirDisponibilidadPDF(visibles, filtro, criterios, nombreDeEmpresa || user?.companyName || '');
     } catch (err) { aviso(err); }
   };
   const whatsapp = async () => {
     try {
-      const r = await compartirDisponibilidadPDF(visibles, cifras, criterios, user?.companyName ?? '');
+      const r = await compartirDisponibilidadPDF(visibles, filtro, criterios, nombreDeEmpresa || user?.companyName || '');
       if (r === 'descargado') toast('PDF descargado. Adjúntalo en la conversación de WhatsApp.');
     } catch (err) { aviso(err); }
   };
@@ -205,14 +205,16 @@ export function DisponibilidadPage() {
         subtitle={isLoading ? 'Cargando…' : `Control de disponibilidad operativa y asignación de flota${actualizado ? ` · ${actualizado}` : ''}`}
         actions={
           <div className="disp-acciones">
-            <Button variant="plain" className="btn--icono btn--icono-acento" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar"
-              onClick={() => qc.invalidateQueries({ queryKey: ['flota', 'disponibilidad'] })} />
-            <Button variant="plain" className="btn--icono btn--icono-whatsapp" icon={<MessageCircle size={18} />} aria-label="Compartir PDF por WhatsApp" title="Compartir PDF por WhatsApp"
-              disabled={!visibles.length} onClick={whatsapp} />
-            <Button variant="plain" className="btn--icono btn--icono-pdf" icon={<FileText size={18} />} aria-label="Descargar PDF" title="Descargar PDF"
-              disabled={!visibles.length} onClick={pdf} />
-            <Button variant="plain" className="btn--icono btn--icono-excel" icon={<FileSpreadsheet size={18} />} aria-label="Exportar Excel" title="Exportar Excel"
-              disabled={!visibles.length} onClick={excel} />
+            <div className="acciones-iconos acciones-iconos--sinfondo">
+              <button type="button" className="acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Actualizar" aria-label="Actualizar"
+                onClick={() => qc.invalidateQueries({ queryKey: ['flota', 'disponibilidad'] })}><RefreshCw size={20} /></button>
+              <button type="button" className="acciones-iconos__boton acciones-iconos__boton--whatsapp" data-tip="Compartir PDF por WhatsApp" aria-label="Compartir PDF por WhatsApp"
+                disabled={!visibles.length} onClick={whatsapp}><MessageCircle size={20} /></button>
+              <button type="button" className="acciones-iconos__boton acciones-iconos__boton--rojo" data-tip="Abrir PDF" aria-label="Abrir PDF"
+                disabled={!visibles.length} onClick={pdf}><FileText size={20} /></button>
+              <button type="button" className="acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Exportar Excel" aria-label="Exportar Excel"
+                disabled={!visibles.length} onClick={excel}><FileSpreadsheet size={20} /></button>
+            </div>
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ veh: null })}>Registrar unidad</Button>}
           </div>
         }
