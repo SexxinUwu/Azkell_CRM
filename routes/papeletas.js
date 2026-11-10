@@ -282,7 +282,7 @@ module.exports = (db, logAudit) => {
     // Leer una foto de la papeleta con IA: devuelve los datos para que la persona los revise y confirme (no guarda nada)
     router.post('/papeletas/leer-foto', upload.single('foto'), async (req, res) => {
         try {
-            if (!req.file || !/^image\//.test(req.file.mimetype)) throw aviso('Sube una foto de la papeleta (imagen).');
+            if (!req.file || !/^(image\/|application\/pdf)/.test(req.file.mimetype)) throw aviso('Sube la papeleta como foto (imagen) o como PDF.');
             const entidades = (await P(req).query('SELECT codigo, nombre FROM papeletas_entidades WHERE activo = 1'))[0];
             const datos = await leerPapeletaConIA(req.file.buffer, req.file.mimetype, entidades);
             res.json({ ok: true, datos });

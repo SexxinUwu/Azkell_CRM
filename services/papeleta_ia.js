@@ -7,7 +7,7 @@ const aviso = (mensaje, status = 400) => Object.assign(new Error(mensaje), { sta
 
 function instrucciones(entidades) {
     const lista = entidades.map(e => `${e.codigo} = ${e.nombre}`).join('\n');
-    return `Eres un asistente que lee papeletas de tránsito, multas y actas de control de transporte de Perú a partir de una foto.
+    return `Eres un asistente que lee papeletas de tránsito, multas y actas de control de transporte de Perú a partir de una foto o de un PDF (si el PDF tiene varias páginas, usa la de la papeleta o resolución).
 Devuelve SOLO un JSON con estas claves (usa null cuando el dato no se vea con claridad; NO inventes nada):
 - entidad_codigo: uno de estos códigos según quién emitió el documento:
 ${lista}

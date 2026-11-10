@@ -161,7 +161,7 @@ export function PapFormulario({ abierto, papeleta, onClose, onHecho }: {
     }));
   }, [abierto, entidad, base, f.monto]);
 
-  // Lectura con IA de una foto de la papeleta: rellena lo que se vea; la persona revisa
+  // Lectura con IA de una foto o PDF de la papeleta: rellena lo que se vea; la persona revisa
   async function leerConIA(archivo: File | undefined) {
     if (!archivo) return;
     setLeyendo(true); setError(null);
@@ -181,7 +181,7 @@ export function PapFormulario({ abierto, papeleta, onClose, onHecho }: {
       }));
       if (d.conductor_nombre) tocado.current.add('conductor');
       setFotos(prev => [...prev, foto]);
-      setNotaIA('Datos leídos de la foto con IA. Revísalos antes de guardar: la IA puede equivocarse.');
+      setNotaIA('Datos leídos del documento con IA. Revísalos antes de guardar: la IA puede equivocarse.');
       haptic('success');
     } catch (err) { setError(errorMessage(err)); haptic('warning'); }
     finally { setLeyendo(false); if (entradaIA.current) entradaIA.current.value = ''; }
@@ -227,9 +227,9 @@ export function PapFormulario({ abierto, papeleta, onClose, onHecho }: {
         {!editando && (
           <div className="pap-ia">
             <span className="pap-ia__icono" aria-hidden><Sparkles size={20} /></span>
-            <div><strong>Escribe menos: sube una foto de la papeleta</strong><span>Se leen la entidad, el número, la fecha, la placa, la infracción y el monto. Tú solo revisas.</span></div>
-            <Button variant="secondary" icon={<ScanLine size={16} />} loading={leyendo} onClick={() => entradaIA.current?.click()}>Leer foto</Button>
-            <input ref={entradaIA} type="file" accept="image/*" hidden onChange={e => { void leerConIA(e.target.files?.[0]); }} />
+            <div><strong>Escribe menos: sube la papeleta (foto o PDF)</strong><span>Se leen la entidad, el número, la fecha, la placa, la infracción y el monto. Tú solo revisas.</span></div>
+            <Button variant="secondary" icon={<ScanLine size={16} />} loading={leyendo} onClick={() => entradaIA.current?.click()}>Leer documento</Button>
+            <input ref={entradaIA} type="file" accept="image/*,application/pdf,.pdf" hidden onChange={e => { void leerConIA(e.target.files?.[0]); }} />
           </div>
         )}
         {notaIA && <Notice tone="accent" icon={<Sparkles size={16} />}>{notaIA}</Notice>}
