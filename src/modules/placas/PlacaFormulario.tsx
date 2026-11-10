@@ -10,7 +10,7 @@ import { SwitchRow } from '../../core/ui/forms';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
-import { Plus, Search } from 'lucide-react';
+import { Plus, ScanText, Search } from 'lucide-react';
 import { NuevoClienteSheet } from './NuevoClienteSheet';
 import { formatPlateInput, normalizePlate } from '../../core/lib/peru';
 import { spring } from '../../core/lib/motion';
@@ -74,6 +74,7 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
   const [intento, setIntento] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [consultandoPlaca, setConsultandoPlaca] = useState(false);
+  const [leyendo, setLeyendo] = useState(false);
   const [nuevoCliente, setNuevoCliente] = useState(false);
 
   // Datos de la placa (consultarDatosPlaca de la versión actual): SUNARP/MTC o la base; llena la ficha con lo que llega
@@ -107,8 +108,39 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
       }));
       toast('Ficha técnica obtenida');
     } catch {
-      toast('No se encontraron datos automáticos para esta placa', 'error');
+      toast('No hay datos automáticos para esta placa. Usa el botón de leer captura de SUNARP.', 'error');
     } finally { setConsultandoPlaca(false); }
+  }
+
+  // Captura de "Consulta Vehicular" de SUNARP: la IA lee la imagen y llena la ficha (nada se guarda hasta registrar)
+  async function leerCaptura(ev: ChangeEvent<HTMLInputElement>) {
+    const archivo = ev.target.files?.[0];
+    ev.target.value = '';
+    if (!archivo) return;
+    setLeyendo(true);
+    try {
+      const imagen = await new Promise<string>((ok, mal) => {
+        const r = new FileReader();
+        r.onload = () => ok(String(r.result).split(',')[1] ?? '');
+        r.onerror = () => mal(new Error('No se pudo abrir la imagen.'));
+        r.readAsDataURL(archivo);
+      });
+      const d = await api<DatosPlacaServidor>('/asistente/leer-sunarp', { method: 'POST', body: { imagen, mime: archivo.type } });
+      setP(x => ({
+        ...x,
+        ...(modo === 'crear' && d.placa ? { placa: normalizePlate(d.placa) ?? d.placa } : {}),
+        ...(d.cliente ? { cliente: d.cliente } : {}),
+        ...(d.marca ? { marca: d.marca } : {}),
+        ...(d.modelo ? { modelo: d.modelo } : {}),
+        ...(d.color ? { color: d.color } : {}),
+        ...(d.nro_motor ? { nroMotor: d.nro_motor } : {}),
+        ...(d.nro_vin ? { vin: d.nro_vin } : {}),
+        ...(d.anio ? { anio: String(d.anio) } : {}),
+      }));
+      toast('Datos leídos de SUNARP. Revísalos antes de guardar.');
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+    } finally { setLeyendo(false); }
   }
 
   // Cada vez que se abre, parte de la placa (o vacía)
@@ -233,6 +265,11 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
                   </div>
                   <Button variant="secondary" icon={<Search size={16} />} aria-label="Buscar ficha técnica" title="Buscar Ficha Técnica"
                     loading={consultandoPlaca} onClick={consultarPlaca}>{''}</Button>
+                  <label style={{ display: 'contents' }}>
+                    <input type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={leerCaptura} />
+                    <Button variant="secondary" icon={<ScanText size={16} />} aria-label="Leer captura de SUNARP" title="Leer captura de SUNARP"
+                      loading={leyendo} onClick={e => (e.currentTarget.previousElementSibling as HTMLInputElement | null)?.click()}>{''}</Button>
+                  </label>
                 </div>
               )}
             </Field>
