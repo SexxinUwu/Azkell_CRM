@@ -154,7 +154,7 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
         </Field>
         <Field label="Documento">
           {p => (
-            <Combobox {...p} options={opcionesDoc} value={seleccion} disabled={fijo} placeholder="Busca o escribe un tipo de documento"
+            <Combobox {...p} enHoja options={opcionesDoc} value={seleccion} disabled={fijo} placeholder="Busca o escribe un tipo de documento"
               tituloHoja="Tipo de documento" createLabel="Agregar tipo"
               onChange={v => { if (v) setSeleccion(v); }}
               onCreate={t => { const n = t.trim(); if (n) setSeleccion(PREFIJO_CUSTOM + n); }} />
