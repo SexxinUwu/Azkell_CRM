@@ -5,7 +5,8 @@ import { CircleAlert, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
-import { Field, SelectInput, TextInput } from '../../core/ui/Field';
+import { Field, TextInput } from '../../core/ui/Field';
+import { Combobox, type ComboboxOption } from '../../core/ui/Combobox';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
@@ -14,11 +15,11 @@ import { usePlacas } from '../placas/api';
 import {
   CAMPOS_DOC, guardarDocumentoPersonalizado, guardarDocumentoVehiculo, subirArchivoDocumento, useVehiculosFlota, type VehiculoFlota,
 } from './api';
-import type { DocPersonalizado } from './docsEstado';
+import { personalizadosDe, type DocPersonalizado } from './docsEstado';
 
 const dia = (v: unknown) => (v ? String(v).split('T')[0] : '');
 const TIVE = 'custom:TIVE';
-const OTRO = 'custom:OTRO';
+const PREFIJO_CUSTOM = 'custom:';
 const esPersonalizado = (sel: string) => sel.startsWith('custom:');
 
 interface Personalizado { constancia: string; emision: string; vencimiento: string; costo: string }
@@ -37,7 +38,6 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
   const [seleccion, setSeleccion] = useState('soat');
   const [valores, setValores] = useState<Record<string, string>>({});
   const [costo, setCosto] = useState('');
-  const [nombreOtro, setNombreOtro] = useState('');
   const [perso, setPerso] = useState<Personalizado>(VACIO);
   const [archivo, setArchivo] = useState<File | null>(null);
   // Cambia al quitar el archivo elegido: el campo de archivo se vacía de verdad
@@ -57,12 +57,10 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
     setError(null); setArchivo(null); setCosto('');
     setPlaca(placaInicial ?? '');
     if (personalizado) {
-      setSeleccion(/TIVE/i.test(personalizado.tipo) ? TIVE : OTRO);
-      setNombreOtro(personalizado.tipo);
+      setSeleccion(/TIVE/i.test(personalizado.tipo) ? TIVE : PREFIJO_CUSTOM + personalizado.tipo);
       setPerso({ constancia: personalizado.constancia ?? '', emision: dia(personalizado.emision), vencimiento: dia(personalizado.vencimiento), costo: personalizado.pago ?? '' });
     } else {
       setSeleccion(prefijoInicial ?? 'soat');
-      setNombreOtro('');
       setPerso(VACIO);
     }
   }, [open, placaInicial, prefijoInicial, personalizado]);
@@ -86,7 +84,22 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
     return [...s].sort();
   }, [placas.data, vehiculos.data]);
 
-  const nombreTipo = seleccion === TIVE ? 'TIVE' : nombreOtro.trim();
+  const nombreTipo = seleccion === TIVE ? 'TIVE' : seleccion.slice(PREFIJO_CUSTOM.length).trim();
+
+  // Lista de tipos: los estándar, TIVE y todos los que ya se registraron en alguna unidad (más el que se acaba de escribir)
+  const opcionesDoc = useMemo(() => {
+    const o: ComboboxOption[] = Object.entries(CAMPOS_DOC).map(([k, c]) => ({ value: k, label: c.label }));
+    o.push({ value: TIVE, label: 'Tarjeta de propiedad (TIVe / SUNARP)', description: 'No vence', keywords: 'tive sunarp propiedad' });
+    const vistos = new Set<string>(['TIVE']);
+    const agregar = (t: string) => {
+      const n = t.trim(); const k = n.toUpperCase();
+      if (!n || vistos.has(k) || /TIVE/i.test(n)) return;
+      vistos.add(k); o.push({ value: PREFIJO_CUSTOM + n, label: n });
+    };
+    (vehiculos.data ?? []).forEach(v => personalizadosDe(v).forEach(d => agregar(d.tipo)));
+    if (esCustom) agregar(nombreTipo);
+    return o;
+  }, [vehiculos.data, esCustom, nombreTipo]);
 
   async function guardar() {
     setErrCampo({});
@@ -94,7 +107,7 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
     setEnviando(true); setError(null);
     try {
       if (esCustom) {
-        if (!nombreTipo) { setErrCampo({ nombre: 'Escribe el nombre del documento.' }); haptic('warning'); return; }
+        if (!nombreTipo) { setError('Escribe el nombre del documento.'); haptic('warning'); return; }
         const { emision, vencimiento } = perso;
         if (emision && vencimiento && vencimiento < emision) { setErrCampo({ vencimiento: 'El vencimiento es anterior a la emisión.' }); haptic('warning'); return; }
         const url = archivo ? await subirArchivoDocumento(archivo) : (personalizado?.url ?? null);
@@ -136,19 +149,12 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
         </Field>
         <Field label="Documento">
           {p => (
-            <SelectInput {...p} value={seleccion} onChange={e => setSeleccion(e.target.value)} disabled={fijo}>
-              {Object.entries(CAMPOS_DOC).map(([k, c]) => <option key={k} value={k}>{c.label}</option>)}
-              <option value={TIVE}>Tarjeta de propiedad (TIVe / SUNARP) · no vence</option>
-              <option value={OTRO}>+ Otro tipo de documento…</option>
-            </SelectInput>
+            <Combobox {...p} options={opcionesDoc} value={seleccion} disabled={fijo} placeholder="Busca o escribe un tipo de documento"
+              tituloHoja="Tipo de documento" createLabel="Agregar tipo"
+              onChange={v => { if (v) setSeleccion(v); }}
+              onCreate={t => { const n = t.trim(); if (n) setSeleccion(PREFIJO_CUSTOM + n); }} />
           )}
         </Field>
-
-        {seleccion === OTRO && (
-          <Field label="Nombre del documento" wide error={errCampo.nombre}>
-            {p => <TextInput {...p} value={nombreOtro} onChange={e => setNombreOtro(e.target.value)} disabled={fijo} />}
-          </Field>
-        )}
 
         {esCustom && (
           <>

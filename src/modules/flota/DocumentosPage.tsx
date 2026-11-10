@@ -214,7 +214,7 @@ export function DocumentosPage() {
             puedeEditar && { label: 'Importar documentos', icon: <FileSpreadsheet size={17} />, onSelect: () => setImportando(true) },
           ]} />
           {puedeEditar && (
-            <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ placa: null, prefijo: null, personalizado: null })}>Nuevo documento</Button>
+            <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ placa: vista === 'expediente' ? placa : null, prefijo: null, personalizado: null })}>Nuevo documento</Button>
           )}
         </div>
       </header>
