@@ -5,6 +5,7 @@ import { EmptyState } from '../../core/ui/Display';
 import { haptic } from '../../core/lib/haptics';
 import type { ReporteFalla } from './api';
 import { leerOts } from './ChecklistDetalle';
+import { leerFallas } from './fman';
 
 type Persona = 'creador' | 'conductor';
 
@@ -27,6 +28,31 @@ function agrupar(items: ReporteFalla[], clave: (f: ReporteFalla) => string): Fil
     const x = m.get(n) ?? { nombre: n, total: 0, con: 0, sin: 0 };
     x.total++; if (tieneOt(f)) x.con++; else x.sin++;
     m.set(n, x);
+  }
+  return [...m.values()].sort((a, b) => b.total - a.total || a.nombre.localeCompare(b.nombre));
+}
+
+const placaLimpia = (s: unknown) => String(s ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+/**
+ * Unidades con fallas: un reporte cuenta para cada placa que de verdad tiene fallas anotadas (tracto, carreta o las dos).
+ * "Con OT" = alguna OT del reporte es de esa placa; si el reporte tiene OT solo de la otra unidad, esta queda sin OT.
+ */
+function agruparUnidades(items: ReporteFalla[]): Fila[] {
+  const m = new Map<string, Fila>();
+  for (const f of items) {
+    const tracto = String(f.placa_tracto ?? '').toUpperCase().trim(), remolque = String(f.placa_remolque ?? '').toUpperCase().trim();
+    let unidades: string[] = [];
+    if (tracto && leerFallas(f.fallas_tracto_json).length > 0) unidades.push(tracto);
+    if (remolque && leerFallas(f.fallas_remolque_json).length > 0) unidades.push(remolque);
+    if (!unidades.length) unidades = [tracto || remolque || 'SIN PLACA'];
+    const ots = leerOts(f.ots_generadas_json);
+    for (const u of new Set(unidades)) {
+      const x = m.get(u) ?? { nombre: u, total: 0, con: 0, sin: 0 };
+      x.total++;
+      if (ots.some(o => !o.placa || placaLimpia(o.placa) === placaLimpia(u))) x.con++; else x.sin++;
+      m.set(u, x);
+    }
   }
   return [...m.values()].sort((a, b) => b.total - a.total || a.nombre.localeCompare(b.nombre));
 }
@@ -56,7 +82,7 @@ export function ChecklistPanel({ items, onPersona, onSinOt }: {
   const sinOt = total - conOt;
 
   const ranking = useMemo(() => agrupar(items, f => limpiar(persona === 'creador' ? f.creado_por : f.conductor)), [items, persona]);
-  const unidades = useMemo(() => agrupar(items, f => String(f.placa_tracto || f.placa_remolque || 'SIN PLACA').toUpperCase().trim()).slice(0, 8), [items]);
+  const unidades = useMemo(() => agruparUnidades(items).slice(0, 8), [items]);
   const antiguos = useMemo(
     () => items.filter(f => !tieneOt(f) && /pendiente/i.test(f.estado || 'Pendiente'))
       .map(f => ({ f, d: dias(f.fecha_reporte) })).sort((a, b) => b.d - a.d).slice(0, 5),

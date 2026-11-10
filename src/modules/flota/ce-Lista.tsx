@@ -101,7 +101,7 @@ export function CeLista({
           </div>
         </div>
         <div className="cep-header__acciones">
-          <div className="acciones-iconos">
+          <div className="acciones-iconos acciones-iconos--sinfondo">
             <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--azul"
               data-tip="Empresas" aria-label="Empresas" onClick={onEmpresas}>
               <LayoutGrid size={17} />
@@ -118,11 +118,8 @@ export function CeLista({
               data-tip="Exportar Excel" aria-label="Exportar Excel" disabled={exportando} onClick={exportar}>
               <FileSpreadsheet size={17} />
             </button>
-            <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--azul"
-              data-tip="Registrar entrega" aria-label="Registrar entrega" onClick={() => { haptic('selection'); onRegistrar(); }}>
-              <Plus size={17} />
-            </button>
           </div>
+          <Button variant="primary" icon={<Plus size={16} />} onClick={() => { haptic('selection'); onRegistrar(); }}>Registrar entrega</Button>
         </div>
       </header>
 

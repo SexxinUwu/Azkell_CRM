@@ -235,14 +235,6 @@ export function ChecklistPage() {
     ];
   }
 
-  if (vista === 'plantilla') {
-    return (
-      <Page>
-        <ChecklistPlantilla puedeEditar={permisos.editar} onVolver={() => setVista('lista')} />
-      </Page>
-    );
-  }
-
   const cargando = isLoading;
   const pendientesTotal = items.filter(f => estadoDe(f) === 'Pendiente').length;
   const kpis: Array<{ id: string; filtro: FiltroEstado; etiqueta: string; valor: number; sub: string; tono?: 'ok' | 'warning' | 'valor'; icono: ReactNode }> = [
@@ -364,6 +356,7 @@ export function ChecklistPage() {
       )}
 
       {formulario}
+      <ChecklistPlantilla abierta={vista === 'plantilla'} puedeEditar={permisos.editar} onCerrar={() => setVista('lista')} />
       {detalle && (
         <ChecklistDetalle falla={detalle} open
           puedeEditar={permisos.editar} puedeOTs={permisos.ots} puedeEliminar={permisos.eliminar}

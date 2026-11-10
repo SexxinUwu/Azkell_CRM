@@ -28,3 +28,8 @@
   background: #1d1d1f; color: #fff; font-size: 0.75rem; font-weight: 600; white-space: nowrap;
   pointer-events: none; z-index: 9999;
 }
+
+/* Variante sin casilla: solo el icono con su color; el nombre sale al pasar el mouse */
+.acciones-iconos.acciones-iconos--sinfondo .acciones-iconos__boton { background: transparent; box-shadow: none; }
+.acciones-iconos.acciones-iconos--sinfondo .acciones-iconos__boton:hover:not(:disabled) { background: transparent; box-shadow: none; transform: translateY(-1px) scale(1.08); }
+.acciones-iconos--sinfondo .acciones-iconos__boton svg { width: 20px; height: 20px; }
