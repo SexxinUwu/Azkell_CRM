@@ -4439,7 +4439,7 @@ app.get('/api/vehiculos-flota', async (req, res) => {
             vf.sc_entidad, vf.sc_asesor, vf.sc_vencimiento, vf.fum_emision, vf.fum_vencimiento,
             vf.ext_emision, vf.ext_vencimiento, vf.ext_cantidad,
             vf.tc_url, vf.soat_url, vf.matpel_url, vf.rt_url, vf.boni_url, vf.sv_url, vf.sc_url, vf.fum_url, vf.ext_url, vf.wialon_name, p.motora,
-            p.alquilada_a, p.alquiler_desde, p.docs_responsable, p.alquiler_nota
+            p.alquilada_a, p.alquiler_desde, p.docs_responsable, p.alquiler_nota, p.estado AS estado_placa
         FROM placas p
         LEFT JOIN vehiculos_flota vf ON CONVERT(p.placa USING utf8mb4) = CONVERT(vf.placa USING utf8mb4)
         ORDER BY p.placa ASC

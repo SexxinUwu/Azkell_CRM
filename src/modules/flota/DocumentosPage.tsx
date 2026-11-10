@@ -73,7 +73,8 @@ export function DocumentosPage() {
   const papPendientes = (papeletas.data?.data ?? []).filter(x => ['PENDIENTE', 'EN_DESCARGO'].includes(x.estado) && x.saldo > 0);
   const papVencidas = papPendientes.filter(x => x.vencida).length;
 
-  const vehiculos = data ?? [];
+  // Solo unidades activas: las inactivas no se muestran ni suman
+  const vehiculos = useMemo(() => (data ?? []).filter(v => !/^inactiv/i.test(v.estado_placa ?? '')), [data]);
   const empresas = useMemo(() => agruparEmpresas(vehiculos.map(v => v.empresa)), [vehiculos]);
   const todas = useMemo<FilaExpediente[]>(
     () => vehiculos.map(v => ({ v, m: metaDeVehiculo(v) })).sort((a, b) => a.v.placa.localeCompare(b.v.placa)),

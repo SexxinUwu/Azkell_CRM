@@ -83,6 +83,8 @@ export interface VehiculoFlota {
   /** Último inventario de vehículos (acta de entrega) de la unidad; no se carga a mano ni vence */
   inventario_vehiculos?: { id: string; numero: string; fecha: string; total: number } | null;
   /** Empresa a la que está alquilada la unidad (vacío = no está alquilada); el alquiler es indefinido */
+  /** Estado de la placa (Activa / Inactiva): las inactivas no figuran en Documentos */
+  estado_placa?: string | null;
   alquilada_a?: string | null;
   alquiler_desde?: string | null;
   /** Quién actualiza los documentos según el convenio: PROPIA (nosotros) o ARRENDATARIA (la empresa que alquila) */
