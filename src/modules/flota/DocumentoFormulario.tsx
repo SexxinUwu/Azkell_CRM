@@ -22,6 +22,10 @@ const TIVE = 'custom:TIVE';
 const PREFIJO_CUSTOM = 'custom:';
 const esPersonalizado = (sel: string) => sel.startsWith('custom:');
 
+// Tipos que ya se usan en la flota: salen siempre en la lista, aunque la empresa aún no tenga ninguno cargado
+const TIPOS_COMUNES = ['Certificado GPS', 'Contrato de Alquiler Vehicular', 'Certificado de Fabricación'];
+const sinTilde = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+
 interface Personalizado { constancia: string; emision: string; vencimiento: string; costo: string }
 const VACIO: Personalizado = { constancia: '', emision: '', vencimiento: '', costo: '' };
 
@@ -90,12 +94,13 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
   const opcionesDoc = useMemo(() => {
     const o: ComboboxOption[] = Object.entries(CAMPOS_DOC).map(([k, c]) => ({ value: k, label: c.label }));
     o.push({ value: TIVE, label: 'Tarjeta de propiedad (TIVe / SUNARP)', description: 'No vence', keywords: 'tive sunarp propiedad' });
-    const vistos = new Set<string>(['TIVE']);
+    const vistos = new Set<string>(['tive', ...Object.values(CAMPOS_DOC).map(c => sinTilde(c.label)), 'extintores', 'extintor']);
     const agregar = (t: string) => {
-      const n = t.trim(); const k = n.toUpperCase();
+      const n = t.trim(); const k = sinTilde(n);
       if (!n || vistos.has(k) || /TIVE/i.test(n)) return;
       vistos.add(k); o.push({ value: PREFIJO_CUSTOM + n, label: n });
     };
+    TIPOS_COMUNES.forEach(agregar);
     (vehiculos.data ?? []).forEach(v => personalizadosDe(v).forEach(d => agregar(d.tipo)));
     if (esCustom) agregar(nombreTipo);
     return o;
