@@ -260,11 +260,20 @@ export function ChecklistPage() {
         subtitle={cargando ? 'Cargando…' : `${items.length} ${items.length === 1 ? 'reporte' : 'reportes'}${pendientesTotal ? ` · ${pendientesTotal} pendientes` : ''}`}
         actions={
           <>
-            <MenuOtros label="Otros" opciones={[
-              { label: 'Exportar Excel', icon: <FileSpreadsheet size={17} />, disabled: exportando || items.length === 0, onSelect: exportar },
-              { label: 'Plantilla del reporte', icon: <SlidersHorizontal size={17} />, onSelect: () => { haptic('selection'); setVista('plantilla'); } },
-              { label: 'Actualizar', icon: <RefreshCw size={17} />, disabled: isFetching, onSelect: () => { haptic('selection'); qc.invalidateQueries({ queryKey: ['flota', 'checklist'] }); } },
-            ]} />
+            <div className="oc-acciones ck-acciones">
+              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--verde ck-ico"
+                data-tip="Exportar Excel" aria-label="Exportar Excel" disabled={exportando || items.length === 0} onClick={exportar}>
+                <FileSpreadsheet size={20} />
+              </button>
+              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--azul ck-ico"
+                data-tip="Plantilla del reporte" aria-label="Plantilla del reporte" onClick={() => { haptic('selection'); setVista('plantilla'); }}>
+                <SlidersHorizontal size={20} />
+              </button>
+              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--celeste ck-ico"
+                data-tip="Actualizar" aria-label="Actualizar" disabled={isFetching} onClick={() => { haptic('selection'); qc.invalidateQueries({ queryKey: ['flota', 'checklist'] }); }}>
+                <RefreshCw size={20} className={isFetching ? 'cep-girando' : undefined} />
+              </button>
+            </div>
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => { haptic('selection'); setNuevo(true); }}>Nuevo reporte</Button>}
           </>
         }
