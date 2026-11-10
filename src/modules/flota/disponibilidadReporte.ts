@@ -11,23 +11,35 @@ const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&a
 
 export interface CifrasDisponibilidad { total: number; base: number; ruta: number; mantenimiento: number }
 
-interface UnidadPdf { placa: string; clase: 'Camión' | 'Carreta'; sub: string; estado: Estado; conductor: string; empresa: string; alquiladaA: string; acoplada: string; marca: string; capacidad: string; obs: string }
+interface PlacaPdf { placa: string; sub: string; estado: Estado }
+/** Una fila del PDF: el camión o tracto en una columna y su carreta, remolque, semi o Thermo King en la otra. Nunca se mezclan. */
+interface FilaPdf { camion: PlacaPdf | null; carreta: PlacaPdf | null; conductor: string; empresa: string; alquiladaA: string; empresaCarreta: string; alquiladaCarreta: string; marca: string; capacidad: string; obs: string; estados: Estado[] }
 
-/** Una fila por placa (como cuentan las cifras de la pantalla), con la otra placa de la fila como "acoplada" */
-function unidadesPdf(filas: VehiculoDisponibilidad[], estadoElegido: string): UnidadPdf[] {
-  const out: UnidadPdf[] = [];
-  for (const v of filas) {
-    if (v.placa_camion) {
-      out.push({ placa: v.placa_camion, clase: 'Camión', sub: v.sub_tipo || v.tipo_unidad || '', estado: estadoDeTexto(v.estado), conductor: v.conductor_asignado || '',
-        empresa: v.empresa || v.cliente || '', alquiladaA: v.alquilada_a || '', acoplada: v.placa_carreta || '', marca: v.marca || '', capacidad: v.capacidad_tanque && v.capacidad_tanque !== '—' ? v.capacidad_tanque : '', obs: v.observaciones || '' });
-    }
-    if (v.placa_carreta) {
-      out.push({ placa: v.placa_carreta, clase: 'Carreta', sub: v.sub_tipo_carreta || v.sub_tipo || '', estado: estadoDeTexto(v.estado_carreta || v.estado), conductor: v.placa_camion ? '' : v.conductor_asignado || '',
-        empresa: v.empresa_carreta || v.empresa || '', alquiladaA: v.alquilada_a_carreta || '', acoplada: v.placa_camion || '', marca: v.marca_carreta || '', capacidad: '', obs: v.placa_camion ? '' : v.observaciones || '' });
-    }
-  }
-  return estadoElegido === 'Todos' ? out : out.filter(u => u.estado === estadoElegido);
+function filasPdf(filas: VehiculoDisponibilidad[]): FilaPdf[] {
+  return filas.map(v => {
+    const camion = v.placa_camion ? { placa: v.placa_camion, sub: v.sub_tipo || v.tipo_unidad || '', estado: estadoDeTexto(v.estado) } : null;
+    const carreta = v.placa_carreta ? { placa: v.placa_carreta, sub: v.sub_tipo_carreta || v.sub_tipo || '', estado: estadoDeTexto(v.estado_carreta || v.estado) } : null;
+    return {
+      camion, carreta, conductor: v.conductor_asignado || '', empresa: (camion ? v.empresa || v.cliente : v.empresa_carreta || v.empresa) || '',
+      alquiladaA: (camion ? v.alquilada_a : v.alquilada_a_carreta) || '', empresaCarreta: camion && carreta ? v.empresa_carreta || '' : '', alquiladaCarreta: camion && carreta ? v.alquilada_a_carreta || '' : '',
+      marca: (camion ? v.marca : v.marca_carreta || v.marca) || '', capacidad: camion && v.capacidad_tanque && v.capacidad_tanque !== '—' ? v.capacidad_tanque : '', obs: v.observaciones || '',
+      estados: [camion?.estado, carreta?.estado].filter((e): e is Estado => !!e),
+    };
+  });
 }
+
+/** Filas de una sección: si el camión y la carreta están en el mismo estado van juntos; si no, cada uno en su estado (sin perder la columna) */
+function filasDeEstado(todas: FilaPdf[], estado: Estado): FilaPdf[] {
+  const out: FilaPdf[] = [];
+  for (const f of todas) {
+    const cam = f.camion?.estado === estado, car = f.carreta?.estado === estado;
+    if (cam && car) out.push(f);
+    else if (cam) out.push({ ...f, carreta: null, empresaCarreta: '', alquiladaCarreta: '' });
+    else if (car) out.push({ ...f, camion: null, conductor: f.camion ? '' : f.conductor, empresa: f.empresaCarreta || f.empresa, alquiladaA: f.alquiladaCarreta, empresaCarreta: '', alquiladaCarreta: '', capacidad: '', marca: f.marca });
+  }
+  return out;
+}
+const nPlacas = (f: FilaPdf) => (f.camion ? 1 : 0) + (f.carreta ? 1 : 0);
 
 const SECCIONES: Array<{ estado: Estado; titulo: string; color: string; fondo: string }> = [
   { estado: 'En Ruta', titulo: 'En ruta', color: '#1e40af', fondo: '#dbeafe' },
@@ -64,33 +76,37 @@ tr { break-inside: avoid; }
 .pie { margin-top: 4mm; display: flex; justify-content: space-between; padding-top: 1.6mm; border-top: .2mm solid #e2e8f0; font-size: 6px; color: #94a3b8; letter-spacing: .04em; }
 `;
 
-export function htmlDisponibilidad(unidades: UnidadPdf[], criterios: string[], empresa: string, logo: string | null): string {
+export function htmlDisponibilidad(todas: FilaPdf[], estadoElegido: string, criterios: string[], empresa: string, logo: string | null): string {
   const ahora = new Date();
   const fecha = ahora.toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
   const hora = ahora.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-  const por = (e: Estado) => unidades.filter(u => u.estado === e);
-  const operativas = por('En Ruta').length + por('En Base').length;
-  const pct = unidades.length ? Math.round((operativas / unidades.length) * 100) : 0;
+  const visibles = SECCIONES.filter(x => estadoElegido === 'Todos' || x.estado === estadoElegido);
+  const porEstado = new Map(visibles.map(x => [x.estado, filasDeEstado(todas, x.estado)] as const));
+  const cuenta = (e: Estado) => (porEstado.get(e) ?? []).reduce((n, f) => n + nPlacas(f), 0);
+  const total = visibles.reduce((n, x) => n + cuenta(x.estado), 0);
+  const operativas = cuenta('En Ruta') + cuenta('En Base');
+  const pct = total ? Math.round((operativas / total) * 100) : 0;
   const resumen: Array<[string, string | number]> = [
-    ['Total unidades', unidades.length], ['En ruta', por('En Ruta').length], ['En base', por('En Base').length], ['En mantenimiento', por('En Mantenimiento').length], ['Flota operativa', `${pct}%`],
+    ['Total unidades', total], ['En ruta', cuenta('En Ruta')], ['En base', cuenta('En Base')], ['En mantenimiento', cuenta('En Mantenimiento')], ['Flota operativa', `${pct}%`],
   ];
-  const cabeceras = ['Placa', 'Tipo', 'Acoplada a', 'Conductor', 'Empresa', 'Marca', 'Capacidad', 'Observaciones'];
-  const secciones = SECCIONES.map(s => {
-    const lista = por(s.estado);
+  const celdaPlaca = (p: PlacaPdf | null) => p ? `<b class="mono">${esc(p.placa)}</b>${p.sub ? `<span class="alq">${esc(p.sub)}</span>` : ''}` : '—';
+  const cabeceras = ['Camión / Tracto', 'Carreta / Remolque / Semi', 'Conductor', 'Empresa', 'Marca', 'Capacidad', 'Observaciones'];
+  const secciones = visibles.map(sec => {
+    const lista = porEstado.get(sec.estado) ?? [];
     if (!lista.length) return '';
+    const n = cuenta(sec.estado);
     return `<section class="seccion">
-      <h2 style="background:${s.fondo};color:${s.color}">${s.titulo}<span>${lista.length} ${lista.length === 1 ? 'unidad' : 'unidades'}</span></h2>
-      <table><thead><tr>${cabeceras.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${lista.map(u => `<tr>
-        <td class="mono"><b>${esc(u.placa)}</b></td><td>${esc(u.clase)}${u.sub && u.sub !== u.clase ? `<span class="alq">${esc(u.sub)}</span>` : ''}</td>
-        <td class="mono">${esc(u.acoplada) || '—'}</td><td>${esc(u.conductor) || '—'}</td>
-        <td>${esc(u.empresa) || '—'}${u.alquiladaA ? `<span class="alq">Alquilada a ${esc(u.alquiladaA)}</span>` : ''}</td>
-        <td>${esc(u.marca) || '—'}</td><td>${esc(u.capacidad) || '—'}</td><td>${esc(u.obs) || '—'}</td></tr>`).join('')}</tbody></table></section>`;
+      <h2 style="background:${sec.fondo};color:${sec.color}">${sec.titulo}<span>${n} ${n === 1 ? 'unidad' : 'unidades'}</span></h2>
+      <table><thead><tr>${cabeceras.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${lista.map(f => `<tr>
+        <td>${celdaPlaca(f.camion)}</td><td>${celdaPlaca(f.carreta)}</td><td>${esc(f.conductor) || '—'}</td>
+        <td>${esc(f.empresa) || '—'}${f.alquiladaA ? `<span class="alq">Alquilada a ${esc(f.alquiladaA)}</span>` : ''}${f.empresaCarreta && f.empresaCarreta !== f.empresa ? `<span class="alq">Carreta: ${esc(f.empresaCarreta)}${f.alquiladaCarreta ? ` (alq. a ${esc(f.alquiladaCarreta)})` : ''}</span>` : ''}</td>
+        <td>${esc(f.marca) || '—'}</td><td>${esc(f.capacidad) || '—'}</td><td>${esc(f.obs) || '—'}</td></tr>`).join('')}</tbody></table></section>`;
   }).join('');
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Disponibilidad de flota</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"><style>${CSS}</style></head><body><div class="hoja">
   <header class="cab">
     <div>${logo ? `<img src="${esc(logo)}" alt="">` : ''}</div>
-    <div><h1>Disponibilidad de flota</h1><p>${esc(empresa || 'Todas las empresas')} · ${unidades.length} ${unidades.length === 1 ? 'unidad' : 'unidades'}</p></div>
+    <div><h1>Disponibilidad de flota</h1><p>${esc(empresa || 'Todas las empresas')} · ${total} ${total === 1 ? 'unidad' : 'unidades'}</p></div>
     <div class="fecha">${esc(fecha)}<br>${esc(hora)}</div>
   </header>
   <div class="filtros"><b>Filtros:</b> ${criterios.length ? criterios.map(esc).join(' · ') : 'ninguno, toda la flota'}</div>
@@ -112,7 +128,7 @@ async function logoComoDataUrl(): Promise<string | null> {
 }
 
 async function pedirPdf(filas: VehiculoDisponibilidad[], estadoElegido: string, criterios: string[], empresa: string): Promise<Blob> {
-  const html = htmlDisponibilidad(unidadesPdf(filas, estadoElegido), criterios, empresa, await logoComoDataUrl());
+  const html = htmlDisponibilidad(filasPdf(filas), estadoElegido, criterios, empresa, await logoComoDataUrl());
   const res = await apiFetch('/disponibilidad-flota/pdf', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ html, titulo: 'Disponibilidad de flota' }) });
   if (!res.ok) throw new Error(`No se pudo generar el PDF (HTTP ${res.status})`);
   return res.blob();
