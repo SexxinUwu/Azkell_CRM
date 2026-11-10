@@ -4,7 +4,7 @@
 const express = require('express');
 const { KNOWLEDGE } = require('./asistente-knowledge');
 const { detectReport } = require('./asistente-intents');
-const { REPORTS, availableReports, buildReport, resolveRange, todayForPrompt, filtrosPlaca, filtrosPlacasDelMensaje, tituloReporte } = require('./asistente-reports');
+const { REPORTS, availableReports, buildReport, resolveRange, todayForPrompt, filtrosPlaca, filtrosPlacasDelMensaje, tituloReporte, tienePermiso } = require('./asistente-reports');
 const { declaracionesDisponibles, ejecutarConsulta } = require('./asistente-consultas');
 
 const MODELS = (process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-3.8-flash')
@@ -329,6 +329,45 @@ module.exports = function (db) {
       res.json(data);
     } catch (err) {
       res.status(err.status || 500).json({ error: err.message || 'Error al generar el reporte.' });
+    }
+  });
+
+  // Lee una captura de "Consulta Vehicular" de SUNARP (imagen) y devuelve los datos de la ficha. No guarda nada.
+  router.post('/leer-sunarp', async (req, res) => {
+    try {
+      if (!asistenteEnabled()) return res.status(503).json({ error: 'El lector con IA aún no está activado. Avisa al administrador.' });
+      if (!tienePermiso(req.user, 'placas.c') && !tienePermiso(req.user, 'placas.e')) return res.status(403).json({ error: 'No tienes permiso para registrar placas.' });
+      const { imagen, mime } = req.body || {};
+      if (typeof imagen !== 'string' || !imagen || imagen.length > 12_000_000) return res.status(400).json({ error: 'Imagen no válida o demasiado grande.' });
+      if (!/^image\/(png|jpeg|webp)$/.test(String(mime))) return res.status(400).json({ error: 'Sube una imagen PNG, JPG o WEBP.' });
+      consume(String(req.user?.id || req.user?.correo || 'anon'));
+
+      const campos = {
+        placa: 'N° PLACA', serie: 'N° SERIE', vin: 'N° VIN', motor: 'N° MOTOR', color: 'COLOR', marca: 'MARCA',
+        modelo: 'MODELO', anio: 'AÑO DE MODELO (4 dígitos)', propietario: 'PROPIETARIO(S), nombre completo tal cual',
+      };
+      const parts = await callGemini(JSON.stringify({
+        contents: [{ role: 'user', parts: [
+          { text: 'Esta es una captura de la Consulta Vehicular de SUNARP (Perú). Copia exactamente los valores impresos, sin inventar ni corregir. Si un campo está vacío, devuelve "". Campos: ' + Object.entries(campos).map(([k, v]) => `${k} = ${v}`).join('; ') + '.' },
+          { inlineData: { mimeType: mime, data: imagen } },
+        ] }],
+        generationConfig: {
+          temperature: 0, responseMimeType: 'application/json',
+          responseSchema: { type: 'OBJECT', properties: Object.fromEntries(Object.keys(campos).map(k => [k, { type: 'STRING' }])) },
+        },
+      }));
+      let d = {};
+      try { d = JSON.parse(parts.map(p => p.text || '').join('')); } catch { /* respuesta no JSON */ }
+      const lim = (v, n = 80) => String(v ?? '').trim().toUpperCase().slice(0, n);
+      const out = {
+        placa: lim(d.placa, 10), nro_vin: lim(d.vin || d.serie, 30), nro_motor: lim(d.motor, 30), color: lim(d.color, 40),
+        marca: lim(d.marca, 40), modelo: lim(d.modelo, 60), anio: /^\d{4}$/.test(String(d.anio).trim()) ? String(d.anio).trim() : '',
+        cliente: lim(d.propietario, 150),
+      };
+      if (!out.placa && !out.nro_vin && !out.nro_motor) return res.status(422).json({ error: 'No pude leer datos de SUNARP en esa imagen.' });
+      res.json(out);
+    } catch (err) {
+      res.status(err.status || 500).json({ error: err.message || 'Error al leer la imagen.' });
     }
   });
 
