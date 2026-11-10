@@ -52,7 +52,7 @@ const CSS = `
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: #fff; }
 body { font-family: 'Inter', 'Liberation Sans', Arial, sans-serif; color: #0f172a; font-size: 9px; line-height: 1.3; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.hoja { width: 297mm; padding: 9mm; }
+.hoja { width: 297mm; padding: 0 9mm; }
 .mono { font-family: 'JetBrains Mono', 'Liberation Mono', monospace; }
 .cab { display: grid; grid-template-columns: 42mm 1fr auto; align-items: center; gap: 5mm; padding-bottom: 3mm; border-bottom: .5mm solid #0f172a; margin-bottom: 3mm; }
 .cab img { max-height: 14mm; max-width: 40mm; object-fit: contain; }
@@ -64,12 +64,14 @@ body { font-family: 'Inter', 'Liberation Sans', Arial, sans-serif; color: #0f172
 .resumen div { padding: 2mm 3mm; background: #f1f5f9; border-radius: 2mm; text-align: center; }
 .resumen strong { display: block; font-size: 15px; font-weight: 800; }
 .resumen span { font-size: 6.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #64748b; }
-.seccion { margin-bottom: 4mm; }
+.seccion { margin-bottom: 3mm; }
+.seccion > h2 { break-after: avoid; }
 .seccion > h2 { display: flex; justify-content: space-between; align-items: center; margin: 0; padding: 1.6mm 3mm; font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; border-radius: 2mm 2mm 0 0; }
 .seccion > h2 span { font-weight: 700; }
-table { width: 100%; border-collapse: collapse; font-size: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 7.6px; }
 th { text-align: left; padding: 1.4mm 2mm; background: #f8fafc; font-size: 6.4px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #475569; border-bottom: .2mm solid #e2e8f0; }
-td { padding: 1.3mm 2mm; border-bottom: .2mm solid #e2e8f0; vertical-align: top; }
+thead { display: table-header-group; }
+td { padding: 1mm 2mm; border-bottom: .2mm solid #e2e8f0; vertical-align: top; }
 tr { break-inside: avoid; }
 .alq { display: block; font-size: 6.5px; color: #64748b; font-weight: 600; }
 .vacio { padding: 3mm; color: #94a3b8; font-style: italic; border: .2mm solid #e2e8f0; border-top: 0; }

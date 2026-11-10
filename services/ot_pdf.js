@@ -22,7 +22,9 @@ async function obtenerNavegador() {
 }
 
 /** HTML del documento -> PDF (Buffer). El título queda como metadato del PDF, que es lo que muestra el visor. */
-async function htmlAPdf(html, titulo, horizontal = false, unaHoja = false) {
+async function htmlAPdf(html, titulo, horizontal = false, unaHoja = false, opciones = {}) {
+  // opciones.margenV: margen arriba y abajo en mm (todas las hojas, no solo la primera). opciones.compactar: si sobra poco para una hoja más, se reduce todo en proporción para no generar una hoja casi vacía.
+  const margenV = Number(opciones.margenV) > 0 ? Number(opciones.margenV) : 0;
   const b = await obtenerNavegador();
   const documento = html
     .replace(/<button id="btnPrint"[\s\S]*?<\/button>/, '')
@@ -54,7 +56,23 @@ async function htmlAPdf(html, titulo, horizontal = false, unaHoja = false) {
             h.style.zoom = String(z);
         });
     }
-    return await pagina.pdf({ format: 'A4', landscape: horizontal, printBackground: true, preferCSSPageSize: false, margin: { top: '0', right: '0', bottom: '0', left: '0' } });
+    if (opciones.compactar) {
+        await pagina.evaluate((horiz, mv) => {
+            const h = document.querySelector('.hoja');
+            if (!h) return;
+            const hojaMm = (horiz ? 210 : 297) - 2 * mv, anchoMm = horiz ? 297 : 210;
+            const alto1 = (hojaMm / 25.4) * 96 - 2;
+            const alto = h.scrollHeight;
+            const n = Math.ceil(alto / alto1);
+            if (n <= 1) return;
+            // Se intenta una hoja menos; solo si hay que reducir poco (hasta ~22 %) para que se siga leyendo bien
+            const z = ((n - 1) * alto1 * 0.96) / alto;
+            if (z < 0.78) return;
+            h.style.width = `${anchoMm / z}mm`;
+            h.style.zoom = String(z);
+        }, horizontal, margenV);
+    }
+    return await pagina.pdf({ format: 'A4', landscape: horizontal, printBackground: true, preferCSSPageSize: false, margin: { top: `${margenV}mm`, right: '0', bottom: `${margenV}mm`, left: '0' } });
   } finally {
     await pagina.close();
   }

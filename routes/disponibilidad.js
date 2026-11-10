@@ -521,7 +521,7 @@ module.exports = function (db, logAudit) {
         if (!html.includes('<html')) return res.status(400).json({ error: 'Documento no válido' });
         try {
             const { htmlAPdf } = require('../services/ot_pdf');
-            const pdf = await htmlAPdf(html, String(req.body.titulo || 'Disponibilidad de flota').slice(0, 150), true, false);
+            const pdf = await htmlAPdf(html, String(req.body.titulo || 'Disponibilidad de flota').slice(0, 150), true, false, { margenV: 8, compactar: true });
             res.set('Content-Type', 'application/pdf').send(Buffer.from(pdf));
         } catch (err) {
             console.error('Error en POST /api/disponibilidad-flota/pdf:', err.message);
