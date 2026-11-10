@@ -114,7 +114,9 @@ export function Combobox({
   const listId = `${inputId}-list`;
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
-  const selected = options.find(o => o.value === value) ?? null;
+  // Si se permite escribir un valor propio («Usar …») y aún no está en la lista, se muestra tal cual en la casilla
+  const permiteNuevo = !!(onCreate || creates);
+  const selected = options.find(o => o.value === value) ?? (permiteNuevo && value ? { value, label: value } : null);
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
