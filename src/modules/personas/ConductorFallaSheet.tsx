@@ -186,7 +186,7 @@ export function ConductorFallaSheet({ open, viaje, conductor, onClose, onHecho }
           fallas_remolque: deUnidad('REMOLQUE'),
           fallas_libres_text: '',
           fotos_base64: fotos,
-          creado_por: conductor ? `${conductor} (Conductor)` : 'Conductor',
+          creado_por: conductor || 'Conductor',
           anexar_si_existe: true,
         },
       });

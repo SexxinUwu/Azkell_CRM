@@ -476,7 +476,7 @@ function GastoSheet({ open, editar, viaje, conductor, onClose, onHecho }: { open
     f.append('sub_motivo', motivo);
     f.append('importe', String(v));
     f.append('detalle', nota.trim() || motivo);
-    f.append('usuario_creacion', conductor ? `${conductor} (Conductor)` : 'CONDUCTOR MÓVIL');
+    f.append('usuario_creacion', conductor || 'CONDUCTOR MÓVIL');
     if (foto) f.append('sustento', foto);
     const r = await api<{ ok?: boolean; error?: string }>(`/tesoreria/liquidaciones-gastos/${editar.id}`, { method: 'PUT', body: f });
     if (r.ok === false) throw new Error(r.error || 'No se pudo guardar el gasto');
@@ -500,7 +500,7 @@ function GastoSheet({ open, editar, viaje, conductor, onClose, onHecho }: { open
       sub_motivo: motivo,
       importe: v,
       detalle: nota.trim() || motivo,
-      usuario_creacion: conductor ? `${conductor} (Conductor)` : 'CONDUCTOR MÓVIL',
+      usuario_creacion: conductor || 'CONDUCTOR MÓVIL',
       fecha: hoyLocal(),
       registrado_en: new Date().toISOString(),
       foto,
