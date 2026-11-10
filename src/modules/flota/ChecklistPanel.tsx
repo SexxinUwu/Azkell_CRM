@@ -15,6 +15,7 @@ const dias = (iso: string | null | undefined) => {
   const t = iso ? new Date(iso).getTime() : NaN;
   return Number.isNaN(t) ? 0 : Math.max(0, Math.floor((Date.now() - t) / 86400000));
 };
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0);
 
 interface Fila { nombre: string; total: number; con: number; sin: number }
@@ -55,7 +56,7 @@ export function ChecklistPanel({ items, onPersona, onSinOt }: {
   const sinOt = total - conOt;
 
   const ranking = useMemo(() => agrupar(items, f => limpiar(persona === 'creador' ? f.creado_por : f.conductor)), [items, persona]);
-  const unidades = useMemo(() => agrupar(items, f => String(f.placa_tracto ?? '').toUpperCase().trim()).slice(0, 8), [items]);
+  const unidades = useMemo(() => agrupar(items, f => String(f.placa_tracto || f.placa_remolque || 'SIN PLACA').toUpperCase().trim()).slice(0, 8), [items]);
   const antiguos = useMemo(
     () => items.filter(f => !tieneOt(f) && /pendiente/i.test(f.estado || 'Pendiente'))
       .map(f => ({ f, d: dias(f.fecha_reporte) })).sort((a, b) => b.d - a.d).slice(0, 5),
@@ -65,7 +66,15 @@ export function ChecklistPanel({ items, onPersona, onSinOt }: {
   const porDia = useMemo(() => {
     const m = new Map<string, number>();
     for (const f of items) { const d = String(f.fecha_reporte ?? '').slice(0, 10); if (d) m.set(d, (m.get(d) ?? 0) + 1); }
-    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    const dias = [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    const meses: Array<{ clave: string; titulo: string; total: number; dias: Array<[string, number]> }> = [];
+    for (const d of dias) {
+      const clave = d[0].slice(0, 7);
+      let g = meses[meses.length - 1];
+      if (!g || g.clave !== clave) { g = { clave, titulo: `${MESES[+clave.slice(5) - 1]} ${clave.slice(0, 4)}`, total: 0, dias: [] }; meses.push(g); }
+      g.dias.push(d); g.total += d[1];
+    }
+    return meses;
   }, [items]);
 
   if (!total) return <EmptyState icon={<ClipboardCheck size={22} />} title="Sin reportes">No hay reportes de fallas con estos filtros.</EmptyState>;
@@ -73,7 +82,7 @@ export function ChecklistPanel({ items, onPersona, onSinOt }: {
   const lista = verTodos ? ranking : ranking.slice(0, 8);
   const maxR = Math.max(1, ranking[0]?.total ?? 1);
   const maxU = Math.max(1, unidades[0]?.total ?? 1);
-  const maxD = Math.max(1, ...porDia.map(x => x[1]));
+  const maxD = Math.max(1, ...porDia.flatMap(g => g.dias.map(x => x[1])));
 
   return (
     <div className="ckp">
@@ -155,12 +164,20 @@ export function ChecklistPanel({ items, onPersona, onSinOt }: {
 
       <section className="ckp-card ckp-card--ancha">
         <h3 className="ckp-card__titulo">Reportes por día</h3>
-        <div className="ckp-dias" role="img" aria-label="Reportes por día">
-          {porDia.map(([d, n]) => (
-            <span key={d} className="ckp-dia" title={`${d.slice(8)}/${d.slice(5, 7)}: ${n}`}>
-              <span className="ckp-dia__barra" style={{ height: `${Math.max(8, (n / maxD) * 100)}%` }} />
-              <small>{d.slice(8)}</small>
-            </span>
+        <div className="ckp-meses" role="img" aria-label="Reportes por día, agrupados por mes">
+          {porDia.map(g => (
+            <div key={g.clave} className="ckp-mes" style={{ flexGrow: g.dias.length }}>
+              <div className="ckp-mes__tit"><b>{g.titulo}</b><span>{g.total} {g.total === 1 ? 'reporte' : 'reportes'}</span></div>
+              <div className="ckp-dias">
+                {g.dias.map(([d, n]) => (
+                  <span key={d} className="ckp-dia" title={`${d.slice(8)}/${d.slice(5, 7)}: ${n} ${n === 1 ? 'reporte' : 'reportes'}`}>
+                    <span className="ckp-dia__n">{n}</span>
+                    <span className="ckp-dia__barra" style={{ height: `${Math.max(8, (n / maxD) * 100)}%` }} />
+                    <small>{d.slice(8)}</small>
+                  </span>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </section>

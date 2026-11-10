@@ -232,3 +232,11 @@ button.ckp-fila:hover { background: var(--fill, rgba(120, 120, 128, 0.12)); }
 .oc-acciones.ck-acciones .ck-ico.oc-acciones__boton { background: transparent; box-shadow: none; }
 .oc-acciones.ck-acciones .ck-ico.oc-acciones__boton:hover:not(:disabled) { background: transparent; box-shadow: none; transform: translateY(-1px) scale(1.08); }
 .oc-acciones.ck-acciones .ck-ico.oc-acciones__boton:disabled { opacity: 0.4; }
+
+.ckp-meses { display: flex; gap: var(--s-4); overflow-x: auto; }
+.ckp-mes { display: flex; flex-direction: column; gap: var(--s-2); min-width: 0; flex-basis: 0; }
+.ckp-mes + .ckp-mes { border-left: 1px solid var(--separator, rgba(120, 120, 128, 0.25)); padding-left: var(--s-4); }
+.ckp-mes__tit { display: flex; align-items: baseline; gap: var(--s-2); font-size: 0.8125rem; white-space: nowrap; }
+.ckp-mes__tit span { color: var(--label-secondary); font-size: 0.75rem; }
+.ckp-mes .ckp-dias { height: 8rem; }
+.ckp-dia__n { font-size: 0.6875rem; font-weight: 700; }
