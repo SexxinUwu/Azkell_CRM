@@ -8,7 +8,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { CheckCheck, ClipboardCheck, ClipboardList, Clock, Eye, FileDown, FileSpreadsheet, MapPin, Pencil, Plus, RefreshCw, SearchX, SlidersHorizontal, Trash2, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField, TextInput } from '../../core/ui/Field';
+import { TextInput } from '../../core/ui/Field';
+import { Combobox } from '../../core/ui/Combobox';
+import { ChoiceChips } from '../../core/ui/Chips';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { MenuOtros, type OpcionOtros } from '../../core/ui/MenuOtros';
@@ -28,10 +32,15 @@ import { GenerarOTsSheet } from './GenerarOTsSheet';
 import { ChecklistDetalle, leerOts } from './ChecklistDetalle';
 import { AgregarFallasSheet } from './AgregarFallasSheet';
 import { ChecklistPlantilla } from './ChecklistPlantilla';
+import { ChecklistPanel } from './ChecklistPanel';
 import { leerFallas, pdfFman, textoFman } from './fman';
 
 type AccionFila = 'detalle' | 'pdf' | 'agregar' | 'editar' | 'ots' | 'eliminar';
 type Vista = 'lista' | 'plantilla';
+type Modo = 'lista' | 'panel';
+type FiltroOt = 'todos' | 'con' | 'sin';
+/** Nombre sin la etiqueta "(Conductor)" que algunos reportes antiguos traen pegada */
+const nombreCreador = (s: unknown) => String(s ?? '').replace(/\s*\([^)]*\)\s*$/, '').trim().toUpperCase();
 type FiltroEstado = 'TODOS' | 'Pendiente' | 'En Proceso' | 'Finalizado';
 interface Permisos { editar: boolean; ots: boolean; eliminar: boolean }
 
@@ -73,6 +82,11 @@ const COLUMNAS: ColumnaTabla[] = [
 /** Reporte de fallas: calca de la pantalla del clásico con el diseño de Órdenes de compra (totales, filtros, tabla, plantilla, formulario, OTs y PDF). */
 export function ChecklistPage() {
   const [vista, setVista] = useState<Vista>('lista');
+  const [modo, setModo] = useState<Modo>('lista');
+  const [filtroOt, setFiltroOt] = useState<FiltroOt>('todos');
+  const [filtroCreador, setFiltroCreador] = useState('');
+  const [filtroConductor, setFiltroConductor] = useState('');
+  const [filtrando, setFiltrando] = useState(false);
   const [desde, setDesde] = useState(inicioMes());
   const [hasta, setHasta] = useState(hoyLima());
   const { data, isLoading, isError, error, isFetching } = useChecklist(desde, hasta);
@@ -122,13 +136,22 @@ export function ChecklistPage() {
 
   const visibles = useMemo(() => {
     let lista = filtroEstado === 'TODOS' ? porEmpresa : porEmpresa.filter(f => estadoDe(f) === filtroEstado);
+    if (filtroOt !== 'todos') lista = lista.filter(f => (leerOts(f.ots_generadas_json).length > 0) === (filtroOt === 'con'));
+    if (filtroCreador) lista = lista.filter(f => (nombreCreador(f.creado_por) || 'SIN DATO') === filtroCreador);
+    if (filtroConductor) lista = lista.filter(f => (nombreCreador(f.conductor) || 'SIN DATO') === filtroConductor);
     const q = busqueda.trim().toUpperCase();
     if (q) {
       lista = lista.filter(f => [f.folio, f.placa_tracto, f.placa_remolque, f.conductor, f.procedencia, empresaDe(f)]
         .some(x => String(x ?? '').toUpperCase().includes(q)));
     }
     return lista;
-  }, [porEmpresa, filtroEstado, busqueda, clientePorPlaca]);
+  }, [porEmpresa, filtroEstado, busqueda, clientePorPlaca, filtroOt, filtroCreador, filtroConductor]);
+  const opcionesCreador = useMemo(
+    () => [...new Set(items.map(f => nombreCreador(f.creado_por) || 'SIN DATO'))].sort().map(n => ({ value: n, label: n })),
+    [items],
+  );
+  const filtrosActivos = (filtroEmpresa !== 'TODAS' ? 1 : 0) + (filtroOt !== 'todos' ? 1 : 0) + (filtroCreador ? 1 : 0) + (filtroConductor ? 1 : 0) + (desde !== inicioMes() || hasta !== hoyLima() ? 1 : 0);
+  const limpiarFiltros = () => { setFiltroEmpresa('TODAS'); setFiltroOt('todos'); setFiltroCreador(''); setFiltroConductor(''); esteMes(); };
 
   const detalle = items.find(f => String(f.id) === String(detalleId)) ?? null;
   const formulario = (
@@ -237,59 +260,64 @@ export function ChecklistPage() {
         subtitle={cargando ? 'Cargando…' : `${items.length} ${items.length === 1 ? 'reporte' : 'reportes'}${pendientesTotal ? ` · ${pendientesTotal} pendientes` : ''}`}
         actions={
           <>
-            <div className="oc-acciones">
-              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--verde"
-                data-tip="Exportar Excel" aria-label="Exportar Excel" disabled={exportando || items.length === 0} onClick={exportar}>
-                <FileSpreadsheet size={17} />
-              </button>
-              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--azul"
-                data-tip="Plantilla" aria-label="Plantilla de reporte de fallas" onClick={() => { haptic('selection'); setVista('plantilla'); }}>
-                <SlidersHorizontal size={17} />
-              </button>
-              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--celeste"
-                data-tip="Actualizar" aria-label="Actualizar" disabled={isFetching} onClick={() => { haptic('selection'); qc.invalidateQueries({ queryKey: ['flota', 'checklist'] }); }}>
-                <RefreshCw size={17} className={isFetching ? 'cep-girando' : undefined} />
-              </button>
-            </div>
+            <MenuOtros label="Otros" opciones={[
+              { label: 'Exportar Excel', icon: <FileSpreadsheet size={17} />, disabled: exportando || items.length === 0, onSelect: exportar },
+              { label: 'Plantilla del reporte', icon: <SlidersHorizontal size={17} />, onSelect: () => { haptic('selection'); setVista('plantilla'); } },
+              { label: 'Actualizar', icon: <RefreshCw size={17} />, disabled: isFetching, onSelect: () => { haptic('selection'); qc.invalidateQueries({ queryKey: ['flota', 'checklist'] }); } },
+            ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => { haptic('selection'); setNuevo(true); }}>Nuevo reporte</Button>}
           </>
         }
       />
 
-      <div className="inv-kpis" style={{ marginBottom: 'var(--s-4)' }}>
+      <div className="inv-kpis ck-kpis" style={{ marginBottom: 'var(--s-3)' }}>
         {kpis.map(k => (
-          <KpiTarjeta key={k.id} className="ck-kpi" etiqueta={k.etiqueta} valor={String(k.valor)} sub={k.sub} icono={k.icono} tono={k.tono}
+          <KpiTarjeta key={k.id} className="ck-kpi" etiqueta={k.etiqueta} valor={String(k.valor)} icono={k.icono} tono={k.tono}
             activo={filtroEstado === k.filtro} onClick={() => { haptic('selection'); setFiltroEstado(k.filtro); }} />
         ))}
       </div>
 
-      <div className="ck-filtros" style={{ marginBottom: 'var(--s-4)' }}>
-        <div className="ck-filtros__buscar">
-          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar folio, placa, conductor…" />
-        </div>
-        <div className="ck-filtros__fila">
+      <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar folio, placa, conductor…" activos={filtrosActivos} onAbrirFiltros={() => setFiltrando(true)}>
+        <SegmentedControl label="Vista" value={modo} onChange={setModo} options={[{ value: 'lista', label: 'Lista' }, { value: 'panel', label: 'Panel' }]} />
+      </BarraFiltros>
+
+      <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} onLimpiar={limpiarFiltros} resultado={visibles.length} unidad="reporte">
+        <GrupoFiltro titulo="Fechas">
           <div className="ck-rango">
             <TextInput type="date" aria-label="Desde" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} />
             <span className="t-footnote c-secondary">a</span>
             <TextInput type="date" aria-label="Hasta" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} />
             <Button variant="secondary" size="sm" onClick={esteMes}>Este mes</Button>
           </div>
-          <div className="ck-empresas" role="group" aria-label="Empresa">
-            {['TODAS', ...EMPRESAS].map(e => (
-              <button key={e} type="button" aria-pressed={filtroEmpresa === e}
-                className={`ck-empresas__op${filtroEmpresa === e ? ' ck-empresas__op--activa' : ''}`}
-                onClick={() => { haptic('selection'); setFiltroEmpresa(e); }}>
-                {e === 'TODAS' ? 'Todas' : e}
-              </button>
-            ))}
-          </div>
-          <span className="badge" style={{ marginLeft: 'auto' }}>
-            {cargando ? 'Cargando…' : `${visibles.length} ${visibles.length === 1 ? 'reporte' : 'reportes'}`}
-          </span>
-        </div>
-      </div>
+        </GrupoFiltro>
+        <GrupoFiltro titulo="Empresa">
+          <ChoiceChips label="Empresa" value={filtroEmpresa} onChange={setFiltroEmpresa}
+            options={[{ value: 'TODAS', label: 'Todas' }, ...EMPRESAS.map(e => ({ value: e, label: e }))]} />
+        </GrupoFiltro>
+        <GrupoFiltro titulo="Orden de trabajo">
+          <ChoiceChips label="Orden de trabajo" value={filtroOt} onChange={v => setFiltroOt(v as FiltroOt)}
+            options={[{ value: 'todos', label: 'Todos' }, { value: 'con', label: 'Con OT' }, { value: 'sin', label: 'Sin OT' }]} />
+        </GrupoFiltro>
+        <GrupoFiltro titulo="Quién lo creó">
+          <Combobox options={opcionesCreador} value={filtroCreador || null} onChange={v => setFiltroCreador(v ?? '')} enHoja compacta
+            placeholder="Todas las personas" tituloHoja="Quién lo creó" />
+        </GrupoFiltro>
+      </HojaFiltros>
 
-      {isError ? <Notice tone="error">{errorMessage(error)}</Notice> : cargando ? <PageLoader variante="camion" /> : visibles.length === 0 ? (
+      {(filtroCreador || filtroConductor) && (
+        <div className="ck-chip-filtro">
+          {filtroCreador && <button type="button" className="ck-chip-filtro__op" onClick={() => setFiltroCreador('')}>Creó: {filtroCreador} ✕</button>}
+          {filtroConductor && <button type="button" className="ck-chip-filtro__op" onClick={() => setFiltroConductor('')}>Conductor: {filtroConductor} ✕</button>}
+        </div>
+      )}
+
+      {modo === 'panel' && !isError && !cargando ? (
+        <ChecklistPanel items={visibles}
+          onPersona={(n, tipo) => { if (tipo === 'creador') setFiltroCreador(n); else setFiltroConductor(n); setModo('lista'); }}
+          onSinOt={() => { setFiltroOt('sin'); setModo('lista'); }} />
+      ) : null}
+
+      {modo === 'panel' && !isError && !cargando ? null : isError ? <Notice tone="error">{errorMessage(error)}</Notice> : cargando ? <PageLoader variante="camion" /> : visibles.length === 0 ? (
         <EmptyState icon={busqueda ? <SearchX size={22} /> : <ClipboardCheck size={22} />} title={busqueda ? 'Sin coincidencias' : 'Sin reportes'}>
           {busqueda
             ? <Button variant="secondary" size="sm" onClick={() => setBusqueda('')}>Quitar búsqueda</Button>

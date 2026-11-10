@@ -181,3 +181,49 @@ table[aria-label="Reportes de fallas"] tbody tr:hover td { background: color-mix
 /* Acciones del detalle: una fila que se desliza con el dedo o la rueda, en vez de salirse del cuadro */
 .ckd-acciones { display: flex; gap: var(--s-2); align-items: center; width: 100%; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; padding-bottom: 2px; }
 .ckd-acciones > * { flex: 0 0 auto; scroll-snap-align: start; }
+
+/* ── Encabezado compacto: tarjetas más bajas ── */
+.ck-kpis .inv-kpi { padding: var(--s-2) var(--s-3); min-height: 0; }
+.ck-kpis .inv-kpi__valor { font-size: 1.375rem; line-height: 1.1; }
+.ck-chip-filtro { display: flex; flex-wrap: wrap; gap: var(--s-2); margin: var(--s-3) 0; }
+.ck-chip-filtro__op { border: 0; border-radius: 999px; padding: 0.3rem 0.75rem; font: inherit; font-size: 0.8125rem; font-weight: 600; background: var(--accent); color: var(--label-inverse); cursor: pointer; }
+
+/* ── Panel de fallas ── */
+.ckp { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); margin-top: var(--s-3); }
+.ckp-card { background: var(--surface); border-radius: var(--r-lg, 1rem); padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
+.ckp-card--ancha { grid-column: 1 / -1; }
+.ckp-card__cab { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.ckp-card__titulo { margin: 0; font-size: 0.9375rem; font-weight: 700; }
+.ckp-cob { display: flex; align-items: baseline; gap: var(--s-2); }
+.ckp-cob__num { font-size: 2.25rem; font-weight: 800; line-height: 1; }
+.ckp-cob__txt { color: var(--label-secondary); font-size: 0.875rem; }
+.ckp-leyenda { display: flex; flex-wrap: wrap; gap: var(--s-4); font-size: 0.875rem; }
+.ckp-leyenda span, .ckp-link { display: inline-flex; align-items: center; gap: 0.4rem; }
+.ckp-link { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; padding: 0; }
+.ckp-link:hover b { text-decoration: underline; }
+.ckp-pto { width: 0.6rem; height: 0.6rem; border-radius: 50%; display: inline-block; }
+.ckp-pto--con, .ckp-barra__con { background: #1f9d55; }
+.ckp-pto--sin, .ckp-barra__sin { background: #e0a020; }
+.ckp-barra { display: flex; height: 0.5rem; border-radius: 999px; overflow: hidden; background: var(--fill, rgba(120, 120, 128, 0.16)); }
+.ckp-barra--grande { height: 0.75rem; }
+.ckp-barra > span { display: block; height: 100%; }
+.ckp-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-1); }
+.ckp-fila { display: flex; align-items: center; gap: var(--s-3); width: 100%; padding: var(--s-2); border: 0; border-radius: var(--r-md, 0.75rem); background: none; font: inherit; color: inherit; text-align: left; }
+button.ckp-fila { cursor: pointer; transition: background 160ms ease; }
+button.ckp-fila:hover { background: var(--fill, rgba(120, 120, 128, 0.12)); }
+.ckp-fila__pos { width: 1.5rem; text-align: center; color: var(--label-secondary); font-weight: 700; font-size: 0.8125rem; flex-shrink: 0; }
+.ckp-fila__cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.ckp-fila__nombre { font-weight: 600; font-size: 0.875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ckp-fila__nums { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
+.ckp-fila__nums b { font-size: 1rem; }
+.ckp-fila__nums small, .ckp-sub { color: var(--label-secondary); font-size: 0.75rem; }
+.ckp-mono { font-family: var(--font-mono, ui-monospace, monospace); }
+.ckp-mas { align-self: flex-start; border: 0; background: none; font: inherit; font-size: 0.8125rem; font-weight: 600; color: var(--accent); cursor: pointer; padding: 0.25rem var(--s-2); }
+.ckp-vacio { margin: 0; color: var(--label-secondary); font-size: 0.875rem; }
+.ckp-edad { font-weight: 700; font-size: 0.8125rem; color: var(--label-secondary); flex-shrink: 0; }
+.ckp-edad--alta { color: #c0392b; }
+.ckp-dias { display: flex; align-items: flex-end; gap: 4px; height: 7.5rem; overflow-x: auto; padding-bottom: 2px; }
+.ckp-dia { flex: 1 0 1.25rem; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
+.ckp-dia__barra { width: 100%; max-width: 1.5rem; border-radius: 6px 6px 2px 2px; background: var(--accent); min-height: 4px; }
+.ckp-dia small { font-size: 0.6875rem; color: var(--label-secondary); }
+@media (max-width: 720px) { .ckp { grid-template-columns: minmax(0, 1fr); } }
