@@ -900,6 +900,7 @@ label.row__main { cursor: pointer; }
 /* Importante: la lista de la hoja NO es su propio contenedor de scroll (lo es el cuerpo de la hoja). Con overflow:auto + overscroll contain
    Chrome no encadenaba la rueda del mouse al cuerpo de la hoja y la lista no se movía. */
 /* El buscador se queda arriba mientras se baja por la lista */
+@media (min-width: 640px) { .sheet:has(.combobox--compacta) { max-height: min(34rem, calc(100dvh - 4rem)); } }
 .combobox--hoja .combobox__field { position: sticky; top: 0; z-index: 21; background: var(--surface); }
 .combobox__option {
   display: flex;

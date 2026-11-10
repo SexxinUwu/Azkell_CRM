@@ -37,6 +37,8 @@ interface ComboboxProps {
   enHoja?: boolean;
   /** Título de la hoja cuando `enHoja` (si no, el placeholder) */
   tituloHoja?: string;
+  /** Hoja de la altura de un formulario normal (escritorio), no casi toda la pantalla */
+  compacta?: boolean;
 }
 
 const NINGUNA: string[] = [];
@@ -102,7 +104,7 @@ const Fila = memo(function Fila({ o, i, listId, activa, elegida, words, onActiva
  */
 export function Combobox({
   id, options, value, onChange, placeholder = 'Escribe para buscar', onCreate, createLabel = 'Registrar', creates, loading, disabled, limit = 30,
-  enHoja = false, tituloHoja, ...aria
+  enHoja = false, tituloHoja, compacta = false, ...aria
 }: ComboboxProps) {
   // En celular la búsqueda siempre va en una hoja: la lista inline se reacomodaba con el teclado y provocaba el bucle de foco
   const esMovil = useMediaQuery(MOBILE_QUERY);
@@ -247,7 +249,7 @@ export function Combobox({
   const display = typing ? query : selected?.label ?? '';
 
   const buscador = (
-    <div className={`combobox${open ? ' combobox--open' : ''}${hoja ? ' combobox--hoja' : ''}`}>
+    <div className={`combobox${open ? ' combobox--open' : ''}${hoja ? ' combobox--hoja' : ''}${compacta ? ' combobox--compacta' : ''}`}>
       <div className="combobox__field">
         <Search size={16} className="combobox__search" aria-hidden />
         <input
