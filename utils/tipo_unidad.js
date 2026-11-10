@@ -7,7 +7,7 @@
 // - Carreta: nombre común de un semirremolque de dos ejes. Se mantiene aparte hasta confirmar con la tarjeta de propiedad.
 // Lo que está en la lista de abajo es lo que usa routes/legacy.js para clasificar las unidades como no motoras.
 
-const TIPOS = ['Camión', 'Tracto', 'Semirremolque', 'Remolque', 'Carreta', 'Cisterna', 'Furgón', 'Plataforma', 'Tolva'];
+const TIPOS = ['Camión', 'Tracto', 'Semirremolque', 'Remolque', 'Carreta', 'Cisterna', 'Furgón', 'Plataforma', 'Tolva', 'Auto', 'Camioneta'];
 
 // Variantes escritas a mano (sin tildes, sin espacios dobles, en minúsculas) → nombre único
 const VARIANTES = {
@@ -23,6 +23,14 @@ const VARIANTES = {
     'furgon': 'Furgón',
     'plataforma': 'Plataforma',
     'tolva': 'Tolva',
+    'auto': 'Auto',
+    'automovil': 'Auto',
+    'carro': 'Auto',
+    'sedan': 'Auto',
+    'camioneta': 'Camioneta',
+    'suv': 'Camioneta',
+    'pick up': 'Camioneta',
+    'pickup': 'Camioneta',
 };
 
 const sinTildes = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '');

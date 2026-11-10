@@ -127,7 +127,7 @@ function VisorTresD({ unidad, res, oscuro, parte, capa, escenaRef, onSeleccion, 
   const [modeloVis, setModeloVis] = useState<Modelo | null>(null);
   const [pop, setPop] = useState<PopEstado | null>(null);
 
-  const esCarreta = res.M.kind === 'trailer';
+  const esCarreta = res.M.kind === 'trailer' || res.M.kind === 'car'; // sin cabina que bascular ni puertas
   const colores = useMemo(() => colorsOf(unidad.f.COLOR), [unidad.f.COLOR]);
   const subLinea = [unidad.f.TIPO, res.body, unidad.f.CONFIGURACION || res.cfg, unidad.f.ANO].filter(Boolean).join(' · ');
 

@@ -4,7 +4,7 @@
 import type { Placa } from '../api';
 import { MODELS, TLABEL, truckBase, variant, type ModeloDef } from './modelosDatos';
 
-export type Cat = 'T' | 'C' | 'R' | 'S' | 'O';
+export type Cat = 'T' | 'C' | 'R' | 'S' | 'A' | 'O';
 
 export interface Unidad {
   plate: string;
@@ -20,6 +20,7 @@ export const CATS: { id: 'all' | Cat; single: string; name: string }[] = [
   { id: 'R', single: 'Carreta', name: 'Carretas' },
   { id: 'S', single: 'Semirremolque', name: 'Semirremolques' },
   { id: 'T', single: 'Tracto', name: 'Tractos' },
+  { id: 'A', single: 'Auto', name: 'Autos y camionetas' },
   { id: 'O', single: 'Otros', name: 'Otros' },
 ];
 
@@ -57,6 +58,7 @@ function catOf(f: Record<string, string>): Cat {
   if (t === 'TRACTO') return 'T';
   if (t === 'CAMION') return 'C';
   if (t === 'CARRETA') return 'R';
+  if (/^(AUTO|AUTOMOVIL|CAMIONETA|SUV|PICK ?UP)$/.test(t)) return 'A';
   if (/SEMI|REMOLQUE/.test(t)) return 'S';
   // Cambio: Furgón, Cisterna, Plataforma o Tolva se clasifican por la configuración (S = Semirremolque, R = Carreta)
   if (TIPOS_CARRETA.indexOf(t) >= 0) {
@@ -211,6 +213,13 @@ const KLBL: Record<string, string> = { tractor: 'tracto', tipper: 'volquete', bo
 /** De la fila a la configuración 3D (literal de resolve() del archivo, con los cambios de carretas) */
 export function resolverModelo(u: Unidad): Resuelta {
   const f = u.f;
+  // Autos y camionetas: modelo 3D propio, configuración A2 (2 ejes, 4 llantas)
+  if (u.cat === 'A') {
+    const camioneta = /CAMIONETA|SUV|PICK/.test(norm(f.TIPO));
+    const M = MODELS.find(m => m.id === (camioneta ? 'camioneta' : 'auto'));
+    if (!M) throw new Error('No hay modelo 3D de auto');
+    return { M, cfg: 'A2', notes: [], body: camioneta ? 'Camioneta' : 'Sedán', ref: M.title + ' · A2' };
+  }
   const marca = norm(f.MARCA), modelo = norm(f.MODELO), sub = norm(f['SUB TIPO']);
   const cfg = norm(f.CONFIGURACION).replace(/ /g, ''), ll = parseInt(f.LLANTAS, 10) || 0;
   const notes: string[] = [];

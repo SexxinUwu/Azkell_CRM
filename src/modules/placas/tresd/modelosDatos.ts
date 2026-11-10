@@ -13,7 +13,7 @@ export interface ModeloDef {
   title: string;
   badge?: string;
   sub: string;
-  kind: 'tractor' | 'box' | 'tipper' | 'cargo' | 'trailer';
+  kind: 'tractor' | 'box' | 'tipper' | 'cargo' | 'trailer' | 'car';
   paint: number;
   ttype?: string;
   specs?: [string, string][];
@@ -199,6 +199,12 @@ export const MODELS: ModeloDef[] = [
 { id:'carreta-furgon', brand:'Carreta', short:'Furgón', title:'Furgón', sub:'', kind:'trailer', ttype:'furgon', paint:0x2b3036, specs:[] },
 { id:'carreta-frio', brand:'Carreta', short:'Furgón frío', title:'Furgón frío', sub:'', kind:'trailer', ttype:'frio', paint:0x2b3036, specs:[] },
 { id:'carreta-cisterna', brand:'Carreta', short:'Cisterna', title:'Cisterna', sub:'', kind:'trailer', ttype:'cisterna', paint:0x2b3036, specs:[] },
+{ id:'auto', brand:'Auto', short:'Auto', title:'Auto', sub:'Sedán · 2 ejes', kind:'car', paint:0x9aa3ab,
+  car:{L:4.6, W:1.8, wb:2.7, R:0.33, y0:0.26, hb:0.62, cabL:2.25, cabW:1.56, cabH:0.56, cabX:-0.2},
+  specs:[['Tipo','Auto (sedán)'],['Configuración','A2 · 2 ejes, 4 llantas'],['Largo','≈ 4,6 m'],['Ancho','≈ 1,8 m'],['Entre ejes','2,7 m']] },
+{ id:'camioneta', brand:'Camioneta', short:'Camioneta', title:'Camioneta', sub:'SUV · 2 ejes', kind:'car', paint:0x2b3036,
+  car:{L:4.9, W:1.95, wb:2.9, R:0.38, y0:0.34, hb:0.7, cabL:3.1, cabW:1.72, cabH:0.7, cabX:-0.45},
+  specs:[['Tipo','Camioneta (SUV / pick-up)'],['Configuración','A2 · 2 ejes, 4 llantas'],['Largo','≈ 4,9 m'],['Ancho','≈ 1,95 m'],['Entre ejes','2,9 m']] },
 { id:'carreta-tolva', brand:'Carreta', short:'Tolva', title:'Tolva', sub:'', kind:'trailer', ttype:'tolva', paint:0x9e1b22, specs:[] },
 ];
 

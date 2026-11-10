@@ -1090,10 +1090,66 @@ function buildStandalone(M: ModeloDef, cfg: ConfigConstruccion): Ctx {
   return ctx;
 }
 
+/* ====================== Auto / camioneta ====================== */
+function buildCar(M: ModeloDef, cfg: ConfigConstruccion): Ctx {
+  const ctx = crearCtx(M, cfg);
+  const a = M.car as {L: number; W: number; wb: number; R: number; y0: number; hb: number; cabL: number; cabW: number; cabH: number; cabX: number};
+  const { L, W, wb, R, y0, hb, cabL, cabW, cabH, cabX } = a;
+  const pm = paintM(ctx), glass = glassM(), black = blackM(0.6);
+  const yRoof = y0 + hb + cabH;
+
+  // Carrocería: caja baja, cabina y parachoques
+  const car = part(ctx, 'carroceria', 'Carrocería', 'Estructura monocasco con capó, cabina y maletero. El color sale del color de la placa.', null, {ex: [0, 1.1, 0]});
+  rb(car, L, hb, W, 0.14, pm, 0, y0 + hb / 2, 0);
+  rb(car, cabL, cabH + 0.08, cabW, 0.2, pm, cabX, y0 + hb + cabH / 2 - 0.04, 0);
+  // Vidrios: laterales y parabrisas
+  box(car, cabL - 0.5, cabH * 0.66, cabW + 0.012, glass, cabX, y0 + hb + cabH * 0.46, 0);
+  const wsY = y0 + hb + cabH * 0.46, wsX = cabX + cabL / 2 + 0.02;
+  const ws = box(car, 0.03, cabH * 0.7, cabW - 0.2, glass, wsX, wsY, 0); ws.rotation.z = 0.6;
+  const rw = box(car, 0.03, cabH * 0.7, cabW - 0.2, glass, cabX - cabL / 2 - 0.02, wsY, 0); rw.rotation.z = -0.6;
+  for (const s of [1, -1]) {
+    box(car, 0.14, 0.09, 0.12, pm, cabX + cabL / 2 - 0.35, y0 + hb + 0.1, s * (cabW / 2 + 0.1));      // espejos
+    box(car, 0.012, 0.02, 0.62, black, cabX, y0 + hb * 0.5, s * (W / 2 + 0.004));                     // franja de puerta
+  }
+  // Parachoques, parrilla, luces y placas
+  const lampW = mat(0xfff6d8, {emissive: 0xfff2c0, emissiveIntensity: 1.2, roughness: 0.2}), lampR = mat(0xd01820, {emissive: 0xff2020, emissiveIntensity: 0.9, roughness: 0.3});
+  rb(car, 0.14, 0.22, W - 0.1, 0.05, black, L / 2 - 0.04, y0 + 0.08, 0);
+  rb(car, 0.14, 0.22, W - 0.1, 0.05, black, -L / 2 + 0.04, y0 + 0.08, 0);
+  box(car, 0.03, 0.17, 0.95, black, L / 2 + 0.006, y0 + hb * 0.5, 0);
+  const luces = part(ctx, 'luces', 'Luces', 'Faros delanteros y luces traseras.', null, {ex: [0, 0.8, 0]});
+  for (const s of [1, -1]) {
+    box(luces, 0.04, 0.12, 0.42, lampW, L / 2 + 0.004, y0 + hb * 0.62, s * (W / 2 - 0.3));
+    box(luces, 0.04, 0.12, 0.42, lampR, -L / 2 - 0.004, y0 + hb * 0.62, s * (W / 2 - 0.3));
+  }
+  const fontPlaca = '600 64px "IBM Plex Mono", monospace', txt = cfg.plate || M.title;
+  const pf = new THREE.Mesh(new THREE.PlaneGeometry(0.52, 0.11), textMat(txt, 512, 108, '#15202b', '#f4f6f8', fontPlaca));
+  pf.rotation.y = PI / 2; pf.position.set(L / 2 + 0.075, y0 + 0.08, 0); luces.add(pf);
+  const pr = new THREE.Mesh(new THREE.PlaneGeometry(0.52, 0.11), textMat(txt, 512, 108, '#15202b', '#f4f6f8', fontPlaca));
+  pr.rotation.y = -PI / 2; pr.position.set(-L / 2 - 0.075, y0 + 0.08, 0); luces.add(pr);
+
+  // Ruedas: dos ejes
+  const ruedas = part(ctx, 'ruedas', 'Ruedas y ejes', 'Dos ejes, cuatro llantas.', null);
+  const kit = wheelKit(R);
+  for (const x of [wb / 2, -wb / 2]) {
+    const g = new THREE.Group(); g.position.set(x, R, 0); ruedas.add(g);
+    cyl(g, 0.03, W - 0.4, black, 0, 0, 0, 'z', 12);
+    for (const s of [1, -1]) {
+      cyl(g, R + 0.07, 0.03, black, 0, 0, s * (W / 2 + 0.003), 'z', 28);          // paso de rueda
+      const wg = new THREE.Group(); g.add(wg); makeWheel(wg, 0, s * (W / 2 - 0.03), s, kit, false, true); explodable(ctx, wg, [0, 0, s * 0.7]);
+    }
+  }
+
+  ctx.len = L; ctx.height = yRoof; ctx.offset = 0;
+  ctx.eye = new V(cabX + 0.15, y0 + hb + cabH * 0.45, 0.35); ctx.look = new V(cabX + 2, y0 + hb + cabH * 0.35, 0.3);
+  ctx.title = M.title; ctx.sub = M.sub; ctx.specs = M.specs;
+  finalizar(ctx);
+  return ctx;
+}
+
 /**
  * Construye la unidad 3D. Carretas (kind 'trailer') se ven solas; el resto, camión o tracto con su carrocería.
  * Equivale a build() del original, sin globales: la placa, la librea, el frío y la configuración vienen en cfg.
  */
 export function construir(M: ModeloDef, cfg: ConfigConstruccion): Modelo {
-  return M.kind === 'trailer' ? buildStandalone(M, cfg) : buildTruck(M, cfg);
+  return M.kind === 'trailer' ? buildStandalone(M, cfg) : M.kind === 'car' ? buildCar(M, cfg) : buildTruck(M, cfg);
 }

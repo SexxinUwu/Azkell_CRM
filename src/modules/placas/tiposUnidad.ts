@@ -1,7 +1,7 @@
 // Tipos de unidad con nombre único. Espejo de utils/tipo_unidad.js (servidor): cambiar las dos listas juntas.
 // Remolques: el semirremolque se acopla al tracto por la quinta rueda; el remolque se jala con barra de tiro.
 
-export const TIPOS_UNIDAD = ['Camión', 'Tracto', 'Semirremolque', 'Remolque', 'Carreta', 'Cisterna', 'Furgón', 'Plataforma', 'Tolva'] as const;
+export const TIPOS_UNIDAD = ['Camión', 'Tracto', 'Semirremolque', 'Remolque', 'Carreta', 'Cisterna', 'Furgón', 'Plataforma', 'Tolva', 'Auto', 'Camioneta'] as const;
 
 const VARIANTES: Record<string, string> = {
   'camion': 'Camión',
@@ -16,6 +16,14 @@ const VARIANTES: Record<string, string> = {
   'furgon': 'Furgón',
   'plataforma': 'Plataforma',
   'tolva': 'Tolva',
+  'auto': 'Auto',
+  'automovil': 'Auto',
+  'carro': 'Auto',
+  'sedan': 'Auto',
+  'camioneta': 'Camioneta',
+  'suv': 'Camioneta',
+  'pick up': 'Camioneta',
+  'pickup': 'Camioneta',
 };
 
 const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '');

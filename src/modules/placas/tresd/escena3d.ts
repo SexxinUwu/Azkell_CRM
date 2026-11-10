@@ -505,6 +505,7 @@ export class Escena3D {
     const cur = this.cur;
     if (!cur) return;
     if (cur.M.kind === 'trailer' && (nombre === 'engine' || nombre === 'inside')) return;
+    if (cur.M.kind === 'car' && nombre === 'engine') return;
     const [p, t] = this.viewDef(nombre, cur);
     const tgt = new V(t[0], t[1], t[2]), pos = new V(p[0], p[1], p[2]);
     this.invalidate();
