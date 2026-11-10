@@ -6,17 +6,17 @@ import { MultiSelect } from '../../core/ui/MultiSelect';
 import { Field, TextInput } from '../../core/ui/Field';
 
 export interface Rango { min: string; max: string }
-export type ListaFiltro = 'auditoria' | 'estados' | 'placas' | 'carretas' | 'motores' | 'rutas' | 'conductores';
+export type ListaFiltro = 'auditoria' | 'motivos' | 'estados' | 'placas' | 'carretas' | 'motores' | 'rutas' | 'conductores';
 export type ClaveRango = 'peso' | 'galones' | 'rendimiento' | 'gasto' | 'diferencia';
 export type FiltrosAnalisis = Record<ListaFiltro, string[]> & Record<ClaveRango, Rango> & { viaje: string };
 export type OpcionesFiltro = Record<ListaFiltro, string[]>;
 
 const RANGO_VACIO: Rango = { min: '', max: '' };
 export const FILTROS_ANALISIS_VACIOS: FiltrosAnalisis = {
-  auditoria: [], estados: [], placas: [], carretas: [], motores: [], rutas: [], conductores: [], viaje: '',
+  auditoria: [], motivos: [], estados: [], placas: [], carretas: [], motores: [], rutas: [], conductores: [], viaje: '',
   peso: RANGO_VACIO, galones: RANGO_VACIO, rendimiento: RANGO_VACIO, gasto: RANGO_VACIO, diferencia: RANGO_VACIO,
 };
-const LISTAS: ListaFiltro[] = ['auditoria', 'estados', 'placas', 'carretas', 'motores', 'rutas', 'conductores'];
+const LISTAS: ListaFiltro[] = ['auditoria', 'motivos', 'estados', 'placas', 'carretas', 'motores', 'rutas', 'conductores'];
 const RANGOS: ClaveRango[] = ['peso', 'galones', 'rendimiento', 'gasto', 'diferencia'];
 
 const hayRango = (r: Rango) => r.min !== '' || r.max !== '';
@@ -83,6 +83,7 @@ export function FiltrosAnalisisSheet({ open, onClose, filtros, onChange, opcione
         <Grupo titulo="Auditoría y estado">
           <ToggleChips label="Auditoría" options={opciones.auditoria.map(v => ({ value: v, label: v }))} value={filtros.auditoria} onChange={v => set('auditoria', v)} />
           <ToggleChips label="Estado" options={opciones.estados.map(v => ({ value: v, label: v }))} value={filtros.estados} onChange={v => set('estados', v)} />
+          <MultiSelect label="Motivo de la observación" placeholder="Todos los motivos" options={opciones.motivos} value={filtros.motivos} onChange={v => set('motivos', v)} />
         </Grupo>
         <Grupo titulo="Unidad">
           <div style={grid}>

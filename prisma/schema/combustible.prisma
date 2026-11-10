@@ -7,12 +7,22 @@ model CombustibleAuditoriaViaje {
   estado_auditoria String    @default("PENDIENTE") @db.VarChar(30)
   observacion      String?   @db.Text
   usuario          String?   @db.VarChar(100)
+  motivos          String?   @db.Text
   creado_en        DateTime? @default(now()) @db.Timestamp(0)
   actualizado_en   DateTime? @default(now()) @db.Timestamp(0)
 
   @@unique([modulo, viaje], map: "uk_modulo_viaje")
   @@index([viaje], map: "idx_viaje")
   @@map("combustible_auditoria_viajes")
+}
+
+model CombustibleAuditoriaMotivo {
+  id        Int       @id @default(autoincrement())
+  nombre    String    @unique(map: "uq_comb_aud_motivo") @db.VarChar(80)
+  activo    Int       @default(1) @db.TinyInt
+  creado_en DateTime? @default(now()) @db.Timestamp(0)
+
+  @@map("combustible_auditoria_motivos")
 }
 
 model CombustibleEstacionProveedor {

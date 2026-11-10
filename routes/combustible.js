@@ -1254,9 +1254,18 @@ module.exports = function (db, broadcast, logAudit) {
             const moduloAuditoria = valesTable === 'marsisa_combustible_vales' ? 'marsisa' : 'operaciones';
             const auditoriaMap = new Map();
             try {
-                const [auditRows] = await tdb.query(
-                    `SELECT modulo, viaje, estado_auditoria, observacion, usuario, DATE_FORMAT(actualizado_en, '%Y-%m-%d %H:%i:%s') AS actualizado_en FROM combustible_auditoria_viajes`
-                );
+                // `motivos` existe tras la migración 20; si aún no se aplicó, se lee sin esa columna
+                let auditRows;
+                try {
+                    [auditRows] = await tdb.query(
+                        `SELECT modulo, viaje, estado_auditoria, observacion, motivos, usuario, DATE_FORMAT(actualizado_en, '%Y-%m-%d %H:%i:%s') AS actualizado_en FROM combustible_auditoria_viajes`
+                    );
+                } catch (eCol) {
+                    if (eCol && eCol.code !== 'ER_BAD_FIELD_ERROR') throw eCol;
+                    [auditRows] = await tdb.query(
+                        `SELECT modulo, viaje, estado_auditoria, observacion, usuario, DATE_FORMAT(actualizado_en, '%Y-%m-%d %H:%i:%s') AS actualizado_en FROM combustible_auditoria_viajes`
+                    );
+                }
                 auditRows.forEach(a => {
                     if (a.viaje) {
                         const vKey = String(a.viaje).trim();
@@ -1713,6 +1722,8 @@ module.exports = function (db, broadcast, logAudit) {
                                      auditoriaMap.get(vNumKey) || null;
                     const estadoAuditoria = auditObj ? (auditObj.estado_auditoria || 'PENDIENTE') : 'PENDIENTE';
                     const observacionAuditoria = auditObj ? (auditObj.observacion || '') : '';
+                    let motivosAuditoria = [];
+                    try { const m = auditObj && auditObj.motivos ? JSON.parse(auditObj.motivos) : []; motivosAuditoria = Array.isArray(m) ? m : []; } catch (eMot) { motivosAuditoria = []; }
                     const usuarioAuditoria = auditObj ? (auditObj.usuario || '') : '';
 
                     trips.push({
@@ -1723,6 +1734,7 @@ module.exports = function (db, broadcast, logAudit) {
                         estado: estadoViaje,
                         estadoAuditoria,
                         observacionAuditoria,
+                        motivosAuditoria,
                         usuarioAuditoria,
                         motor: placaMotorMap.get(t.placa) || '',
                         marca: placaMarcaMap.get(t.placa) || '',
@@ -2392,6 +2404,22 @@ module.exports = function (db, broadcast, logAudit) {
     };
 
     // POST /api/combustible/auditar-viaje
+    // Catálogo de motivos de la auditoría (Observado). Sin la migración 20 devuelve la lista inicial.
+    const MOTIVOS_INICIALES = ['ROBO DE COMBUSTIBLE', 'MAL MANEJO', 'CONSUMO ALTO SIN JUSTIFICACIÓN', 'VALE O DATO INCONSISTENTE', 'DESVÍO DE RUTA', 'FALLA MECÁNICA', 'OTRO'];
+    router.get('/auditoria-motivos', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            let motivos = MOTIVOS_INICIALES;
+            try {
+                const [rows] = await tdb.query('SELECT nombre FROM combustible_auditoria_motivos WHERE activo = 1 ORDER BY id ASC');
+                if (rows.length) motivos = rows.map(r => r.nombre);
+            } catch (e) { /* tabla aún no creada */ }
+            res.json({ ok: true, motivos });
+        } catch (err) {
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     router.post('/auditar-viaje', async (req, res) => {
         try {
             const tdb = getDb(req);
@@ -2399,7 +2427,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             const valesTable = getValesTable(req);
             const moduloAuditoria = valesTable === 'marsisa_combustible_vales' ? 'marsisa' : 'operaciones';
-            const { viaje, estado_auditoria, observacion } = req.body;
+            const { viaje, estado_auditoria, observacion, motivos } = req.body;
 
             if (!viaje) {
                 return res.status(400).json({ ok: false, error: 'N° de viaje requerido' });
@@ -2415,6 +2443,14 @@ module.exports = function (db, broadcast, logAudit) {
                 return res.status(400).json({ ok: false, error: 'La observación supera los 1000 caracteres' });
             }
             const obs = (observacion !== undefined && observacion !== null) ? String(observacion).trim() : '';
+            // Motivos: solo un viaje OBSERVADO los lleva, y debe llevar al menos uno
+            const listaMotivos = est === 'OBSERVADO'
+                ? [...new Set((Array.isArray(motivos) ? motivos : []).map(m => String(m || '').trim().toUpperCase().slice(0, 80)).filter(Boolean))].slice(0, 10)
+                : [];
+            if (est === 'OBSERVADO' && listaMotivos.length === 0) {
+                return res.status(400).json({ ok: false, error: 'Elige al menos un motivo para el viaje observado.' });
+            }
+            const motivosJson = listaMotivos.length ? JSON.stringify(listaMotivos) : null;
             const usuario = (req.user && (req.user.username || req.user.nombre)) || req.body.usuario || 'Auditor';
 
             // Un viaje CONFORME queda bloqueado: solo un administrador puede volver a cambiarlo
@@ -2424,6 +2460,17 @@ module.exports = function (db, broadcast, logAudit) {
             }
 
             const sqlAudit = `
+                INSERT INTO combustible_auditoria_viajes (modulo, viaje, estado_auditoria, observacion, motivos, usuario)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    estado_auditoria = VALUES(estado_auditoria),
+                    observacion = VALUES(observacion),
+                    motivos = VALUES(motivos),
+                    usuario = VALUES(usuario),
+                    actualizado_en = CURRENT_TIMESTAMP
+            `;
+            // Sin la migración 20 (columna `motivos`) se guarda como antes, sin motivos
+            const sqlAuditSinMotivos = `
                 INSERT INTO combustible_auditoria_viajes (modulo, viaje, estado_auditoria, observacion, usuario)
                 VALUES (?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
@@ -2432,17 +2479,25 @@ module.exports = function (db, broadcast, logAudit) {
                     usuario = VALUES(usuario),
                     actualizado_en = CURRENT_TIMESTAMP
             `;
-
-            await tdb.query(sqlAudit, [moduloAuditoria, rawViaje, est, obs, usuario]);
-            if (cleanViaje && cleanViaje !== rawViaje) {
-                await tdb.query(sqlAudit, [moduloAuditoria, cleanViaje, est, obs, usuario]);
+            const guardarFila = async (clave) => {
+                try { await tdb.query(sqlAudit, [moduloAuditoria, clave, est, obs, motivosJson, usuario]); }
+                catch (eIns) {
+                    if (!eIns || eIns.code !== 'ER_BAD_FIELD_ERROR') throw eIns;
+                    await tdb.query(sqlAuditSinMotivos, [moduloAuditoria, clave, est, obs, usuario]);
+                }
+            };
+            await guardarFila(rawViaje);
+            if (cleanViaje && cleanViaje !== rawViaje) await guardarFila(cleanViaje);
+            // Un motivo nuevo escrito por la persona queda en el catálogo para los próximos viajes
+            for (const m of listaMotivos) {
+                try { await tdb.query('INSERT IGNORE INTO combustible_auditoria_motivos (nombre) VALUES (?)', [m]); } catch (eCat) { /* sin catálogo todavía */ }
             }
 
             if (typeof logAudit === 'function') {
                 logAudit(req, 'AUDITORIA_COMBUSTIBLE', `Viaje [${rawViaje}] marcado como [${est}]. Obs: ${obs}`);
             }
 
-            res.json({ ok: true, viaje: rawViaje, estado_auditoria: est, observacion: obs, usuario });
+            res.json({ ok: true, viaje: rawViaje, estado_auditoria: est, observacion: obs, motivos: listaMotivos, usuario });
         } catch (err) {
             console.error('Error al guardar auditoría de combustible:', err);
             res.status(500).json({ ok: false, error: err.message });
