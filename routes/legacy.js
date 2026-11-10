@@ -30,9 +30,10 @@ function credencialesWialon(tdb) {
         baseUrl: u || 'https://hst-api.wialon.us/wialon/ajax.html'
     }));
 }
-// Sensores de nivel de combustible de una unidad (campo `sens` de Wialon, flag 4096), en orden de preferencia:
-// los que miden en %, luego los de tipo "fuel level" (Combustible Total primero) y luego los de tanque en galones/litros.
-// Un sensor puede existir y marcar 0,00 o "---": por eso se prueba con el último mensaje y se usa el primero que da un valor.
+// Sensores de nivel de combustible de una unidad (campo `sens` de Wialon, flag 4096).
+// Solo cuentan los que miden en %: es el dato que entrega la telemetría. Se refleja tal cual, sin convertir ni calcular nada.
+// Los de tanque en galones/litros (Tanque P/S, Combustible Total) NO se usan: si el sensor en % marca 0 la unidad no tiene telemetría
+// y se deja vacío, en vez de inventar un porcentaje a partir de otro sensor.
 function candidatosCombustible(sens) {
     const lista = Object.values(sens || {}).filter(x => x && x.id != null);
     const nombre = (x) => String(x.n || '').toLowerCase();
@@ -40,10 +41,7 @@ function candidatosCombustible(sens) {
     const malo = /consum|tasa|rate|rendim|acumul|presi|temp/i;
     const esComb = (x) => /(combust|fuel|diesel|tanque|tank)/i.test(nombre(x));
     const pct = lista.filter(x => !malo.test(nombre(x)) && esComb(x) && (metrica(x) === '%' || /%/.test(nombre(x))));
-    const nivel = lista.filter(x => !pct.includes(x) && !malo.test(nombre(x)) && x.t === 'fuel level')
-        .sort((a, b) => (/total/i.test(nombre(b)) ? 1 : 0) - (/total/i.test(nombre(a)) ? 1 : 0));
-    const gal = lista.filter(x => !pct.includes(x) && !nivel.includes(x) && !malo.test(nombre(x)) && esComb(x) && /^(gal|galones|gallons|l|lt|lts|litros|liters|litres)$/.test(metrica(x)));
-    return [...pct, ...nivel, ...gal];
+    return pct;
 }
 async function valorSensorUltimo(baseUrl, sid, unitId, sensor) {
     try {
@@ -61,7 +59,7 @@ async function elegirSensorValido(baseUrl, sid, unitId, sens) {
         const valor = await valorSensorUltimo(baseUrl, sid, unitId, sensor);
         if (valor != null) return { sensor, valor };
     }
-    return { sensor: c[0] || null, valor: null };
+    return { sensor: null, valor: null }; // el sensor en % marca 0 o no existe: sin telemetría de combustible
 }
 const WIALON_CACHE_TTL = 4000; // 4s de refresco ultra rápido para tiempo real y animación fluida
 
