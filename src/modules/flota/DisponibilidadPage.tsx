@@ -285,7 +285,7 @@ export function DisponibilidadPage() {
                     {visibles.map((v, i) => {
                       const cat = categoria(v);
                       return (
-                        <tr key={`${v.id ?? i}-${v.placa_camion}`} className="disp-fila pressable" onClick={() => { haptic('selection'); setSeleccionado(v); }}>
+                        <tr key={`${v.id ?? i}-${v.placa_camion}`} className="disp-fila">
                           <td className="disp-num">{i + 1}</td>
                           <td>{v.placa_camion ? <><LicensePlate plate={v.placa_camion} size="sm" />{v.alquilada_a && <small className="disp-alq">Alq. a {v.alquilada_a}</small>}</> : <span className="disp-sin">—</span>}</td>
                           <td>{v.placa_carreta ? <><LicensePlate plate={v.placa_carreta} size="sm" />{v.alquilada_a_carreta && <small className="disp-alq">Alq. a {v.alquilada_a_carreta}</small>}</> : <span className="disp-sin">—</span>}</td>
@@ -320,7 +320,7 @@ export function DisponibilidadPage() {
                 {visibles.map((v, i) => {
                   const cat = categoria(v);
                   return (
-                    <article key={`${v.id ?? i}-${v.placa_camion}`} className="disp-mcard pressable" onClick={() => { haptic('selection'); setSeleccionado(v); }}>
+                    <article key={`${v.id ?? i}-${v.placa_camion}`} className="disp-mcard">
                       <div className="disp-mcard__cab">
                         {v.placa_camion ? <LicensePlate plate={v.placa_camion} size="sm" /> : <span className="disp-sin">—</span>}
                         {v.placa_carreta && <LicensePlate plate={v.placa_carreta} size="sm" />}

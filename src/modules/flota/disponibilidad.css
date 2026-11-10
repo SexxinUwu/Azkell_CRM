@@ -54,8 +54,6 @@
 .disp-tabla td { padding: 10px 8px; border-bottom: 1px solid var(--separator); vertical-align: middle; font-size: 0.8125rem; }
 .disp-tabla tr:last-child td { border-bottom: 0; }
 .disp-tabla .disp-num { color: var(--label-3); font-weight: 600; width: 2.5rem; }
-.disp-fila { cursor: pointer; }
-.disp-fila:hover td { background: var(--fill-subtle); }
 .disp-conductor { font-weight: 600; text-transform: uppercase; }
 .disp-obs { max-width: 14rem; color: var(--label-2); }
 .disp-gps {
