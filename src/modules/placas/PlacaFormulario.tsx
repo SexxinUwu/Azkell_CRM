@@ -277,7 +277,7 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
               {props => (
                 <div style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <Combobox {...props} options={clientes} value={p.cliente || null} placeholder="Busca o escribe el cliente"
+                    <Combobox {...props} options={p.cliente && !clientes.some(c => c.value === p.cliente) ? [{ value: p.cliente, label: p.cliente, description: undefined }, ...clientes] : clientes} value={p.cliente || null} placeholder="Busca o escribe el cliente"
                       onChange={v => {
                         const ruc = clientes.find(c => c.value === v)?.description;
                         setP(x => ({ ...x, cliente: v ?? '', ruc: ruc && !x.ruc ? ruc : x.ruc }));
@@ -306,7 +306,7 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
             </Field>
             {campoLista('subTipo', 'Sub tipo', sugerencias.subTipo)}
             <Field label="Marca">
-              {props => <Combobox {...props} options={marcas} value={p.marca || null} onChange={v => set('marca', v ?? '')}
+              {props => <Combobox {...props} options={p.marca && !marcas.some(m => m.value === p.marca) ? [{ value: p.marca, label: p.marca }, ...marcas] : marcas} value={p.marca || null} onChange={v => set('marca', v ?? '')}
                 placeholder="Busca la marca" onCreate={t => set('marca', t.trim().toUpperCase())} createLabel="Usar" />}
             </Field>
             {campoLista('modelo', 'Modelo', modelos, { placeholder: p.marca ? `Modelos de ${p.marca}` : 'Elige o escribe el modelo' })}
