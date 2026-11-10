@@ -83,10 +83,13 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
 
   const opcionesPlaca = useMemo(() => {
     const s = new Set<string>();
-    (placas.data ?? []).forEach(p => s.add(p.placa));
-    (vehiculos.data ?? []).forEach(v => s.add(v.placa));
+    const inactiva = (e?: string | null) => /^inactiv/i.test(e ?? '');
+    (placas.data ?? []).forEach(p => { if (!inactiva(p.estado)) s.add(p.placa); });
+    (vehiculos.data ?? []).forEach(v => { if (!inactiva(v.estado_placa)) s.add(v.placa); });
+    // La unidad con la que se abre el formulario siempre se conserva
+    if (placaInicial) s.add(placaInicial);
     return [...s].sort();
-  }, [placas.data, vehiculos.data]);
+  }, [placas.data, vehiculos.data, placaInicial]);
 
   const nombreTipo = seleccion === TIVE ? 'TIVE' : seleccion.slice(PREFIJO_CUSTOM.length).trim();
 

@@ -129,7 +129,6 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
       setP(x => ({
         ...x,
         ...(modo === 'crear' && d.placa ? { placa: normalizePlate(d.placa) ?? d.placa } : {}),
-        ...(d.cliente ? { cliente: d.cliente } : {}),
         ...(d.marca ? { marca: d.marca } : {}),
         ...(d.modelo ? { modelo: d.modelo } : {}),
         ...(d.color ? { color: d.color } : {}),
