@@ -124,25 +124,25 @@ module.exports = function globalRBAC(req, res, next) {
     const aprobTesoreriaChica = req.method === 'POST' && /^\/tesoreria\/caja-chica\/.+\/aprobar-tesoreria$/.test(path);
     const descontarChica = req.method === 'POST' && /^\/tesoreria\/caja-chica\/movimientos\/[^/]+\/descontar$/.test(path);
     if (aprobGerenciaChica || aprobTesoreriaChica || descontarChica) {
-        const reglasChica = aprobGerenciaChica ? [['gerencia_aprobaciones_caja', ['e', 'c']]]
-            : descontarChica ? [['gerencia_aprobaciones_caja', ['e', 'c']], ['tesoreria', ['c']]]
+        const reglasChica = aprobGerenciaChica ? [['gerencia_aprobaciones_caja', ['a']]]
+            : descontarChica ? [['gerencia_aprobaciones_caja', ['a']], ['tesoreria', ['c']]]
             : [['tesoreria', ['c']]];
         const tieneChica = reglasChica.some(([modulo, acciones]) => p[modulo] && acciones.some(a => p[modulo][a] === 1 || p[modulo][a] === true));
         if (!tieneChica) return res.status(403).json({ error: 'RBAC: Permiso denegado para aprobar (caja chica)' });
         return next();
     }
 
-    // NOTAS DE CRÉDITO: aprobar, anular y reembolsar exigen el permiso «Aprobar notas de crédito» (registrar y enlazar la devolución, no)
+    // NOTAS DE CRÉDITO: aprobar, anular y reembolsar exigen la acción «Aprobar» del módulo (registrar y enlazar la devolución, no)
     if (req.method === 'POST' && /^\/compras\/notas-credito\/[^/]+\/(aprobar|anular|reembolso)$/.test(path)) {
-        const tieneNc = p.tesoreria_nc_aprobar && (p.tesoreria_nc_aprobar.l === 1 || p.tesoreria_nc_aprobar.l === true);
-        if (!tieneNc) return res.status(403).json({ error: 'RBAC: Permiso denegado: aprobar, anular o reembolsar notas de crédito exige el permiso «Aprobar notas de crédito»' });
+        const tieneNc = p.tesoreria_nc && (p.tesoreria_nc.a === 1 || p.tesoreria_nc.a === true);
+        if (!tieneNc) return res.status(403).json({ error: 'RBAC: Permiso denegado: aprobar, anular o reembolsar notas de crédito exige la acción «Aprobar» en Notas de crédito' });
         return next();
     }
 
     if (esAprobacionOc || esAprobacionCaja) {
         const reglas = esAprobacionOc
-            ? [['gerencia_aprobaciones_oc', ['e', 'c']]]
-            : [['gerencia_aprobaciones_caja', ['e', 'c']], ...['tesoreria', 'tes_motivos', 'liquidaciones_gastos', 'cond', 'conductores'].map(m => [m, ['c']])];
+            ? [['gerencia_aprobaciones_oc', ['a']]]
+            : [['gerencia_aprobaciones_caja', ['a']], ...['tesoreria', 'tes_motivos', 'liquidaciones_gastos', 'cond', 'conductores'].map(m => [m, ['c']])];
         const tiene = reglas.some(([modulo, acciones]) => p[modulo] && acciones.some(a => p[modulo][a] === 1 || p[modulo][a] === true));
         if (!tiene) return res.status(403).json({ error: 'RBAC: Permiso denegado para aprobar o anular (Gerencia)' });
         return next();

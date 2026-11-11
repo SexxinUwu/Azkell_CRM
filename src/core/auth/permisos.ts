@@ -7,7 +7,7 @@
 
 export const ADMIN = '*';
 
-const ACCIONES: Record<string, string> = { l: 'ver', c: 'crear', e: 'editar', d: 'eliminar' };
+const ACCIONES: Record<string, string> = { l: 'ver', c: 'crear', e: 'editar', d: 'eliminar', a: 'aprobar' };
 const activo = (v: unknown) => v === 1 || v === true || v === '1';
 
 /** Dueño del SaaS: misma regla que routes/superadmin.js. No depende de los permisos de la empresa. */

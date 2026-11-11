@@ -30,8 +30,8 @@ export interface RolFila {
   miembros?: number;
 }
 
-type Accion = 'l' | 'c' | 'e' | 'd';
-const ETIQUETA: Record<Accion, string> = { l: 'Leer', c: 'Crear', e: 'Editar', d: 'Eliminar' };
+type Accion = 'l' | 'c' | 'e' | 'd' | 'a';
+const ETIQUETA: Record<Accion, string> = { l: 'Leer', c: 'Crear', e: 'Editar', d: 'Eliminar', a: 'Aprobar' };
 type Marcas = Partial<Record<Accion, boolean>>;
 
 const ICONO_GRUPO: Record<string, LucideIcon> = {
@@ -40,7 +40,7 @@ const ICONO_GRUPO: Record<string, LucideIcon> = {
   SEGURIDAD: ShieldCheck, CONFIGURACIÓN: Settings,
 };
 
-const accionesDe = (mod: ModuloPermiso): Accion[] => (mod.lcad ? ['l', 'c', 'e', 'd'] : ['l']);
+const accionesDe = (mod: ModuloPermiso): Accion[] => (mod.lcad ? (mod.aprobar ? ['l', 'c', 'e', 'd', 'a'] : ['l', 'c', 'e', 'd']) : ['l']);
 const etiquetaGrupo = (g: string) => g.charAt(0) + g.slice(1).toLowerCase();
 
 function leerPermisos(json: string | null | undefined): Record<string, Marcas> {
@@ -66,7 +66,7 @@ function armarPermisos(b: Borrador): string {
   MODULOS_PERMISO.forEach(mod => {
     const m = b.marcas[mod.key] ?? {};
     salida[mod.key] = mod.lcad
-      ? { l: m.l ? 1 : 0, c: m.c ? 1 : 0, e: m.e ? 1 : 0, d: m.d ? 1 : 0 }
+      ? { l: m.l ? 1 : 0, c: m.c ? 1 : 0, e: m.e ? 1 : 0, d: m.d ? 1 : 0, ...(mod.aprobar ? { a: m.a ? 1 : 0 } : {}) }
       : { l: m.l ? 1 : 0 };
   });
   return JSON.stringify(salida);

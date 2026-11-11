@@ -159,7 +159,7 @@ export function AprobacionesOCPage() {
   const qc = useQueryClient();
   const { can } = useAuth();
   // Solo lectura: sin estos permisos la lista y el detalle se ven, pero no hay botones de decisión.
-  const puedeAccionar = can('gerencia_aprobaciones_oc.editar');
+  const puedeAccionar = can('gerencia_aprobaciones_oc.aprobar');
   const movil = useMediaQuery(QUERY_MOVIL);
 
   const [desde, setDesde] = useState(() => mesAtras(hoyLima()));

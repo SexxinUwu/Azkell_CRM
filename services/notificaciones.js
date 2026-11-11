@@ -224,7 +224,7 @@ async function smsConfigurado(db) {
 // ── Destinatarios automáticos del canal «Teléfono (app)» ─────────────────────
 // Quién recibe cada aviso lo decide el permiso del usuario (rol + permisos propios), igual que el inicio de sesión.
 const PERMISO_AVISO = {
-  oc_aprobacion: { modulos: ['gerencia_aprobaciones_oc'], accion: 'e' },   // aprobadores (Gerencia)
+  oc_aprobacion: { modulos: ['gerencia_aprobaciones_oc'], accion: 'a' },   // aprobadores (Gerencia)
   oc_pagar: { modulos: ['tesoreria_pagos', 'tesoreria_caja'], accion: 'l' }, // Tesorería
   oc_voucher: { modulos: ['ent_inv', 'rec_compras'], accion: 'l' },          // Almacén / logística
 };

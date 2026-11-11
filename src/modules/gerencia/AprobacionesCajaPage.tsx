@@ -96,7 +96,7 @@ export function AprobacionesCajaPage() {
   const qc = useQueryClient();
   const { can } = useAuth();
   // Solo lectura sin este permiso: se ven los movimientos, sin botones de decisión.
-  const puedeAccionar = can('gerencia_aprobaciones_caja.editar');
+  const puedeAccionar = can('gerencia_aprobaciones_caja.aprobar');
   const movil = useMediaQuery(QUERY_MOVIL);
 
   const [busqueda, setBusqueda] = useState('');

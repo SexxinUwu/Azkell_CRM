@@ -227,7 +227,7 @@ export function EntradasPage() {
   const puedeEditar = can('ent_inv.editar');
   const puedeEliminar = can('ent_inv.eliminar');
   // Anular una orden es decisión de Gerencia (como aprobar o rechazar): sin ese permiso el botón no aparece y el servidor lo bloquea
-  const puedeAnular = can('gerencia_aprobaciones_oc.editar', 'gerencia_aprobaciones_oc.crear');
+  const puedeAnular = can('gerencia_aprobaciones_oc.aprobar');
   // Pagar es un acto de Tesorería: mismos permisos que Pago de requerimientos
   const puedePagar = can('tesoreria_caja.ver', 'tesoreria_pago_req.ver');
 

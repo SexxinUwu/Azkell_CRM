@@ -6,6 +6,8 @@ export interface ModuloPermiso {
   nombre: string;
   desc: string;
   lcad: boolean;
+  /** Módulo de aprobación: además de leer, crear, editar y eliminar tiene la acción «Aprobar» */
+  aprobar?: boolean;
 }
 
 export const MODULOS_PERMISO: ModuloPermiso[] = [
@@ -41,8 +43,8 @@ export const MODULOS_PERMISO: ModuloPermiso[] = [
   { grupo: 'ALMACÉN', key: 'kardex', nombre: 'Kardex', desc: 'Movimientos por artículo', lcad: false },
   { grupo: 'ALMACÉN', key: 'prov_inv', nombre: 'Proveedores', desc: 'Directorio de proveedores', lcad: true },
   { grupo: 'ALMACÉN', key: 'almacen_otros', nombre: 'Otros (Catálogos)', desc: 'Almacenes, familias, unidades, sistemas y marcas', lcad: true },
-  { grupo: 'GERENCIA', key: 'gerencia_aprobaciones_oc', nombre: 'Aprobación de O/C', desc: 'Aprobación y autorización de órdenes de compra', lcad: true },
-  { grupo: 'GERENCIA', key: 'gerencia_aprobaciones_caja', nombre: 'Aprobación de Caja', desc: 'Aprobación de vales y gastos de caja', lcad: true },
+  { grupo: 'GERENCIA', key: 'gerencia_aprobaciones_oc', nombre: 'Aprobación de O/C', desc: 'Aprobación y autorización de órdenes de compra; «Aprobar» aprueba, rechaza y anula', lcad: true, aprobar: true },
+  { grupo: 'GERENCIA', key: 'gerencia_aprobaciones_caja', nombre: 'Aprobación de Caja', desc: 'Aprobación de vales y gastos de caja; «Aprobar» aprueba y anula', lcad: true, aprobar: true },
   { grupo: 'DIRECTORIO', key: 'cond', nombre: 'Personal', desc: 'Directorio de personal', lcad: true },
   { grupo: 'DIRECTORIO', key: 'clientes', nombre: 'Clientes', desc: 'Directorio de clientes', lcad: true },
   { grupo: 'OPERACIONES', key: 'op_programacion', nombre: 'Programación', desc: 'Planificación de vehículos y clientes', lcad: true },
@@ -59,8 +61,7 @@ export const MODULOS_PERMISO: ModuloPermiso[] = [
   { grupo: 'RRHH', key: 'rrhh_nomina', nombre: 'Nómina y Pagos', desc: 'Gestión de pagos y nómina', lcad: true },
   { grupo: 'TESORERÍA', key: 'tesoreria_caja', nombre: 'Caja', desc: 'Movimientos de caja, ingresos y egresos', lcad: true },
   { grupo: 'TESORERÍA', key: 'tesoreria_papeletas', nombre: 'Pago de Papeletas', desc: 'Papeletas y multas por pagar y sus pagos', lcad: true },
-  { grupo: 'TESORERÍA', key: 'tesoreria_nc', nombre: 'Notas de crédito de proveedores', desc: 'Registro, aprobación y aplicación del saldo a favor de proveedores', lcad: true },
-  { grupo: 'TESORERÍA', key: 'tesoreria_nc_aprobar', nombre: 'Aprobar notas de crédito', desc: 'Aprobar, anular y reembolsar notas de crédito de proveedores (registrarlas y enlazar la devolución no lo exige)', lcad: false },
+  { grupo: 'TESORERÍA', key: 'tesoreria_nc', nombre: 'Notas de crédito de proveedores', desc: 'Registro y aplicación del saldo a favor; «Aprobar» aprueba, anula y reembolsa', lcad: true, aprobar: true },
   { grupo: 'TESORERÍA', key: 'tesoreria_pago_req', nombre: 'Pago de Requerimientos', desc: 'Pagos de órdenes de compra autorizadas', lcad: true },
   { grupo: 'TESORERÍA', key: 'tesoreria_movimientos', nombre: 'Movimientos', desc: 'Control de ingresos y egresos bancarios', lcad: true },
   { grupo: 'TESORERÍA', key: 'tesoreria_liquidaciones', nombre: 'Liquidación de Gastos', desc: 'Auditoría de gastos operativos de viaje', lcad: true },

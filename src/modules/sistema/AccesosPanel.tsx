@@ -10,8 +10,8 @@ import { MODULOS_PERMISO, type ModuloPermiso } from './permisosCatalogo';
 export interface UsuarioAcceso { idUsuario?: string; nombre?: string; correo?: string; rol?: string; rol_id?: number | string | null; estado?: string; permisos?: unknown }
 export interface RolAcceso { id: number; nombre: string; color?: string; es_admin?: number; permisos_json?: string | null }
 
-type Accion = 'l' | 'c' | 'e' | 'd';
-const ACCIONES: Array<{ a: Accion; texto: string }> = [{ a: 'l', texto: 'Leer' }, { a: 'c', texto: 'Crear' }, { a: 'e', texto: 'Editar' }, { a: 'd', texto: 'Eliminar' }];
+type Accion = 'l' | 'c' | 'e' | 'd' | 'a';
+const ACCIONES: Array<{ a: Accion; texto: string }> = [{ a: 'l', texto: 'Leer' }, { a: 'c', texto: 'Crear' }, { a: 'e', texto: 'Editar' }, { a: 'd', texto: 'Eliminar' }, { a: 'a', texto: 'Aprobar' }];
 type Mapa = Record<string, Partial<Record<Accion, number | boolean>>>;
 
 const leer = (v: unknown): Mapa => {
@@ -68,7 +68,7 @@ export function AccesosPanel({ usuarios, roles }: { usuarios: UsuarioAcceso[]; r
                   <span className="acc__nombre"><b>{mod.nombre}</b><small>{mod.desc}</small></span>
                   <span className="acc__cifras">
                     {ACCIONES.map(x => {
-                      const aplica = mod.lcad || x.a === 'l';
+                      const aplica = x.a === 'l' || (mod.lcad && (x.a !== 'a' || !!mod.aprobar));
                       const n = aplica ? cuantos(mod, x.a) : null;
                       return <span key={x.a} className={`acc__cifra${n === 0 ? ' acc__cifra--cero' : ''}${n == null ? ' acc__cifra--na' : ''}`} aria-label={`${x.texto}: ${n ?? 'no aplica'}`} data-t={`${x.texto} `}>{n ?? '—'}</span>;
                     })}
@@ -85,7 +85,7 @@ export function AccesosPanel({ usuarios, roles }: { usuarios: UsuarioAcceso[]; r
         {abierto && (
           <div className="acc__detalle">
             <p className="acc__intro" style={{ margin: 0 }}>{abierto.desc}</p>
-            {ACCIONES.filter(x => abierto.lcad || x.a === 'l').map(x => {
+            {ACCIONES.filter(x => x.a === 'l' || (abierto.lcad && (x.a !== 'a' || !!abierto.aprobar))).map(x => {
               const gente = quienes(abierto, x.a);
               return (
                 <section key={x.a}>
