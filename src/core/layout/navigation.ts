@@ -152,7 +152,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'salidas', label: 'Órdenes de salida', to: '/almacen/salidas', icon: PackageMinus, permissions: ver('sal_inv') },
       { key: 'kardex', label: 'Kardex', to: '/almacen/kardex', icon: History, permissions: ver('kardex') },
       { key: 'proveedores', label: 'Proveedores', to: '/almacen/proveedores', icon: Warehouse, permissions: ver('prov_inv') },
-      { key: 'almacen-notas-credito', label: 'Notas de crédito', to: '/almacen/notas-credito', icon: ReceiptText, permissions: ver('ent_inv', 'tesoreria_nc') },
+      { key: 'almacen-notas-credito', label: 'Notas de crédito', to: '/almacen/notas-credito', icon: ReceiptText, permissions: ver('alm_nc') },
       { key: 'almacen-otros', label: 'Otros', to: '/almacen/otros', icon: Layers, permissions: ver('almacen_otros', 'inv', 'ent_inv', 'prov_inv', 'rec_compras', 'gerencia_aprobaciones_oc', 'cfg_mant') },
     ],
   },

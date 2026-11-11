@@ -34,7 +34,7 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'almacen/notas-credito/*',
-    permisos: ['ent_inv.ver', 'tesoreria_nc.ver', 'admin'],
+    permisos: ['alm_nc.ver', 'tesoreria_nc.ver', 'admin'],
     // La misma pantalla que en Tesorería: devoluciones y notas de crédito de proveedores
     Page: lazy(() => import('../tesoreria/NotasCreditoPage').then(m => ({ default: m.NotasCreditoPage }))),
   },

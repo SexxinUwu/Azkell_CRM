@@ -41,6 +41,7 @@ export const MODULOS_PERMISO: ModuloPermiso[] = [
   { grupo: 'ALMACÉN', key: 'rec_compras', nombre: 'Recepción de Compras', desc: 'Recepción e ingreso de compras aprobadas', lcad: true },
   { grupo: 'ALMACÉN', key: 'sal_inv', nombre: 'Órdenes de Salida', desc: 'Egresos del almacén', lcad: true },
   { grupo: 'ALMACÉN', key: 'kardex', nombre: 'Kardex', desc: 'Movimientos por artículo', lcad: false },
+  { grupo: 'ALMACÉN', key: 'alm_nc', nombre: 'Notas de crédito', desc: 'Registrar notas de crédito de proveedores, devolver mercadería y enlazar la salida (aprobarlas es de Tesorería)', lcad: true },
   { grupo: 'ALMACÉN', key: 'prov_inv', nombre: 'Proveedores', desc: 'Directorio de proveedores', lcad: true },
   { grupo: 'ALMACÉN', key: 'almacen_otros', nombre: 'Otros (Catálogos)', desc: 'Almacenes, familias, unidades, sistemas y marcas', lcad: true },
   { grupo: 'GERENCIA', key: 'gerencia_aprobaciones_oc', nombre: 'Aprobación de O/C', desc: 'Aprobación y autorización de órdenes de compra; «Aprobar» aprueba, rechaza y anula', lcad: true, aprobar: true },

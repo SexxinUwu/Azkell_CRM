@@ -37,9 +37,9 @@ export function NotasCreditoPage() {
   const qc = useQueryClient();
   const notas = useNotasCredito();
   const resumen = useResumenProveedoresNc();
-  // La misma pantalla vive en Tesorería y en Almacén: en Almacén crea quien puede registrar órdenes de compra
+  // La misma pantalla vive en Tesorería y en Almacén, cada una con su propio permiso (el de Almacén no da acceso a Tesorería)
   const enAlmacen = useLocation().pathname.startsWith('/almacen');
-  const puedeCrear = can('tesoreria_nc.crear', 'ent_inv.crear');
+  const puedeCrear = can('tesoreria_nc.crear', 'alm_nc.crear');
 
   const [vista, setVista] = useState<Vista>('notas');
   const [busqueda, setBusqueda] = useState('');

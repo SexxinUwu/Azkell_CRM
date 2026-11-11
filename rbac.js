@@ -160,7 +160,8 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/seguridad/asistencia')) mod = ['asist', 'seguridad'];
     // Papeletas (Flota): su propio permiso; Tesorería también las ve y registra sus pagos
     // Notas de crédito de proveedores: su propio permiso; quien paga órdenes (Tesorería o Almacén) también las consulta para aplicarlas
-    else if (path.startsWith('/compras/notas-credito')) mod = ['tesoreria_nc', 'tesoreria_pago_req', 'tesoreria_caja', 'ent_inv'];
+    // Consultarlas: también quien paga órdenes. Registrar o enlazar: solo con el permiso de Notas de crédito (Tesorería o Almacén)
+    else if (path.startsWith('/compras/notas-credito')) mod = req.method === 'GET' ? ['tesoreria_nc', 'alm_nc', 'tesoreria_pago_req', 'tesoreria_caja', 'ent_inv'] : ['tesoreria_nc', 'alm_nc'];
     else if (path.startsWith('/papeletas')) { mod = ['papeletas', 'tesoreria_papeletas', 'tesoreria_caja']; if (path === '/papeletas/pdf') accion = 'l'; }
     // PDF del acta: el POST solo convierte el documento, no guarda nada; quien ve las actas puede imprimirlas
     else if (path === '/seguridad/entrega-vehiculos/pdf') { mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas', 'docs_flota']; accion = 'l'; }
