@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
-import { AlertTriangle, Check, Disc3, Download, Minus, Pencil, Share2, Trash2, Wrench, X } from 'lucide-react';
+import { AlertTriangle, Check, Disc3, Download, Minus, Pencil, Share2, Trash2, X } from 'lucide-react';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { useQueryClient } from '@tanstack/react-query';
@@ -14,19 +14,11 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { Notice } from '../../core/ui/Display';
 import { InspeccionDetalleSheet } from '../mantenimiento/NeumaticosDetalleSheet';
 import { compartirPDF, descargarArchivo } from '../../core/lib/pdf';
-import { fallaEstadoColor, useChecklist, type ReporteFalla } from '../flota/api';
-import { GenerarOTsSheet } from '../flota/GenerarOTsSheet';
 import { VisorFotos, type FotoVisor } from '../../core/ui/VisorFotos';
 import { clavePlaca, useFotosFirmadas, useInspeccionesNeumaticos, type Inspeccion, type PuntoRevisado } from './api';
 import { pdfInspeccion } from './inspeccionPdf';
 
 const fechaLarga = (d: Date | null) => (d ? d.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : 'Sin fecha');
-
-/** Reporte de fallas que nació de esta inspección (legacy.js lo marca en el texto y en cada falla) */
-function reporteDeInspeccion(r: ReporteFalla, id: string): boolean {
-  if ((r.fallas_libres_text ?? '').includes(`Inspección ${id}`)) return true;
-  return [r.fallas_tracto_json, r.fallas_remolque_json].some(j => (j ?? '').includes(`"origen_inspeccion":"${id}"`));
-}
 
 // Ficha de una inspección: resumen, puntos revisados por categoría (fallas primero), fotos y firma.
 export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccion | null; onClose: () => void }) {
@@ -36,9 +28,7 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
   const reduce = useReducedMotion();
   const navigate = useNavigate();
   const { can, user } = useAuth();
-  const checklist = useChecklist();
   const [visor, setVisor] = useState<{ lista: FotoVisor[]; i: number } | null>(null);
-  const [otAbierta, setOtAbierta] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<{ tono: 'error' | 'neutral'; texto: string } | null>(null);
   // Eliminar (clásico: "Eliminar Insp. Mecánica" / "Eliminar Insp. Neumáticos" con confirmación)
@@ -59,8 +49,6 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
   // El PDF necesita las fotos ya firmadas: si todavía se están firmando, los botones esperan
   const fotosListas = fotos.length === 0 || !firmadas.isPending;
 
-  const reporte = useMemo(() => (i && checklist.data ? checklist.data.find(r => reporteDeInspeccion(r, i.id)) ?? null : null), [i, checklist.data]);
-
   // Inspección de neumáticos asociada: misma placa y dentro de 35 días de esta inspección (como el clásico)
   const neu = useInspeccionesNeumaticos();
   const neuAsociada = useMemo(() => {
@@ -69,7 +57,6 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
     return (neu.data ?? []).find(n => clavePlaca(n.placa) === clave && (!n.fecha || !i.fecha || Math.abs(n.fecha.getTime() - i.fecha.getTime()) / 86_400_000 <= 35)) ?? null;
   }, [i, neu.data]);
   const [neuDetalle, setNeuDetalle] = useState<string | null>(null);
-  const reporteActivo = !!reporte && fallaEstadoColor(reporte) === 'amber';
 
   const conteo = useMemo(() => {
     const c = { OK: 0, FALLA: 0, otros: 0 };
@@ -88,7 +75,7 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
       .sort((a, b) => b[1].filter(p => p.estado === 'FALLA').length - a[1].filter(p => p.estado === 'FALLA').length);
   }, [i]);
 
-  // Acciones: PDF oficial, WhatsApp y, si hay fallas, generar las OT desde su reporte de fallas
+  // Acciones: PDF oficial y WhatsApp (las OT se generan desde Reporte de fallas)
   const generarPdf = () => pdfInspeccion({ inspeccion: i!, fotos: firmadas.data ?? {}, usuario: user?.name ?? '' });
   const nombreArchivo = i ? `Inspeccion-${i.placa}-${i.id}.pdf` : 'Inspeccion.pdf';
   const descargar = async () => {
@@ -110,14 +97,6 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
       console.error('WhatsApp de inspección:', err);
       setAviso({ tono: 'error', texto: 'No se pudo preparar el PDF para WhatsApp.' });
     } finally { setOcupado(false); }
-  };
-  const generarOt = () => {
-    if (!reporte) {
-      setAviso({ tono: 'neutral', texto: 'Esta inspección no tiene un reporte de fallas enlazado. Si la unidad ya tenía una OT activa, sus fallas se añadieron a esa OT.' });
-      return;
-    }
-    setAviso(null);
-    setOtAbierta(true);
   };
 
   // Eliminar la inspección mecánica (eliminarInspeccion del clásico) o la de neumáticos (neuEliminarInspeccion)
@@ -183,9 +162,6 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
             <div className="insp-acciones">
               <Button variant="secondary" icon={<Download size={16} />} onClick={descargar} disabled={ocupado || !fotosListas}>PDF</Button>
               <Button variant="secondary" icon={<Share2 size={16} />} onClick={whatsapp} disabled={ocupado || !fotosListas}>WhatsApp</Button>
-              {conteo.FALLA > 0 && (
-                <Button variant="secondary" icon={<Wrench size={16} />} onClick={generarOt} disabled={!!reporte && !reporteActivo}>Generar OT desde inspección</Button>
-              )}
             </div>
             {neuAsociada && (
               <div className="insp-neu-asociada">
@@ -265,7 +241,6 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
         )}
       </Sheet>
 
-      {reporte && <GenerarOTsSheet falla={reporte} open={otAbierta} onClose={() => setOtAbierta(false)} />}
       <ConfirmSheet
         open={confirmar !== null}
         onClose={() => !eliminando && setConfirmar(null)}

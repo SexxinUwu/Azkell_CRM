@@ -11,6 +11,7 @@ import { useToast } from '../../core/ui/Toast';
 import { formatMoneda, formatSoles } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
 import { pagarEntrada, useEmpresaCuentas, type EntradaInv } from './api';
+import { AplicarNotasCredito, type AplicacionElegida } from '../tesoreria/AplicarNotasCredito';
 import { codigoLimpio, esCredito, esDolares, etiquetaCuentaEmpresa, montoPago } from './entradaReglas';
 
 const MAX_VOUCHER = 25 * 1024 * 1024; // mismo límite que el servidor
@@ -41,6 +42,9 @@ export function ConfirmarPagoSheet({ entrada: e, open, onClose, onPagado }: Prop
   const [confirmado, setConfirmado] = useState(false);
   const [errores, setErrores] = useState<Errores>({});
   const [guardando, setGuardando] = useState(false);
+  // Notas de crédito del proveedor aplicadas a este pago (si las hay)
+  const [ncs, setNcs] = useState<AplicacionElegida[]>([]);
+  const [netoNc, setNetoNc] = useState<number | null>(null);
 
   const cuentas = useMemo(() => (cuentasQ.data ?? []).map(c => ({
     label: etiquetaCuentaEmpresa(c),
@@ -59,7 +63,9 @@ export function ConfirmarPagoSheet({ entrada: e, open, onClose, onPagado }: Prop
   const cuenta = cuentas.find(c => c.label === cuentaSel) ?? null;
   const enDolares = cuenta ? cuenta.usd : !!e && esDolares(e.moneda);
   const tc = Number(e?.tipo_cambio) || 0;
-  const monto = e ? montoPago(Number(e.total_pen) || 0, tc, enDolares) : 0;
+  const importe = e ? montoPago(Number(e.total_pen) || 0, tc, enDolares) : 0;
+  // Lo que sale del banco: el importe menos las notas de crédito aplicadas
+  const monto = ncs.length && netoNc != null ? netoNc : importe;
 
   function elegirVoucher(f: File | undefined) {
     if (!f) return;
@@ -76,9 +82,10 @@ export function ConfirmarPagoSheet({ entrada: e, open, onClose, onPagado }: Prop
   async function confirmar() {
     if (!e || guardando) return;
     const nuevos: Errores = {};
-    if (!constancia.trim()) nuevos.constancia = 'Ingresa el número de constancia u operación.';
+    const totalmenteCompensada = ncs.length > 0 && monto <= 0;
+    if (!constancia.trim() && !totalmenteCompensada) nuevos.constancia = 'Ingresa el número de constancia u operación.';
     if (!cuenta) nuevos.cuenta = 'Elige la cuenta de origen de la empresa.';
-    if (!(monto > 0)) {
+    if (!(importe > 0)) {
       nuevos.monto = enDolares && tc <= 0
         ? 'La orden no tiene tipo de cambio: no se puede calcular el monto en US$.'
         : 'La orden no tiene total en soles para pagar.';
@@ -92,6 +99,7 @@ export function ConfirmarPagoSheet({ entrada: e, open, onClose, onPagado }: Prop
     fd.append('cuenta_origen', cuenta.label);
     fd.append('moneda', enDolares ? 'USD' : 'PEN');
     fd.append('monto', String(monto));
+    if (ncs.length) fd.append('nc_aplicaciones', JSON.stringify(ncs.map(a => ({ nc_id: a.nc_id, monto: a.monto }))));
     if (voucher) fd.append('voucher', voucher);
 
     setGuardando(true);
@@ -140,6 +148,8 @@ export function ConfirmarPagoSheet({ entrada: e, open, onClose, onPagado }: Prop
             </span>
             {errores.monto && <span className="field__error" role="alert">{errores.monto}</span>}
           </div>
+
+          <AplicarNotasCredito entradaId={e.id} moneda={enDolares ? 'USD' : 'PEN'} importe={importe} onChange={(a, n) => { setNcs(a); setNetoNc(n); }} />
 
           {cuentasQ.isError ? (
             <Notice tone="error">No se pudieron cargar las cuentas bancarias de la empresa.</Notice>

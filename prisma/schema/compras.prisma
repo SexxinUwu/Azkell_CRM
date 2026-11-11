@@ -107,3 +107,72 @@ enum OrdenesCompraEstado {
   RECHAZADA
   RECIBIDA
 }
+
+// Notas de crédito de proveedores: saldo a favor que se aplica al pago de órdenes de compra
+model CompraNotaCredito {
+  id                    Int       @id @default(autoincrement())
+  codigo                String    @unique(map: "uq_nc_codigo") @db.VarChar(20)
+  proveedor_id          String?   @db.VarChar(20)
+  proveedor_nombre      String    @db.VarChar(200)
+  proveedor_ruc         String?   @db.VarChar(20)
+  serie                 String    @db.VarChar(10)
+  numero                String    @db.VarChar(20)
+  fecha_emision         DateTime  @db.Date
+  moneda                String    @default("PEN") @db.VarChar(3)
+  base                  Decimal   @default(0.00) @db.Decimal(14, 2)
+  igv                   Decimal   @default(0.00) @db.Decimal(14, 2)
+  total                 Decimal   @default(0.00) @db.Decimal(14, 2)
+  saldo                 Decimal   @default(0.00) @db.Decimal(14, 2)
+  motivo_sunat          String?   @db.VarChar(2)
+  motivo_texto          String?   @db.VarChar(255)
+  oc_origen             String?   @db.VarChar(20)
+  referencia_devolucion String?   @db.VarChar(150)
+  forma                 String    @default("APLICAR") @db.VarChar(10)
+  estado                String    @default("REGISTRADA") @db.VarChar(20)
+  archivo_url           String?   @db.Text
+  observaciones         String?   @db.Text
+  registrado_por        String?   @db.VarChar(150)
+  aprobado_por          String?   @db.VarChar(150)
+  fecha_aprobacion      DateTime? @db.DateTime(0)
+  anulado_por           String?   @db.VarChar(150)
+  motivo_anulacion      String?   @db.VarChar(255)
+  reembolso_fecha       DateTime? @db.Date
+  reembolso_constancia  String?   @db.VarChar(100)
+  reembolso_url         String?   @db.Text
+  reembolso_caja_id     Int?
+  created_at            DateTime? @default(now()) @db.Timestamp(0)
+  updated_at            DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([proveedor_id], map: "idx_nc_proveedor")
+  @@index([estado], map: "idx_nc_estado")
+  @@index([proveedor_ruc, serie, numero], map: "idx_nc_documento")
+  @@map("compras_notas_credito")
+}
+
+model CompraNcAplicacion {
+  id          Int       @id @default(autoincrement())
+  nc_id       Int
+  entrada_id  String    @db.VarChar(20)
+  monto       Decimal   @db.Decimal(14, 2)
+  moneda      String    @default("PEN") @db.VarChar(3)
+  estado      String    @default("VIGENTE") @db.VarChar(12)
+  usuario     String?   @db.VarChar(150)
+  observacion String?   @db.VarChar(255)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([nc_id], map: "idx_ncap_nc")
+  @@index([entrada_id], map: "idx_ncap_entrada")
+  @@map("compras_nc_aplicaciones")
+}
+
+model CompraNcHistorial {
+  id         Int       @id @default(autoincrement())
+  nc_id      Int
+  accion     String    @db.VarChar(40)
+  detalle    String?   @db.Text
+  usuario    String?   @db.VarChar(150)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([nc_id], map: "idx_nchis_nc")
+  @@map("compras_nc_historial")
+}

@@ -10,7 +10,7 @@
 //
 // Permisos: 'clave.ver' según la matriz de permisos actual (ver core/auth/permisos.ts). Los administradores ven todo.
 import {
-  Accessibility, Activity, ArrowLeftRight, Banknote, BarChart3, Boxes, Building2, Cog, Code, Contact, Disc3, Droplet, FileText, Fuel, Gauge, Gavel, HardHat, History, Hourglass, IdCard, Landmark, Layers, LayoutDashboard, List, MapPin, Package, PackageMinus, PackagePlus, Palette, Route, ScrollText, Settings, ShieldCheck, Tag, Target, Truck, UserCog, Users, Wallet, Warehouse, Wrench, CalendarDays, ClipboardCheck, ClipboardList, Clock, type LucideIcon, Bell,
+  Accessibility, Activity, ReceiptText, ArrowLeftRight, Banknote, BarChart3, Boxes, Building2, Cog, Code, Contact, Disc3, Droplet, FileText, Fuel, Gauge, Gavel, HardHat, History, Hourglass, IdCard, Landmark, Layers, LayoutDashboard, List, MapPin, Package, PackageMinus, PackagePlus, Palette, Route, ScrollText, Settings, ShieldCheck, Tag, Target, Truck, UserCog, Users, Wallet, Warehouse, Wrench, CalendarDays, ClipboardCheck, ClipboardList, Clock, type LucideIcon, Bell,
 } from 'lucide-react';
 import type { RutaModulo } from '../../modules/personal/rutas.tipos';
 
@@ -175,6 +175,7 @@ const SECCIONES_BASE: NavSection[] = [
     items: [
       { key: 'caja', label: 'Caja', to: '/tesoreria/caja', icon: Banknote, permissions: ver('tesoreria_caja') },
       { key: 'pago-requerimientos', label: 'Pago de requerimientos', to: '/tesoreria/pago-requerimientos', icon: Wallet, permissions: ver('tesoreria_caja', 'tesoreria_pago_req') },
+      { key: 'notas-credito', label: 'Notas de crédito', to: '/tesoreria/notas-credito', icon: ReceiptText, permissions: ver('tesoreria_nc', 'tesoreria_pago_req') },
       { key: 'movimientos', label: 'Movimientos', to: '/tesoreria/movimientos', icon: ArrowLeftRight, permissions: ver('tesoreria_caja', 'tesoreria_movimientos') },
       { key: 'papeletas-tesoreria', label: 'Papeletas', to: '/tesoreria/papeletas', icon: Gavel, permissions: ver('tesoreria_papeletas', 'tesoreria_caja') },
       { key: 'caja-chica', label: 'Caja chica', to: '/tesoreria/caja-chica', icon: Wallet, permissions: ver('tesoreria_caja') },

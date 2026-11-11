@@ -3290,6 +3290,8 @@ const seguridadRoutes = require('./routes/seguridad')(db, logAudit);
 app.use('/api', seguridadRoutes);
 // Papeletas (Flota): papeletas, multas y actas de control de las unidades
 app.use('/api', require('./routes/papeletas')(db, logAudit));
+// Notas de crédito de proveedores (Tesorería): saldo a favor que se aplica al pago de órdenes de compra
+app.use('/api', require('./routes/notas_credito_proveedor')(db, logAudit));
 
 const mantenimientoRoutes = require('./routes/mantenimiento')(db, logAudit);
 app.use('/api/mantenimiento', mantenimientoRoutes);

@@ -60,6 +60,7 @@ export const MODULOS_PERMISO: ModuloPermiso[] = [
   { grupo: 'RRHH', key: 'rrhh_nomina', nombre: 'Nómina y Pagos', desc: 'Gestión de pagos y nómina', lcad: true },
   { grupo: 'TESORERÍA', key: 'tesoreria_caja', nombre: 'Caja', desc: 'Movimientos de caja, ingresos y egresos', lcad: true },
   { grupo: 'TESORERÍA', key: 'tesoreria_papeletas', nombre: 'Pago de Papeletas', desc: 'Papeletas y multas por pagar y sus pagos', lcad: true },
+  { grupo: 'TESORERÍA', key: 'tesoreria_nc', nombre: 'Notas de crédito de proveedores', desc: 'Registro, aprobación y aplicación del saldo a favor de proveedores', lcad: true },
   { grupo: 'TESORERÍA', key: 'tesoreria_pago_req', nombre: 'Pago de Requerimientos', desc: 'Pagos de órdenes de compra autorizadas', lcad: true },
   { grupo: 'TESORERÍA', key: 'tesoreria_movimientos', nombre: 'Movimientos', desc: 'Control de ingresos y egresos bancarios', lcad: true },
   { grupo: 'TESORERÍA', key: 'tesoreria_liquidaciones', nombre: 'Liquidación de Gastos', desc: 'Auditoría de gastos operativos de viaje', lcad: true },

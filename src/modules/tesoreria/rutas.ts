@@ -51,6 +51,12 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'pago-requerimientos', label: 'Pago de requerimientos', to: '/tesoreria/pago-requerimientos', icon: 'CreditCard', permisos: ['tesoreria_caja.ver'] },
   },
   {
+    path: 'tesoreria/notas-credito/*',
+    permisos: ['tesoreria_nc.ver', 'tesoreria_pago_req.ver', 'tesoreria_caja.ver', 'admin'],
+    Page: lazy(() => import('./NotasCreditoPage').then(m => ({ default: m.NotasCreditoPage }))),
+    nav: { key: 'notas-credito', label: 'Notas de crédito', to: '/tesoreria/notas-credito', icon: 'ReceiptText', permisos: ['tesoreria_nc.ver', 'tesoreria_pago_req.ver'] },
+  },
+  {
     path: 'tesoreria/papeletas/*',
     permisos: ['tesoreria_papeletas.ver', 'tesoreria_caja.ver', 'admin'],
     Page: lazy(() => import('../flota/PapeletasTesoreriaPage').then(m => ({ default: m.PapeletasTesoreriaPage }))),

@@ -2397,8 +2397,33 @@ module.exports = function (db, broadcast, logAudit) {
             // Con pago parcial de caja chica, lo que se paga aquí es solo lo que falta
             const pendienteCajaChica = estadoOc === 'pago parcial' ? (await require('../services/caja_chica').pendienteOc(tdb, id)).pendiente : null;
             const importeAPagar = pendienteCajaChica ?? importeOrigen;
+            // Notas de crédito del proveedor aplicadas a este pago: lo que sale del banco es el importe menos lo compensado
+            let aplicacionesNc = [];
+            try { aplicacionesNc = typeof b.nc_aplicaciones === 'string' ? JSON.parse(b.nc_aplicaciones || '[]') : (Array.isArray(b.nc_aplicaciones) ? b.nc_aplicaciones : []); } catch (e) { aplicacionesNc = []; }
+            let ncAplicadas = { total: 0, detalle: [] };
+            const notasCredito = require('../services/notas_credito_proveedor');
+            if (aplicacionesNc.length) {
+                try {
+                    ncAplicadas = await notasCredito.aplicar(tdb, {
+                        entradaId: id, proveedorId: oc.proveedor_id, proveedorNombre: oc.proveedor_nombre, moneda: monedaPago, importe: importeAPagar,
+                        aplicaciones: aplicacionesNc, usuario: usuarioPago,
+                    });
+                } catch (errNc) {
+                    return res.status(errNc.status || 500).json({ error: errNc.message || 'No se pudieron aplicar las notas de crédito.' });
+                }
+            }
             const montoEnviado = parseFloat(b.monto || b.importe) || 0;
-            const montoPagado = montoEnviado > 0 ? montoEnviado : importeAPagar;
+            const montoPagado = ncAplicadas.detalle.length
+                ? Math.round((importeAPagar - ncAplicadas.total) * 100) / 100
+                : (montoEnviado > 0 ? montoEnviado : importeAPagar);
+            if (ncAplicadas.detalle.length && montoEnviado > 0 && Math.abs(montoEnviado - montoPagado) > 0.011) {
+                await notasCredito.revertir(tdb, ncAplicadas.detalle, usuarioPago, 'El monto del pago no coincide con el neto').catch(() => {});
+                return res.status(409).json({ error: `El monto a pagar (${montoEnviado.toFixed(2)}) no coincide con el importe menos las notas de crédito (${montoPagado.toFixed(2)}). Actualiza la pantalla.` });
+            }
+            if (ncAplicadas.detalle.length && montoPagado < 0) {
+                await notasCredito.revertir(tdb, ncAplicadas.detalle, usuarioPago, 'Las notas superan el importe').catch(() => {});
+                return res.status(409).json({ error: 'Las notas de crédito superan el importe de la orden.' });
+            }
 
             // 2. Subir voucher a S3 si se adjuntó
             let voucherUrl = oc.url_voucher || null;
@@ -2422,11 +2447,13 @@ module.exports = function (db, broadcast, logAudit) {
                 WHERE id = ? AND LOWER(TRIM(estado)) IN ('aprobado', 'autorizado', 'pago parcial')
             `, [numeroConstancia, cuentaOrigen, voucherUrl, usuarioPago, id]);
             if (!updOc || updOc.affectedRows === 0) {
+                if (ncAplicadas.detalle.length) await notasCredito.revertir(tdb, ncAplicadas.detalle, usuarioPago, 'La orden ya había sido procesada').catch(() => {});
                 return res.status(409).json({ error: 'La orden de compra ya fue procesada por otro pago. No se registró un nuevo egreso.' });
             }
 
-            // 4. Asentar egreso automático en tesoreria_caja (Conciliación automática)
+            // 4. Asentar egreso automático en tesoreria_caja (Conciliación automática). Si las notas de crédito cubren todo, no sale dinero y no hay egreso.
             try {
+                if (montoPagado <= 0.004) throw Object.assign(new Error('Compensada por completo con notas de crédito: sin egreso en Caja'), { sinEgreso: true });
                 const anioActual = new Date().getFullYear();
                 const [maxRow] = await tdb.query(
                     "SELECT numero FROM tesoreria_caja WHERE serie = ? ORDER BY id DESC LIMIT 1",
@@ -2501,12 +2528,12 @@ module.exports = function (db, broadcast, logAudit) {
                     oc.cuenta_bancaria_proveedor || '',
                     cuentaOrigen || 'BCP - CTA CTE SOLES',
                     voucherUrl,
-                    `PAGO DE REQUERIMIENTO OC ${id} | N° Constancia: ${numeroConstancia}`,
+                    `PAGO DE REQUERIMIENTO OC ${id} | N° Constancia: ${numeroConstancia}${ncAplicadas.detalle.length ? ` | Neto tras notas de crédito (${ncAplicadas.detalle.map(d => `${d.codigo} ${d.monto.toFixed(2)}`).join(', ')})` : ''}`,
                     oc.creado_por || usuarioPago,
                     oc.aprobado_por || oc.autoriza || usuarioPago
                 ]);
             } catch (errCaja) {
-                console.warn('Advertencia al asentar egreso en tesoreria_caja:', errCaja.message);
+                if (!errCaja.sinEgreso) console.warn('Advertencia al asentar egreso en tesoreria_caja:', errCaja.message);
             }
 
             // 5. Auditoría y broadcast

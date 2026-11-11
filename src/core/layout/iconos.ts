@@ -32,6 +32,7 @@ import {
   Users,
   Warehouse,
   Wrench,
+  ReceiptText,
 } from 'lucide-react';
 
 const ICONOS: Record<string, LucideIcon> = {
@@ -66,6 +67,7 @@ const ICONOS: Record<string, LucideIcon> = {
   Users,
   Warehouse,
   Wrench,
+  ReceiptText,
 };
 
 export const iconoDe = (nombre: string): LucideIcon => ICONOS[nombre] ?? Circle;

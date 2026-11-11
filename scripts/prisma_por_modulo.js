@@ -49,6 +49,7 @@ const TABLAS = {
   ordenes_compra: ['compras', 'OrdenCompra'], ordenes_compra_items: ['compras', 'OrdenCompraItem'],
   recepciones_oc: ['compras', 'RecepcionOc'], detalle_recepciones_oc: ['compras', 'DetalleRecepcionOc'],
   oc_approval_tokens: ['compras', 'OcApprovalToken'],
+  compras_notas_credito: ['compras', 'CompraNotaCredito'], compras_nc_aplicaciones: ['compras', 'CompraNcAplicacion'], compras_nc_historial: ['compras', 'CompraNcHistorial'],
   // Operaciones
   operaciones_ordenes_viaje: ['operaciones', 'OrdenViaje'], operaciones_ordenes_viaje_rutas: ['operaciones', 'OrdenViajeRuta'],
   operaciones_ordenes_servicio: ['operaciones', 'OrdenServicio'], operaciones_ordenes_servicio_docs: ['operaciones', 'OrdenServicioDoc'],

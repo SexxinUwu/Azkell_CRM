@@ -1,0 +1,31 @@
+/* Notas de crédito de proveedores */
+.nc-aplicar { border: 1px solid var(--separator); border-radius: var(--r-lg); padding: var(--s-3); display: flex; flex-direction: column; gap: var(--s-2); background: var(--surface-sunken); }
+.nc-aplicar__cab { display: flex; align-items: center; gap: var(--s-2); color: var(--accent-ink); font-size: 0.875rem; }
+.nc-aplicar__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-1); }
+.nc-aplicar__fila { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--surface); box-shadow: var(--shadow-card); cursor: pointer; }
+.nc-aplicar__fila--on { box-shadow: inset 0 0 0 1.5px var(--accent), var(--shadow-card); }
+.nc-aplicar__texto { flex: 1; min-width: 0; font-size: 0.875rem; }
+.nc-aplicar__texto small { display: block; color: var(--label-2); font-size: 0.75rem; }
+.nc-aplicar__monto { font-weight: 700; color: var(--green-ink); white-space: nowrap; }
+.nc-aplicar__resumen { margin: 0; display: flex; flex-direction: column; gap: 4px; font-size: 0.875rem; }
+.nc-aplicar__resumen div { display: flex; justify-content: space-between; gap: var(--s-3); }
+.nc-aplicar__resumen dt { color: var(--label-2); }
+.nc-aplicar__resumen dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.nc-aplicar__neto { padding-top: 6px; border-top: 1px solid var(--separator); font-size: 1rem; }
+.nc-aplicar__neto dt, .nc-aplicar__neto dd { color: var(--label); font-weight: 800; }
+
+.nc-estado { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 0.6875rem; font-weight: 700; }
+.nc-estado--amber { background: var(--amber-tint); color: var(--amber-ink); }
+.nc-estado--green { background: var(--green-tint); color: var(--green-ink); }
+.nc-estado--blue { background: var(--blue-tint); color: var(--blue-ink); }
+.nc-estado--gray { background: var(--gray-tint); color: var(--gray-ink); }
+.nc-estado--red { background: var(--red-tint); color: var(--red-ink); }
+
+.nc-lineas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-2); }
+.nc-lineas li { display: flex; gap: var(--s-3); align-items: baseline; font-size: 0.875rem; }
+.nc-lineas time { color: var(--label-3); font-size: 0.75rem; min-width: 7.5rem; font-variant-numeric: tabular-nums; }
+.nc-lineas small { display: block; color: var(--label-2); }
+.nc-total-cifras { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-2); }
+.nc-total-cifras > div { background: var(--surface-sunken); border-radius: var(--r-md); padding: var(--s-2) var(--s-3); text-align: center; }
+.nc-total-cifras strong { display: block; font-size: 1.0625rem; font-variant-numeric: tabular-nums; }
+.nc-total-cifras span { font-size: 0.6875rem; color: var(--label-2); text-transform: uppercase; letter-spacing: 0.05em; }
