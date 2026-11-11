@@ -6,6 +6,8 @@ import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
+import { useMediaQuery } from '../../core/lib/useMediaQuery';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -33,11 +35,34 @@ function motivoPendiente(p: ProveedorInv): string | null {
   return null;
 }
 
+/** Un contacto sin nombre real (solo un número, o "Contacto general") es el teléfono de la empresa */
+const esGenerico = (nombre: string) => /^[\d\s+()-]{6,}$/.test(nombre.trim()) || /^contacto general$/i.test(nombre.trim());
+
+const COL_CONTACTOS: ColumnaTabla[] = [
+  { id: 'contacto', titulo: 'Contacto', ancho: 240, minimo: 160 },
+  { id: 'empresa', titulo: 'Empresa', ancho: 300, minimo: 160 },
+  { id: 'cargo', titulo: 'Cargo / área', ancho: 140 },
+  { id: 'telefono', titulo: 'Teléfono', ancho: 130 },
+  { id: 'correo', titulo: 'Correo', ancho: 220 },
+  { id: 'ruc', titulo: 'RUC / DNI', ancho: 120 },
+  { id: 'acciones', titulo: '', ancho: 120, alinear: 'center' },
+];
+const COL_PROVEEDORES: ColumnaTabla[] = [
+  { id: 'proveedor', titulo: 'Proveedor', ancho: 320, minimo: 180 },
+  { id: 'ruc', titulo: 'RUC / DNI', ancho: 130 },
+  { id: 'contactos', titulo: 'Contactos', ancho: 260, minimo: 140 },
+  { id: 'telefono', titulo: 'Teléfono', ancho: 130 },
+  { id: 'correo', titulo: 'Correo', ancho: 220 },
+  { id: 'cuentas', titulo: 'Cuentas', ancho: 80, alinear: 'center' },
+  { id: 'estado', titulo: 'Estado', ancho: 110, alinear: 'center' },
+  { id: 'acciones', titulo: '', ancho: 120, alinear: 'center' },
+];
+
 type Vista = 'contactos' | 'proveedores';
 const leerVista = (): Vista => { try { return localStorage.getItem('fleet_prov_vista') === 'proveedores' ? 'proveedores' : 'contactos'; } catch { return 'contactos'; } };
 
 /** Una fila del directorio: un asesor (con su empresa) o, si la empresa no tiene contactos, la empresa misma */
-interface Entrada { clave: string; nombre: string; sub: string; telefono: string | null; correo: string | null; empresa: boolean; proveedor: ProveedorInv }
+interface Entrada { clave: string; nombre: string; sub: string; cargo: string | null; telefono: string | null; correo: string | null; empresa: boolean; proveedor: ProveedorInv }
 
 export function ProveedoresPage() {
   const { data, isLoading, isError, error } = useProveedores();
@@ -45,6 +70,7 @@ export function ProveedoresPage() {
   const qc = useQueryClient();
   const toast = useToast();
 
+  const ancha = useMediaQuery('(min-width: 900px)');
   const [vista, setVista] = useState<Vista>(leerVista);
   const [busqueda, setBusqueda] = useState('');
   const [soloPendientes, setSoloPendientes] = useState(false);
@@ -71,12 +97,17 @@ export function ProveedoresPage() {
     const lista: Entrada[] = [];
     for (const p of proveedores) {
       const empresa = nombreMostrado(p);
+      const subEmpresa = p.ruc ? `RUC ${p.ruc}` : 'Sin RUC';
       if (p.contactos.length === 0) {
-        lista.push({ clave: `e${p.id}`, nombre: empresa, sub: p.ruc ? `RUC ${p.ruc}` : 'Empresa', telefono: p.telefono, correo: p.correo, empresa: true, proveedor: p });
+        lista.push({ clave: `e${p.id}`, nombre: empresa, sub: subEmpresa, cargo: null, telefono: p.telefono, correo: p.correo, empresa: true, proveedor: p });
         continue;
       }
       for (const c of p.contactos) {
-        lista.push({ clave: `c${p.id}-${c.id ?? c.nombre}`, nombre: c.nombre, sub: [empresa, c.cargo].filter(Boolean).join(' · '), telefono: c.telefono, correo: c.email, empresa: false, proveedor: p });
+        const generico = esGenerico(c.nombre);
+        const tel = c.telefono || (generico && /\d/.test(c.nombre) ? c.nombre : null);
+        lista.push(generico
+          ? { clave: `c${p.id}-${c.id ?? c.nombre}`, nombre: empresa, sub: subEmpresa, cargo: c.cargo, telefono: tel, correo: c.email, empresa: true, proveedor: p }
+          : { clave: `c${p.id}-${c.id ?? c.nombre}`, nombre: c.nombre, sub: [empresa, c.cargo].filter(Boolean).join(' · '), cargo: c.cargo, telefono: tel, correo: c.email, empresa: false, proveedor: p });
       }
     }
     return lista.filter(e => coincide(e.nombre, e.sub, e.telefono, e.correo, e.proveedor.ruc)).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
@@ -175,6 +206,41 @@ export function ProveedoresPage() {
             <EmptyState icon={<SearchX size={22} />} title="Nada coincide">
               <button type="button" className="placas-limpiar" onClick={() => setBusqueda('')}>Quitar búsqueda</button>
             </EmptyState>
+          ) : ancha ? (
+            vista === 'contactos' && !soloPendientes ? (
+              <TablaRedimensionable id="almacen-proveedores-contactos" columnas={COL_CONTACTOS} ariaLabel="Contactos de proveedores" altoMax="68vh">
+                {entradas.map(e => (
+                  <tr key={e.clave} className="pv-tr" onClick={() => { haptic('selection'); setSeleccionado(e.proveedor); }}>
+                    <Celda><span className="pv-celda-nombre"><Avatar nombre={e.nombre} empresa={e.empresa} /><button type="button" className="oc-codigo">{e.nombre}</button></span></Celda>
+                    <Celda>{e.empresa ? '—' : nombreMostrado(e.proveedor)}</Celda>
+                    <Celda>{e.cargo || '—'}</Celda>
+                    <Celda mono>{e.telefono || '—'}</Celda>
+                    <Celda>{e.correo || '—'}</Celda>
+                    <Celda mono>{e.proveedor.ruc || '—'}</Celda>
+                    <Celda alinear="center"><Contactar nombre={e.nombre} telefono={e.telefono} correo={e.correo} /></Celda>
+                  </tr>
+                ))}
+              </TablaRedimensionable>
+            ) : (
+              <TablaRedimensionable id="almacen-proveedores-empresas" columnas={COL_PROVEEDORES} ariaLabel="Proveedores" altoMax="68vh">
+                {empresas.map(p => {
+                  const motivo = motivoPendiente(p);
+                  const nombres = p.contactos.map(c => c.nombre).filter(n => !esGenerico(n));
+                  return (
+                    <tr key={p.id} className="pv-tr" onClick={() => { haptic('selection'); setSeleccionado(p); }}>
+                      <Celda><span className="pv-celda-nombre"><Avatar nombre={nombreMostrado(p)} empresa /><button type="button" className="oc-codigo">{nombreMostrado(p)}</button></span></Celda>
+                      <Celda mono>{motivo ? <span className="pv-pendiente">{motivo}</span> : p.ruc}</Celda>
+                      <Celda>{nombres.length ? <>{nombres[0]}{nombres.length > 1 && <span className="pv-contador" style={{ marginLeft: 6 }}>+{nombres.length - 1}</span>}</> : '—'}</Celda>
+                      <Celda mono>{p.telefono || p.contactos.find(c => c.telefono)?.telefono || '—'}</Celda>
+                      <Celda>{p.correo || p.contactos.find(c => c.email)?.email || '—'}</Celda>
+                      <Celda alinear="center">{p.cuentas?.length || '—'}</Celda>
+                      <Celda alinear="center">{p.estado ?? 'Activo'}</Celda>
+                      <Celda alinear="center"><Contactar nombre={nombreMostrado(p)} telefono={p.telefono || p.contactos.find(c => c.telefono)?.telefono} correo={p.correo} /></Celda>
+                    </tr>
+                  );
+                })}
+              </TablaRedimensionable>
+            )
           ) : vista === 'contactos' && !soloPendientes ? (
             <Letras items={entradas} letra={e => letraDe(e.nombre)} fila={e => (
               <FilaDirectorio key={e.clave} nombre={e.nombre} sub={e.sub} semilla={e.nombre} empresa={e.empresa}
@@ -219,6 +285,29 @@ export function ProveedoresPage() {
         confirmLabel="Eliminar"
       />
     </Page>
+  );
+}
+
+// ─── Tabla web ───────────────────────────────────────────────────────────────
+
+function Avatar({ nombre, empresa }: { nombre: string; empresa: boolean }) {
+  return (
+    <span className={`pv-avatar pv-avatar--chico${empresa ? ' pv-avatar--empresa' : ''}`} aria-hidden style={{ background: `linear-gradient(145deg, ${tono(nombre)}, color-mix(in srgb, ${tono(nombre)} 70%, #000))` }}>
+      {empresa ? <Building2 size={14} /> : initials(nombre)}
+    </span>
+  );
+}
+
+/** Llamar, WhatsApp y correo sin abrir la ficha */
+function Contactar({ nombre, telefono, correo }: { nombre: string; telefono?: string | null; correo?: string | null }) {
+  const tel = (telefono ?? '').trim(); const wa = whatsapp(tel);
+  if (!tel && !correo) return <span style={{ color: 'var(--label-3)' }}>—</span>;
+  return (
+    <span className="pv-fila__acciones" onClick={e => e.stopPropagation()}>
+      {tel && <a className="pv-accion pv-accion--chica" href={`tel:${tel.replace(/\s/g, '')}`} aria-label={`Llamar a ${nombre}`}><Phone size={14} /></a>}
+      {wa && <a className="pv-accion pv-accion--chica pv-accion--wa" href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" aria-label={`WhatsApp a ${nombre}`}><MessageCircle size={14} /></a>}
+      {correo && <a className="pv-accion pv-accion--chica pv-accion--mail" href={`mailto:${correo}`} aria-label={`Escribir a ${nombre}`}><Mail size={14} /></a>}
+    </span>
   );
 }
 

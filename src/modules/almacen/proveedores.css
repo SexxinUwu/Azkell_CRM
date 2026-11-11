@@ -23,6 +23,15 @@
 .pv-accion--mail { background: var(--blue-tint); color: var(--blue-ink); }
 .pv-contador { flex-shrink: 0; font-size: 0.75rem; font-weight: 600; color: var(--label-2); background: var(--fill); border-radius: 999px; padding: 0.15rem 0.55rem; }
 
+/* Tabla web */
+.pv-tr { cursor: pointer; }
+.pv-tr:hover td { background: var(--fill-subtle); }
+.pv-celda-nombre { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+.pv-celda-nombre .oc-codigo { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv-avatar--chico { width: 1.75rem; height: 1.75rem; font-size: 0.6875rem; }
+.pv-accion--chica { width: 1.75rem; height: 1.75rem; }
+.pv-pendiente { color: var(--amber-ink); font-weight: 600; font-family: inherit; }
+
 /* Aviso de proveedores por regularizar */
 .pv-alerta { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) var(--s-4); margin-bottom: var(--s-4); border-radius: var(--r-xl); background: var(--amber-tint, rgba(255, 159, 10, 0.14)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--amber-ink, #b25e00) 25%, transparent); flex-wrap: wrap; }
 .pv-alerta__icono { color: var(--amber-ink, #b25e00); display: grid; place-items: center; }
