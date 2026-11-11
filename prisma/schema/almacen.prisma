@@ -130,6 +130,8 @@ model EntradaInv {
   cuenta_bancaria_proveedor String?           @db.VarChar(150)
   cuenta_bancaria_empresa   String?           @db.VarChar(150)
   nc_sugeridas              String?           @db.VarChar(255)
+  anulado_por               String?           @db.VarChar(150)
+  fecha_anulacion           DateTime?         @db.DateTime(0)
   solicitante               String?           @db.VarChar(150)
   estado_factura            String?           @default("Pendiente") @db.VarChar(50)
   numero_operacion          String?           @db.VarChar(100)

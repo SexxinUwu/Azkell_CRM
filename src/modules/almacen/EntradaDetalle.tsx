@@ -1,7 +1,7 @@
 import '../../core/ui/acciones-iconos.css';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Ban, Check, CircleAlert, CreditCard, Eye, FileDown, Package, Paperclip, Pencil, Shield, Trash2, X } from 'lucide-react';
-import { formatFechaPe, formatMoneda } from '../../core/lib/format';
+import { formatFechaHoraPe, formatFechaPe, formatMoneda } from '../../core/lib/format';
 import { type EntradaInv } from './api';
 import {
   codigoLimpio, descripcionArticulo, desgloseIgv, esCredito, estadoPagable, etiquetaEstado, esServicio,
@@ -79,7 +79,12 @@ export function EntradaDetalle({
   let banner: { tono: string; titulo: string; texto: string };
   if (anulado) {
     const motivo = notaGerencia(e.motivo_anulacion || e.observaciones || '');
-    banner = { tono: 'oc-banner--rojo', titulo: 'ANULADA', texto: motivo ? `Motivo${aprobador ? ` (${aprobador})` : ''}: “${motivo}”` : 'Orden de compra anulada o rechazada.' };
+    // Con la columna nueva se dice quién anuló y cuándo, y aparte quién la había aprobado
+    const quien = e.anulado_por ? `Anulada por ${e.anulado_por}${e.fecha_anulacion ? ` el ${formatFechaHoraPe(e.fecha_anulacion)}` : ''}` : '';
+    const aprobo = e.anulado_por && e.aprobado_por && !/^direcci[oó]n/i.test(e.aprobado_por) && e.fecha_aprobacion ? ` · Había sido aprobada por ${aprobador}` : '';
+    banner = e.anulado_por
+      ? { tono: 'oc-banner--rojo', titulo: 'ANULADA', texto: `${quien}${motivo ? ` · Motivo: “${motivo}”` : ''}${aprobo}.` }
+      : { tono: 'oc-banner--rojo', titulo: 'ANULADA', texto: motivo ? `Motivo${aprobador ? ` (${aprobador})` : ''}: “${motivo}”` : 'Orden de compra anulada o rechazada.' };
   } else if (observado) {
     const obs = notaGerencia(e.observaciones || '');
     banner = { tono: 'oc-banner--ambar', titulo: 'OBSERVADA', texto: obs ? `Observación${aprobador ? ` (${aprobador})` : ''}: “${obs}”` : 'Requiere subsanación o visto bueno directivo.' };

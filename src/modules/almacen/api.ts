@@ -181,6 +181,9 @@ export interface EntradaInv {
   fecha_pago?: string | null;
   /** JSON con los ids de las notas de crédito que se pidió descontar al pagar */
   nc_sugeridas?: string | null;
+  /** Quién anuló la orden y cuándo (las anteriores a esta columna no lo tienen) */
+  anulado_por?: string | null;
+  fecha_anulacion?: string | null;
   url_cotizacion?: string | null;
   url_cotizacion_presigned?: string | null;
   url_factura?: string | null;

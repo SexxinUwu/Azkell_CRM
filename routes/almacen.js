@@ -2310,8 +2310,10 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         const { motivo } = req.body;
         try { await prepararAnulacion(typeof tdb.promise === 'function' ? tdb.promise() : tdb, id); }
         catch (errReenc) { return res.status(errReenc.aviso ? errReenc.status : 500).json({ error: errReenc.message }); }
-        tdb.query('UPDATE entradas_inv SET estado=?, motivo_anulacion=? WHERE id=?',
-            ['Anulado', String(motivo || '').trim(), id], (err, result) => {
+        // Se guarda quién anuló y cuándo (el aprobador es otra persona y se muestra aparte)
+        const quienAnula = String((req.user && (req.user.nombre || req.user.correo)) || (req.body && req.body.usuario) || '').slice(0, 150) || null;
+        tdb.query('UPDATE entradas_inv SET estado=?, motivo_anulacion=?, anulado_por=?, fecha_anulacion=NOW() WHERE id=?',
+            ['Anulado', String(motivo || '').trim(), quienAnula, id], (err, result) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); }
                 res.json({ ok: true });
