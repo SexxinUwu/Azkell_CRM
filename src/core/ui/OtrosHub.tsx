@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { Page, PageHeader } from './Display';
-import './hub-tarjetas.css';
+import './otros-tarjetas.css';
 
 export interface CasillaHub { key: string; titulo: string; descripcion: string; icono: ReactNode; onAbrir: () => void }
 export interface SeccionHub { titulo: string; /** Color de la sección: blue, green, violet, amber, teal o rose */ tono: 'blue' | 'green' | 'violet' | 'amber' | 'teal' | 'rose'; casillas: CasillaHub[] }
