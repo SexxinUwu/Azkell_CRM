@@ -264,6 +264,7 @@ export class MotorTelemetria {
     const m = this.mapa, o = this.opt;
     const vis = (id: string, on: boolean) => { if (m.getLayer(id)) m.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none'); };
     vis('buildings', o.buildings && (this.tema !== 'sat' || o.buildingsSat));
+    vis('bld-shadow', o.buildings && this.tema !== 'sat');
     ['trails', 'trails-glow'].forEach(id => vis(id, o.trails && !this.hist));
     ['geo-fill', 'geo-line', 'geo-label'].forEach(id => vis(id, o.geo));
     vis('trafico', o.traffic);

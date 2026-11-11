@@ -45,14 +45,25 @@ export function buildStyle(t: TemaMapa, relieve: boolean): StyleSpecification {
     if (night) L.push(<any>{id:'road-maj-glow', type:'line', source:'omt', 'source-layer':'transportation', maxzoom:15.5, filter:isCls(['motorway','trunk']), paint:{'line-color':'#ff7a1a', 'line-opacity':['interpolate', ['linear'], ['zoom'], 12, .22, 16, .08], 'line-blur':6, 'line-width':W([6,3,18,50])}});
     L.push(<any>{id:'road-maj', type:'line', source:'omt', 'source-layer':'transportation', filter:isCls(['motorway','trunk']), layout:{'line-cap':'round','line-join':'round'}, paint:{'line-color':night ? ['interpolate', ['linear'], ['zoom'], 13, P.maj, 15.5, '#2a1a10'] : P.maj, 'line-width':W([6,.8,18,22]), 'line-opacity':night ? .95 : 1}});
     if (night) L.push(<any>{id:'road-maj-edge', type:'line', source:'omt', 'source-layer':'transportation', minzoom:14, filter:isCls(['motorway','trunk']), layout:{'line-join':'round'}, paint:{'line-color':'#ff9440', 'line-width':['interpolate', ['linear'], ['zoom'], 14, .6, 18, 1.6], 'line-gap-width':W([14,4,18,22]), 'line-blur':.6, 'line-opacity':['interpolate', ['linear'], ['zoom'], 14, 0, 15.5, .95]}});
+    // Pasos a desnivel: sombra sobre lo de abajo, borde y la calzada otra vez encima (se ven como puentes reales)
+    const puente = ['==', ['get','brunnel'], 'bridge'];
+    const clasesPuente = isCls(['motorway','trunk','primary','secondary','tertiary']);
+    L.push(<any>{id:'bridge-shadow', type:'line', source:'omt', 'source-layer':'transportation', minzoom:14, filter:['all', puente, clasesPuente], layout:{'line-join':'round'}, paint:{'line-color':'#000000', 'line-opacity':night ? .55 : .2, 'line-blur':3.5, 'line-translate':[0, 5], 'line-width':W([13,1.6,18,28])}});
+    L.push(<any>{id:'bridge-casing', type:'line', source:'omt', 'source-layer':'transportation', minzoom:14, filter:['all', puente, clasesPuente], layout:{'line-join':'round'}, paint:{'line-color':night ? '#0b1422' : '#bcc2cd', 'line-width':W([13,1.4,18,27])}});
+    L.push(<any>{id:'bridge-road', type:'line', source:'omt', 'source-layer':'transportation', minzoom:14, filter:['all', puente, clasesPuente], layout:{'line-join':'round'}, paint:{'line-color':['match', ['get','class'], ['motorway','trunk'], P.maj, 'primary', night ? '#1b3a52' : '#fff6dc', night ? '#22324a' : '#ffffff'], 'line-width':W([13,.9,18,22])}});
+    // Línea central discontinua: la vía se lee como carriles al acercarse
+    L.push(<any>{id:'road-center', type:'line', source:'omt', 'source-layer':'transportation', minzoom:15.3, filter:isCls(['motorway','trunk','primary','secondary','tertiary']), layout:{'line-join':'round'}, paint:{'line-color':night ? '#ffd27a' : '#aab1bf', 'line-opacity':night ? .5 : .75, 'line-dasharray':[4, 5], 'line-width':W([15.3,.4,19,2.2])}});
   }
   if (sat){
     L.push(<any>{id:'road-maj', type:'line', source:'omt', 'source-layer':'transportation', filter:isCls(['motorway','trunk']), paint:{'line-color':'#ffb347', 'line-opacity':.55, 'line-width':W([8,.8,18,8])}});
     L.push(<any>{id:'road-pri', type:'line', source:'omt', 'source-layer':'transportation', filter:isCls(['primary']), minzoom:12, paint:{'line-color':'#ffffff', 'line-opacity':.3, 'line-width':W([12,.6,18,5])}});
   }
+  // Sombra proyectada en el suelo (hacia abajo y a la izquierda): da peso y profundidad a los edificios
+  L.push(<any>{id:'bld-shadow', type:'fill', source:'omt', 'source-layer':'building', minzoom:14, layout:{visibility:sat ? 'none' : 'visible'}, paint:{
+    'fill-color':night ? '#000000' : '#39445a', 'fill-opacity':['interpolate', ['linear'], ['zoom'], 14, 0, 15.5, night ? .6 : .24], 'fill-translate':[-5, 7], 'fill-translate-anchor':'viewport'}});
   L.push(<any>{id:'buildings', type:'fill-extrusion', source:'omt', 'source-layer':'building', minzoom:13.5, layout:{visibility:sat ? 'none' : 'visible'}, paint:{
-    'fill-extrusion-color':['interpolate', ['linear'], ['coalesce', ['get','render_height'], 6], 0, P.bld[0], 25, P.bld[1], 70, P.bld[2], 180, P.bld[3]],
-    'fill-extrusion-height':['interpolate', ['linear'], ['zoom'], 13.5, 0, 14.5, ['coalesce', ['get','render_height'], 6]],
+    'fill-extrusion-color':['interpolate', ['linear'], ['coalesce', ['get','render_height'], 9], 0, P.bld[0], 12, P.bld[0], 25, P.bld[1], 70, P.bld[2], 180, P.bld[3]],
+    'fill-extrusion-height':['interpolate', ['linear'], ['zoom'], 13.5, 0, 14.5, ['coalesce', ['get','render_height'], 9]],
     'fill-extrusion-base':['coalesce', ['get','render_min_height'], 0], 'fill-extrusion-opacity':night ? .92 : .85, 'fill-extrusion-vertical-gradient':true}});
   const labelPaint = {'text-color':sat ? '#ffffff' : P.label, 'text-halo-color':sat ? 'rgba(0,0,0,.75)' : P.halo, 'text-halo-width':1.4};
   L.push(<any>{id:'road-label', type:'symbol', source:'omt', 'source-layer':'transportation_name', minzoom:13.5, filter:isCls(['motorway','trunk','primary','secondary','tertiary']), layout:{'symbol-placement':'line', 'text-field':['coalesce', ['get','name:es'], ['get','name']], 'text-font':F_REG, 'text-size':11, 'text-letter-spacing':.04}, paint:labelPaint});
@@ -66,7 +77,7 @@ export function buildStyle(t: TemaMapa, relieve: boolean): StyleSpecification {
   L.push(<any>{id:'place-label', type:'symbol', source:'omt', 'source-layer':'place', filter:isCls(['city','town','suburb','neighbourhood','village']), layout:{'text-field':['coalesce', ['get','name:es'], ['get','name']], 'text-font':['match', ['get','class'], ['city','town'], ['literal', F_BOLD], ['literal', F_REG]], 'text-size':['match', ['get','class'], 'city', 16, 'town', 13, 11.5], 'text-transform':['match', ['get','class'], ['suburb','neighbourhood'], 'uppercase', 'none'], 'text-letter-spacing':['match', ['get','class'], ['suburb','neighbourhood'], .12, .02], 'text-max-width':8}, paint:labelPaint});
   const sky = night ? {'sky-color':'#03050a', 'horizon-color':'#0d2238', 'fog-color':'#04070d', 'sky-horizon-blend':.6, 'horizon-fog-blend':.7, 'fog-ground-blend':.55, 'atmosphere-blend':.2}
     : sat ? {'sky-color':'#5d9ae0', 'horizon-color':'#cfe2f5', 'fog-color':'#c6d4e2', 'sky-horizon-blend':.5, 'horizon-fog-blend':.6, 'fog-ground-blend':.6, 'atmosphere-blend':.6}
-    : {'sky-color':'#88bdf5', 'horizon-color':'#eaf2fb', 'fog-color':'#eef2f7', 'sky-horizon-blend':.5, 'horizon-fog-blend':.6, 'fog-ground-blend':.6, 'atmosphere-blend':.6};
+    : {'sky-color':'#7db4f2', 'horizon-color':'#eaf2fb', 'fog-color':'#e9eef5', 'sky-horizon-blend':.55, 'horizon-fog-blend':.7, 'fog-ground-blend':.7, 'atmosphere-blend':.6};
   const style: any = {version:8, glyphs:MAPA_URLS.tipografias,
     sources:{omt:{type:'vector', url:MAPA_URLS.vectores, attribution:ATRIBUCION.vectores},
       dem:{type:'raster-dem', tiles:[MAPA_URLS.relieve], encoding:'terrarium', tileSize:256, maxzoom:14, attribution:ATRIBUCION.relieve}},
