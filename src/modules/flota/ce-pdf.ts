@@ -176,6 +176,13 @@ export function htmlActaEntrega(r: EntregaVehiculo, grupos: CategoriaPlantilla[]
 
   const dato = (k: string, v: unknown, clase = '', extra = '') =>
     `<div class="${clase}"><span class="etq">${k}</span><b${extra ? ` class="${extra}"` : ''}>${esc(v)}</b></div>`;
+  // Nivel de combustible del medidor (se guarda dentro de inventario_partes_json); solo para unidades motoras
+  let nivelFila = '';
+  try {
+    const partes = typeof r.inventario_partes_json === 'string' ? JSON.parse(r.inventario_partes_json || '{}') : (r.inventario_partes_json ?? {});
+    const n = Number((partes as Record<string, unknown>).__nivel_combustible);
+    if (Number.isFinite(n) && /^(TRACTO|CAMI|AUTO|CAMIONETA)/i.test(String(r.clase || ''))) nivelFila = dato('Nivel de combustible', `${n}%`, 'tit-fila', 'mono');
+  } catch { nivelFila = ''; }
 
   const categoria = (g: (typeof resumen.grupos)[number]) => `
     <section class="cat"><h3><span>${esc(g.titulo)}</span><em>${g.items.length}</em></h3>
@@ -214,6 +221,7 @@ export function htmlActaEntrega(r: EntregaVehiculo, grupos: CategoriaPlantilla[]
       ${dato('Tipo', r.tipo, 'tit-fila')}${dato('Modelo', r.modelo, 'tit-fila')}${dato('Color', r.color, 'tit-fila')}
       ${dato('Número del motor', r.numero_motor, 's2', 'mono')}${dato('Serie / VIN', r.numero_serie, 's2', 'mono')}
       ${dato('Kilometraje actual', km, 'km', 'mono')}${dato('Cilindros', r.cilindros)}
+      ${nivelFila}
     </div>
   </section>
 

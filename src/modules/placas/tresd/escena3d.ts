@@ -83,6 +83,8 @@ export class Escena3D {
   private rafId = 0;
   private readonly reduce: boolean;
   private calidad = 0;
+  // La calidad solo baja sola en equipos sin GPU real
+  private permiteBajar = false;
   private lento = 0;
   private encadenado = false;
   private errorReportado = false;
@@ -438,9 +440,10 @@ export class Escena3D {
 
   private calidadInicial(tactil: boolean): number {
     const gpu = this.nombreGpu();
-    if (/swiftshader|llvmpipe|software|basic render/i.test(gpu)) return QUALITY.length - 1;
-    // Antes el escritorio arrancaba en la calidad máxima (píxeles x2 y sombras de 4096): en laptops se trababa al abrir
-    return tactil ? 2 : 1;
+    // Sin GPU real (render por software) se empieza bajo y sí se puede bajar más
+    if (/swiftshader|llvmpipe|software|basic render/i.test(gpu)) { this.permiteBajar = true; return QUALITY.length - 1; }
+    // Con GPU real se arranca en la calidad máxima y no se baja sola: el equipo se ajusta por sí mismo
+    return tactil ? 1 : 0;
   }
 
   private nombreGpu(): string {
@@ -625,7 +628,7 @@ export class Escena3D {
 
   private actualizarCalidadAutomatica(raw: number, moviendose: boolean): void {
     // Si el equipo no llega a ~30 cuadros por segundo, baja nitidez y sombras un nivel cada vez
-    if (this.encadenado && !document.hidden){
+    if (this.permiteBajar && this.encadenado && !document.hidden){
       this.lento = raw > 0.034 ? this.lento + 1 : Math.max(0, this.lento - 2);
       if (this.lento > 24 && this.calidad < QUALITY.length - 1){
         this.calidad++;

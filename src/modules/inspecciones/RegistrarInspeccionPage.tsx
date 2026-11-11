@@ -14,6 +14,8 @@ import { errorMessage } from '../../core/api/client';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import { usePlacas } from '../placas/api';
+import { esUnidadMotora } from '../../core/lib/unidadMotora';
+import { MedidorCombustible } from '../../core/ui/MedidorCombustible';
 import {
   armarDetalles, borrarBorrador, cabeceraDesde, claveRespuesta, guardarBorrador, guardarInspeccion, hoyISO, leerBorrador, reducirFoto, respuestasDesde,
   respuestaVacia, useEsquema, type Cabecera, type Respuesta,
@@ -80,6 +82,7 @@ export function RegistrarInspeccionPage({ editar = null }: { editar?: Inspeccion
   const opcionesPlaca = useMemo(() => (placas.data ?? []).filter(p => p.estado.toLowerCase() === 'activa')
     .map(p => ({ value: p.placa, label: p.placa, description: [p.tipo, p.marca, p.cliente].filter(Boolean).join(' · ') })), [placas.data]);
   const placaSel = (placas.data ?? []).find(p => p.placa === cab.placa);
+  const motoraSel = esUnidadMotora(placaSel);
 
   const erroresCab = {
     placa: !cab.placa ? 'Elige la placa de la unidad.' : null,
@@ -103,7 +106,8 @@ export function RegistrarInspeccionPage({ editar = null }: { editar?: Inspeccion
     secciones.forEach((s, si) => s.items.forEach((it, ii) => {
       const r = resp[claveRespuesta(si, ii)];
       if (it.tipo === 'okfalla') { if (r?.estado === 'OK') ok++; else if (r?.estado === 'FALLA') falla++; else sin++; }
-      else if (it.tipo === 'percent') { if (r?.porcentaje) ok++; else sin++; }
+      else if (it.tipo === 'nivel' && !motoraSel) return; // no aplica a remolques
+      else if (it.tipo === 'percent' || it.tipo === 'nivel') { if (r?.porcentaje) ok++; else sin++; }
       else if (r?.texto?.trim()) ok++; else sin++;
     }));
     return { ok, falla, sin };
@@ -123,7 +127,7 @@ export function RegistrarInspeccionPage({ editar = null }: { editar?: Inspeccion
     const conFoto = fallasLista.filter(x => x.r?.foto).length;
     setGuardado({ fase: 'subiendo', hechas: 0, total: conFoto });
     try {
-      const detalles = await armarDetalles(secciones, resp, (hechas, total) => setGuardado({ fase: 'subiendo', hechas, total }));
+      const detalles = await armarDetalles(secciones, resp, (hechas, total) => setGuardado({ fase: 'subiendo', hechas, total }), motoraSel);
       setGuardado({ fase: 'guardando', hechas: conFoto, total: conFoto });
       const firmaFinal = firma.current?.obtener() || editar?.firma || '';
       const id = await guardarInspeccion(cab, detalles, firmaFinal, editar?.id ?? '');
@@ -265,6 +269,7 @@ export function RegistrarInspeccionPage({ editar = null }: { editar?: Inspeccion
                   {s.items.map((it, ii) => {
                     const k = claveRespuesta(si, ii);
                     const r = resp[k] ?? respuestaVacia();
+                    if (it.tipo === 'nivel' && !motoraSel) return null; // el medidor solo aplica a motoras
                     return (
                       <li key={k} className={`wiz-punto${r.estado === 'FALLA' ? ' wiz-punto--falla' : r.estado === 'OK' ? ' wiz-punto--ok' : ''}`}>
                         <div className="wiz-punto__fila">
@@ -282,8 +287,12 @@ export function RegistrarInspeccionPage({ editar = null }: { editar?: Inspeccion
                             </div>
                           )}
                           {it.tipo === 'percent' && <span className="wiz-porcentaje t-numeric">{r.porcentaje === '' ? 'Sin medir' : `${r.porcentaje}%`}</span>}
+                          {it.tipo === 'nivel' && motoraSel && <span className="wiz-porcentaje t-numeric">{r.porcentaje === '' ? 'Sin medir' : `${r.porcentaje}%`}</span>}
                         </div>
 
+                        {it.tipo === 'nivel' && motoraSel && (
+                          <MedidorCombustible value={r.porcentaje === '' ? null : Number(r.porcentaje)} label={it.label} onChange={v => set(k, { porcentaje: String(v) })} />
+                        )}
                         {it.tipo === 'percent' && (
                           <input type="range" min={0} max={100} step={5} className="wiz-rango" aria-label={`${it.label} (%)`}
                             value={r.porcentaje === '' ? 50 : Number(r.porcentaje)} onChange={e => set(k, { porcentaje: e.target.value })} />

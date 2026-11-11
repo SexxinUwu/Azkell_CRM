@@ -1,0 +1,4 @@
+/* Plantilla de inspección: el tipo de ítem es una lista compacta a la derecha del nombre */
+.cep-pl__tipo { font: inherit; font-size: 0.8125rem; padding: 6px 8px; border-radius: var(--r-sm); border: 1px solid var(--separator); background: var(--surface); color: var(--label); max-width: 15rem; }
+.cep-pl__item { flex-wrap: wrap; }
+.cep-pl__item input { min-width: 0; flex: 1 1 12rem; }

@@ -9,6 +9,8 @@ import { CargaCamion } from '../../core/ui/CargaCamion';
 import { EmptyState, Notice } from '../../core/ui/Display';
 import { EvidenciasArchivos } from '../../core/ui/EvidenciasArchivos';
 import { Field, TextInput } from '../../core/ui/Field';
+import { MedidorCombustible } from '../../core/ui/MedidorCombustible';
+import { esUnidadMotora } from '../../core/lib/unidadMotora';
 import { Combobox } from '../../core/ui/Combobox';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
@@ -143,6 +145,8 @@ function configuracionDeVehiculo(r: { configuracion?: unknown; modelo?: unknown;
 }
 
 /** Deja solo los estados válidos (B, R, M). Acepta texto o { estado } por ítem. */
+const CLAVE_NIVEL = '__nivel_combustible';
+
 function normalizarPartes(raw: Record<string, unknown>): Record<string, Calificacion> {
   const out: Record<string, Calificacion> = {};
   for (const [k, v] of Object.entries(raw)) {
@@ -170,6 +174,8 @@ export function CeFormulario({ registro, empresa, modo, hoja, onCerrar, onGuarda
   const [partes, setPartes] = useState<Record<string, Calificacion>>({});
   const [cantidades, setCantidades] = useState<Record<string, string>>({});
   const [croquis, setCroquis] = useState<Croquis>({ configuracion: 'T3', estiloCabina: 'chata', estiloCarroceria: 'furgon' });
+  // Nivel de combustible (medidor, solo camiones, tractos y unidades motoras). Se guarda dentro de inventario_partes_json
+  const [nivelCombustible, setNivelCombustible] = useState<number | null>(null);
   const [origenKm, setOrigenKm] = useState<OrigenKm | null>(null);
   const [firmasGuardadas, setFirmasGuardadas] = useState<{ entrega: string | null; recibe: string | null }>({ entrega: null, recibe: null });
   const [errores, setErrores] = useState<Partial<Record<CampoNombre, string>>>({});
@@ -226,6 +232,8 @@ export function CeFormulario({ registro, empresa, modo, hoja, onCerrar, onGuarda
 
   const grupos: CategoriaPlantilla[] = plantilla.data ?? PLANTILLA_FABRICA;
   const placasOpciones = recursos.data?.placas ?? [];
+  // El medidor de combustible solo aplica a camiones, tractos y unidades motoras (no a carretas ni remolques)
+  const motoraActa = esUnidadMotora({ tipo: campos.clase });
   const conductores = recursos.data?.conductores ?? [];
   // La plantilla vigente tiene que estar lista antes de cargar las partes de un acta (si no, se leerían con la de fábrica)
   const plantillaLista = plantilla.isSuccess || plantilla.isError;
@@ -275,6 +283,8 @@ export function CeFormulario({ registro, empresa, modo, hoja, onCerrar, onGuarda
     }
     setPartes(porParte);
     setCantidades(cants);
+    const nivel = Number((crudo as Record<string, unknown>)[CLAVE_NIVEL]);
+    setNivelCombustible(Number.isFinite(nivel) && (crudo as Record<string, unknown>)[CLAVE_NIVEL] !== undefined ? nivel : null);
     setCroquis({
       configuracion: configuracionDeVehiculo(r),
       estiloCabina: r.estilo_cabina === 'trompa' ? 'trompa' : 'chata',
@@ -472,7 +482,7 @@ export function CeFormulario({ registro, empresa, modo, hoja, onCerrar, onGuarda
       configuracion: croquis.configuracion,
       estilo_cabina: croquis.estiloCabina,
       estilo_carroceria: croquis.estiloCarroceria,
-      inventario_partes_json: partesParaGuardar(),
+      inventario_partes_json: { ...partesParaGuardar(), ...(motoraActa && nivelCombustible != null ? { [CLAVE_NIVEL]: nivelCombustible } : {}) },
       observaciones: campos.observaciones,
       doc_entrega: entrega,
       doc_recibe: recibe,
@@ -675,6 +685,11 @@ export function CeFormulario({ registro, empresa, modo, hoja, onCerrar, onGuarda
           {campo('color', 'Color', { mayus: true, placeholder: 'BLANCO' })}
           {campo('numero_motor', 'Número de motor', { mayus: true, mono: true, placeholder: 'N° de motor' })}
           {campo('numero_serie', 'Número de serie / VIN', { mayus: true, mono: true, placeholder: 'N° VIN o serie' })}
+          {motoraActa && (
+            <Field label="Nivel de combustible" wide hint={nivelCombustible == null ? 'Elige el nivel con la lista o deslizando la aguja' : undefined}>
+              {() => <MedidorCombustible value={nivelCombustible} onChange={setNivelCombustible} disabled={soloLectura} />}
+            </Field>
+          )}
         </div>
       </section>
 

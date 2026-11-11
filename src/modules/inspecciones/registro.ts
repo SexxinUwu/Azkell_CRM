@@ -8,7 +8,8 @@ import { api } from '../../core/api/client';
 import { ESQUEMA_POR_DEFECTO } from './esquemaPorDefecto';
 import type { Inspeccion, PuntoRevisado } from './api';
 
-export type TipoPunto = 'okfalla' | 'percent' | 'text';
+// nivel: nivel de combustible (medidor). Solo aplica a unidades motoras; se guarda igual que un porcentaje
+export type TipoPunto = 'okfalla' | 'percent' | 'nivel' | 'text';
 export interface Seccion { titulo: string; items: Array<{ label: string; tipo: TipoPunto }> }
 
 /** Respuesta de un punto mientras se llena el formulario */
@@ -85,7 +86,7 @@ async function subirFoto(dataUrl: string, idTemporal: string): Promise<string> {
 export interface Cabecera { placa: string; fecha: string; km: string; cliente: string; tecnico: string; dias: string }
 
 /** Arma los puntos en el formato de detalles_json de la versión actual */
-export async function armarDetalles(esquema: Seccion[], respuestas: Record<string, Respuesta>, alSubir?: (hechas: number, total: number) => void) {
+export async function armarDetalles(esquema: Seccion[], respuestas: Record<string, Respuesta>, alSubir?: (hechas: number, total: number) => void, motora = true) {
   const idTemporal = 'Insp_' + Date.now();
   const conFoto = Object.values(respuestas).filter(r => r.estado === 'FALLA' && r.foto).length;
   let subidas = 0;
@@ -93,6 +94,8 @@ export async function armarDetalles(esquema: Seccion[], respuestas: Record<strin
   for (let s = 0; s < esquema.length; s++) {
     for (let i = 0; i < esquema[s].items.length; i++) {
       const it = esquema[s].items[i];
+      // El medidor de combustible no aplica a remolques ni carretas: ese punto no se guarda
+      if (it.tipo === 'nivel' && !motora) continue;
       const r = respuestas[claveRespuesta(s, i)] ?? respuestaVacia();
       let estado = 'SIN DATOS', observacion = '', foto = '';
       if (it.tipo === 'okfalla') {
@@ -104,7 +107,7 @@ export async function armarDetalles(esquema: Seccion[], respuestas: Record<strin
           if (r.foto.startsWith('http')) foto = r.foto;
           else if (r.foto) { foto = await subirFoto(r.foto, idTemporal); alSubir?.(++subidas, conFoto); }
         }
-      } else if (it.tipo === 'percent') {
+      } else if (it.tipo === 'percent' || it.tipo === 'nivel') {
         if (r.porcentaje !== '') estado = `${r.porcentaje}%`;
       } else if (it.tipo === 'text') {
         if (r.texto.trim()) { estado = 'REGISTRADO'; observacion = r.texto.trim(); }
@@ -170,7 +173,7 @@ export function respuestasDesde(i: Inspeccion, esquema: Seccion[]): Record<strin
     if (it.tipo === 'okfalla') {
       if (p.estado === 'OK') r.estado = 'OK';
       if (p.estado === 'FALLA') { r.estado = 'FALLA'; r.observacion = p.observacion ?? ''; r.foto = p.foto ?? ''; }
-    } else if (it.tipo === 'percent') {
+    } else if (it.tipo === 'percent' || it.tipo === 'nivel') {
       const m = /^(\d+)%$/.exec(p.estado ?? '');
       if (m) r.porcentaje = m[1];
     } else if (p.estado === 'REGISTRADO') {
