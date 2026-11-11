@@ -22,7 +22,9 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 interface Errores { proveedor?: string; serie?: string; numero?: string; fecha?: string; total?: string; archivo?: string }
 
 /** Registra la nota de crédito que emitió el proveedor. El archivo es obligatorio; queda "Por aprobar" hasta que otra persona la apruebe. */
-export function NcFormulario({ open, onClose, onCreada }: { open: boolean; onClose: () => void; onCreada: (id: number) => void }) {
+export interface NcInicial { proveedorId?: string; ocOrigen?: string; referencia?: string; total?: number; moneda?: 'PEN' | 'USD' }
+
+export function NcFormulario({ open, onClose, onCreada, inicial }: { open: boolean; onClose: () => void; onCreada: (id: number) => void; inicial?: NcInicial | null }) {
   const qc = useQueryClient();
   const toast = useToast();
   const proveedores = useProveedores();
@@ -49,10 +51,10 @@ export function NcFormulario({ open, onClose, onCreada }: { open: boolean; onClo
 
   useEffect(() => {
     if (!open) return;
-    setProveedorId(''); setSerie(''); setNumero(''); setFecha(hoy()); setMoneda('PEN'); setBase(''); setIgv(''); setTotal('');
-    setMotivoSunat('07'); setOcOrigen(''); setForma('APLICAR'); setReferencia(''); setObservaciones(''); setArchivo(null); setClaveArchivo(c => c + 1);
+    setProveedorId(inicial?.proveedorId ?? ''); setSerie(''); setNumero(''); setFecha(hoy()); setMoneda(inicial?.moneda ?? 'PEN'); setBase(''); setIgv(''); setTotal(inicial?.total ? String(inicial.total) : '');
+    setMotivoSunat('07'); setOcOrigen(inicial?.ocOrigen ?? ''); setForma('APLICAR'); setReferencia(inicial?.referencia ?? ''); setObservaciones(''); setArchivo(null); setClaveArchivo(c => c + 1);
     setErrores({}); setError(null);
-  }, [open]);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const proveedor = (proveedores.data ?? []).find(p => p.id === proveedorId) ?? null;
   const opcionesProveedor = useMemo(() => (proveedores.data ?? []).map(p => ({ value: p.id, label: p.nombre, description: p.ruc ?? undefined })), [proveedores.data]);

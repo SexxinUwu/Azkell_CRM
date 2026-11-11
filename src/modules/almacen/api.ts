@@ -460,7 +460,7 @@ export function estadoSalida(s: Pick<SalidaInv, 'estado'>): EstadoSalida {
 
 /** Valores que guarda el servidor en tipo_destino (el clásico muestra "Vehículo / Unidad" y "Personal / Taller") */
 export const TIPOS_DESTINO = ['Vehiculo', 'Personal'] as const;
-export const ETIQUETA_DESTINO: Record<string, string> = { Vehiculo: 'Vehículo / Unidad', Personal: 'Personal / Taller' };
+export const ETIQUETA_DESTINO: Record<string, string> = { Vehiculo: 'Vehículo / Unidad', Personal: 'Personal / Taller', 'Devolucion a proveedor': 'Devolución a proveedor' };
 
 export const TIPO_ORDEN_SALIDA = 'Orden de Salida';
 export const TIPO_ORDEN_AJUSTE = 'Ajuste de Inventario (Resta)';

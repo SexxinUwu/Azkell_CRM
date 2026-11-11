@@ -2,7 +2,7 @@ import './nc.css';
 import '../../core/ui/acciones-iconos.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, ChevronRight, Clock, Coins, FileText, Plus, ReceiptText, RefreshCw, SearchX, Wallet } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Clock, Coins, FileText, PackageMinus, Plus, ReceiptText, RefreshCw, SearchX, Wallet } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
@@ -14,7 +14,9 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { formatFechaPe } from '../../core/lib/format';
-import { NcFormulario } from './nc-Formulario';
+import { NcFormulario, type NcInicial } from './nc-Formulario';
+import { NcDevolucion } from './nc-Devolucion';
+import { NcEstadoCuenta } from './nc-EstadoCuenta';
 import { NcDetalle } from './nc-Detalle';
 import { ETIQUETA_ESTADO, TONO_ESTADO, montoNc, useNotasCredito, useResumenProveedoresNc, type EstadoNc, type NotaCredito } from './nc-api';
 
@@ -44,6 +46,9 @@ export function NotasCreditoPage() {
   const [filtrando, setFiltrando] = useState(false);
   const [formulario, setFormulario] = useState(false);
   const [detalleId, setDetalleId] = useState<number | null>(null);
+  const [devolucion, setDevolucion] = useState(false);
+  const [inicial, setInicial] = useState<NcInicial | null>(null);
+  const [cuenta, setCuenta] = useState<{ clave: string; nombre: string } | null>(null);
 
   const lista = useMemo(() => notas.data ?? [], [notas.data]);
   const proveedores = useMemo(() => [...new Set(lista.map(n => n.proveedor_nombre))].sort().map(v => ({ value: v, label: v })), [lista]);
@@ -83,7 +88,8 @@ export function NotasCreditoPage() {
                 <RefreshCw size={20} />
               </button>
             </div>
-            {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => { haptic('selection'); setFormulario(true); }}>Registrar nota de crédito</Button>}
+            {puedeCrear && <Button variant="secondary" icon={<PackageMinus size={16} />} onClick={() => { haptic('selection'); setDevolucion(true); }}>Devolver mercadería</Button>}
+            {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => { haptic('selection'); setInicial(null); setFormulario(true); }}>Registrar nota de crédito</Button>}
           </>
         }
       />
@@ -115,7 +121,7 @@ export function NotasCreditoPage() {
       </HojaFiltros>
 
       {notas.isError ? <Notice tone="error">{errorMessage(notas.error)}</Notice> : cargando ? <PageLoader /> : vista === 'proveedores' ? (
-        <PorProveedor datos={resumen.data ?? []} cargando={resumen.isLoading} onElegir={p => { setProveedor(p); setVista('notas'); }} />
+        <PorProveedor datos={resumen.data ?? []} cargando={resumen.isLoading} onElegir={(clave, nombre) => setCuenta({ clave, nombre })} />
       ) : visibles.length === 0 ? (
         <EmptyState icon={busqueda || filtrosActivos ? <SearchX size={22} /> : <ReceiptText size={22} />} title={lista.length ? 'Ninguna nota coincide' : 'Sin notas de crédito'}>
           {lista.length ? 'Prueba con otra búsqueda o quita los filtros.' : puedeCrear ? <>Cuando un proveedor te dé una nota por una devolución, regístrala con <strong>Registrar nota de crédito</strong>.</> : 'Aún no hay notas registradas.'}
@@ -126,7 +132,11 @@ export function NotasCreditoPage() {
         </div>
       )}
 
-      <NcFormulario open={formulario} onClose={() => setFormulario(false)} onCreada={id => { setFormulario(false); setDetalleId(id); }} />
+      <NcFormulario open={formulario} inicial={inicial} onClose={() => setFormulario(false)} onCreada={id => { setFormulario(false); setDetalleId(id); }} />
+      <NcDevolucion open={devolucion} onClose={() => setDevolucion(false)}
+        onHecha={d => { setDevolucion(false); setInicial({ proveedorId: d.proveedorId, ocOrigen: d.ocOrigen, referencia: d.referencia, total: d.total, moneda: d.moneda }); setFormulario(true); }} />
+      <NcEstadoCuenta proveedor={cuenta?.clave ?? null} nombre={cuenta?.nombre ?? ''} onClose={() => setCuenta(null)}
+        onVerNotas={() => { if (cuenta) setProveedor(cuenta.nombre); setCuenta(null); setVista('notas'); }} />
       <NcDetalle id={detalleId} onClose={() => setDetalleId(null)} />
     </Page>
   );
@@ -154,13 +164,13 @@ function FilaNota({ n, onAbrir }: { n: NotaCredito; onAbrir: () => void }) {
   );
 }
 
-function PorProveedor({ datos, cargando, onElegir }: { datos: Array<{ clave: string; proveedor_nombre: string; moneda: 'PEN' | 'USD'; notas: number; por_aprobar: number; saldo_a_favor: number; aplicado: number; total: number }>; cargando: boolean; onElegir: (nombre: string) => void }) {
+function PorProveedor({ datos, cargando, onElegir }: { datos: Array<{ clave: string; proveedor_nombre: string; moneda: 'PEN' | 'USD'; notas: number; por_aprobar: number; saldo_a_favor: number; aplicado: number; total: number }>; cargando: boolean; onElegir: (clave: string, nombre: string) => void }) {
   if (cargando) return <PageLoader />;
   if (!datos.length) return <EmptyState icon={<CheckCircle2 size={22} />} title="Sin saldos por proveedor">Cuando registres notas de crédito, aquí verás cuánto tiene a favor cada proveedor.</EmptyState>;
   return (
     <div className="list">
       {datos.map(d => (
-        <button key={`${d.clave}-${d.moneda}`} type="button" className="row pressable" onClick={() => onElegir(d.proveedor_nombre)} style={{ textAlign: 'left' }}>
+        <button key={`${d.clave}-${d.moneda}`} type="button" className="row pressable" onClick={() => onElegir(d.clave, d.proveedor_nombre)} style={{ textAlign: 'left' }}>
           <span className="row__main">
             <span className="row__title">{d.proveedor_nombre}</span>
             <span className="row__subtitle">{d.notas} {d.notas === 1 ? 'nota' : 'notas'}{d.por_aprobar ? ` · ${d.por_aprobar} por aprobar` : ''} · aplicado {montoNc(d.aplicado, d.moneda)} de {montoNc(d.total, d.moneda)}</span>

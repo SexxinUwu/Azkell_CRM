@@ -10,6 +10,7 @@ import { EmptyState, Notice } from '../../core/ui/Display';
 import { EvidenciasArchivos } from '../../core/ui/EvidenciasArchivos';
 import { Field, TextInput } from '../../core/ui/Field';
 import { MedidorCombustible } from '../../core/ui/MedidorCombustible';
+import { AdjuntoEvidencia } from '../../core/ui/AdjuntoEvidencia';
 import { esUnidadMotora } from '../../core/lib/unidadMotora';
 import { Combobox } from '../../core/ui/Combobox';
 import { LicensePlate } from '../../core/ui/LicensePlate';
@@ -189,6 +190,10 @@ export function CeFormulario({ registro, empresa, modo, hoja, onCerrar, onGuarda
   const [cargado, setCargado] = useState(nuevo);
   // Evidencias: las nuevas (archivos por subir) y las que el acta ya tiene guardadas
   const [fotosNuevas, setFotosNuevas] = useState<File[]>([]);
+  // Foto del medidor de combustible (se guarda junto con las evidencias del acta)
+  const [fotoNivel, setFotoNivel] = useState<File | null>(null);
+  const vistaNivel = useMemo(() => (fotoNivel ? URL.createObjectURL(fotoNivel) : ''), [fotoNivel]);
+  useEffect(() => () => { if (vistaNivel) URL.revokeObjectURL(vistaNivel); }, [vistaNivel]);
   const [fotosGuardadas, setFotosGuardadas] = useState<EvidenciaActa[]>([]);
   const [visor, setVisor] = useState<number | null>(null);
   const [quitando, setQuitando] = useState<string | null>(null);
@@ -500,10 +505,11 @@ export function CeFormulario({ registro, empresa, modo, hoja, onCerrar, onGuarda
       const idFinal = nuevo ? String(r.id ?? '') : (idRegistro ?? '');
 
       // Evidencias: el acta ya quedó guardada; si las fotos fallan se avisa sin perder lo demás
-      if (fotosNuevas.length > 0 && idFinal) {
+      const aSubir = fotoNivel ? [fotoNivel, ...fotosNuevas] : fotosNuevas;
+      if (aSubir.length > 0 && idFinal) {
         try {
           const f = new FormData();
-          fotosNuevas.forEach(a => f.append('fotos', a));
+          aSubir.forEach(a => f.append('fotos', a));
           await api(`/seguridad/entrega-vehiculos/${encodeURIComponent(idFinal)}/evidencias`, { method: 'POST', body: f });
         } catch (errFotos) {
           toast(`El acta se guardó, pero las imágenes no se subieron: ${errorMessage(errFotos)}`, 'error');
@@ -687,7 +693,15 @@ export function CeFormulario({ registro, empresa, modo, hoja, onCerrar, onGuarda
           {campo('numero_serie', 'Número de serie / VIN', { mayus: true, mono: true, placeholder: 'N° VIN o serie' })}
           {motoraActa && (
             <Field label="Nivel de combustible" wide hint={nivelCombustible == null ? 'Elige el nivel con la lista o deslizando la aguja' : undefined}>
-              {() => <MedidorCombustible value={nivelCombustible} onChange={setNivelCombustible} disabled={soloLectura} />}
+              {() => (
+                <>
+                  <MedidorCombustible value={nivelCombustible} onChange={setNivelCombustible} disabled={soloLectura} />
+                  {!soloLectura && (
+                    <AdjuntoEvidencia valor={fotoNivel ? 'foto' : ''} src={vistaNivel} titulo="Foto del medidor (se guarda con las evidencias)"
+                      onArchivo={f => { if (f.type.startsWith('image/')) setFotoNivel(f); else toast('Aquí solo se adjuntan fotos.', 'error'); }} onQuitar={() => setFotoNivel(null)} />
+                  )}
+                </>
+              )}
             </Field>
           )}
         </div>
