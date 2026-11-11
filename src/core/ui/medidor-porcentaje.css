@@ -1,0 +1,20 @@
+/* Medición en porcentaje */
+.pct { display: flex; flex-direction: column; gap: var(--s-2); width: 100%; margin-top: var(--s-2); }
+.pct__cab { display: flex; align-items: center; justify-content: center; gap: var(--s-4); }
+.pct__valor { min-width: 6.5rem; text-align: center; font-size: 1.75rem; font-weight: 800; letter-spacing: -0.02em; }
+.pct--vacio .pct__valor { font-size: 1rem; font-weight: 700; color: var(--label-2); }
+.pct__paso { width: 2.5rem; height: 2.5rem; border-radius: 50%; border: 0; background: var(--fill); color: var(--label); display: grid; place-items: center; cursor: pointer; transition: transform 100ms ease, background-color 120ms ease; }
+.pct__paso:active:not(:disabled) { transform: scale(0.92); background: var(--fill-strong); }
+.pct__paso:disabled { opacity: 0.4; cursor: default; }
+.pct__rango { -webkit-appearance: none; appearance: none; width: 100%; height: 0.75rem; border-radius: 999px; outline: none; cursor: pointer; margin: var(--s-1) 0;
+  background: linear-gradient(90deg, var(--accent) 0, var(--accent) var(--p, 0%), var(--fill-strong) var(--p, 0%), var(--fill-strong) 100%); }
+.pct--vacio .pct__rango { background: var(--fill); }
+.pct__rango::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: #fff; border: 3px solid var(--accent); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); cursor: grab; }
+.pct__rango::-moz-range-thumb { width: 1.5rem; height: 1.5rem; border-radius: 50%; background: #fff; border: 3px solid var(--accent); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); cursor: grab; }
+.pct--vacio .pct__rango::-webkit-slider-thumb { border-color: var(--label-3); }
+.pct--vacio .pct__rango::-moz-range-thumb { border-color: var(--label-3); }
+.pct__rango:focus-visible { box-shadow: 0 0 0 3px var(--accent-ring); }
+.pct__atajos { display: flex; justify-content: center; gap: var(--s-2); }
+.pct__atajo { border: 0; border-radius: 999px; padding: 0.3rem 0.9rem; font: inherit; font-size: 0.8125rem; font-weight: 700; background: var(--fill-subtle); color: var(--label-2); cursor: pointer; transition: background-color 120ms ease, color 120ms ease; }
+.pct__atajo--on { background: var(--accent); color: var(--label-inverse); }
+.pct__atajo:disabled { opacity: 0.4; cursor: default; }

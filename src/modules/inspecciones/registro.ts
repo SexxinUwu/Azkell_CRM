@@ -75,18 +75,30 @@ export async function reducirFoto(archivo: File, maximo = 1600): Promise<string>
   }
 }
 
-/** Sube una foto a S3; si no se puede, la deja en base64 (como la versión actual) */
+/** Lee una evidencia: la foto se reduce; un documento PDF se guarda tal cual (hasta 8 MB) */
+export async function leerEvidencia(archivo: File): Promise<string> {
+  if (archivo.type === 'application/pdf') {
+    if (archivo.size > 8 * 1024 * 1024) throw new Error('El documento supera 8 MB.');
+    return await new Promise<string>((ok, mal) => { const l = new FileReader(); l.onload = () => ok(String(l.result)); l.onerror = () => mal(new Error('No se pudo leer el documento.')); l.readAsDataURL(archivo); });
+  }
+  if (!archivo.type.startsWith('image/')) throw new Error('Solo se aceptan fotos o documentos PDF.');
+  return reducirFoto(archivo);
+}
+
+/** Sube una foto o documento a S3; si no se puede, lo deja en base64 (como la versión actual) */
 async function subirFoto(dataUrl: string, idTemporal: string): Promise<string> {
+  const mime = /^data:([^;,]+)/.exec(dataUrl)?.[1] ?? 'image/jpeg';
+  const pdf = mime === 'application/pdf';
   try {
     const r = await api<{ ok?: boolean; uploadUrl?: string; finalUrl?: string }>('/mantenimiento/inspecciones/upload-url', {
-      method: 'POST', body: { idInsp: idTemporal, fileName: 'foto.jpg', fileType: 'image/jpeg' },
+      method: 'POST', body: { idInsp: idTemporal, fileName: pdf ? 'documento.pdf' : 'foto.jpg', fileType: mime },
     });
     if (!r.ok || !r.uploadUrl || !r.finalUrl) return dataUrl;
     // Sin fetch(dataUrl): la CSP (connect-src) no permite data: y el aviso llegaba al servidor
     const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
     const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-    const blob = new Blob([bytes], { type: 'image/jpeg' });
-    const put = await fetch(r.uploadUrl, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
+    const blob = new Blob([bytes], { type: mime });
+    const put = await fetch(r.uploadUrl, { method: 'PUT', headers: { 'Content-Type': mime }, body: blob });
     return put.ok ? r.finalUrl : dataUrl;
   } catch {
     return dataUrl;
@@ -98,7 +110,7 @@ export interface Cabecera { placa: string; fecha: string; km: string; cliente: s
 /** Arma los puntos en el formato de detalles_json de la versión actual */
 export async function armarDetalles(esquema: Seccion[], respuestas: Record<string, Respuesta>, alSubir?: (hechas: number, total: number) => void, motora = true) {
   const idTemporal = 'Insp_' + Date.now();
-  const conFoto = Object.values(respuestas).filter(r => r.estado === 'FALLA' && r.foto).length;
+  const conFoto = Object.values(respuestas).filter(r => (r.estado === 'FALLA' || r.porcentaje !== '') && r.foto && !r.foto.startsWith('http')).length;
   let subidas = 0;
   const detalles: PuntoRevisado[] = [];
   for (let s = 0; s < esquema.length; s++) {
@@ -119,6 +131,11 @@ export async function armarDetalles(esquema: Seccion[], respuestas: Record<strin
         }
       } else if (it.tipo === 'percent' || it.tipo === 'nivel') {
         if (r.porcentaje !== '') estado = `${r.porcentaje}%`;
+        // El nivel de combustible puede llevar su evidencia (foto o documento)
+        if (it.tipo === 'nivel' && r.foto) {
+          if (r.foto.startsWith('http')) foto = r.foto;
+          else { foto = await subirFoto(r.foto, idTemporal); alSubir?.(++subidas, conFoto); }
+        }
       } else if (it.tipo === 'text') {
         if (r.texto.trim()) { estado = 'REGISTRADO'; observacion = r.texto.trim(); }
       }

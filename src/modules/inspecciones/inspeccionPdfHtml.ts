@@ -75,8 +75,9 @@ td { padding: 1.6mm 2mm; border-bottom: .2mm solid #e2e8f0; vertical-align: top;
 export function htmlInspeccion(d: DatosInspeccionPdf, logo: string | null): { html: string; fotos: string[] } {
   const i = d.inspeccion;
   const fotos: string[] = [];
+  const esDoc = (url: string) => /^data:application\/pdf/i.test(url) || /\.pdf(\?|$)/i.test(url);
   const foto = (url: string) => {
-    if (!url) return '';
+    if (!url || esDoc(url)) return '';
     if (url.startsWith('data:image/')) return url;
     let k = fotos.indexOf(url);
     if (k < 0) { fotos.push(url); k = fotos.length - 1; }
@@ -114,12 +115,14 @@ export function htmlInspeccion(d: DatosInspeccionPdf, logo: string | null): { ht
 
   const fallasLista = puntos.filter(p => p.estado.toUpperCase() === 'FALLA');
   const fallas = fallasLista.length ? `<h2>Fallas encontradas (${fallasLista.length})</h2><div class="fallas">${fallasLista.map(p => `
-    <div class="caso"><div><small>${esc(p.categoria)}</small><div style="font-weight:700;font-size:10.5px">${esc(p.item)}</div>${p.observacion ? `<div class="obs">${esc(p.observacion)}</div>` : '<div class="obs" style="color:#64748b">Sin observación</div>'}</div>${p.foto ? `<img src="${foto(p.foto)}" alt="">` : ''}</div>`).join('')}</div>` : '';
+    <div class="caso"><div><small>${esc(p.categoria)}</small><div style="font-weight:700;font-size:10.5px">${esc(p.item)}</div>${p.observacion ? `<div class="obs">${esc(p.observacion)}</div>` : '<div class="obs" style="color:#64748b">Sin observación</div>'}${esDoc(p.foto) ? '<div class="obs" style="color:#64748b">Documento adjunto en el sistema</div>' : ''}</div>${foto(p.foto) ? `<img src="${foto(p.foto)}" alt="">` : ''}</div>`).join('')}</div>` : '';
 
   // Evidencia: todas las fotos o documentos subidos (incluida la del nivel de combustible), sin repetir las de las fallas ya mostradas
   const mostradas = new Set(fallasLista.map(p => p.foto).filter(Boolean));
   const evid = puntos.filter(p => p.foto && !mostradas.has(p.foto));
-  const evidencia = evid.length ? `<h2>Evidencia adjunta</h2><div class="fotos">${evid.map(p => `<figure><img src="${foto(p.foto)}" alt=""><figcaption>${esc(p.categoria)} · ${esc(p.item)}</figcaption></figure>`).join('')}</div>` : '';
+  const evidencia = evid.length ? `<h2>Evidencia adjunta</h2><div class="fotos">${evid.map(p => esDoc(p.foto)
+    ? `<figure><div style="height:38mm;display:grid;place-items:center;background:#fee2e2;color:#b91c1c;font-weight:800">DOCUMENTO PDF</div><figcaption>${esc(p.categoria)} · ${esc(p.item)} (ver en el sistema)</figcaption></figure>`
+    : `<figure><img src="${foto(p.foto)}" alt=""><figcaption>${esc(p.categoria)} · ${esc(p.item)}</figcaption></figure>`).join('')}</div>` : '';
 
   const firma = i.firma ? `<img src="${foto(i.firma)}" alt="Firma">` : '<span style="color:#94a3b8">Sin firma registrada</span>';
 

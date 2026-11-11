@@ -18,6 +18,7 @@ import { compartirPDF } from '../../core/lib/pdf';
 import { VisorFotos, type FotoVisor } from '../../core/ui/VisorFotos';
 import { clavePlaca, useFotosFirmadas, useInspeccionesNeumaticos, type Inspeccion, type PuntoRevisado } from './api';
 import { abrirPdfInspeccion, pdfInspeccion } from './inspeccionPdf';
+import { esDocumentoEvidencia } from '../../core/ui/AdjuntoEvidencia';
 
 const fechaLarga = (d: Date | null) => (d ? d.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : 'Sin fecha');
 
@@ -44,7 +45,7 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
   const ver = (url: string) => (url.includes('.s3.') ? (firmadas.data?.[url] ?? '') : url);
   // Abre el visor con todas las fotos de la inspección, empezando por la tocada
   const abrirFoto = (foto: string) => {
-    const lista: FotoVisor[] = (i?.puntos ?? []).filter(p => p.foto).map(p => ({ url: ver(p.foto), titulo: p.item })).filter(f => f.url);
+    const lista: FotoVisor[] = (i?.puntos ?? []).filter(p => p.foto && !esDocumentoEvidencia(p.foto)).map(p => ({ url: ver(p.foto), titulo: p.item })).filter(f => f.url);
     setVisor({ lista, i: Math.max(0, lista.findIndex(f => f.url === ver(foto))) });
   };
 
@@ -221,11 +222,14 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
                         {p.observacion && <div className="row__subtitle row__subtitle--wrap">{p.observacion}</div>}
                         {!['OK', 'FALLA', 'SIN DATOS'].includes(p.estado) && <div className="row__subtitle">{p.estado}</div>}
                       </div>
-                      {p.foto && (
+                      {p.foto && (esDocumentoEvidencia(p.foto) ? (
+                        <a className="insp-foto pressable" href={ver(p.foto) || undefined} target="_blank" rel="noopener noreferrer" aria-label={`Abrir el documento de ${p.item}`}
+                          style={{ display: 'grid', placeItems: 'center', background: 'var(--red-tint)', color: 'var(--red-ink)' }}><FileText size={22} /></a>
+                      ) : (
                         <button type="button" className="insp-foto pressable" onClick={() => abrirFoto(p.foto)} aria-label={`Ver foto de ${p.item}`}>
                           {ver(p.foto) && <img src={ver(p.foto)} alt="" loading="lazy" />}
                         </button>
-                      )}
+                      ))}
                     </div>
                   ))}
                 </div>

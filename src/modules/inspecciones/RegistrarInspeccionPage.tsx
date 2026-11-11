@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Camera, Check, CheckCheck, ChevronRight, ClipboardCheck, RotateCcw, Trash2, X } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Field, TextInput } from '../../core/ui/Field';
@@ -10,14 +10,16 @@ import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Notice, Page } from '../../core/ui/Display';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { useToast } from '../../core/ui/Toast';
-import { errorMessage } from '../../core/api/client';
+import { api, errorMessage } from '../../core/api/client';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import { usePlacas } from '../placas/api';
 import { esUnidadMotora } from '../../core/lib/unidadMotora';
 import { MedidorCombustible } from '../../core/ui/MedidorCombustible';
+import { MedidorPorcentaje } from '../../core/ui/MedidorPorcentaje';
+import { AdjuntoEvidencia } from '../../core/ui/AdjuntoEvidencia';
 import {
-  armarDetalles, borrarBorrador, cabeceraDesde, claveRespuesta, guardarBorrador, guardarInspeccion, hoyISO, leerBorrador, reducirFoto, respuestasDesde,
+  armarDetalles, borrarBorrador, cabeceraDesde, claveRespuesta, guardarBorrador, guardarInspeccion, hoyISO, leerBorrador, leerEvidencia, reducirFoto, respuestasDesde,
   respuestaVacia, useEsquema, type Cabecera, type Respuesta,
 } from './registro';
 import { Firma, type FirmaHandle } from './Firma';
@@ -61,6 +63,24 @@ export function RegistrarInspeccionPage({ editar = null }: { editar?: Inspeccion
     setCab(cabeceraDesde(editar));
     setResp(respuestasDesde(editar, esquema.data));
   }, [editar, esquema.data]);
+  // Cliente y kilometraje salen solos de la unidad: el cliente, de la ficha de la placa; el kilometraje, del odómetro actual del GPS
+  const placaFicha = (placas.data ?? []).find(p => p.placa === cab.placa);
+  useEffect(() => {
+    if (editar || !placaFicha) return;
+    setCab(c => (c.cliente === placaFicha.cliente ? c : { ...c, cliente: placaFicha.cliente ?? '' }));
+  }, [placaFicha, editar]);
+  const kmGps = useQuery<{ km: number | null }>({
+    queryKey: ['inspecciones', 'km-gps', cab.placa],
+    enabled: !editar && cab.placa.length >= 5,
+    queryFn: () => api<{ km: number | null }>(`/neumaticos/km-gps/${encodeURIComponent(cab.placa)}`, { query: { fecha: hoyISO() } }),
+    staleTime: 60_000,
+  });
+  const kmDelGps = !editar && kmGps.data?.km != null && kmGps.data.km > 0 ? Math.round(kmGps.data.km) : null;
+  useEffect(() => { if (kmDelGps != null) setCab(c => (c.km === String(kmDelGps) ? c : { ...c, km: String(kmDelGps) })); }, [kmDelGps]);
+  // Entrando a una placa directa (o editando) la placa no se cambia; la fecha y el técnico son los de hoy y los del usuario
+  const bloqueaPlaca = !!placaInicial || !!editar;
+  const bloqueaAuto = !editar;
+
   // Fotos guardadas en S3: se firman para verlas; al guardar se conserva la URL original
   const urlsFotos = Object.values(resp).map(r => r.foto).filter(f => f.startsWith('https://') && f.includes('.s3.'));
   const firmadas = useFotosFirmadas(urlsFotos).data ?? {};
@@ -119,6 +139,11 @@ export function RegistrarInspeccionPage({ editar = null }: { editar?: Inspeccion
   async function elegirFoto(k: string, archivo: File | undefined) {
     if (!archivo) return;
     try { set(k, { foto: await reducirFoto(archivo) }); haptic('selection'); }
+    catch (err) { toast(errorMessage(err), 'error'); }
+  }
+
+  async function elegirEvidencia(k: string, archivo: File) {
+    try { set(k, { foto: await leerEvidencia(archivo) }); haptic('selection'); }
     catch (err) { toast(errorMessage(err), 'error'); }
   }
 
@@ -223,7 +248,7 @@ export function RegistrarInspeccionPage({ editar = null }: { editar?: Inspeccion
                 <div className="form-grid">
                   <Field label="Placa" error={intentoCab ? erroresCab.placa : null} wide>
                     {props => (
-                      <Combobox {...props} options={opcionesPlaca} value={cab.placa || null} placeholder="Busca la placa"
+                      <Combobox {...props} options={opcionesPlaca} value={cab.placa || null} placeholder="Busca la placa" disabled={bloqueaPlaca}
                         onChange={v => {
                           const p = (placas.data ?? []).find(x => x.placa === v);
                           setCab(c => ({ ...c, placa: v ?? '', cliente: p?.cliente ?? c.cliente }));
@@ -231,16 +256,17 @@ export function RegistrarInspeccionPage({ editar = null }: { editar?: Inspeccion
                     )}
                   </Field>
                   <Field label="Fecha" error={intentoCab ? erroresCab.fecha : null}>
-                    {props => <TextInput {...props} type="date" value={cab.fecha} max={hoyISO()} onChange={e => setCab(c => ({ ...c, fecha: e.target.value }))} />}
+                    {props => <TextInput {...props} type="date" value={cab.fecha} max={hoyISO()} readOnly={bloqueaAuto} onChange={e => setCab(c => ({ ...c, fecha: e.target.value }))} />}
                   </Field>
-                  <Field label="Kilometraje del tablero" error={erroresCab.km}>
-                    {props => <TextInput {...props} inputMode="numeric" value={cab.km} placeholder="Ej. 245300" onChange={e => setCab(c => ({ ...c, km: e.target.value.replace(/\D/g, '') }))} />}
+                  <Field label="Kilometraje actual" error={erroresCab.km}
+                    hint={kmDelGps != null ? 'Odómetro actual del GPS' : kmGps.isFetching ? 'Consultando el GPS…' : cab.placa ? 'Sin dato del GPS: escríbelo del tablero' : undefined}>
+                    {props => <TextInput {...props} inputMode="numeric" value={cab.km} readOnly={kmDelGps != null} placeholder="Ej. 245300" onChange={e => setCab(c => ({ ...c, km: e.target.value.replace(/\D/g, '') }))} />}
                   </Field>
                   <Field label="Técnico" error={intentoCab ? erroresCab.tecnico : null} wide>
-                    {props => <TextInput {...props} value={cab.tecnico} onChange={e => setCab(c => ({ ...c, tecnico: e.target.value.toUpperCase() }))} />}
+                    {props => <TextInput {...props} value={cab.tecnico} readOnly={bloqueaAuto && !!cab.tecnico} onChange={e => setCab(c => ({ ...c, tecnico: e.target.value.toUpperCase() }))} />}
                   </Field>
                   <Field label="Cliente">
-                    {props => <TextInput {...props} value={cab.cliente} onChange={e => setCab(c => ({ ...c, cliente: e.target.value }))} />}
+                    {props => <TextInput {...props} value={cab.cliente || placaFicha?.cliente || ''} readOnly={!!placaFicha?.cliente} onChange={e => setCab(c => ({ ...c, cliente: e.target.value }))} />}
                   </Field>
                   <Field label="Vigencia (días)" hint="Hasta la próxima inspección">
                     {props => <TextInput {...props} inputMode="numeric" value={cab.dias} onChange={e => setCab(c => ({ ...c, dias: e.target.value.replace(/\D/g, '').slice(0, 3) }))} />}
@@ -286,16 +312,16 @@ export function RegistrarInspeccionPage({ editar = null }: { editar?: Inspeccion
                               </button>
                             </div>
                           )}
-                          {it.tipo === 'percent' && <span className="wiz-porcentaje t-numeric">{r.porcentaje === '' ? 'Sin medir' : `${r.porcentaje}%`}</span>}
-                          {it.tipo === 'nivel' && motoraSel && <span className="wiz-porcentaje t-numeric">{r.porcentaje === '' ? 'Sin medir' : `${r.porcentaje}%`}</span>}
                         </div>
 
                         {it.tipo === 'nivel' && motoraSel && (
-                          <MedidorCombustible value={r.porcentaje === '' ? null : Number(r.porcentaje)} label={it.label} onChange={v => set(k, { porcentaje: String(v) })} />
+                          <>
+                            <MedidorCombustible value={r.porcentaje === '' ? null : Number(r.porcentaje)} label={it.label} onChange={v => set(k, { porcentaje: String(v) })} />
+                            <AdjuntoEvidencia valor={r.foto} src={fotoSrc(r.foto)} titulo={`${it.label} · evidencia`} onArchivo={f => { void elegirEvidencia(k, f); }} onQuitar={() => set(k, { foto: '' })} />
+                          </>
                         )}
                         {it.tipo === 'percent' && (
-                          <input type="range" min={0} max={100} step={5} className="wiz-rango" aria-label={`${it.label} (%)`}
-                            value={r.porcentaje === '' ? 50 : Number(r.porcentaje)} onChange={e => set(k, { porcentaje: e.target.value })} />
+                          <MedidorPorcentaje value={r.porcentaje === '' ? null : Number(r.porcentaje)} label={it.label} onChange={v => set(k, { porcentaje: String(v) })} />
                         )}
                         {it.tipo === 'text' && (
                           <textarea className="input wiz-texto" rows={2} value={r.texto} onChange={e => set(k, { texto: e.target.value })} placeholder="Escribe aquí" />
