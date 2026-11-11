@@ -333,7 +333,12 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                    )
                    FROM proveedor_cuentas_bancarias c
                    WHERE c.proveedor_id = p.id
-               ) AS cuentas_json
+               ) AS cuentas_json,
+               (
+                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', k.id, 'nombre', k.nombre, 'cargo', k.cargo, 'telefono', k.telefono, 'email', k.email, 'principal', k.principal))
+                   FROM proveedor_contactos k
+                   WHERE k.proveedor_id = p.id AND k.estado = 1
+               ) AS contactos_json
         FROM proveedores_inv p
         LEFT JOIN proveedor_marcas_inv m ON m.proveedor_id = p.id
         GROUP BY p.id, p.nombre, p.razon_social, p.tipo_documento, p.numero_documento, p.telefono, p.email, p.direccion, p.estado, p.observaciones, p.created_at, p.updated_at
@@ -348,6 +353,10 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 } catch (e) { cuentas = []; }
                 r.cuentas = cuentas;
                 delete r.cuentas_json;
+                let contactos = [];
+                try { contactos = typeof r.contactos_json === 'string' ? JSON.parse(r.contactos_json) : (r.contactos_json || []); } catch (e) { contactos = []; }
+                r.contactos = contactos.sort((a, b) => (b.principal || 0) - (a.principal || 0) || String(a.nombre).localeCompare(String(b.nombre)));
+                delete r.contactos_json;
                 return r;
             });
             res.json(procesados);
@@ -386,8 +395,34 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     ]).filter(c => c[1] && c[4]);
     const INSERT_CUENTAS = 'INSERT INTO proveedor_cuentas_bancarias (proveedor_id,banco,moneda,tipo_cuenta,numero_cuenta,cci,detraccion,estado) VALUES ?';
 
+    // Contactos (asesores) del proveedor: sin nombre no se guardan; siempre hay uno principal si hay alguno
+    const filasContactos = (proveedorId, contactos) => {
+        const f = contactos.map(c => [proveedorId, String(c.nombre || '').trim(), c.cargo || null, c.telefono || null, c.email || null, c.principal ? 1 : 0]).filter(c => c[1]);
+        if (f.length && !f.some(c => c[5])) f[0][5] = 1;
+        let hay = false; f.forEach(c => { if (c[5] && hay) c[5] = 0; if (c[5]) hay = true; });
+        return f;
+    };
+    const guardarContactos = (db, proveedorId, contactos, cb) => {
+        if (!Array.isArray(contactos)) return cb();
+        db.query('DELETE FROM proveedor_contactos WHERE proveedor_id=?', [proveedorId], (e1) => {
+            if (e1) return cb(e1);
+            const f = filasContactos(proveedorId, contactos);
+            if (!f.length) return cb();
+            db.query('INSERT INTO proveedor_contactos (proveedor_id,nombre,cargo,telefono,email,principal) VALUES ?', [f], cb);
+        });
+    };
+    // Ningún documento (RUC/DNI) se repite
+    const documentoRepetido = (db, numero, idPropio, cb) => {
+        const n = String(numero || '').replace(/\s+/g, '');
+        if (!n) return cb(null, null);
+        db.query("SELECT id, nombre FROM proveedores_inv WHERE REPLACE(numero_documento,' ','')=? AND id<>? LIMIT 1", [n, idPropio || ''], (e, r) => cb(e, r && r[0]));
+    };
+
     router.post('/proveedores', (req, res) => {
-        const { nombre, razon_social, tipo_documento, numero_documento, telefono, email, direccion, estado, observaciones, marcas, cuentas } = req.body;
+        const { nombre, razon_social, tipo_documento, numero_documento, telefono, email, direccion, estado, observaciones, marcas, cuentas, contactos } = req.body;
+        documentoRepetido(getDb(req), numero_documento, null, (eDup, dup) => {
+        if (eDup) return res.status(500).json({ error: eDup.message });
+        if (dup) return res.status(409).json({ error: `Ya existe un proveedor con ese documento: ${dup.nombre} (${dup.id})` });
         _generarCodigoAlmacen('PROV', null, (err, id) => {
             if (err) return res.status(500).json({ error: err.message });
             getDb(req).query('INSERT INTO proveedores_inv (id,nombre,razon_social,tipo_documento,numero_documento,telefono,email,direccion,estado,observaciones) VALUES (?,?,?,?,?,?,?,?,?,?)',
@@ -403,20 +438,25 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                         getDb(req).query('INSERT INTO proveedor_marcas_inv (proveedor_id,marca) VALUES ?', [mVals], () => { });
                     }
                     const cVals = Array.isArray(cuentas) ? filasCuentas(id, cuentas) : [];
-                    if (!cVals.length) return finalizar();
+                    const conContactos = () => guardarContactos(getDb(req), id, contactos, (errC) => errC ? res.status(500).json({ error: errC.message }) : finalizar());
+                    if (!cVals.length) return conContactos();
                     asegurarCci(getDb(req), () => {
                         getDb(req).query(INSERT_CUENTAS, [cVals], (err3) => {
                             if (err3) return res.status(500).json({ error: err3.message });
-                            finalizar();
+                            conContactos();
                         });
                     });
                 });
+        });
         });
     });
 
     router.put('/proveedores/:id', (req, res) => {
         const { id } = req.params;
-        const { nombre, razon_social, tipo_documento, numero_documento, telefono, email, direccion, estado, observaciones, marcas, cuentas } = req.body;
+        const { nombre, razon_social, tipo_documento, numero_documento, telefono, email, direccion, estado, observaciones, marcas, cuentas, contactos } = req.body;
+        documentoRepetido(getDb(req), numero_documento, id, (eDup, dup) => {
+        if (eDup) return res.status(500).json({ error: eDup.message });
+        if (dup) return res.status(409).json({ error: `Ya existe un proveedor con ese documento: ${dup.nombre} (${dup.id})` });
         getDb(req).query('UPDATE proveedores_inv SET nombre=?,razon_social=?,tipo_documento=?,numero_documento=?,telefono=?,email=?,direccion=?,estado=?,observaciones=? WHERE id=?',
             [nombre, razon_social || null, tipo_documento || 'RUC', numero_documento || null, telefono || null, email || null, direccion || null, estado || 'Activo', observaciones || null, id],
             (err) => {
@@ -427,15 +467,16 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 };
                 // Marcas y cuentas solo se reemplazan si vienen en la petición: si no vienen, se conservan
                 const cambiarCuentas = () => {
-                    if (!Array.isArray(cuentas)) return finalizar();
+                    const alFinal = () => guardarContactos(getDb(req), id, contactos, (errC) => errC ? res.status(500).json({ error: errC.message }) : finalizar());
+                    if (!Array.isArray(cuentas)) return alFinal();
                     asegurarCci(getDb(req), () => {
                         getDb(req).query('DELETE FROM proveedor_cuentas_bancarias WHERE proveedor_id=?', [id], (errDel) => {
                             if (errDel) return res.status(500).json({ error: errDel.message });
                             const cVals = filasCuentas(id, cuentas);
-                            if (!cVals.length) return finalizar();
+                            if (!cVals.length) return alFinal();
                             getDb(req).query(INSERT_CUENTAS, [cVals], (errIns) => {
                                 if (errIns) return res.status(500).json({ error: errIns.message });
-                                finalizar();
+                                alFinal();
                             });
                         });
                     });
@@ -448,9 +489,11 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     } else cambiarCuentas();
                 });
             });
+        });
     });
 
     router.delete('/proveedores/:id', (req, res) => {
+        getDb(req).query('DELETE FROM proveedor_contactos WHERE proveedor_id=?', [req.params.id], () => {
         getDb(req).query('DELETE FROM proveedor_cuentas_bancarias WHERE proveedor_id=?', [req.params.id], () => {
             getDb(req).query('DELETE FROM proveedor_marcas_inv WHERE proveedor_id=?', [req.params.id], () => {
                 getDb(req).query('DELETE FROM proveedores_inv WHERE id=?', [req.params.id], (err) => {
@@ -458,6 +501,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 });
             });
+        });
         });
     });
 

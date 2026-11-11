@@ -199,6 +199,21 @@ model ProveedorCuentaBancaria {
   @@map("proveedor_cuentas_bancarias")
 }
 
+model ProveedorContacto {
+  id           Int       @id @default(autoincrement())
+  proveedor_id String    @db.VarChar(20)
+  nombre       String    @db.VarChar(150)
+  cargo        String?   @db.VarChar(100)
+  telefono     String?   @db.VarChar(30)
+  email        String?   @db.VarChar(150)
+  principal    Boolean   @default(false)
+  estado       Boolean   @default(true)
+  created_at   DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([proveedor_id], map: "idx_prov_contacto")
+  @@map("proveedor_contactos")
+}
+
 model ProveedorMarcaInv {
   id           Int    @id @default(autoincrement())
   proveedor_id String @db.VarChar(20)

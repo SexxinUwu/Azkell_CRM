@@ -603,8 +603,18 @@ export function useKardex(inventario_id: string | null) {
 /**
  * Proveedor como lo usa la interfaz. El servidor guarda numero_documento (RUC), email y razon_social,
  * y las cuentas bancarias en su propia tabla: esos campos se mapean aquí (useProveedores / guardarProveedor).
- * El "contacto" no tiene columna en el servidor: al guardar se anota al final de las observaciones.
+ * Los contactos (asesores) viven en su propia tabla: un proveedor tiene varios; el principal se copia a telefono y correo.
  */
+/** Un asesor o persona de contacto del proveedor */
+export interface ContactoProveedor {
+  id?: number;
+  nombre: string;
+  cargo: string | null;
+  telefono: string | null;
+  email: string | null;
+  principal: boolean;
+}
+
 /** Una cuenta bancaria del proveedor: una fila del formulario y del servidor */
 export interface CuentaProveedor {
   banco: string | null;
@@ -623,10 +633,12 @@ export interface ProveedorInv {
   /** RUC, DNI, CE u Otro */
   tipo_documento: string | null;
   ruc: string | null;
+  /** Nombre del contacto principal */
   contacto: string | null;
   telefono: string | null;
   correo: string | null;
   direccion: string | null;
+  contactos: ContactoProveedor[];
   banco: string | null;
   cuenta: string | null;
   cci: string | null;
@@ -649,13 +661,12 @@ interface ProveedorServidor {
   estado: string | null;
   observaciones: string | null;
   cuentas?: Array<{ banco: string | null; moneda: string | null; numero_cuenta: string | null; tipo_cuenta?: string | null; cci?: string | null; detraccion?: number | boolean | null }>;
+  contactos?: Array<{ id: number; nombre: string; cargo: string | null; telefono: string | null; email: string | null; principal: number | boolean }>;
 }
 
-const MARCA_CONTACTO = 'Contacto: ';
-
 function proveedorDesdeServidor(p: ProveedorServidor): ProveedorInv {
-  const obs = p.observaciones ?? '';
-  const linea = obs.split('\n').find(l => l.startsWith(MARCA_CONTACTO));
+  const contactos: ContactoProveedor[] = (p.contactos ?? []).map(k => ({ id: k.id, nombre: k.nombre, cargo: k.cargo, telefono: k.telefono, email: k.email, principal: !!k.principal }));
+  const principal = contactos.find(k => k.principal) ?? contactos[0];
   const cuenta = p.cuentas?.[0];
   return {
     id: String(p.id),
@@ -664,15 +675,16 @@ function proveedorDesdeServidor(p: ProveedorServidor): ProveedorInv {
     tipo_documento: p.tipo_documento ?? 'RUC',
     ruc: p.numero_documento,
     // En los proveedores antiguos "nombre" guarda al asesor y razon_social la empresa: ese nombre es el contacto
-    contacto: linea ? linea.slice(MARCA_CONTACTO.length) : (p.razon_social?.trim() && p.razon_social.trim().toUpperCase() !== p.nombre.trim().toUpperCase() ? p.nombre : null),
-    telefono: p.telefono,
-    correo: p.email,
+    contacto: principal?.nombre ?? null,
+    telefono: p.telefono ?? principal?.telefono ?? null,
+    correo: p.email ?? principal?.email ?? null,
     direccion: p.direccion,
+    contactos,
     banco: cuenta?.banco ?? null,
     cuenta: cuenta?.numero_cuenta ?? null,
     cci: null,
     moneda_pago: cuenta?.moneda ?? null,
-    observaciones: obs.split('\n').filter(l => !l.startsWith(MARCA_CONTACTO)).join('\n') || null,
+    observaciones: p.observaciones || null,
     estado: p.estado,
     cuentas: (p.cuentas ?? []).map(c => ({
       banco: c.banco, moneda: c.moneda, numero_cuenta: c.numero_cuenta, tipo_cuenta: c.tipo_cuenta ?? null, cci: c.cci ?? null, detraccion: c.detraccion ? true : false,
@@ -681,17 +693,19 @@ function proveedorDesdeServidor(p: ProveedorServidor): ProveedorInv {
 }
 
 function proveedorAServidor(d: Partial<ProveedorInv>): Record<string, unknown> {
-  const obs = [d.observaciones?.trim(), d.contacto?.trim() ? `${MARCA_CONTACTO}${d.contacto.trim()}` : ''].filter(Boolean).join('\n');
+  const obs = d.observaciones?.trim();
+  const principal = d.contactos?.find(k => k.principal) ?? d.contactos?.[0];
   return {
     nombre: d.nombre,
     razon_social: d.razon_social ?? null,
     tipo_documento: d.tipo_documento ?? 'RUC',
     numero_documento: d.ruc ?? null,
-    telefono: d.telefono ?? null,
-    email: d.correo ?? null,
+    telefono: d.contactos ? (principal?.telefono ?? null) : (d.telefono ?? null),
+    email: d.contactos ? (principal?.email ?? null) : (d.correo ?? null),
     direccion: d.direccion ?? null,
     estado: d.estado ?? 'Activo',
     observaciones: obs || null,
+    ...(d.contactos ? { contactos: d.contactos.map(k => ({ nombre: k.nombre, cargo: k.cargo, telefono: k.telefono, email: k.email, principal: k.principal })) } : {}),
   };
 }
 

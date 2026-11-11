@@ -43,7 +43,7 @@ const TABLAS = {
   almacen_sistemas: ['almacen', 'AlmacenSistema'], almacen_unidades: ['almacen', 'AlmacenUnidad'], inventario: ['almacen', 'Inventario'],
   entradas_inv: ['almacen', 'EntradaInv'], detalle_entradas_inv: ['almacen', 'DetalleEntradaInv'],
   salidas_inv: ['almacen', 'SalidaInv'], detalle_salidas_inv: ['almacen', 'DetalleSalidaInv'],
-  proveedores_inv: ['almacen', 'ProveedorInv'], proveedor_marcas_inv: ['almacen', 'ProveedorMarcaInv'],
+  proveedores_inv: ['almacen', 'ProveedorInv'], proveedor_contactos: ['almacen', 'ProveedorContacto'], proveedor_marcas_inv: ['almacen', 'ProveedorMarcaInv'],
   proveedor_cuentas_bancarias: ['almacen', 'ProveedorCuentaBancaria'], configuracion_almacen: ['almacen', 'ConfiguracionAlmacen'],
   // Compras
   ordenes_compra: ['compras', 'OrdenCompra'], ordenes_compra_items: ['compras', 'OrdenCompraItem'],

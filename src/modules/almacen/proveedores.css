@@ -1,0 +1,40 @@
+/* Directorio de proveedores: lista compacta por letras (como Contactos del teléfono) y ficha en ventana. Todo con tokens: claro y oscuro. */
+.pv-barra { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; margin-bottom: var(--s-4); }
+.pv-barra .search { flex: 1; min-width: 12rem; }
+
+.pv-lista { display: flex; flex-direction: column; gap: var(--s-1); max-width: 46rem; margin: 0 auto; }
+.pv-letra { margin: var(--s-4) var(--s-3) var(--s-1); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; color: var(--label-2); }
+.pv-grupo { list-style: none; margin: 0; padding: 0; background: var(--surface); border-radius: var(--r-xl); overflow: hidden; box-shadow: inset 0 0 0 1px var(--separator); }
+.pv-fila { display: flex; align-items: center; gap: var(--s-3); padding: 0 var(--s-3) 0 var(--s-4); }
+.pv-fila + .pv-fila .pv-fila__principal { box-shadow: inset 0 1px 0 var(--separator); }
+.pv-fila__principal { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--s-3); padding: 0.55rem 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.pv-fila:hover { background: var(--fill-subtle); }
+.pv-fila__principal:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; border-radius: var(--r-md); }
+.pv-avatar { flex-shrink: 0; width: 2.5rem; height: 2.5rem; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 0.9375rem; font-weight: 700; letter-spacing: 0.01em; }
+.pv-avatar--grande { width: 4rem; height: 4rem; font-size: 1.375rem; }
+.pv-avatar--empresa { background: var(--fill-strong) !important; color: var(--label-2); }
+.pv-fila__texto { min-width: 0; display: flex; flex-direction: column; }
+.pv-fila__nombre { font-size: 1rem; font-weight: 600; color: var(--label); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pv-fila__sub { font-size: 0.8125rem; color: var(--label-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pv-fila__acciones { display: flex; gap: var(--s-2); flex-shrink: 0; }
+.pv-accion { width: 2.25rem; height: 2.25rem; border-radius: 50%; display: grid; place-items: center; background: var(--fill); color: var(--label); text-decoration: none; transition: transform 100ms ease, background-color 120ms ease; }
+.pv-accion:active { transform: scale(0.92); }
+.pv-accion--wa { background: var(--green-tint); color: var(--green-ink); }
+.pv-accion--mail { background: var(--blue-tint); color: var(--blue-ink); }
+.pv-contador { flex-shrink: 0; font-size: 0.75rem; font-weight: 600; color: var(--label-2); background: var(--fill); border-radius: 999px; padding: 0.15rem 0.55rem; }
+
+/* Ficha del proveedor (ventana) */
+.pv-ficha { display: flex; flex-direction: column; gap: var(--s-5); }
+.pv-hero { display: flex; flex-direction: column; align-items: center; gap: var(--s-1); text-align: center; padding-top: var(--s-1); }
+.pv-hero h3 { margin: var(--s-2) 0 0; font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; color: var(--label); }
+.pv-hero__sub { font-size: 0.875rem; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.pv-seccion h4 { margin: 0 var(--s-3) var(--s-1); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--label-2); }
+.pv-tarjeta { list-style: none; margin: 0; padding: 0; background: var(--surface-sunken); border-radius: var(--r-lg); overflow: hidden; box-shadow: inset 0 0 0 1px var(--separator); }
+.pv-tarjeta > li { display: flex; align-items: center; gap: var(--s-3); padding: 0.6rem var(--s-4); }
+.pv-tarjeta > li + li { box-shadow: inset 0 1px 0 var(--separator); }
+.pv-dato { display: flex; justify-content: space-between; gap: var(--s-4); font-size: 0.9375rem; }
+.pv-dato span:first-child { color: var(--label-2); flex-shrink: 0; }
+.pv-dato span:last-child { color: var(--label); text-align: right; word-break: break-word; }
+.pv-mono { font-variant-numeric: tabular-nums; }
+.pv-estrella { color: var(--amber-ink, #b25e00); }
+.pv-vacio { margin: 0; padding: var(--s-4); text-align: center; font-size: 0.875rem; color: var(--label-2); }

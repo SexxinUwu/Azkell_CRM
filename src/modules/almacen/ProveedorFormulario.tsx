@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Star, Trash2 } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Field, TextInput } from '../../core/ui/Field';
@@ -8,7 +8,7 @@ import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { BANCOS_PERU, tieneYapePlin } from './bancosPeru';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
-import { guardarProveedor, type CuentaProveedor, type ProveedorInv } from './api';
+import { guardarProveedor, type ContactoProveedor, type CuentaProveedor, type ProveedorInv } from './api';
 
 interface Props {
   open: boolean;
@@ -47,18 +47,22 @@ const nuevaFila = (c: Partial<CuentaProveedor> = {}): FilaCuenta => ({
   detraccion: !!c.detraccion,
 });
 
+// Cada contacto es una fila del formulario
+type FilaContacto = ContactoProveedor & { key: string };
+const nuevoContacto = (c: Partial<ContactoProveedor> = {}, principal = false): FilaContacto => ({
+  key: `con${++secuenciaFila}`, id: c.id, nombre: c.nombre ?? '', cargo: c.cargo ?? '', telefono: c.telefono ?? '', email: c.email ?? '', principal: c.principal ?? principal,
+});
+
 export function ProveedorFormulario({ open, proveedor: p, inicial, onClose, onGuardado }: Props) {
   const toast = useToast();
   const [guardando, setGuardando] = useState(false);
   const [consultando, setConsultando] = useState(false);
-  const [pestana, setPestana] = useState<'datos' | 'cuentas'>('datos');
+  const [pestana, setPestana] = useState<'datos' | 'cuentas' | 'contactos'>('datos');
 
   const [tipoDoc, setTipoDoc] = useState('RUC');
   const [nombre, setNombre] = useState('');
   const [ruc, setRuc] = useState('');
-  const [contacto, setContacto] = useState('');
-  const [telefono, setTelefono] = useState('');
-  const [correo, setCorreo] = useState('');
+  const [contactos, setContactos] = useState<FilaContacto[]>([]);
   const [direccion, setDireccion] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [cuentas, setCuentas] = useState<FilaCuenta[]>([]);
@@ -70,15 +74,13 @@ export function ProveedorFormulario({ open, proveedor: p, inicial, onClose, onGu
       setTipoDoc(p.tipo_documento ?? 'RUC');
       setNombre(p.nombre ?? '');
       setRuc(p.ruc ?? '');
-      setContacto(p.contacto ?? '');
-      setTelefono(p.telefono ?? '');
-      setCorreo(p.correo ?? '');
+      setContactos((p.contactos ?? []).map(c => nuevoContacto(c)));
       setDireccion(p.direccion ?? '');
       setObservaciones(p.observaciones ?? '');
       setCuentas((p.cuentas ?? []).map(c => nuevaFila(c)));
     } else {
       setTipoDoc('RUC');
-      setNombre(inicial?.nombre ?? ''); setRuc(inicial?.ruc ?? ''); setContacto(''); setTelefono(''); setCorreo('');
+      setNombre(inicial?.nombre ?? ''); setRuc(inicial?.ruc ?? ''); setContactos([]);
       setDireccion(''); setObservaciones(''); setCuentas([]);
     }
   }, [open, p, inicial?.nombre, inicial?.ruc]);
@@ -120,17 +122,23 @@ export function ProveedorFormulario({ open, proveedor: p, inicial, onClose, onGu
     setCuentas(filas => filas.map(f => (f.key === key ? { ...f, ...cambios } : f)));
   }
 
+  function cambiarContacto(key: string, cambios: Partial<ContactoProveedor>) {
+    setContactos(filas => filas.map(f => (f.key === key ? { ...f, ...cambios } : f)));
+  }
+  function hacerPrincipal(key: string) {
+    setContactos(filas => filas.map(f => ({ ...f, principal: f.key === key })));
+  }
+
   async function guardar() {
     if (!nombre.trim()) { toast('El nombre es obligatorio', 'error'); setPestana('datos'); return; }
+    if (contactos.some(c => !c.nombre.trim() && (c.telefono || c.email))) { toast('Cada contacto necesita un nombre', 'error'); setPestana('contactos'); return; }
     setGuardando(true);
     try {
       const res = (await guardarProveedor({
         nombre: nombre.trim(),
         tipo_documento: tipoDoc,
         ruc: ruc || null,
-        contacto: contacto || null,
-        telefono: telefono || null,
-        correo: correo || null,
+        contactos: contactos.filter(c => c.nombre.trim()).map(({ key: _key, ...c }) => ({ ...c, nombre: c.nombre.trim(), cargo: c.cargo || null, telefono: c.telefono || null, email: c.email || null })),
         direccion: direccion || null,
         observaciones: observaciones || null,
         cuentas: cuentas.map(({ key: _key, ...c }) => ({ ...c, banco: c.banco || null, numero_cuenta: c.numero_cuenta || null, cci: c.cci || null })),
@@ -154,7 +162,8 @@ export function ProveedorFormulario({ open, proveedor: p, inicial, onClose, onGu
           onChange={setPestana}
           options={[
             { value: 'datos', label: 'Datos' },
-            { value: 'cuentas', label: cuentas.length ? `Cuentas bancarias (${cuentas.length})` : 'Cuentas bancarias' },
+            { value: 'cuentas', label: cuentas.length ? `Cuentas (${cuentas.length})` : 'Cuentas' },
+            { value: 'contactos', label: contactos.length ? `Contactos (${contactos.length})` : 'Contactos' },
           ]}
         />
 
@@ -178,19 +187,6 @@ export function ProveedorFormulario({ open, proveedor: p, inicial, onClose, onGu
               Consultar RUC / DNI
             </Button>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
-              <Field label="Contacto">
-                {pp => <TextInput {...pp} value={contacto} placeholder="Nombre del asesor" onChange={ev => setContacto(ev.target.value)} />}
-              </Field>
-              <Field label="Teléfono">
-                {pp => <TextInput {...pp} value={telefono} placeholder="+51 999 999 999" onChange={ev => setTelefono(ev.target.value)} />}
-              </Field>
-            </div>
-
-            <Field label="Correo">
-              {pp => <TextInput {...pp} type="email" value={correo} placeholder="proveedor@email.com" onChange={ev => setCorreo(ev.target.value)} />}
-            </Field>
-
             <Field label="Dirección">
               {pp => <TextInput {...pp} value={direccion} placeholder="Dirección física" onChange={ev => setDireccion(ev.target.value)} />}
             </Field>
@@ -198,6 +194,45 @@ export function ProveedorFormulario({ open, proveedor: p, inicial, onClose, onGu
             <Field label="Observaciones">
               {pp => <TextInput {...pp} value={observaciones} placeholder="Notas adicionales" onChange={ev => setObservaciones(ev.target.value)} />}
             </Field>
+          </>
+        )}
+
+        {pestana === 'contactos' && (
+          <>
+            <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--label-2)' }}>
+              Los asesores de esta empresa. El RUC se registra una sola vez; aquí agregas todas las personas con quien se trata.
+            </p>
+            {contactos.map(c => (
+              <div key={c.key} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)', padding: 'var(--s-3)', borderRadius: 'var(--r-md)', background: 'var(--fill-subtle)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
+                  <Field label="Nombre">
+                    {pp => <TextInput {...pp} value={c.nombre} placeholder="Nombre del asesor" onChange={ev => cambiarContacto(c.key, { nombre: ev.target.value })} />}
+                  </Field>
+                  <Field label="Cargo / área">
+                    {pp => <TextInput {...pp} value={c.cargo ?? ''} placeholder="Ventas, cobranzas…" onChange={ev => cambiarContacto(c.key, { cargo: ev.target.value })} />}
+                  </Field>
+                  <Field label="Teléfono">
+                    {pp => <TextInput {...pp} inputMode="tel" value={c.telefono ?? ''} placeholder="999 999 999" onChange={ev => cambiarContacto(c.key, { telefono: ev.target.value })} />}
+                  </Field>
+                  <Field label="Correo">
+                    {pp => <TextInput {...pp} type="email" value={c.email ?? ''} placeholder="asesor@empresa.com" onChange={ev => cambiarContacto(c.key, { email: ev.target.value })} />}
+                  </Field>
+                </div>
+                <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+                  <Button variant={c.principal ? 'secondary' : 'plain'} size="sm" icon={<Star size={15} />} onClick={() => hacerPrincipal(c.key)}>
+                    {c.principal ? 'Contacto principal' : 'Hacer principal'}
+                  </Button>
+                  <Button variant="plain" size="sm" icon={<Trash2 size={15} />} onClick={() => setContactos(filas => filas.filter(f => f.key !== c.key))}>
+                    Quitar
+                  </Button>
+                </div>
+              </div>
+            ))}
+            <div>
+              <Button variant="secondary" icon={<Plus size={16} />} onClick={() => setContactos(filas => [...filas, nuevoContacto({}, filas.length === 0)])}>
+                Agregar contacto
+              </Button>
+            </div>
           </>
         )}
 
