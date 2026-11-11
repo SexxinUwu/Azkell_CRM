@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
-import { AlertTriangle, Check, Disc3, Download, Minus, Pencil, Share2, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Check, Disc3, FileText, MessageCircle, Minus, Pencil, Trash2, X } from 'lucide-react';
+import '../../core/ui/acciones-iconos.css';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { useQueryClient } from '@tanstack/react-query';
@@ -13,10 +14,10 @@ import { spring } from '../../core/lib/motion';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { Notice } from '../../core/ui/Display';
 import { InspeccionDetalleSheet } from '../mantenimiento/NeumaticosDetalleSheet';
-import { compartirPDF, descargarArchivo } from '../../core/lib/pdf';
+import { compartirPDF } from '../../core/lib/pdf';
 import { VisorFotos, type FotoVisor } from '../../core/ui/VisorFotos';
 import { clavePlaca, useFotosFirmadas, useInspeccionesNeumaticos, type Inspeccion, type PuntoRevisado } from './api';
-import { pdfInspeccion } from './inspeccionPdf';
+import { abrirPdfInspeccion, pdfInspeccion } from './inspeccionPdf';
 
 const fechaLarga = (d: Date | null) => (d ? d.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : 'Sin fecha');
 
@@ -46,8 +47,6 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
     const lista: FotoVisor[] = (i?.puntos ?? []).filter(p => p.foto).map(p => ({ url: ver(p.foto), titulo: p.item })).filter(f => f.url);
     setVisor({ lista, i: Math.max(0, lista.findIndex(f => f.url === ver(foto))) });
   };
-  // El PDF necesita las fotos ya firmadas: si todavía se están firmando, los botones esperan
-  const fotosListas = fotos.length === 0 || !firmadas.isPending;
 
   // Inspección de neumáticos asociada: misma placa y dentro de 35 días de esta inspección (como el clásico)
   const neu = useInspeccionesNeumaticos();
@@ -76,13 +75,13 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
   }, [i]);
 
   // Acciones: PDF oficial y WhatsApp (las OT se generan desde Reporte de fallas)
-  const generarPdf = () => pdfInspeccion({ inspeccion: i!, fotos: firmadas.data ?? {}, usuario: user?.name ?? '' });
+  // El servidor genera el PDF y descarga él mismo las fotos: no hay que esperar a que se firmen en la pantalla
   const nombreArchivo = i ? `Inspeccion-${i.placa}-${i.id}.pdf` : 'Inspeccion.pdf';
   const descargar = async () => {
     if (!i) return;
     setOcupado(true); setAviso(null);
     try {
-      descargarArchivo(await generarPdf(), nombreArchivo);
+      await abrirPdfInspeccion({ inspeccion: i, usuario: user?.name ?? '' });
     } catch (err) {
       console.error('PDF de inspección:', err);
       setAviso({ tono: 'error', texto: 'No se pudo generar el PDF. Intenta de nuevo.' });
@@ -92,7 +91,7 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
     if (!i) return;
     setOcupado(true); setAviso(null);
     try {
-      await compartirPDF(await generarPdf(), nombreArchivo, `Informe técnico de la inspección ${i.id} · placa ${i.placa}`);
+      await compartirPDF(await pdfInspeccion({ inspeccion: i, usuario: user?.name ?? '' }), nombreArchivo, `Informe técnico de la inspección ${i.id} · placa ${i.placa}`);
     } catch (err) {
       console.error('WhatsApp de inspección:', err);
       setAviso({ tono: 'error', texto: 'No se pudo preparar el PDF para WhatsApp.' });
@@ -160,8 +159,10 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
             </motion.div>
 
             <div className="insp-acciones">
-              <Button variant="secondary" icon={<Download size={16} />} onClick={descargar} disabled={ocupado || !fotosListas}>PDF</Button>
-              <Button variant="secondary" icon={<Share2 size={16} />} onClick={whatsapp} disabled={ocupado || !fotosListas}>WhatsApp</Button>
+              <div className="acciones-iconos acciones-iconos--sinfondo">
+                <button type="button" className="acciones-iconos__boton acciones-iconos__boton--rojo" data-tip="Abrir PDF" aria-label="Abrir PDF" onClick={descargar} disabled={ocupado}><FileText size={22} /></button>
+                <button type="button" className="acciones-iconos__boton acciones-iconos__boton--whatsapp" data-tip="Compartir por WhatsApp" aria-label="Compartir por WhatsApp" onClick={whatsapp} disabled={ocupado}><MessageCircle size={22} /></button>
+              </div>
             </div>
             {neuAsociada && (
               <div className="insp-neu-asociada">

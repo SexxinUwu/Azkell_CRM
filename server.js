@@ -3292,6 +3292,8 @@ app.use('/api', seguridadRoutes);
 app.use('/api', require('./routes/papeletas')(db, logAudit));
 // Notas de crédito de proveedores (Tesorería): saldo a favor que se aplica al pago de órdenes de compra
 app.use('/api', require('./routes/notas_credito_proveedor')(db, logAudit));
+// PDF del informe de inspección (HTML del cliente convertido con Chromium; las fotos las incrusta el servidor)
+app.use('/api', require('./routes/inspeccion_pdf')());
 
 const mantenimientoRoutes = require('./routes/mantenimiento')(db, logAudit);
 app.use('/api/mantenimiento', mantenimientoRoutes);
