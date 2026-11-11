@@ -27,7 +27,7 @@ import { centrosActivos, centroSugerido, motivoDeSubMotivo, motivosDe, subMotivo
 import { useCentrosCostos, useMotivosGastos } from '../tesoreria/api';
 import { EscanerQr } from './EscanerQr';
 import { ProveedorFormulario } from './ProveedorFormulario';
-import { AvisoSaldoFavor, sumaSaldo } from '../tesoreria/AvisoSaldoFavor';
+import { AvisoSaldoFavor, compensacion } from '../tesoreria/AvisoSaldoFavor';
 import { useNcDeProveedor } from '../tesoreria/nc-api';
 import { InventarioFormulario } from './InventarioFormulario';
 import './entradas.css';
@@ -141,6 +141,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
     });
   const listaOpc = (lista: string[]): ComboboxOption[] => lista.map(v => ({ value: v, label: v }));
   const [proveedorId, setProveedorId] = useState<string | null>(null);
+  const [ncMarcadas, setNcMarcadas] = useState<number[]>([]);
   const [cuentaProv, setCuentaProv] = useState('');
   const [cuentaEmpresa, setCuentaEmpresa] = useState('');
   const [condicion, setCondicion] = useState<string>('Al contado');
@@ -197,6 +198,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       setMotivoGasto(naturaleza);
       setSubMotivo(sub && subs.includes(sub) ? sub : (subs[0] ?? ''));
       setProveedorId(e.proveedor_id ?? null);
+      try { const ids = JSON.parse(e.nc_sugeridas || '[]'); setNcMarcadas(Array.isArray(ids) ? ids.map(Number) : []); } catch { setNcMarcadas([]); }
       setCuentaProv(e.cuenta_bancaria_proveedor ?? '');
       setCuentaEmpresa(e.cuenta_bancaria_empresa ?? '');
       setCondicion(e.condicion_pago ?? 'Al contado');
@@ -498,6 +500,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       placa: (servicio ? otPlaca : placa) || null,
       ot_id: servicio ? (otId || null) : null,
       documento_referencia: e?.documento_referencia ?? null,
+      nc_sugeridas: ncMarcadas.filter(id => notasFavor.some(n => n.id === id)),
       estado_factura: e?.estado_factura ?? 'Factura Pendiente',
       moneda,
       tipo_cambio: tc || null,
@@ -547,10 +550,10 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
           <span>IGV 18 % <strong className="oc-pie__igv">{dinero(igv)}</strong></span>
         </div>
       )}
-      {sumaSaldo(notasFavor) > 0 && total > 0 && (
+      {ncMarcadas.length > 0 && total > 0 && (
         <div className="oc-pie__desglose">
-          <span>A favor <strong>{dinero(sumaSaldo(notasFavor))}</strong></span>
-          <span>A pagar al descontarlo <strong className="oc-pie__igv">{dinero(Math.max(0, Math.round((total - sumaSaldo(notasFavor)) * 100) / 100))}</strong></span>
+          <span>Notas marcadas <strong>− {dinero(compensacion(notasFavor, ncMarcadas, total))}</strong></span>
+          <span>A pagar al descontarlas <strong className="oc-pie__igv">{dinero(Math.max(0, Math.round((total - compensacion(notasFavor, ncMarcadas, total)) * 100) / 100))}</strong></span>
         </div>
       )}
       <div className="oc-pie__total">
@@ -698,7 +701,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
                     tituloHoja="Buscar proveedor"
                     options={opcionesProveedores}
                     value={proveedorId}
-                    onChange={id => { setProveedorId(id); setCuentaProv(''); }}
+                    onChange={id => { setProveedorId(id); setCuentaProv(''); setNcMarcadas([]); }}
                     placeholder="Busca por nombre o RUC…"
                     loading={proveedoresQ.isLoading}
                     onCreate={texto => {
@@ -718,7 +721,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
                 )}
               </Field>
               {notasFavor.length > 0 && (
-                <div className="field field--wide"><AvisoSaldoFavor notas={notasFavor} moneda={moneda} total={totalesLineas(lineas).total} /></div>
+                <div className="field field--wide"><AvisoSaldoFavor notas={notasFavor} moneda={moneda} total={totalesLineas(lineas).total} marcadas={ncMarcadas} onToggle={id => setNcMarcadas(m => (m.includes(id) ? m.filter(x => x !== id) : [...m, id]))} /></div>
               )}
               <Field label="Cuenta bancaria de la empresa" wide>
                 {p => (

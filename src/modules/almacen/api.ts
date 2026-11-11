@@ -179,6 +179,8 @@ export interface EntradaInv {
   /** Quién confirmó el pago y cuándo (los llena Tesorería o Almacén al pagar) */
   pagado_por?: string | null;
   fecha_pago?: string | null;
+  /** JSON con los ids de las notas de crédito que se pidió descontar al pagar */
+  nc_sugeridas?: string | null;
   url_cotizacion?: string | null;
   url_cotizacion_presigned?: string | null;
   url_factura?: string | null;
@@ -229,6 +231,8 @@ export interface PayloadEntrada {
   creado_por: string | null;
   /** undefined: no se cambia; null: se quita */
   url_cotizacion?: string | null;
+  /** Ids de las notas de crédito que se piden descontar al pagar (opcional) */
+  nc_sugeridas?: number[];
   items: ItemEnvio[];
 }
 

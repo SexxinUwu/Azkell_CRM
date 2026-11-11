@@ -149,7 +149,7 @@ export function ConfirmarPagoSheet({ entrada: e, open, onClose, onPagado }: Prop
             {errores.monto && <span className="field__error" role="alert">{errores.monto}</span>}
           </div>
 
-          <AplicarNotasCredito entradaId={e.id} moneda={enDolares ? 'USD' : 'PEN'} importe={importe} onChange={(a, n) => { setNcs(a); setNetoNc(n); }} />
+          <AplicarNotasCredito entradaId={e.id} sugeridas={(() => { try { const x = JSON.parse(e.nc_sugeridas || '[]'); return Array.isArray(x) ? x.map(Number) : []; } catch { return []; } })()} moneda={enDolares ? 'USD' : 'PEN'} importe={importe} onChange={(a, n) => { setNcs(a); setNetoNc(n); }} />
 
           {cuentasQ.isError ? (
             <Notice tone="error">No se pudieron cargar las cuentas bancarias de la empresa.</Notice>

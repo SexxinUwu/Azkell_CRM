@@ -1778,6 +1778,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 ],
                 (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
+                    guardarNcSugeridas(tdb, id, req.body.nc_sugeridas);
                     auditar(tdb, actorDe(req), {
                         action: 'CREATE', entity: 'warehouse-entry', entityId: id,
                         summary: `Registró la entrada ${id} de ${proveedor_nombre || 'proveedor sin nombre'} por ${moneda === 'USD' ? 'US$' : 'S/'} ${Number(total_pen || 0).toFixed(2)}`,
@@ -1962,6 +1963,12 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             next();
         });
     };
+    // Notas de crédito que quien genera la orden pide descontar al pagarla (solo ids; Tesorería las ve marcadas y confirma al pagar)
+    const guardarNcSugeridas = (tdb, id, ncs) => {
+        if (ncs === undefined) return;
+        const ids = Array.isArray(ncs) ? ncs.map(Number).filter(n => Number.isInteger(n) && n > 0) : [];
+        tdb.query('UPDATE entradas_inv SET nc_sugeridas = ? WHERE id = ?', [ids.length ? JSON.stringify(ids) : null, id], (e) => { if (e) console.error('[nc_sugeridas]', e.message); });
+    };
     router.put('/entradas/:id', tcSunatSiFalta, ordenEditable, (req, res) => {
         const tdb = getDb(req);
         const { id } = req.params;
@@ -1998,6 +2005,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
         tdb.query(updateSql, updateParams, (err) => {
                 if (err) return res.status(500).json({ error: err.message });
+                guardarNcSugeridas(tdb, id, req.body.nc_sugeridas);
 
                 // Delete old details
                 tdb.query('DELETE FROM detalle_entradas_inv WHERE entrada_id=?', [id], (errDel) => {

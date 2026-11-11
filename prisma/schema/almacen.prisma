@@ -129,6 +129,7 @@ model EntradaInv {
   prioridad                 String?           @default("Normal") @db.VarChar(30)
   cuenta_bancaria_proveedor String?           @db.VarChar(150)
   cuenta_bancaria_empresa   String?           @db.VarChar(150)
+  nc_sugeridas              String?           @db.VarChar(255)
   solicitante               String?           @db.VarChar(150)
   estado_factura            String?           @default("Pendiente") @db.VarChar(50)
   numero_operacion          String?           @db.VarChar(100)

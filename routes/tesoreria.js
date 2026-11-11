@@ -2323,6 +2323,7 @@ module.exports = function (db, broadcast, logAudit) {
                     ot_id: oc.ot_id || '',
                     observaciones: oc.observaciones || '',
                     documento_referencia: oc.documento_referencia || '',
+                    nc_sugeridas: oc.nc_sugeridas || null,
                     creado_por: oc.creado_por,
                     creador_nombre: creadorNombre,
                     aprobado_por: oc.aprobado_por,

@@ -162,7 +162,7 @@ export function PagoProcesarSheet({ oc, open, onClose }: { oc: OrdenPago | null;
             {errores.monto && <span className="field__error" role="alert">{errores.monto}</span>}
           </div>
 
-          <AplicarNotasCredito entradaId={oc.id} moneda={usd ? 'USD' : 'PEN'} importe={importe} onChange={(a, n) => { setNcs(a); setNetoNc(n); }} />
+          <AplicarNotasCredito entradaId={oc.id} sugeridas={(() => { try { const x = JSON.parse(oc.nc_sugeridas || '[]'); return Array.isArray(x) ? x.map(Number) : []; } catch { return []; } })()} moneda={usd ? 'USD' : 'PEN'} importe={importe} onChange={(a, n) => { setNcs(a); setNetoNc(n); }} />
 
           {bancos.isError ? (
             <Notice tone="error">No se pudieron cargar las cuentas bancarias.</Notice>

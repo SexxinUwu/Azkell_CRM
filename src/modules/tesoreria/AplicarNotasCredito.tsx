@@ -12,11 +12,13 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
  * Bloque del pago de una orden: si el proveedor tiene notas de crédito aprobadas con saldo, se pueden aplicar.
  * Calcula cuánto se compensa y cuánto sale realmente del banco. El servidor vuelve a validar todo al confirmar el pago.
  */
-export function AplicarNotasCredito({ entradaId, moneda, importe, onChange }: {
+export function AplicarNotasCredito({ entradaId, moneda, importe, sugeridas, onChange }: {
   entradaId: string | number | null;
   moneda: 'PEN' | 'USD';
   /** Importe de la orden en la moneda del pago */
   importe: number;
+  /** Ids de las notas que quien generó la orden pidió descontar: llegan ya marcadas */
+  sugeridas?: number[];
   onChange: (aplicaciones: AplicacionElegida[], neto: number) => void;
 }) {
   const q = useNcDisponibles(entradaId, moneda, true);
@@ -40,6 +42,13 @@ export function AplicarNotasCredito({ entradaId, moneda, importe, onChange }: {
   useEffect(() => { onChange(aplicaciones, neto); }, [aplicaciones, neto]); // eslint-disable-line react-hooks/exhaustive-deps
   // Si cambia la moneda o la orden, se parte limpio
   useEffect(() => { setMarcadas(new Set()); }, [entradaId, moneda]);
+  // Cuando llegan las notas disponibles, se marcan las sugeridas (una sola vez por orden)
+  const sugeridasKey = (sugeridas ?? []).join(',');
+  useEffect(() => {
+    if (!notas.length || !sugeridasKey) return;
+    const ids = sugeridasKey.split(',').map(Number);
+    setMarcadas(new Set(notas.filter(n => ids.includes(n.id)).map(n => n.id)));
+  }, [notas, sugeridasKey, entradaId, moneda]);
 
   if (q.isLoading || notas.length === 0) return null;
 
@@ -49,7 +58,7 @@ export function AplicarNotasCredito({ entradaId, moneda, importe, onChange }: {
     <section className="nc-aplicar" aria-label="Notas de crédito del proveedor">
       <header className="nc-aplicar__cab">
         <ReceiptText size={16} aria-hidden />
-        <strong>Este proveedor tiene saldo a favor</strong>
+        <strong>Este proveedor tiene saldo a favor</strong>{sugeridasKey && <span className="nc-aviso__ayuda"> · Almacén pidió descontar las notas marcadas</span>}
       </header>
       <ul className="nc-aplicar__lista">
         {notas.map(n => {

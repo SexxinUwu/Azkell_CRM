@@ -14,6 +14,8 @@ export interface ItemOrden {
 // Forma que devuelve GET /api/tesoreria/pago-requerimientos (routes/tesoreria.js).
 export interface OrdenPago {
   id: string | number;
+  /** JSON con los ids de las notas de crédito que Almacén pidió descontar */
+  nc_sugeridas?: string | null;
   folio?: string | number;
   fecha?: string | null;
   fecha_vencimiento?: string | null;
