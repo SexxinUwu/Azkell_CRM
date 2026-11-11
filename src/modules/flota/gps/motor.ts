@@ -110,7 +110,7 @@ export class MotorTelemetria {
   readonly root: HTMLDivElement;
   readonly mapa: MapaGL;
   tema: TemaMapa;
-  opt: OpcionesMapa = { traffic: false, terrain: !MOVIL(), buildings: true, trails: true, geo: true, smooth: true, models: true, buildingsSat: false };
+  opt: OpcionesMapa = { traffic: false, terrain: false, buildings: true, trails: true, geo: true, smooth: true, models: true, buildingsSat: false };
 
   private mapDiv: HTMLDivElement;
   private tagLayer: HTMLDivElement;
