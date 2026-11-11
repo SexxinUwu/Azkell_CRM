@@ -6,6 +6,7 @@ import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { Letras, letraDe } from '../../core/ui/Agenda';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useMediaQuery } from '../../core/lib/useMediaQuery';
 import { useToast } from '../../core/ui/Toast';
@@ -25,7 +26,6 @@ import { ImportarProveedoresSheet, descargarPlantillaProveedores } from './Impor
 const TONOS = ['#f56300', '#0a84ff', '#30a46c', '#bf5af2', '#ff375f', '#5e5ce6', '#ac8e68', '#0fa3b1'];
 const tono = (s: string) => TONOS[[...s].reduce((a, ch) => a + ch.charCodeAt(0), 0) % TONOS.length];
 const nombreMostrado = (p: ProveedorInv) => p.razon_social?.trim() || p.nombre;
-const letraDe = (s: string) => { const l = s.trim().charAt(0).toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); return /[A-Z]/.test(l) ? l : '#'; };
 
 /** Motivo por el que un proveedor está por regularizar (null si está en regla): sin documento o con un RUC/DNI que no tiene 11 u 8 dígitos */
 function motivoPendiente(p: ProveedorInv): string | null {
@@ -312,25 +312,6 @@ function Contactar({ nombre, telefono, correo }: { nombre: string; telefono?: st
 }
 
 // ─── Lista por letras ────────────────────────────────────────────────────────
-
-function Letras<T>({ items, letra, fila }: { items: T[]; letra: (x: T) => string; fila: (x: T) => React.ReactNode }) {
-  const grupos = useMemo(() => {
-    const m = new Map<string, T[]>();
-    for (const it of items) { const l = letra(it); m.set(l, [...(m.get(l) ?? []), it]); }
-    return [...m.entries()];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items]);
-  return (
-    <div className="pv-lista">
-      {grupos.map(([l, filas]) => (
-        <section key={l} aria-label={`Letra ${l}`}>
-          <div className="pv-letra">{l}</div>
-          <ul className="pv-grupo">{filas.map(fila)}</ul>
-        </section>
-      ))}
-    </div>
-  );
-}
 
 function FilaDirectorio({ nombre, sub, semilla, empresa, telefono, correo, onAbrir }: {
   nombre: string; sub: string; semilla: string; empresa: boolean; telefono?: string | null; correo?: string | null; onAbrir: () => void;

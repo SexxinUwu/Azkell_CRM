@@ -24,7 +24,7 @@ export function ConductorFicha({ conductor, onClose, onEditar, onEliminar }: {
     <Sheet
       open={!!conductor}
       onClose={onClose}
-      title={c?.nombre || 'Conductor'}
+      title={c?.nombre || 'Personal'}
       footer={
         <>
           {onEliminar && c ? (

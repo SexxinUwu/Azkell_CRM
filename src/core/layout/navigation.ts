@@ -202,7 +202,7 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Directorio',
     items: [
-      { key: 'conductores', label: 'Personal (conductores)', to: '/conductores', icon: IdCard, permissions: ver('cond') },
+      { key: 'conductores', label: 'Personal', to: '/conductores', icon: IdCard, permissions: ver('cond') },
       { key: 'clientes', label: 'Clientes', to: '/directorio/clientes', icon: Users, permissions: ver('clientes') },
     ],
   },

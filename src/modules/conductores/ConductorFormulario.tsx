@@ -123,7 +123,7 @@ export function ConductorFormulario({ conductor, existentes, open, onClose, onGu
     <Sheet
       open={open}
       onClose={onClose}
-      title={editando ? 'Editar conductor' : 'Nuevo conductor'}
+      title={editando ? 'Editar persona' : 'Nueva persona'}
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={guardando}>Cancelar</Button>

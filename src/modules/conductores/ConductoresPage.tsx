@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { FileSpreadsheet, IdCard, MessageCircle, Phone, Plus, SearchX } from 'lucide-react';
+import { FileSpreadsheet, MessageCircle, Phone, Plus, SearchX } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -9,6 +9,9 @@ import { SearchField } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { MultiSelect } from '../../core/ui/MultiSelect';
 import { ConfirmSheet } from '../../core/ui/Sheet';
+import { Letras, letraDe } from '../../core/ui/Agenda';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
+import { useMediaQuery } from '../../core/lib/useMediaQuery';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
@@ -23,6 +26,19 @@ import { ConductorFormulario } from './ConductorFormulario';
 import { ImportarConductores } from './ImportarConductores';
 import { FotoConductor } from './FotoConductor';
 import './conductores.css';
+import '../almacen/proveedores.css'; // lista por letras compartida con Proveedores
+
+/** Llamar y WhatsApp sin abrir la ficha */
+function Contactar({ nombre, telefono }: { nombre: string; telefono: string }) {
+  const tel = telefono.trim(); const wa = whatsapp(tel);
+  if (!tel) return <span style={{ color: 'var(--label-3)' }}>—</span>;
+  return (
+    <span className="pv-fila__acciones" onClick={e => e.stopPropagation()}>
+      <a className="pv-accion pv-accion--chica" href={`tel:${tel.replace(/\s/g, '')}`} aria-label={`Llamar a ${nombre}`}><Phone size={14} /></a>
+      {wa && <a className="pv-accion pv-accion--chica pv-accion--wa" href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" aria-label={`WhatsApp a ${nombre}`}><MessageCircle size={14} /></a>}
+    </span>
+  );
+}
 
 // Estados del clásico: Activo, Cesado y Bloqueado (Inactivo se conserva para registros antiguos)
 type FiltroEstado = 'todos' | 'activos' | 'cesados' | 'bloqueados' | 'inactivos';
@@ -42,13 +58,24 @@ const exportarConductores = (filas: Conductor[]) => exportarExcel('Directorio_Pe
     c.estado,
   ]));
 
-// Directorio › Conductores: consulta, alta, edición, importación y eliminación.
+const COLUMNAS: ColumnaTabla[] = [
+  { id: 'nombre', titulo: 'Nombre', ancho: 300, minimo: 180 },
+  { id: 'empresa', titulo: 'Empresa', ancho: 240, minimo: 140 },
+  { id: 'dni', titulo: 'DNI', ancho: 110 },
+  { id: 'licencia', titulo: 'Licencia', ancho: 130 },
+  { id: 'telefono', titulo: 'Teléfono', ancho: 130 },
+  { id: 'estado', titulo: 'Estado', ancho: 110, alinear: 'center' },
+  { id: 'acciones', titulo: '', ancho: 100, alinear: 'center' },
+];
+
+// Directorio › Personal: consulta, alta, edición, importación y eliminación. Tabla en pantalla ancha y lista por letras en el celular.
 export function ConductoresPage() {
   const { data, isLoading, isError, error } = useConductores();
   const { can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
   const reduce = useReducedMotion();
+  const ancha = useMediaQuery('(min-width: 900px)');
   const [busqueda, setBusqueda] = useState('');
   const [estado, setEstado] = useState<FiltroEstado>('todos');
   const [empresas, setEmpresas] = useState<string[]>([]);
@@ -104,16 +131,16 @@ export function ConductoresPage() {
     <Page>
       <PageHeader
         eyebrow="Directorio"
-        title="Conductores"
+        title="Personal"
         subtitle={isLoading ? 'Cargando…' : `${conductores.length} personas · ${resumen.activos} activas`}
         actions={
           <>
             <MenuOtros opciones={[
               { label: 'Exportar Excel', detalle: `${visibles.length} ${visibles.length === 1 ? 'persona' : 'personas'} con los filtros actuales`, icon: <FileSpreadsheet size={17} />,
                 onSelect: () => exportarConductores(visibles).catch(err => toast(errorMessage(err), 'error')) },
-              puedeCrear && { label: 'Importar desde Excel', detalle: 'Agrega conductores en lote', icon: <FileSpreadsheet size={17} />, onSelect: () => setImportando(true) },
+              puedeCrear && { label: 'Importar desde Excel', detalle: 'Agrega personal en lote', icon: <FileSpreadsheet size={17} />, onSelect: () => setImportando(true) },
             ]} />
-            {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ conductor: null })}>Nuevo conductor</Button>}
+            {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ conductor: null })}>Nueva persona</Button>}
           </>
         }
       />
@@ -158,41 +185,46 @@ export function ConductoresPage() {
           </p>
 
           {visibles.length === 0 ? (
-            <EmptyState icon={<SearchX size={22} />} title="No hay conductores con esos filtros">Prueba con otra búsqueda o quita los filtros.</EmptyState>
+            <EmptyState icon={<SearchX size={22} />} title="No hay personal con esos filtros">Prueba con otra búsqueda o quita los filtros.</EmptyState>
           ) : (
-            <motion.ul className="conductores-grid" layout={!reduce}>
-              <AnimatePresence mode="popLayout" initial={!reduce}>
-                {visibles.map((c, i) => {
-                  const wa = whatsapp(c.telefono);
-                  return (
-                    <motion.li key={c.id} layout={!reduce}
-                      initial={{ opacity: 0, y: 14, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
-                      transition={{ ...spring, delay: reduce ? 0 : Math.min(i, 12) * 0.025 }}>
-                      <div className="conductor-card">
-                        <button type="button" className="conductor-card__principal pressable" onClick={() => setAbierto(c)}>
-                          <FotoConductor conductor={c} size={52} />
-                          <div className="conductor-card__texto">
-                            <div className="conductor-card__nombre">{c.nombre || 'Sin nombre'}</div>
-                            <div className="conductor-card__meta">
-                              <IdCard size={13} />
-                              <span>{[c.dni && `DNI ${c.dni}`, c.licencia].filter(Boolean).join(' · ') || 'Sin documentos'}</span>
-                            </div>
-                            <div className="conductor-card__empresa">{c.empresa ? nombreEmpresa(c.empresa) : 'Sin empresa'}</div>
-                          </div>
-                          {!activo(c) && <span className="placa-estado placa-estado--off">{c.estado}</span>}
-                        </button>
-                        {(c.telefono || wa) && (
-                          <div className="conductor-card__acciones">
-                            {c.telefono && <a className="conductor-accion pressable" href={`tel:${c.telefono.replace(/\s/g, '')}`} aria-label={`Llamar a ${c.nombre}`}><Phone size={16} /></a>}
-                            {wa && <a className="conductor-accion conductor-accion--wa pressable" href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" aria-label={`WhatsApp a ${c.nombre}`}><MessageCircle size={16} /></a>}
-                          </div>
-                        )}
+            ancha ? (
+              <TablaRedimensionable id="directorio-personal" columnas={COLUMNAS} ariaLabel="Personal" altoMax="68vh">
+                {visibles.map(c => (
+                  <tr key={c.id} className="pv-tr" onClick={() => { haptic('selection'); setAbierto(c); }}>
+                    <Celda><span className="pv-celda-nombre"><FotoConductor conductor={c} size={28} /><button type="button" className="oc-codigo">{c.nombre || 'Sin nombre'}</button></span></Celda>
+                    <Celda>{c.empresa ? nombreEmpresa(c.empresa) : '—'}</Celda>
+                    <Celda mono>{c.dni || '—'}</Celda>
+                    <Celda mono>{c.licencia || '—'}</Celda>
+                    <Celda mono>{c.telefono || '—'}</Celda>
+                    <Celda alinear="center"><span className={`placa-estado placa-estado--${activo(c) ? 'on' : 'off'}`}>{c.estado}</span></Celda>
+                    <Celda alinear="center">
+                      <Contactar nombre={c.nombre} telefono={c.telefono} />
+                    </Celda>
+                  </tr>
+                ))}
+              </TablaRedimensionable>
+            ) : (
+              <Letras items={visibles} letra={c => letraDe(c.nombre)} fila={c => {
+                const wa = whatsapp(c.telefono);
+                return (
+                  <li key={c.id} className="pv-fila">
+                    <button type="button" className="pv-fila__principal" onClick={() => { haptic('selection'); setAbierto(c); }}>
+                      <FotoConductor conductor={c} size={40} />
+                      <span className="pv-fila__texto">
+                        <span className="pv-fila__nombre">{c.nombre || 'Sin nombre'}</span>
+                        <span className="pv-fila__sub">{[c.empresa ? nombreEmpresa(c.empresa) : null, c.dni && `DNI ${c.dni}`, !activo(c) ? c.estado : null].filter(Boolean).join(' · ') || 'Sin datos'}</span>
+                      </span>
+                    </button>
+                    {(c.telefono || wa) && (
+                      <div className="pv-fila__acciones">
+                        {c.telefono && <a className="pv-accion" href={`tel:${c.telefono.replace(/\s/g, '')}`} aria-label={`Llamar a ${c.nombre}`}><Phone size={16} /></a>}
+                        {wa && <a className="pv-accion pv-accion--wa" href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" aria-label={`WhatsApp a ${c.nombre}`}><MessageCircle size={16} /></a>}
                       </div>
-                    </motion.li>
-                  );
-                })}
-              </AnimatePresence>
-            </motion.ul>
+                    )}
+                  </li>
+                );
+              }} />
+            )
           )}
         </>
       )}
@@ -217,8 +249,8 @@ export function ConductoresPage() {
         onConfirm={eliminar}
         loading={eliminando}
         title={`¿Eliminar a ${porEliminar?.nombre ?? ''}?`}
-        message="Se borra del directorio de conductores. Los viajes, vales y registros que ya tiene no se modifican. Esta acción no se puede deshacer."
-        confirmLabel="Eliminar conductor"
+        message="Se borra del directorio de personal. Los viajes, vales y registros que ya tiene no se modifican. Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
       />
     </Page>
   );
