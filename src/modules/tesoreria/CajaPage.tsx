@@ -93,7 +93,7 @@ export function CajaPage() {
         subtitle={isLoading ? 'Cargando…' : `${lista.length} movimientos · ${resumen.pendientes} por aprobar · ${periodo}`}
         actions={
           <>
-            <div className="acciones-iconos" role="group" aria-label="Acciones de caja">
+            <div className="acciones-iconos acciones-iconos--sinfondo" role="group" aria-label="Acciones de caja">
               <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Exportar Excel"
                 aria-label="Exportar Excel" icon={<FileSpreadsheet size={17} />} onClick={exportar} />
               <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Bancos"

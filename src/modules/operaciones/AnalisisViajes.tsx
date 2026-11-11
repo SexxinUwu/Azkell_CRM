@@ -731,7 +731,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
         title={urea ? 'Análisis de urea' : 'Análisis de combustible'}
         subtitle={datos.isLoading ? 'Cargando…' : `${visibles.length} viajes · ${resumen.pendientes} sin auditar`}
         actions={
-          <div className="acciones-iconos">
+          <div className="acciones-iconos acciones-iconos--sinfondo">
             <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--verde"
               data-tip="Exportar Excel" aria-label="Exportar Excel" onClick={() => exportar()}>
               <FileSpreadsheet size={17} />

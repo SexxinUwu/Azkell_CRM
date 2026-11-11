@@ -166,7 +166,7 @@ export function InspeccionesPage() {
         subtitle={cargando ? 'Cargando…' : `${total} unidades en operación · ${(insp.data ?? []).length} inspecciones registradas`}
         actions={
           <>
-            <div className="acciones-iconos">
+            <div className="acciones-iconos acciones-iconos--sinfondo">
               {can('insp.crear') && (
                 <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Importar Excel" aria-label="Importar Excel" onClick={() => setImportando(true)}>
                   <Upload size={17} />

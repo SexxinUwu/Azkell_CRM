@@ -182,7 +182,7 @@ export function IncidenciasPage() {
   }));
 
   const acciones: ReactNode = vista === 'matriz' ? (
-    <div className="acciones-iconos">
+    <div className="acciones-iconos acciones-iconos--sinfondo">
       {puedeCrear && <Accion tip="Registrar incidencia" tono="verde" icono={<Plus size={18} />} onClick={() => { haptic('selection'); setFormulario({ incidencia: null }); }} />}
       {puedeCrear && <Accion tip="Importar desde Excel" tono="violeta" icono={<FileUp size={18} />} onClick={() => { haptic('selection'); setImportando(true); }} />}
       <Accion tip="Descargar plantilla Excel" tono="azul" icono={<FileDown size={18} />} onClick={() => { haptic('selection'); descargarPlantillaIncidencias(); }} />

@@ -229,7 +229,7 @@ export function InventarioPage() {
   ];
 
   const botonesAcciones = (
-    <div className="acciones-iconos">
+    <div className="acciones-iconos acciones-iconos--sinfondo">
       {accionesIconos.map(a => (
         <button key={a.tip} type="button" className={`acciones-iconos__boton acciones-iconos__boton--${a.color} inv-accion`}
           data-tip={a.tip} aria-label={a.tip} onClick={a.onSelect}>

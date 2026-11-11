@@ -1,3 +1,4 @@
+import '../../core/ui/acciones-iconos.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, ClipboardList, Coins, Eye, FileDown, FileSpreadsheet, FileText, PackageCheck, PackageMinus, Plus, RefreshCw, SearchX, Trash2 } from 'lucide-react';
@@ -304,7 +305,7 @@ export function SalidasPage() {
         subtitle={subtitulo}
         actions={
           <>
-            <div className="oc-acciones">
+            <div className="oc-acciones oc-acciones--sinfondo">
               <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--verde" data-tip="Exportar a Excel" aria-label="Exportar a Excel" onClick={exportar}>
                 <FileSpreadsheet size={17} />
               </button>

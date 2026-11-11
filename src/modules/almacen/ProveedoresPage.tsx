@@ -85,7 +85,7 @@ export function ProveedoresPage() {
           subtitle={isLoading ? 'Cargando…' : `${proveedores.length} proveedores registrados`}
           actions={
             <>
-              <div className="acciones-iconos" role="group" aria-label="Acciones de proveedores">
+              <div className="acciones-iconos acciones-iconos--sinfondo" role="group" aria-label="Acciones de proveedores">
                 <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Exportar Excel"
                   aria-label="Exportar Excel" icon={<FileSpreadsheet size={17} />}
                   onClick={() => exportarExcel('Proveedores', 'Proveedores',

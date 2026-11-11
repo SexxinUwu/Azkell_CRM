@@ -153,7 +153,7 @@ export function PlacasPage() {
         subtitle={isLoading ? 'Cargando unidades…' : `${resumen.total} unidades · ${resumen.motoras} motoras · ${resumen.noMotoras} no motoras`}
         actions={
           <>
-            <div className="acciones-iconos" role="group" aria-label="Acciones de placas">
+            <div className="acciones-iconos acciones-iconos--sinfondo" role="group" aria-label="Acciones de placas">
               {puedeCrear && (
                 <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Importar desde Excel" aria-label="Importar desde Excel" onClick={() => setImportando(true)}>
                   <Upload size={17} />

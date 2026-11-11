@@ -402,7 +402,7 @@ function AccionIcono({ tip, color, icono, onClick, disabled = false, activo }: {
   tip: string; color: 'verde' | 'azul' | 'violeta' | 'rojo' | 'ambar'; icono: ReactNode; onClick: () => void; disabled?: boolean; activo?: boolean;
 }) {
   return (
-    <button type="button" className={`acciones-iconos__boton acciones-iconos__boton--${color}`} data-tip={tip}
+    <button type="button" className={`acciones-iconos__boton acciones-iconos__boton--libre acciones-iconos__boton--${color}`} data-tip={tip}
       aria-label={tip} aria-pressed={activo} disabled={disabled} onClick={onClick}>
       {icono}
     </button>

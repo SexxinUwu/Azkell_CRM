@@ -1,3 +1,4 @@
+import '../../core/ui/acciones-iconos.css';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Ban, Check, CircleAlert, CreditCard, Eye, FileDown, Package, Paperclip, Pencil, Shield, Trash2, X } from 'lucide-react';
 import { formatFechaPe, formatMoneda } from '../../core/lib/format';
@@ -136,7 +137,7 @@ export function EntradaDetalle({
       </header>
 
       {/* Acciones principales */}
-      <div className="oc-acciones">
+      <div className="oc-acciones oc-acciones--sinfondo">
         {onEditar && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Editar orden" aria-label="Editar orden" onClick={onEditar}><Pencil size={17} /></button>}
         <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Adjuntos y sustentos" aria-label="Adjuntos y sustentos" onClick={onAdjuntos}><Paperclip size={17} /></button>
         {onConfirmarPago && pagable && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Confirmar pago" aria-label="Confirmar pago" onClick={onConfirmarPago}><CreditCard size={17} /></button>}

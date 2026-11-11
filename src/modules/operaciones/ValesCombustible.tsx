@@ -217,7 +217,7 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
         subtitle={q.isLoading ? 'Cargando…' : `${k?.totalVales ?? 0} vales`}
         actions={
           <>
-            <div className="acciones-iconos">
+            <div className="acciones-iconos acciones-iconos--sinfondo">
               <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--verde"
                 data-tip="Exportar Excel" aria-label="Exportar Excel" onClick={() => exportar()}>
                 <FileSpreadsheet size={17} />

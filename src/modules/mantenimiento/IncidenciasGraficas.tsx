@@ -72,7 +72,7 @@ export function IncidenciasGraficas() {
           <SelectInput aria-label="Año del tablero" className="inc-graficas__anio" value={anio} onChange={e => setAnio(Number(e.target.value))}>
             {ANIOS.map(a => <option key={a} value={a}>{a}</option>)}
           </SelectInput>
-          <div className="acciones-iconos">
+          <div className="acciones-iconos acciones-iconos--sinfondo">
             <button type="button" className="btn btn--secondary btn--icon acciones-iconos__boton acciones-iconos__boton--rojo"
               data-tip="Exportar PDF" aria-label="Exportar PDF" onClick={imprimir}>
               <Printer size={18} />

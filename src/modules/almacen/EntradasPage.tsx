@@ -1,3 +1,4 @@
+import '../../core/ui/acciones-iconos.css';
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -360,7 +361,7 @@ export function EntradasPage() {
           subtitle={isLoading ? 'Cargando…' : `${entradas.length} ${entradas.length === 1 ? 'orden' : 'órdenes'}${conteo.registradas ? ` · ${conteo.registradas} pendientes de aprobación` : ''}`}
           actions={
             <>
-              <div className="oc-acciones">
+              <div className="oc-acciones oc-acciones--sinfondo">
                 <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--verde" data-tip="Exportar a Excel" aria-label="Exportar a Excel" onClick={exportar}>
                   <FileSpreadsheet size={17} />
                 </button>
