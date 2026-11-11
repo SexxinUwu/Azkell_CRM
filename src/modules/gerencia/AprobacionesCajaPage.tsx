@@ -5,7 +5,9 @@ import { CheckCircle, Coins, Eye, SearchX, XCircle } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { Field, TextInput } from '../../core/ui/Field';
+import { Combobox } from '../../core/ui/Combobox';
+import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { Sheet } from '../../core/ui/Sheet';
 import { api, errorMessage } from '../../core/api/client';
@@ -102,6 +104,8 @@ export function AprobacionesCajaPage() {
   const [hasta, setHasta] = useState('');
   const [motivo, setMotivo] = useState('');
   const [soloBusqueda, setSoloBusqueda] = useState(false);
+  const [filtrando, setFiltrando] = useState(false);
+  const filtrosActivos = (motivo ? 1 : 0) + (desde || hasta ? 1 : 0);
   const [accion, setAccion] = useState<{ id: string | number; tipo: 'aprobar' | 'anular'; resumen: string } | null>(null);
   const [motivoAnulacion, setMotivoAnulacion] = useState('');
   const [procesando, setProcesando] = useState(false);
@@ -265,19 +269,23 @@ export function AprobacionesCajaPage() {
             <Notice tone="success">No hay movimientos pendientes de aprobación.</Notice>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(10rem, 1fr))', gap: 'var(--s-2)' }}>
-            <Field label="Fecha desde">{p => <TextInput {...p} type="date" value={desde} onChange={e => setDesde(e.target.value)} />}</Field>
-            <Field label="Fecha hasta">{p => <TextInput {...p} type="date" value={hasta} onChange={e => setHasta(e.target.value)} />}</Field>
-            <Field label="Motivo">
-              {p => (
-                <SelectInput {...p} value={motivo} onChange={e => setMotivo(e.target.value)}>
-                  <option value="">Todos los Motivos</option>
-                  {motivos.map(m => <option key={m} value={m}>{m}</option>)}
-                </SelectInput>
-              )}
-            </Field>
-          </div>
-          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar por conductor, placa, motivo u OV…" />
+          {/* Barra compacta: búsqueda y Filtros; fechas y motivo van en la hoja */}
+          <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar por conductor, placa, motivo u OV…"
+            activos={filtrosActivos} onAbrirFiltros={() => setFiltrando(true)} />
+          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} resultado={visibles.length} unidad="movimiento"
+            onLimpiar={() => { setDesde(''); setHasta(''); setMotivo(''); }}>
+            <GrupoFiltro titulo="Fechas">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
+                <TextInput type="date" aria-label="Fecha desde" value={desde} onChange={e => setDesde(e.target.value)} />
+                <span className="t-footnote c-secondary">a</span>
+                <TextInput type="date" aria-label="Fecha hasta" value={hasta} onChange={e => setHasta(e.target.value)} />
+              </div>
+            </GrupoFiltro>
+            <GrupoFiltro titulo="Motivo">
+              <Combobox options={motivos.map(m => ({ value: m, label: m }))} value={motivo || null} onChange={v => setMotivo(v ?? '')} enHoja compacta
+                placeholder="Todos los motivos" tituloHoja="Motivo" />
+            </GrupoFiltro>
+          </HojaFiltros>
 
           {visibles.length === 0 ? (
             <EmptyState icon={<SearchX size={22} />} title="Sin coincidencias">

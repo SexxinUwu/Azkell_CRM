@@ -439,7 +439,8 @@ export class Escena3D {
   private calidadInicial(tactil: boolean): number {
     const gpu = this.nombreGpu();
     if (/swiftshader|llvmpipe|software|basic render/i.test(gpu)) return QUALITY.length - 1;
-    return tactil ? 1 : 0;
+    // Antes el escritorio arrancaba en la calidad máxima (píxeles x2 y sombras de 4096): en laptops se trababa al abrir
+    return tactil ? 2 : 1;
   }
 
   private nombreGpu(): string {

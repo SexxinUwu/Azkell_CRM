@@ -5,7 +5,9 @@ import { CalendarCheck, CarFront, ClipboardList, Eye, FileSpreadsheet, FileText,
 import { Button } from '../../core/ui/Button';
 import { MenuFila } from '../../core/ui/MenuFila';
 import { Badge, EmptyState, Notice } from '../../core/ui/Display';
-import { SearchField } from '../../core/ui/Field';
+import { TextInput } from '../../core/ui/Field';
+import { Combobox } from '../../core/ui/Combobox';
+import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { errorMessage } from '../../core/api/client';
 import { formatFechaPe, formatQuantity } from '../../core/lib/format';
@@ -66,12 +68,27 @@ export function CeLista({
   const movil = useMediaQuery(MOBILE_QUERY);
   const [busqueda, setBusqueda] = useState('');
   const [exportando, setExportando] = useState(false);
+  const [filtrando, setFiltrando] = useState(false);
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+  const [motivoF, setMotivoF] = useState('');
+  const [tipoF, setTipoF] = useState('');
+  const filtrosActivos = (desde || hasta ? 1 : 0) + (motivoF ? 1 : 0) + (tipoF ? 1 : 0);
+  const opcionesMotivo = useMemo(() => [...new Set(registros.map(r => (r.motivo || '').trim()).filter(Boolean))].sort().map(v => ({ value: v, label: v })), [registros]);
+  const opcionesTipo = useMemo(() => [...new Set(registros.map(r => (r.tipo || '').trim()).filter(Boolean))].sort().map(v => ({ value: v, label: v })), [registros]);
 
   const visibles = useMemo(() => {
     const q = normalizar(busqueda.trim());
-    if (!q) return registros;
-    return registros.filter(r => normalizar([r.numero_inventario, r.id, r.placa, r.quien_entrega, r.quien_recibe, r.observaciones].join(' ')).includes(q));
-  }, [registros, busqueda]);
+    return registros.filter(r => {
+      if (q && !normalizar([r.numero_inventario, r.id, r.placa, r.quien_entrega, r.quien_recibe, r.observaciones].join(' ')).includes(q)) return false;
+      const f = (r.fecha || '').slice(0, 10);
+      if (desde && f < desde) return false;
+      if (hasta && f > hasta) return false;
+      if (motivoF && (r.motivo || '').trim() !== motivoF) return false;
+      if (tipoF && (r.tipo || '').trim() !== tipoF) return false;
+      return true;
+    });
+  }, [registros, busqueda, desde, hasta, motivoF, tipoF]);
 
   async function exportar() {
     haptic('selection');
@@ -137,9 +154,25 @@ export function CeLista({
 
       <div className="cep-barra">
         <div className="cep-barra__buscar">
-          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Placa, conductor, inventario…" />
+          <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Placa, conductor, inventario…" activos={filtrosActivos} onAbrirFiltros={() => setFiltrando(true)} />
         </div>
         <span className="cep-barra__conteo">{cargando ? 'Cargando…' : `${visibles.length} ${visibles.length === 1 ? 'acta' : 'actas'}`}</span>
+        <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} resultado={visibles.length} unidad="acta"
+          onLimpiar={() => { setDesde(''); setHasta(''); setMotivoF(''); setTipoF(''); }}>
+          <GrupoFiltro titulo="Fecha de la entrega">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
+              <TextInput type="date" aria-label="Desde" value={desde} onChange={e => setDesde(e.target.value)} />
+              <span className="t-footnote c-secondary">a</span>
+              <TextInput type="date" aria-label="Hasta" value={hasta} onChange={e => setHasta(e.target.value)} />
+            </div>
+          </GrupoFiltro>
+          <GrupoFiltro titulo="Motivo">
+            <Combobox options={opcionesMotivo} value={motivoF || null} onChange={v => setMotivoF(v ?? '')} enHoja compacta placeholder="Todos los motivos" tituloHoja="Motivo" />
+          </GrupoFiltro>
+          <GrupoFiltro titulo="Tipo de unidad">
+            <Combobox options={opcionesTipo} value={tipoF || null} onChange={v => setTipoF(v ?? '')} enHoja compacta placeholder="Todos los tipos" tituloHoja="Tipo de unidad" />
+          </GrupoFiltro>
+        </HojaFiltros>
       </div>
 
       {error ? <Notice tone="error">{errorMessage(error)}</Notice> : null}

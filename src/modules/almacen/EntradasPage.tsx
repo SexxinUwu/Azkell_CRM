@@ -6,8 +6,10 @@ import { CircleCheck, ClipboardList, Coins, CreditCard, Download, Eye, FileSprea
 import { exportarConsolidadoOC, exportarDetalleArticulosOC, descargarPlantillaEntradas } from './exportarEntradas';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { TextInput } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { ChoiceChips } from '../../core/ui/Chips';
+import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { MenuOtros, type OpcionOtros } from '../../core/ui/MenuOtros';
@@ -203,6 +205,8 @@ export function EntradasPage() {
   const [desde, setDesde] = useState(() => mesAtras(hoyLima()));
   const [hasta, setHasta] = useState(() => hoyLima());
   const [estado, setEstado] = useState<FiltroEstado>('todas');
+  const [filtrando, setFiltrando] = useState(false);
+  const filtrosActivos = (estado !== 'todas' ? 1 : 0) + (desde !== mesAtras(hoyLima()) || hasta !== hoyLima() ? 1 : 0);
   // Por defecto: una fila por orden de compra (sin duplicados); «Por artículo» muestra cada artículo
   const [vista, setVista] = useState<Vista>('ordenes');
   const [pagina, setPagina] = useState(1);
@@ -404,35 +408,38 @@ export function EntradasPage() {
             <KpiTarjeta etiqueta="Unidades pedidas" valor={kpis.unidades.toLocaleString('es-PE')} sub={`${kpis.proveedores} proveedores`} icono={<Package size={18} />} />
           </div>
 
-          {/* Filtros */}
-          <div className="oc-filtros" style={{ marginBottom: 'var(--s-4)' }}>
-            <SearchField value={busqueda} onChange={setBusqueda} placeholder="Código, proveedor, documento, placa o artículo" />
-            <div className="oc-filtros__fila">
-              <div className="oc-fechas">
-                <TextInput type="date" aria-label="Desde" value={desde} onChange={ev => setDesde(ev.target.value)} />
-                <span className="t-footnote c-secondary">a</span>
-                <TextInput type="date" aria-label="Hasta" value={hasta} onChange={ev => setHasta(ev.target.value)} />
-                <button type="button" className="oc-cotizacion__quitar" aria-label="Quitar fechas"
-                  onClick={() => { setDesde(''); setHasta(''); }}>×</button>
-              </div>
+          {/* Filtros: barra compacta (búsqueda, vista, Filtros) y la hoja con fechas y estado */}
+          <div style={{ marginBottom: 'var(--s-4)' }}>
+            <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Código, proveedor, documento, placa o artículo"
+              activos={filtrosActivos} onAbrirFiltros={() => setFiltrando(true)}>
               <SegmentedControl<Vista> label="Ver por" value={vista} onChange={setVista}
-                options={[{ value: 'ordenes', label: 'Por orden de compra' }, { value: 'articulos', label: 'Por artículo' }]} />
-              <SelectInput aria-label="Estado de la orden" value={estado} onChange={ev => setEstado(ev.target.value as FiltroEstado)} style={{ width: 'auto' }}>
-                <option value="todas">Todas ({conteo.todas})</option>
-                <option value="registradas">Registradas ({conteo.registradas})</option>
-                <option value="aprobadas">Aprobadas ({conteo.aprobadas})</option>
-                <option value="procesadas">Procesadas ({conteo.procesadas})</option>
-                <option value="anuladas">Anuladas ({conteo.anuladas})</option>
-              </SelectInput>
-              <span className="badge" style={{ marginLeft: 'auto' }}>
-                {visibles.length} {visibles.length === 1 ? 'registro' : 'registros'}
-              </span>
-            </div>
+                options={[{ value: 'ordenes', label: 'Por orden' }, { value: 'articulos', label: 'Por artículo' }]} />
+              <span className="badge">{visibles.length} {visibles.length === 1 ? 'registro' : 'registros'}</span>
+            </BarraFiltros>
+            <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} resultado={visibles.length} unidad="registro"
+              onLimpiar={() => { setEstado('todas'); setDesde(mesAtras(hoyLima())); setHasta(hoyLima()); }}>
+              <GrupoFiltro titulo="Fechas">
+                <div className="oc-fechas">
+                  <TextInput type="date" aria-label="Desde" value={desde} onChange={ev => setDesde(ev.target.value)} />
+                  <span className="t-footnote c-secondary">a</span>
+                  <TextInput type="date" aria-label="Hasta" value={hasta} onChange={ev => setHasta(ev.target.value)} />
+                  <button type="button" className="oc-cotizacion__quitar" aria-label="Quitar fechas"
+                    onClick={() => { setDesde(''); setHasta(''); }}>×</button>
+                </div>
+              </GrupoFiltro>
+              <GrupoFiltro titulo="Estado de la orden">
+                <ChoiceChips label="Estado de la orden" value={estado} onChange={v => setEstado(v as FiltroEstado)} options={[
+                  { value: 'todas', label: `Todas (${conteo.todas})` }, { value: 'registradas', label: `Registradas (${conteo.registradas})` },
+                  { value: 'aprobadas', label: `Aprobadas (${conteo.aprobadas})` }, { value: 'procesadas', label: `Procesadas (${conteo.procesadas})` },
+                  { value: 'anuladas', label: `Anuladas (${conteo.anuladas})` },
+                ]} />
+              </GrupoFiltro>
+            </HojaFiltros>
           </div>
 
           {visibles.length === 0 ? (
             <EmptyState icon={<SearchX size={22} />} title="Ninguna orden coincide">
-              <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setDesde(''); setHasta(''); setEstado('todas'); }}>
+              <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setDesde(mesAtras(hoyLima())); setHasta(hoyLima()); setEstado('todas'); }}>
                 Quitar filtros
               </button>
             </EmptyState>

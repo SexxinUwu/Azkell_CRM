@@ -53,7 +53,8 @@ export function PlacasPage() {
   const [filtrando, setFiltrando] = useState(false);
   const [params, setParams] = useSearchParams();
   const vistaParam = params.get('vista');
-  const [vista, setVista] = useState<Vista>(() => (vistaParam === 'tarjetas' ? 'tarjetas' : '3d'));
+  // La vista 3D es la más pesada: se abre solo si se pide (?vista=3d o el botón), para que la pantalla de Placas entre rápido
+  const [vista, setVista] = useState<Vista>(() => (vistaParam === '3d' ? '3d' : 'tarjetas'));
   const [detalle3d, setDetalle3d] = useState(false);
   const [abierta, setAbierta] = useState<Placa | null>(null);
   const [formulario, setFormulario] = useState<{ modo: 'crear' | 'editar'; placa: Placa | null } | null>(null);
