@@ -14,6 +14,7 @@ import { PersonaPicker } from '../../core/ui/PersonaPicker';
 import { ESTADOS_DISP, type VehiculoDisponibilidad } from './api';
 
 const norm = (s: string) => s.trim().toUpperCase();
+const SIN_CONDUCTOR = 'SIN CONDUCTOR';
 
 // Conductores registrados (nombre y DNI), como en la versión actual
 function useConductoresLista() {
@@ -79,6 +80,7 @@ export function DisponibilidadFormulario({ veh, usuario, open, onClose }: {
     return () => { vigente = false; };
   }, [open, camion, carreta, editando, conductorTocado]);
 
+  const sinConductor = conductor.trim().toUpperCase() === SIN_CONDUCTOR;
   const lista = placas.data ?? [];
   const camiones = lista.filter(p => p.motora).map(p => ({ placa: p.placa, detalle: p.cliente }));
   const carretas = lista.filter(p => !p.motora).map(p => ({ placa: p.placa, detalle: p.cliente }));
@@ -126,10 +128,18 @@ export function DisponibilidadFormulario({ veh, usuario, open, onClose }: {
               ? 'Tomado de la última orden de viaje. Puedes cambiarlo.'
               : <>Última orden de viaje: <strong>{sugerido}</strong> <Button variant="plain" onClick={() => { setConductor(sugerido); setConductorTocado(false); }}>Usar este</Button></>
         }>
-          {p => (
-            <PersonaPicker {...p} value={conductor} onChange={v => { setConductorTocado(true); setConductor(v); }} opciones={conductores.data ?? []}
-              placeholder="Elige el conductor" titulo="Buscar conductor" />
-          )}
+          {p => (sinConductor ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+              <span className="badge">Sin conductor</span>
+              <Button variant="plain" onClick={() => { setConductorTocado(true); setConductor(sugerido ?? ''); }}>Elegir un conductor</Button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-1)' }}>
+              <PersonaPicker {...p} value={conductor} onChange={v => { setConductorTocado(true); setConductor(v); }} opciones={conductores.data ?? []}
+                placeholder="Elige el conductor" titulo="Buscar conductor" />
+              <div><Button variant="plain" onClick={() => { setConductorTocado(true); setConductor(SIN_CONDUCTOR); }}>Dejar sin conductor</Button></div>
+            </div>
+          ))}
         </Field>
         <Field label="Estado">
           {p => (

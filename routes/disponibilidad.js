@@ -431,7 +431,8 @@ module.exports = function (db, logAudit) {
         // El conductor de la última orden de viaje no se fija en la tabla: se toma en vivo.
         // Solo se guarda si la persona eligió otro (así un cambio de viaje se refleja solo).
         const sugerido = (await conductorDeUltimoViaje(pDb, cam, 'placa_tracto')) || (await conductorDeUltimoViaje(pDb, car, 'placa_remolque'));
-        const conductorAGuardar = conductor && conductor.toUpperCase() !== sugerido.toUpperCase() ? conductor : '';
+        // «SIN CONDUCTOR» es una elección explícita: se guarda siempre (si no, volvería a salir el conductor del último viaje)
+        const conductorAGuardar = conductor.toUpperCase() === 'SIN CONDUCTOR' ? 'SIN CONDUCTOR' : (conductor && conductor.toUpperCase() !== sugerido.toUpperCase() ? conductor : '');
         const marca = (body.marca || '').trim().toUpperCase();
         const capacidad = (body.capacidad_tanque || '').trim();
         const tipoUnidad = (body.tipo_unidad || '').trim();

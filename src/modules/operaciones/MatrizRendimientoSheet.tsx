@@ -142,6 +142,9 @@ export function MatrizRendimientoPanel({ puedeEditar }: { puedeEditar: boolean }
   const [confg, setConfg] = useState('');
   const [kmDesde, setKmDesde] = useState('');
   const [kmHasta, setKmHasta] = useState('');
+  const [tramo, setTramo] = useState('');
+  const [galDesde, setGalDesde] = useState('');
+  const [galHasta, setGalHasta] = useState('');
   const [filtrando, setFiltrando] = useState(false);
   const [editar, setEditar] = useState<Vacio | null>(null);
   const [borrar, setBorrar] = useState<FilaMatriz | null>(null);
@@ -161,21 +164,30 @@ export function MatrizRendimientoPanel({ puedeEditar }: { puedeEditar: boolean }
     staleTime: 30_000,
   });
 
+  // Consumo (galones) de un tramo de peso: se elige el tramo y el rango; sin tramo no filtra
+  const gd = galDesde.trim() === '' ? null : Number(galDesde), gh = galHasta.trim() === '' ? null : Number(galHasta);
+  const enRangoTramo = (f: FilaMatriz) => {
+    if (!tramo || ((gd === null || Number.isNaN(gd)) && (gh === null || Number.isNaN(gh)))) return true;
+    const v = f[tramo as typeof TRAMOS[number]];
+    if (v === '' || v == null) return false;
+    return (gd === null || Number.isNaN(gd) || num(v) >= gd) && (gh === null || Number.isNaN(gh) || num(v) <= gh);
+  };
   const visibles = useMemo(() => {
     const desde = kmDesde.trim() === '' ? null : Number(kmDesde), hasta = kmHasta.trim() === '' ? null : Number(kmHasta);
     return (matriz.data ?? []).filter(f =>
       (!sentido || f.sentido === sentido) && (!ruta || f.ruta === ruta) && (!motor || f.motor === motor) && (!confg || f.confg === confg) &&
       (desde === null || Number.isNaN(desde) || num(f.km) >= desde) && (hasta === null || Number.isNaN(hasta) || num(f.km) <= hasta) &&
+      enRangoTramo(f) &&
       (!q || `${f.ruta} ${f.motor} ${f.confg}`.toUpperCase().includes(q.toUpperCase())));
-  }, [matriz.data, q, sentido, ruta, motor, confg, kmDesde, kmHasta]);
+  }, [matriz.data, q, sentido, ruta, motor, confg, kmDesde, kmHasta, tramo, galDesde, galHasta]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Valores que existen en cada columna: pocos = botones; muchos = lista con buscador
   const valores = useMemo(() => {
     const u = (k: 'sentido' | 'ruta' | 'motor' | 'confg') => [...new Set((matriz.data ?? []).map(f => String(f[k] ?? '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
     return { sentido: u('sentido'), ruta: u('ruta'), motor: u('motor'), confg: u('confg') };
   }, [matriz.data]);
-  const filtrosActivos = (sentido ? 1 : 0) + (ruta ? 1 : 0) + (motor ? 1 : 0) + (confg ? 1 : 0) + (kmDesde.trim() || kmHasta.trim() ? 1 : 0);
-  const limpiarFiltros = () => { setSentido(''); setRuta(''); setMotor(''); setConfg(''); setKmDesde(''); setKmHasta(''); };
+  const filtrosActivos = (sentido ? 1 : 0) + (ruta ? 1 : 0) + (motor ? 1 : 0) + (confg ? 1 : 0) + (kmDesde.trim() || kmHasta.trim() ? 1 : 0) + (tramo && (galDesde.trim() || galHasta.trim()) ? 1 : 0);
+  const limpiarFiltros = () => { setSentido(''); setRuta(''); setMotor(''); setConfg(''); setKmDesde(''); setKmHasta(''); setTramo(''); setGalDesde(''); setGalHasta(''); };
   /** Hasta 5 valores: botones; más: lista con buscador */
   const selector = (titulo: string, lista: string[], valor: string, cambiar: (v: string) => void) => (
     <GrupoFiltro titulo={titulo}>
@@ -267,6 +279,14 @@ export function MatrizRendimientoPanel({ puedeEditar }: { puedeEditar: boolean }
               <TextInput inputMode="decimal" aria-label="Total km desde" placeholder="Desde" value={kmDesde} onChange={e => setKmDesde(e.target.value)} />
               <span className="t-footnote c-secondary">a</span>
               <TextInput inputMode="decimal" aria-label="Total km hasta" placeholder="Hasta" value={kmHasta} onChange={e => setKmHasta(e.target.value)} />
+            </div>
+          </GrupoFiltro>
+          <GrupoFiltro titulo="Consumo por tramo de peso (galones)">
+            <Combobox options={TRAMOS.map(t => ({ value: t, label: `${ETIQUETA_TRAMO[t]} Tn` }))} value={tramo || null} onChange={v => setTramo(v ?? '')} enHoja compacta placeholder="Elige el tramo de peso" tituloHoja="Tramo de peso" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
+              <TextInput inputMode="decimal" aria-label="Consumo desde" placeholder="Desde" value={galDesde} onChange={e => setGalDesde(e.target.value)} disabled={!tramo} />
+              <span className="t-footnote c-secondary">a</span>
+              <TextInput inputMode="decimal" aria-label="Consumo hasta" placeholder="Hasta" value={galHasta} onChange={e => setGalHasta(e.target.value)} disabled={!tramo} />
             </div>
           </GrupoFiltro>
         </HojaFiltros>
