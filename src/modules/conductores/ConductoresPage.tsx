@@ -1,22 +1,17 @@
 import { useMemo, useState } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { FileSpreadsheet, MessageCircle, Phone, Plus, SearchX } from 'lucide-react';
+import { FileSpreadsheet, MessageCircle, Phone, Plus, SearchX, Upload } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { MenuOtros } from '../../core/ui/MenuOtros';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField } from '../../core/ui/Field';
-import { SegmentedControl } from '../../core/ui/SegmentedControl';
-import { MultiSelect } from '../../core/ui/MultiSelect';
+import { ChoiceChips } from '../../core/ui/Chips';
+import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { Letras, letraDe } from '../../core/ui/Agenda';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useMediaQuery } from '../../core/lib/useMediaQuery';
-import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
-import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
 import { exportarExcel } from '../../core/lib/excel';
@@ -74,11 +69,11 @@ export function ConductoresPage() {
   const { can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
-  const reduce = useReducedMotion();
   const ancha = useMediaQuery('(min-width: 900px)');
   const [busqueda, setBusqueda] = useState('');
   const [estado, setEstado] = useState<FiltroEstado>('todos');
-  const [empresas, setEmpresas] = useState<string[]>([]);
+  const [empresa, setEmpresa] = useState('');
+  const [filtrando, setFiltrando] = useState(false);
   const [abierto, setAbierto] = useState<Conductor | null>(null);
   const [formulario, setFormulario] = useState<{ conductor: Conductor | null } | null>(null);
   const [importando, setImportando] = useState(false);
@@ -90,13 +85,7 @@ export function ConductoresPage() {
   const puedeEliminar = can('cond.eliminar');
 
   const conductores = data ?? [];
-  const resumen = useMemo(() => ({
-    activos: conductores.filter(activo).length,
-    cesados: conductores.filter(c => estadoDe(c) === 'cesado').length,
-    bloqueados: conductores.filter(c => estadoDe(c) === 'bloqueado').length,
-    conLicencia: conductores.filter(c => c.licencia).length,
-    sinDni: conductores.filter(c => !c.dni).length,
-  }), [conductores]);
+  const activas = useMemo(() => conductores.filter(activo).length, [conductores]);
   // Empresas como filtro rápido: las que son la misma (aunque escritas distinto) cuentan como una
   const gruposEmpresa = useMemo(() => agruparEmpresas(conductores.map(c => c.empresa)), [conductores]);
   const nombreEmpresa = (e: string) => gruposEmpresa.find(g => g.clave === claveEmpresa(e))?.nombre ?? e;
@@ -104,10 +93,11 @@ export function ConductoresPage() {
   const visibles = useMemo(() => conductores.filter(c =>
     (estado === 'todos' || (estado === 'activos' ? activo(c) : estado === 'cesados' ? estadoDe(c) === 'cesado'
       : estado === 'bloqueados' ? estadoDe(c) === 'bloqueado' : estadoDe(c) === 'inactivo'))
-    && (!empresas.length || empresas.some(e => claveEmpresa(e) === claveEmpresa(c.empresa)))
+    && (!empresa || claveEmpresa(empresa) === claveEmpresa(c.empresa))
     && coincide(c, busqueda),
-  ), [conductores, estado, empresas, busqueda]);
-  const hayFiltros = !!busqueda || estado !== 'todos' || empresas.length > 0;
+  ), [conductores, estado, empresa, busqueda]);
+  const filtrosActivos = (estado !== 'todos' ? 1 : 0) + (empresa ? 1 : 0);
+  const limpiarFiltros = () => { setEstado('todos'); setEmpresa(''); };
 
   async function eliminar() {
     if (!porEliminar) return;
@@ -132,14 +122,18 @@ export function ConductoresPage() {
       <PageHeader
         eyebrow="Directorio"
         title="Personal"
-        subtitle={isLoading ? 'Cargando…' : `${conductores.length} personas · ${resumen.activos} activas`}
+        subtitle={isLoading ? 'Cargando…' : `${conductores.length} personas · ${activas} activas`}
         actions={
           <>
-            <MenuOtros opciones={[
-              { label: 'Exportar Excel', detalle: `${visibles.length} ${visibles.length === 1 ? 'persona' : 'personas'} con los filtros actuales`, icon: <FileSpreadsheet size={17} />,
-                onSelect: () => exportarConductores(visibles).catch(err => toast(errorMessage(err), 'error')) },
-              puedeCrear && { label: 'Importar desde Excel', detalle: 'Agrega personal en lote', icon: <FileSpreadsheet size={17} />, onSelect: () => setImportando(true) },
-            ]} />
+            <div className="acciones-iconos acciones-iconos--sinfondo" role="group" aria-label="Acciones del personal">
+              <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Exportar Excel"
+                aria-label="Exportar Excel" icon={<FileSpreadsheet size={17} />}
+                onClick={() => exportarConductores(visibles).catch(err => toast(errorMessage(err), 'error'))} />
+              {puedeCrear && (
+                <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Importar desde Excel"
+                  aria-label="Importar desde Excel" icon={<Upload size={17} />} onClick={() => setImportando(true)} />
+              )}
+            </div>
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ conductor: null })}>Nueva persona</Button>}
           </>
         }
@@ -147,42 +141,24 @@ export function ConductoresPage() {
 
       {isLoading ? <PageLoader /> : isError ? <Notice tone="error">{errorMessage(error)}</Notice> : (
         <>
-          <div className="placas-resumen">
-            {[
-              { label: 'Activos', value: resumen.activos, tone: 'green' },
-              { label: 'Cesados', value: resumen.cesados, tone: 'gray' },
-              { label: 'Bloqueados', value: resumen.bloqueados, tone: 'red' },
-              { label: 'Con licencia', value: resumen.conLicencia, tone: 'blue' },
-              { label: 'Sin DNI', value: resumen.sinDni, tone: resumen.sinDni ? 'amber' : 'gray' },
-            ].map((k, i) => (
-              <motion.div key={k.label} className={`placas-kpi placas-kpi--${k.tone}`}
-                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring, delay: reduce ? 0 : 0.05 * i }}>
-                <AnimatedNumber value={k.value} className="placas-kpi__valor t-numeric" />
-                <span className="placas-kpi__label">{k.label}</span>
-              </motion.div>
-            ))}
-          </div>
+          <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Nombre, DNI, licencia, empresa o teléfono"
+            activos={filtrosActivos} onAbrirFiltros={() => setFiltrando(true)} />
 
-          <div className="toolbar placas-toolbar">
-            <div className="placas-toolbar__buscar">
-              <SearchField value={busqueda} onChange={setBusqueda} placeholder="Nombre, DNI, licencia, empresa o teléfono" />
-            </div>
-            <SegmentedControl<FiltroEstado> label="Estado" value={estado} onChange={setEstado}
-              options={[
-                { value: 'todos', label: 'Todos' }, { value: 'activos', label: 'Activos' }, { value: 'cesados', label: 'Cesados' },
-                { value: 'bloqueados', label: 'Bloqueados' }, ...(conductores.some(c => estadoDe(c) === 'inactivo') ? [{ value: 'inactivos' as const, label: 'Inactivos' }] : []),
-              ]} />
-          </div>
-          {gruposEmpresa.length > 1 && (
-            <div className="placas-tipos">
-              <MultiSelect label="Empresa" value={empresas} onChange={setEmpresas} options={gruposEmpresa.map(g => g.nombre)} placeholder="Todas" />
-            </div>
-          )}
-
-          <p className="placas-conteo t-footnote c-secondary" aria-live="polite">
-            {visibles.length === conductores.length ? `${conductores.length} personas` : `${visibles.length} de ${conductores.length} personas`}
-            {hayFiltros && <> · <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setEstado('todos'); setEmpresas([]); }}>Quitar filtros</button></>}
-          </p>
+          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} onLimpiar={limpiarFiltros} resultado={visibles.length} unidad="persona">
+            <GrupoFiltro titulo="Estado">
+              <ChoiceChips<FiltroEstado> label="Estado" value={estado} onChange={setEstado}
+                options={[
+                  { value: 'todos', label: 'Todos' }, { value: 'activos', label: 'Activos' }, { value: 'cesados', label: 'Cesados' }, { value: 'bloqueados', label: 'Bloqueados' },
+                  ...(conductores.some(c => estadoDe(c) === 'inactivo') ? [{ value: 'inactivos' as const, label: 'Inactivos' }] : []),
+                ]} />
+            </GrupoFiltro>
+            {gruposEmpresa.length > 1 && (
+              <GrupoFiltro titulo="Empresa">
+                <ChoiceChips label="Empresa" value={empresa} onChange={setEmpresa}
+                  options={[{ value: '', label: 'Todas' }, ...gruposEmpresa.map(g => ({ value: g.nombre, label: g.nombre }))]} />
+              </GrupoFiltro>
+            )}
+          </HojaFiltros>
 
           {visibles.length === 0 ? (
             <EmptyState icon={<SearchX size={22} />} title="No hay personal con esos filtros">Prueba con otra búsqueda o quita los filtros.</EmptyState>
