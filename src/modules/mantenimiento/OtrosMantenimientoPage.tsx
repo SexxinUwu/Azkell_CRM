@@ -1,61 +1,41 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../core/auth/AuthProvider';
-import { Page, PageHeader } from '../../core/ui/Display';
-import { OTROS_MANTENIMIENTO, type NavItem } from '../../core/layout/navigation';
-import '../../core/ui/otros-tarjetas.css';
+import { OtrosHub, type SeccionHub } from '../../core/ui/OtrosHub';
+import { OTROS_MANTENIMIENTO } from '../../core/layout/navigation';
 
-// Otros de Mantenimiento: las herramientas avanzadas del taller en casillas agrupadas (no en una lista).
-// Cada casilla abre su pantalla de la app nueva.
+// Otros de Mantenimiento: las herramientas avanzadas del taller en casillas grandes agrupadas.
 
-const SECCIONES: Array<{ titulo: string; claves: string[] }> = [
-  { titulo: 'Programación operativa', claves: ['planificacion', 'backlog'] },
-  { titulo: 'Rendimiento e indicadores', claves: ['kpis', 'productividad', 'finanzas-taller'] },
-  { titulo: 'Configuración y parámetros', claves: ['frecuencias-mp', 'kits-mp', 'tipos-mp', 'fleetrun-config', 'config-metrica', 'personal-taller', 'situaciones'] },
+const DESCRIPCION: Record<string, string> = {
+  planificacion: 'Programa los mantenimientos preventivos de cada unidad.',
+  backlog: 'Trabajos y reportes pendientes de atender en el taller.',
+  kpis: 'Indicadores de productividad, tiempos y cumplimiento del taller.',
+  productividad: 'Horas y trabajos realizados por cada técnico.',
+  'finanzas-taller': 'Costos de repuestos y mano de obra del taller.',
+  'frecuencias-mp': 'Cada cuántos kilómetros o días toca cada preventivo.',
+  'kits-mp': 'Kits de materiales y repuestos por tipo de servicio.',
+  'tipos-mp': 'Tipos de mantenimiento preventivo y sus alertas.',
+  'fleetrun-config': 'Umbrales de alerta preventiva por unidad.',
+  'config-metrica': 'Metas y métricas que usa el tablero del taller.',
+  'personal-taller': 'Técnicos y personal que trabajan en el taller.',
+  situaciones: 'Estados de las unidades y de la rampa.',
+};
+
+const SECCIONES: Array<{ titulo: string; tono: SeccionHub['tono']; claves: string[] }> = [
+  { titulo: 'Programación operativa', tono: 'blue', claves: ['planificacion', 'backlog'] },
+  { titulo: 'Rendimiento e indicadores', tono: 'green', claves: ['kpis', 'productividad', 'finanzas-taller'] },
+  { titulo: 'Configuración y parámetros', tono: 'violet', claves: ['frecuencias-mp', 'kits-mp', 'tipos-mp', 'fleetrun-config', 'config-metrica', 'personal-taller', 'situaciones'] },
 ];
 
 export function OtrosMantenimientoPage() {
   const { can } = useAuth();
   const navigate = useNavigate();
-
   const visibles = OTROS_MANTENIMIENTO.filter(i => can(...i.permissions));
-
-  function abrir(i: NavItem) {
-    if (i.to) navigate(i.to);
-  }
-
-  return (
-    <Page>
-      <PageHeader
-        eyebrow="Mantenimiento"
-        title="Otros"
-        subtitle="Planificación, indicadores y configuración avanzada del taller"
-      />
-      <div className="otros-panel">
-        {SECCIONES.map(s => {
-          const items = visibles.filter(i => s.claves.includes(i.key));
-          if (!items.length) return null;
-          return (
-            <section key={s.titulo} className="otros-grupo">
-              <h2 className="t-footnote c-secondary" style={{ textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 var(--s-2)' }}>
-                {s.titulo}
-              </h2>
-              <div className="otros-tarjetas">
-                {items.map(i => {
-                  const Icono = i.icon;
-                  return (
-                    <button key={i.key} type="button" className="otros-tile" onClick={() => abrir(i)}>
-                      <span className="otros-tile__icono" aria-hidden><Icono size={20} /></span>
-                      <span className="otros-tile__texto">
-                        <span className="otros-tile__titulo">{i.label}</span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          );
-        })}
-      </div>
-    </Page>
-  );
+  const secciones: SeccionHub[] = SECCIONES.map(s => ({
+    titulo: s.titulo, tono: s.tono,
+    casillas: visibles.filter(i => s.claves.includes(i.key)).map(i => {
+      const Icono = i.icon;
+      return { key: i.key, titulo: i.label, descripcion: DESCRIPCION[i.key] ?? '', icono: <Icono size={24} />, onAbrir: () => { if (i.to) navigate(i.to); } };
+    }),
+  }));
+  return <OtrosHub eyebrow="Mantenimiento" subtitle="Planificación, indicadores y configuración avanzada del taller" secciones={secciones} />;
 }

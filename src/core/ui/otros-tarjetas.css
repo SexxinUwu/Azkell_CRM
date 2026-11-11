@@ -51,6 +51,85 @@
   .otros-tile:hover .otros-tile__icono { transform: none; }
 }
 
+/* Pantalla «Otros»: casillas grandes con icono de color, sombras en capas y entrada escalonada.
+   Solo se animan transform y opacidad, así que es rápido; todo con tokens (claro y oscuro). */
+
+.hub-panel { display: flex; flex-direction: column; gap: var(--s-6); padding: var(--s-2) 0 var(--s-6); }
+.hub-grupo { --tono: var(--accent); --tono-ink: var(--accent-ink); }
+.hub-grupo--blue { --tono: var(--blue); --tono-ink: var(--blue-ink); }
+.hub-grupo--green { --tono: var(--green); --tono-ink: var(--green-ink); }
+.hub-grupo--violet { --tono: #8b5cf6; --tono-ink: #7c3aed; }
+.hub-grupo--amber { --tono: var(--amber); --tono-ink: var(--amber-ink); }
+.hub-grupo--teal { --tono: #14b8a6; --tono-ink: #0f766e; }
+.hub-grupo--rose { --tono: #f43f5e; --tono-ink: #e11d48; }
+:root[data-theme="dark"] .hub-grupo--violet { --tono-ink: #a78bfa; }
+:root[data-theme="dark"] .hub-grupo--teal { --tono-ink: #5eead4; }
+:root[data-theme="dark"] .hub-grupo--rose { --tono-ink: #fb7185; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hub-grupo--violet { --tono-ink: #a78bfa; }
+  :root:not([data-theme="light"]) .hub-grupo--teal { --tono-ink: #5eead4; }
+  :root:not([data-theme="light"]) .hub-grupo--rose { --tono-ink: #fb7185; }
+}
+
+.hub-grupo__titulo { display: flex; align-items: center; gap: var(--s-2); margin: 0 0 var(--s-3) var(--s-1); font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--label-2); }
+.hub-grupo__punto { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--tono); box-shadow: 0 0 0 4px color-mix(in srgb, var(--tono) 18%, transparent); }
+
+.hub-tarjetas { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fill, minmax(18.5rem, 1fr)); }
+
+.hub-tile {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: var(--s-4);
+  min-height: 7rem; padding: var(--s-5); text-align: left; cursor: pointer;
+  background: var(--surface); color: inherit;
+  border: 0; border-radius: 22px;
+  box-shadow: 0 0 0 1px var(--separator), 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 20px -14px rgba(15, 23, 42, 0.28);
+  transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 200ms ease;
+  animation: hub-in 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 28ms);
+}
+/* Brillo del color de la sección al pasar el mouse */
+.hub-tile::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 220ms ease;
+  background: radial-gradient(130% 90% at 0% 0%, color-mix(in srgb, var(--tono) 16%, transparent), transparent 62%);
+}
+.hub-tile:hover { transform: translateY(-4px); box-shadow: 0 0 0 1px color-mix(in srgb, var(--tono) 45%, transparent), 0 2px 4px rgba(15, 23, 42, 0.06), 0 22px 36px -16px rgba(15, 23, 42, 0.38); }
+.hub-tile:hover::before { opacity: 1; }
+.hub-tile:active { transform: translateY(-1px) scale(0.985); transition-duration: 80ms; }
+.hub-tile:focus-visible { outline: 2px solid var(--tono); outline-offset: 3px; }
+
+.hub-tile__icono {
+  position: relative; flex: 0 0 auto; width: 3.5rem; height: 3.5rem; border-radius: 18px;
+  display: grid; place-items: center; color: var(--tono-ink);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--tono) 24%, var(--surface)), color-mix(in srgb, var(--tono) 10%, var(--surface)));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tono) 22%, transparent), 0 6px 12px -8px color-mix(in srgb, var(--tono) 70%, transparent);
+  transition: transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.hub-tile:hover .hub-tile__icono { transform: scale(1.08) rotate(-5deg); }
+
+.hub-tile__texto { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.hub-tile__titulo { font-size: 1.0625rem; font-weight: 650; letter-spacing: -0.01em; line-height: 1.25; color: var(--label); }
+.hub-tile__detalle { font-size: 0.8125rem; color: var(--label-2); line-height: 1.4; }
+.hub-tile__flecha { position: relative; flex: 0 0 auto; color: var(--label-3); opacity: 0.6; transition: transform 200ms ease, opacity 200ms ease, color 200ms ease; }
+.hub-tile:hover .hub-tile__flecha { transform: translateX(4px); opacity: 1; color: var(--tono-ink); }
+
+.hub-tile--peligro .hub-tile__icono { color: var(--red-ink, #dc2626); }
+
+@keyframes hub-in { from { opacity: 0; transform: translateY(10px) scale(0.985); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 639px) {
+  .hub-tarjetas { grid-template-columns: minmax(0, 1fr); gap: var(--s-3); }
+  .hub-tile { min-height: 5.75rem; padding: var(--s-4); gap: var(--s-3); border-radius: 20px; }
+  .hub-tile__icono { width: 3.25rem; height: 3.25rem; border-radius: 16px; }
+  .hub-tile:hover { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-tile { animation: none; transition: none; }
+  .hub-tile:hover, .hub-tile:active { transform: none; }
+  .hub-tile:hover .hub-tile__icono { transform: none; }
+  .hub-tile__flecha, .hub-tile::before { transition: none; }
+}
+
 /* Volver al hub de Otros: una fila alineada con el contenido de la pantalla, como el enlace de atrás de las demás pantallas */
 .otros-volver-fila { max-width: var(--content-max); margin: 0 auto var(--s-4); }
 .otros-volver {
