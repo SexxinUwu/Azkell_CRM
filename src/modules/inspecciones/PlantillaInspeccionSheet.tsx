@@ -9,7 +9,7 @@ import { Notice } from '../../core/ui/Display';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { ESQUEMA_POR_DEFECTO } from './esquemaPorDefecto';
-import { useEsquema, type Seccion, type TipoPunto } from './registro';
+import { asegurarNivelCombustible, useEsquema, type Seccion, type TipoPunto } from './registro';
 
 // Plantilla de la inspección mecánica: sistemas (LLANTA, MOTOR…) con sus ítems.
 // Lee la plantilla vigente con useEsquema y guarda con POST /api/mantenimiento/inspecciones/config/guardar
@@ -124,7 +124,7 @@ export function PlantillaInspeccionSheet({ open, onClose }: { open: boolean; onC
       accion: () => {
         setRecienAgregado(null);
         setError(null);
-        const fabrica = aEditable(ESQUEMA_POR_DEFECTO);
+        const fabrica = aEditable(asegurarNivelCombustible(ESQUEMA_POR_DEFECTO));
         setSistemas(fabrica);
         void guardarLista(fabrica);
       },

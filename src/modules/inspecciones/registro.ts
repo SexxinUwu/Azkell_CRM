@@ -24,6 +24,16 @@ export interface Respuesta {
 
 export const respuestaVacia = (): Respuesta => ({ estado: '', observacion: '', porcentaje: '', texto: '', foto: '' });
 
+/** Toda plantilla de inspección tiene el medidor de combustible: si no lo trae, el sistema lo agrega (en MOTOR, o en un sistema nuevo).
+ *  Se aplica al leer la plantilla, sin cambiar la base; al guardar la plantilla, el ítem queda guardado. */
+export function asegurarNivelCombustible(esquema: Seccion[]): Seccion[] {
+  if (esquema.some(s => s.items.some(it => it.tipo === 'nivel'))) return esquema;
+  const item = { label: 'Nivel de combustible', tipo: 'nivel' as TipoPunto };
+  const i = esquema.findIndex(s => /MOTOR/i.test(s.titulo));
+  if (i >= 0) return esquema.map((s, k) => (k === i ? { ...s, items: [...s.items, item] } : s));
+  return [...esquema, { titulo: 'COMBUSTIBLE', items: [item] }];
+}
+
 export function useEsquema() {
   return useQuery({
     queryKey: ['inspecciones', 'esquema'],
@@ -32,7 +42,7 @@ export function useEsquema() {
       try {
         const r = await api<{ ok?: boolean; data?: Array<{ titulo?: string; items_json?: unknown }> }>('/mantenimiento/inspecciones/config');
         if (r.ok && Array.isArray(r.data) && r.data.length) {
-          return r.data.map(d => {
+          return asegurarNivelCombustible(r.data.map(d => {
             let items: Array<{ label?: string; type?: string } | string> = [];
             try { items = typeof d.items_json === 'string' ? JSON.parse(d.items_json) : (d.items_json as typeof items) ?? []; } catch { items = []; }
             return {
@@ -41,10 +51,10 @@ export function useEsquema() {
                 ? { label: it, tipo: 'okfalla' as TipoPunto }
                 : { label: it.label ?? '', tipo: (it.type as TipoPunto) || 'okfalla' })),
             };
-          }).filter(s => s.items.length);
+          }).filter(s => s.items.length));
         }
       } catch { /* sin configuración: lista por defecto */ }
-      return ESQUEMA_POR_DEFECTO;
+      return asegurarNivelCombustible(ESQUEMA_POR_DEFECTO);
     },
   });
 }
