@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Building2, Download, FileSpreadsheet, Mail, MessageCircle, Phone, Plus, SearchX, Star, Upload } from 'lucide-react';
+import { Building2, CircleAlert, Download, FileSpreadsheet, Mail, MessageCircle, Phone, Plus, SearchX, Star, Upload } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
@@ -25,6 +25,14 @@ const tono = (s: string) => TONOS[[...s].reduce((a, ch) => a + ch.charCodeAt(0),
 const nombreMostrado = (p: ProveedorInv) => p.razon_social?.trim() || p.nombre;
 const letraDe = (s: string) => { const l = s.trim().charAt(0).toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); return /[A-Z]/.test(l) ? l : '#'; };
 
+/** Motivo por el que un proveedor está por regularizar (null si está en regla): sin documento o con un RUC/DNI que no tiene 11 u 8 dígitos */
+function motivoPendiente(p: ProveedorInv): string | null {
+  const doc = (p.ruc ?? '').replace(/\s/g, '');
+  if (!doc) return 'Sin RUC o DNI';
+  if (!/^\d+$/.test(doc) || (doc.length !== 11 && doc.length !== 8)) return 'RUC o DNI incompleto';
+  return null;
+}
+
 type Vista = 'contactos' | 'proveedores';
 const leerVista = (): Vista => { try { return localStorage.getItem('fleet_prov_vista') === 'proveedores' ? 'proveedores' : 'contactos'; } catch { return 'contactos'; } };
 
@@ -39,6 +47,7 @@ export function ProveedoresPage() {
 
   const [vista, setVista] = useState<Vista>(leerVista);
   const [busqueda, setBusqueda] = useState('');
+  const [soloPendientes, setSoloPendientes] = useState(false);
   const [seleccionado, setSeleccionado] = useState<ProveedorInv | null>(null);
   const [formulario, setFormulario] = useState<{ proveedor: ProveedorInv | null } | null>(null);
   const [porEliminar, setPorEliminar] = useState<ProveedorInv | null>(null);
@@ -50,6 +59,7 @@ export function ProveedoresPage() {
   const puedeEliminar = can('prov_inv.eliminar');
 
   const proveedores = data ?? [];
+  const pendientes = useMemo(() => proveedores.filter(p => motivoPendiente(p)), [proveedores]);
   const totalContactos = proveedores.reduce((s, p) => s + p.contactos.length, 0);
   const cambiarVista = (v: Vista) => { setVista(v); try { localStorage.setItem('fleet_prov_vista', v); } catch { /* sin almacenamiento */ } };
 
@@ -73,11 +83,11 @@ export function ProveedoresPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proveedores, q]);
 
-  const empresas = useMemo(() => proveedores
+  const empresas = useMemo(() => (soloPendientes ? pendientes : proveedores)
     .filter(p => coincide(nombreMostrado(p), p.nombre, p.ruc, p.contactos.map(c => c.nombre).join(' '), p.telefono))
     .sort((a, b) => nombreMostrado(a).localeCompare(nombreMostrado(b), 'es')),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [proveedores, q]);
+  [proveedores, pendientes, soloPendientes, q]);
 
   async function confirmarEliminar() {
     if (!porEliminar) return;
@@ -143,17 +153,29 @@ export function ProveedoresPage() {
         </EmptyState>
       ) : (
         <>
+          {pendientes.length > 0 && (
+            <div className="pv-alerta" role="status">
+              <span className="pv-alerta__icono" aria-hidden><CircleAlert size={20} /></span>
+              <span className="pv-alerta__texto">
+                <b>{pendientes.length} {pendientes.length === 1 ? 'proveedor por regularizar' : 'proveedores por regularizar'}</b>
+                <small>Les falta el RUC o DNI (o está incompleto). Sin eso no se pueden emitir documentos ni evitar duplicados.</small>
+              </span>
+              <Button variant={soloPendientes ? 'secondary' : 'primary'} size="sm" onClick={() => { setSoloPendientes(v => !v); setBusqueda(''); }}>
+                {soloPendientes ? 'Ver todos' : 'Ver cuáles'}
+              </Button>
+            </div>
+          )}
           <div className="pv-barra">
-            <SegmentedControl<Vista> label="Vista del directorio" value={vista} onChange={cambiarVista}
+            <SegmentedControl<Vista> label="Vista del directorio" value={soloPendientes ? 'proveedores' : vista} onChange={v => { setSoloPendientes(false); cambiarVista(v); }}
               options={[{ value: 'contactos', label: 'Contactos' }, { value: 'proveedores', label: 'Proveedores' }]} />
             <SearchField value={busqueda} onChange={setBusqueda} placeholder={vista === 'contactos' ? 'Asesor, empresa, RUC o teléfono' : 'Razón social, RUC o asesor'} />
           </div>
 
-          {(vista === 'contactos' ? entradas.length : empresas.length) === 0 ? (
+          {(vista === 'contactos' && !soloPendientes ? entradas.length : empresas.length) === 0 ? (
             <EmptyState icon={<SearchX size={22} />} title="Nada coincide">
               <button type="button" className="placas-limpiar" onClick={() => setBusqueda('')}>Quitar búsqueda</button>
             </EmptyState>
-          ) : vista === 'contactos' ? (
+          ) : vista === 'contactos' && !soloPendientes ? (
             <Letras items={entradas} letra={e => letraDe(e.nombre)} fila={e => (
               <FilaDirectorio key={e.clave} nombre={e.nombre} sub={e.sub} semilla={e.nombre} empresa={e.empresa}
                 telefono={e.telefono} correo={e.correo} onAbrir={() => { haptic('selection'); setSeleccionado(e.proveedor); }} />
@@ -161,7 +183,7 @@ export function ProveedoresPage() {
           ) : (
             <Letras items={empresas} letra={p => letraDe(nombreMostrado(p))} fila={p => (
               <FilaDirectorio key={p.id} nombre={nombreMostrado(p)} semilla={nombreMostrado(p)} empresa
-                sub={[p.ruc ? `RUC ${p.ruc}` : 'Sin RUC', p.contactos.length ? `${p.contactos.length} ${p.contactos.length === 1 ? 'contacto' : 'contactos'}` : null].filter(Boolean).join(' · ')}
+                sub={[soloPendientes ? motivoPendiente(p) : (p.ruc ? `RUC ${p.ruc}` : 'Sin RUC'), p.contactos.length ? `${p.contactos.length} ${p.contactos.length === 1 ? 'contacto' : 'contactos'}` : null].filter(Boolean).join(' · ')}
                 onAbrir={() => { haptic('selection'); setSeleccionado(p); }} />
             )} />
           )}
