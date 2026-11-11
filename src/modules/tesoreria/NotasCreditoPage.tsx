@@ -2,6 +2,7 @@ import './nc.css';
 import '../../core/ui/acciones-iconos.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import { CheckCircle2, ChevronRight, Clock, Coins, FileText, PackageMinus, Plus, ReceiptText, RefreshCw, SearchX, Wallet } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -30,13 +31,15 @@ const ESTADOS: Array<{ value: FiltroEstado; label: string }> = [
 
 const sumar = (xs: number[]) => Math.round(xs.reduce((s, v) => s + v, 0) * 100) / 100;
 
-/** Tesorería › Notas de crédito de proveedores: registro, aprobación, saldo a favor y su aplicación al pago de órdenes de compra */
+/** Tesorería y Almacén › Notas de crédito de proveedores: registro, aprobación, saldo a favor y su aplicación al pago de órdenes de compra */
 export function NotasCreditoPage() {
   const { can } = useAuth();
   const qc = useQueryClient();
   const notas = useNotasCredito();
   const resumen = useResumenProveedoresNc();
-  const puedeCrear = can('tesoreria_nc.crear');
+  // La misma pantalla vive en Tesorería y en Almacén: en Almacén crea quien puede registrar órdenes de compra
+  const enAlmacen = useLocation().pathname.startsWith('/almacen');
+  const puedeCrear = can('tesoreria_nc.crear', 'ent_inv.crear');
 
   const [vista, setVista] = useState<Vista>('notas');
   const [busqueda, setBusqueda] = useState('');
@@ -78,7 +81,7 @@ export function NotasCreditoPage() {
   return (
     <Page>
       <PageHeader
-        eyebrow="Tesorería"
+        eyebrow={enAlmacen ? 'Almacén' : 'Tesorería'}
         title="Notas de crédito de proveedores"
         subtitle={cargando ? 'Cargando…' : `${cifras.total} notas · ${cifras.porAprobar} por aprobar`}
         actions={

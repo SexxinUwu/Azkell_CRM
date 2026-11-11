@@ -26,6 +26,7 @@ export function NcDetalle({ id, onClose }: { id: number | null; onClose: () => v
   const q = useDetalleNc(id);
   const d = q.data?.data;
   const puedeEditar = can('tesoreria_nc.editar');
+  const puedeEnlazar = puedeEditar || can('ent_inv.editar'); // Almacén completa la devolución; aprobar, reembolsar y anular son de Tesorería
   const [ocupado, setOcupado] = useState(false);
   const [anulando, setAnulando] = useState(false);
   const [reembolsando, setReembolsando] = useState(false);
@@ -83,7 +84,7 @@ export function NcDetalle({ id, onClose }: { id: number | null; onClose: () => v
             {d && faltaSalida(d) && (
               <Notice tone="accent" icon={<PackageMinus size={16} />}>
                 <b>Falta registrar la salida de la devolución.</b> Enlaza la salida de almacén o genérala ahora para que baje el stock.
-                {puedeEditar && (
+                {puedeEnlazar && (
                   <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', marginTop: 'var(--s-2)' }}>
                     <Button size="sm" variant="secondary" onClick={() => setEnlazando(true)}>Enlazar salida existente</Button>
                     <Button size="sm" variant="primary" onClick={() => setDevolviendo(true)}>Devolver mercadería ahora</Button>

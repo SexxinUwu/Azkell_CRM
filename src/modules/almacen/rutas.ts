@@ -33,6 +33,12 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'proveedores', label: 'Proveedores', to: '/almacen/proveedores', icon: 'Warehouse', permisos: ['prov_inv.ver'] },
   },
   {
+    path: 'almacen/notas-credito/*',
+    permisos: ['ent_inv.ver', 'tesoreria_nc.ver', 'admin'],
+    // La misma pantalla que en Tesorería: devoluciones y notas de crédito de proveedores
+    Page: lazy(() => import('../tesoreria/NotasCreditoPage').then(m => ({ default: m.NotasCreditoPage }))),
+  },
+  {
     path: 'almacen/recepcion-compras/*',
     permisos: ['rec_compras.ver', 'ent_inv.ver', 'inv.ver', 'admin'],
     Page: lazy(() => import('./RecepcionComprasPage').then(m => ({ default: m.RecepcionComprasPage }))),
