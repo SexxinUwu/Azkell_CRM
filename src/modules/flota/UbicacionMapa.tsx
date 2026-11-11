@@ -8,7 +8,8 @@ import { motorTelemetria, type Alerta, type EntradaMotor, type MotorTelemetria, 
 import { ST, type ClaseEstado, type DescCamion } from './gps/camiones';
 import type { TemaMapa } from './gps/estilos';
 import { HAY_TRAFICO } from './gps/mapaConfig';
-import type { UnidadMapa } from './api';
+import type { GeocercaMapa, UnidadMapa } from './api';
+import { BuscadorGeocercas } from './BuscadorGeocercas';
 import type { Historial } from './UbicacionHistorial';
 
 export const COLOR_ESTADO = { movimiento: ST.mov.c, ralenti: ST.ral.c, detenido: ST.det.c, sin_senal: ST.off.c };
@@ -39,6 +40,8 @@ interface Props {
   tema: TemaMapa;
   base: 'mapa' | 'sat';
   onBase: (b: 'mapa' | 'sat') => void;
+  /** Geocercas de Wialon: alimentan el buscador */
+  geocercas?: GeocercaMapa[];
   /** Contenido flotante que va encima del mapa (barra superior, lista, ficha) */
   children?: React.ReactNode;
 }
@@ -61,6 +64,8 @@ export function UbicacionMapa(p: Props) {
   const [opt, setOpt] = useState<OpcionesMapa | null>(null);
   const [traficoNo, setTraficoNo] = useState(false);
   const [avisoTrafico, setAvisoTrafico] = useState(false);
+  const [buscandoGeo, setBuscandoGeo] = useState(false);
+  const [geoElegida, setGeoElegida] = useState<string | null>(null);
   const cbRef = useRef(p);
   cbRef.current = p;
 
@@ -108,6 +113,7 @@ export function UbicacionMapa(p: Props) {
     m.setOpcion(k, v);
     setOpt({ ...m.opt });
   };
+  const elegirGeo = (id: string | null) => { motorRef.current?.irAGeocerca(id); setGeoElegida(id); };
   const activo = (k: keyof OpcionesMapa) => !!opt && (k === 'buildings' && p.tema === 'sat' ? opt.buildingsSat : opt[k]);
 
   return (
@@ -115,6 +121,7 @@ export function UbicacionMapa(p: Props) {
       <div ref={host} className="tg-host" />
       {p.children}
       {avisoTrafico && <div className="tg-aviso-trafico" role="status">{AVISO_TRAFICO}</div>}
+      {buscandoGeo && <BuscadorGeocercas geocercas={p.geocercas ?? []} contar={() => motorRef.current?.unidadesPorGeocerca() ?? new Map()} onElegir={elegirGeo} elegida={geoElegida} onCerrar={() => setBuscandoGeo(false)} />}
       <div className="tg-ctrl">
         <div className="tg-tools tg-glass" role="toolbar" aria-label="Herramientas del mapa">
           {HERRAMIENTAS.map(h => (
@@ -124,6 +131,9 @@ export function UbicacionMapa(p: Props) {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={h.d} />{h.k === 'traffic' && <><circle cx="12" cy="7.5" r="1.3" fill="currentColor" /><circle cx="12" cy="12" r="1.3" fill="currentColor" /><circle cx="12" cy="16.5" r="1.3" fill="currentColor" /></>}</svg>
             </button>
           ))}
+          <button type="button" className="btn btn--plain btn--icon tg-tool" data-tip="Buscar geocerca" aria-label="Buscar geocerca" aria-pressed={buscandoGeo} onClick={() => setBuscandoGeo(v => !v)}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3 4 8v8l8 5 8-5V8z" /><circle cx="12" cy="12" r="2.2" /></svg>
+          </button>
         </div>
         <div className="tg-seg tg-glass">
           <SegmentedControl label="Estilo del mapa" value={p.base} onChange={p.onBase} options={ESTILOS.map(e => ({ value: e.s, label: e.l }))} />

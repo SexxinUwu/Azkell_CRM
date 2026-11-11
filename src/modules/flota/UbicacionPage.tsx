@@ -337,7 +337,7 @@ export function UbicacionPage() {
             <UbicacionMapa unidades={unidades} descs={descs} visibles={visibles} seleccionada={seleccionada}
               hojaAbierta={!!seleccion} encuadreVersion={0} encuadrarA={encuadrarA}
               historial={historial ?? null} eventosHist={eventosHist} viajeSel={viajeSel} indice={indice} onElegir={elegir} onAlerta={nuevaAlerta} onPiloto={setPiloto}
-              tema={tema} base={base} onBase={cambiarBase}>
+              tema={tema} base={base} onBase={cambiarBase} geocercas={geocercas.data ?? []}>
               <header className="tg-top">
                 <div className="tg-brand tg-glass">
                   <span className="tg-eyebrow">Flota · Telemetría</span>

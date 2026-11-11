@@ -242,6 +242,11 @@ export class MotorTelemetria {
     m.addLayer({ id: 'geo-fill', type: 'fill', source: 'geo', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, .5, 14, .38, 18, .26] } });
     m.addLayer({ id: 'geo-line', type: 'line', source: 'geo', paint: { 'line-color': ['get', 'color'], 'line-width': 2, 'line-opacity': .9 } });
     m.addLayer({ id: 'geo-label', type: 'symbol', source: 'geo', minzoom: 13, layout: { 'text-field': ['get', 'name'], 'text-font': F_BOLD, 'text-size': 11.5, 'text-letter-spacing': .06, 'text-transform': 'uppercase' }, paint: { 'text-color': ['get', 'color'], 'text-halo-color': this.tema === 'day' ? '#fff' : '#05070c', 'text-halo-width': 1.6 } });
+    // Geocerca elegida en el buscador: relleno y borde más fuertes encima de las demás
+    m.addSource('geo-sel', { type: 'geojson', data: this.datosGeoSel() });
+    m.addLayer({ id: 'geo-sel-fill', type: 'fill', source: 'geo-sel', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': .38 } });
+    m.addLayer({ id: 'geo-sel-line', type: 'line', source: 'geo-sel', paint: { 'line-color': '#ffffff', 'line-width': 3.2, 'line-opacity': .95 } });
+    m.addLayer({ id: 'geo-sel-line2', type: 'line', source: 'geo-sel', paint: { 'line-color': ['get', 'color'], 'line-width': 1.6 } });
     // Ruta asignada: capa lista; el ERP todavía no guarda destinos de viaje, así que queda vacía
     m.addSource('route', { type: 'geojson', data: fc([]) });
     m.addLayer({ id: 'route', type: 'line', source: 'route', layout: { 'line-cap': 'round' }, paint: { 'line-color': this.tema === 'day' ? '#0a8fd6' : '#ffffff', 'line-opacity': .75, 'line-width': W([9, 2, 18, 7]) as any, 'line-dasharray': [1.2, 1.6] } });
@@ -335,6 +340,30 @@ export class MotorTelemetria {
     // Sin esto, MapLibre 5.6 falla con "shaderPreludeCode" al cambiar de estilo con relieve
     this.mapa.setTerrain(null);
     this.mapa.setStyle(buildStyle(t, this.opt.terrain), { diff: false });
+  }
+  private geoSel: string | null = null;
+  private datosGeoSel() {
+    const g = this.geoSel ? this.geos.find(x => x.id === this.geoSel) : null;
+    return fc(g ? [{ type: 'Feature', properties: { name: g.name, color: g.color }, geometry: { type: 'Polygon', coordinates: [g.ring] } }] : []);
+  }
+  /** Resalta una geocerca y lleva la cámara hasta ella (null quita el resaltado) */
+  irAGeocerca(id: string | null) {
+    this.geoSel = id;
+    (this.mapa.getSource('geo-sel') as GeoJSONSource | undefined)?.setData(this.datosGeoSel() as any);
+    const g = id ? this.geos.find(x => x.id === id) : null;
+    if (!g || !g.ring.length) return;
+    // Si las geocercas estaban ocultas, se muestran para que se vea a dónde se fue
+    if (!this.opt.geo) { this.opt.geo = true; this.aplicarOpciones(false); this.cb?.onOpciones?.(); }
+    this.setFollow(false);
+    const b = new maplibregl.LngLatBounds(g.ring[0], g.ring[0]);
+    g.ring.forEach(p => b.extend(p));
+    this.mapa.fitBounds(b, { padding: MOVIL() ? { top: 150, bottom: 190, left: 30, right: 30 } : 120, maxZoom: 17, duration: REDUCIR() ? 0 : 1400, pitch: Math.min(this.mapa.getPitch(), 50), essential: !REDUCIR() });
+  }
+  /** Cuántas unidades hay dentro de cada geocerca ahora mismo */
+  unidadesPorGeocerca(): Map<string, number> {
+    const m = new Map<string, number>();
+    this.units.forEach(u => { if (u.geo) m.set(u.geo, (m.get(u.geo) ?? 0) + 1); });
+    return m;
   }
   setGeocercas(gs: Geocerca[]) {
     this.geos = gs;
