@@ -110,7 +110,7 @@ export class MotorTelemetria {
   readonly root: HTMLDivElement;
   readonly mapa: MapaGL;
   tema: TemaMapa;
-  opt: OpcionesMapa = { traffic: false, terrain: false, buildings: true, trails: true, geo: true, smooth: true, models: true, buildingsSat: false };
+  opt: OpcionesMapa = { traffic: false, terrain: !MOVIL(), buildings: true, trails: true, geo: true, smooth: true, models: true, buildingsSat: false };
 
   private mapDiv: HTMLDivElement;
   private tagLayer: HTMLDivElement;
@@ -133,6 +133,7 @@ export class MotorTelemetria {
   private last = performance.now();
   private pushAcc = 0;
   private trailAcc = 0;
+  private camC: LngLat | null = null;
   private uiAcc = 0;
   private trailPend = true;
   private sucio = true;
@@ -253,7 +254,7 @@ export class MotorTelemetria {
     m.addLayer(this.camiones.capa);
     this.capasHistorial();
     this.camiones.noche = this.tema === 'night';
-    this.aplicarOpciones(false);
+    this.aplicarOpciones(this.opt.terrain);
     this.styleReady = true; this.sucio = true; this.sucioDatos = true;
   }
   private iconOpacity() { return this.opt.models ? ['interpolate', ['linear'], ['zoom'], ZOOM_3D, 1, 15.4, 0] : 1; }
@@ -465,9 +466,18 @@ export class MotorTelemetria {
     if (this.follow && sel && sel.view) {
       this.followT += realDt;
       const k = Math.min(1, realDt * 2.2);
-      const cam: any = { center: sel.view, bearing: angLerp(m.getBearing(), sel.hview, Math.min(1, realDt * 2.5)) };
+      // Punto de mira: un poco delante de la unidad según su velocidad (se ve lo que viene)
+      const mov = Math.min(1, (sel.kmh || 0) / 60);
+      const adelante = 110 * mov, rad = (sel.hview * Math.PI) / 180, lat = sel.view[1] * Math.PI / 180;
+      const meta: LngLat = [sel.view[0] + (adelante * Math.sin(rad)) / (111320 * Math.cos(lat)), sel.view[1] + (adelante * Math.cos(rad)) / 111320];
+      // Suavizado propio: la cámara no salta con cada actualización del GPS
+      if (!this.camC) this.camC = meta.slice() as LngLat;
+      const s = Math.min(1, realDt * 3.2);
+      this.camC = [this.camC[0] + (meta[0] - this.camC[0]) * s, this.camC[1] + (meta[1] - this.camC[1]) * s];
+      const cam: any = { center: this.camC, bearing: angLerp(m.getBearing(), sel.hview, Math.min(1, realDt * 2.5)) };
       if (this.opt.terrain) cam.elevation = m.queryTerrainElevation(sel.view) || 0;
       if (this.followT < 2.5) { cam.zoom = m.getZoom() + (18.3 - m.getZoom()) * k; cam.pitch = m.getPitch() + (64 - m.getPitch()) * k; }
+      else { const tp = 64 + 7 * mov; cam.pitch = m.getPitch() + (tp - m.getPitch()) * Math.min(1, realDt * 1.5); }
       m.jumpTo(cam);
     }
     // Fallo de MapLibre 5.6: una animación interrumpida deja la cámara desalineada
@@ -602,7 +612,7 @@ export class MotorTelemetria {
     const nuevo = !!(on && this.sel && this.units.get(this.sel)?.view);
     if (nuevo === this.follow) return;
     this.follow = nuevo;
-    if (nuevo) { this.followT = 0; this.mapa.stop(); }
+    if (nuevo) { this.followT = 0; this.camC = null; this.mapa.stop(); }
     const H = this.root.clientHeight;
     this.mapa.setPadding(nuevo ? { top: Math.round(H * (MOVIL() ? .3 : .38)), bottom: 0, left: 0, right: 0 } : this.relleno(!!this.sel));
     this.cb.onPiloto(nuevo);
