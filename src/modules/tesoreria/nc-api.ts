@@ -72,6 +72,16 @@ export function useNcDisponibles(entradaId: string | number | null, moneda: 'PEN
   });
 }
 
+/** Notas de crédito aprobadas con saldo a favor de un proveedor, en una moneda: para avisarlo al generar una orden nueva */
+export function useNcDeProveedor(proveedorId: string | null, proveedorNombre: string | null, moneda: 'PEN' | 'USD', activo: boolean) {
+  return useQuery({
+    queryKey: ['tesoreria', 'notas-credito', 'disponibles-proveedor', proveedorId, moneda],
+    queryFn: () => api<{ data: NcDisponible[] }>('/compras/notas-credito/disponibles', { query: { proveedor_id: String(proveedorId), proveedor_nombre: proveedorNombre ?? '', moneda } }).then(r => r.data ?? []),
+    enabled: activo && !!proveedorId,
+    staleTime: 15_000,
+  });
+}
+
 export function useNcDeOrden(entradaId: string | number | null) {
   return useQuery({
     queryKey: ['tesoreria', 'notas-credito', 'por-oc', entradaId],

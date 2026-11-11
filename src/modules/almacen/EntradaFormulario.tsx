@@ -27,6 +27,8 @@ import { centrosActivos, centroSugerido, motivoDeSubMotivo, motivosDe, subMotivo
 import { useCentrosCostos, useMotivosGastos } from '../tesoreria/api';
 import { EscanerQr } from './EscanerQr';
 import { ProveedorFormulario } from './ProveedorFormulario';
+import { AvisoSaldoFavor, sumaSaldo } from '../tesoreria/AvisoSaldoFavor';
+import { useNcDeProveedor } from '../tesoreria/nc-api';
 import { InventarioFormulario } from './InventarioFormulario';
 import './entradas.css';
 
@@ -165,6 +167,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
   const sunat = useTipoCambioSunat(open && moneda === 'USD');
 
   const proveedor = proveedores.find(p => p.id === proveedorId) ?? null;
+  // Saldo a favor del proveedor (notas de crédito aprobadas) en la moneda de la orden: se avisa y se descuenta al pagar
+  const saldoFavorQ = useNcDeProveedor(proveedorId, proveedor?.razon_social?.trim() || proveedor?.nombre || null, moneda, open && !servicio);
+  const notasFavor = saldoFavorQ.data ?? [];
 
   // Inicialización al abrir: nueva orden o edición de una existente
   useEffect(() => {
@@ -542,6 +547,12 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
           <span>IGV 18 % <strong className="oc-pie__igv">{dinero(igv)}</strong></span>
         </div>
       )}
+      {sumaSaldo(notasFavor) > 0 && total > 0 && (
+        <div className="oc-pie__desglose">
+          <span>A favor <strong>{dinero(sumaSaldo(notasFavor))}</strong></span>
+          <span>A pagar al descontarlo <strong className="oc-pie__igv">{dinero(Math.max(0, Math.round((total - sumaSaldo(notasFavor)) * 100) / 100))}</strong></span>
+        </div>
+      )}
       <div className="oc-pie__total">
         <span className="oc-pie__etiqueta">Total</span>
         <span className="oc-pie__monto">
@@ -706,6 +717,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
                     placeholder={proveedorId ? 'Selecciona la cuenta…' : 'Primero elige el proveedor'} />
                 )}
               </Field>
+              {notasFavor.length > 0 && (
+                <div className="field field--wide"><AvisoSaldoFavor notas={notasFavor} moneda={moneda} total={totalesLineas(lineas).total} /></div>
+              )}
               <Field label="Cuenta bancaria de la empresa" wide>
                 {p => (
                   <Combobox {...p} enHoja tituloHoja="Cuenta bancaria de la empresa" options={listaOpc(cuentasEmpresaEtiquetas)} value={cuentaEmpresa || null}
