@@ -23,7 +23,7 @@ export interface DevolucionHecha { proveedorId: string; ocOrigen: string; refere
  * Devolver mercadería a un proveedor: se elige la orden de compra, las cantidades que vuelven y el motivo.
  * El sistema genera la salida de almacén (baja el stock y queda en el kardex) y deja listos los datos para registrar la nota de crédito.
  */
-export function NcDevolucion({ open, onClose, onHecha }: { open: boolean; onClose: () => void; onHecha: (d: DevolucionHecha) => void }) {
+export function NcDevolucion({ open, onClose, onHecha, inicial }: { open: boolean; onClose: () => void; onHecha: (d: DevolucionHecha) => void; inicial?: { proveedorId?: string; ocOrigen?: string } | null }) {
   const qc = useQueryClient();
   const toast = useToast();
   const { user } = useAuth();
@@ -37,7 +37,7 @@ export function NcDevolucion({ open, onClose, onHecha }: { open: boolean; onClos
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
-  useEffect(() => { if (open) { setProveedorId(''); setOrdenId(''); setCantidades({}); setMotivo(''); setError(null); } }, [open]);
+  useEffect(() => { if (open) { setProveedorId(inicial?.proveedorId ?? ''); setOrdenId(inicial?.ocOrigen ?? ''); setCantidades({}); setMotivo(''); setError(null); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const proveedor = (proveedores.data ?? []).find(p => p.id === proveedorId) ?? null;
   const opcionesProveedor = useMemo(() => (proveedores.data ?? []).map(p => ({ value: p.id, label: p.nombre, description: p.ruc ?? undefined })), [proveedores.data]);

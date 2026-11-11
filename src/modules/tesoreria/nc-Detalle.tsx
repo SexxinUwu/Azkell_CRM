@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, ExternalLink, Undo2, XCircle } from 'lucide-react';
+import { CheckCircle2, ExternalLink, PackageMinus, Undo2, XCircle } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
@@ -13,7 +13,10 @@ import { haptic } from '../../core/lib/haptics';
 import { formatFechaPe } from '../../core/lib/format';
 import { useEmpresaCuentas } from '../almacen/api';
 import { etiquetaCuentaEmpresa } from '../almacen/entradaReglas';
-import { ETIQUETA_ESTADO, TONO_ESTADO, accionNc, montoNc, useDetalleNc } from './nc-api';
+import { Combobox } from '../../core/ui/Combobox';
+import { ETIQUETA_ESTADO, TONO_ESTADO, accionNc, enlazarSalida, faltaSalida, montoNc, useDetalleNc } from './nc-api';
+import { NcDevolucion } from './nc-Devolucion';
+import { useSalidasLibres } from './nc-Mercaderia';
 
 /** Detalle de una nota de crédito: cifras, archivo, a qué órdenes se aplicó y su historial. Desde aquí se aprueba, se reembolsa o se anula. */
 export function NcDetalle({ id, onClose }: { id: number | null; onClose: () => void }) {
@@ -26,6 +29,10 @@ export function NcDetalle({ id, onClose }: { id: number | null; onClose: () => v
   const [ocupado, setOcupado] = useState(false);
   const [anulando, setAnulando] = useState(false);
   const [reembolsando, setReembolsando] = useState(false);
+  const [enlazando, setEnlazando] = useState(false);
+  const [devolviendo, setDevolviendo] = useState(false);
+  const [salidaElegida, setSalidaElegida] = useState('');
+  const libres = useSalidasLibres(d?.proveedor_nombre ?? null);
 
   const refrescar = async () => { await qc.invalidateQueries({ queryKey: ['tesoreria', 'notas-credito'] }); };
 
@@ -33,6 +40,14 @@ export function NcDetalle({ id, onClose }: { id: number | null; onClose: () => v
     if (!d) return;
     setOcupado(true);
     try { await accionNc(d.id, 'aprobar'); haptic('success'); toast(`Nota ${d.codigo} aprobada: ya se puede aplicar`); await refrescar(); }
+    catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
+    finally { setOcupado(false); }
+  }
+
+  async function enlazar(referencia: string) {
+    if (!d || !referencia) return;
+    setOcupado(true);
+    try { await enlazarSalida(d.id, referencia); haptic('success'); toast(`Salida ${referencia} enlazada a ${d.codigo}`); setEnlazando(false); setDevolviendo(false); setSalidaElegida(''); await refrescar(); }
     catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
     finally { setOcupado(false); }
   }
@@ -65,6 +80,17 @@ export function NcDetalle({ id, onClose }: { id: number | null; onClose: () => v
               <div><strong style={{ color: d.saldo > 0 ? 'var(--green-ink)' : undefined }}>{montoNc(d.saldo, d.moneda)}</strong><span>Saldo a favor</span></div>
             </div>
 
+            {d && faltaSalida(d) && (
+              <Notice tone="accent" icon={<PackageMinus size={16} />}>
+                <b>Falta registrar la salida de la devolución.</b> Enlaza la salida de almacén o genérala ahora para que baje el stock.
+                {puedeEditar && (
+                  <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', marginTop: 'var(--s-2)' }}>
+                    <Button size="sm" variant="secondary" onClick={() => setEnlazando(true)}>Enlazar salida existente</Button>
+                    <Button size="sm" variant="primary" onClick={() => setDevolviendo(true)}>Devolver mercadería ahora</Button>
+                  </div>
+                )}
+              </Notice>
+            )}
             {d.estado === 'REGISTRADA' && <Notice>Falta la aprobación. {d.registrado_por ? `La registró ${d.registrado_por}: la aprueba otra persona (Tesorería o Contabilidad).` : ''}</Notice>}
             {d.estado === 'ANULADA' && <Notice tone="error">Anulada por {d.anulado_por || '—'}: {d.motivo_anulacion}</Notice>}
 
@@ -113,6 +139,19 @@ export function NcDetalle({ id, onClose }: { id: number | null; onClose: () => v
         )}
       </Sheet>
 
+      {d && (
+        <Sheet open={enlazando} onClose={() => !ocupado && setEnlazando(false)} title="Enlazar salida de la devolución"
+          footer={<><Button variant="secondary" onClick={() => setEnlazando(false)} disabled={ocupado}>Cancelar</Button>
+            <Button variant="primary" onClick={() => enlazar(salidaElegida)} loading={ocupado} disabled={!salidaElegida}>Enlazar</Button></>}>
+          <Combobox options={libres.map(sa => ({ value: String(sa.id), label: String(sa.id), description: `${sa.fecha ? formatFechaPe(sa.fecha) : ''} · ${sa.responsable ?? ''}` }))}
+            value={salidaElegida || null} onChange={v => setSalidaElegida(v ?? '')} enHoja compacta placeholder="Elige la salida" tituloHoja="Salida de almacén" />
+          {libres.length === 0 && <p className="field__hint">No hay salidas de devolución sin nota. Usa «Devolver mercadería ahora».</p>}
+        </Sheet>
+      )}
+      {d && (
+        <NcDevolucion open={devolviendo} onClose={() => setDevolviendo(false)} inicial={{ proveedorId: d.proveedor_id ?? undefined, ocOrigen: d.oc_origen ?? undefined }}
+          onHecha={r => { void enlazar(r.referencia); }} />
+      )}
       {d && <AnularSheet open={anulando} nota={d.codigo} id={d.id} onClose={() => setAnulando(false)} onHecho={async () => { setAnulando(false); await refrescar(); }} />}
       {d && <ReembolsoSheet open={reembolsando} nota={d.codigo} id={d.id} monto={montoNc(d.saldo, d.moneda)} usd={d.moneda === 'USD'} onClose={() => setReembolsando(false)} onHecho={async () => { setReembolsando(false); await refrescar(); }} />}
     </>

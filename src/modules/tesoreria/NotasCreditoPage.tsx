@@ -18,7 +18,7 @@ import { NcFormulario, type NcInicial } from './nc-Formulario';
 import { NcDevolucion } from './nc-Devolucion';
 import { NcEstadoCuenta } from './nc-EstadoCuenta';
 import { NcDetalle } from './nc-Detalle';
-import { ETIQUETA_ESTADO, TONO_ESTADO, montoNc, useNotasCredito, useResumenProveedoresNc, type EstadoNc, type NotaCredito } from './nc-api';
+import { ETIQUETA_ESTADO, TONO_ESTADO, montoNc, useNotasCredito, useResumenProveedoresNc, type EstadoNc, type NotaCredito, faltaSalida } from './nc-api';
 
 type Vista = 'notas' | 'proveedores';
 type FiltroEstado = 'todas' | EstadoNc;
@@ -159,6 +159,7 @@ function FilaNota({ n, onAbrir }: { n: NotaCredito; onAbrir: () => void }) {
         <span className="row__subtitle" style={{ display: 'block' }}>{['APROBADA', 'APLICADA_PARCIAL'].includes(n.estado) ? `Saldo ${montoNc(n.saldo, n.moneda)}` : ' '}</span>
       </span>
       <span className={`nc-estado nc-estado--${TONO_ESTADO[n.estado]}`}>{ETIQUETA_ESTADO[n.estado]}</span>
+      {faltaSalida(n) && <span className="nc-estado nc-estado--amber" title="Falta registrar la salida de almacén de la devolución">Falta salida</span>}
       <ChevronRight size={18} className="row__chevron" aria-hidden />
     </button>
   );

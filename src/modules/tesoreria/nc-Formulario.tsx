@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Building2, CircleAlert, FileText, Receipt, Wallet } from 'lucide-react';
+import { Building2, CircleAlert, FileText, PackageMinus, Receipt, Wallet } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
@@ -12,7 +12,9 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { formatFechaPe } from '../../core/lib/format';
-import { useEntradas, useProveedores, type EntradaInv } from '../almacen/api';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { guardarSalida, useEntradas, useProveedores, type EntradaInv } from '../almacen/api';
+import { NcMercaderia, useMercaderia } from './nc-Mercaderia';
 import { MOTIVOS_SUNAT, montoNc } from './nc-api';
 
 const hoy = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
@@ -47,6 +49,7 @@ export function NcFormulario({ open, onClose, onCreada, inicial }: { open: boole
   const toast = useToast();
   const proveedores = useProveedores();
   const entradas = useEntradas();
+  const { user } = useAuth();
 
   const [proveedorId, setProveedorId] = useState('');
   const [ocOrigen, setOcOrigen] = useState('');
@@ -64,9 +67,12 @@ export function NcFormulario({ open, onClose, onCreada, inicial }: { open: boole
   const [errores, setErrores] = useState<Errores>({});
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  // Si la salida ya se generó y la nota falló, al reintentar no se vuelve a generar
+  const [salidaCreada, setSalidaCreada] = useState('');
 
   useEffect(() => {
     if (!open) return;
+    setSalidaCreada('');
     setProveedorId(inicial?.proveedorId ?? ''); setOcOrigen(inicial?.ocOrigen ?? ''); setSerie(''); setNumero(''); setFecha(hoy());
     setMoneda(inicial?.moneda ?? 'PEN'); setTotal(inicial?.total ? String(inicial.total) : '');
     setMotivoSunat(MOTIVO_POR_DEFECTO); setForma('APLICAR'); setReferencia(inicial?.referencia ?? ''); setObservaciones(''); setArchivo(null);
@@ -85,6 +91,10 @@ export function NcFormulario({ open, onClose, onCreada, inicial }: { open: boole
   const orden = ordenesValidas.find(e => e.id === ocOrigen) ?? null;
   const importe = orden ? importeOc(orden) : null;
   const proveedor = (proveedores.data ?? []).find(p => p.id === proveedorId) ?? null;
+  const merc = useMercaderia(orden);
+  const nombreProveedor = proveedor ? (proveedor.razon_social?.trim() || proveedor.nombre) : null;
+  // Devolviendo ahora, el valor de lo devuelto se propone como total (se puede bajar)
+  useEffect(() => { if (merc.modo === 'ahora' && merc.totalDevuelto > 0) setTotal(merc.totalDevuelto.toFixed(2)); }, [merc.modo, merc.totalDevuelto]);
   const opcionesProveedor = useMemo(() => (proveedores.data ?? []).map(p => ({ value: p.id, label: p.razon_social?.trim() || p.nombre, description: p.ruc ?? undefined })), [proveedores.data]);
   // Todas las órdenes (o las del proveedor elegido), con su importe a la vista
   const opcionesOrden = useMemo(() => ordenesValidas
@@ -124,10 +134,28 @@ export function NcFormulario({ open, onClose, onCreada, inicial }: { open: boole
     if (!archivo) e.archivo = 'Adjunta la nota de crédito (PDF, XML o foto): es obligatorio.';
     setErrores(e);
     if (Object.keys(e).length || !proveedor || !archivo) { haptic('warning'); return; }
+    if (orden && merc.modo === 'ahora' && !merc.elegidas.length && !salidaCreada) { setError('Indica la cantidad que se devuelve de al menos un artículo, o elige «Aún no / no aplica».'); haptic('warning'); return; }
+    if (orden && merc.modo === 'ya' && !merc.salidaYa) { setError('Elige la salida de la devolución, o elige otra opción.'); haptic('warning'); return; }
+    setError(null);
+
+    setEnviando(true);
+    let refSalida = orden && merc.modo === 'ya' ? merc.salidaYa : salidaCreada;
+    try {
+      if (orden && merc.modo === 'ahora' && !refSalida) {
+        const motivoTxt = MOTIVOS_SUNAT.find(m => m.value === motivoSunat)?.label ?? '';
+        const r = await guardarSalida({
+          fecha: hoy(), tipo_destino: 'Devolucion a proveedor', responsable: nombreProveedor ?? proveedor.nombre, moneda: orden.moneda,
+          observaciones: `DEVOLUCIÓN A PROVEEDOR · orden ${String(orden.id).replace(/^ENT-/, '')} · ${motivoTxt}`, creado_por: user?.name ?? '', items: merc.itemsSalida,
+        } as Parameters<typeof guardarSalida>[0]) as { ok?: boolean; id?: string | number; error?: string };
+        if (r.ok === false || r.error || r.id == null) throw new Error(r.error || 'No se pudo registrar la salida de almacén');
+        refSalida = String(r.id); setSalidaCreada(refSalida);
+        toast(`Salida ${refSalida} registrada: el stock ya bajó.`);
+      }
+    } catch (err) { setError(errorMessage(err)); haptic('warning'); setEnviando(false); return; }
 
     const fd = new FormData();
     fd.append('proveedor_id', proveedor.id);
-    fd.append('proveedor_nombre', proveedor.razon_social?.trim() || proveedor.nombre);
+    fd.append('proveedor_nombre', nombreProveedor ?? proveedor.nombre);
     if (proveedor.ruc) fd.append('proveedor_ruc', proveedor.ruc);
     fd.append('serie', serie.trim().toUpperCase());
     fd.append('numero', numero.trim());
@@ -140,19 +168,19 @@ export function NcFormulario({ open, onClose, onCreada, inicial }: { open: boole
     fd.append('motivo_texto', MOTIVOS_SUNAT.find(m => m.value === motivoSunat)?.label ?? '');
     if (ocOrigen) fd.append('oc_origen', ocOrigen);
     fd.append('forma', forma);
-    if (referencia.trim()) fd.append('referencia_devolucion', referencia.trim());
+    const refFinal = refSalida || referencia.trim();
+    if (refFinal) fd.append('referencia_devolucion', refFinal);
     if (observaciones.trim()) fd.append('observaciones', observaciones.trim());
     fd.append('archivo', archivo);
 
-    setEnviando(true); setError(null);
     try {
       const r = await api<{ ok?: boolean; id: number; codigo: string; error?: string }>('/compras/notas-credito', { method: 'POST', body: fd });
       if (r.ok === false) throw new Error(r.error || 'No se pudo registrar la nota');
       haptic('success');
       toast(`Nota ${r.codigo} registrada. Falta que otra persona la apruebe.`);
-      await qc.invalidateQueries({ queryKey: ['tesoreria', 'notas-credito'] });
+      await Promise.all([qc.invalidateQueries({ queryKey: ['tesoreria', 'notas-credito'] }), qc.invalidateQueries({ queryKey: ['almacen'] })]);
       onCreada(r.id);
-    } catch (err) { setError(errorMessage(err)); haptic('warning'); }
+    } catch (err) { setError(errorMessage(err) + (refSalida && merc.modo === 'ahora' ? ` La salida ${refSalida} ya se generó: al reintentar no se duplica.` : '')); haptic('warning'); }
     finally { setEnviando(false); }
   }
 
@@ -180,6 +208,12 @@ export function NcFormulario({ open, onClose, onCreada, inicial }: { open: boole
               enHoja compacta placeholder="Busca el proveedor" tituloHoja="Proveedor" loading={proveedores.isLoading} disabled={!!orden} />}
           </Field>
         </Seccion>
+
+        {orden && (
+          <Seccion icono={<PackageMinus size={16} />} titulo="Mercadería devuelta">
+            <NcMercaderia h={merc} moneda={moneda} proveedorNombre={nombreProveedor} sugerirDevolucion={['06', '07'].includes(motivoSunat) && !referencia.trim()} />
+          </Seccion>
+        )}
 
         <Seccion icono={<Receipt size={16} />} titulo="Documento del proveedor">
           <div className="ncf-fila">
@@ -233,7 +267,7 @@ export function NcFormulario({ open, onClose, onCreada, inicial }: { open: boole
         <details className="ncf-mas" open={!!inicial?.referencia}>
           <summary>Más datos (opcional)</summary>
           <div className="ncf-seccion__cuerpo" style={{ marginTop: 'var(--s-3)' }}>
-            <Field label="Guía o salida de la devolución" hint="Guía de remisión o N° de salida de almacén de lo que se devolvió">
+            <Field label="Guía o salida de la devolución" hint="Guía de remisión u otra referencia. Si elegiste una salida arriba, esa tiene prioridad.">
               {p => <TextInput {...p} value={referencia} onChange={e => setReferencia(e.target.value)} />}
             </Field>
             <Field label="Observaciones">

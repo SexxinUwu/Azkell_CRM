@@ -167,6 +167,13 @@ module.exports = (db, logAudit) => {
             const igual = dup.find(d => nc.mismoProveedor(d, proveedorId, proveedorNombre));
             if (igual) throw aviso(`Esa nota ya está registrada: ${igual.codigo}.`, 409);
 
+            // Una salida de devolución respalda una sola nota: así no se descuenta dos veces
+            const referencia = texto(b.referencia_devolucion, 150);
+            if (referencia) {
+                const [usada] = await p.query("SELECT codigo FROM compras_notas_credito WHERE referencia_devolucion = ? AND estado <> 'ANULADA' LIMIT 1", [referencia]);
+                if (usada.length) throw aviso(`La devolución ${referencia} ya respalda la nota ${usada[0].codigo}.`, 409);
+            }
+
             // Si se indica la orden de origen, la nota no puede superar su importe
             const ocOrigen = texto(b.oc_origen, 20);
             if (ocOrigen) {
@@ -184,12 +191,34 @@ module.exports = (db, logAudit) => {
             const [r] = await p.query('INSERT INTO compras_notas_credito SET ?', [{
                 codigo, proveedor_id: proveedorId, proveedor_nombre: proveedorNombre, proveedor_ruc: texto(b.proveedor_ruc, 20), serie, numero, fecha_emision: fecha,
                 moneda, base, igv, total, saldo: total, motivo_sunat: texto(b.motivo_sunat, 2), motivo_texto: texto(b.motivo_texto, 255), oc_origen: ocOrigen,
-                referencia_devolucion: texto(b.referencia_devolucion, 150), forma, estado: 'REGISTRADA', archivo_url: url, observaciones: texto(b.observaciones, 2000), registrado_por: usuario,
+                referencia_devolucion: referencia, forma, estado: 'REGISTRADA', archivo_url: url, observaciones: texto(b.observaciones, 2000), registrado_por: usuario,
             }]);
             await nc.historial(p, r.insertId, 'REGISTRADA', `${serie}-${numero} · ${moneda} ${total.toFixed(2)} · ${proveedorNombre}${ocOrigen ? ` · orden ${ocOrigen}` : ''}`, usuario);
             auditar(req, 'REGISTRÓ NC PROVEEDOR', `${codigo} ${serie}-${numero} ${moneda} ${total} (${proveedorNombre})`);
             res.json({ ok: true, id: r.insertId, codigo });
         } catch (err) { responder(res, err, 'crear'); }
+    });
+
+    // ── Enlazar la salida de almacén de la devolución a una nota que se registró sin ella ───────────────────
+    router.post('/compras/notas-credito/:id/enlazar-salida', async (req, res) => {
+        try {
+            const p = P(req);
+            const id = Number(req.params.id);
+            const referencia = texto(req.body && req.body.referencia, 150);
+            if (!referencia) throw aviso('Indica la salida de la devolución.');
+            const [f] = await p.query('SELECT codigo, estado, referencia_devolucion FROM compras_notas_credito WHERE id = ?', [id]);
+            if (!f.length) throw aviso('La nota no existe.', 404);
+            if (f[0].estado === 'ANULADA') throw aviso('La nota está anulada.', 409);
+            if (f[0].referencia_devolucion) throw aviso(`La nota ya tiene su devolución: ${f[0].referencia_devolucion}.`, 409);
+            const [usada] = await p.query("SELECT codigo FROM compras_notas_credito WHERE referencia_devolucion = ? AND estado <> 'ANULADA' AND id <> ? LIMIT 1", [referencia, id]);
+            if (usada.length) throw aviso(`La devolución ${referencia} ya respalda la nota ${usada[0].codigo}.`, 409);
+            const [r] = await p.query('UPDATE compras_notas_credito SET referencia_devolucion = ? WHERE id = ? AND referencia_devolucion IS NULL', [referencia, id]);
+            if (r.affectedRows !== 1) throw aviso('No se pudo enlazar: la nota cambió, vuelve a abrirla.', 409);
+            const usuario = usuarioDe(req);
+            await nc.historial(p, id, 'SALIDA ENLAZADA', referencia, usuario);
+            auditar(req, 'ENLAZÓ SALIDA A NC PROVEEDOR', `${f[0].codigo} ← ${referencia}`);
+            res.json({ ok: true });
+        } catch (err) { responder(res, err, 'enlazar la salida'); }
     });
 
     // ── Aprobar (quien la registra no la aprueba; el administrador puede, y queda anotado) ──────────────────

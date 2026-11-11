@@ -81,6 +81,15 @@ export function useNcDeOrden(entradaId: string | number | null) {
   });
 }
 
+/** Enlaza la salida de almacén de la devolución a una nota que se registró sin ella */
+export async function enlazarSalida(id: number, referencia: string) {
+  return api(`/compras/notas-credito/${id}/enlazar-salida`, { method: 'POST', body: { referencia } });
+}
+
+/** ¿La nota es por una devolución y todavía no tiene su salida de almacén? */
+export const faltaSalida = (n: Pick<NotaCredito, 'motivo_sunat' | 'referencia_devolucion' | 'estado'>) =>
+  ['06', '07'].includes(n.motivo_sunat ?? '') && !n.referencia_devolucion && n.estado !== 'ANULADA';
+
 export async function accionNc(id: number, accion: 'aprobar' | 'anular', cuerpo?: Record<string, unknown>) {
   return api(`/compras/notas-credito/${id}/${accion}`, { method: 'POST', body: cuerpo ?? {} });
 }
