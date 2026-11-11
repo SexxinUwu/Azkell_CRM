@@ -29,3 +29,22 @@
 .nc-total-cifras > div { background: var(--surface-sunken); border-radius: var(--r-md); padding: var(--s-2) var(--s-3); text-align: center; }
 .nc-total-cifras strong { display: block; font-size: 1.0625rem; font-variant-numeric: tabular-nums; }
 .nc-total-cifras span { font-size: 0.6875rem; color: var(--label-2); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* Formulario de nota de crédito: secciones tipo lista agrupada */
+.ncf { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
+.ncf-seccion { display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-4); border-radius: var(--r-xl); background: var(--fill-subtle); box-shadow: inset 0 0 0 1px var(--separator); min-width: 0; }
+.ncf-seccion__titulo { margin: 0; display: flex; align-items: center; gap: var(--s-2); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--label-2); }
+.ncf-seccion__titulo > span { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--accent-tint); color: var(--accent-ink); }
+.ncf-seccion__cuerpo { display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
+.ncf-fila { display: grid; grid-template-columns: 1fr 1.4fr 1.4fr; gap: var(--s-3); }
+.ncf-importe { display: grid; grid-template-columns: 1.4fr 1fr; gap: var(--s-3); align-items: end; }
+.ncf-total { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.ncf-moneda { display: flex; flex-direction: column; gap: 2px; min-height: 2.75rem; justify-content: center; padding: 0 var(--s-3); border-radius: var(--r-md); background: var(--fill); font-size: 0.75rem; color: var(--label-2); }
+.ncf-moneda strong { font-size: 0.9375rem; color: var(--label); }
+.ncf-orden { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s-2); padding: var(--s-3) var(--s-4); border-radius: var(--r-lg); background: var(--accent-tint); color: var(--accent-ink); font-size: 0.875rem; }
+.ncf-orden strong { font-size: 1.125rem; font-variant-numeric: tabular-nums; }
+.ncf-orden small { color: var(--label-2); font-size: 0.8125rem; }
+.ncf-desglose { margin: 0; font-size: 0.8125rem; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.ncf-mas { padding: var(--s-3) var(--s-4); border-radius: var(--r-xl); background: var(--fill-subtle); }
+.ncf-mas summary { cursor: pointer; font-size: 0.875rem; font-weight: 600; color: var(--label-2); }
+@media (max-width: 560px) { .ncf-fila, .ncf-importe { grid-template-columns: 1fr; } }

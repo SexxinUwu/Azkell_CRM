@@ -8,15 +8,21 @@ export const esDocumentoEvidencia = (v: string) => /^data:application\/pdf/i.tes
  * Adjuntar una evidencia: tomar una foto con la cámara o abrir la galería / elegir un documento (PDF).
  * `src` es la dirección para mostrar la foto (la guardada puede necesitar firma); sin ella solo se muestra el nombre.
  */
-export function AdjuntoEvidencia({ valor, src, onArchivo, onQuitar, titulo = 'Evidencia', disabled }: {
+export function AdjuntoEvidencia({ valor, src, onArchivo, onQuitar, titulo = 'Evidencia', disabled, aceptar = 'image/*,application/pdf', documento, nombre }: {
   valor: string;
   src?: string;
   onArchivo: (f: File) => void;
   onQuitar: () => void;
   titulo?: string;
   disabled?: boolean;
+  /** Tipos que acepta la galería o el selector de documentos (por defecto fotos y PDF) */
+  aceptar?: string;
+  /** Fuerza el aspecto de documento (por ejemplo un XML) */
+  documento?: boolean;
+  /** Nombre del archivo elegido, para mostrarlo */
+  nombre?: string;
 }) {
-  const doc = !!valor && esDocumentoEvidencia(valor);
+  const doc = !!valor && (documento || esDocumentoEvidencia(valor));
   return (
     <div className="adjunto" role="group" aria-label={titulo}>
       {valor ? (
@@ -24,7 +30,7 @@ export function AdjuntoEvidencia({ valor, src, onArchivo, onQuitar, titulo = 'Ev
           {doc
             ? <span className="adjunto__doc"><FileText size={22} aria-hidden /></span>
             : (src ? <img className="adjunto__foto" src={src} alt={titulo} /> : <span className="adjunto__doc"><Paperclip size={20} aria-hidden /></span>)}
-          <span className="adjunto__texto"><b>{doc ? 'Documento adjunto' : 'Foto adjunta'}</b><small>{titulo}</small></span>
+          <span className="adjunto__texto"><b>{nombre ?? (doc ? 'Documento adjunto' : 'Foto adjunta')}</b><small>{doc ? 'Documento' : 'Foto'} · {titulo}</small></span>
           <button type="button" className="adjunto__quitar" onClick={onQuitar} disabled={disabled} aria-label="Quitar el adjunto"><X size={16} /></button>
         </div>
       ) : (
@@ -35,7 +41,7 @@ export function AdjuntoEvidencia({ valor, src, onArchivo, onQuitar, titulo = 'Ev
           </label>
           <label className={`adjunto__btn adjunto__btn--galeria${disabled ? ' is-off' : ''}`}>
             <Images size={18} aria-hidden /> Galería o documento
-            <input type="file" accept="image/*,application/pdf" hidden disabled={disabled} onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onArchivo(f); }} />
+            <input type="file" accept={aceptar} hidden disabled={disabled} onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onArchivo(f); }} />
           </label>
         </div>
       )}
