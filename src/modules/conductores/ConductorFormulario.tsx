@@ -127,47 +127,36 @@ export function ConductorFormulario({ conductor, existentes, open, onClose, onGu
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={guardando}>Cancelar</Button>
-          <Button variant="primary" onClick={guardar} loading={guardando} disabled={!cambiado}>{editando ? 'Guardar cambios' : 'Agregar conductor'}</Button>
+          <Button variant="primary" onClick={guardar} loading={guardando} disabled={!cambiado}>{editando ? 'Guardar cambios' : 'Agregar persona'}</Button>
         </>
       }
     >
-      <div className="placa-form">
-        <div className="conductor-form__foto">
-          <button type="button" className="conductor-form__foto-btn pressable" onClick={() => inputFoto.current?.click()} aria-label="Cambiar foto">
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.span key={fotoNueva ?? c.foto ?? 'iniciales'} initial={{ opacity: 0, scale: reduce ? 1 : 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={spring}>
-                <FotoConductor conductor={c} foto={fotoNueva ?? (c.foto || undefined)} size={96} />
-              </motion.span>
-            </AnimatePresence>
-            <span className="conductor-form__camara"><Camera size={15} /></span>
-          </button>
-          {fotoNueva && (
-            <button type="button" className="placas-limpiar" onClick={() => setFotoNueva(undefined)}><X size={13} style={{ verticalAlign: '-2px' }} /> Quitar foto nueva</button>
-          )}
-          <input ref={inputFoto} type="file" accept="image/*" hidden onChange={e => elegirFoto(e.target.files?.[0])} />
-        </div>
-
-        <section className="form-section">
-          <h3 className="form-section__title">Identificación</h3>
-          <div className="form-grid">
-            <Field label="DNI" error={error('dni')} hint={buscandoDni ? 'Buscando en RENIEC…' : 'Con 8 dígitos el nombre se completa solo.'}>
+      <div className="cf">
+        <div className="cf-cabecera">
+          <div className="cf-foto">
+            <button type="button" className="conductor-form__foto-btn pressable" onClick={() => inputFoto.current?.click()} aria-label="Cambiar foto">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span key={fotoNueva ?? c.foto ?? 'iniciales'} initial={{ opacity: 0, scale: reduce ? 1 : 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={spring}>
+                  <FotoConductor conductor={c} foto={fotoNueva ?? (c.foto || undefined)} size={88} />
+                </motion.span>
+              </AnimatePresence>
+              <span className="conductor-form__camara"><Camera size={15} /></span>
+            </button>
+            {fotoNueva && (
+              <button type="button" className="placas-limpiar" onClick={() => setFotoNueva(undefined)}><X size={13} style={{ verticalAlign: '-2px' }} /> Quitar</button>
+            )}
+            <input ref={inputFoto} type="file" accept="image/*" hidden onChange={e => elegirFoto(e.target.files?.[0])} />
+          </div>
+          <div className="cf-cabecera__campos">
+            <Field label="DNI" error={error('dni')} hint={buscandoDni ? 'Buscando en RENIEC…' : undefined}>
               {props => (
                 <div className="conductor-form__dni">
-                  <TextInput {...props} {...campo('dni', v => v.replace(/\D/g, '').slice(0, 8))} inputMode="numeric" autoFocus={!editando} className="input--mono" />
+                  <TextInput {...props} {...campo('dni', v => v.replace(/\D/g, '').slice(0, 8))} inputMode="numeric" placeholder="8 dígitos: el nombre se completa solo" autoFocus={!editando} className="input--mono" />
                   {buscandoDni && <LoaderCircle size={16} className="conductor-form__girando" aria-hidden />}
                 </div>
               )}
             </Field>
-            <Field label="Licencia de conducir" error={error('licencia')}>
-              {props => <TextInput {...props} {...campo('licencia', v => v.toUpperCase().replace(/\s/g, '').slice(0, 20))} placeholder="Q12345678" className="input--mono" />}
-            </Field>
-            <Field label="Banco" hint="Para autollenar la cuenta al elegir al conductor">
-              {props => <TextInput {...props} value={c.banco} onChange={e => setC(x => ({ ...x, banco: e.target.value.toUpperCase().slice(0, 50) }))} placeholder="BCP" />}
-            </Field>
-            <Field label="Número de cuenta">
-              {props => <TextInput {...props} value={c.numero_cuenta} onChange={e => setC(x => ({ ...x, numero_cuenta: e.target.value.slice(0, 50) }))} placeholder="191-XXXXXXXX-X-XX o celular" className="input--mono" />}
-            </Field>
-            <Field label="Nombre completo" error={error('nombre')} wide
+            <Field label="Nombre completo" error={error('nombre')}
               hint={deReniec ? <span className="conductor-form__reniec"><Sparkles size={12} /> Obtenido de RENIEC</span> : undefined}>
               {props => (
                 <motion.div key={deReniec ? c.nombre : 'manual'} initial={deReniec && !reduce ? { backgroundColor: 'var(--green-tint)' } : false}
@@ -178,15 +167,28 @@ export function ConductorFormulario({ conductor, existentes, open, onClose, onGu
               )}
             </Field>
           </div>
-        </section>
+        </div>
 
-        <section className="form-section">
-          <h3 className="form-section__title">Contacto y empresa</h3>
-          <div className="form-grid">
+        <section className="cf-seccion">
+          <h3 className="cf-seccion__titulo">Licencia y contacto</h3>
+          <div className="cf-grid">
+            <Field label="Licencia de conducir" error={error('licencia')}>
+              {props => <TextInput {...props} {...campo('licencia', v => v.toUpperCase().replace(/\s/g, '').slice(0, 20))} placeholder="Q12345678" className="input--mono" />}
+            </Field>
             <Field label="Celular" error={error('telefono')}>
               {props => <TextInput {...props} {...campo('telefono', v => v.replace(/[^\d\s+]/g, '').slice(0, 15))} inputMode="tel" placeholder="987 654 321" />}
             </Field>
-            <div className="field">
+          </div>
+        </section>
+
+        <section className="cf-seccion">
+          <h3 className="cf-seccion__titulo">Empresa y estado</h3>
+          <div className="cf-grid">
+            <Field label="Empresa" wide>
+              {props => <Combobox {...props} options={empresas} value={c.empresa || null} onChange={v => setC(x => ({ ...x, empresa: v ?? '' }))}
+                placeholder="Busca o escribe la empresa" onCreate={t => setC(x => ({ ...x, empresa: t.trim().toUpperCase() }))} createLabel="Usar" />}
+            </Field>
+            <div className="field field--wide">
               <span className="field__label">Estado</span>
               <SegmentedControl block label="Estado" value={c.estado} onChange={v => setC(x => ({ ...x, estado: v }))}
                 options={[
@@ -194,10 +196,6 @@ export function ConductorFormulario({ conductor, existentes, open, onClose, onGu
                   ...(c.estado === 'Inactivo' ? [{ value: 'Inactivo', label: 'Inactivo' }] : []),
                 ]} />
             </div>
-            <Field label="Empresa" wide>
-              {props => <Combobox {...props} options={empresas} value={c.empresa || null} onChange={v => setC(x => ({ ...x, empresa: v ?? '' }))}
-                placeholder="Busca o escribe la empresa" onCreate={t => setC(x => ({ ...x, empresa: t.trim().toUpperCase() }))} createLabel="Usar" />}
-            </Field>
           </div>
         </section>
       </div>

@@ -131,3 +131,19 @@
 /* ─── Importar: vista previa de personas ─── */
 .importar__personas { list-style: none; display: flex; flex-direction: column; gap: var(--s-2); }
 .importar__personas li { display: flex; align-items: center; gap: var(--s-3); }
+
+/* Formulario de personal: foto junto a DNI y nombre, y dos bloques sencillos */
+.cf { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
+.cf-cabecera { display: flex; gap: var(--s-4); align-items: flex-start; }
+.cf-foto { display: flex; flex-direction: column; align-items: center; gap: var(--s-2); flex-shrink: 0; }
+.cf-cabecera__campos { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--s-3); }
+.cf-seccion { display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-4); border-radius: var(--r-lg); background: var(--fill-subtle); min-width: 0; }
+.cf-seccion__titulo { margin: 0; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--label-2); }
+.cf-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3) var(--s-4); }
+.cf-grid > .field--wide { grid-column: 1 / -1; }
+.cf .input, .cf .field { min-width: 0; }
+@media (max-width: 520px) {
+  .cf-cabecera { flex-direction: column; align-items: center; }
+  .cf-cabecera__campos { width: 100%; }
+  .cf-grid { grid-template-columns: 1fr; }
+}
