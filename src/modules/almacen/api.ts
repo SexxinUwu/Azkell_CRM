@@ -663,7 +663,8 @@ function proveedorDesdeServidor(p: ProveedorServidor): ProveedorInv {
     razon_social: p.razon_social,
     tipo_documento: p.tipo_documento ?? 'RUC',
     ruc: p.numero_documento,
-    contacto: linea ? linea.slice(MARCA_CONTACTO.length) : null,
+    // En los proveedores antiguos "nombre" guarda al asesor y razon_social la empresa: ese nombre es el contacto
+    contacto: linea ? linea.slice(MARCA_CONTACTO.length) : (p.razon_social?.trim() && p.razon_social.trim().toUpperCase() !== p.nombre.trim().toUpperCase() ? p.nombre : null),
     telefono: p.telefono,
     correo: p.email,
     direccion: p.direccion,

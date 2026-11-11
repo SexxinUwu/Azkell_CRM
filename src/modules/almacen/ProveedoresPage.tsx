@@ -154,7 +154,7 @@ export function ProveedoresPage() {
                             {initials(p.nombre) || <Building2 size={20} />}
                           </span>
                           <div className="conductor-card__texto">
-                            <div className="conductor-card__nombre">{p.nombre}</div>
+                            <div className="conductor-card__nombre">{p.razon_social?.trim() || p.nombre}</div>
                             <div className="conductor-card__meta"><span>{p.ruc ? `RUC ${p.ruc}` : 'Sin RUC'}</span></div>
                             <div className="conductor-card__empresa">
                               {[p.contacto, tel].filter(Boolean).join(' · ') || 'Sin contacto'}
