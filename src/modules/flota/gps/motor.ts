@@ -134,6 +134,7 @@ export class MotorTelemetria {
   private pushAcc = 0;
   private trailAcc = 0;
   private camC: LngLat | null = null;
+  private t0Trafico: number | null = null;
   private uiAcc = 0;
   private trailPend = true;
   private sucio = true;
@@ -173,7 +174,12 @@ export class MotorTelemetria {
         if ([401, 403, 429].includes(ev.error?.status ?? 0) || this.fallosTrafico >= 5) this.apagarTrafico();
       } else console.error(e.error ?? e);
     });
-    this.mapa.on('data', e => { if ((e as unknown as { sourceId?: string; tile?: unknown }).sourceId === 'trafico' && (e as unknown as { tile?: unknown }).tile) this.fallosTrafico = 0; });
+    this.mapa.on('data', e => {
+      if ((e as unknown as { sourceId?: string; tile?: unknown }).sourceId === 'trafico' && (e as unknown as { tile?: unknown }).tile) {
+        this.fallosTrafico = 0;
+        if (this.t0Trafico != null) { console.info(`[tráfico] primera tesela visible ${Math.round(performance.now() - this.t0Trafico)} ms después de encenderlo`); this.t0Trafico = null; }
+      }
+    });
     this.mapa.on('move', () => { this.sucio = true; });
     this.mapa.on('dragstart', e => { if (this.follow && (e as any).originalEvent) this.setFollow(false); });
     // Con la cámara piloto el jumpTo por cuadro impide que MapLibre emita dragstart: el arrastre (ratón o dedo) se detecta aquí.
@@ -291,7 +297,9 @@ export class MotorTelemetria {
   /** Una sola petición de prueba antes de encender el tráfico: con clave sin cupo o no autorizada no se piden más teselas */
   private async probarTrafico(): Promise<boolean> {
     try {
+      const t = performance.now();
       const r = await fetch(TRAFICO_URL.replace('{z}', '0').replace('{x}', '0').replace('{y}', '0'), { cache: 'no-store' });
+      console.info(`[tráfico] prueba de la clave: ${Math.round(performance.now() - t)} ms (estado ${r.status})`);
       return ![401, 403, 429].includes(r.status);
     } catch { return true; /* sin red: la capa lo reintentará y, si falla varias veces, se apaga */ }
   }
@@ -319,12 +327,12 @@ export class MotorTelemetria {
       if (!v) { this.opt.traffic = false; if (this.styleReady) this.aplicarOpciones(false); return; }
       if (this.traficoNoDisponible || !HAY_TRAFICO) return;
       // Se enciende solo si la prueba sale bien; el estado del botón se actualiza con onOpciones
-      void this.probarTrafico().then(ok => {
-        if (!ok) { this.apagarTrafico(); return; }
-        this.opt.traffic = true; this.fallosTrafico = 0;
-        if (this.styleReady) this.aplicarOpciones(false);
-        this.cb.onOpciones?.();
-      });
+      // Se enciende de inmediato (antes esperaba la prueba y sumaba un viaje de ida y vuelta); la prueba corre en paralelo y apaga la capa si la clave no sirve
+      this.t0Trafico = performance.now();
+      this.opt.traffic = true; this.fallosTrafico = 0;
+      if (this.styleReady) this.aplicarOpciones(false);
+      this.cb.onOpciones?.();
+      void this.probarTrafico().then(ok => { if (!ok) this.apagarTrafico(); });
       return;
     }
     this.opt[k] = v;
