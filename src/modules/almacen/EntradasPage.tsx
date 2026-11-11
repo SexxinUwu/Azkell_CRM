@@ -61,6 +61,8 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'costo', titulo: 'Costo unit.', ancho: 104, alinear: 'right' },
   { id: 'total_oc', titulo: 'Total O.C.', ancho: 120, alinear: 'right' },
   { id: 'total_soles', titulo: 'Total (S/)', ancho: 120, alinear: 'right' },
+  { id: 'nc', titulo: 'Notas de crédito', ancho: 130, alinear: 'right' },
+  { id: 'pagado', titulo: 'Se pagó (neto)', ancho: 130, alinear: 'right' },
   { id: 'cc', titulo: 'Centro de costo', ancho: 130 },
   { id: 'voucher', titulo: 'Voucher', ancho: 104, alinear: 'center' },
   { id: 'cotizacion', titulo: 'Cotización', ancho: 110, alinear: 'center' },
@@ -130,6 +132,7 @@ function FilaOC({ orden: o, item, vista, ...acciones }: FilaProps) {
   const moneda = o.moneda === 'USD' ? 'USD' : 'PEN';
   const totalCant = items.reduce((s, it) => s + (Number(it.cantidad) || 0), 0);
   const toc = totalOrden(o);
+  const ncAplicado = Number(o.nc_aplicado) || 0;
   const codigo = codigoLimpio(o.id);
   const tipo = esServicio(o.tipo_orden) ? 'ORDEN DE SERVICIO' : 'ORDEN DE COMPRA';
   const fecha = o.fecha ? formatFechaPe(String(o.fecha).split('T')[0]) : '—';
@@ -152,6 +155,8 @@ function FilaOC({ orden: o, item, vista, ...acciones }: FilaProps) {
   const totales = [
     <Celda key="toc" alinear="right"><strong className="oc-importe">{formatMoneda(toc, moneda)}</strong></Celda>,
     <Celda key="tsol" alinear="right"><strong className="oc-importe">{formatSoles(Number(o.total_pen) || 0)}</strong></Celda>,
+    <Celda key="nc" alinear="right">{ncAplicado > 0 ? <span className="oc-nc" title={(o.nc_aplicadas ?? []).map(n => `${n.serie}-${n.numero}`).join(', ')}>− {formatMoneda(ncAplicado, moneda)}</span> : '—'}</Celda>,
+    <Celda key="pagado" alinear="right">{ncAplicado > 0 ? <strong className="oc-importe">{formatMoneda(Math.max(0, Math.round((toc - ncAplicado) * 100) / 100), moneda)}</strong> : '—'}</Celda>,
   ];
 
   if (vista === 'ordenes') {

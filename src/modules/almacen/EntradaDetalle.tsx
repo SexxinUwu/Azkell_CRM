@@ -47,6 +47,9 @@ export function EntradaDetalle({
 }: Props) {
   const items = e.items ?? [];
   const moneda = e.moneda === 'USD' ? 'USD' : 'PEN';
+  // Importe de la orden en su moneda (el costo de los artículos y el stock no cambian aunque una nota de crédito compense parte del pago)
+  const tcOrden = Number(e.tipo_cambio) || 0;
+  const totalOrdenDetalle = e.total_oc != null ? (Number(e.total_oc) || 0) : (moneda === 'USD' && tcOrden > 0 ? (Number(e.total_pen) || 0) / tcOrden : (Number(e.total_pen) || 0));
   const totalCant = items.reduce((s, it) => s + (Number(it.cantidad) || 0), 0);
   const totalCalc = items.reduce((s, it) => s + (Number(it.importe) || (Number(it.cantidad) || 0) * (Number(it.costo_unitario) || 0)), 0);
   const tc = Number(e.tipo_cambio) || 0;
@@ -194,6 +197,15 @@ export function EntradaDetalle({
             <Dato etiqueta="Pago confirmado por" valor={`${e.pagado_por}${e.fecha_pago ? ` · ${formatFechaPe(String(e.fecha_pago).split(/[T ]/)[0])}` : ''}`} />
           )}
         </Grupo>
+        {(e.nc_aplicadas ?? []).length > 0 && (
+          <Grupo titulo="Trazabilidad del pago (notas de crédito)" ancho>
+            <Dato etiqueta="Costo de la orden (stock y contabilidad)" valor={formatMoneda(totalOrdenDetalle, moneda)} extra={moneda === 'USD' ? `≈ ${formatMoneda(Number(e.total_pen) || 0, 'PEN')}` : undefined} />
+            {(e.nc_aplicadas ?? []).map((n, i) => (
+              <Dato key={i} etiqueta={`Compensado con la nota ${n.codigo}`} valor={`− ${formatMoneda(n.monto, moneda)}`} extra={`Documento del proveedor ${n.serie}-${n.numero}`} />
+            ))}
+            <Dato etiqueta="Se pagó realmente (sale del banco)" valor={formatMoneda(Math.max(0, Math.round((totalOrdenDetalle - (Number(e.nc_aplicado) || 0)) * 100) / 100), moneda)} extra="El egreso en Caja es solo esta diferencia; el costo de los artículos no cambia." ancho />
+          </Grupo>
+        )}
         <Grupo titulo="Motivo" ancho>
           <Dato etiqueta="Motivo de compra / ingreso" valor={e.motivo_entrada || '—'} />
           <Dato etiqueta="Motivo (naturaleza del gasto)" valor={naturaleza || '—'} />

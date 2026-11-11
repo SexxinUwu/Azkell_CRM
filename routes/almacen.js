@@ -1642,6 +1642,23 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     r.url_factura_presigned = r.url_factura ? ('/api/almacen/entradas/' + encodeURIComponent(r.id) + '/archivo/factura/ver') : null;
                     return r;
                 });
+                // Trazabilidad: notas de crédito aplicadas al pago de cada orden (la orden conserva su importe completo)
+                try {
+                    const ids = signedRows.map(r => r.id);
+                    if (ids.length) {
+                        const [apl] = await (typeof tdb.promise === 'function' ? tdb.promise() : tdb).query(
+                            `SELECT a.entrada_id, a.monto, a.moneda, n.codigo, n.serie, n.numero
+                             FROM compras_nc_aplicaciones a JOIN compras_notas_credito n ON n.id = a.nc_id
+                             WHERE a.estado = 'VIGENTE' AND a.entrada_id IN (?) ORDER BY a.id ASC`, [ids]);
+                        const porOrden = {};
+                        (apl || []).forEach(a => { (porOrden[a.entrada_id] = porOrden[a.entrada_id] || []).push({ codigo: a.codigo, serie: a.serie, numero: a.numero, monto: Number(a.monto) || 0, moneda: a.moneda }); });
+                        signedRows.forEach(r => {
+                            const l = porOrden[r.id] || [];
+                            r.nc_aplicadas = l;
+                            r.nc_aplicado = Math.round(l.reduce((s, x) => s + x.monto, 0) * 100) / 100;
+                        });
+                    }
+                } catch (eNc) { console.error('[entradas nc_aplicadas]', eNc.message); }
                 res.json(signedRows);
             } catch (innerErr) {
                 console.error('[GET /api/almacen/entradas inner error]', innerErr);

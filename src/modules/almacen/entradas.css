@@ -338,3 +338,6 @@ table[aria-label="Órdenes de compra"] tbody tr:hover td { background: color-mix
 .oc-acciones__boton.oc-acciones__boton--azul { color: #0a64d6; background: rgba(0, 122, 255, 0.14); }
 .oc-acciones__boton.oc-acciones__boton--violeta { color: #6d28d9; background: rgba(124, 58, 237, 0.14); }
 .oc-acciones__boton.oc-acciones__boton--celeste { color: #0369a1; background: rgba(14, 165, 233, 0.16); }
+
+/* Nota de crédito aplicada al pago de una orden */
+.oc-nc { color: var(--green-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
