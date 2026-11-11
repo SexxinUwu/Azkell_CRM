@@ -12,6 +12,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { RolesPanel } from './RolesPanel';
+import { AccesosPanel } from './AccesosPanel';
 import { UsuarioFila } from './UsuarioFila';
 import './sistema.css';
 
@@ -112,7 +113,7 @@ type FormUsuario = typeof FORM_VACIO;
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-const TABS = ['Usuarios', 'Roles'] as const;
+const TABS = ['Usuarios', 'Roles', 'Accesos'] as const;
 
 export function UsuariosPage() {
   const qc    = useQueryClient();
@@ -304,7 +305,7 @@ export function UsuariosPage() {
 
       <div className="sis-tabs">
         <SegmentedControl<typeof TABS[number]> label="Sección" block value={tab} onChange={setTab}
-          options={[{ value: 'Usuarios', label: `Usuarios · ${lista.length}` }, { value: 'Roles', label: `Roles · ${roles.length}` }]} />
+          options={[{ value: 'Usuarios', label: `Usuarios · ${lista.length}` }, { value: 'Roles', label: `Roles · ${roles.length}` }, { value: 'Accesos', label: 'Accesos' }]} />
       </div>
 
       {isLoading ? <PageLoader /> : (
@@ -348,6 +349,7 @@ export function UsuariosPage() {
           )}
 
           {tab === 'Roles' && <RolesPanel roles={roles} canEdit={puedeEditar} />}
+          {tab === 'Accesos' && <AccesosPanel usuarios={lista} roles={roles} />}
         </>
       )}
 

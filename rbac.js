@@ -132,6 +132,13 @@ module.exports = function globalRBAC(req, res, next) {
         return next();
     }
 
+    // NOTAS DE CRÉDITO: aprobar, anular y reembolsar exigen el permiso «Aprobar notas de crédito» (registrar y enlazar la devolución, no)
+    if (req.method === 'POST' && /^\/compras\/notas-credito\/[^/]+\/(aprobar|anular|reembolso)$/.test(path)) {
+        const tieneNc = p.tesoreria_nc_aprobar && (p.tesoreria_nc_aprobar.l === 1 || p.tesoreria_nc_aprobar.l === true);
+        if (!tieneNc) return res.status(403).json({ error: 'RBAC: Permiso denegado: aprobar, anular o reembolsar notas de crédito exige el permiso «Aprobar notas de crédito»' });
+        return next();
+    }
+
     if (esAprobacionOc || esAprobacionCaja) {
         const reglas = esAprobacionOc
             ? [['gerencia_aprobaciones_oc', ['e', 'c']]]

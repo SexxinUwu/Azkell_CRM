@@ -70,7 +70,7 @@ const SECCIONES_BASE: NavSection[] = [
     title: 'Operaciones',
     items: [
       { key: 'programacion', label: 'Programación', to: '/operaciones/programacion', icon: CalendarDays, permissions: ver('op_programacion', 'op_guias_remision') },
-      { key: 'ordenes-viaje', noEmpresa: 'marsisa', label: 'Órdenes de viaje', to: '/operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'op_guias_remision', 'op_guias_remision') },
+      { key: 'ordenes-viaje', noEmpresa: 'marsisa', label: 'Órdenes de viaje', to: '/operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'op_guias_remision') },
       { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: ScrollText, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision') },
       { key: 'reporte-viajes', label: 'Reporte de viajes', to: '/operaciones/reporte-viajes', icon: BarChart3, permissions: ver('op_reporte_viajes') },
       {
@@ -126,7 +126,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'mant-dashboard', label: 'Dashboard mantenimiento', to: '/mantenimiento/dashboard', icon: LayoutDashboard, permissions: ver('mant_dashboard', 'dashboard', 'status_rampa', 'checklist') },
       { key: 'status-rampa', label: 'Status de rampa', to: '/mantenimiento/status-rampa', icon: Wrench, permissions: ver('status_rampa') },
       { key: 'inspecciones', label: 'Análisis de inspecciones', to: '/inspecciones', icon: ClipboardList, permissions: ver('insp') },
-      { key: 'fleetrun', label: 'Mantenimiento preventivo (Fleetrun)', to: '/mantenimiento/fleetrun', icon: Gauge, permissions: ver('fleet', 'fleet') },
+      { key: 'fleetrun', label: 'Mantenimiento preventivo (Fleetrun)', to: '/mantenimiento/fleetrun', icon: Gauge, permissions: ver('fleet') },
       { key: 'reportes-ot', label: 'Reportes OT', to: '/mantenimiento/reportes-ot', icon: ScrollText, permissions: ver('reportes_ot') },
       { key: 'trabajos-ot', label: 'Historial de trabajos', to: '/mantenimiento/trabajos-ot', icon: History, permissions: ver('trabajos_ot') },
       {
@@ -139,7 +139,7 @@ const SECCIONES_BASE: NavSection[] = [
         ],
       },
       { key: 'incidencias', label: 'Incidencias en ruta', to: '/mantenimiento/incidencias', icon: ShieldCheck, permissions: ver('incidencias_ruta') },
-      { key: 'mant-otros', label: 'Otros', to: '/mantenimiento/otros', icon: Layers, permissions: [] },
+      { key: 'mant-otros', label: 'Otros', to: '/mantenimiento/otros', icon: Layers, permissions: [...ver('otros_mant'), ...OTROS_MANTENIMIENTO.flatMap(i => i.permissions)] },
     ],
   },
   {
@@ -153,7 +153,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'kardex', label: 'Kardex', to: '/almacen/kardex', icon: History, permissions: ver('kardex') },
       { key: 'proveedores', label: 'Proveedores', to: '/almacen/proveedores', icon: Warehouse, permissions: ver('prov_inv') },
       { key: 'almacen-notas-credito', label: 'Notas de crédito', to: '/almacen/notas-credito', icon: ReceiptText, permissions: ver('ent_inv', 'tesoreria_nc') },
-      { key: 'almacen-otros', label: 'Otros', to: '/almacen/otros', icon: Layers, permissions: [] },
+      { key: 'almacen-otros', label: 'Otros', to: '/almacen/otros', icon: Layers, permissions: ver('almacen_otros', 'inv', 'ent_inv', 'prov_inv', 'rec_compras', 'gerencia_aprobaciones_oc', 'cfg_mant') },
     ],
   },
   {
@@ -166,7 +166,7 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'RRHH',
     items: [
-      { key: 'personal', label: 'Gestión de personal', to: '/directorio/personal', icon: Contact, permissions: ver('rrhh_personal') },
+      { key: 'personal', label: 'Legajos y contratos', to: '/directorio/personal', icon: Contact, permissions: ver('rrhh_personal') },
       { key: 'asistencia', label: 'Asistencia y turnos', to: '/personas/asistencia', icon: ClipboardCheck, permissions: ver('rrhh_asistencia') },
       { key: 'nomina', label: 'Nómina y pagos', to: '/personas/nomina', icon: Banknote, permissions: ver('rrhh_nomina') },
     ],

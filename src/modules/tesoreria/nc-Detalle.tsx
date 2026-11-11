@@ -26,6 +26,7 @@ export function NcDetalle({ id, onClose }: { id: number | null; onClose: () => v
   const q = useDetalleNc(id);
   const d = q.data?.data;
   const puedeEditar = can('tesoreria_nc.editar');
+  const puedeAprobar = can('tesoreria_nc_aprobar.ver'); // aprobar, anular y reembolsar
   const puedeEnlazar = puedeEditar || can('ent_inv.editar'); // Almacén completa la devolución; aprobar, reembolsar y anular son de Tesorería
   const [ocupado, setOcupado] = useState(false);
   const [anulando, setAnulando] = useState(false);
@@ -59,7 +60,7 @@ export function NcDetalle({ id, onClose }: { id: number | null; onClose: () => v
   return (
     <>
       <Sheet open={id != null} onClose={() => !ocupado && onClose()} title={d ? `${d.codigo} · ${d.serie}-${d.numero}` : 'Nota de crédito'}
-        footer={d && puedeEditar ? (
+        footer={d && puedeAprobar ? (
           <>
             {['REGISTRADA', 'APROBADA'].includes(d.estado) && sinUso && (
               <Button variant="plain" icon={<XCircle size={16} />} onClick={() => setAnulando(true)} disabled={ocupado} style={{ marginRight: 'auto', color: 'var(--red-ink)' }}>Anular</Button>
