@@ -1,5 +1,10 @@
 /* Órdenes de servicio: formulario por secciones y ficha */
 .os-form { display: flex; flex-direction: column; gap: var(--s-4); }
+/* En pantallas anchas las secciones se reparten en dos columnas para aprovechar el ancho */
+@media (min-width: 900px) {
+  .os-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-4); align-items: start; }
+  .os-form__ancho { grid-column: 1 / -1; }
+}
 .os-seccion { background: var(--fill-subtle); border-radius: var(--r-lg, 16px); padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-3); }
 .os-seccion__titulo { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.01em; color: var(--label-2); }
 .os-seccion__icono { width: 1.625rem; height: 1.625rem; border-radius: 8px; display: grid; place-items: center; background: var(--accent-tint); color: var(--accent); }

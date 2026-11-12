@@ -112,8 +112,8 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
   const errores = useMemo(() => {
     const e: Partial<Record<Campo, string>> = {};
     if (!f.cliente.trim()) e.cliente = 'Elige o escribe el cliente.';
-    if (!f.origen.trim()) e.origen = 'Indica de dónde sale la carga.';
-    if (!f.destino.trim()) e.destino = 'Indica a dónde va.';
+    if (!f.origen.trim()) e.origen = 'Indica el punto de carga.';
+    if (!f.destino.trim()) e.destino = 'Indica el punto de entrega.';
     if (f.flete !== '' && !(Number(f.flete) >= 0)) e.flete = 'Escribe un monto válido.';
     return e;
   }, [f]);
@@ -157,7 +157,7 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
 
   const ocupado = guardando !== null;
   return (
-    <Sheet open={open} onClose={() => !ocupado && onClose()} title={editando ? `Orden ${orden!.codigo_orden}` : 'Nueva orden de servicio'}
+    <Sheet ancho open={open} onClose={() => !ocupado && onClose()} title={editando ? `Orden ${orden!.codigo_orden}` : 'Nueva orden de servicio'}
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={ocupado}>Cancelar</Button>
@@ -174,7 +174,7 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
         </>
       }>
       <div className="os-form">
-        {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
+        {error && <div className="os-form__ancho"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
 
         <Seccion icono={<UserRound size={16} />} titulo="Cliente">
           <Field label="Cliente *" error={ver('cliente')}>
@@ -187,15 +187,15 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
           </div>
         </Seccion>
 
-        <Seccion icono={<MapPin size={16} />} titulo="Recorrido">
+        <Seccion icono={<MapPin size={16} />} titulo="Puntos de carga y entrega">
           <div className="os-fila">
             <SegmentedControl block label="Tipo de servicio" value={f.tipo_servicio} onChange={v => set({ tipo_servicio: v })} options={TIPOS} />
             <SegmentedControl block label="Sentido" value={f.sentido} onChange={v => set({ sentido: v })} options={SENTIDOS} />
           </div>
           {f.sentido === 'RETORNO' && <p className="os-nota">Un retorno con carga es un servicio adicional dentro del mismo viaje. Si regresa vacío no hace falta crear un servicio.</p>}
           <div className="os-fila">
-            <Field label="Origen *" error={ver('origen')}>{p => <TextInput {...p} value={f.origen} placeholder="Ciudad o punto de carga" onBlur={() => tocar('origen')} onChange={e => set({ origen: e.target.value })} />}</Field>
-            <Field label="Destino *" error={ver('destino')}>{p => <TextInput {...p} value={f.destino} placeholder="Ciudad o punto de entrega" onBlur={() => tocar('destino')} onChange={e => set({ destino: e.target.value })} />}</Field>
+            <Field label="Punto de carga *" error={ver('origen')}>{p => <TextInput {...p} value={f.origen} placeholder="Ciudad, distrito o planta de carga" onBlur={() => tocar('origen')} onChange={e => set({ origen: e.target.value })} />}</Field>
+            <Field label="Punto de entrega *" error={ver('destino')}>{p => <TextInput {...p} value={f.destino} placeholder="Ciudad, distrito o lugar de entrega" onBlur={() => tocar('destino')} onChange={e => set({ destino: e.target.value })} />}</Field>
           </div>
           <div className="os-fila">
             <Field label="Fecha del servicio">{p => <TextInput {...p} type="date" value={f.fecha} onChange={e => set({ fecha: e.target.value })} />}</Field>
