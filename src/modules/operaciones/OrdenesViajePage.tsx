@@ -364,7 +364,7 @@ function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onE
             )}
             {tab === 'ordenes' && <SeccionOrdenesServicioViaje codigo={v.viaje} onNueva={onNuevaOS ?? (() => undefined)} puedeCrear={!!onNuevaOS} />}
             {tab === 'guias' && <EmptyState icon={<FolderOpen size={22} />} title="Sin guías vinculadas">Las guías de remisión se vincularán a las órdenes de este viaje más adelante.</EmptyState>}
-            {tab === 'gps' && <SeccionGpsViaje placa={v.placa_tracto} inicio={v.fecha_inicio ?? v.fecha_viaje} fin={v.fecha_fin} />}
+            {tab === 'gps' && <SeccionGpsViaje placa={v.placa_tracto} inicio={v.fecha_inicio} fin={v.fecha_fin} />}
             {tab === 'liquidaciones' && <SeccionGastosViaje codigo={v.viaje} conductor={v.conductor} placa={v.placa_tracto} puedeEditar={puedeEditarViaje} />}
           </div>
         </div>

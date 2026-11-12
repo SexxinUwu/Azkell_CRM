@@ -2,7 +2,9 @@
 // Usa el mismo historial de Wialon que la pantalla de Ubicación (/script/obtenerHistorialGPS con rango de fechas).
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Notice } from '../../core/ui/Display';
+import './seguimiento.css';
+import { MapPin } from 'lucide-react';
+import { EmptyState, Notice } from '../../core/ui/Display';
 import { api, errorMessage } from '../../core/api/client';
 import { esOscuro, suscribirTema } from '../../core/lib/theme';
 
@@ -170,37 +172,37 @@ export function MapaRecorridoViaje({ placa, inicio, fin }: { placa: string; inic
     if (verExcesos) c.excesos.addTo(c.mapa); else c.excesos.remove();
   }, [verParadas, verExcesos, puntos, paradasPin, excesosPin, q.dataUpdatedAt]);
 
-  if (q.isLoading) return <div className="tarjeta__lista"><div className="dato"><span className="dato__valor">Cargando recorrido…</span></div></div>;
+  if (q.isLoading) return <p className="os-nota">Cargando recorrido…</p>;
   if (q.isError) return <Notice tone="error">{errorMessage(q.error)}</Notice>;
   const t = q.data;
   if (!t || t.puntos.length === 0) {
-    return <div className="tarjeta__lista"><div className="dato"><span className="dato__valor" style={{ color: 'var(--label-2)' }}>El GPS no registró posiciones de {placa} entre el inicio y el fin del viaje.</span></div></div>;
+    return <EmptyState icon={<MapPin size={22} />} title="Sin posiciones">El GPS no registró posiciones de {placa} durante este viaje.</EmptyState>;
   }
-  const dato = (label: string, valor: string) => <div className="dato"><span className="dato__label">{label}</span><span className="dato__valor dato__valor--mono">{valor}</span></div>;
+  const kpi = (label: string, valor: string, unidad: string, nota: string) => (
+    <div className="vk__t"><span className="vk__l">{label}</span><strong>{valor} <small>{unidad}</small></strong><em>{nota}</em></div>
+  );
   return (
-    <div style={{ marginTop: 'var(--s-2)' }}>
+    <div className="vg">
       {errorMapa && <Notice tone="error">{errorMapa}</Notice>}
-      <div ref={contenedor} style={{ height: 320, borderRadius: 12, overflow: 'hidden', background: 'var(--fill, #e5e7eb)' }} />
-      <div role="group" aria-label="Marcadores del mapa" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-3, 16px)', marginTop: 'var(--s-2)', fontSize: 13, color: 'var(--label-2)' }}>
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+      <div className="vk">
+        {kpi('Distancia recorrida', t.km.toLocaleString('es-PE', { maximumFractionDigits: 1 }), 'km', 'Trazada por el GPS')}
+        {kpi('Velocidad máxima', String(t.velMax), 'km/h', `Promedio ${t.velProm} km/h`)}
+        {kpi('Paradas', String(t.paradas), '', `${t.paradaMin} min detenido`)}
+        {kpi('Excesos', String(t.excesosPin.length), '', `A ${UMBRAL_EXCESO} km/h o más`)}
+      </div>
+      <div ref={contenedor} className="vg__mapa" />
+      <div role="group" aria-label="Marcadores del mapa" className="vg__chips">
+        <label className={`vg__chip${verParadas ? ' vg__chip--on' : ''}`}>
           <input type="checkbox" checked={verParadas} onChange={e => setVerParadas(e.target.checked)} />
-          <span aria-hidden="true" style={{ width: 14, height: 14, borderRadius: '50%', background: '#475569', display: 'inline-block' }} />
-          Paradas ≥ {UMBRAL_PARADA_MIN} min ({t.paradasPin.length})
+          <span aria-hidden="true" className="vg__punto" style={{ background: '#475569' }} />Paradas ≥ {UMBRAL_PARADA_MIN} min ({t.paradasPin.length})
         </label>
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+        <label className={`vg__chip${verExcesos ? ' vg__chip--on' : ''}`}>
           <input type="checkbox" checked={verExcesos} onChange={e => setVerExcesos(e.target.checked)} />
-          <span aria-hidden="true" style={{ width: 14, height: 14, borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} />
-          Excesos ≥ {UMBRAL_EXCESO} km/h ({t.excesosPin.length})
+          <span aria-hidden="true" className="vg__punto" style={{ background: '#dc2626' }} />Excesos ≥ {UMBRAL_EXCESO} km/h ({t.excesosPin.length})
         </label>
       </div>
       {t.truncado && <Notice>El viaje es muy largo o denso y el GPS no pudo cargarse completo; el trazado puede tener huecos.</Notice>}
-      <div className="tarjeta__lista" style={{ marginTop: 'var(--s-2)' }}>
-        {dato('Tramo', `${hora(t.puntos[0].t)} → ${hora(t.puntos[t.puntos.length - 1].t)}`)}
-        {dato('Distancia trazada', `${t.km.toLocaleString('es-PE', { maximumFractionDigits: 1 })} km`)}
-        {dato('Velocidad máx. / prom.', `${t.velMax} / ${t.velProm} km/h`)}
-        {dato(`Paradas (≥${UMBRAL_PARADA_MIN} min)`, `${t.paradas} · ${t.paradaMin} min`)}
-        {dato('Puntos GPS', t.total > t.puntos.length ? `${t.puntos.length} de ${t.total} (reducidos)` : String(t.total))}
-      </div>
+      <p className="os-nota">Tramo {hora(t.puntos[0].t)} → {hora(t.puntos[t.puntos.length - 1].t)} · {t.total > t.puntos.length ? `${t.puntos.length} de ${t.total} puntos GPS (reducidos)` : `${t.total} puntos GPS`}</p>
     </div>
   );
 }

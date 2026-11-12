@@ -229,3 +229,12 @@
 .vh__tramo span { margin-left: 4px; color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
 .vh__card > strong { overflow-wrap: anywhere; }
 .vh--os .vh__card strong { font-size: 1.125rem; }
+
+/* GPS del viaje */
+.vg__mapa { height: 340px; border-radius: 16px; overflow: hidden; background: var(--fill); border: 1px solid var(--separator); }
+.vg__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.vg__chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: var(--fill); color: var(--label-2); font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
+.vg__chip input { position: absolute; opacity: 0; pointer-events: none; }
+.vg__chip--on { background: var(--ink); color: var(--label-inverse); }
+.vg__chip:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.vg__punto { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
