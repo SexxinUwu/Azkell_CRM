@@ -8,7 +8,7 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, TextInput } from '../../core/ui/Field';
 import { LicensePlate } from '../../core/ui/LicensePlate';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import { AccionesCabecera } from '../../core/ui/AccionesCabecera';
 import { Sheet } from '../../core/ui/Sheet';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
@@ -191,8 +191,8 @@ export function OrdenesServicioPage() {
         subtitle={lista.isLoading ? 'Cargando…' : `${datos.length} órdenes · ${conteo.INICIADO ?? 0} en curso`}
         actions={
           <>
-            <MenuOtros opciones={[
-              { label: 'Exportar Excel', detalle: `${visibles.length} órdenes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
+            <AccionesCabecera etiqueta="Acciones de órdenes de servicio" acciones={[
+              { label: 'Exportar Excel', icon: <FileSpreadsheet size={17} />, tono: 'verde', onClick: exportar },
             ]} />
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ orden: null })}>Nueva orden</Button>}
           </>

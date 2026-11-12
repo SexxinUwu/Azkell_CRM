@@ -5,7 +5,7 @@ import { CircleAlert, FileSpreadsheet, MapPin, Pencil, Plus, SearchX, Trash2 } f
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, TextInput } from '../../core/ui/Field';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import { AccionesCabecera } from '../../core/ui/AccionesCabecera';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
@@ -113,7 +113,7 @@ export function EstacionesProveedoresPage() {
         subtitle={lista.isLoading ? 'Cargando…' : `${lista.data?.total ?? 0} proveedores de combustible`}
         actions={
           <>
-            <MenuOtros opciones={[{ label: 'Exportar Excel', detalle: `${datos.length} de esta página`, icon: <FileSpreadsheet size={17} />, onSelect: exportar }]} />
+            <AccionesCabecera etiqueta="Acciones de estaciones" acciones={[{ label: 'Exportar Excel', icon: <FileSpreadsheet size={17} />, tono: 'verde', onClick: exportar }]} />
             {puedeEditar && <Button variant="primary" icon={<Plus size={16} />} onClick={abrirNuevo}>Nuevo proveedor</Button>}
           </>
         }

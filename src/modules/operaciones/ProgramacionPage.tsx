@@ -6,7 +6,7 @@ import { CalendarDays, Plus, Route, Truck } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import { AccionesCabecera } from '../../core/ui/AccionesCabecera';
 import { api, errorMessage } from '../../core/api/client';
 import { AsignacionViajeSheet } from './AsignacionViajeSheet';
 
@@ -63,10 +63,12 @@ export function ProgramacionPage() {
         title="Programación"
         subtitle="Viajes programados y en curso, por día"
         actions={
-          <MenuOtros opciones={[
-            { label: verFinalizados ? 'Ocultar finalizados' : 'Mostrar finalizados', icon: <CalendarDays size={17} />, onSelect: () => setVerFinalizados(v => !v) },
-            { label: 'Nuevo viaje', icon: <Plus size={17} />, separado: true, onSelect: () => navigate('/operaciones/ordenes-viaje') },
-          ]} />
+          <>
+            <AccionesCabecera etiqueta="Acciones de programación" acciones={[
+              { label: verFinalizados ? 'Ocultar finalizados' : 'Mostrar finalizados', icon: <CalendarDays size={17} />, tono: 'ambar', activo: verFinalizados, onClick: () => setVerFinalizados(v => !v) },
+            ]} />
+            <Button variant="primary" icon={<Plus size={16} />} onClick={() => navigate('/operaciones/ordenes-viaje')}>Nuevo viaje</Button>
+          </>
         }
       />
 

@@ -4,7 +4,7 @@ import { ChevronDown, ChevronRight, FileSpreadsheet, SearchX } from 'lucide-reac
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import { AccionesCabecera } from '../../core/ui/AccionesCabecera';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
@@ -143,7 +143,7 @@ export function ReporteViajesPage() {
         eyebrow="Operaciones"
         title="Reporte de viajes"
         subtitle={datos.isLoading ? 'Cargando…' : `${kpis.viajes} viajes · galones teóricos con la matriz D2`}
-        actions={<MenuOtros opciones={[{ label: 'Exportar Excel', detalle: `${filtrados.length} viajes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar }]} />}
+        actions={<AccionesCabecera etiqueta="Acciones del reporte" acciones={[{ label: 'Exportar Excel', icon: <FileSpreadsheet size={17} />, tono: 'verde', onClick: exportar }]} />}
       />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 'var(--s-3)' }}>

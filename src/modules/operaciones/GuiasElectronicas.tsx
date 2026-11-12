@@ -5,7 +5,7 @@ import { Check, Copy, FileSpreadsheet, FileText, Pencil, Plus, RefreshCw, Send, 
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import { AccionesCabecera } from '../../core/ui/AccionesCabecera';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
@@ -184,10 +184,10 @@ export function GuiasElectronicas({ tipo }: { tipo: TipoGuia }) {
         subtitle={lista.isLoading ? 'Cargando…' : `${datos.length} guías · ${conteo.BORRADOR ?? 0} borradores`}
         actions={
           <div style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center' }}>
-            {puedeEditar && <Button variant="primary" icon={<Plus size={16} />} onClick={nuevaGuia}>Nueva guía</Button>}
-            <MenuOtros opciones={[
-              { label: 'Exportar Excel', detalle: `${visibles.length} guías`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
+            <AccionesCabecera etiqueta="Acciones de guías" acciones={[
+              { label: 'Exportar Excel', icon: <FileSpreadsheet size={17} />, tono: 'verde', onClick: exportar },
             ]} />
+            {puedeEditar && <Button variant="primary" icon={<Plus size={16} />} onClick={nuevaGuia}>Nueva guía</Button>}
           </div>
         }
       />
