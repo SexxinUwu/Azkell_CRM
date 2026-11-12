@@ -5,7 +5,7 @@ import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
-import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { Combobox } from '../../core/ui/Combobox';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
@@ -44,8 +44,10 @@ export function GenerarViajeSheet({ orden, onClose, onGenerado }: { orden: Orden
   }, [orden]);
 
   const set = (k: string, val: string) => setV(a => ({ ...a, [k]: val }));
-  const tractos = (placas.data ?? []).filter(p => p.motora).map(p => p.placa);
-  const remolques = (placas.data ?? []).filter(p => !p.motora).map(p => p.placa);
+  const placasActivas = (placas.data ?? []).filter(x => x.estado.toLowerCase() === 'activa');
+  const opcionesConductores = (conductores.data ?? []).map(c => ({ value: c.nombre, label: c.nombre }));
+  const opcionesPlacas = (motora: boolean) => placasActivas.filter(x => !!x.motora === motora)
+    .map(x => ({ value: x.placa, label: x.placa, description: [x.tipo, x.marca, x.cliente].filter(Boolean).join(' · ') }));
   const tercero = v.ejecucion === 'TERCERO';
   const km = Number(orden?.distancia_km) || 0;
   const ruta = orden?.ruta || [orden?.origen, orden?.destino].filter(Boolean).join(' - ');
@@ -84,10 +86,9 @@ export function GenerarViajeSheet({ orden, onClose, onGenerado }: { orden: Orden
         {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
         <div className="form-grid">
           <Field label="Fecha y hora de salida">{p => <TextInput {...p} type="datetime-local" value={v.fecha_viaje ?? ''} onChange={e => set('fecha_viaje', e.target.value)} />}</Field>
-          <div className="field field--wide">
-            <SegmentedControl block label="¿Quién transporta?" value={tercero ? 'TERCERO' : 'PROPIO'} onChange={x => set('ejecucion', x)}
-              options={[{ value: 'PROPIO', label: 'Flota propia' }, { value: 'TERCERO', label: 'Transportista tercero' }]} />
-          </div>
+          <Field label="Quién transporta (definido en la orden)" wide>
+            {p => <TextInput {...p} readOnly value={tercero ? 'Transportista tercero' : 'Flota propia'} />}
+          </Field>
           {tercero && (<>
             <Field label="Transportista tercero *" wide error={errores.tercero_nombre}>{p => <TextInput {...p} value={v.tercero_nombre ?? ''} placeholder="Razón social del transportista" onChange={e => set('tercero_nombre', e.target.value)} />}</Field>
             <Field label="RUC del transportista">{p => <TextInput {...p} inputMode="numeric" value={v.tercero_ruc ?? ''} onChange={e => set('tercero_ruc', e.target.value.replace(/\D/g, '').slice(0, 11))} />}</Field>
@@ -96,22 +97,14 @@ export function GenerarViajeSheet({ orden, onClose, onGenerado }: { orden: Orden
             <Field label="Moneda">{p => <SelectInput {...p} value={v.tercero_moneda ?? 'SOLES'} onChange={e => set('tercero_moneda', e.target.value)}><option value="SOLES">Soles (S/)</option><option value="DOLARES">Dólares (US$)</option></SelectInput>}</Field>
           </>)}
           <Field label={tercero ? 'Conductor del tercero (opcional)' : 'Conductor *'} wide error={errores.conductor}>
-            {p => (<>
-              <TextInput {...p} list="gv-conductores" value={v.conductor ?? ''} placeholder="Busca al conductor" onChange={e => set('conductor', e.target.value)} />
-              <datalist id="gv-conductores">{(conductores.data ?? []).map(c => <option key={c.id} value={c.nombre} />)}</datalist>
-            </>)}
+            {p => <Combobox {...p} options={opcionesConductores} value={v.conductor || null} loading={conductores.isLoading} placeholder="Busca al conductor"
+              createLabel="Usar este nombre" limit={50} onChange={x => set('conductor', x ?? '')} onCreate={t => set('conductor', t)} />}
           </Field>
           <Field label={tercero ? 'Tracto del tercero (opcional)' : 'Tracto *'} error={errores.placa_tracto}>
-            {p => (<>
-              <TextInput {...p} list="gv-tractos" value={v.placa_tracto ?? ''} placeholder="Placa" onChange={e => set('placa_tracto', e.target.value.toUpperCase())} />
-              <datalist id="gv-tractos">{tractos.map(t => <option key={t} value={t} />)}</datalist>
-            </>)}
+            {p => <Combobox {...p} options={opcionesPlacas(true)} value={v.placa_tracto || null} placeholder="Busca la placa" onChange={x => set('placa_tracto', x ?? '')} />}
           </Field>
           <Field label="Remolque">
-            {p => (<>
-              <TextInput {...p} list="gv-remolques" value={v.placa_remolque ?? ''} placeholder="Placa" onChange={e => set('placa_remolque', e.target.value.toUpperCase())} />
-              <datalist id="gv-remolques">{remolques.map(t => <option key={t} value={t} />)}</datalist>
-            </>)}
+            {p => <Combobox {...p} options={opcionesPlacas(false)} value={v.placa_remolque || null} placeholder="Busca la placa" onChange={x => set('placa_remolque', x ?? '')} />}
           </Field>
           <Field label="Escolta · opcional">{p => <TextInput {...p} value={v.escolta ?? ''} onChange={e => set('escolta', e.target.value)} />}</Field>
           <Field label="Observaciones · opcional" wide>{p => <TextInput {...p} value={v.observaciones ?? ''} onChange={e => set('observaciones', e.target.value)} />}</Field>
