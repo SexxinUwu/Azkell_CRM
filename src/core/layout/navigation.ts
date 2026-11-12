@@ -273,7 +273,7 @@ function filtrarItems(items: NavItem[], can: (...p: string[]) => boolean, empres
 }
 
 // Operaciones se está rehaciendo: por ahora solo Marsisa ve estas secciones (las demás empresas no las tienen en el menú)
-const SECCIONES_SOLO_MARSISA = new Set(['Operaciones', 'Operaciones Marsisa']);
+const SECCIONES_SOLO_MARSISA = new Set(['Operaciones']);
 
 export function visibleSections(can: (...p: string[]) => boolean, esFundador = false): NavSection[] {
   const empresa = empresaDelDominio();
