@@ -272,16 +272,21 @@ function filtrarItems(items: NavItem[], can: (...p: string[]) => boolean, empres
     });
 }
 
+// Operaciones se está rehaciendo: por ahora solo Marsisa ve estas secciones (las demás empresas no las tienen en el menú)
+const SECCIONES_SOLO_MARSISA = new Set(['Operaciones', 'Operaciones Marsisa']);
+
 export function visibleSections(can: (...p: string[]) => boolean, esFundador = false): NavSection[] {
   const empresa = empresaDelDominio();
   return NAV_SECTIONS
+    .filter(s => !SECCIONES_SOLO_MARSISA.has(s.title) || empresa.includes('marsisa'))
     .map(s => ({ ...s, items: filtrarItems(s.items, can, empresa, esFundador) }))
     .filter(s => s.items.length > 0);
 }
 
 // Pestañas inferiores en el celular: solo pantallas de la app nueva (el resto, en "Más").
 export function mobileTabs(can: (...p: string[]) => boolean): NavItem[] {
-  return ALL_NAV_ITEMS.filter(i => i.to && can(...i.permissions)).slice(0, 3);
+  // Las pestañas salen de lo que el menú realmente muestra (así no aparece Operaciones donde está oculto)
+  return aplanar(visibleSections(can).flatMap(sec => sec.items)).filter(i => i.to).slice(0, 3);
 }
 
 /** Primera pantalla de la app nueva a la que puede entrar el usuario */
