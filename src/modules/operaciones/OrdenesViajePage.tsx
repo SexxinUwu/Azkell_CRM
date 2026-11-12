@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  CheckCircle2, CircleAlert, Eye, FileSpreadsheet, MapPin, Pencil, Play, Plus, RefreshCw, SearchX, Trash2, Truck,
+  CheckCircle2, CircleAlert, Eye, FileSpreadsheet, MapPin, Pencil, Play, RefreshCw, SearchX, Trash2, Truck,
 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -190,7 +190,6 @@ export function OrdenesViajePage() {
               // Solo la empresa Marsisa tiene base externa; el servidor responde syncSkipped en las demás (mismo criterio que la navegación)
               puedeCrear && esMarsisa && { label: 'Sincronizar con MarsisaSoft', icon: <RefreshCw size={17} />, tono: 'violeta', onClick: () => setSincronizar(true) },
             ]} />
-            {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ viaje: null })}>Nuevo viaje</Button>}
           </>
         }
       />
@@ -213,7 +212,7 @@ export function OrdenesViajePage() {
 
         {isLoading ? <PageLoader /> : isError ? <Notice tone="error">{errorMessage(error)}</Notice> : visibles.length === 0 ? (
           <EmptyState icon={busqueda || estado ? <SearchX size={22} /> : <Truck size={22} />} title={busqueda || estado ? 'Sin coincidencias' : 'Sin viajes'}>
-            {puedeCrear && !busqueda && !estado ? <>Crea el primero con <strong>Nuevo viaje</strong>.</> : 'Prueba con otro filtro.'}
+            {!busqueda && !estado ? <>Los viajes se generan desde <strong>Órdenes de servicio</strong>.</> : 'Prueba con otro filtro.'}
           </EmptyState>
         ) : (
           <TablaRedimensionable id="ordenes-viaje" columnas={COLUMNAS_VIAJE} ariaLabel="Órdenes de viaje">
