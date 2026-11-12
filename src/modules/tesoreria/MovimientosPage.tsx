@@ -1,11 +1,12 @@
 import '../mantenimiento/mant.css';
 import './mov.css';
 import { useMemo, useState } from 'react';
-import { ArrowLeftRight, FileSpreadsheet, Printer, SearchX } from 'lucide-react';
+import { ArrowLeftRight, FileSpreadsheet, FileText, Printer, SearchX } from 'lucide-react';
 import { PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput } from '../../core/ui/Field';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import { BotonTip } from '../../core/ui/BotonTip';
+import '../../core/ui/botonesIcono.css';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
@@ -17,6 +18,7 @@ import { useBancos, useMovimientos, type MovimientoTesoreria } from './api';
 import { esDolar, hoyLima, limpio, num, primerDiaMesLima } from './mov-utilidades';
 import { MovDetalleSheet } from './mov-DetalleSheet';
 import { MovFilaMovil, MovFilaTabla } from './mov-Filas';
+import { descargarMovimientosPdf } from './movimientosPdf';
 
 type Tipo = '' | 'INGRESO' | 'EGRESO';
 
@@ -122,6 +124,18 @@ export function MovimientosPage() {
     } catch (err) { toast(errorMessage(err), 'error'); }
   }
 
+  async function exportarPdf() {
+    try {
+      let empresa = '';
+      try { empresa = localStorage.getItem('fleet_empresa_nombre') ?? ''; } catch { /* nada */ }
+      await descargarMovimientosPdf(lista, {
+        periodo, estado, banco, busqueda: busqueda.trim(), tipo: tipo ? (tipo === 'EGRESO' ? 'Egresos' : 'Ingresos') : '',
+        empresa: empresa || window.location.hostname.split('.')[0] || 'Azkell',
+      });
+      haptic('success');
+    } catch (err) { toast(errorMessage(err), 'error'); }
+  }
+
   return (
     <Page wide>
       <PageHeader
@@ -129,10 +143,11 @@ export function MovimientosPage() {
         title="Movimientos"
         subtitle={isLoading ? 'Cargando…' : `${lista.length} ${lista.length === 1 ? 'registro' : 'registros'}${filtrando ? ` de ${todos.length}` : ''} · ${periodo}`}
         actions={
-          <MenuOtros opciones={[
-            { label: 'Exportar Excel', detalle: `${lista.length} movimientos`, icon: <FileSpreadsheet size={17} />, onSelect: exportar, disabled: lista.length === 0 },
-            { label: 'Imprimir listado', detalle: 'Tarjetas y tabla del período', icon: <Printer size={17} />, onSelect: () => window.print() },
-          ]} />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <BotonTip tip="Generar PDF" className="btn btn--secondary btn--icon btn-tip btn-tip--rojo" onClick={exportarPdf} disabled={lista.length === 0}><FileText size={18} /></BotonTip>
+            <BotonTip tip="Exportar Excel" className="btn btn--secondary btn--icon btn-tip btn-tip--verde" onClick={exportar} disabled={lista.length === 0}><FileSpreadsheet size={18} /></BotonTip>
+            <BotonTip tip="Imprimir listado" className="btn btn--secondary btn--icon btn-tip btn-tip--azul" onClick={() => window.print()}><Printer size={18} /></BotonTip>
+          </div>
         }
       />
 
