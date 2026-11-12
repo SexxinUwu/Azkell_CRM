@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
+import { Check, SlidersHorizontal } from 'lucide-react';
 import { Button } from './Button';
 import { SearchField } from './Field';
 import { Sheet } from './Sheet';
@@ -68,5 +68,26 @@ export function GrupoFiltro({ titulo, children }: { titulo: string; children: Re
       <h3 className="placas-filtros__titulo t-footnote">{titulo}</h3>
       {children}
     </section>
+  );
+}
+
+export interface OpcionLista<T extends string> { value: T; label: string; count?: number }
+
+/** Lista de una sola elección (filas con check): para filtros de estado u otras opciones cortas */
+export function ListaEleccion<T extends string>({ opciones, value, onChange }: { opciones: OpcionLista<T>[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <div className="list">
+      {opciones.map(o => {
+        const sel = o.value === value;
+        return (
+          <button key={o.value} type="button" className="row" aria-pressed={sel} onClick={() => onChange(o.value)}
+            style={{ width: '100%', textAlign: 'left', border: 0, background: 'none', font: 'inherit', color: 'inherit' }}>
+            <div className="row__main"><div className="row__title">{o.label}</div></div>
+            {o.count !== undefined && <span className="c-secondary t-numeric">{o.count}</span>}
+            {sel && <Check size={18} style={{ color: 'var(--accent)' }} aria-hidden />}
+          </button>
+        );
+      })}
+    </div>
   );
 }

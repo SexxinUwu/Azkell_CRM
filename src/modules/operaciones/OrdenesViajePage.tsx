@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { AccionesCabecera } from '../../core/ui/AccionesCabecera';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
@@ -18,6 +18,7 @@ import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
+import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../core/ui/FiltrosListado';
 import type { ReactNode } from 'react';
 import { OrdenServicioSheet } from './OrdenServicioSheet';
 import { SeccionDocumentosViaje, SeccionGastosViaje, SeccionOrdenesServicioViaje, SeccionSinRegistros } from './ViajeExtras';
@@ -125,6 +126,7 @@ export function OrdenesViajePage() {
   const [busqueda, setBusqueda] = useState('');
   const [q, setQ] = useState('');
   const [estado, setEstado] = useState('');
+  const [filtrando, setFiltrando] = useState(false);
   // ?viaje=V-0001 abre la ficha de ese viaje (lo usa Programación); el parámetro se quita al abrirla
   const [params, setParams] = useSearchParams();
   const [abiertoId, setAbiertoId] = useState<string | null>(params.get('viaje'));
@@ -195,20 +197,14 @@ export function OrdenesViajePage() {
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-        <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
-          {[['', 'Todos', lista.length], ...ESTADOS.map(e => [e, e.charAt(0) + e.slice(1).toLowerCase(), conteo[e] ?? 0])].map(([val, label, c]) => (
-            <button key={String(val)} type="button" className="pressable" onClick={() => { haptic('selection'); setEstado(String(val)); }}
-              style={{
-                padding: '0.375rem 0.875rem', borderRadius: 'var(--r-full)', fontSize: '0.875rem', fontWeight: 600, border: 'none', cursor: 'pointer',
-                background: estado === val ? 'var(--ink)' : 'var(--fill)', color: estado === val ? 'var(--label-inverse)' : 'var(--label-2)',
-              }}>
-              {label} <span style={{ opacity: 0.7, marginLeft: 4 }}>{c}</span>
-            </button>
-          ))}
-        </div>
+        <BarraFiltros busqueda={busqueda} placeholder="Viaje, conductor, placa o ruta…" activos={estado ? 1 : 0} onAbrirFiltros={() => setFiltrando(true)}
+          onBusqueda={v => { setBusqueda(v); window.clearTimeout((window as unknown as { _ovT?: number })._ovT); (window as unknown as { _ovT?: number })._ovT = window.setTimeout(() => setQ(v.trim()), 350); }} />
 
-        <SearchField value={busqueda} placeholder="Viaje, conductor, placa o ruta…"
-          onChange={v => { setBusqueda(v); window.clearTimeout((window as unknown as { _ovT?: number })._ovT); (window as unknown as { _ovT?: number })._ovT = window.setTimeout(() => setQ(v.trim()), 350); }} />
+        <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={estado ? 1 : 0} onLimpiar={() => setEstado('')} resultado={visibles.length} unidad="viaje">
+          <GrupoFiltro titulo="Estado">
+            <ListaEleccion value={estado} onChange={setEstado} opciones={[{ value: '', label: 'Todos', count: lista.length }, ...ESTADOS.map(e => ({ value: e, label: e.charAt(0) + e.slice(1).toLowerCase(), count: conteo[e] ?? 0 }))]} />
+          </GrupoFiltro>
+        </HojaFiltros>
 
         {isLoading ? <PageLoader /> : isError ? <Notice tone="error">{errorMessage(error)}</Notice> : visibles.length === 0 ? (
           <EmptyState icon={busqueda || estado ? <SearchX size={22} /> : <Truck size={22} />} title={busqueda || estado ? 'Sin coincidencias' : 'Sin viajes'}>

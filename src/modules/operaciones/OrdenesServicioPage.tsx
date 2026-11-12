@@ -13,7 +13,7 @@ import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, TextInput } from '../../core/ui/Field';
 import { ChoiceChips } from '../../core/ui/Chips';
 import { Combobox } from '../../core/ui/Combobox';
-import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
+import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../core/ui/FiltrosListado';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
@@ -221,8 +221,8 @@ export function OrdenesServicioPage() {
     if (hasta && (o.fecha_fmt ?? '') > hasta) return false;
     return true;
   }), [datos, estado, tipo, sentido, conViaje, cliente, desde, hasta]);
-  const filtrosActivos = [tipo, sentido, conViaje, cliente, desde, hasta].filter(Boolean).length;
-  const limpiarFiltros = () => { setTipo(''); setSentido(''); setConViaje(''); setCliente(''); setDesde(''); setHasta(''); };
+  const filtrosActivos = [estado, tipo, sentido, conViaje, cliente, desde, hasta].filter(Boolean).length;
+  const limpiarFiltros = () => { setEstado(''); setTipo(''); setSentido(''); setConViaje(''); setCliente(''); setDesde(''); setHasta(''); };
   const conteo = useMemo(() => Object.fromEntries(ESTADOS.map(e => [e, datos.filter(o => estadoDe(o) === e).length])), [datos]);
   const puedeEditar = can('op_ordenes_servicio.editar', 'op_ordenes_servicio.crear', 'op_ordenes_viaje.editar');
   const puedeCrear = can('op_ordenes_servicio.crear', 'op_ordenes_servicio.editar', 'op_ordenes_viaje.editar');
@@ -294,18 +294,13 @@ export function OrdenesServicioPage() {
         onConfirm={async () => { if (entregar) { await cambiarEstado(entregar, 'ENTREGADO', 'Orden entregada'); setEntregar(null); } }} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-        <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
-          {[['', 'Todas', datos.length], ...ESTADOS.map(e => [e, ETIQUETA[e], conteo[e] ?? 0])].map(([val, label, c]) => (
-            <button key={String(val)} type="button" className={`os-chip${estado === val ? ' os-chip--on' : ''}`} aria-pressed={estado === val} onClick={() => setEstado(String(val))}>
-              {label} <span className="os-chip__n">{c}</span>
-            </button>
-          ))}
-        </div>
-
         <BarraFiltros busqueda={busqueda} placeholder="Orden, cliente, tramo, viaje, conductor o placa…" activos={filtrosActivos} onAbrirFiltros={() => setFiltrando(true)}
           onBusqueda={v => { setBusqueda(v); window.clearTimeout((window as unknown as { _osT?: number })._osT); (window as unknown as { _osT?: number })._osT = window.setTimeout(() => setQ(v.trim()), 350); }} />
 
         <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} onLimpiar={limpiarFiltros} resultado={visibles.length} unidad="orden">
+          <GrupoFiltro titulo="Estado">
+            <ListaEleccion value={estado} onChange={setEstado} opciones={[{ value: '', label: 'Todas', count: datos.length }, ...ESTADOS.map(e => ({ value: e, label: ETIQUETA[e], count: conteo[e] ?? 0 }))]} />
+          </GrupoFiltro>
           <GrupoFiltro titulo="Tipo de servicio">
             <ChoiceChips label="Tipo de servicio" value={tipo} onChange={setTipo}
               options={[{ value: '', label: 'Todos' }, { value: 'NACIONAL', label: 'Nacional' }, { value: 'LOCAL', label: 'Local' }]} />
