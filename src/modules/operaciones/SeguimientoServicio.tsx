@@ -13,24 +13,38 @@ export interface DatosSeguimiento {
   distancia_km?: number | string | null; creado_fmt?: string | null; viajes?: ViajeSeguimiento[];
 }
 
-const VELOCIDAD_PROMEDIO = 55; // km/h, solo para estimar cuando no hay lectura de GPS
 const PARADAS = [0, 1 / 3, 2 / 3, 1];
 const ETAPAS = ['Pendiente', 'Programado', 'En ejecución', 'Entregado'];
 const ESTADO_IDX: Record<string, number> = { PENDIENTE: 0, PROGRAMADO: 1, EN_EJECUCION: 2, ENTREGADO: 3 };
 const PILL: Record<string, string> = { PENDIENTE: 'Pendiente', PROGRAMADO: 'Programado', EN_EJECUCION: 'En ruta', ENTREGADO: 'Entregado', ANULADO: 'Anulado' };
 
-const num = (v: unknown) => Number(v) || 0;
-const aFecha = (t?: string | null) => (t ? new Date(t.replace(' ', 'T')) : null);
-const hora = (d: Date | null) => (d && !Number.isNaN(d.getTime()) ? d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—');
+export const num = (v: unknown) => Number(v) || 0;
+export const aFecha = (t?: string | null) => (t ? new Date(t.replace(' ', 'T')) : null);
+export const hora = (d: Date | null) => (d && !Number.isNaN(d.getTime()) ? d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—');
 const dia = (t?: string | null) => (t ? t.slice(8, 10) + '/' + t.slice(5, 7) : '');
 const iniciales = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase() || '?';
-const duracion = (min: number) => { const m = Math.max(1, Math.round(min)); const h = Math.floor(m / 60); return h ? `${h} h ${m % 60 ? `${m % 60} min` : ''}`.trim() : `${m} min`; };
+export const duracion = (min: number) => { const m = Math.max(1, Math.round(min)); const h = Math.floor(m / 60); return h ? `${h} h ${m % 60 ? `${m % 60} min` : ''}`.trim() : `${m} min`; };
+
+/**
+ * Avance con datos reales: kilómetros del GPS sobre la distancia de la ruta. La llegada se calcula con la velocidad media
+ * real desde la salida (no hay velocidad supuesta); sin lectura de GPS o con menos de 15 minutos de marcha no se estima nada.
+ */
+export function avanceReal(gpsKm: number, dist: number, salida: Date | null, ahora: number) {
+  const real = dist > 0 && gpsKm > 0;
+  const frac = real ? Math.min(0.97, Math.max(0.02, gpsKm / dist)) : 0;
+  const recorrido = real ? Math.min(gpsKm, dist) : 0;
+  const restante = real ? Math.max(0, dist - gpsKm) : dist;
+  const horas = salida ? (ahora - salida.getTime()) / 3_600_000 : 0;
+  const velocidad = real && horas >= 0.25 ? gpsKm / horas : 0;
+  const etaMin = velocidad > 5 ? (restante / velocidad) * 60 : null;
+  return { real, frac, recorrido, restante, etaMin, velocidad };
+}
 
 /**
  * Seguimiento del servicio: estado, camión que avanza por la ruta, conductor e historial.
  * Todo sale de datos reales (fechas del viaje, kilómetros del GPS); la llegada se estima con una velocidad promedio.
  */
-export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'todo' }: { o: DatosSeguimiento; estado: string; tipo?: 'servicio' | 'viaje'; parte?: 'todo' | 'avance' | 'pie' }) {
+export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'todo' }: { o: DatosSeguimiento; estado: string; tipo?: 'servicio' | 'viaje'; parte?: 'todo' | 'avance' | 'pie' | 'pista' }) {
   const viaje = tipo === 'viaje';
   const etapas = viaje ? ['Registrado', 'Programado', 'En ruta', 'Finalizado'] : ETAPAS;
   const v = o.viajes?.[0];
@@ -49,18 +63,10 @@ export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'tod
   }, [enRuta]);
 
   const calc = useMemo(() => {
-    // Solo se mueve con kilómetros reales del GPS; sin lectura el camión se queda al inicio del tramo y no se calcula llegada
-    let frac = 0;
-    let real = false;
-    if (enRuta && dist > 0) {
-      const gps = num(v?.km_recorrido_gps);
-      if (gps > 0) { frac = Math.min(0.97, Math.max(0.02, gps / dist)); real = true; }
-    }
-    const restante = dist * (1 - frac);
-    const etaMin = dist > 0 ? Math.max(1, (restante / VELOCIDAD_PROMEDIO) * 60) : 0;
-    const llegada = new Date(ahora + etaMin * 60_000);
-    const pos = anulada ? 0 : estado === 'ENTREGADO' ? 1 : idx === 2 ? PARADAS[2] + (PARADAS[3] - PARADAS[2]) * frac : PARADAS[idx];
-    return { frac, restante, etaMin, llegada, pos, real };
+    const a = enRuta ? avanceReal(num(v?.km_recorrido_gps), dist, aFecha(v?.fecha_inicio), ahora) : avanceReal(0, dist, null, ahora);
+    const llegada = a.etaMin != null ? new Date(ahora + a.etaMin * 60_000) : null;
+    const pos = anulada ? 0 : estado === 'ENTREGADO' ? 1 : idx === 2 ? PARADAS[2] + (PARADAS[3] - PARADAS[2]) * a.frac : PARADAS[idx];
+    return { ...a, llegada, pos };
   }, [v, enRuta, dist, ahora, anulada, estado, idx]);
 
   // El camión rueda mientras avanza entre paradas o cuando va en ruta
@@ -82,18 +88,18 @@ export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'tod
 
   const titulo = anulada ? (viaje ? 'Viaje anulado' : 'Servicio anulado')
     : estado === 'ENTREGADO' ? (viaje ? '¡Viaje finalizado!' : '¡Entregado!')
-    : enRuta ? (calc.real ? `Llega en ${duracion(calc.etaMin)}` : 'En ruta')
+    : enRuta ? (calc.etaMin != null ? `Llega en ${duracion(calc.etaMin)}` : 'En ruta')
     : estado === 'PROGRAMADO' ? 'Programado' : (viaje ? 'Viaje registrado' : 'Pedido recibido');
   const sub = anulada ? 'Ya no se ejecutará'
     : estado === 'ENTREGADO' ? `Llegó a las ${hora(fin)}`
-    : enRuta ? (calc.real ? `Hora estimada ${hora(calc.llegada)} · ${calc.restante.toFixed(0)} km restantes` : 'Sin lectura de GPS todavía')
+    : enRuta ? (calc.llegada ? `Hora estimada ${hora(calc.llegada)} · ${calc.restante.toFixed(0)} km restantes` : calc.real ? `${calc.recorrido.toFixed(0)} de ${dist.toLocaleString('es-PE')} km recorridos` : 'Sin lectura de GPS todavía')
     : estado === 'PROGRAMADO' ? (tercero ? `Lo lleva ${v?.tercero_nombre || 'un transportista tercero'}` : v?.conductor ? `Sale con ${v.conductor}` : 'Falta asignar conductor') : (viaje ? 'Falta asignar conductor y unidad' : 'Esperando programación');
 
   const tiempos = [
     hora(aFecha(o.creado_fmt)),
     v?.vinculado_en ? hora(aFecha(v.vinculado_en)) : '—',
     salida ? hora(salida) : '—',
-    fin ? hora(fin) : enRuta && calc.real ? `Est. ${hora(calc.llegada)}` : '—',
+    fin ? hora(fin) : enRuta && calc.llegada ? `Est. ${hora(calc.llegada)}` : '—',
   ];
 
   const eventos = [
@@ -107,8 +113,9 @@ export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'tod
   const nombreConductor = tercero ? (v?.tercero_nombre ?? 'Transportista tercero') : (v?.conductor ?? '');
 
   return (
-    <section className={`seg${anulada ? ' seg--anulada' : ''}${parte === 'pie' ? ' seg--plano' : ''}`} aria-label="Seguimiento del servicio">
+    <section className={`seg${anulada ? ' seg--anulada' : ''}${parte === 'pie' || parte === 'pista' ? ' seg--plano' : ''}`} aria-label="Seguimiento del servicio">
       {parte !== 'pie' && (<>
+      {parte !== 'pista' && (
       <header className="seg__cab">
         <div className="seg__id">
           <span className="seg__orden"><BrandMark size={22} /> {o.codigo_orden}{o.es_retorno ? ' · retorno' : ''}</span>
@@ -117,6 +124,7 @@ export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'tod
         </div>
         <span className={`seg__pill${enRuta ? ' seg__pill--vivo' : ''}${anulada ? ' seg__pill--gris' : ''}`}><i />{(viaje ? { ...PILL, PENDIENTE: 'Registrado', ENTREGADO: 'Finalizado' } : PILL)[estado] ?? estado}</span>
       </header>
+      )}
 
       {parte === 'todo' && (
       <div className="seg__ruta">
@@ -138,7 +146,7 @@ export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'tod
             );
           })}
           <div className={`seg__camion${rodando ? ' seg__camion--rueda' : ''}${calc.pos > 0.82 ? ' seg__camion--borde' : ''}`} style={{ left: `${calc.pos * 100}%` }} aria-hidden>
-            {enRuta && calc.real && <span className="seg__globo">{calc.restante.toFixed(0)} km · {duracion(calc.etaMin)}</span>}
+            {enRuta && calc.real && <span className="seg__globo">{calc.restante.toFixed(0)} km{calc.etaMin != null ? ` · ${duracion(calc.etaMin)}` : ''}</span>}
             <svg viewBox="0 0 42 28">
               <g className="seg__cuerpo">
                 <rect x="1" y="2" width="26" height="17" rx="2.5" className="seg__verde" />
@@ -163,7 +171,7 @@ export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'tod
       </div>
       </>)}
 
-      {parte !== 'avance' && (
+      {(parte === 'todo' || parte === 'pie') && (
       <div className={`seg__pie${v && nombreConductor ? '' : ' seg__pie--solo'}`}>
       {v && nombreConductor && (
         <div className="seg__conductor">

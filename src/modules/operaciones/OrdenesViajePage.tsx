@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeftRight, Bell, Building2, CheckCircle2, CircleAlert, ClipboardList, Eye, FileSpreadsheet, FolderOpen, Fuel, Gauge, LayoutGrid, MapPin, Package, Paperclip, Pencil, Play, RefreshCw, Route, SearchX, Ticket, Trash2, Truck, UserRound, Wallet,
+  ArrowLeftRight, Bell, CheckCircle2, CircleAlert, ClipboardList, Eye, FileSpreadsheet, FolderOpen, Fuel, LayoutGrid, MapPin, Paperclip, Pencil, Play, RefreshCw, SearchX, Ticket, Trash2, Truck, Wallet,
 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -16,13 +16,14 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { LicensePlate } from '../../core/ui/LicensePlate';
+import { IconoFila } from '../../core/ui/IconoFila';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../core/ui/FiltrosListado';
 import type { ReactNode } from 'react';
 import { OrdenServicioSheet } from './OrdenServicioSheet';
 import { SeguimientoServicio } from './SeguimientoServicio';
-import { Dato, FichaCard, FichaGrid, Pestanas, PuntosStrip, TituloFicha } from './FichaCards';
+import { Pestanas, PuntosStrip, TituloFicha } from './FichaCards';
+import { BitacoraViaje, HeroViaje, KpisViaje, UnidadCargaViaje } from './ViajeResumen';
 import './seguimiento.css';
 import { SeccionDocumentosViaje, SeccionGastosViaje, SeccionOrdenesServicioViaje, SeccionSinRegistros } from './ViajeExtras';
 import { SeccionGpsViaje, SeccionValesViaje } from './ViajeCombustibleGps';
@@ -76,6 +77,7 @@ interface Viaje {
 
 // Columnas de la tabla de órdenes de viaje
 const COLUMNAS_VIAJE: ColumnaTabla[] = [
+  { id: 'acciones', titulo: 'Acciones', ancho: 130, minimo: 110 },
   { id: 'estado', titulo: 'Estado', ancho: 130 },
   { id: 'viaje', titulo: 'N° viaje', ancho: 140, minimo: 110 },
   { id: 'fecha', titulo: 'Fecha', ancho: 150 },
@@ -89,7 +91,6 @@ const COLUMNAS_VIAJE: ColumnaTabla[] = [
   { id: 'km-ini', titulo: 'Km inicio', ancho: 110, alinear: 'right' },
   { id: 'km-fin', titulo: 'Km fin', ancho: 110, alinear: 'right' },
   { id: 'recorrido', titulo: 'Recorrido', ancho: 110, alinear: 'right' },
-  { id: 'acciones', titulo: 'Acciones', ancho: 150, minimo: 120 },
 ];
 
 // Pastilla de color del tema (mismos tonos que el resto de la app)
@@ -221,7 +222,7 @@ export function OrdenesViajePage() {
             {!busqueda && !estado ? <>Los viajes se generan desde <strong>Órdenes de servicio</strong>.</> : 'Prueba con otro filtro.'}
           </EmptyState>
         ) : (
-          <TablaRedimensionable id="ordenes-viaje" columnas={COLUMNAS_VIAJE} ariaLabel="Órdenes de viaje">
+          <TablaRedimensionable id="ordenes-viaje-v2" columnas={COLUMNAS_VIAJE} ariaLabel="Órdenes de viaje" className="tabla-redim--compacta">
             {visibles.map(v => {
               const t = css(tono(v.estado)) as string;
               const vencidoTracto = vencidosPorPlaca.has(placaNorm(v.placa_tracto));
@@ -229,16 +230,26 @@ export function OrdenesViajePage() {
               const recorrido = v.kilometraje_inicial != null && v.kilometraje_final != null ? n(v.kilometraje_final) - n(v.kilometraje_inicial) : null;
               return (
                 <tr key={v.viaje} className="tabla-redim__fila--click" onClick={() => { haptic('selection'); setAbiertoId(v.viaje); }}>
+                  <Celda>
+                    <span style={{ display: 'inline-flex', gap: 2 }}>
+                      <IconoFila texto="Ver monitoreo del viaje" tono="azul" icono={<Eye size={15} />} onClick={() => setMonitoreo(v)} />
+                      {puedeEditar && v.estado !== 'FINALIZADO' && v.estado !== 'LIQUIDADO' && v.estado !== 'ANULADO' && (
+                        <IconoFila texto="Editar" tono="ambar" icono={<Pencil size={15} />} onClick={() => setFormulario({ viaje: v })} />
+                      )}
+                      {puedeEditar && v.estado === 'ACTIVO' && <IconoFila texto="Iniciar viaje" tono="verde" icono={<Play size={15} />} onClick={() => setAccion({ tipo: 'iniciar', viaje: v })} />}
+                      {puedeEditar && v.estado === 'INICIADO' && <IconoFila texto="Finalizar viaje" tono="verde" icono={<CheckCircle2 size={15} />} onClick={() => setAccion({ tipo: 'finalizar', viaje: v })} />}
+                    </span>
+                  </Celda>
                   <Celda><Pastilla tono={t}>{v.estado}</Pastilla></Celda>
                   <Celda mono>{v.viaje}</Celda>
                   <Celda mono>{fmtFecha(v.fecha_viaje)}</Celda>
                   <Celda>{v.conductor || 'Sin conductor'}</Celda>
                   <Celda>
-                    <LicensePlate plate={v.placa_tracto ?? ''} size="sm" />
+                    {v.placa_tracto ? <span className="tbl-placa">{v.placa_tracto}</span> : '—'}
                     {vencidoTracto && <span title={`${v.placa_tracto}: documento vencido`} style={{ marginLeft: 6 }}><CircleAlert size={14} style={{ color: 'var(--red-ink)', verticalAlign: 'middle' }} aria-label="Documento vencido" /></span>}
                   </Celda>
                   <Celda>
-                    <LicensePlate plate={v.placa_remolque ?? ''} size="sm" />
+                    {v.placa_remolque ? <span className="tbl-placa">{v.placa_remolque}</span> : '—'}
                     {vencidoCarreta && <span title={`${v.placa_remolque}: documento vencido`} style={{ marginLeft: 6 }}><CircleAlert size={14} style={{ color: 'var(--red-ink)', verticalAlign: 'middle' }} aria-label="Documento vencido" /></span>}
                   </Celda>
                   <Celda>{v.ruta || v.rutas_list || [v.origen, v.destino].filter(Boolean).join(' → ') || '—'}</Celda>
@@ -248,20 +259,6 @@ export function OrdenesViajePage() {
                   <Celda alinear="right" mono>{v.kilometraje_inicial != null ? n(v.kilometraje_inicial).toLocaleString('es-PE') : '—'}</Celda>
                   <Celda alinear="right" mono>{v.kilometraje_final != null ? n(v.kilometraje_final).toLocaleString('es-PE') : '—'}</Celda>
                   <Celda alinear="right" mono>{recorrido != null && recorrido >= 0 ? recorrido.toLocaleString('es-PE') : '—'}</Celda>
-                  <Celda>
-                    <span style={{ display: 'inline-flex', gap: 'var(--s-1)' }} onClick={ev => ev.stopPropagation()}>
-                      <Button variant="secondary" icon={<Eye size={15} />} aria-label={`Ver monitoreo del viaje ${v.viaje}`} title="Ver monitoreo detallado del viaje" onClick={() => setMonitoreo(v)}>{''}</Button>
-                      {puedeEditar && v.estado !== 'FINALIZADO' && v.estado !== 'LIQUIDADO' && v.estado !== 'ANULADO' && (
-                        <Button variant="secondary" icon={<Pencil size={15} />} aria-label={`Editar viaje ${v.viaje}`} onClick={() => setFormulario({ viaje: v })}>{''}</Button>
-                      )}
-                      {puedeEditar && v.estado === 'ACTIVO' && (
-                        <Button variant="secondary" icon={<Play size={15} />} aria-label={`Iniciar viaje ${v.viaje}`} onClick={() => setAccion({ tipo: 'iniciar', viaje: v })}>{''}</Button>
-                      )}
-                      {puedeEditar && v.estado === 'INICIADO' && (
-                        <Button variant="secondary" icon={<CheckCircle2 size={15} />} aria-label={`Finalizar viaje ${v.viaje}`} onClick={() => setAccion({ tipo: 'finalizar', viaje: v })}>{''}</Button>
-                      )}
-                    </span>
-                  </Celda>
                 </tr>
               );
             })}
@@ -358,10 +355,9 @@ function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onE
   // Cada viaje que se abre empieza en el resumen
   useEffect(() => { setTab('resumen'); }, [v?.viaje]);
 
-  const tercero = v?.ejecucion === 'TERCERO';
-  const recorrido = v && v.kilometraje_final != null && v.kilometraje_inicial != null ? v.kilometraje_final - v.kilometraje_inicial : n(v?.km_recorrido_gps);
-  const moneda = /DOL/i.test(String(v?.tercero_moneda ?? '')) ? 'US$' : 'S/';
-  const km = n(v?.distancia_km);
+  const vencidos = useDocumentosVencidos();
+  const placasViaje = [placaNorm(v?.placa_tracto), placaNorm(v?.placa_remolque)].filter(Boolean);
+  const alertas = (vencidos.data ?? []).filter(d => placasViaje.includes(placaNorm(d.placa))).map(d => ({ ...d, vence: String(d.vence).slice(0, 10).split('-').reverse().join('/') }));
   const tabs = TABS_VIAJE.map(t => (t.id === 'ordenes' && v ? { ...t, n: n(v.cant_ordenes) } : t));
   const datosSeg = v ? {
     codigo_orden: v.viaje,
@@ -388,36 +384,20 @@ function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onE
       }>
       {v && datosSeg && (
         <div className="fd">
-          <FichaGrid>
-            <FichaCard icono={<Route size={17} />} label="Ruta" valor={v.ruta || [v.origen, v.destino].filter(Boolean).join(' - ') || 'Sin ruta'} sub={km ? `${km.toLocaleString('es-PE')} km` : null} />
-            <FichaCard icono={<Truck size={17} />} label="Unidad" valor={v.placa_tracto ? `${v.placa_tracto}${v.placa_remolque ? ` / ${v.placa_remolque}` : ''}` : (v.tercero_nombre || 'Sin asignar')}
-              sub={[v.configuracion_tracto, v.configuracion_remolque].filter(Boolean).join(' + ') || null} />
-            <FichaCard icono={<UserRound size={17} />} label="Conductor" valor={v.conductor || '—'} sub={v.conductor_telefono || null} />
-            <FichaCard icono={<Building2 size={17} />} label="Ejecuta" valor={tercero ? 'Transportista tercero' : (v.conductor || v.placa_tracto) ? 'Flota propia' : 'Sin definir'} sub={tercero ? v.tercero_nombre : null} />
-            <FichaCard icono={<Package size={17} />} label="Peso total" valor={`${(n(v.peso_ida) + n(v.peso_retorno)).toLocaleString('es-PE')} kg`} sub="Lo completan las guías" />
-            <FichaCard icono={<ClipboardList size={17} />} label="Órdenes de servicio" valor={n(v.cant_ordenes)} sub={v.ordenes_list} />
-            <FichaCard icono={<Gauge size={17} />} label="Recorrido" valor={recorrido > 0 ? `${recorrido.toLocaleString('es-PE')} km` : 'Sin kilometraje'}
-              sub={v.kilometraje_final == null && n(v.km_recorrido_gps) > 0 ? 'Según GPS' : null} />
-          </FichaGrid>
-          <PuntosStrip
-            carga={{ titulo: v.origen, detalle: v.direccion_partida, extra: v.ubigeo_partida ? `Ubigeo ${v.ubigeo_partida}` : null }}
-            descarga={{ titulo: v.destino, detalle: v.direccion_llegada, extra: v.ubigeo_llegada ? `Ubigeo ${v.ubigeo_llegada}` : null }} />
-          <SeguimientoServicio tipo="viaje" parte="avance" estado={etapaDelViaje(v)} o={datosSeg} />
+          <HeroViaje v={v} etapa={etapaDelViaje(v)} datos={<SeguimientoServicio tipo="viaje" parte="pista" estado={etapaDelViaje(v)} o={datosSeg} />} />
+          <KpisViaje v={v} />
           <Pestanas tabs={tabs} valor={tab} onChange={setTab} />
 
           <div className="vj-panel" key={tab} role="tabpanel">
             {tab === 'resumen' && (
               <>
-                <SeguimientoServicio tipo="viaje" parte="pie" estado={etapaDelViaje(v)} o={datosSeg} />
-                <div className="vj-tiles">
-                  <Dato label="Km inicial" valor={v.kilometraje_inicial?.toLocaleString('es-PE')} mono />
-                  <Dato label="Km final" valor={v.kilometraje_final?.toLocaleString('es-PE')} mono />
-                  <Dato label="Horas motor remolque" valor={v.horas_motor_remolque} mono />
-                  <Dato label="Escolta" valor={v.escolta} />
-                  {tercero && <Dato label="Costo del tercero" valor={n(v.tercero_costo) ? `${moneda} ${n(v.tercero_costo).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : ''} nota={[v.tercero_ruc, v.tercero_documento].filter(Boolean).join(' · ') || null} />}
-                  <Dato label="Registrado por" valor={v.usuario_creacion} />
-                  <Dato label="Observaciones" valor={v.observaciones} ancho />
+                <div className="vr">
+                  <BitacoraViaje v={v} />
+                  <UnidadCargaViaje v={v} alertas={alertas} />
                 </div>
+                <PuntosStrip
+                  carga={{ titulo: v.origen, detalle: v.direccion_partida, extra: v.ubigeo_partida ? `Ubigeo ${v.ubigeo_partida}` : null }}
+                  descarga={{ titulo: v.destino, detalle: v.direccion_llegada, extra: v.ubigeo_llegada ? `Ubigeo ${v.ubigeo_llegada}` : null }} />
               </>
             )}
             {tab === 'combustible' && <SeccionValesViaje codigo={v.viaje} placa={v.placa_tracto} />}
@@ -448,6 +428,7 @@ function AccionViaje({ accion, usuario, onClose, onHecho }: {
   const [km, setKm] = useState('');
   const [horas, setHoras] = useState('');
   const [errKm, setErrKm] = useState<string | undefined>();
+  const [kmGps, setKmGps] = useState(false);
   const [fecha, setFecha] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -456,9 +437,20 @@ function AccionViaje({ accion, usuario, onClose, onHecho }: {
     if (!accion) return;
     const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     setFecha(d.toISOString().slice(0, 16)); setError(null);
-    setKm(accion.tipo === 'iniciar' ? String(accion.viaje.kilometraje_inicial ?? '') : '');
+    setKm(accion.tipo === 'iniciar' ? String(accion.viaje.kilometraje_inicial ?? '') : ''); setKmGps(false);
     setHoras(String(accion.viaje.horas_motor_remolque ?? ''));
   }, [accion]);
+
+  // El kilometraje se sugiere con el odómetro del GPS de la placa en esa fecha; la persona puede corregirlo
+  const placaGps = accion?.viaje.placa_tracto ?? '';
+  const diaGps = fecha.slice(0, 10);
+  const gps = useQuery({
+    queryKey: ['operaciones', 'km-gps', placaGps, diaGps], enabled: !!accion && !!placaGps && /^\d{4}-\d{2}-\d{2}$/.test(diaGps), staleTime: 60_000,
+    queryFn: () => api<{ km: number | null; fecha: string | null }>(`/neumaticos/km-gps/${encodeURIComponent(placaGps)}`, { query: { fecha: diaGps } }),
+  });
+  useEffect(() => {
+    if (accion && gps.data?.km != null && gps.data.km > 0 && !km) { setKm(String(Math.round(gps.data.km))); setKmGps(true); }
+  }, [gps.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!accion) return <Sheet open={false} onClose={onClose} title=""><span /></Sheet>;
   const iniciar = accion.tipo === 'iniciar';
@@ -492,7 +484,8 @@ function AccionViaje({ accion, usuario, onClose, onHecho }: {
         <Field label={iniciar ? 'Fecha y hora de salida' : 'Fecha y hora de llegada'} wide>
           {p => <TextInput {...p} type="datetime-local" value={fecha} onChange={e => setFecha(e.target.value)} />}
         </Field>
-        <Field label={iniciar ? 'Kilometraje inicial' : 'Kilometraje final'} error={errKm}>{p => <TextInput {...p} inputMode="numeric" value={km} onChange={e => { setKm(e.target.value.replace(/\D/g, '')); setErrKm(undefined); }} autoFocus />}</Field>
+        <Field label={iniciar ? 'Kilometraje inicial' : 'Kilometraje final'} error={errKm}
+          hint={kmGps ? `Odómetro del GPS al ${(gps.data?.fecha ?? diaGps).split('-').reverse().join('/')}. Puedes corregirlo.` : gps.isFetching ? 'Consultando el GPS…' : placaGps ? 'Sin lectura del GPS para esta fecha: escríbelo del tablero' : undefined}>{p => <TextInput {...p} inputMode="numeric" value={km} onChange={e => { setKm(e.target.value.replace(/\D/g, '')); setKmGps(false); setErrKm(undefined); }} autoFocus />}</Field>
         {iniciar && <Field label="Horas motor del remolque">{p => <TextInput {...p} inputMode="numeric" value={horas} onChange={e => setHoras(e.target.value.replace(/\D/g, ''))} />}</Field>}
       </div>
     </Sheet>

@@ -16,10 +16,9 @@ import { Field, SearchField, TextInput } from '../../core/ui/Field';
 import { ChoiceChips } from '../../core/ui/Chips';
 import { Combobox } from '../../core/ui/Combobox';
 import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../core/ui/FiltrosListado';
-import { LicensePlate } from '../../core/ui/LicensePlate';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
-import { TooltipFijo } from '../../core/ui/TooltipFijo';
+import { IconoFila } from '../../core/ui/IconoFila';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -74,16 +73,6 @@ const cerrado = (e: string) => e === 'ENTREGADO' || e === 'ANULADO';
 function Pastilla({ estado }: { estado: string }) {
   const t = TONO[estado] ?? 'gray';
   return <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, background: `var(--${t}-tint)`, color: `var(--${t}-ink)`, fontSize: '0.6875rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{ETIQUETA[estado] ?? estado}</span>;
-}
-
-// Acción de icono dentro de una fila de la tabla: nombre al pasar el mouse
-function IconoFila({ texto, tono, icono, onClick, cargando }: { texto: string; tono: string; icono: ReactNode; onClick: () => void; cargando?: boolean }) {
-  return (
-    <TooltipFijo texto={texto}>
-      <button type="button" className={`acciones-iconos__boton acciones-iconos__boton--libre acciones-iconos__boton--${tono}`} aria-label={texto} disabled={cargando}
-        style={{ width: 32, height: 32 }} onClick={ev => { ev.stopPropagation(); onClick(); }}>{icono}</button>
-    </TooltipFijo>
-  );
 }
 
 // Elegir un viaje abierto para sumar el servicio
@@ -341,7 +330,7 @@ export function OrdenesServicioPage() {
             {puedeCrear ? 'Crea la primera con el botón «Nueva orden».' : 'Aún no hay órdenes registradas.'}
           </EmptyState>
         ) : (
-          <TablaRedimensionable id="ordenes-servicio-v2" columnas={COLUMNAS} ariaLabel="Órdenes de servicio">
+          <TablaRedimensionable id="ordenes-servicio-v3" columnas={COLUMNAS} ariaLabel="Órdenes de servicio" className="tabla-redim--compacta">
             {visibles.map(x => {
               const e = estadoDe(x);
               const libre = puedeEditar && !cerrado(e);
@@ -349,11 +338,11 @@ export function OrdenesServicioPage() {
                 <tr key={x.id} className="tabla-redim__fila--click" onClick={() => { haptic('selection'); setAbiertoId(x.id); }}>
                   <Celda>
                     <span style={{ display: 'inline-flex', gap: 2 }}>
-                      {libre && !x.viaje && <IconoFila texto="Generar viaje" tono="violeta" icono={<Wand2 size={17} />} onClick={() => generarViaje(x)} />}
-                      {libre && !x.viaje && <IconoFila texto="Asignar a un viaje" tono="azul" icono={<Link2 size={17} />} onClick={() => setAsignar(x)} />}
-                      {libre && e === 'PROGRAMADO' && <IconoFila texto="Iniciar servicio" tono="verde" icono={<Play size={17} />} onClick={() => setIniciar(x)} />}
-                      {puedeEditar && e === 'EN_EJECUCION' && <IconoFila texto="Marcar entregada" tono="verde" icono={<PackageCheck size={17} />} onClick={() => setEntregar(x)} />}
-                      {libre && <IconoFila texto="Editar" tono="ambar" icono={<Pencil size={16} />} onClick={() => editarFila(x.id)} />}
+                      {libre && !x.viaje && <IconoFila texto="Generar viaje" tono="violeta" icono={<Wand2 size={15} />} onClick={() => generarViaje(x)} />}
+                      {libre && !x.viaje && <IconoFila texto="Asignar a un viaje" tono="azul" icono={<Link2 size={15} />} onClick={() => setAsignar(x)} />}
+                      {libre && e === 'PROGRAMADO' && <IconoFila texto="Iniciar servicio" tono="verde" icono={<Play size={15} />} onClick={() => setIniciar(x)} />}
+                      {puedeEditar && e === 'EN_EJECUCION' && <IconoFila texto="Marcar entregada" tono="verde" icono={<PackageCheck size={15} />} onClick={() => setEntregar(x)} />}
+                      {libre && <IconoFila texto="Editar" tono="ambar" icono={<Pencil size={15} />} onClick={() => editarFila(x.id)} />}
                     </span>
                   </Celda>
                   <Celda><Pastilla estado={e} /></Celda>
@@ -365,7 +354,7 @@ export function OrdenesServicioPage() {
                   <Celda alinear="right" mono>{n(x.peso_estimado) ? `${n(x.peso_estimado).toLocaleString('es-PE')} kg` : '—'}</Celda>
                   <Celda mono>{x.viaje ? `${x.viaje}${x.viajes_n > 1 ? ` +${x.viajes_n - 1}` : ''}` : '—'}</Celda>
                   <Celda>
-                    {x.placa_tracto ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><LicensePlate plate={x.placa_tracto} size="sm" />{x.conductor}</span>
+                    {x.placa_tracto ? <span className="tbl-unidad"><span className="tbl-placa">{x.placa_tracto}</span>{x.conductor}</span>
                       : x.tercero_nombre ? x.tercero_nombre : '—'}
                   </Celda>
                   <Celda alinear="right" mono>{dinero(x)}</Celda>
