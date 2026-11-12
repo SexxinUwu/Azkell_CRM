@@ -2,6 +2,7 @@ import '../mantenimiento/mant.css';
 import { useState } from 'react';
 import { Building2, Download, Upload } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import '../../core/ui/acciones-iconos.css';
 import { CrudLista } from '../../core/ui/CrudLista';
 import { api } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -25,7 +26,7 @@ export function ClientesPage() {
   return (
     <>
     <CrudLista<Cliente>
-      eyebrow="Directorio" titulo="Clientes" singular="Cliente" icono={<Building2 size={16} />}
+      eyebrow="Flota" titulo="Clientes" singular="Cliente" icono={<Building2 size={16} />}
       datos={lista} cargando={isLoading} error={isError ? error : undefined} idDe={c => c.id}
       principal={c => c.razon_social || c.nombre || 'Sin razón social'}
       secundaria={c => [c.ruc_dni ? `RUC/DNI ${c.ruc_dni}` : 'Sin RUC', c.telefono, c.email].filter(Boolean).join(' · ')}
@@ -34,6 +35,29 @@ export function ClientesPage() {
         tono: String(c.estado ?? 'Activo').toLowerCase() === 'activo' ? 'green' : 'neutral',
       })}
       buscarEn={c => `${c.razon_social ?? ''} ${c.nombre ?? ''} ${c.ruc_dni ?? ''} ${c.email ?? ''} ${c.telefono ?? ''}`}
+      tabla={{
+        id: 'clientes-v2',
+        columnas: [
+          { id: 'razon', titulo: 'Razón social', ancho: 300, minimo: 180 },
+          { id: 'ruc', titulo: 'RUC / DNI', ancho: 130 },
+          { id: 'tel', titulo: 'Teléfono', ancho: 130 },
+          { id: 'correo', titulo: 'Correo', ancho: 220 },
+          { id: 'dir', titulo: 'Dirección', ancho: 280, minimo: 140 },
+          { id: 'unid', titulo: 'Unidades', ancho: 100, alinear: 'right' },
+          { id: 'estado', titulo: 'Estado', ancho: 110 },
+          { id: 'acc', titulo: '', ancho: 56, minimo: 56 },
+        ],
+        celdas: c => {
+          const activo = String(c.estado ?? 'Activo').toLowerCase() === 'activo';
+          return [
+            <strong key="r">{c.razon_social || c.nombre || 'Sin razón social'}</strong>,
+            c.ruc_dni || '—', c.telefono || '—', c.email || '—', c.direccion || '—',
+            <span key="u" style={{ fontVariantNumeric: 'tabular-nums' }}>{Number(c.total_flota) || 0}</span>,
+            <span key="e" style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, fontSize: '0.6875rem', fontWeight: 700,
+              background: activo ? 'var(--green-tint)' : 'var(--gray-tint)', color: activo ? 'var(--green-ink)' : 'var(--gray-ink)' }}>{activo ? 'Activo' : 'Inactivo'}</span>,
+          ];
+        },
+      }}
       campos={[
         { clave: 'razon_social', label: 'Razón social', requerido: true, wide: true, normalizar: v => v.toUpperCase() },
         {

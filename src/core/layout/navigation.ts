@@ -111,6 +111,7 @@ const SECCIONES_BASE: NavSection[] = [
     title: 'Flota',
     items: [
       { key: 'placas', label: 'Placas', to: '/placas', icon: Truck, permissions: ver('placas') },
+      { key: 'clientes', label: 'Clientes', to: '/flota/clientes', icon: Users, permissions: ver('clientes') },
       { key: 'disponibilidad', label: 'Disponibilidad', to: '/flota/disponibilidad', icon: Gauge, permissions: ver('disponibilidad') },
       { key: 'ubicacion', label: 'GPS', to: '/flota/ubicacion', icon: MapPin, permissions: ver('gps') },
       { key: 'documentos', label: 'Documentos', to: '/flota/documentos', icon: FileText, permissions: ver('docs_flota') },
@@ -204,7 +205,6 @@ const SECCIONES_BASE: NavSection[] = [
     title: 'Directorio',
     items: [
       { key: 'conductores', label: 'Personal', to: '/conductores', icon: IdCard, permissions: ver('cond') },
-      { key: 'clientes', label: 'Clientes', to: '/directorio/clientes', icon: Users, permissions: ver('clientes') },
     ],
   },
   {

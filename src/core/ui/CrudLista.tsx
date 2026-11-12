@@ -4,6 +4,8 @@ import { Button, PageLoader } from './Button';
 import { EmptyState, Notice, Page, PageHeader } from './Display';
 import { Field, SearchField, SelectInput, TextInput } from './Field';
 import { MenuOtros } from './MenuOtros';
+import { AccionesCabecera } from './AccionesCabecera';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from './TablaRedimensionable';
 import { ConfirmSheet, Sheet } from './Sheet';
 import { useToast } from './Toast';
 import { errorMessage } from '../api/client';
@@ -67,6 +69,8 @@ export interface CrudListaProps<T> {
   /** Contenido arriba de la lista (filtros, KPIs) */
   arriba?: ReactNode;
   mensajeVacio?: string;
+  /** Vista en tabla (en lugar de tarjetas): columnas y celdas de cada fila. Las acciones pasan a iconos con su nombre al pasar el mouse. */
+  tabla?: { id: string; columnas: ColumnaTabla[]; celdas: (t: T) => ReactNode[] };
 }
 
 const TONO_FILA = { green: 'var(--green-ink)', amber: 'var(--amber-ink)', red: 'var(--red-ink)', blue: 'var(--accent-ink)', neutral: 'var(--label-2)' };
@@ -111,10 +115,17 @@ export function CrudLista<T>(p: CrudListaProps<T>) {
         subtitle={p.cargando ? 'Cargando…' : `${p.datos.length} registros`}
         actions={
           <>
-            <MenuOtros opciones={[
-              p.exportar ? { label: 'Exportar Excel', detalle: `${visibles.length} registros`, icon: <FileSpreadsheet size={17} />, onSelect: exportar } : null,
-              ...(p.extras ?? []),
-            ]} />
+            {p.tabla ? (
+              <AccionesCabecera etiqueta={`Acciones de ${p.titulo.toLowerCase()}`} acciones={[
+                p.exportar ? { label: 'Exportar Excel', icon: <FileSpreadsheet size={17} />, tono: 'verde', onClick: exportar } : null,
+                ...(p.extras ?? []).map(x => ({ label: x.label, icon: x.icon, tono: 'azul' as const, onClick: x.onSelect })),
+              ]} />
+            ) : (
+              <MenuOtros opciones={[
+                p.exportar ? { label: 'Exportar Excel', detalle: `${visibles.length} registros`, icon: <FileSpreadsheet size={17} />, onSelect: exportar } : null,
+                ...(p.extras ?? []),
+              ]} />
+            )}
             {p.crear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setEditando({ item: null })}>Nuevo</Button>}
           </>
         }
@@ -133,6 +144,23 @@ export function CrudLista<T>(p: CrudListaProps<T>) {
                 ? <button type="button" className="placas-limpiar" onClick={() => setBusqueda('')}>Quitar búsqueda</button>
                 : p.mensajeVacio ?? (p.crear ? <>Crea el primero con <strong>Nuevo</strong>.</> : 'Aún no hay registros.')}
             </EmptyState>
+          ) : p.tabla ? (
+            <TablaRedimensionable id={p.tabla.id} columnas={p.tabla.columnas} ariaLabel={p.titulo}>
+              {visibles.map(t => (
+                <tr key={String(p.idDe(t))} className={p.editar ? 'tabla-redim__fila--click' : undefined}
+                  onClick={p.editar ? () => { haptic('selection'); setEditando({ item: t }); } : undefined}>
+                  {p.tabla!.celdas(t).map((c, i) => <Celda key={i}>{c}</Celda>)}
+                  {p.eliminar && (
+                    <Celda>
+                      <button type="button" className="acciones-iconos__boton acciones-iconos__boton--libre acciones-iconos__boton--rojo" style={{ width: 32, height: 32 }}
+                        aria-label={`Eliminar ${p.principal(t)}`} onClick={e => { e.stopPropagation(); setPorEliminar(t); }}>
+                        <Trash2 size={16} />
+                      </button>
+                    </Celda>
+                  )}
+                </tr>
+              ))}
+            </TablaRedimensionable>
           ) : (
             <div className="tarjeta__lista">
               {visibles.map(t => {
