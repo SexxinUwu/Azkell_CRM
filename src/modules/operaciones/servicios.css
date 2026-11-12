@@ -64,3 +64,56 @@ button.os-viaje:active { transform: scale(0.985); transition-duration: 0.08s; }
 .os-res__fila { display: flex; justify-content: space-between; gap: var(--s-3); font-size: 0.875rem; }
 .os-res__label { color: var(--label-2); flex-shrink: 0; }
 .os-res__valor { text-align: right; font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
+
+/* Detalle de la orden: ruta con camión que avanza según la etapa */
+.os-ruta { display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-4); border-radius: var(--r-lg, 16px); background: var(--fill-subtle); }
+.os-ruta__cab { display: flex; align-items: center; gap: var(--s-3); }
+.os-ruta__id { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.os-ruta__cod { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--label-3); font-variant-numeric: tabular-nums; }
+.os-ruta__cliente { font-size: 1rem; font-weight: 700; overflow-wrap: anywhere; }
+.os-ruta__tramo { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: var(--s-3); }
+.os-ruta__nombre { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; min-width: 0; overflow-wrap: anywhere; }
+.os-ruta__nombre small { display: block; font-size: 0.8125rem; font-weight: 500; color: var(--label-2); margin-top: 4px; }
+.os-ruta__km { font-size: 1.5rem; font-weight: 700; color: var(--accent); text-align: right; font-variant-numeric: tabular-nums; }
+.os-ruta__km small { display: block; font-size: 0.75rem; font-weight: 500; color: var(--label-2); }
+.os-pista { position: relative; height: 56px; margin: 30px 24px 4px; }
+.os-pista__linea { position: absolute; left: 0; right: 0; top: 50%; height: 4px; margin-top: -2px; border-radius: 4px; background: var(--fill); }
+.os-pista__avance { position: absolute; left: 0; top: 50%; height: 4px; margin-top: -2px; border-radius: 4px; background: var(--accent); transition: width 1s cubic-bezier(0.45, 0, 0.2, 1); }
+.os-parada { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--surface); border: 2px solid var(--separator); transition: background-color 0.4s ease, border-color 0.4s ease; }
+.os-parada--on { background: var(--accent); border-color: var(--accent); }
+.os-parada--actual { animation: os-pulso 1.6s ease-out infinite; }
+.os-camion { position: absolute; top: 50%; width: 46px; height: 28px; margin: -23px 0 0 -23px; transition: left 1s cubic-bezier(0.45, 0, 0.2, 1); }
+.os-camion svg { width: 100%; height: 100%; overflow: visible; display: block; }
+.os-camion__caja { fill: var(--accent); }
+.os-camion__ventana { fill: var(--surface); }
+.os-camion__rueda { fill: var(--label); transform-box: fill-box; transform-origin: center; }
+.os-camion__vel { stroke: var(--accent); stroke-width: 2; stroke-linecap: round; opacity: 0; }
+.os-camion--mueve svg { animation: os-bache 0.3s ease-in-out infinite alternate; }
+.os-camion--mueve .os-camion__rueda { animation: os-giro 0.45s linear infinite; }
+.os-camion--mueve .os-camion__vel { animation: os-estela 0.5s ease-in-out infinite alternate; }
+.os-ruta--anulada .os-camion { opacity: 0.35; }
+.os-ruta--anulada .os-pista__avance { background: var(--label-3); }
+.os-etapas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.os-etapas span { font-size: 0.75rem; color: var(--label-3); }
+.os-etapas span:nth-child(2), .os-etapas span:nth-child(3) { text-align: center; }
+.os-etapas span:last-child { text-align: right; }
+.os-etapas .os-etapa--on { color: var(--label); font-weight: 700; }
+@keyframes os-giro { to { transform: rotate(360deg); } }
+@keyframes os-bache { to { transform: translateY(-1.5px); } }
+@keyframes os-estela { from { opacity: 0.05; transform: translateX(0); } to { opacity: 0.6; transform: translateX(-3px); } }
+@keyframes os-pulso { 0% { box-shadow: 0 0 0 0 var(--accent-tint); } 70%, 100% { box-shadow: 0 0 0 10px transparent; } }
+@media (prefers-reduced-motion: reduce) {
+  .os-camion--mueve, .os-camion--mueve *, .os-parada--actual { animation: none !important; }
+  .os-pista__avance, .os-camion { transition: none; }
+}
+
+/* Bloques de datos del detalle */
+.os-grupos { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
+@media (max-width: 560px) { .os-grupos { grid-template-columns: 1fr; } }
+.os-bloque { background: var(--surface); border: 1px solid var(--separator); border-radius: var(--r-md, 12px); padding: var(--s-3) var(--s-4); min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.os-bloque h3 { margin: 0 0 4px; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--label-3); }
+.os-bloque p { margin: 0; overflow-wrap: anywhere; }
+.os-bloque--ancho { grid-column: 1 / -1; }
+.os-cifra { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.os-cifra small { font-size: 0.875rem; font-weight: 600; color: var(--label-2); margin-left: 6px; }
+.os-fuerte { font-weight: 600; }

@@ -1,7 +1,7 @@
 import '../mantenimiento/mant.css';
 import '../../core/ui/acciones-iconos.css';
 import './servicios.css';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, CircleAlert, FileSpreadsheet, Link2, Link2Off, PackageCheck, Pencil, Play, Plus, Route, ScrollText, SearchX, Wand2, XCircle } from 'lucide-react';
@@ -9,6 +9,7 @@ import { OrdenServicioSheet, type OrdenParaEditar } from './OrdenServicioSheet';
 import { GenerarViajeSheet } from './GenerarViajeSheet';
 import { AccionesCabecera } from '../../core/ui/AccionesCabecera';
 import { Button, PageLoader } from '../../core/ui/Button';
+import { BrandMark } from '../../core/layout/BrandMark';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, TextInput } from '../../core/ui/Field';
 import { ChoiceChips } from '../../core/ui/Chips';
@@ -52,16 +53,64 @@ function Pastilla({ estado }: { estado: string }) {
   return <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, background: `var(--${t}-tint)`, color: `var(--${t}-ink)`, fontSize: '0.6875rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{ETIQUETA[estado] ?? estado}</span>;
 }
 
-// Avance del servicio en cuatro pasos (pendiente, programado, en ejecución, entregado)
-function Pasos({ estado }: { estado: string }) {
-  const idx = Math.max(0, ['PENDIENTE', 'PROGRAMADO', 'EN_EJECUCION', 'ENTREGADO'].indexOf(estado));
+// Cabecera del servicio: logo de la empresa, la ruta y un camión que avanza por ella según la etapa
+const ETAPAS_RUTA = ['PENDIENTE', 'PROGRAMADO', 'EN_EJECUCION', 'ENTREGADO'];
+const POS_RUTA = [0, 33.33, 66.66, 100];
+function RutaServicio({ o, estado }: { o: Orden; estado: string }) {
+  const idx = ETAPAS_RUTA.indexOf(estado);
+  const anulada = estado === 'ANULADO';
+  const pos = POS_RUTA[Math.max(0, idx)];
+  const [mueve, setMueve] = useState(false);
+  const previa = useRef<number | null>(null);
+  // El camión solo se mueve cuando cambia la etapa, no al abrir el detalle
+  useEffect(() => {
+    if (previa.current === null || previa.current === idx) { previa.current = idx; return; }
+    previa.current = idx;
+    setMueve(true);
+    const t = window.setTimeout(() => setMueve(false), 1000);
+    return () => window.clearTimeout(t);
+  }, [idx]);
+  const km = n(o.distancia_km);
   return (
-    <div>
-      <div className="os-pasos" role="img" aria-label={`Avance: ${ETIQUETA[estado] ?? estado}`}>
-        {[0, 1, 2, 3].map(i => <span key={i} className={`os-paso${estado !== 'ANULADO' && i <= idx ? ' os-paso--on' : ''}`} />)}
+    <section className={`os-ruta${anulada ? ' os-ruta--anulada' : ''}`} aria-label="Ruta del servicio">
+      <header className="os-ruta__cab">
+        <BrandMark size={44} />
+        <div className="os-ruta__id">
+          <span className="os-ruta__cod">{o.codigo_orden}{o.es_retorno ? ' · retorno' : ''}</span>
+          <span className="os-ruta__cliente">{o.cliente_nombre || 'Sin cliente'}</span>
+        </div>
+        <Pastilla estado={estado} />
+      </header>
+      <div className="os-ruta__tramo">
+        <div className="os-ruta__nombre">
+          {[o.origen, o.destino].filter(Boolean).join(' → ') || 'Sin ruta'}
+          <small>{etiquetaTipo(o.tipo_servicio)} · {o.es_retorno ? 'Retorno con carga' : 'Ida'}</small>
+        </div>
+        {km ? <div className="os-ruta__km">{km.toLocaleString('es-PE')}<small>km</small></div> : null}
       </div>
-      <div className="os-pasos-leyenda"><span>Pendiente</span><span>Programado</span><span>En ejecución</span><span>Entregado</span></div>
-    </div>
+      <div className="os-pista" role="img" aria-label={`Avance: ${ETIQUETA[estado] ?? estado}`}>
+        <div className="os-pista__linea" />
+        <div className="os-pista__avance" style={{ width: `${pos}%` }} />
+        {POS_RUTA.map((p, i) => (
+          <span key={p} className={`os-parada${!anulada && i <= idx ? ' os-parada--on' : ''}${!anulada && i === idx ? ' os-parada--actual' : ''}`} style={{ left: `${p}%` }} />
+        ))}
+        <div className={`os-camion${mueve ? ' os-camion--mueve' : ''}`} style={{ left: `${pos}%` }}>
+          <svg viewBox="0 0 46 28" aria-hidden="true">
+            <line className="os-camion__vel" x1="0" y1="8" x2="8" y2="8" />
+            <line className="os-camion__vel" x1="0" y1="14" x2="10" y2="14" />
+            <line className="os-camion__vel" x1="2" y1="20" x2="8" y2="20" />
+            <rect className="os-camion__caja" x="10" y="3" width="24" height="16" rx="3" />
+            <path className="os-camion__caja" d="M34 8 h6 l4 6 v5 h-10 z" />
+            <rect className="os-camion__ventana" x="37" y="9" width="5" height="4" rx="1" />
+            <circle className="os-camion__rueda" cx="16" cy="23" r="4" />
+            <circle className="os-camion__rueda" cx="38" cy="23" r="4" />
+          </svg>
+        </div>
+      </div>
+      <div className="os-etapas">
+        {ETAPAS_RUTA.map((e, i) => <span key={e} className={!anulada && i === idx ? 'os-etapa--on' : ''}>{ETIQUETA[e]}</span>)}
+      </div>
+    </section>
   );
 }
 
@@ -263,9 +312,6 @@ export function OrdenesServicioPage() {
     } catch (err) { toast(errorMessage(err), 'error'); }
   }
 
-  const fila = (label: string, valor: unknown, mono = false) => (valor === null || valor === undefined || valor === '' ? null : (
-    <div className="dato"><span className="dato__label">{label}</span><span className={`dato__valor${mono ? ' dato__valor--mono' : ''}`}>{String(valor)}</span></div>
-  ));
   const est = abierta ? estadoDe(abierta) : 'PENDIENTE';
 
   return (
@@ -379,7 +425,7 @@ export function OrdenesServicioPage() {
         }>
         {o && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
-            <Pasos estado={estadoDe(o)} />
+            <RutaServicio o={o} estado={estadoDe(o)} />
             <div className="os-viaje">
               <span className="os-viaje__datos">
                 <span className="os-viaje__codigo">{o.viaje ? `Viaje ${o.viaje}` : 'Sin viaje todavía'}</span>
@@ -402,13 +448,44 @@ export function OrdenesServicioPage() {
                 )}
               </span>
             </div>
-            <div className="tarjeta__lista">
-              {fila('Cliente', o.cliente_nombre)}{fila('Servicio', `${etiquetaTipo(o.tipo_servicio)}${o.es_retorno ? ' · retorno con carga' : ''}`)}{fila('Ruta', [o.ruta, n(o.distancia_km) ? `${n(o.distancia_km).toLocaleString('es-PE')} km` : ''].filter(Boolean).join(' · '))}
-              {fila('Punto de carga', [o.origen, o.ubigeo_origen && `ubigeo ${o.ubigeo_origen}`].filter(Boolean).join(' · '))}{fila('Dirección de carga', o.direccion_origen)}
-              {fila('Punto de entrega', [o.destino, o.ubigeo_destino && `ubigeo ${o.ubigeo_destino}`].filter(Boolean).join(' · '))}{fila('Dirección de entrega', o.direccion_destino)}{fila('Remitente', o.remitente_generador)}{fila('Destinatario', o.destinatario)}
-              {fila('Carga', o.descripcion_carga)}{fila('Peso estimado', n(o.peso_estimado) ? `${n(o.peso_estimado).toLocaleString('es-PE')} kg` : null)}
-              {fila('Fecha', [o.fecha_fmt, o.fecha_entrega_fmt].filter(Boolean).join(' → '), true)}
-              {fila('Flete', `${dinero(o)} · ${o.impuesto ?? ''}`)}{fila('Observaciones', o.observaciones)}
+            <div className="os-grupos">
+              <section className="os-bloque">
+                <h3>Flete</h3>
+                <p className="os-cifra">{dinero(o)}</p>
+                <p className="os-nota">{o.impuesto ?? ''}</p>
+              </section>
+              <section className="os-bloque">
+                <h3>Peso</h3>
+                <p className="os-cifra">{n(o.peso_estimado) ? <>{n(o.peso_estimado).toLocaleString('es-PE')}<small>kg</small></> : '—'}</p>
+                <p className="os-nota">Lo completan las guías de remisión</p>
+              </section>
+              <section className="os-bloque os-bloque--ancho">
+                <h3>Remitente y destinatario</h3>
+                <p><span className="os-fuerte">Remitente</span> · {o.remitente_generador || '—'}</p>
+                <p><span className="os-fuerte">Destinatario</span> · {o.destinatario || '—'}</p>
+              </section>
+              <section className="os-bloque">
+                <h3>Punto de carga</h3>
+                <p className="os-fuerte">{o.origen || '—'}</p>
+                <p className="os-nota">{[o.ubigeo_origen && `Ubigeo ${o.ubigeo_origen}`, o.direccion_origen].filter(Boolean).join(' · ') || 'Sin dirección todavía'}</p>
+              </section>
+              <section className="os-bloque">
+                <h3>Punto de entrega</h3>
+                <p className="os-fuerte">{o.destino || '—'}</p>
+                <p className="os-nota">{[o.ubigeo_destino && `Ubigeo ${o.ubigeo_destino}`, o.direccion_destino].filter(Boolean).join(' · ') || 'Sin dirección todavía'}</p>
+              </section>
+              <section className="os-bloque">
+                <h3>Fechas</h3>
+                <p>Servicio · <span className="os-fuerte">{o.fecha_fmt || '—'}</span></p>
+                <p>Entrega estimada · <span className="os-fuerte">{o.fecha_entrega_fmt || '—'}</span></p>
+              </section>
+              {(o.descripcion_carga || o.observaciones) && (
+                <section className="os-bloque os-bloque--ancho">
+                  <h3>Notas</h3>
+                  {o.descripcion_carga && <p>Carga · {o.descripcion_carga}</p>}
+                  {o.observaciones && <p>{o.observaciones}</p>}
+                </section>
+              )}
             </div>
             {det.isLoading && <PageLoader />}
           </div>
