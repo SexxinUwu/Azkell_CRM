@@ -1,15 +1,15 @@
 import '../mantenimiento/mant.css';
 import '../../core/ui/acciones-iconos.css';
 import './servicios.css';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, CircleAlert, FileSpreadsheet, Link2, Link2Off, PackageCheck, Pencil, Play, Plus, Route, ScrollText, SearchX, Wand2, XCircle } from 'lucide-react';
 import { OrdenServicioSheet, type OrdenParaEditar } from './OrdenServicioSheet';
 import { GenerarViajeSheet } from './GenerarViajeSheet';
+import { SeguimientoServicio } from './SeguimientoServicio';
 import { AccionesCabecera } from '../../core/ui/AccionesCabecera';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { BrandMark } from '../../core/layout/BrandMark';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, TextInput } from '../../core/ui/Field';
 import { ChoiceChips } from '../../core/ui/Chips';
@@ -46,72 +46,10 @@ const estadoDe = (o: Orden) => String(o.estado_servicio ?? 'PENDIENTE').toUpperC
 const simbolo = (m: string | null) => (/DOL/i.test(String(m ?? '')) ? 'US$' : 'S/');
 const dinero = (o: Orden) => `${simbolo(o.moneda)} ${n(o.costo_flete).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const cerrado = (e: string) => e === 'ENTREGADO' || e === 'ANULADO';
-const etiquetaTipo = (t: string | null) => (/LOCAL/i.test(String(t ?? '')) ? 'Local' : /NACIONAL/i.test(String(t ?? '')) ? 'Nacional' : t || '—');
 
 function Pastilla({ estado }: { estado: string }) {
   const t = TONO[estado] ?? 'gray';
   return <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, background: `var(--${t}-tint)`, color: `var(--${t}-ink)`, fontSize: '0.6875rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{ETIQUETA[estado] ?? estado}</span>;
-}
-
-// Cabecera del servicio: logo de la empresa, la ruta y un camión que avanza por ella según la etapa
-const ETAPAS_RUTA = ['PENDIENTE', 'PROGRAMADO', 'EN_EJECUCION', 'ENTREGADO'];
-const POS_RUTA = [0, 33.33, 66.66, 100];
-function RutaServicio({ o, estado }: { o: Orden; estado: string }) {
-  const idx = ETAPAS_RUTA.indexOf(estado);
-  const anulada = estado === 'ANULADO';
-  const pos = POS_RUTA[Math.max(0, idx)];
-  const [mueve, setMueve] = useState(false);
-  const previa = useRef<number | null>(null);
-  // El camión solo se mueve cuando cambia la etapa, no al abrir el detalle
-  useEffect(() => {
-    if (previa.current === null || previa.current === idx) { previa.current = idx; return; }
-    previa.current = idx;
-    setMueve(true);
-    const t = window.setTimeout(() => setMueve(false), 1000);
-    return () => window.clearTimeout(t);
-  }, [idx]);
-  const km = n(o.distancia_km);
-  return (
-    <section className={`os-ruta${anulada ? ' os-ruta--anulada' : ''}`} aria-label="Ruta del servicio">
-      <header className="os-ruta__cab">
-        <BrandMark size={44} />
-        <div className="os-ruta__id">
-          <span className="os-ruta__cod">{o.codigo_orden}{o.es_retorno ? ' · retorno' : ''}</span>
-          <span className="os-ruta__cliente">{o.cliente_nombre || 'Sin cliente'}</span>
-        </div>
-        <Pastilla estado={estado} />
-      </header>
-      <div className="os-ruta__tramo">
-        <div className="os-ruta__nombre">
-          {[o.origen, o.destino].filter(Boolean).join(' → ') || 'Sin ruta'}
-          <small>{etiquetaTipo(o.tipo_servicio)} · {o.es_retorno ? 'Retorno con carga' : 'Ida'}</small>
-        </div>
-        {km ? <div className="os-ruta__km">{km.toLocaleString('es-PE')}<small>km</small></div> : null}
-      </div>
-      <div className="os-pista" role="img" aria-label={`Avance: ${ETIQUETA[estado] ?? estado}`}>
-        <div className="os-pista__linea" />
-        <div className="os-pista__avance" style={{ width: `${pos}%` }} />
-        {POS_RUTA.map((p, i) => (
-          <span key={p} className={`os-parada${!anulada && i <= idx ? ' os-parada--on' : ''}${!anulada && i === idx ? ' os-parada--actual' : ''}`} style={{ left: `${p}%` }} />
-        ))}
-        <div className={`os-camion${mueve ? ' os-camion--mueve' : ''}`} style={{ left: `${pos}%` }}>
-          <svg viewBox="0 0 46 28" aria-hidden="true">
-            <line className="os-camion__vel" x1="0" y1="8" x2="8" y2="8" />
-            <line className="os-camion__vel" x1="0" y1="14" x2="10" y2="14" />
-            <line className="os-camion__vel" x1="2" y1="20" x2="8" y2="20" />
-            <rect className="os-camion__caja" x="10" y="3" width="24" height="16" rx="3" />
-            <path className="os-camion__caja" d="M34 8 h6 l4 6 v5 h-10 z" />
-            <rect className="os-camion__ventana" x="37" y="9" width="5" height="4" rx="1" />
-            <circle className="os-camion__rueda" cx="16" cy="23" r="4" />
-            <circle className="os-camion__rueda" cx="38" cy="23" r="4" />
-          </svg>
-        </div>
-      </div>
-      <div className="os-etapas">
-        {ETAPAS_RUTA.map((e, i) => <span key={e} className={!anulada && i === idx ? 'os-etapa--on' : ''}>{ETIQUETA[e]}</span>)}
-      </div>
-    </section>
-  );
 }
 
 // Acción de icono dentro de una fila de la tabla: nombre al pasar el mouse
@@ -425,7 +363,7 @@ export function OrdenesServicioPage() {
         }>
         {o && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
-            <RutaServicio o={o} estado={estadoDe(o)} />
+            <SeguimientoServicio o={o} estado={estadoDe(o)} />
             <div className="os-viaje">
               <span className="os-viaje__datos">
                 <span className="os-viaje__codigo">{o.viaje ? `Viaje ${o.viaje}` : 'Sin viaje todavía'}</span>

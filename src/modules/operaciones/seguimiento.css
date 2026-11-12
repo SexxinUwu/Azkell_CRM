@@ -1,0 +1,84 @@
+/* Seguimiento del servicio: estado en vivo, camión, conductor e historial */
+.seg { display: flex; flex-direction: column; gap: var(--s-4); padding: var(--s-4); border-radius: var(--r-xl, 20px); background: var(--fill-subtle); }
+.seg__cab { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-3); }
+.seg__id { min-width: 0; }
+.seg__orden { display: inline-flex; align-items: center; gap: 8px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.03em; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.seg__titulo { margin: 8px 0 0; font-size: 1.5rem; font-weight: 750; letter-spacing: -0.02em; line-height: 1.1; }
+.seg__sub { margin: 4px 0 0; font-size: 0.8125rem; color: var(--label-2); }
+.seg__pill { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; font-size: 0.75rem; font-weight: 650; padding: 6px 11px; border-radius: 999px; background: var(--green-tint); color: var(--green-ink); }
+.seg__pill i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; position: relative; }
+.seg__pill--vivo i::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: currentColor; animation: seg-ping 1.4s ease-out infinite; }
+.seg__pill--gris { background: var(--fill); color: var(--label-2); }
+@keyframes seg-ping { to { transform: scale(2.8); opacity: 0; } }
+.seg__ruta { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap; font-size: 0.875rem; }
+.seg__ruta strong { font-size: 1rem; }
+.seg__ruta span { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Pista y camión */
+.seg__escena { padding-top: 34px; }
+.seg__pista { position: relative; height: 22px; margin: 0 11px; }
+.seg__linea, .seg__avance { position: absolute; top: 50%; left: 0; height: 4px; border-radius: 2px; transform: translateY(-50%); }
+.seg__linea { width: 100%; background: repeating-linear-gradient(90deg, var(--separator) 0 8px, transparent 8px 13px); }
+.seg__avance { background: var(--green); transition: width 1.2s cubic-bezier(0.45, 0, 0.2, 1); box-shadow: 0 0 10px color-mix(in srgb, var(--green) 40%, transparent); }
+.seg__parada { position: absolute; top: 50%; width: 22px; height: 22px; border-radius: 50%; transform: translate(-50%, -50%); display: grid; place-items: center; background: var(--surface); border: 2px solid var(--separator); color: #fff; z-index: 1; transition: background-color 0.35s, border-color 0.35s; }
+.seg__parada svg { opacity: 0; transform: scale(0.4); transition: opacity 0.3s, transform 0.35s cubic-bezier(0.3, 1.6, 0.5, 1); }
+.seg__parada--hecha { background: var(--green); border-color: var(--green); }
+.seg__parada--hecha svg { opacity: 1; transform: scale(1); }
+.seg__parada--actual { border-color: var(--green); }
+.seg__parada--actual::after { content: ''; position: absolute; inset: -2px; border-radius: 50%; border: 2px solid var(--green); animation: seg-anillo 1.6s ease-out infinite; }
+@keyframes seg-anillo { to { transform: scale(2); opacity: 0; } }
+.seg__camion { position: absolute; bottom: 50%; width: 42px; z-index: 3; transform: translate(-50%, 4px); transition: left 1.2s cubic-bezier(0.45, 0, 0.2, 1); }
+.seg__camion svg { display: block; width: 100%; overflow: visible; }
+.seg__verde { fill: var(--green); }
+.seg__rueda { transform-box: fill-box; transform-origin: center; }
+.seg__luces { opacity: 0; transition: opacity 0.3s; }
+.seg__camion--rueda .seg__cuerpo { animation: seg-bache 0.2s ease-in-out infinite alternate; }
+.seg__camion--rueda .seg__rueda { animation: seg-giro 0.32s linear infinite; }
+.seg__camion--rueda .seg__luces { opacity: 1; }
+.seg--anulada .seg__camion { opacity: 0.35; }
+@keyframes seg-bache { to { transform: translateY(-1.4px); } }
+@keyframes seg-giro { to { transform: rotate(360deg); } }
+.seg__globo { position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%); background: var(--label); color: var(--surface); font-size: 0.7188rem; font-weight: 650; padding: 5px 9px; border-radius: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.seg__globo::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--label); }
+.seg__camion--borde .seg__globo { left: auto; right: -6px; transform: none; }
+.seg__camion--borde .seg__globo::after { left: auto; right: 14px; transform: none; }
+
+.seg__etapas { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 16px; font-size: 0.78rem; }
+.seg__etapa { color: var(--label-3); }
+.seg__etapa b { display: block; font-weight: 500; }
+.seg__etapa time { display: block; font-size: 0.6875rem; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.seg__etapa:nth-child(1) { text-align: left; }
+.seg__etapa:nth-child(2) { text-align: center; transform: translateX(-14%); }
+.seg__etapa:nth-child(3) { text-align: center; transform: translateX(14%); }
+.seg__etapa:nth-child(4) { text-align: right; }
+.seg__etapa--on { color: var(--label); }
+.seg__etapa--on b { font-weight: 750; }
+
+/* Conductor */
+.seg__conductor { display: flex; align-items: center; gap: var(--s-3); padding: 12px; border-radius: 14px; background: var(--surface); }
+.seg__avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--green); color: #fff; font-weight: 700; font-size: 0.875rem; flex: none; }
+.seg__quien { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.seg__quien strong { font-size: 0.875rem; overflow-wrap: anywhere; }
+.seg__quien > span { font-size: 0.75rem; color: var(--label-2); }
+.seg__placa { font-family: ui-monospace, Menlo, monospace; font-size: 0.6875rem; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--separator); color: var(--label); }
+.seg__llamar { width: 38px; height: 38px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--green); color: #fff; transition: transform 0.15s; text-decoration: none; }
+.seg__llamar:active { transform: scale(0.92); }
+
+/* Historial */
+.seg__historial h4 { margin: 0 0 10px; font-size: 0.8125rem; display: flex; justify-content: space-between; }
+.seg__historial h4 span { color: var(--label-2); font-weight: 500; }
+.seg__historial ul { list-style: none; margin: 0; padding: 0; }
+.seg__ev { display: grid; grid-template-columns: 44px 14px 1fr; gap: 10px; align-items: start; padding-bottom: 14px; position: relative; }
+.seg__ev::before { content: ''; position: absolute; left: calc(44px + 10px + 6px); top: 14px; bottom: 0; width: 2px; background: var(--separator); }
+.seg__ev:last-child::before { display: none; }
+.seg__ev time { font-size: 0.7188rem; color: var(--label-2); padding-top: 1px; font-variant-numeric: tabular-nums; }
+.seg__ev time small { display: block; font-size: 0.625rem; color: var(--label-3); }
+.seg__marca { width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--green); background: var(--surface); margin-top: 2px; }
+.seg__ev--ultimo .seg__marca { background: var(--green); box-shadow: 0 0 0 4px var(--green-tint); }
+.seg__ev strong { display: block; font-size: 0.8125rem; font-weight: 600; }
+.seg__ev div > span { display: block; font-size: 0.75rem; color: var(--label-2); margin-top: 2px; overflow-wrap: anywhere; }
+
+@media (prefers-reduced-motion: reduce) {
+  .seg__camion--rueda .seg__cuerpo, .seg__camion--rueda .seg__rueda, .seg__pill--vivo i::after, .seg__parada--actual::after { animation: none !important; }
+  .seg__avance, .seg__camion { transition: none; }
+}

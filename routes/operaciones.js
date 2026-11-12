@@ -1667,6 +1667,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
         SELECT os.*,
                DATE_FORMAT(os.fecha, '%Y-%m-%d') AS fecha_fmt,
                DATE_FORMAT(os.fecha_entrega, '%Y-%m-%d') AS fecha_entrega_fmt,
+               DATE_FORMAT(os.creado_en, '%Y-%m-%d %H:%i:%s') AS creado_fmt,
                (SELECT MAX(m.km) FROM combustible_matriz_d2 m WHERE m.estado = 'ACTIVO' AND m.ruta COLLATE utf8mb4_unicode_ci = os.ruta COLLATE utf8mb4_unicode_ci) AS distancia_km,
                b.viaje AS viaje, COALESCE(b.n, 0) AS viajes_n,
                ov.estado AS viaje_estado, ov.conductor AS conductor, ov.placa_tracto AS placa_tracto,
@@ -1779,7 +1780,11 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             if (!rows.length) return res.status(404).json({ ok: false, error: 'Orden de servicio no encontrada' });
             const o = rows[0];
             const [viajes] = await tdb.query(
-                `SELECT r.viaje, ov.estado, ov.conductor, ov.placa_tracto, ov.placa_remolque, ov.ejecucion, ov.tercero_nombre, DATE_FORMAT(ov.fecha_viaje, '%Y-%m-%d') AS fecha_viaje
+                `SELECT r.viaje, ov.estado, ov.conductor, ov.placa_tracto, ov.placa_remolque, ov.ejecucion, ov.tercero_nombre, DATE_FORMAT(ov.fecha_viaje, '%Y-%m-%d') AS fecha_viaje,
+                        DATE_FORMAT(r.creado_en, '%Y-%m-%d %H:%i:%s') AS vinculado_en,
+                        DATE_FORMAT(ov.fecha_inicio, '%Y-%m-%d %H:%i:%s') AS fecha_inicio, DATE_FORMAT(ov.fecha_fin, '%Y-%m-%d %H:%i:%s') AS fecha_fin,
+                        ov.kilometraje_inicial, ov.kilometraje_final, ov.km_recorrido_gps,
+                        (SELECT c.telefono FROM conductores c WHERE c.nombre COLLATE utf8mb4_unicode_ci = ov.conductor COLLATE utf8mb4_unicode_ci LIMIT 1) AS conductor_telefono
                  FROM operaciones_ordenes_viaje_rutas r LEFT JOIN operaciones_ordenes_viaje ov ON ov.viaje COLLATE utf8mb4_unicode_ci = r.viaje COLLATE utf8mb4_unicode_ci
                  WHERE r.orden COLLATE utf8mb4_unicode_ci = ? COLLATE utf8mb4_unicode_ci ORDER BY r.id`, [o.codigo_orden]);
             // documentos y rutas ya no se manejan aquí (las guías se vincularán más adelante); se devuelven vacíos por compatibilidad
