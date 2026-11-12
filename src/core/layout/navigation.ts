@@ -69,20 +69,21 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Operaciones',
     items: [
-      { key: 'programacion', label: 'Programación', to: '/operaciones/programacion', icon: CalendarDays, permissions: ver('op_programacion', 'op_guias_remision') },
-      { key: 'ordenes-viaje', label: 'Órdenes de viaje', to: '/operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'op_guias_remision') },
-      { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: ScrollText, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision') },
-      { key: 'ubigeos', label: 'Ubigeos', to: '/operaciones/ubigeos', icon: MapPin, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision') },
-      { key: 'reporte-viajes', label: 'Reporte de viajes', to: '/operaciones/reporte-viajes', icon: BarChart3, permissions: ver('op_reporte_viajes') },
+      { key: 'programacion', label: 'Programación', to: '/operaciones/programacion', icon: CalendarDays, permissions: ver('op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa' },
+      { key: 'ordenes-viaje', label: 'Órdenes de viaje', to: '/operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa' },
+      { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: ScrollText, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa' },
+      { key: 'ubigeos', label: 'Ubigeos', to: '/operaciones/ubigeos', icon: MapPin, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa' },
+      { key: 'clientes', label: 'Clientes', to: '/operaciones/clientes', icon: Users, permissions: ver('clientes') },
+      { key: 'reporte-viajes', label: 'Reporte de viajes', to: '/operaciones/reporte-viajes', icon: BarChart3, permissions: ver('op_reporte_viajes'), soloEmpresa: 'marsisa' },
       {
-        key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [],
+        key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [], soloEmpresa: 'marsisa',
         children: [
           { key: 'guias-remitente', label: 'Guía de remisión electrónica (remitente)', to: '/operaciones/guias-remitente', icon: FileText, permissions: ver('op_guias_remision') },
           { key: 'guias-transportista', label: 'Guía de remisión de transportista', to: '/operaciones/guias-transportista', icon: FileText, permissions: ver('op_guias_remision') },
         ],
       },
       {
-        key: 'combustible-grupo', label: 'Combustible', icon: Fuel, permissions: [],
+        key: 'combustible-grupo', label: 'Combustible', icon: Fuel, permissions: [], soloEmpresa: 'marsisa',
         children: [
           { key: 'vales', noEmpresa: 'marsisa', label: 'Vales de combustible', to: '/operaciones/vales', icon: Fuel, permissions: ver('combustible_vales') },
           { key: 'matriz-combustible', noEmpresa: 'marsisa', label: 'Matriz de combustible (D2)', to: '/operaciones/matriz-combustible', icon: Target, permissions: ver('combustible_analisis') },
@@ -112,7 +113,6 @@ const SECCIONES_BASE: NavSection[] = [
     title: 'Flota',
     items: [
       { key: 'placas', label: 'Placas', to: '/placas', icon: Truck, permissions: ver('placas') },
-      { key: 'clientes', label: 'Clientes', to: '/flota/clientes', icon: Users, permissions: ver('clientes') },
       { key: 'disponibilidad', label: 'Disponibilidad', to: '/flota/disponibilidad', icon: Gauge, permissions: ver('disponibilidad') },
       { key: 'ubicacion', label: 'GPS', to: '/flota/ubicacion', icon: MapPin, permissions: ver('gps') },
       { key: 'documentos', label: 'Documentos', to: '/flota/documentos', icon: FileText, permissions: ver('docs_flota') },
@@ -273,13 +273,9 @@ function filtrarItems(items: NavItem[], can: (...p: string[]) => boolean, empres
     });
 }
 
-// Operaciones se está rehaciendo: por ahora solo Marsisa ve estas secciones (las demás empresas no las tienen en el menú)
-const SECCIONES_SOLO_MARSISA = new Set(['Operaciones']);
-
 export function visibleSections(can: (...p: string[]) => boolean, esFundador = false): NavSection[] {
   const empresa = empresaDelDominio();
   return NAV_SECTIONS
-    .filter(s => !SECCIONES_SOLO_MARSISA.has(s.title) || empresa.includes('marsisa'))
     .map(s => ({ ...s, items: filtrarItems(s.items, can, empresa, esFundador) }))
     .filter(s => s.items.length > 0);
 }

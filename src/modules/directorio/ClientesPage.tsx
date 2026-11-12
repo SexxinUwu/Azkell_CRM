@@ -26,7 +26,7 @@ export function ClientesPage() {
   return (
     <>
     <CrudLista<Cliente>
-      eyebrow="Flota" titulo="Clientes" singular="Cliente" icono={<Building2 size={16} />}
+      eyebrow="Operaciones" titulo="Clientes" singular="Cliente" icono={<Building2 size={16} />}
       datos={lista} cargando={isLoading} error={isError ? error : undefined} idDe={c => c.id}
       principal={c => c.razon_social || c.nombre || 'Sin razón social'}
       secundaria={c => [c.ruc_dni ? `RUC/DNI ${c.ruc_dni}` : 'Sin RUC', c.telefono, c.email].filter(Boolean).join(' · ')}
