@@ -11,6 +11,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import './servicios.css';
+import { useTipoCambioSunat } from '../almacen/api';
 import { etiquetaUbigeo, useOpcionesUbigeo } from './ubigeos';
 
 // Lo que llega del detalle del servicio (GET /operaciones/ordenes-servicio/:id)
@@ -100,14 +101,22 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
   const [intento, setIntento] = useState(false);
   const [guardando, setGuardando] = useState<'solo' | 'viaje' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // El tipo de cambio se precarga con el de SUNAT mientras la persona no lo escriba a mano
+  const [tcManual, setTcManual] = useState(false);
   const editando = !!orden;
 
-  useEffect(() => { if (open) { setF(formInicial(orden)); setTocados(new Set()); setIntento(false); setError(null); } }, [open, orden]);
+  useEffect(() => { if (open) { setF(formInicial(orden)); setTocados(new Set()); setIntento(false); setError(null); setTcManual(!!orden); } }, [open, orden]);
 
   const clientes = useQuery({
     queryKey: ['directorio', 'clientes'], enabled: open, staleTime: 5 * 60_000,
-    queryFn: () => api<unknown>('/clientes').then(r => (Array.isArray(r) ? r : ((r as { data?: unknown[] })?.data ?? [])) as { nombre?: string; razon_social?: string }[]),
+    queryFn: () => api<unknown>('/clientes').then(r => (Array.isArray(r) ? r : ((r as { data?: unknown[] })?.data ?? [])) as { nombre?: string; razon_social?: string; direccion?: string | null }[]),
   });
+  const sunat = useTipoCambioSunat(open && f.moneda === 'DOLARES');
+  useEffect(() => {
+    if (f.moneda === 'DOLARES' && !tcManual && sunat.data?.venta) setF(x => ({ ...x, tipo_cambio: Number(sunat.data!.venta).toFixed(3) }));
+  }, [f.moneda, tcManual, sunat.data]);
+  // Dirección registrada de cada cliente (viene de SUNAT al darlo de alta): sirve para completar la dirección de carga o entrega sin escribirla
+  const direccionDe = useMemo(() => new Map((clientes.data ?? []).map(c => [(c.nombre ?? c.razon_social ?? '').trim(), (c.direccion ?? '').trim()])), [clientes.data]);
   const opcionesClientes = useMemo(() => {
     const nombres = new Set<string>();
     (clientes.data ?? []).forEach(c => { const n = (c.nombre ?? c.razon_social ?? '').trim(); if (n) nombres.add(n); });
@@ -117,6 +126,14 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
   const ubi = useOpcionesUbigeo();
   const etiquetaDe = (codigo: string) => { const u = ubi.porCodigo.get(codigo); return u ? etiquetaUbigeo(u) : ''; };
   const set = (p: Partial<Form>) => setF(x => ({ ...x, ...p }));
+  // Elegir cliente: remitente por defecto = el mismo cliente; la dirección de carga se completa sola si estaba vacía
+  const elegirCliente = (nombre: string) => setF(x => {
+    const siguiente = { ...x, cliente: nombre };
+    if (nombre && !x.remitente) { siguiente.remitente = nombre; if (!x.origen_dir && direccionDe.get(nombre)) siguiente.origen_dir = direccionDe.get(nombre)!; }
+    return siguiente;
+  });
+  const elegirRemitente = (nombre: string) => setF(x => ({ ...x, remitente: nombre, origen_dir: !x.origen_dir && direccionDe.get(nombre) ? direccionDe.get(nombre)! : x.origen_dir }));
+  const elegirDestinatario = (nombre: string) => setF(x => ({ ...x, destinatario: nombre, destino_dir: !x.destino_dir && direccionDe.get(nombre) ? direccionDe.get(nombre)! : x.destino_dir }));
   const errores = useMemo(() => {
     const e: Partial<Record<Campo, string>> = {};
     if (!f.cliente.trim()) e.cliente = 'Elige o escribe el cliente.';
@@ -187,11 +204,17 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
         <Seccion icono={<UserRound size={16} />} titulo="Cliente">
           <Field label="Cliente *" error={ver('cliente')}>
             {p => <Combobox {...p} options={opcionesClientes} value={f.cliente || null} placeholder="Busca o escribe el cliente" loading={clientes.isLoading}
-              createLabel="Usar este cliente" onChange={v => { set({ cliente: v ?? '' }); tocar('cliente'); }} onCreate={t => { set({ cliente: t }); tocar('cliente'); }} />}
+              createLabel="Usar este cliente" limit={50} onChange={v => { elegirCliente(v ?? ''); tocar('cliente'); }} onCreate={t => { elegirCliente(t); tocar('cliente'); }} />}
           </Field>
           <div className="os-fila">
-            <Field label="Remitente">{p => <TextInput {...p} value={f.remitente} placeholder="Quién entrega la carga" onChange={e => set({ remitente: e.target.value })} />}</Field>
-            <Field label="Destinatario">{p => <TextInput {...p} value={f.destinatario} placeholder="Quién la recibe" onChange={e => set({ destinatario: e.target.value })} />}</Field>
+            <Field label="Remitente" hint="Quien entrega la carga. Por defecto, el cliente.">
+              {p => <Combobox {...p} options={opcionesClientes} value={f.remitente || null} limit={50} placeholder="Busca o escribe" createLabel="Usar este nombre"
+                onChange={v => elegirRemitente(v ?? '')} onCreate={t => elegirRemitente(t)} />}
+            </Field>
+            <Field label="Destinatario" hint="Quien recibe la carga en destino.">
+              {p => <Combobox {...p} options={opcionesClientes} value={f.destinatario || null} limit={50} placeholder="Busca o escribe" createLabel="Usar este nombre"
+                onChange={v => elegirDestinatario(v ?? '')} onCreate={t => elegirDestinatario(t)} />}
+            </Field>
           </div>
         </Seccion>
 
@@ -233,7 +256,10 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
             <Field label="Impuesto">{p => <Combobox {...p} options={IMPUESTOS} value={f.impuesto} onChange={v => set({ impuesto: v ?? 'INCLUYE IGV' })} />}</Field>
           </div>
           {f.moneda === 'DOLARES' && (
-            <Field label="Tipo de cambio">{p => <TextInput {...p} inputMode="decimal" value={f.tipo_cambio} onChange={e => set({ tipo_cambio: e.target.value.replace(/[^\d.]/g, '') })} />}</Field>
+            <Field label="Tipo de cambio"
+              hint={tcManual ? 'Escrito a mano.' : sunat.isLoading ? 'Consultando SUNAT…' : sunat.data ? `SUNAT (venta) del ${sunat.data.fecha}` : 'No se pudo consultar SUNAT: escríbelo a mano.'}>
+              {p => <TextInput {...p} inputMode="decimal" value={f.tipo_cambio} onChange={e => { setTcManual(true); set({ tipo_cambio: e.target.value.replace(/[^\d.]/g, '') }); }} />}
+            </Field>
           )}
           <Field label="Observaciones">{p => <TextInput {...p} value={f.observaciones} placeholder="Notas para operaciones" onChange={e => set({ observaciones: e.target.value })} />}</Field>
         </Seccion>
