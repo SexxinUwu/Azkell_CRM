@@ -161,6 +161,7 @@ function IniciarServicioSheet({ orden, onClose, onIniciado }: { orden: Orden | n
 }
 
 const COLUMNAS: ColumnaTabla[] = [
+  { id: 'acciones', titulo: 'Acciones', ancho: 150, minimo: 120 },
   { id: 'estado', titulo: 'Estado', ancho: 130 },
   { id: 'codigo', titulo: 'Orden', ancho: 150, minimo: 120 },
   { id: 'fecha', titulo: 'Fecha', ancho: 110 },
@@ -171,7 +172,6 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'viaje', titulo: 'Viaje', ancho: 140 },
   { id: 'unidad', titulo: 'Unidad y conductor', ancho: 210 },
   { id: 'flete', titulo: 'Flete', ancho: 130, alinear: 'right' },
-  { id: 'acciones', titulo: 'Acciones', ancho: 150, minimo: 120 },
 ];
 
 // Operaciones › Órdenes de servicio: el pedido del cliente. Se programa en un viaje (existente o nuevo), se ejecuta y se entrega.
@@ -342,6 +342,15 @@ export function OrdenesServicioPage() {
               const libre = puedeEditar && !cerrado(e);
               return (
                 <tr key={x.id} className="tabla-redim__fila--click" onClick={() => { haptic('selection'); setAbiertoId(x.id); }}>
+                  <Celda>
+                    <span style={{ display: 'inline-flex', gap: 2 }}>
+                      {libre && !x.viaje && <IconoFila texto="Generar viaje" tono="violeta" icono={<Wand2 size={17} />} onClick={() => generarViaje(x)} />}
+                      {libre && !x.viaje && <IconoFila texto="Asignar a un viaje" tono="azul" icono={<Link2 size={17} />} onClick={() => setAsignar(x)} />}
+                      {libre && e === 'PROGRAMADO' && <IconoFila texto="Iniciar servicio" tono="verde" icono={<Play size={17} />} onClick={() => setIniciar(x)} />}
+                      {puedeEditar && e === 'EN_EJECUCION' && <IconoFila texto="Marcar entregada" tono="verde" icono={<PackageCheck size={17} />} onClick={() => setEntregar(x)} />}
+                      {libre && <IconoFila texto="Editar" tono="ambar" icono={<Pencil size={16} />} onClick={() => editarFila(x.id)} />}
+                    </span>
+                  </Celda>
                   <Celda><Pastilla estado={e} /></Celda>
                   <Celda mono>{x.codigo_orden}{x.es_retorno ? ' · retorno' : ''}</Celda>
                   <Celda mono>{x.fecha_fmt || '—'}</Celda>
@@ -355,15 +364,6 @@ export function OrdenesServicioPage() {
                       : x.tercero_nombre ? x.tercero_nombre : '—'}
                   </Celda>
                   <Celda alinear="right" mono>{dinero(x)}</Celda>
-                  <Celda>
-                    <span style={{ display: 'inline-flex', gap: 2 }}>
-                      {libre && !x.viaje && <IconoFila texto="Generar viaje" tono="violeta" icono={<Wand2 size={17} />} onClick={() => generarViaje(x)} />}
-                      {libre && !x.viaje && <IconoFila texto="Asignar a un viaje" tono="azul" icono={<Link2 size={17} />} onClick={() => setAsignar(x)} />}
-                      {libre && e === 'PROGRAMADO' && <IconoFila texto="Iniciar servicio" tono="verde" icono={<Play size={17} />} onClick={() => setIniciar(x)} />}
-                      {puedeEditar && e === 'EN_EJECUCION' && <IconoFila texto="Marcar entregada" tono="verde" icono={<PackageCheck size={17} />} onClick={() => setEntregar(x)} />}
-                      {libre && <IconoFila texto="Editar" tono="ambar" icono={<Pencil size={16} />} onClick={() => editarFila(x.id)} />}
-                    </span>
-                  </Celda>
                 </tr>
               );
             })}
