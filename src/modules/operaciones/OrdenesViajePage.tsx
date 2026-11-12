@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  CheckCircle2, CircleAlert, Eye, FileSpreadsheet, MapPin, Pencil, Play, RefreshCw, SearchX, Trash2, Truck,
+  ArrowLeftRight, Bell, CheckCircle2, CircleAlert, ClipboardList, Eye, FileSpreadsheet, FolderOpen, Fuel, LayoutGrid, MapPin, Paperclip, Pencil, Play, RefreshCw, SearchX, Ticket, Trash2, Truck, Wallet,
 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -21,6 +21,8 @@ import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/Ta
 import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../core/ui/FiltrosListado';
 import type { ReactNode } from 'react';
 import { OrdenServicioSheet } from './OrdenServicioSheet';
+import { SeguimientoServicio } from './SeguimientoServicio';
+import './seguimiento.css';
 import { SeccionDocumentosViaje, SeccionGastosViaje, SeccionOrdenesServicioViaje, SeccionSinRegistros } from './ViajeExtras';
 import { SeccionGpsViaje, SeccionValesViaje } from './ViajeCombustibleGps';
 import { MonitoreoViajeSheet, type ViajeMonitoreo } from './ViajeMonitoreo';
@@ -57,6 +59,12 @@ interface Viaje {
   kilometraje_final: number | null;
   horas_motor_remolque: number | null;
   usuario_creacion: string | null;
+  km_recorrido_gps?: number | string | null;
+  distancia_km?: number | string | null;
+  conductor_telefono?: string | null;
+  configuracion_tracto?: string | null;
+  configuracion_remolque?: string | null;
+  ordenes_list_extra?: never;
   cant_ordenes: number;
   peso_ida: number | string;
   peso_retorno: number | string;
@@ -321,14 +329,49 @@ function ResumenFinanciero({ viaje }: { viaje: Viaje }) {
   );
 }
 
+type TabViaje = 'resumen' | 'combustible' | 'ordenes' | 'documentos' | 'gps' | 'adjuntos' | 'liquidaciones' | 'eventos' | 'cambios' | 'peajes';
+const TABS_VIAJE: { id: TabViaje; label: string; icono: ReactNode }[] = [
+  { id: 'resumen', label: 'Resumen', icono: <LayoutGrid size={15} /> },
+  { id: 'combustible', label: 'Combustible', icono: <Fuel size={15} /> },
+  { id: 'ordenes', label: 'Órdenes', icono: <ClipboardList size={15} /> },
+  { id: 'documentos', label: 'Documentos', icono: <FolderOpen size={15} /> },
+  { id: 'gps', label: 'GPS', icono: <MapPin size={15} /> },
+  { id: 'adjuntos', label: 'Adjuntos', icono: <Paperclip size={15} /> },
+  { id: 'liquidaciones', label: 'Liquidaciones', icono: <Wallet size={15} /> },
+  { id: 'eventos', label: 'Eventos', icono: <Bell size={15} /> },
+  { id: 'cambios', label: 'Cambios', icono: <ArrowLeftRight size={15} /> },
+  { id: 'peajes', label: 'Peajes', icono: <Ticket size={15} /> },
+];
+
+// El estado del viaje expresado en las etapas del seguimiento
+const etapaDelViaje = (v: Viaje) => (v.estado === 'INICIADO' ? 'EN_EJECUCION'
+  : v.estado === 'FINALIZADO' || v.estado === 'LIQUIDADO' ? 'ENTREGADO'
+  : v.estado === 'ANULADO' ? 'ANULADO'
+  : v.conductor || v.placa_tracto || v.tercero_nombre ? 'PROGRAMADO' : 'PENDIENTE');
+
+function Bloque({ label, valor, nota, mono, ancho }: { label: string; valor?: ReactNode; nota?: string | null; mono?: boolean; ancho?: boolean }) {
+  if (valor === null || valor === undefined || valor === '') return null;
+  return (
+    <div className={`vj-tile${ancho ? ' vj-tile--ancho' : ''}`}>
+      <span className="vj-tile__label">{label}</span>
+      <span className={`vj-tile__valor${mono ? ' vj-tile__valor--mono' : ''}`}>{valor}</span>
+      {nota ? <small className="vj-tile__nota">{nota}</small> : null}
+    </div>
+  );
+}
+
 function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onEliminar, onNuevaOS, puedeEditarViaje }: {
   viaje: Viaje | null; onClose: () => void; onEditar?: () => void; onIniciar?: () => void; onFinalizar?: () => void; onEliminar?: () => void; onNuevaOS?: () => void; puedeEditarViaje: boolean;
 }) {
-  const fila = (label: string, valor: unknown, mono = false) => (valor === null || valor === undefined || valor === '' ? null : (
-    <div className="dato"><span className="dato__label">{label}</span><span className={`dato__valor${mono ? ' dato__valor--mono' : ''}`}>{String(valor)}</span></div>
-  ));
+  const [tab, setTab] = useState<TabViaje>('resumen');
+  // Cada viaje que se abre empieza en el resumen
+  useEffect(() => { setTab('resumen'); }, [v?.viaje]);
+
+  const tercero = v?.ejecucion === 'TERCERO';
+  const recorrido = v && v.kilometraje_final != null && v.kilometraje_inicial != null ? v.kilometraje_final - v.kilometraje_inicial : n(v?.km_recorrido_gps);
+  const moneda = /DOL/i.test(String(v?.tercero_moneda ?? '')) ? 'US$' : 'S/';
   return (
-    <Sheet open={!!v} onClose={onClose} title={v ? `Viaje ${v.viaje}` : ''}
+    <Sheet ancho open={!!v} onClose={onClose} title={v ? `Viaje ${v.viaje}` : ''}
       footer={
         <>
           {onEliminar && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={onEliminar}>Eliminar</Button>}
@@ -339,35 +382,67 @@ function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onE
         </>
       }>
       {v && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
-          <div className="inv-metricas">
-            <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.0625rem', color: `var(--${css(tono(v.estado))}-ink)` }}>{v.estado}</span><span className="inv-metrica__label">Estado</span></div>
-            <div className="inv-metrica"><span className="inv-metrica__num">{n(v.cant_ordenes)}</span><span className="inv-metrica__label">Órdenes de servicio</span></div>
-            <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.0625rem' }}>{(n(v.peso_ida) + n(v.peso_retorno)).toLocaleString('es-PE')} kg</span><span className="inv-metrica__label">Peso total</span></div>
+        <div className="vj">
+          <nav className="vj-tabs" role="tablist" aria-label="Secciones del viaje">
+            {TABS_VIAJE.map(t => (
+              <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={`vj-tab${tab === t.id ? ' vj-tab--on' : ''}`}
+                onClick={() => { haptic('selection'); setTab(t.id); }}>
+                {t.icono}{t.label}
+                {t.id === 'ordenes' && n(v.cant_ordenes) > 0 && <span className="vj-tab__n">{n(v.cant_ordenes)}</span>}
+              </button>
+            ))}
+          </nav>
+
+          <div className="vj-panel" key={tab} role="tabpanel">
+            {tab === 'resumen' && (
+              <>
+                <SeguimientoServicio tipo="viaje" estado={etapaDelViaje(v)} o={{
+                  codigo_orden: v.viaje,
+                  cliente_nombre: [v.conductor, v.placa_tracto].filter(Boolean).join(' · ') || 'Sin unidad asignada',
+                  origen: v.origen, destino: v.destino, distancia_km: v.distancia_km, creado_fmt: v.fecha_viaje,
+                  viajes: [{
+                    viaje: v.viaje, estado: v.estado, conductor: v.conductor, placa_tracto: v.placa_tracto, placa_remolque: v.placa_remolque,
+                    ejecucion: v.ejecucion, tercero_nombre: v.tercero_nombre, vinculado_en: v.fecha_viaje, fecha_inicio: v.fecha_inicio, fecha_fin: v.fecha_fin,
+                    km_recorrido_gps: v.km_recorrido_gps, conductor_telefono: v.conductor_telefono,
+                  }],
+                }} />
+                <section>
+                  <h4 className="vj-titulo">Ficha operativa</h4>
+                  <div className="vj-tiles">
+                    <Bloque label="Ejecuta" valor={tercero ? 'Transportista tercero' : 'Flota propia'} nota={tercero ? v.tercero_nombre : null} />
+                    <Bloque label="Peso total" valor={`${(n(v.peso_ida) + n(v.peso_retorno)).toLocaleString('es-PE')} kg`} nota="Lo completan las guías" />
+                    <Bloque label="Tracto" valor={v.placa_tracto} mono nota={v.configuracion_tracto} />
+                    <Bloque label="Remolque" valor={v.placa_remolque} mono nota={v.configuracion_remolque} />
+                    <Bloque label="Órdenes de servicio" valor={n(v.cant_ordenes)} nota={v.ordenes_list} />
+                    <Bloque label="Escolta" valor={v.escolta} />
+                    {tercero && <Bloque label="Costo del tercero" valor={n(v.tercero_costo) ? `${moneda} ${n(v.tercero_costo).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : ''} nota={[v.tercero_ruc, v.tercero_documento].filter(Boolean).join(' · ') || null} />}
+                    <Bloque label="Km inicial" valor={v.kilometraje_inicial?.toLocaleString('es-PE')} mono />
+                    <Bloque label="Km final" valor={v.kilometraje_final?.toLocaleString('es-PE')} mono />
+                    <Bloque label="Recorrido" valor={recorrido > 0 ? `${recorrido.toLocaleString('es-PE')} km` : ''} mono nota={v.kilometraje_final == null && n(v.km_recorrido_gps) > 0 ? 'Según GPS' : null} />
+                    <Bloque label="Horas motor remolque" valor={v.horas_motor_remolque} mono />
+                    <Bloque label="Punto de partida" valor={v.direccion_partida} nota={v.ubigeo_partida ? `Ubigeo ${v.ubigeo_partida}` : null} ancho />
+                    <Bloque label="Punto de llegada" valor={v.direccion_llegada} nota={v.ubigeo_llegada ? `Ubigeo ${v.ubigeo_llegada}` : null} ancho />
+                    <Bloque label="Observaciones" valor={v.observaciones} ancho />
+                    <Bloque label="Registrado por" valor={v.usuario_creacion} />
+                  </div>
+                </section>
+              </>
+            )}
+            {tab === 'combustible' && <SeccionValesViaje codigo={v.viaje} placa={v.placa_tracto} />}
+            {tab === 'ordenes' && <SeccionOrdenesServicioViaje codigo={v.viaje} onNueva={onNuevaOS ?? (() => undefined)} puedeCrear={!!onNuevaOS} />}
+            {tab === 'documentos' && <SeccionDocumentosViaje codigo={v.viaje} />}
+            {tab === 'gps' && <SeccionGpsViaje placa={v.placa_tracto} inicio={v.fecha_inicio ?? v.fecha_viaje} fin={v.fecha_fin} />}
+            {tab === 'adjuntos' && <SeccionSinRegistros titulo="Archivos adjuntos" mensaje="No se registran archivos adjuntos para este viaje." />}
+            {tab === 'liquidaciones' && (
+              <>
+                <ResumenFinanciero viaje={v} />
+                <SeccionGastosViaje codigo={v.viaje} conductor={v.conductor} placa={v.placa_tracto} puedeEditar={puedeEditarViaje} />
+              </>
+            )}
+            {tab === 'eventos' && <SeccionSinRegistros titulo="Eventos operativos" mensaje="No se registran eventos operativos para este viaje." />}
+            {tab === 'cambios' && <SeccionSinRegistros titulo="Cambios de conductor y remolque" mensaje="No se registran cambios de conductor ni de remolque para este viaje." />}
+            {tab === 'peajes' && <SeccionSinRegistros titulo="Peajes" mensaje="No se registran peajes asociados a este viaje." />}
           </div>
-          <div className="tarjeta__lista">
-            {fila('Ejecuta', v.ejecucion === 'TERCERO' ? `Tercero: ${v.tercero_nombre ?? ''}` : 'Flota propia')}
-            {v.ejecucion === 'TERCERO' && fila('Costo del tercero', n(v.tercero_costo) ? `${/DOL/i.test(String(v.tercero_moneda ?? '')) ? 'US$' : 'S/'} ${n(v.tercero_costo).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : '')}
-            {v.ejecucion === 'TERCERO' && fila('RUC / documento del tercero', [v.tercero_ruc, v.tercero_documento].filter(Boolean).join(' · '))}
-            {fila('Conductor', v.conductor)}{fila('Tracto', v.placa_tracto, true)}{fila('Remolque', v.placa_remolque, true)}{fila('Escolta', v.escolta)}
-            {fila('Ruta', v.ruta)}{fila('Partida', v.direccion_partida)}{fila('Llegada', v.direccion_llegada)}
-            {fila('Rutas', v.rutas_list)}{fila('Órdenes de servicio', v.ordenes_list)}
-          </div>
-          <div className="tarjeta__lista">
-            {fila('Fecha del viaje', fmtFecha(v.fecha_viaje), true)}{fila('Inicio', v.fecha_inicio ? fmtFecha(v.fecha_inicio) : '', true)}{fila('Fin', v.fecha_fin ? fmtFecha(v.fecha_fin) : '', true)}
-            {fila('Km inicial', v.kilometraje_inicial?.toLocaleString('es-PE'), true)}{fila('Km final', v.kilometraje_final?.toLocaleString('es-PE'), true)}
-            {fila('Horas motor remolque', v.horas_motor_remolque, true)}{fila('Observaciones', v.observaciones)}{fila('Creado por', v.usuario_creacion)}
-          </div>
-          <SeccionOrdenesServicioViaje codigo={v.viaje} onNueva={onNuevaOS ?? (() => undefined)} puedeCrear={!!onNuevaOS} />
-          <ResumenFinanciero viaje={v} />
-          <SeccionGastosViaje codigo={v.viaje} conductor={v.conductor} placa={v.placa_tracto} puedeEditar={puedeEditarViaje} />
-          <SeccionValesViaje codigo={v.viaje} placa={v.placa_tracto} />
-          <SeccionGpsViaje placa={v.placa_tracto} inicio={v.fecha_inicio ?? v.fecha_viaje} fin={v.fecha_fin} />
-          <SeccionDocumentosViaje codigo={v.viaje} />
-          <SeccionSinRegistros titulo="Archivos adjuntos" mensaje="No se registran archivos adjuntos para este viaje." />
-          <SeccionSinRegistros titulo="Eventos operativos" mensaje="No se registran eventos operativos para este viaje." />
-          <SeccionSinRegistros titulo="Cambios de conductor y remolque" mensaje="No se registran cambios de conductor ni de remolque para este viaje." />
-          <SeccionSinRegistros titulo="Peajes" mensaje="No se registran peajes asociados a este viaje." />
         </div>
       )}
     </Sheet>

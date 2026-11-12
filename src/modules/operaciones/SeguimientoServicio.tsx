@@ -30,7 +30,9 @@ const duracion = (min: number) => { const m = Math.max(1, Math.round(min)); cons
  * Seguimiento del servicio: estado, camión que avanza por la ruta, conductor e historial.
  * Todo sale de datos reales (fechas del viaje, kilómetros del GPS); la llegada se estima con una velocidad promedio.
  */
-export function SeguimientoServicio({ o, estado }: { o: DatosSeguimiento; estado: string }) {
+export function SeguimientoServicio({ o, estado, tipo = 'servicio' }: { o: DatosSeguimiento; estado: string; tipo?: 'servicio' | 'viaje' }) {
+  const viaje = tipo === 'viaje';
+  const etapas = viaje ? ['Registrado', 'Programado', 'En ruta', 'Finalizado'] : ETAPAS;
   const v = o.viajes?.[0];
   const idx = ESTADO_IDX[estado] ?? 0;
   const anulada = estado === 'ANULADO';
@@ -80,14 +82,14 @@ export function SeguimientoServicio({ o, estado }: { o: DatosSeguimiento; estado
   const salida = aFecha(v?.fecha_inicio);
   const fin = aFecha(v?.fecha_fin);
 
-  const titulo = anulada ? 'Servicio anulado'
-    : estado === 'ENTREGADO' ? '¡Entregado!'
+  const titulo = anulada ? (viaje ? 'Viaje anulado' : 'Servicio anulado')
+    : estado === 'ENTREGADO' ? (viaje ? '¡Viaje finalizado!' : '¡Entregado!')
     : enRuta ? (dist > 0 ? `Llega en ${duracion(calc.etaMin)}` : 'En ruta')
-    : estado === 'PROGRAMADO' ? 'Programado' : 'Pedido recibido';
+    : estado === 'PROGRAMADO' ? 'Programado' : (viaje ? 'Viaje registrado' : 'Pedido recibido');
   const sub = anulada ? 'Ya no se ejecutará'
     : estado === 'ENTREGADO' ? `Llegó a las ${hora(fin)}`
     : enRuta ? (dist > 0 ? `Hora estimada ${hora(calc.llegada)} · ${calc.restante.toFixed(0)} km restantes` : 'Sin distancia de referencia')
-    : estado === 'PROGRAMADO' ? (tercero ? `Lo lleva ${v?.tercero_nombre || 'un transportista tercero'}` : v?.conductor ? `Sale con ${v.conductor}` : 'Falta asignar conductor') : 'Esperando programación';
+    : estado === 'PROGRAMADO' ? (tercero ? `Lo lleva ${v?.tercero_nombre || 'un transportista tercero'}` : v?.conductor ? `Sale con ${v.conductor}` : 'Falta asignar conductor') : (viaje ? 'Falta asignar conductor y unidad' : 'Esperando programación');
 
   const tiempos = [
     hora(aFecha(o.creado_fmt)),
@@ -97,10 +99,10 @@ export function SeguimientoServicio({ o, estado }: { o: DatosSeguimiento; estado
   ];
 
   const eventos = [
-    estado === 'ENTREGADO' && v?.fecha_fin ? { t: v.fecha_fin, titulo: 'Entregado', detalle: 'Servicio concluido', tono: '' } : null,
+    estado === 'ENTREGADO' && v?.fecha_fin ? { t: v.fecha_fin, titulo: viaje ? 'Viaje finalizado' : 'Entregado', detalle: 'Servicio concluido', tono: '' } : null,
     v?.fecha_inicio ? { t: v.fecha_inicio, titulo: 'Salió a ruta', detalle: [v.conductor, v.placa_tracto].filter(Boolean).join(' · ') || v.viaje, tono: '' } : null,
     v?.vinculado_en ? { t: v.vinculado_en, titulo: 'Ruta programada', detalle: `Viaje ${v.viaje}${v.conductor ? ` · ${v.conductor}` : ''}`, tono: '' } : null,
-    o.creado_fmt ? { t: o.creado_fmt, titulo: 'Pedido registrado', detalle: `${cliente} · ${tramo}`, tono: '' } : null,
+    o.creado_fmt ? { t: o.creado_fmt, titulo: viaje ? 'Viaje registrado' : 'Pedido registrado', detalle: `${cliente} · ${tramo}`, tono: '' } : null,
   ].filter((e): e is { t: string; titulo: string; detalle: string; tono: string } => !!e);
 
   const tel = (v?.conductor_telefono ?? '').replace(/\D/g, '');
@@ -114,7 +116,7 @@ export function SeguimientoServicio({ o, estado }: { o: DatosSeguimiento; estado
           <h3 className="seg__titulo">{titulo}</h3>
           <p className="seg__sub">{sub}</p>
         </div>
-        <span className={`seg__pill${enRuta ? ' seg__pill--vivo' : ''}${anulada ? ' seg__pill--gris' : ''}`}><i />{PILL[estado] ?? estado}</span>
+        <span className={`seg__pill${enRuta ? ' seg__pill--vivo' : ''}${anulada ? ' seg__pill--gris' : ''}`}><i />{(viaje ? { ...PILL, PENDIENTE: 'Registrado', ENTREGADO: 'Finalizado' } : PILL)[estado] ?? estado}</span>
       </header>
 
       <div className="seg__ruta">
@@ -151,7 +153,7 @@ export function SeguimientoServicio({ o, estado }: { o: DatosSeguimiento; estado
           </div>
         </div>
         <div className="seg__etapas">
-          {ETAPAS.map((e, i) => (
+          {etapas.map((e, i) => (
             <div key={e} className={!anulada && i === idx ? 'seg__etapa seg__etapa--on' : 'seg__etapa'}>
               <b>{e}</b><time>{tiempos[i]}</time>
             </div>
@@ -159,6 +161,7 @@ export function SeguimientoServicio({ o, estado }: { o: DatosSeguimiento; estado
         </div>
       </div>
 
+      <div className={`seg__pie${v && nombreConductor ? '' : ' seg__pie--solo'}`}>
       {v && nombreConductor && (
         <div className="seg__conductor">
           <span className="seg__avatar">{iniciales(nombreConductor)}</span>
@@ -181,6 +184,7 @@ export function SeguimientoServicio({ o, estado }: { o: DatosSeguimiento; estado
             </li>
           ))}
         </ul>
+      </div>
       </div>
     </section>
   );

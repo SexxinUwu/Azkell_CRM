@@ -45,6 +45,12 @@ const n = (v: unknown) => Number(v) || 0;
 const estadoDe = (o: Orden) => String(o.estado_servicio ?? 'PENDIENTE').toUpperCase();
 const simbolo = (m: string | null) => (/DOL/i.test(String(m ?? '')) ? 'US$' : 'S/');
 const dinero = (o: Orden) => `${simbolo(o.moneda)} ${n(o.costo_flete).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fechaCorta = (f?: string | null) => (f ? `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}` : '—');
+const plazoDias = (a?: string | null, b?: string | null) => {
+  if (!a || !b) return 'Sin fecha de entrega';
+  const d = Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86_400_000);
+  return d <= 0 ? 'Entrega el mismo día' : `${d} ${d === 1 ? 'día' : 'días'} de plazo`;
+};
 const cerrado = (e: string) => e === 'ENTREGADO' || e === 'ANULADO';
 
 function Pastilla({ estado }: { estado: string }) {
@@ -350,7 +356,7 @@ export function OrdenesServicioPage() {
         )}
       </div>
 
-      <Sheet open={!!abierta} onClose={() => setAbiertoId(null)} title={abierta ? `Orden ${abierta.codigo_orden}` : ''}
+      <Sheet ancho open={!!abierta} onClose={() => setAbiertoId(null)} title={abierta ? `Orden ${abierta.codigo_orden}` : ''}
         footer={
           puedeEditar && abierta && !cerrado(est) ? (
             <>
@@ -386,45 +392,48 @@ export function OrdenesServicioPage() {
                 )}
               </span>
             </div>
-            <div className="os-grupos">
-              <section className="os-bloque">
-                <h3>Flete</h3>
-                <p className="os-cifra">{dinero(o)}</p>
-                <p className="os-nota">{o.impuesto ?? ''}</p>
+            <div className="os-datos">
+              <section className="os-kpi">
+                <span className="os-kpi__label">Flete</span>
+                <strong className="os-kpi__valor">{dinero(o)}</strong>
+                <span className="os-kpi__nota">{o.impuesto ?? ''}</span>
               </section>
-              <section className="os-bloque">
-                <h3>Peso</h3>
-                <p className="os-cifra">{n(o.peso_estimado) ? <>{n(o.peso_estimado).toLocaleString('es-PE')}<small>kg</small></> : '—'}</p>
-                <p className="os-nota">Lo completan las guías de remisión</p>
+              <section className="os-kpi">
+                <span className="os-kpi__label">Peso</span>
+                <strong className="os-kpi__valor">{n(o.peso_estimado) ? <>{n(o.peso_estimado).toLocaleString('es-PE')}<small>kg</small></> : '—'}</strong>
+                <span className="os-kpi__nota">Lo completan las guías de remisión</span>
               </section>
-              <section className="os-bloque os-bloque--ancho">
-                <h3>Remitente y destinatario</h3>
-                <p><span className="os-fuerte">Remitente</span> · {o.remitente_generador || '—'}</p>
-                <p><span className="os-fuerte">Destinatario</span> · {o.destinatario || '—'}</p>
+              <section className="os-kpi">
+                <span className="os-kpi__label">Fechas</span>
+                <strong className="os-kpi__valor os-kpi__valor--fechas">{fechaCorta(o.fecha_fmt)}<ArrowRight size={16} aria-hidden />{fechaCorta(o.fecha_entrega_fmt)}</strong>
+                <span className="os-kpi__nota">{plazoDias(o.fecha_fmt, o.fecha_entrega_fmt)}</span>
               </section>
-              <section className="os-bloque">
-                <h3>Punto de carga</h3>
-                <p className="os-fuerte">{o.origen || '—'}</p>
-                <p className="os-nota">{[o.ubigeo_origen && `Ubigeo ${o.ubigeo_origen}`, o.direccion_origen].filter(Boolean).join(' · ') || 'Sin dirección todavía'}</p>
-              </section>
-              <section className="os-bloque">
-                <h3>Punto de entrega</h3>
-                <p className="os-fuerte">{o.destino || '—'}</p>
-                <p className="os-nota">{[o.ubigeo_destino && `Ubigeo ${o.ubigeo_destino}`, o.direccion_destino].filter(Boolean).join(' · ') || 'Sin dirección todavía'}</p>
-              </section>
-              <section className="os-bloque">
-                <h3>Fechas</h3>
-                <p>Servicio · <span className="os-fuerte">{o.fecha_fmt || '—'}</span></p>
-                <p>Entrega estimada · <span className="os-fuerte">{o.fecha_entrega_fmt || '—'}</span></p>
-              </section>
-              {(o.descripcion_carga || o.observaciones) && (
-                <section className="os-bloque os-bloque--ancho">
-                  <h3>Notas</h3>
-                  {o.descripcion_carga && <p>Carga · {o.descripcion_carga}</p>}
-                  {o.observaciones && <p>{o.observaciones}</p>}
-                </section>
-              )}
             </div>
+            <section className="os-trayecto" aria-label="Carga y entrega">
+              <div className="os-punto-card os-punto-card--carga">
+                <span className="os-punto-card__tag">Punto de carga</span>
+                <strong>{o.origen || '—'}</strong>
+                <span>{[o.ubigeo_origen && `Ubigeo ${o.ubigeo_origen}`, o.direccion_origen].filter(Boolean).join(' · ') || 'Sin dirección todavía'}</span>
+                <span className="os-punto-card__ref">Remitente · <b>{o.remitente_generador || '—'}</b></span>
+              </div>
+              <div className="os-trayecto__medio" aria-hidden>
+                <ArrowRight size={18} />
+                {n(o.distancia_km) ? <span>{n(o.distancia_km).toLocaleString('es-PE')} km</span> : null}
+              </div>
+              <div className="os-punto-card os-punto-card--entrega">
+                <span className="os-punto-card__tag">Punto de entrega</span>
+                <strong>{o.destino || '—'}</strong>
+                <span>{[o.ubigeo_destino && `Ubigeo ${o.ubigeo_destino}`, o.direccion_destino].filter(Boolean).join(' · ') || 'Sin dirección todavía'}</span>
+                <span className="os-punto-card__ref">Destinatario · <b>{o.destinatario || '—'}</b></span>
+              </div>
+            </section>
+            {(o.descripcion_carga || o.observaciones) && (
+              <section className="os-kpi">
+                <span className="os-kpi__label">Notas</span>
+                {o.descripcion_carga && <span>Carga · {o.descripcion_carga}</span>}
+                {o.observaciones && <span>{o.observaciones}</span>}
+              </section>
+            )}
             {det.isLoading && <PageLoader />}
           </div>
         )}
