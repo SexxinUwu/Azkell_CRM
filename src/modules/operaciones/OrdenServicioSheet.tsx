@@ -11,6 +11,7 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import './servicios.css';
+import { etiquetaUbigeo, useOpcionesUbigeo } from './ubigeos';
 
 // Lo que llega del detalle del servicio (GET /operaciones/ordenes-servicio/:id)
 export interface OrdenParaEditar {
@@ -27,6 +28,10 @@ export interface OrdenParaEditar {
   es_retorno?: number | boolean | null;
   origen?: string | null;
   destino?: string | null;
+  ubigeo_origen?: string | null;
+  direccion_origen?: string | null;
+  ubigeo_destino?: string | null;
+  direccion_destino?: string | null;
   descripcion_carga?: string | null;
   peso_estimado?: number | string | null;
   impuesto?: string | null;
@@ -37,7 +42,8 @@ export interface OrdenParaEditar {
 interface Form {
   cliente: string; remitente: string; destinatario: string;
   tipo_servicio: string; sentido: 'IDA' | 'RETORNO';
-  origen: string; destino: string; descripcion: string; peso: string; fecha: string; fecha_entrega: string;
+  /** origen y destino guardan el código de ubigeo elegido */
+  origen: string; origen_dir: string; destino: string; destino_dir: string; descripcion: string; peso: string; fecha: string; fecha_entrega: string;
   moneda: string; tipo_cambio: string; flete: string; impuesto: string; observaciones: string;
 }
 type Campo = 'cliente' | 'origen' | 'destino' | 'flete';
@@ -52,13 +58,13 @@ const IMPUESTOS = [{ value: 'INCLUYE IGV', label: 'Incluye IGV' }, { value: 'MÁ
 
 function formInicial(o: OrdenParaEditar | null): Form {
   if (!o) {
-    return { cliente: '', remitente: '', destinatario: '', tipo_servicio: 'TRANSPORTE NACIONAL', sentido: 'IDA', origen: '', destino: '', descripcion: '', peso: '',
+    return { cliente: '', remitente: '', destinatario: '', tipo_servicio: 'TRANSPORTE NACIONAL', sentido: 'IDA', origen: '', origen_dir: '', destino: '', destino_dir: '', descripcion: '', peso: '',
       fecha: hoy(), fecha_entrega: '', moneda: 'SOLES', tipo_cambio: '3.750', flete: '', impuesto: 'INCLUYE IGV', observaciones: '' };
   }
   return {
     cliente: str(o.cliente_nombre), remitente: str(o.remitente_generador), destinatario: str(o.destinatario),
     tipo_servicio: str(o.tipo_servicio) || 'TRANSPORTE NACIONAL', sentido: o.es_retorno ? 'RETORNO' : 'IDA',
-    origen: str(o.origen), destino: str(o.destino), descripcion: str(o.descripcion_carga), peso: str(o.peso_estimado ?? ''),
+    origen: str(o.ubigeo_origen), origen_dir: str(o.direccion_origen), destino: str(o.ubigeo_destino), destino_dir: str(o.direccion_destino), descripcion: str(o.descripcion_carga), peso: str(o.peso_estimado ?? ''),
     fecha: str(o.fecha_fmt) || hoy(), fecha_entrega: str(o.fecha_entrega_fmt),
     moneda: /DOL/i.test(str(o.moneda)) ? 'DOLARES' : 'SOLES', tipo_cambio: str(o.tipo_cambio ?? '3.750'),
     flete: str(o.costo_flete ?? ''), impuesto: str(o.impuesto) || 'INCLUYE IGV', observaciones: str(o.observaciones),
@@ -108,12 +114,14 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
     return [...nombres].sort((a, b) => a.localeCompare(b, 'es')).map(n => ({ value: n, label: n }));
   }, [clientes.data]);
 
+  const ubi = useOpcionesUbigeo();
+  const etiquetaDe = (codigo: string) => { const u = ubi.porCodigo.get(codigo); return u ? etiquetaUbigeo(u) : ''; };
   const set = (p: Partial<Form>) => setF(x => ({ ...x, ...p }));
   const errores = useMemo(() => {
     const e: Partial<Record<Campo, string>> = {};
     if (!f.cliente.trim()) e.cliente = 'Elige o escribe el cliente.';
-    if (!f.origen.trim()) e.origen = 'Indica el punto de carga.';
-    if (!f.destino.trim()) e.destino = 'Indica el punto de entrega.';
+    if (!f.origen) e.origen = 'Elige el distrito del punto de carga.';
+    if (!f.destino) e.destino = 'Elige el distrito del punto de entrega.';
     if (f.flete !== '' && !(Number(f.flete) >= 0)) e.flete = 'Escribe un monto válido.';
     return e;
   }, [f]);
@@ -128,7 +136,7 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
     try {
       const cuerpo = {
         cliente_nombre: f.cliente, remitente_generador: f.remitente, destinatario: f.destinatario, tipo_servicio: f.tipo_servicio, es_retorno: f.sentido === 'RETORNO' ? 1 : 0,
-        origen: f.origen, destino: f.destino, descripcion_carga: f.descripcion, peso_estimado: f.peso === '' ? null : Number(f.peso),
+        origen: etiquetaDe(f.origen), destino: etiquetaDe(f.destino), ubigeo_origen: f.origen, direccion_origen: f.origen_dir, ubigeo_destino: f.destino, direccion_destino: f.destino_dir, descripcion_carga: f.descripcion, peso_estimado: f.peso === '' ? null : Number(f.peso),
         fecha: f.fecha, fecha_entrega: f.fecha_entrega || null, moneda: f.moneda, tipo_cambio: f.moneda === 'DOLARES' ? Number(f.tipo_cambio) || 3.75 : 3.75,
         costo_flete: f.flete === '' ? 0 : Number(f.flete), impuesto: f.impuesto, observaciones: f.observaciones,
       };
@@ -194,8 +202,18 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
           </div>
           {f.sentido === 'RETORNO' && <p className="os-nota">Un retorno con carga es un servicio adicional dentro del mismo viaje. Si regresa vacío no hace falta crear un servicio.</p>}
           <div className="os-fila">
-            <Field label="Punto de carga *" error={ver('origen')}>{p => <TextInput {...p} value={f.origen} placeholder="Ciudad, distrito o planta de carga" onBlur={() => tocar('origen')} onChange={e => set({ origen: e.target.value })} />}</Field>
-            <Field label="Punto de entrega *" error={ver('destino')}>{p => <TextInput {...p} value={f.destino} placeholder="Ciudad, distrito o lugar de entrega" onBlur={() => tocar('destino')} onChange={e => set({ destino: e.target.value })} />}</Field>
+            <div className="os-punto">
+              <Field label="Punto de carga *" error={ver('origen')} hint={f.origen ? `Ubigeo ${f.origen}` : 'Busca por distrito, provincia o código'}>
+                {p => <Combobox {...p} options={ubi.opciones} value={f.origen || null} loading={ubi.cargando} placeholder="Distrito de carga" onChange={v => { set({ origen: v ?? '' }); tocar('origen'); }} />}
+              </Field>
+              <Field label="Dirección o planta">{p => <TextInput {...p} value={f.origen_dir} placeholder="Calle, número o nombre de la planta" onChange={e => set({ origen_dir: e.target.value })} />}</Field>
+            </div>
+            <div className="os-punto">
+              <Field label="Punto de entrega *" error={ver('destino')} hint={f.destino ? `Ubigeo ${f.destino}` : 'Busca por distrito, provincia o código'}>
+                {p => <Combobox {...p} options={ubi.opciones} value={f.destino || null} loading={ubi.cargando} placeholder="Distrito de entrega" onChange={v => { set({ destino: v ?? '' }); tocar('destino'); }} />}
+              </Field>
+              <Field label="Dirección o lugar de entrega">{p => <TextInput {...p} value={f.destino_dir} placeholder="Calle, número o nombre del lugar" onChange={e => set({ destino_dir: e.target.value })} />}</Field>
+            </div>
           </div>
           <div className="os-fila">
             <Field label="Fecha del servicio">{p => <TextInput {...p} type="date" value={f.fecha} onChange={e => set({ fecha: e.target.value })} />}</Field>

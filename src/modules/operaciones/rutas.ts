@@ -27,6 +27,12 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: 'ClipboardList', permisos: ['operaciones.ver', 'admin'] },
   },
   {
+    path: 'operaciones/ubigeos/*',
+    permisos: ['op_ordenes_servicio.ver', 'op_ordenes_viaje.ver', 'op_programacion.ver', 'op_guias_remision.ver', 'admin'],
+    Page: lazy(() => import('./UbigeosPage').then(m => ({ default: m.UbigeosPage }))),
+    nav: { key: 'ubigeos', label: 'Ubigeos', to: '/operaciones/ubigeos', icon: 'MapPin', permisos: ['operaciones.ver', 'admin'] },
+  },
+  {
     path: 'operaciones/reporte-viajes/*',
     permisos: ['op_reporte_viajes.ver', 'admin'],
     Page: lazy(() => import('./ReporteViajesPage').then(m => ({ default: m.ReporteViajesPage }))),

@@ -1703,6 +1703,10 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             es_retorno: b.es_retorno === true || b.es_retorno === 1 || b.es_retorno === '1' ? 1 : 0,
             origen: osTexto(b.origen, 150),
             destino: osTexto(b.destino, 150),
+            ubigeo_origen: /^\d{6}$/.test(String(b.ubigeo_origen || '')) ? String(b.ubigeo_origen) : null,
+            direccion_origen: osTexto(b.direccion_origen, 255),
+            ubigeo_destino: /^\d{6}$/.test(String(b.ubigeo_destino || '')) ? String(b.ubigeo_destino) : null,
+            direccion_destino: osTexto(b.direccion_destino, 255),
             descripcion_carga: osTexto(b.descripcion_carga, 255),
             peso_estimado: osNumero(b.peso_estimado),
             impuesto: osTexto(b.impuesto, 50) || 'INCLUYE IGV',
@@ -1719,7 +1723,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
             const c = camposServicio(req.body || {});
             if (!c.cliente_nombre) return res.status(400).json({ ok: false, error: 'Indica el cliente.' });
-            if (!c.origen || !c.destino) return res.status(400).json({ ok: false, error: 'Indica el origen y el destino.' });
+            if (!c.origen || !c.destino || !c.ubigeo_origen || !c.ubigeo_destino) return res.status(400).json({ ok: false, error: 'Elige el distrito del punto de carga y del punto de entrega.' });
             const cols = Object.keys(c);
             let ultimo = null;
             for (let intento = 0; intento < 3; intento++) {
@@ -1748,7 +1752,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             if (OS_CERRADOS.includes(String(prev[0].estado_servicio).toUpperCase())) return res.status(409).json({ ok: false, error: 'Una orden entregada o anulada ya no se edita.' });
             const c = camposServicio(req.body || {});
             if (!c.cliente_nombre) return res.status(400).json({ ok: false, error: 'Indica el cliente.' });
-            if (!c.origen || !c.destino) return res.status(400).json({ ok: false, error: 'Indica el origen y el destino.' });
+            if (!c.origen || !c.destino || !c.ubigeo_origen || !c.ubigeo_destino) return res.status(400).json({ ok: false, error: 'Elige el distrito del punto de carga y del punto de entrega.' });
             const cols = Object.keys(c);
             const [r] = await tdb.query(`UPDATE operaciones_ordenes_servicio SET ${cols.map(k => `${k} = ?`).join(', ')} WHERE id = ?`, [...cols.map(k => c[k]), req.params.id]);
             // El tramo del vínculo con el viaje se mantiene al día
@@ -1814,9 +1818,9 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                 const codigo = `${year}-${String(next).padStart(8, '0')}`;
                 const fechaViaje = `${osFecha(o.fecha instanceof Date ? o.fecha.toISOString() : o.fecha) || new Date().toISOString().slice(0, 10)} 00:00:00`;
                 await con.query(
-                    `INSERT INTO operaciones_ordenes_viaje (viaje, fecha_viaje, conductor, placa_tracto, ruta, origen, destino, peso, estado, usuario_creacion)
-                     VALUES (?, ?, '', '', ?, ?, ?, ?, 'ACTIVO', ?)`,
-                    [codigo, fechaViaje, [o.origen, o.destino].filter(Boolean).join(' - '), o.origen, o.destino, o.peso_estimado || 0, osUsuario(req)]);
+                    `INSERT INTO operaciones_ordenes_viaje (viaje, fecha_viaje, conductor, placa_tracto, ruta, origen, destino, ubigeo_partida, direccion_partida, ubigeo_llegada, direccion_llegada, peso, estado, usuario_creacion)
+                     VALUES (?, ?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', ?)`,
+                    [codigo, fechaViaje, [o.origen, o.destino].filter(Boolean).join(' - '), o.origen, o.destino, o.ubigeo_origen, o.direccion_origen, o.ubigeo_destino, o.direccion_destino, o.peso_estimado || 0, osUsuario(req)]);
                 await con.query(
                     `INSERT INTO operaciones_ordenes_viaje_rutas (viaje, orden, ruta, tipo_servicio, es_retorno, peso_total) VALUES (?, ?, ?, ?, ?, ?)`,
                     [codigo, o.codigo_orden, [o.origen, o.destino].filter(Boolean).join(' - '), o.tipo_servicio || 'CARGA GENERAL', o.es_retorno ? 1 : 0, o.peso_estimado || 0]);

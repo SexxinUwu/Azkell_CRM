@@ -36,3 +36,4 @@ button.os-viaje:hover { background: var(--fill); }
 button.os-viaje:active { transform: scale(0.985); transition-duration: 0.08s; }
 .os-paso { transition: background-color 0.4s ease; }
 @media (prefers-reduced-motion: reduce) { .os-chip, .os-viaje, .os-paso { transition: background-color 0.2s ease, color 0.2s ease; } .os-chip:active, button.os-viaje:active { transform: none; } }
+.os-punto { display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }

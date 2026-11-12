@@ -27,6 +27,7 @@ import { haptic } from '../../core/lib/haptics';
 interface Orden {
   id: number; codigo_orden: string; fecha_fmt: string | null; fecha_entrega_fmt: string | null; cliente_nombre: string | null; tipo_servicio: string | null;
   estado_servicio: string | null; es_retorno: number | boolean | null; origen: string | null; destino: string | null; descripcion_carga: string | null;
+  ubigeo_origen: string | null; direccion_origen: string | null; ubigeo_destino: string | null; direccion_destino: string | null;
   peso_estimado: number | string | null; moneda: string | null; tipo_cambio: number | string | null; costo_flete: number | string | null; impuesto: string | null;
   destinatario: string | null; remitente_generador: string | null; observaciones: string | null;
   viaje: string | null; viajes_n: number; viaje_estado: string | null; conductor: string | null; placa_tracto: string | null; placa_carreta: string | null;
@@ -401,7 +402,8 @@ export function OrdenesServicioPage() {
             </div>
             <div className="tarjeta__lista">
               {fila('Cliente', o.cliente_nombre)}{fila('Servicio', `${etiquetaTipo(o.tipo_servicio)}${o.es_retorno ? ' · retorno con carga' : ''}`)}
-              {fila('Origen', o.origen)}{fila('Destino', o.destino)}{fila('Remitente', o.remitente_generador)}{fila('Destinatario', o.destinatario)}
+              {fila('Punto de carga', [o.origen, o.ubigeo_origen && `ubigeo ${o.ubigeo_origen}`].filter(Boolean).join(' · '))}{fila('Dirección de carga', o.direccion_origen)}
+              {fila('Punto de entrega', [o.destino, o.ubigeo_destino && `ubigeo ${o.ubigeo_destino}`].filter(Boolean).join(' · '))}{fila('Dirección de entrega', o.direccion_destino)}{fila('Remitente', o.remitente_generador)}{fila('Destinatario', o.destinatario)}
               {fila('Carga', o.descripcion_carga)}{fila('Peso estimado', n(o.peso_estimado) ? `${n(o.peso_estimado).toLocaleString('es-PE')} kg` : null)}
               {fila('Fecha', [o.fecha_fmt, o.fecha_entrega_fmt].filter(Boolean).join(' → '), true)}
               {fila('Flete', `${dinero(o)} · ${o.impuesto ?? ''}`)}{fila('Observaciones', o.observaciones)}
