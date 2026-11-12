@@ -406,6 +406,7 @@ function AccionViaje({ accion, usuario, onClose, onHecho }: {
 
   if (!accion) return <Sheet open={false} onClose={onClose} title=""><span /></Sheet>;
   const iniciar = accion.tipo === 'iniciar';
+  const v = accion.viaje;
 
   async function confirmar() {
     if (!accion) return;
@@ -427,18 +428,56 @@ function AccionViaje({ accion, usuario, onClose, onHecho }: {
     finally { setEnviando(false); }
   }
 
+  const n1 = n(v.cant_ordenes);
+  const efectos = iniciar
+    ? [
+        n1 > 0 ? `${n1} ${n1 === 1 ? 'servicio pasa' : 'servicios pasan'} a «En ejecución»` : 'El viaje queda en ruta',
+        'Se empieza a medir el recorrido con el GPS',
+      ]
+    : ['El viaje queda finalizado y deja de medirse el recorrido', 'Cada servicio se marca como entregado por separado'];
   return (
-    <Sheet open onClose={() => !enviando && onClose()} title={`${iniciar ? 'Iniciar' : 'Finalizar'} viaje ${accion.viaje.viaje}`}
+    <Sheet open onClose={() => !enviando && onClose()} title={iniciar ? 'Iniciar viaje' : 'Finalizar viaje'}
       footer={<><Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
-        <Button variant="primary" onClick={confirmar} loading={enviando}>{iniciar ? 'Iniciar' : 'Finalizar'}</Button></>}>
-      <div className="form-grid">
-        {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
-        <Field label={iniciar ? 'Fecha y hora de salida' : 'Fecha y hora de llegada'} wide>
-          {p => <TextInput {...p} type="datetime-local" value={fecha} onChange={e => setFecha(e.target.value)} />}
-        </Field>
-        <Field label={iniciar ? 'Kilometraje inicial' : 'Kilometraje final'} error={errKm}
-          hint={kmGps ? `Odómetro del GPS al ${(gps.data?.fecha ?? diaGps).split('-').reverse().join('/')}. Puedes corregirlo.` : gps.isFetching ? 'Consultando el GPS…' : placaGps ? 'Sin lectura del GPS para esta fecha: escríbelo del tablero' : undefined}>{p => <TextInput {...p} inputMode="numeric" value={km} onChange={e => { setKm(e.target.value.replace(/\D/g, '')); setKmGps(false); setErrKm(undefined); }} autoFocus />}</Field>
-        {iniciar && <Field label="Horas motor del remolque">{p => <TextInput {...p} inputMode="numeric" value={horas} onChange={e => setHoras(e.target.value.replace(/\D/g, ''))} />}</Field>}
+        <Button variant="primary" icon={iniciar ? <Play size={16} /> : <CheckCircle2 size={16} />} onClick={confirmar} loading={enviando}>{iniciar ? 'Iniciar viaje' : 'Finalizar viaje'}</Button></>}>
+      <div className="av">
+        <div className="av__resumen">
+          <span className={`av__icono${iniciar ? '' : ' av__icono--azul'}`} aria-hidden>{iniciar ? <Play size={20} /> : <CheckCircle2 size={20} />}</span>
+          <div className="av__quien">
+            <strong>{v.viaje}</strong>
+            <span>{[v.origen, v.destino].filter(Boolean).join(' → ') || v.ruta || 'Sin ruta'}</span>
+          </div>
+          <div className="av__unidad">
+            {v.placa_tracto ? <span className="tbl-placa">{v.placa_tracto}</span> : null}
+            {v.conductor ? <small>{v.conductor}</small> : null}
+          </div>
+        </div>
+
+        {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
+
+        <div className="av__campos">
+          <Field label={iniciar ? 'Salida' : 'Llegada'} wide>
+            {p => <TextInput {...p} type="datetime-local" value={fecha} onChange={e => setFecha(e.target.value)} />}
+          </Field>
+          <Field label={iniciar ? 'Kilometraje de salida' : 'Kilometraje de llegada'} error={errKm}
+            hint={kmGps ? `Odómetro del GPS al ${(gps.data?.fecha ?? diaGps).split('-').reverse().join('/')}. Puedes corregirlo.` : gps.isFetching ? 'Consultando el GPS…' : placaGps ? 'Sin lectura del GPS para esta fecha: escríbelo del tablero' : undefined}>
+            {p => (
+              <span className="av__km">
+                <TextInput {...p} inputMode="numeric" value={km} placeholder="0" autoFocus
+                  onChange={e => { setKm(e.target.value.replace(/\D/g, '')); setKmGps(false); setErrKm(undefined); }} />
+                <i aria-hidden>km</i>
+              </span>
+            )}
+          </Field>
+          {iniciar && (
+            <Field label="Horas de motor del remolque · opcional">
+              {p => <TextInput {...p} inputMode="numeric" value={horas} placeholder="0" onChange={e => setHoras(e.target.value.replace(/\D/g, ''))} />}
+            </Field>
+          )}
+        </div>
+
+        <ul className="av__efectos" aria-label="Qué pasa al confirmar">
+          {efectos.filter(Boolean).map(t => <li key={t as string}><CheckCircle2 size={16} aria-hidden />{t}</li>)}
+        </ul>
       </div>
     </Sheet>
   );

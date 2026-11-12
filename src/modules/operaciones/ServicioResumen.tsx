@@ -22,7 +22,7 @@ export const plazoDias = (a?: string | null, b?: string | null) => {
   return d;
 };
 
-// Misma regla que usa Tesorería al crear la cuenta por cobrar: detracción del 4 % desde S/ 700
+// Referencia de tarifa: detracción del 4 % desde S/ 700 (la misma regla que usará la cuenta por cobrar cuando se implemente)
 export function tarifaDe(neto: number) {
   let total = neto > 700 ? Math.round(neto / 0.96) : neto;
   let detr = total > 700 ? Math.round(total * 0.04) : 0;
@@ -70,7 +70,7 @@ export function KpisServicio({ o }: { o: OrdenBase }) {
   return (
     <div className="vk">
       <div className="vk__t"><span className="vk__l">Flete</span><strong>{flete > 0 ? `${m} ${fmt(flete, 2)}` : '—'}</strong><em>{flete > 0 ? o.impuesto : 'Sin tarifa acordada'}</em></div>
-      <div className="vk__t"><span className="vk__l">Neto a cobrar</span><strong>{flete > 0 ? `${m} ${fmt(t.neto, 2)}` : '—'}</strong><em>{flete > 0 ? (t.detr ? `Detracción ${m} ${fmt(t.detr, 2)}` : 'Sin detracción') : 'Cuenta por cobrar'}</em></div>
+      <div className="vk__t"><span className="vk__l">Neto a cobrar</span><strong>{flete > 0 ? `${m} ${fmt(t.neto, 2)}` : '—'}</strong><em>{flete > 0 ? (t.detr ? `Detracción ${m} ${fmt(t.detr, 2)}` : 'Sin detracción') : 'Tras la detracción'}</em></div>
       <div className="vk__t"><span className="vk__l">Distancia</span><strong>{dist > 0 ? <>{fmt(dist)} <small>km</small></> : '—'}</strong><em>{tipoServicio(o.tipo_servicio)}</em></div>
       <div className="vk__t"><span className="vk__l">Peso</span><strong>{num(o.peso_estimado) > 0 ? <>{fmt(o.peso_estimado)} <small>kg</small></> : '—'}</strong><em>Lo completan las guías</em></div>
       {dolares && <div className="vk__t"><span className="vk__l">Tipo de cambio</span><strong>{num(o.tipo_cambio).toFixed(3)}</strong><em>Dólares a soles</em></div>}

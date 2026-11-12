@@ -4,7 +4,7 @@ import './servicios.css';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, CircleAlert, FileSpreadsheet, Link2, Link2Off, LayoutGrid, Package, PackageCheck, Pencil, Play, Plus, Receipt, Route, ScrollText, SearchX, Wand2, XCircle } from 'lucide-react';
+import { ArrowRight, FileSpreadsheet, Link2, Link2Off, LayoutGrid, Package, PackageCheck, Pencil, Plus, Receipt, Route, ScrollText, SearchX, Wand2, XCircle } from 'lucide-react';
 import { OrdenServicioSheet, type OrdenParaEditar } from './OrdenServicioSheet';
 import { GenerarViajeSheet } from './GenerarViajeSheet';
 import { SeguimientoServicio } from './SeguimientoServicio';
@@ -24,7 +24,6 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
-import { dayKey } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
 
 interface Orden {
@@ -107,45 +106,6 @@ function AsignarViajeSheet({ orden, onClose, onAsignado }: { orden: Orden | null
   );
 }
 
-// Confirmación para iniciar el servicio: fecha de inicio y confirmación explícita
-function IniciarServicioSheet({ orden, onClose, onIniciado }: { orden: Orden | null; onClose: () => void; onIniciado: () => void }) {
-  const toast = useToast();
-  const [fecha, setFecha] = useState('');
-  const [confirmado, setConfirmado] = useState(false);
-  const [enviando, setEnviando] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => { if (orden) { setFecha(dayKey(new Date())); setConfirmado(false); setError(null); } }, [orden]);
-
-  async function iniciar() {
-    if (!orden) return;
-    if (!fecha) { setError('Indica la fecha de inicio.'); return; }
-    if (!confirmado) { setError('Debes confirmar que deseas realizar esta operación.'); return; }
-    setError(null); setEnviando(true);
-    try {
-      const r = await api<{ ok?: boolean; error?: string }>(`/operaciones/ordenes-servicio/${orden.id}/estado`, { method: 'PUT', body: { estado_servicio: 'EN_EJECUCION', fecha_inicio: fecha } });
-      if (r.ok === false) throw new Error(r.error || 'No se pudo iniciar el servicio');
-      haptic('success'); toast(`Orden ${orden.codigo_orden}: en ejecución`); onIniciado();
-    } catch (err) { setError(errorMessage(err)); haptic('warning'); }
-    finally { setEnviando(false); }
-  }
-
-  return (
-    <Sheet open={!!orden} onClose={() => !enviando && onClose()} title="Iniciar servicio"
-      footer={<><Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button><Button variant="primary" icon={<Play size={16} />} onClick={iniciar} loading={enviando}>Iniciar ahora</Button></>}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
-        <p className="t-callout c-secondary" style={{ margin: 0 }}>Orden <strong className="c-primary">{orden?.codigo_orden}</strong> · viaje <strong className="c-primary">{orden?.viaje}</strong></p>
-        {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
-        <Field label="Fecha de inicio *">{p => <TextInput {...p} type="date" value={fecha} onChange={e => setFecha(e.target.value)} />}</Field>
-        <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-          <input type="checkbox" checked={confirmado} onChange={e => { setConfirmado(e.target.checked); setError(null); }} />
-          <span>Confirmo realizar esta operación</span>
-        </label>
-        <p className="t-footnote c-secondary" style={{ margin: 0 }}>El viaje pasa a iniciado y se registra la cuenta por cobrar en Tesorería.</p>
-      </div>
-    </Sheet>
-  );
-}
-
 const COLUMNAS: ColumnaTabla[] = [
   { id: 'acciones', titulo: 'Acciones', ancho: 150, minimo: 120 },
   { id: 'estado', titulo: 'Estado', ancho: 130 },
@@ -174,7 +134,6 @@ export function OrdenesServicioPage() {
   useEffect(() => { setTabOS('resumen'); }, [abiertoId]);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<{ orden: OrdenParaEditar | null } | null>(null);
-  const [iniciar, setIniciar] = useState<Orden | null>(null);
   const [asignar, setAsignar] = useState<Orden | null>(null);
   const [generar, setGenerar] = useState<Orden | null>(null);
   const [anular, setAnular] = useState<Orden | null>(null);
@@ -270,7 +229,6 @@ export function OrdenesServicioPage() {
       <GenerarViajeSheet orden={generar} onClose={() => setGenerar(null)} onGenerado={() => { setGenerar(null); setAbiertoId(null); void refrescar(); }} />
       <OrdenServicioSheet open={!!formulario} orden={formulario?.orden ?? null} onClose={() => setFormulario(null)} />
       <AsignarViajeSheet orden={asignar} onClose={() => setAsignar(null)} onAsignado={() => { setAsignar(null); void refrescar(); }} />
-      <IniciarServicioSheet orden={iniciar} onClose={() => setIniciar(null)} onIniciado={() => { setIniciar(null); void refrescar(); }} />
       <ConfirmSheet open={!!anular} onClose={() => setAnular(null)} title="Anular orden" confirmLabel="Anular orden" loading={!!ocupado}
         message={`Se anula la orden ${anular?.codigo_orden ?? ''} y se quita de su viaje. No se puede deshacer.`}
         onConfirm={async () => { if (anular) { await cambiarEstado(anular, 'ANULADO', 'Orden anulada'); setAnular(null); setAbiertoId(null); } }} />
@@ -326,7 +284,6 @@ export function OrdenesServicioPage() {
                     <span style={{ display: 'inline-flex', gap: 2 }}>
                       {libre && !x.viaje && <IconoFila texto="Generar viaje" tono="violeta" icono={<Wand2 size={15} />} onClick={() => generarViaje(x)} />}
                       {libre && !x.viaje && <IconoFila texto="Asignar a un viaje" tono="azul" icono={<Link2 size={15} />} onClick={() => setAsignar(x)} />}
-                      {libre && e === 'PROGRAMADO' && <IconoFila texto="Iniciar servicio" tono="verde" icono={<Play size={15} />} onClick={() => setIniciar(x)} />}
                       {puedeEditar && e === 'EN_EJECUCION' && <IconoFila texto="Marcar entregada" tono="verde" icono={<PackageCheck size={15} />} onClick={() => setEntregar(x)} />}
                       {libre && <IconoFila texto="Editar" tono="ambar" icono={<Pencil size={15} />} onClick={() => editarFila(x.id)} />}
                     </span>
@@ -357,7 +314,6 @@ export function OrdenesServicioPage() {
             <>
               <Button variant="secondary" icon={<Pencil size={16} />} onClick={() => { if (det.data) { setFormulario({ orden: det.data as unknown as OrdenParaEditar }); setAbiertoId(null); } }} disabled={!det.data}>Editar</Button>
               <Button variant="secondary" icon={<XCircle size={16} />} onClick={() => setAnular(abierta)}>Anular</Button>
-              {est === 'PROGRAMADO' && <Button variant="primary" icon={<Play size={16} />} onClick={() => setIniciar(abierta)}>Iniciar</Button>}
               {est === 'EN_EJECUCION' && <Button variant="primary" icon={<PackageCheck size={16} />} onClick={() => setEntregar(abierta)}>Marcar entregada</Button>}
             </>
           ) : <Button variant="secondary" onClick={() => setAbiertoId(null)}>Cerrar</Button>
@@ -405,6 +361,7 @@ export function OrdenesServicioPage() {
             </div>
                 </>
               )}
+              {tabOS === 'viaje' && estadoDe(o) === 'PROGRAMADO' && o.viaje && <p className="os-nota">El servicio pasa a «En ejecución» cuando el viaje se inicia desde Órdenes de viaje.</p>}
               {tabOS === 'tarifa' && (() => {
                 if (!n(o.costo_flete)) return <EmptyState icon={<Receipt size={22} />} title="Sin tarifa">Esta orden todavía no tiene flete acordado.</EmptyState>;
                 const t = tarifaDe(n(o.costo_flete));
@@ -413,13 +370,12 @@ export function OrdenesServicioPage() {
                   <>
                     <div className="vj-tiles">
                       <Dato label="Flete acordado" valor={dinero(o)} nota={o.impuesto} />
-                      <Dato label="Total con IGV" valor={m(t.total)} nota="Base de la cuenta por cobrar" />
+                      <Dato label="Total con IGV" valor={m(t.total)} nota="Con IGV" />
                       <Dato label="Detracción 4 %" valor={t.detr ? m(t.detr) : 'No aplica'} nota="Se aplica desde S/ 700" />
                       <Dato label="Neto a cobrar" valor={m(t.neto)} />
                       <Dato label="Base imponible" valor={m(t.bi)} />
                       <Dato label="IGV 18 %" valor={m(t.igv)} />
                     </div>
-                    <p className="os-nota">La cuenta por cobrar se crea en Tesorería cuando el servicio entra en ejecución.</p>
                   </>
                 );
               })()}

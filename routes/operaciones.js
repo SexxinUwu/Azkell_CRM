@@ -608,8 +608,17 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             const kmIniVal = kilometraje_inicial ? parseInt(kilometraje_inicial, 10) : null;
             const hrRemVal = horas_motor_remolque ? parseInt(horas_motor_remolque, 10) : null;
 
+            // El viaje es lo que sale a ruta: debe existir, estar sin iniciar y tener quién lo lleva
+            const [vv] = await tdb.query(`SELECT viaje, estado, conductor, placa_tracto, placa_remolque, ejecucion, tercero_nombre FROM operaciones_ordenes_viaje WHERE viaje = ?`, [codeViaje]);
+            if (!vv.length) return res.status(404).json({ ok: false, error: 'El viaje no existe.' });
+            const viajeAct = vv[0];
+            if (['INICIADO', 'FINALIZADO', 'LIQUIDADO', 'ANULADO'].includes(String(viajeAct.estado).toUpperCase())) return res.status(409).json({ ok: false, error: `El viaje ya está ${String(viajeAct.estado).toLowerCase()}.` });
+            if (viajeAct.ejecucion === 'TERCERO' ? !viajeAct.tercero_nombre : (!viajeAct.conductor || !viajeAct.placa_tracto)) {
+                return res.status(409).json({ ok: false, error: viajeAct.ejecucion === 'TERCERO' ? 'El viaje aún no tiene transportista tercero.' : 'El viaje aún no tiene conductor y tracto.' });
+            }
+
             await tdb.query(`
-                UPDATE operaciones_ordenes_viaje 
+                UPDATE operaciones_ordenes_viaje
                 SET estado = 'INICIADO',
                     fecha_inicio = ?,
                     fecha_viaje = COALESCE(?, fecha_viaje),
@@ -627,6 +636,17 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                 codeViaje
             ]);
 
+            // Al salir el viaje, sus servicios programados pasan a «en ejecución». La cuenta por cobrar en Tesorería queda pendiente de implementar: por ahora no se genera nada.
+            let serviciosIniciados = 0;
+            const [servicios] = await tdb.query(
+                `SELECT os.* FROM operaciones_ordenes_servicio os
+                 JOIN operaciones_ordenes_viaje_rutas r ON r.orden COLLATE utf8mb4_unicode_ci = os.codigo_orden COLLATE utf8mb4_unicode_ci
+                 WHERE r.viaje = ? AND os.estado_servicio = 'PROGRAMADO'`, [codeViaje]);
+            for (const os of servicios) {
+                const [u] = await tdb.query(`UPDATE operaciones_ordenes_servicio SET estado_servicio = 'EN_EJECUCION' WHERE id = ? AND estado_servicio = 'PROGRAMADO'`, [os.id]);
+                if (u.affectedRows === 1) serviciosIniciados++;
+            }
+
             if (logAudit) {
                 logAudit({
                     req,
@@ -636,7 +656,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                 });
             }
 
-            res.json({ ok: true, message: `El viaje ${codeViaje} ha sido iniciado exitosamente.` });
+            res.json({ ok: true, servicios: serviciosIniciados, message: serviciosIniciados ? `Viaje ${codeViaje} iniciado: ${serviciosIniciados} ${serviciosIniciados === 1 ? 'servicio pasó' : 'servicios pasaron'} a ejecución.` : `El viaje ${codeViaje} ha sido iniciado exitosamente.` });
         } catch (err) {
             console.error('Error al iniciar viaje:', err);
             res.status(500).json({ error: err.message });
@@ -2036,8 +2056,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                 if (!['INICIADO', 'FINALIZADO'].includes(String(viaje.estado).toUpperCase())) {
                     await tdb.query(`UPDATE operaciones_ordenes_viaje SET estado = 'INICIADO', fecha_inicio = COALESCE(fecha_inicio, ?) WHERE viaje = ?`, [`${fecha} 00:00:00`, viaje.viaje]);
                 }
-                try { await sincronizarCuentaPorCobrar(tdb, o, viaje, fecha); }
-                catch (e) { console.warn('[Operaciones -> Tesorería] No se pudo crear la cuenta por cobrar:', e.message); }
+                // La cuenta por cobrar en Tesorería queda pendiente de implementar: por ahora no se genera nada (sincronizarCuentaPorCobrar sigue definida para retomarla)
             } else if (nuevo === 'ENTREGADO') {
                 await tdb.query(`UPDATE operaciones_ordenes_servicio SET estado_servicio = 'ENTREGADO', fecha_entrega = COALESCE(fecha_entrega, CURDATE()) WHERE id = ?`, [o.id]);
             } else if (nuevo === 'ANULADO') {

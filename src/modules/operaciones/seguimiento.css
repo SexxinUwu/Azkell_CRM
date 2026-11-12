@@ -238,3 +238,21 @@
 .vg__chip--on { background: var(--ink); color: var(--label-inverse); }
 .vg__chip:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .vg__punto { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+/* Iniciar y finalizar viaje */
+.av { display: flex; flex-direction: column; gap: var(--s-4); }
+.av__resumen { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 18px; background: var(--fill-subtle); }
+.av__icono { flex: none; width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--green); color: #fff; }
+.av__icono--azul { background: var(--accent); }
+.av__quien { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.av__quien strong { font-family: ui-monospace, Menlo, monospace; font-size: 1rem; font-variant-numeric: tabular-nums; }
+.av__quien span { font-size: 0.8125rem; color: var(--label-2); overflow-wrap: anywhere; }
+.av__unidad { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.av__unidad small { font-size: 0.75rem; color: var(--label-2); text-align: right; }
+.av__campos { display: grid; grid-template-columns: 1fr; gap: var(--s-3); }
+.av__km { position: relative; display: block; }
+.av__km input { font-size: 1.625rem; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; padding-right: 3.25rem; }
+.av__km i { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-style: normal; font-weight: 600; color: var(--label-3); pointer-events: none; }
+.av__efectos { list-style: none; margin: 0; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--separator); display: flex; flex-direction: column; gap: 10px; }
+.av__efectos li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.875rem; color: var(--label-2); }
+.av__efectos svg { flex: none; margin-top: 1px; color: var(--green); }
