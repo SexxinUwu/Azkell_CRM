@@ -49,20 +49,18 @@ export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'tod
   }, [enRuta]);
 
   const calc = useMemo(() => {
-    const salida = aFecha(v?.fecha_inicio);
+    // Solo se mueve con kilómetros reales del GPS; sin lectura el camión se queda al inicio del tramo y no se calcula llegada
     let frac = 0;
-    let estimado = true;
+    let real = false;
     if (enRuta && dist > 0) {
       const gps = num(v?.km_recorrido_gps);
-      if (gps > 0) { frac = gps / dist; estimado = false; }
-      else if (salida) frac = ((ahora - salida.getTime()) / 3_600_000) * VELOCIDAD_PROMEDIO / dist;
-      frac = Math.min(0.97, Math.max(0.02, frac));
+      if (gps > 0) { frac = Math.min(0.97, Math.max(0.02, gps / dist)); real = true; }
     }
     const restante = dist * (1 - frac);
     const etaMin = dist > 0 ? Math.max(1, (restante / VELOCIDAD_PROMEDIO) * 60) : 0;
     const llegada = new Date(ahora + etaMin * 60_000);
     const pos = anulada ? 0 : estado === 'ENTREGADO' ? 1 : idx === 2 ? PARADAS[2] + (PARADAS[3] - PARADAS[2]) * frac : PARADAS[idx];
-    return { frac, restante, etaMin, llegada, pos, estimado };
+    return { frac, restante, etaMin, llegada, pos, real };
   }, [v, enRuta, dist, ahora, anulada, estado, idx]);
 
   // El camión rueda mientras avanza entre paradas o cuando va en ruta
@@ -84,18 +82,18 @@ export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'tod
 
   const titulo = anulada ? (viaje ? 'Viaje anulado' : 'Servicio anulado')
     : estado === 'ENTREGADO' ? (viaje ? '¡Viaje finalizado!' : '¡Entregado!')
-    : enRuta ? (dist > 0 ? `Llega en ${duracion(calc.etaMin)}` : 'En ruta')
+    : enRuta ? (calc.real ? `Llega en ${duracion(calc.etaMin)}` : 'En ruta')
     : estado === 'PROGRAMADO' ? 'Programado' : (viaje ? 'Viaje registrado' : 'Pedido recibido');
   const sub = anulada ? 'Ya no se ejecutará'
     : estado === 'ENTREGADO' ? `Llegó a las ${hora(fin)}`
-    : enRuta ? (dist > 0 ? `Hora estimada ${hora(calc.llegada)} · ${calc.restante.toFixed(0)} km restantes` : 'Sin distancia de referencia')
+    : enRuta ? (calc.real ? `Hora estimada ${hora(calc.llegada)} · ${calc.restante.toFixed(0)} km restantes` : 'Sin lectura de GPS todavía')
     : estado === 'PROGRAMADO' ? (tercero ? `Lo lleva ${v?.tercero_nombre || 'un transportista tercero'}` : v?.conductor ? `Sale con ${v.conductor}` : 'Falta asignar conductor') : (viaje ? 'Falta asignar conductor y unidad' : 'Esperando programación');
 
   const tiempos = [
     hora(aFecha(o.creado_fmt)),
     v?.vinculado_en ? hora(aFecha(v.vinculado_en)) : '—',
     salida ? hora(salida) : '—',
-    fin ? hora(fin) : enRuta && dist > 0 ? `Est. ${hora(calc.llegada)}` : '—',
+    fin ? hora(fin) : enRuta && calc.real ? `Est. ${hora(calc.llegada)}` : '—',
   ];
 
   const eventos = [
@@ -140,7 +138,7 @@ export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'tod
             );
           })}
           <div className={`seg__camion${rodando ? ' seg__camion--rueda' : ''}${calc.pos > 0.82 ? ' seg__camion--borde' : ''}`} style={{ left: `${calc.pos * 100}%` }} aria-hidden>
-            {enRuta && dist > 0 && <span className="seg__globo">{calc.restante.toFixed(0)} km · {duracion(calc.etaMin)}</span>}
+            {enRuta && calc.real && <span className="seg__globo">{calc.restante.toFixed(0)} km · {duracion(calc.etaMin)}</span>}
             <svg viewBox="0 0 42 28">
               <g className="seg__cuerpo">
                 <rect x="1" y="2" width="26" height="17" rx="2.5" className="seg__verde" />

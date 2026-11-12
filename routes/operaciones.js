@@ -214,6 +214,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                     ov.usuario_creacion,
                     ov.usuario_finalizacion,
                     DATE_FORMAT(ov.creado_en, '%Y-%m-%d %H:%i:%s') AS fecha_registro,
+                    DATE_FORMAT(CONVERT_TZ(ov.creado_en, @@session.time_zone, '-05:00'), '%Y-%m-%d %H:%i:%s') AS registrado_fmt,
                     COALESCE(r_agg.cant_ordenes, 0) AS cant_ordenes,
                     COALESCE(r_agg.peso_ida, 0) AS peso_ida,
                     COALESCE(r_agg.peso_retorno, 0) AS peso_retorno,

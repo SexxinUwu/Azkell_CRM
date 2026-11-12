@@ -60,6 +60,7 @@ interface Viaje {
   kilometraje_final: number | null;
   horas_motor_remolque: number | null;
   usuario_creacion: string | null;
+  registrado_fmt?: string | null;
   km_recorrido_gps?: number | string | null;
   distancia_km?: number | string | null;
   conductor_telefono?: string | null;
@@ -365,17 +366,17 @@ function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onE
   const datosSeg = v ? {
     codigo_orden: v.viaje,
     cliente_nombre: [v.conductor, v.placa_tracto].filter(Boolean).join(' · ') || 'Sin unidad asignada',
-    origen: v.origen, destino: v.destino, distancia_km: v.distancia_km, creado_fmt: v.fecha_viaje,
+    origen: v.origen, destino: v.destino, distancia_km: v.distancia_km, creado_fmt: v.registrado_fmt,
     viajes: [{
       viaje: v.viaje, estado: v.estado, conductor: v.conductor, placa_tracto: v.placa_tracto, placa_remolque: v.placa_remolque,
-      ejecucion: v.ejecucion, tercero_nombre: v.tercero_nombre, vinculado_en: v.fecha_viaje, fecha_inicio: v.fecha_inicio, fecha_fin: v.fecha_fin,
+      ejecucion: v.ejecucion, tercero_nombre: v.tercero_nombre, fecha_inicio: v.fecha_inicio, fecha_fin: v.fecha_fin,
       km_recorrido_gps: v.km_recorrido_gps, conductor_telefono: v.conductor_telefono,
     }],
   } : null;
   return (
     <Sheet extra open={!!v} onClose={onClose}
       title={v ? <TituloFicha codigo={`Viaje ${v.viaje}`} estado={<Pastilla tono={css(tono(v.estado)) as string}>{v.estado}</Pastilla>}
-        sub={[`Programado el ${fmtFecha(v.fecha_viaje)}`, v.ordenes_list ? `Órdenes ${v.ordenes_list}` : null].filter(Boolean).join(' · ')} /> : ''}
+        sub={[v.fecha_viaje ? `Fecha del viaje ${fmtFecha(v.fecha_viaje)}` : null, v.ordenes_list ? `Órdenes ${v.ordenes_list}` : null].filter(Boolean).join(' · ')} /> : ''}
       footer={
         <>
           {onEliminar && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={onEliminar}>Eliminar</Button>}
@@ -392,7 +393,7 @@ function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onE
             <FichaCard icono={<Truck size={17} />} label="Unidad" valor={v.placa_tracto ? `${v.placa_tracto}${v.placa_remolque ? ` / ${v.placa_remolque}` : ''}` : (v.tercero_nombre || 'Sin asignar')}
               sub={[v.configuracion_tracto, v.configuracion_remolque].filter(Boolean).join(' + ') || null} />
             <FichaCard icono={<UserRound size={17} />} label="Conductor" valor={v.conductor || '—'} sub={v.conductor_telefono || null} />
-            <FichaCard icono={<Building2 size={17} />} label="Ejecuta" valor={tercero ? 'Transportista tercero' : 'Flota propia'} sub={tercero ? v.tercero_nombre : null} />
+            <FichaCard icono={<Building2 size={17} />} label="Ejecuta" valor={tercero ? 'Transportista tercero' : (v.conductor || v.placa_tracto) ? 'Flota propia' : 'Sin definir'} sub={tercero ? v.tercero_nombre : null} />
             <FichaCard icono={<Package size={17} />} label="Peso total" valor={`${(n(v.peso_ida) + n(v.peso_retorno)).toLocaleString('es-PE')} kg`} sub="Lo completan las guías" />
             <FichaCard icono={<ClipboardList size={17} />} label="Órdenes de servicio" valor={n(v.cant_ordenes)} sub={v.ordenes_list} />
             <FichaCard icono={<Gauge size={17} />} label="Recorrido" valor={recorrido > 0 ? `${recorrido.toLocaleString('es-PE')} km` : 'Sin kilometraje'}

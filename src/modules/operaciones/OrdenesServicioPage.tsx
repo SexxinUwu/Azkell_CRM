@@ -434,6 +434,7 @@ export function OrdenesServicioPage() {
                 </>
               )}
               {tabOS === 'tarifa' && (() => {
+                if (!n(o.costo_flete)) return <p className="os-nota">Esta orden todavía no tiene flete acordado.</p>;
                 const t = tarifaDe(n(o.costo_flete));
                 const m = (x: number) => `${simbolo(o.moneda)} ${x.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 return (
