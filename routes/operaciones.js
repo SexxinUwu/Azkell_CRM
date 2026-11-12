@@ -1695,6 +1695,27 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
         }
     });
 
+    // Últimas direcciones de carga y entrega usadas (por cliente y distrito): el formulario las propone para no volver a escribirlas
+    router.get('/ordenes-servicio/direcciones-recientes', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+            const [rows] = await tdb.query(
+                `SELECT 'origen' AS tipo, cliente_nombre, ubigeo_origen AS ubigeo, direccion_origen AS direccion, MAX(id) AS ultimo
+                   FROM operaciones_ordenes_servicio WHERE ubigeo_origen IS NOT NULL AND TRIM(COALESCE(direccion_origen, '')) <> '' AND estado_servicio <> 'ANULADO'
+                  GROUP BY cliente_nombre, ubigeo_origen, direccion_origen
+                 UNION ALL
+                 SELECT 'destino' AS tipo, cliente_nombre, ubigeo_destino AS ubigeo, direccion_destino AS direccion, MAX(id) AS ultimo
+                   FROM operaciones_ordenes_servicio WHERE ubigeo_destino IS NOT NULL AND TRIM(COALESCE(direccion_destino, '')) <> '' AND estado_servicio <> 'ANULADO'
+                  GROUP BY cliente_nombre, ubigeo_destino, direccion_destino
+                 ORDER BY ultimo DESC LIMIT 2000`);
+            res.json({ ok: true, data: rows });
+        } catch (err) {
+            console.error('Error al listar direcciones recientes:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     router.get('/ordenes-servicio', async (req, res) => {
         try {
             const tdb = getDb(req);

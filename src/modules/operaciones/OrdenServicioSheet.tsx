@@ -103,14 +103,25 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
   const [error, setError] = useState<string | null>(null);
   // El tipo de cambio se precarga con el de SUNAT mientras la persona no lo escriba a mano
   const [tcManual, setTcManual] = useState(false);
+  // Direcciones que se llenaron solas (se pueden reemplazar por la sugerida del distrito); si la persona escribe, dejan de ser automáticas
+  const [auto, setAuto] = useState({ origen: false, destino: false });
   const editando = !!orden;
 
-  useEffect(() => { if (open) { setF(formInicial(orden)); setTocados(new Set()); setIntento(false); setError(null); setTcManual(!!orden); } }, [open, orden]);
+  useEffect(() => { if (open) { setF(formInicial(orden)); setTocados(new Set()); setIntento(false); setError(null); setTcManual(!!orden); setAuto({ origen: false, destino: false }); } }, [open, orden]);
 
   const clientes = useQuery({
     queryKey: ['directorio', 'clientes'], enabled: open, staleTime: 5 * 60_000,
     queryFn: () => api<unknown>('/clientes').then(r => (Array.isArray(r) ? r : ((r as { data?: unknown[] })?.data ?? [])) as { nombre?: string; razon_social?: string; direccion?: string | null }[]),
   });
+  const recientes = useQuery({
+    queryKey: ['operaciones', 'direcciones-recientes'], enabled: open, staleTime: 60_000,
+    queryFn: () => api<{ data?: { tipo: 'origen' | 'destino'; cliente_nombre: string | null; ubigeo: string; direccion: string; ultimo: number }[] }>('/operaciones/ordenes-servicio/direcciones-recientes').then(r => r.data ?? []),
+  });
+  // Última dirección usada en ese distrito: primero la del mismo cliente; si no hay, la de cualquier cliente
+  const sugerida = (tipo: 'origen' | 'destino', cliente: string, ubigeo: string) => {
+    const filas = (recientes.data ?? []).filter(r => r.tipo === tipo && r.ubigeo === ubigeo);
+    return (filas.find(r => (r.cliente_nombre ?? '').trim() === cliente.trim()) ?? filas[0])?.direccion ?? '';
+  };
   const sunat = useTipoCambioSunat(open && f.moneda === 'DOLARES');
   useEffect(() => {
     if (f.moneda === 'DOLARES' && !tcManual && sunat.data?.venta) setF(x => ({ ...x, tipo_cambio: Number(sunat.data!.venta).toFixed(3) }));
@@ -127,13 +138,30 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
   const etiquetaDe = (codigo: string) => { const u = ubi.porCodigo.get(codigo); return u ? etiquetaUbigeo(u) : ''; };
   const set = (p: Partial<Form>) => setF(x => ({ ...x, ...p }));
   // Elegir cliente: remitente por defecto = el mismo cliente; la dirección de carga se completa sola si estaba vacía
-  const elegirCliente = (nombre: string) => setF(x => {
-    const siguiente = { ...x, cliente: nombre };
-    if (nombre && !x.remitente) { siguiente.remitente = nombre; if (!x.origen_dir && direccionDe.get(nombre)) siguiente.origen_dir = direccionDe.get(nombre)!; }
-    return siguiente;
-  });
-  const elegirRemitente = (nombre: string) => setF(x => ({ ...x, remitente: nombre, origen_dir: !x.origen_dir && direccionDe.get(nombre) ? direccionDe.get(nombre)! : x.origen_dir }));
-  const elegirDestinatario = (nombre: string) => setF(x => ({ ...x, destinatario: nombre, destino_dir: !x.destino_dir && direccionDe.get(nombre) ? direccionDe.get(nombre)! : x.destino_dir }));
+  const elegirCliente = (nombre: string) => {
+    if (nombre && !f.remitente && !f.origen_dir && direccionDe.get(nombre)) setAuto(a => ({ ...a, origen: true }));
+    setF(x => {
+      const siguiente = { ...x, cliente: nombre };
+      if (nombre && !x.remitente) { siguiente.remitente = nombre; if (!x.origen_dir && direccionDe.get(nombre)) siguiente.origen_dir = direccionDe.get(nombre)!; }
+      return siguiente;
+    });
+  };
+  const elegirRemitente = (nombre: string) => {
+    if (!f.origen_dir && direccionDe.get(nombre)) setAuto(a => ({ ...a, origen: true }));
+    setF(x => ({ ...x, remitente: nombre, origen_dir: !x.origen_dir && direccionDe.get(nombre) ? direccionDe.get(nombre)! : x.origen_dir }));
+  };
+  const elegirDestinatario = (nombre: string) => {
+    if (!f.destino_dir && direccionDe.get(nombre)) setAuto(a => ({ ...a, destino: true }));
+    setF(x => ({ ...x, destinatario: nombre, destino_dir: !x.destino_dir && direccionDe.get(nombre) ? direccionDe.get(nombre)! : x.destino_dir }));
+  };
+  // Elegir el distrito: si hay una dirección usada antes en ese distrito, reemplaza a la que se llenó sola (nunca a la que se escribió a mano)
+  const elegirDistrito = (lado: 'origen' | 'destino', codigo: string) => {
+    const dirCampo = lado === 'origen' ? 'origen_dir' : 'destino_dir';
+    const previa = codigo ? sugerida(lado, f.cliente, codigo) : '';
+    const reemplaza = previa && (!f[dirCampo] || auto[lado]);
+    if (reemplaza) setAuto(a => ({ ...a, [lado]: true }));
+    set(reemplaza ? { [lado]: codigo, [dirCampo]: previa } : { [lado]: codigo });
+  };
   const errores = useMemo(() => {
     const e: Partial<Record<Campo, string>> = {};
     if (!f.cliente.trim()) e.cliente = 'Elige o escribe el cliente.';
@@ -227,15 +255,15 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
           <div className="os-fila">
             <div className="os-punto">
               <Field label="Punto de carga *" error={ver('origen')} hint={f.origen ? `Ubigeo ${f.origen}` : 'Busca por distrito, provincia o código'}>
-                {p => <Combobox {...p} options={ubi.opciones} value={f.origen || null} loading={ubi.cargando} placeholder="Distrito de carga" onChange={v => { set({ origen: v ?? '' }); tocar('origen'); }} />}
+                {p => <Combobox {...p} options={ubi.opciones} value={f.origen || null} loading={ubi.cargando} placeholder="Distrito de carga" onChange={v => { elegirDistrito('origen', v ?? ''); tocar('origen'); }} />}
               </Field>
-              <Field label="Dirección o planta">{p => <TextInput {...p} value={f.origen_dir} placeholder="Calle, número o nombre de la planta" onChange={e => set({ origen_dir: e.target.value })} />}</Field>
+              <Field label="Dirección o planta" hint={auto.origen && f.origen_dir ? 'Completada con la última usada. Puedes corregirla.' : undefined}>{p => <TextInput {...p} value={f.origen_dir} placeholder="Calle, número o nombre de la planta" onChange={e => { setAuto(a => ({ ...a, origen: false })); set({ origen_dir: e.target.value }); }} />}</Field>
             </div>
             <div className="os-punto">
               <Field label="Punto de entrega *" error={ver('destino')} hint={f.destino ? `Ubigeo ${f.destino}` : 'Busca por distrito, provincia o código'}>
-                {p => <Combobox {...p} options={ubi.opciones} value={f.destino || null} loading={ubi.cargando} placeholder="Distrito de entrega" onChange={v => { set({ destino: v ?? '' }); tocar('destino'); }} />}
+                {p => <Combobox {...p} options={ubi.opciones} value={f.destino || null} loading={ubi.cargando} placeholder="Distrito de entrega" onChange={v => { elegirDistrito('destino', v ?? ''); tocar('destino'); }} />}
               </Field>
-              <Field label="Dirección o lugar de entrega">{p => <TextInput {...p} value={f.destino_dir} placeholder="Calle, número o nombre del lugar" onChange={e => set({ destino_dir: e.target.value })} />}</Field>
+              <Field label="Dirección o lugar de entrega" hint={auto.destino && f.destino_dir ? 'Completada con la última usada. Puedes corregirla.' : undefined}>{p => <TextInput {...p} value={f.destino_dir} placeholder="Calle, número o nombre del lugar" onChange={e => { setAuto(a => ({ ...a, destino: false })); set({ destino_dir: e.target.value }); }} />}</Field>
             </div>
           </div>
           <div className="os-fila">
