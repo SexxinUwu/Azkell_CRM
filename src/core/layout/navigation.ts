@@ -70,7 +70,7 @@ const SECCIONES_BASE: NavSection[] = [
     title: 'Operaciones',
     items: [
       { key: 'programacion', label: 'Programación', to: '/operaciones/programacion', icon: CalendarDays, permissions: ver('op_programacion', 'op_guias_remision') },
-      { key: 'ordenes-viaje', noEmpresa: 'marsisa', label: 'Órdenes de viaje', to: '/operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'op_guias_remision') },
+      { key: 'ordenes-viaje', label: 'Órdenes de viaje', to: '/operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'op_guias_remision') },
       { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: ScrollText, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision') },
       { key: 'reporte-viajes', label: 'Reporte de viajes', to: '/operaciones/reporte-viajes', icon: BarChart3, permissions: ver('op_reporte_viajes') },
       {
