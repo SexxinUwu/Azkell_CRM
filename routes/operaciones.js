@@ -1716,6 +1716,29 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
         }
     });
 
+    // Rutas para elegir en el formulario: las de la matriz de combustible (según el sentido) y las ya usadas en otros servicios
+    router.get('/ordenes-servicio/rutas', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+            const sentido = String(req.query.sentido || '').toUpperCase() === 'RETORNO' ? 'RETORNO' : 'IDA';
+            let matriz = [];
+            try { [matriz] = await tdb.query(`SELECT DISTINCT ruta FROM combustible_matriz_d2 WHERE estado = 'ACTIVO' AND sentido = ? AND TRIM(ruta) <> '' ORDER BY ruta`, [sentido]); } catch (e) { matriz = []; }
+            const [usadas] = await tdb.query(`SELECT ruta, COUNT(*) AS n FROM operaciones_ordenes_servicio WHERE ruta IS NOT NULL AND ruta <> '' AND es_retorno = ? GROUP BY ruta ORDER BY n DESC LIMIT 200`, [sentido === 'RETORNO' ? 1 : 0]);
+            const vistas = new Set();
+            const data = [];
+            for (const r of [...matriz.map(x => ({ ruta: x.ruta, origen: 'matriz' })), ...usadas.map(x => ({ ruta: x.ruta, origen: 'usada' }))]) {
+                const clave = String(r.ruta).trim().toUpperCase();
+                if (!clave || vistas.has(clave)) continue;
+                vistas.add(clave); data.push({ ruta: clave, origen: r.origen });
+            }
+            res.json({ ok: true, data });
+        } catch (err) {
+            console.error('Error al listar rutas de servicio:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     router.get('/ordenes-servicio', async (req, res) => {
         try {
             const tdb = getDb(req);
@@ -1764,19 +1787,30 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
         }
     });
 
+    // «ORIGEN - DESTINO» → { origen, destino } (la ruta es lo que se elige; origen y destino se derivan de ella)
+    function tramosDeRuta(ruta) {
+        const partes = String(ruta || '').split(/\s+-\s+/).map(t => t.trim()).filter(Boolean);
+        return { origen: partes[0] || null, destino: partes.length > 1 ? partes.slice(1).join(' - ') : null };
+    }
+
     function camposServicio(b) {
+        const ruta = osTexto(b.ruta, 150) ? osTexto(b.ruta, 150).toUpperCase() : null;
+        const tramo = tramosDeRuta(ruta);
         return {
             fecha: osFecha(b.fecha) || new Date().toISOString().slice(0, 10),
             fecha_entrega: osFecha(b.fecha_entrega),
             moneda: osTexto(b.moneda, 20) || 'SOLES',
             tipo_cambio: osNumero(b.tipo_cambio) ?? 3.75,
-            tipo_contratacion: osTexto(b.tipo_contratacion, 50) || 'CLIENTE DIRECTO',
+            tipo_contratacion: String(b.tipo_contratacion || '').toUpperCase() === 'INTERMEDIARIO' ? 'INTERMEDIARIO' : 'CLIENTE DIRECTO',
+            intermediario: String(b.tipo_contratacion || '').toUpperCase() === 'INTERMEDIARIO' ? osTexto(b.intermediario, 255) : null,
+            ejecucion: String(b.ejecucion || '').toUpperCase() === 'TERCERO' ? 'TERCERO' : 'PROPIO',
+            ruta,
             cliente_id: Number.isInteger(Number(b.cliente_id)) && Number(b.cliente_id) > 0 ? Number(b.cliente_id) : null,
             cliente_nombre: osTexto(b.cliente_nombre, 255),
             tipo_servicio: osTexto(b.tipo_servicio, 100) || 'CARGA GENERAL',
             es_retorno: b.es_retorno === true || b.es_retorno === 1 || b.es_retorno === '1' ? 1 : 0,
-            origen: osTexto(b.origen, 150),
-            destino: osTexto(b.destino, 150),
+            origen: tramo.origen || osTexto(b.origen, 150),
+            destino: tramo.destino || osTexto(b.destino, 150),
             ubigeo_origen: /^\d{6}$/.test(String(b.ubigeo_origen || '')) ? String(b.ubigeo_origen) : null,
             direccion_origen: osTexto(b.direccion_origen, 255),
             ubigeo_destino: /^\d{6}$/.test(String(b.ubigeo_destino || '')) ? String(b.ubigeo_destino) : null,
@@ -1797,7 +1831,8 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
             const c = camposServicio(req.body || {});
             if (!c.cliente_nombre) return res.status(400).json({ ok: false, error: 'Indica el cliente.' });
-            if (!c.origen || !c.destino || !c.ubigeo_origen || !c.ubigeo_destino) return res.status(400).json({ ok: false, error: 'Elige el distrito del punto de carga y del punto de entrega.' });
+            if (!c.ruta) return res.status(400).json({ ok: false, error: 'Elige la ruta del servicio.' });
+            if (c.tipo_contratacion === 'INTERMEDIARIO' && !c.intermediario) return res.status(400).json({ ok: false, error: 'Indica la empresa que nos contrata como intermediario.' });
             const cols = Object.keys(c);
             let ultimo = null;
             for (let intento = 0; intento < 3; intento++) {
@@ -1826,12 +1861,13 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             if (OS_CERRADOS.includes(String(prev[0].estado_servicio).toUpperCase())) return res.status(409).json({ ok: false, error: 'Una orden entregada o anulada ya no se edita.' });
             const c = camposServicio(req.body || {});
             if (!c.cliente_nombre) return res.status(400).json({ ok: false, error: 'Indica el cliente.' });
-            if (!c.origen || !c.destino || !c.ubigeo_origen || !c.ubigeo_destino) return res.status(400).json({ ok: false, error: 'Elige el distrito del punto de carga y del punto de entrega.' });
+            if (!c.ruta) return res.status(400).json({ ok: false, error: 'Elige la ruta del servicio.' });
+            if (c.tipo_contratacion === 'INTERMEDIARIO' && !c.intermediario) return res.status(400).json({ ok: false, error: 'Indica la empresa que nos contrata como intermediario.' });
             const cols = Object.keys(c);
             const [r] = await tdb.query(`UPDATE operaciones_ordenes_servicio SET ${cols.map(k => `${k} = ?`).join(', ')} WHERE id = ?`, [...cols.map(k => c[k]), req.params.id]);
             // El tramo del vínculo con el viaje se mantiene al día
             await tdb.query(`UPDATE operaciones_ordenes_viaje_rutas SET ruta = ?, tipo_servicio = ?, es_retorno = ?, peso_total = COALESCE(?, peso_total) WHERE orden = ?`,
-                [`${c.origen} - ${c.destino}`, c.tipo_servicio, c.es_retorno, c.peso_estimado, prev[0].codigo_orden]);
+                [c.ruta, c.tipo_servicio, c.es_retorno, c.peso_estimado, prev[0].codigo_orden]);
             if (logAudit) logAudit({ req, accion: 'EDITAR_ORDEN_SERVICIO', modulo: 'OPERACIONES', detalle: `Editada orden de servicio ${prev[0].codigo_orden}` });
             res.json({ ok: true, message: 'Orden de servicio actualizada.', filas: r.affectedRows });
         } catch (err) {
@@ -1845,7 +1881,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
         await tdb.query(
             `INSERT INTO operaciones_ordenes_viaje_rutas (viaje, orden, ruta, tipo_servicio, es_retorno, peso_total) VALUES (?, ?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE ruta = VALUES(ruta), tipo_servicio = VALUES(tipo_servicio), es_retorno = VALUES(es_retorno), peso_total = VALUES(peso_total)`,
-            [viaje, os.codigo_orden, [os.origen, os.destino].filter(Boolean).join(' - '), os.tipo_servicio || 'CARGA GENERAL', os.es_retorno ? 1 : 0, os.peso_estimado || 0]);
+            [viaje, os.codigo_orden, os.ruta || [os.origen, os.destino].filter(Boolean).join(' - '), os.tipo_servicio || 'CARGA GENERAL', os.es_retorno ? 1 : 0, os.peso_estimado || 0]);
         await tdb.query(`UPDATE operaciones_ordenes_servicio SET estado_servicio = 'PROGRAMADO' WHERE id = ? AND estado_servicio = 'PENDIENTE'`, [os.id]);
     }
 
@@ -1892,12 +1928,12 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                 const codigo = `${year}-${String(next).padStart(8, '0')}`;
                 const fechaViaje = `${osFecha(o.fecha instanceof Date ? o.fecha.toISOString() : o.fecha) || new Date().toISOString().slice(0, 10)} 00:00:00`;
                 await con.query(
-                    `INSERT INTO operaciones_ordenes_viaje (viaje, fecha_viaje, conductor, placa_tracto, ruta, origen, destino, ubigeo_partida, direccion_partida, ubigeo_llegada, direccion_llegada, peso, estado, usuario_creacion)
-                     VALUES (?, ?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', ?)`,
-                    [codigo, fechaViaje, [o.origen, o.destino].filter(Boolean).join(' - '), o.origen, o.destino, o.ubigeo_origen, o.direccion_origen, o.ubigeo_destino, o.direccion_destino, o.peso_estimado || 0, osUsuario(req)]);
+                    `INSERT INTO operaciones_ordenes_viaje (viaje, fecha_viaje, conductor, placa_tracto, ruta, origen, destino, ubigeo_partida, direccion_partida, ubigeo_llegada, direccion_llegada, peso, ejecucion, estado, usuario_creacion)
+                     VALUES (?, ?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', ?)`,
+                    [codigo, fechaViaje, o.ruta || [o.origen, o.destino].filter(Boolean).join(' - '), o.origen, o.destino, o.ubigeo_origen, o.direccion_origen, o.ubigeo_destino, o.direccion_destino, o.peso_estimado || 0, o.ejecucion === 'TERCERO' ? 'TERCERO' : 'PROPIO', osUsuario(req)]);
                 await con.query(
                     `INSERT INTO operaciones_ordenes_viaje_rutas (viaje, orden, ruta, tipo_servicio, es_retorno, peso_total) VALUES (?, ?, ?, ?, ?, ?)`,
-                    [codigo, o.codigo_orden, [o.origen, o.destino].filter(Boolean).join(' - '), o.tipo_servicio || 'CARGA GENERAL', o.es_retorno ? 1 : 0, o.peso_estimado || 0]);
+                    [codigo, o.codigo_orden, o.ruta || [o.origen, o.destino].filter(Boolean).join(' - '), o.tipo_servicio || 'CARGA GENERAL', o.es_retorno ? 1 : 0, o.peso_estimado || 0]);
                 const [u] = await con.query(`UPDATE operaciones_ordenes_servicio SET estado_servicio = 'PROGRAMADO' WHERE id = ? AND estado_servicio = 'PENDIENTE'`, [o.id]);
                 await con.commit();
                 if (logAudit) logAudit({ req, accion: 'GENERAR_VIAJE_DESDE_SERVICIO', modulo: 'OPERACIONES', detalle: `Viaje ${codigo} generado desde el servicio ${o.codigo_orden}` });

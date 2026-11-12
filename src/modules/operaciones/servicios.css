@@ -37,3 +37,30 @@ button.os-viaje:active { transform: scale(0.985); transition-duration: 0.08s; }
 .os-paso { transition: background-color 0.4s ease; }
 @media (prefers-reduced-motion: reduce) { .os-chip, .os-viaje, .os-paso { transition: background-color 0.2s ease, color 0.2s ease; } .os-chip:active, button.os-viaje:active { transform: none; } }
 .os-punto { display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
+
+/* Formulario por pasos */
+.os-asist { display: flex; flex-direction: column; gap: var(--s-4); max-width: 44rem; margin: 0 auto; width: 100%; }
+.os-asist__cab { display: flex; flex-direction: column; gap: 4px; }
+.os-asist__titulo { margin: 0; font-size: 1.5rem; line-height: 1.1; letter-spacing: -0.02em; }
+.os-asist__sub { margin: 0; font-size: 0.875rem; color: var(--label-2); }
+.os-prog { display: flex; gap: 4px; margin-top: var(--s-2); }
+.os-prog__paso { flex: 1; height: 5px; padding: 0; border: 0; border-radius: 999px; background: var(--fill); overflow: hidden; cursor: pointer; }
+.os-prog__lleno { display: block; width: 100%; height: 100%; background: var(--accent); transform-origin: left; }
+.os-asist__paso { display: flex; flex-direction: column; gap: var(--s-4); min-height: 16rem; }
+.os-subtitulo { display: flex; flex-direction: column; gap: 4px; margin-top: var(--s-2); }
+.os-subtitulo__titulo { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; font-weight: 700; color: var(--label-2); }
+
+/* Resumen final */
+.os-res { display: flex; flex-direction: column; gap: var(--s-3); }
+.os-res__hero { display: flex; flex-direction: column; gap: 2px; padding: var(--s-4); border-radius: var(--r-lg, 16px); background: var(--accent-tint); }
+.os-res__ruta { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; color: var(--accent); }
+.os-res__cliente { font-size: 0.9375rem; font-weight: 600; }
+.os-res__monto { font-size: 0.875rem; color: var(--label-2); font-variant-numeric: tabular-nums; }
+.os-res__grupo { background: var(--fill-subtle); border-radius: var(--r-lg, 16px); padding: var(--s-3) var(--s-4); display: flex; flex-direction: column; gap: 6px; }
+.os-res__cab { display: flex; align-items: center; justify-content: space-between; }
+.os-res__cab h4 { margin: 0; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--label-3); }
+.os-res__cambiar { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; color: var(--accent); font-size: 0.8125rem; font-weight: 600; cursor: pointer; padding: 4px 6px; border-radius: 8px; }
+.os-res__cambiar:hover { background: var(--accent-tint); }
+.os-res__fila { display: flex; justify-content: space-between; gap: var(--s-3); font-size: 0.875rem; }
+.os-res__label { color: var(--label-2); flex-shrink: 0; }
+.os-res__valor { text-align: right; font-weight: 500; min-width: 0; overflow-wrap: anywhere; }

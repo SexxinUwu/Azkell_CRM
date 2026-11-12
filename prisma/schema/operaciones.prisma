@@ -56,6 +56,9 @@ model OrdenServicio {
   moneda             String?   @default("SOLES") @db.VarChar(20)
   tipo_cambio        Decimal?  @default(3.750) @db.Decimal(8, 3)
   tipo_contratacion  String?   @default("CLIENTE DIRECTO") @db.VarChar(50)
+  intermediario      String?   @db.VarChar(255)
+  ejecucion          String    @default("PROPIO") @db.VarChar(10)
+  ruta               String?   @db.VarChar(150)
   cliente_id         Int?
   cliente_nombre     String    @db.VarChar(255)
   tipo_servicio      String?   @default("CARGA GENERAL") @db.VarChar(100)
