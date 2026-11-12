@@ -9,7 +9,7 @@ import { OrdenServicioSheet, type OrdenParaEditar } from './OrdenServicioSheet';
 import { GenerarViajeSheet } from './GenerarViajeSheet';
 import { SeguimientoServicio } from './SeguimientoServicio';
 import { Dato, Pestanas, PuntosStrip, TituloFicha } from './FichaCards';
-import { HeroServicio, KpisServicio, PartesServicio, tarifaDe } from './ServicioResumen';
+import { DesgloseTarifa, HeroServicio, KpisServicio, PartesServicio } from './ServicioResumen';
 import { AccionesCabecera } from '../../core/ui/AccionesCabecera';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -326,13 +326,12 @@ export function OrdenesServicioPage() {
             <div className="vj-panel" key={tabOS} role="tabpanel">
               {tabOS === 'resumen' && (
                 <>
-                  <div className="vr">
-                    <PartesServicio o={o} />
-                    <SeguimientoServicio o={o} estado={estadoDe(o)} parte="pie" />
-                  </div>
+                  <SeguimientoServicio o={o} estado={estadoDe(o)} parte="conductor" />
+                  <PartesServicio o={o} />
                   <PuntosStrip
                     carga={{ titulo: o.origen, detalle: o.direccion_origen, extra: o.ubigeo_origen ? `Ubigeo ${o.ubigeo_origen}` : null }}
                     descarga={{ titulo: o.destino, detalle: o.direccion_destino, extra: o.ubigeo_destino ? `Ubigeo ${o.ubigeo_destino}` : null }} />
+                  <SeguimientoServicio o={o} estado={estadoDe(o)} parte="historial" />
                 </>
               )}
               {tabOS === 'viaje' && (
@@ -362,23 +361,9 @@ export function OrdenesServicioPage() {
                 </>
               )}
               {tabOS === 'viaje' && estadoDe(o) === 'PROGRAMADO' && o.viaje && <p className="os-nota">El servicio pasa a «En ejecución» cuando el viaje se inicia desde Órdenes de viaje.</p>}
-              {tabOS === 'tarifa' && (() => {
-                if (!n(o.costo_flete)) return <EmptyState icon={<Receipt size={22} />} title="Sin tarifa">Esta orden todavía no tiene flete acordado.</EmptyState>;
-                const t = tarifaDe(n(o.costo_flete));
-                const m = (x: number) => `${simbolo(o.moneda)} ${x.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                return (
-                  <>
-                    <div className="vj-tiles">
-                      <Dato label="Flete acordado" valor={dinero(o)} nota={o.impuesto} />
-                      <Dato label="Total con IGV" valor={m(t.total)} nota="Con IGV" />
-                      <Dato label="Detracción 4 %" valor={t.detr ? m(t.detr) : 'No aplica'} nota="Se aplica desde S/ 700" />
-                      <Dato label="Neto a cobrar" valor={m(t.neto)} />
-                      <Dato label="Base imponible" valor={m(t.bi)} />
-                      <Dato label="IGV 18 %" valor={m(t.igv)} />
-                    </div>
-                  </>
-                );
-              })()}
+              {tabOS === 'tarifa' && (n(o.costo_flete)
+                ? <DesgloseTarifa o={o} />
+                : <EmptyState icon={<Receipt size={22} />} title="Sin tarifa">Esta orden todavía no tiene flete acordado.</EmptyState>)}
               {tabOS === 'carga' && (
                 <>
                   <div className="vj-tiles">

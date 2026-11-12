@@ -22,14 +22,22 @@ export const plazoDias = (a?: string | null, b?: string | null) => {
   return d;
 };
 
-// Referencia de tarifa: detracción del 4 % desde S/ 700 (la misma regla que usará la cuenta por cobrar cuando se implemente)
-export function tarifaDe(neto: number) {
-  let total = neto > 700 ? Math.round(neto / 0.96) : neto;
-  let detr = total > 700 ? Math.round(total * 0.04) : 0;
-  while (total - detr < neto) { total++; detr = total > 700 ? Math.round(total * 0.04) : 0; }
-  while (total - detr > neto) { total--; detr = total > 700 ? Math.round(total * 0.04) : 0; }
-  const bi = total / 1.18;
-  return { total, detr, neto: total - detr, bi, igv: total - bi };
+/** Cómo se aplicó el IGV al flete: incluido, aparte o sin IGV. */
+export type ModoIgv = 'incluye' | 'mas' | 'no';
+export const modoIgv = (impuesto: string | null): ModoIgv => (/M[ÁA]S/i.test(String(impuesto ?? '')) ? 'mas' : /NO\s*APLICA/i.test(String(impuesto ?? '')) ? 'no' : 'incluye');
+export const etiquetaIgv = (impuesto: string | null) => ({ incluye: 'Incluye IGV', mas: 'Más IGV', no: 'Sin IGV' }[modoIgv(impuesto)]);
+
+/**
+ * Desglose del flete según lo que se acordó: el monto que se escribe es el flete. Con «incluye IGV» ese monto ya es el total;
+ * con «más IGV» el IGV se suma. La detracción del 4 % (redondeada al sol) se aplica al total desde S/ 700.
+ */
+export function tarifaDe(flete: number, impuesto: string | null) {
+  const modo = modoIgv(impuesto);
+  const base = modo === 'incluye' ? flete / 1.18 : flete;
+  const igv = modo === 'no' ? 0 : modo === 'incluye' ? flete - base : flete * 0.18;
+  const total = modo === 'mas' ? flete + igv : flete;
+  const detr = total > 700 ? Math.round(total * 0.04) : 0;
+  return { modo, base, igv, total, detr, neto: total - detr };
 }
 
 const PILL: Record<string, string> = { PENDIENTE: 'Pendiente', PROGRAMADO: 'Programado', EN_EJECUCION: 'En ejecución', ENTREGADO: 'Entregado', ANULADO: 'Anulado' };
@@ -63,13 +71,13 @@ export function HeroServicio({ o, estado, datos }: { o: OrdenBase; estado: strin
 /** Indicadores comerciales: lo que se factura y se cobra, la distancia y el peso. */
 export function KpisServicio({ o }: { o: OrdenBase }) {
   const flete = num(o.costo_flete);
-  const t = tarifaDe(flete);
+  const t = tarifaDe(flete, o.impuesto);
   const m = simbolo(o.moneda);
   const dolares = /DOL/i.test(String(o.moneda ?? ''));
   const dist = num(o.distancia_km);
   return (
     <div className="vk">
-      <div className="vk__t"><span className="vk__l">Flete</span><strong>{flete > 0 ? `${m} ${fmt(flete, 2)}` : '—'}</strong><em>{flete > 0 ? o.impuesto : 'Sin tarifa acordada'}</em></div>
+      <div className="vk__t"><span className="vk__l">Flete</span><strong>{flete > 0 ? `${m} ${fmt(flete, 2)}` : '—'}</strong><em>{flete > 0 ? etiquetaIgv(o.impuesto) : 'Sin tarifa acordada'}</em></div>
       <div className="vk__t"><span className="vk__l">Neto a cobrar</span><strong>{flete > 0 ? `${m} ${fmt(t.neto, 2)}` : '—'}</strong><em>{flete > 0 ? (t.detr ? `Detracción ${m} ${fmt(t.detr, 2)}` : 'Sin detracción') : 'Tras la detracción'}</em></div>
       <div className="vk__t"><span className="vk__l">Distancia</span><strong>{dist > 0 ? <>{fmt(dist)} <small>km</small></> : '—'}</strong><em>{tipoServicio(o.tipo_servicio)}</em></div>
       <div className="vk__t"><span className="vk__l">Peso</span><strong>{num(o.peso_estimado) > 0 ? <>{fmt(o.peso_estimado)} <small>kg</small></> : '—'}</strong><em>Lo completan las guías</em></div>
@@ -89,11 +97,37 @@ export function PartesServicio({ o }: { o: OrdenBase }) {
     ['Entrega estimada', o.fecha_entrega_fmt ? fechaCorta(o.fecha_entrega_fmt) : null],
   ];
   return (
-    <section className="vu__ficha">
+    <section className="vu__ficha vu__ficha--cols">
       <h4 className="vj-titulo">Partes del servicio</h4>
       <dl>
         {filas.filter(f => f[1]).map(([k, val]) => <div key={k} className="vu__fila"><dt>{k}</dt><dd>{val}</dd></div>)}
       </dl>
+    </section>
+  );
+}
+
+/** Desglose de la tarifa como un recibo: flete acordado arriba y, debajo, base, IGV, total, detracción y neto. */
+export function DesgloseTarifa({ o }: { o: OrdenBase }) {
+  const flete = num(o.costo_flete);
+  const t = tarifaDe(flete, o.impuesto);
+  const m = simbolo(o.moneda);
+  const money = (x: number) => `${m} ${fmt(x, 2)}`;
+  const dolares = /DOL/i.test(String(o.moneda ?? ''));
+  return (
+    <section className="td">
+      <div className="td__top">
+        <span className="td__label">Flete acordado</span>
+        <strong className="td__monto">{money(flete)}</strong>
+        <span className="td__tag">{etiquetaIgv(o.impuesto)}</span>
+      </div>
+      <dl className="td__filas">
+        {t.modo !== 'no' && <div className="td__fila"><dt>Base imponible</dt><dd>{money(t.base)}</dd></div>}
+        {t.modo !== 'no' && <div className="td__fila"><dt>IGV 18 %</dt><dd>{money(t.igv)}</dd></div>}
+        <div className="td__fila td__fila--fuerte"><dt>Total a facturar</dt><dd>{money(t.total)}</dd></div>
+        <div className="td__fila"><dt>Detracción 4 %{t.detr ? '' : ' · no aplica'}</dt><dd>{t.detr ? `− ${money(t.detr)}` : '—'}</dd></div>
+        <div className="td__fila td__fila--fuerte"><dt>Neto a cobrar</dt><dd>{money(t.neto)}</dd></div>
+      </dl>
+      {dolares && <p className="os-nota">Tipo de cambio {num(o.tipo_cambio).toFixed(3)}: equivale a S/ {fmt(t.total * num(o.tipo_cambio), 2)} de total.</p>}
     </section>
   );
 }

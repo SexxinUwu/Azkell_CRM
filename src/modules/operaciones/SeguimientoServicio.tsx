@@ -1,6 +1,6 @@
 import './seguimiento.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Phone } from 'lucide-react';
+import { Check, MessageCircle, Phone } from 'lucide-react';
 import { BrandMark } from '../../core/layout/BrandMark';
 
 export interface ViajeSeguimiento {
@@ -44,7 +44,7 @@ export function avanceReal(gpsKm: number, dist: number, salida: Date | null, aho
  * Seguimiento del servicio: estado, camión que avanza por la ruta, conductor e historial.
  * Todo sale de datos reales (fechas del viaje, kilómetros del GPS); la llegada se estima con una velocidad promedio.
  */
-export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'todo' }: { o: DatosSeguimiento; estado: string; tipo?: 'servicio' | 'viaje'; parte?: 'todo' | 'avance' | 'pie' | 'pista' }) {
+export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'todo' }: { o: DatosSeguimiento; estado: string; tipo?: 'servicio' | 'viaje'; parte?: 'todo' | 'avance' | 'pie' | 'pista' | 'conductor' | 'historial' }) {
   const viaje = tipo === 'viaje';
   const etapas = viaje ? ['Registrado', 'Programado', 'En ruta', 'Finalizado'] : ETAPAS;
   const v = o.viajes?.[0];
@@ -110,12 +110,13 @@ export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'tod
   ].filter((e): e is { t: string; titulo: string; detalle: string; tono: string } => !!e);
 
   const tel = (v?.conductor_telefono ?? '').replace(/\D/g, '');
+  const wa = tel.length === 9 ? `https://wa.me/51${tel}` : tel.length === 11 && tel.startsWith('51') ? `https://wa.me/${tel}` : '';
   const nombreConductor = tercero ? (v?.tercero_nombre ?? 'Transportista tercero') : (v?.conductor ?? '');
 
   return (
-    <section className={`seg${anulada ? ' seg--anulada' : ''}${parte === 'pie' || parte === 'pista' ? ' seg--plano' : ''}`} aria-label="Seguimiento del servicio">
-      {parte !== 'pie' && (<>
-      {parte !== 'pista' && (
+    <section className={`seg${anulada ? ' seg--anulada' : ''}${parte !== 'todo' && parte !== 'avance' ? ' seg--plano' : ''}`} aria-label="Seguimiento del servicio">
+      {(parte === 'todo' || parte === 'avance' || parte === 'pista') && (<>
+      {(parte === 'todo' || parte === 'avance') && (
       <header className="seg__cab">
         <div className="seg__id">
           <span className="seg__orden"><BrandMark size={22} /> {o.codigo_orden}{o.es_retorno ? ' · retorno' : ''}</span>
@@ -171,9 +172,9 @@ export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'tod
       </div>
       </>)}
 
-      {(parte === 'todo' || parte === 'pie') && (
+      {(parte === 'todo' || parte === 'pie' || parte === 'conductor' || parte === 'historial') && (
       <div className={`seg__pie${v && nombreConductor ? '' : ' seg__pie--solo'}`}>
-      {v && nombreConductor && (
+      {v && nombreConductor && parte !== 'historial' && (
         <div className="seg__conductor">
           <span className="seg__avatar">{iniciales(nombreConductor)}</span>
           <div className="seg__quien">
@@ -181,9 +182,11 @@ export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'tod
             <span>{tercero ? 'Transportista tercero' : 'Flota propia'}{v.placa_tracto && <> · <span className="seg__placa">{v.placa_tracto}</span></>}{v.placa_remolque && <> · <span className="seg__placa">{v.placa_remolque}</span></>}</span>
           </div>
           {tel.length >= 7 && <a className="seg__llamar" href={`tel:${tel}`} aria-label="Llamar al conductor"><Phone size={16} /></a>}
+          {wa && <a className="seg__wa" href={wa} target="_blank" rel="noreferrer" aria-label="WhatsApp"><MessageCircle size={16} /></a>}
         </div>
       )}
 
+      {parte !== 'conductor' && (
       <div className="seg__historial">
         <h4>Historial <span>{eventos.length} {eventos.length === 1 ? 'evento' : 'eventos'}</span></h4>
         <ul>
@@ -196,6 +199,7 @@ export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'tod
           ))}
         </ul>
       </div>
+      )}
       </div>
       )}
     </section>
