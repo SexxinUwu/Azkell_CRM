@@ -471,6 +471,7 @@ button.row:active { background: var(--fill); }
     translate: -50% -50%;
   }
   .sheet.sheet--ancho { width: min(56rem, calc(100vw - 2rem)); }
+  .sheet.sheet--extra { width: min(74rem, calc(100vw - 2rem)); max-height: min(54rem, calc(100dvh - 3rem)); }
 }
 
 /* Móvil: hoja inferior flotante que se arrastra para cerrar */

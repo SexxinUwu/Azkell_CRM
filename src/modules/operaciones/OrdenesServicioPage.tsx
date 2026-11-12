@@ -4,10 +4,11 @@ import './servicios.css';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, CircleAlert, FileSpreadsheet, Link2, Link2Off, PackageCheck, Pencil, Play, Plus, Route, ScrollText, SearchX, Wand2, XCircle } from 'lucide-react';
+import { Activity, ArrowRight, Building2, CalendarDays, CircleAlert, FileSpreadsheet, Link2, Link2Off, Package, PackageCheck, Pencil, Play, Plus, Receipt, Route, ScrollText, SearchX, Truck, UserRound, Wand2, XCircle } from 'lucide-react';
 import { OrdenServicioSheet, type OrdenParaEditar } from './OrdenServicioSheet';
 import { GenerarViajeSheet } from './GenerarViajeSheet';
 import { SeguimientoServicio } from './SeguimientoServicio';
+import { Dato, FichaCard, FichaGrid, Pestanas, PuntosStrip, TituloFicha } from './FichaCards';
 import { AccionesCabecera } from '../../core/ui/AccionesCabecera';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -51,6 +52,23 @@ const plazoDias = (a?: string | null, b?: string | null) => {
   const d = Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86_400_000);
   return d <= 0 ? 'Entrega el mismo día' : `${d} ${d === 1 ? 'día' : 'días'} de plazo`;
 };
+type TabOS = 'seguimiento' | 'viaje' | 'tarifa' | 'carga';
+const tabsOS = (o: Orden): { id: TabOS; label: string; icono: ReactNode; n?: number }[] => [
+  { id: 'seguimiento', label: 'Seguimiento', icono: <Activity size={15} /> },
+  { id: 'viaje', label: 'Viaje', icono: <Route size={15} />, n: o.viajes_n || undefined },
+  { id: 'tarifa', label: 'Tarifa', icono: <Receipt size={15} /> },
+  { id: 'carga', label: 'Carga y guías', icono: <Package size={15} /> },
+];
+const etiquetaTipoOS = (t: string | null) => (/LOCAL/i.test(String(t ?? '')) ? 'Local' : /NACIONAL/i.test(String(t ?? '')) ? 'Nacional' : t || '—');
+// Misma regla que usa Tesorería al crear la cuenta por cobrar: detracción del 4 % desde S/ 700
+function tarifaDe(neto: number) {
+  let total = neto > 700 ? Math.round(neto / 0.96) : neto;
+  let detr = total > 700 ? Math.round(total * 0.04) : 0;
+  while (total - detr < neto) { total++; detr = total > 700 ? Math.round(total * 0.04) : 0; }
+  while (total - detr > neto) { total--; detr = total > 700 ? Math.round(total * 0.04) : 0; }
+  const bi = total / 1.18;
+  return { total, detr, neto: total - detr, bi, igv: total - bi };
+}
 const cerrado = (e: string) => e === 'ENTREGADO' || e === 'ANULADO';
 
 function Pastilla({ estado }: { estado: string }) {
@@ -177,6 +195,8 @@ export function OrdenesServicioPage() {
   const [q, setQ] = useState('');
   const [estado, setEstado] = useState('');
   const [abiertoId, setAbiertoId] = useState<number | null>(null);
+  const [tabOS, setTabOS] = useState<TabOS>('seguimiento');
+  useEffect(() => { setTabOS('seguimiento'); }, [abiertoId]);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<{ orden: OrdenParaEditar | null } | null>(null);
   const [iniciar, setIniciar] = useState<Orden | null>(null);
@@ -356,7 +376,7 @@ export function OrdenesServicioPage() {
         )}
       </div>
 
-      <Sheet ancho open={!!abierta} onClose={() => setAbiertoId(null)} title={abierta ? `Orden ${abierta.codigo_orden}` : ''}
+      <Sheet extra open={!!abierta} onClose={() => setAbiertoId(null)} title={abierta ? <TituloFicha codigo={abierta.codigo_orden} estado={<Pastilla estado={est} />} sub={[abierta.cliente_nombre, [abierta.origen, abierta.destino].filter(Boolean).join(' → ')].filter(Boolean).join(' · ')} /> : ''}
         footer={
           puedeEditar && abierta && !cerrado(est) ? (
             <>
@@ -368,8 +388,27 @@ export function OrdenesServicioPage() {
           ) : <Button variant="secondary" onClick={() => setAbiertoId(null)}>Cerrar</Button>
         }>
         {o && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
-            <SeguimientoServicio o={o} estado={estadoDe(o)} />
+          <div className="fd">
+            <FichaGrid>
+              <FichaCard icono={<Route size={17} />} label="Ruta" valor={[o.origen, o.destino].filter(Boolean).join(' → ') || 'Sin ruta'}
+                sub={[n(o.distancia_km) ? `${n(o.distancia_km).toLocaleString('es-PE')} km` : null, /LOCAL/i.test(String(o.tipo_servicio ?? '')) ? 'Local' : 'Nacional', o.es_retorno ? 'Retorno con carga' : 'Ida'].filter(Boolean).join(' · ')} />
+              <FichaCard icono={<Building2 size={17} />} label="Cliente" valor={o.cliente_nombre || 'Sin cliente'} sub={o.remitente_generador && o.remitente_generador !== o.cliente_nombre ? `Remitente: ${o.remitente_generador}` : null} />
+              <FichaCard icono={<UserRound size={17} />} label="Destinatario" valor={o.destinatario || '—'} />
+              <FichaCard icono={<Receipt size={17} />} label="Flete" valor={dinero(o)} sub={o.impuesto} />
+              <FichaCard icono={<Package size={17} />} label="Peso" valor={n(o.peso_estimado) ? `${n(o.peso_estimado).toLocaleString('es-PE')} kg` : 'Sin peso'} sub="Lo completan las guías" />
+              <FichaCard icono={<CalendarDays size={17} />} label="Fechas" valor={`${fechaCorta(o.fecha_fmt)} → ${fechaCorta(o.fecha_entrega_fmt)}`} sub={plazoDias(o.fecha_fmt, o.fecha_entrega_fmt)} />
+              <FichaCard icono={<Truck size={17} />} label="Unidad" valor={o.placa_tracto || o.tercero_nombre || 'Sin asignar'}
+                sub={o.viaje ? [o.conductor, o.ejecucion === 'TERCERO' ? 'Tercero' : 'Flota propia'].filter(Boolean).join(' · ') : 'Aún sin viaje'} />
+            </FichaGrid>
+            <PuntosStrip
+              carga={{ titulo: o.origen, detalle: o.direccion_origen, extra: o.ubigeo_origen ? `Ubigeo ${o.ubigeo_origen}` : null }}
+              descarga={{ titulo: o.destino, detalle: o.direccion_destino, extra: o.ubigeo_destino ? `Ubigeo ${o.ubigeo_destino}` : null }} />
+            <SeguimientoServicio o={o} estado={estadoDe(o)} parte="avance" />
+            <Pestanas tabs={tabsOS(o)} valor={tabOS} onChange={setTabOS} />
+            <div className="vj-panel" key={tabOS} role="tabpanel">
+              {tabOS === 'seguimiento' && <SeguimientoServicio o={o} estado={estadoDe(o)} parte="pie" />}
+              {tabOS === 'viaje' && (
+                <>
             <div className="os-viaje">
               <span className="os-viaje__datos">
                 <span className="os-viaje__codigo">{o.viaje ? `Viaje ${o.viaje}` : 'Sin viaje todavía'}</span>
@@ -392,48 +431,38 @@ export function OrdenesServicioPage() {
                 )}
               </span>
             </div>
-            <div className="os-datos">
-              <section className="os-kpi">
-                <span className="os-kpi__label">Flete</span>
-                <strong className="os-kpi__valor">{dinero(o)}</strong>
-                <span className="os-kpi__nota">{o.impuesto ?? ''}</span>
-              </section>
-              <section className="os-kpi">
-                <span className="os-kpi__label">Peso</span>
-                <strong className="os-kpi__valor">{n(o.peso_estimado) ? <>{n(o.peso_estimado).toLocaleString('es-PE')}<small>kg</small></> : '—'}</strong>
-                <span className="os-kpi__nota">Lo completan las guías de remisión</span>
-              </section>
-              <section className="os-kpi">
-                <span className="os-kpi__label">Fechas</span>
-                <strong className="os-kpi__valor os-kpi__valor--fechas">{fechaCorta(o.fecha_fmt)}<ArrowRight size={16} aria-hidden />{fechaCorta(o.fecha_entrega_fmt)}</strong>
-                <span className="os-kpi__nota">{plazoDias(o.fecha_fmt, o.fecha_entrega_fmt)}</span>
-              </section>
+                </>
+              )}
+              {tabOS === 'tarifa' && (() => {
+                const t = tarifaDe(n(o.costo_flete));
+                const m = (x: number) => `${simbolo(o.moneda)} ${x.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                return (
+                  <>
+                    <div className="vj-tiles">
+                      <Dato label="Flete acordado" valor={dinero(o)} nota={o.impuesto} />
+                      <Dato label="Total con IGV" valor={m(t.total)} nota="Base de la cuenta por cobrar" />
+                      <Dato label="Detracción 4 %" valor={t.detr ? m(t.detr) : 'No aplica'} nota="Se aplica desde S/ 700" />
+                      <Dato label="Neto a cobrar" valor={m(t.neto)} />
+                      <Dato label="Base imponible" valor={m(t.bi)} />
+                      <Dato label="IGV 18 %" valor={m(t.igv)} />
+                      {/DOL/i.test(String(o.moneda ?? '')) && <Dato label="Tipo de cambio" valor={n(o.tipo_cambio).toFixed(3)} />}
+                    </div>
+                    <p className="os-nota">La cuenta por cobrar se crea en Tesorería cuando el servicio entra en ejecución.</p>
+                  </>
+                );
+              })()}
+              {tabOS === 'carga' && (
+                <>
+                  <div className="vj-tiles">
+                    <Dato label="Peso estimado" valor={n(o.peso_estimado) ? `${n(o.peso_estimado).toLocaleString('es-PE')} kg` : 'Sin peso'} nota="Lo completan las guías de remisión" />
+                    <Dato label="Tipo de servicio" valor={etiquetaTipoOS(o.tipo_servicio)} nota={o.es_retorno ? 'Retorno con carga' : 'Ida'} />
+                    <Dato label="Descripción de la carga" valor={o.descripcion_carga} ancho />
+                    <Dato label="Observaciones" valor={o.observaciones} ancho />
+                  </div>
+                  <p className="os-nota">Las guías de remisión se vincularán a esta orden más adelante.</p>
+                </>
+              )}
             </div>
-            <section className="os-trayecto" aria-label="Carga y entrega">
-              <div className="os-punto-card os-punto-card--carga">
-                <span className="os-punto-card__tag">Punto de carga</span>
-                <strong>{o.origen || '—'}</strong>
-                <span>{[o.ubigeo_origen && `Ubigeo ${o.ubigeo_origen}`, o.direccion_origen].filter(Boolean).join(' · ') || 'Sin dirección todavía'}</span>
-                <span className="os-punto-card__ref">Remitente · <b>{o.remitente_generador || '—'}</b></span>
-              </div>
-              <div className="os-trayecto__medio" aria-hidden>
-                <ArrowRight size={18} />
-                {n(o.distancia_km) ? <span>{n(o.distancia_km).toLocaleString('es-PE')} km</span> : null}
-              </div>
-              <div className="os-punto-card os-punto-card--entrega">
-                <span className="os-punto-card__tag">Punto de entrega</span>
-                <strong>{o.destino || '—'}</strong>
-                <span>{[o.ubigeo_destino && `Ubigeo ${o.ubigeo_destino}`, o.direccion_destino].filter(Boolean).join(' · ') || 'Sin dirección todavía'}</span>
-                <span className="os-punto-card__ref">Destinatario · <b>{o.destinatario || '—'}</b></span>
-              </div>
-            </section>
-            {(o.descripcion_carga || o.observaciones) && (
-              <section className="os-kpi">
-                <span className="os-kpi__label">Notas</span>
-                {o.descripcion_carga && <span>Carga · {o.descripcion_carga}</span>}
-                {o.observaciones && <span>{o.observaciones}</span>}
-              </section>
-            )}
             {det.isLoading && <PageLoader />}
           </div>
         )}

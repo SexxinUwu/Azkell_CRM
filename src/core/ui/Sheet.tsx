@@ -15,7 +15,7 @@ const openSheets: symbol[] = [];
 interface SheetProps {
   open: boolean;
   onClose: () => void;
-  title: string;
+  title: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
   /** Algo a la derecha del título, junto a la X (por ejemplo, un aviso de la placa) */
@@ -24,6 +24,8 @@ interface SheetProps {
   anclaAbajo?: boolean;
   /** Diálogo ancho en escritorio (formularios con tablas) */
   ancho?: boolean;
+  /** Diálogo muy ancho en escritorio (fichas con varias columnas y pestañas) */
+  extra?: boolean;
   /** Animación corta solo con transform y opacidad (sin desenfoque): para fichas grandes que se abren muy seguido */
   ligera?: boolean;
 }
@@ -35,7 +37,7 @@ interface SheetProps {
  *   el impulso del dedo (skill apple-design §6) para decidir si cierra o vuelve.
  * Entra y sale por el mismo camino (§7). Escape cierra. El foco vuelve al disparador.
  */
-export function Sheet({ open, onClose, title, children, footer, anclaAbajo = false, ancho = false, ligera = false, cabeceraExtra }: SheetProps) {
+export function Sheet({ open, onClose, title, children, footer, anclaAbajo = false, ancho = false, extra = false, ligera = false, cabeceraExtra }: SheetProps) {
   const isMobile = useMediaQuery(MOBILE_QUERY);
   const titleId = useId();
   const dragControls = useDragControls();
@@ -112,7 +114,7 @@ export function Sheet({ open, onClose, title, children, footer, anclaAbajo = fal
           <motion.div
             key="sheet"
             ref={panelRef}
-            className={`sheet${anclaAbajo ? ' sheet--abajo' : ''}${ancho ? ' sheet--ancho' : ''}`}
+            className={`sheet${anclaAbajo ? ' sheet--abajo' : ''}${ancho ? ' sheet--ancho' : ''}${extra ? ' sheet--extra' : ''}`}
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}

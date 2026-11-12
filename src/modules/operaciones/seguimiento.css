@@ -135,3 +135,28 @@
 .seg__pie { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: var(--s-4); align-items: start; }
 .seg__pie--solo { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 720px) { .seg__pie { grid-template-columns: minmax(0, 1fr); } }
+
+/* Fichas de orden y de viaje: título, tarjetas con icono y franja de puntos */
+.fc-titulo { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.fc-titulo__fila { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fc-titulo__cod { font-family: ui-monospace, Menlo, monospace; font-size: 1.125rem; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.fc-titulo__sub { font-size: 0.8125rem; font-weight: 500; color: var(--label-2); letter-spacing: 0; overflow-wrap: anywhere; }
+.fd { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
+.fc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: var(--s-3); }
+.fc-card { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--separator); border-radius: var(--r-md, 12px); min-width: 0; }
+.fc-card__ico { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--fill); color: var(--label-2); }
+.fc-card__txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.fc-card__label { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--label-3); }
+.fc-card__valor { font-size: 0.9375rem; font-weight: 650; overflow-wrap: anywhere; line-height: 1.25; }
+.fc-card__sub { font-size: 0.75rem; color: var(--label-2); overflow-wrap: anywhere; }
+.fc-puntos { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface); border: 1px solid var(--separator); border-radius: var(--r-md, 12px); }
+.fc-punto { padding: 12px 16px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.fc-punto + .fc-punto { border-left: 1px solid var(--separator); }
+.fc-punto__tag { display: inline-flex; align-items: center; gap: 6px; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--label-3); }
+.fc-punto__linea { margin: 0; font-size: 0.875rem; overflow-wrap: anywhere; }
+.fc-punto__linea span { color: var(--label-2); font-size: 0.8125rem; }
+.fc-punto__dir { margin: 0; font-size: 0.8125rem; color: var(--label-2); overflow-wrap: anywhere; }
+@media (max-width: 720px) { .fc-puntos { grid-template-columns: 1fr; } .fc-punto + .fc-punto { border-left: 0; border-top: 1px solid var(--separator); } }
+
+/* Seguimiento: variantes para la ficha */
+.seg--plano { background: transparent; padding: 0; }

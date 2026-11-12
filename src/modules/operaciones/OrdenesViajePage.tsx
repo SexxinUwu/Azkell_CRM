@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeftRight, Bell, CheckCircle2, CircleAlert, ClipboardList, Eye, FileSpreadsheet, FolderOpen, Fuel, LayoutGrid, MapPin, Paperclip, Pencil, Play, RefreshCw, SearchX, Ticket, Trash2, Truck, Wallet,
+  ArrowLeftRight, Bell, Building2, CheckCircle2, CircleAlert, ClipboardList, Eye, FileSpreadsheet, FolderOpen, Fuel, Gauge, LayoutGrid, MapPin, Package, Paperclip, Pencil, Play, RefreshCw, Route, SearchX, Ticket, Trash2, Truck, UserRound, Wallet,
 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -22,6 +22,7 @@ import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../cor
 import type { ReactNode } from 'react';
 import { OrdenServicioSheet } from './OrdenServicioSheet';
 import { SeguimientoServicio } from './SeguimientoServicio';
+import { Dato, FichaCard, FichaGrid, Pestanas, PuntosStrip, TituloFicha } from './FichaCards';
 import './seguimiento.css';
 import { SeccionDocumentosViaje, SeccionGastosViaje, SeccionOrdenesServicioViaje, SeccionSinRegistros } from './ViajeExtras';
 import { SeccionGpsViaje, SeccionValesViaje } from './ViajeCombustibleGps';
@@ -349,17 +350,6 @@ const etapaDelViaje = (v: Viaje) => (v.estado === 'INICIADO' ? 'EN_EJECUCION'
   : v.estado === 'ANULADO' ? 'ANULADO'
   : v.conductor || v.placa_tracto || v.tercero_nombre ? 'PROGRAMADO' : 'PENDIENTE');
 
-function Bloque({ label, valor, nota, mono, ancho }: { label: string; valor?: ReactNode; nota?: string | null; mono?: boolean; ancho?: boolean }) {
-  if (valor === null || valor === undefined || valor === '') return null;
-  return (
-    <div className={`vj-tile${ancho ? ' vj-tile--ancho' : ''}`}>
-      <span className="vj-tile__label">{label}</span>
-      <span className={`vj-tile__valor${mono ? ' vj-tile__valor--mono' : ''}`}>{valor}</span>
-      {nota ? <small className="vj-tile__nota">{nota}</small> : null}
-    </div>
-  );
-}
-
 function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onEliminar, onNuevaOS, puedeEditarViaje }: {
   viaje: Viaje | null; onClose: () => void; onEditar?: () => void; onIniciar?: () => void; onFinalizar?: () => void; onEliminar?: () => void; onNuevaOS?: () => void; puedeEditarViaje: boolean;
 }) {
@@ -370,8 +360,22 @@ function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onE
   const tercero = v?.ejecucion === 'TERCERO';
   const recorrido = v && v.kilometraje_final != null && v.kilometraje_inicial != null ? v.kilometraje_final - v.kilometraje_inicial : n(v?.km_recorrido_gps);
   const moneda = /DOL/i.test(String(v?.tercero_moneda ?? '')) ? 'US$' : 'S/';
+  const km = n(v?.distancia_km);
+  const tabs = TABS_VIAJE.map(t => (t.id === 'ordenes' && v ? { ...t, n: n(v.cant_ordenes) } : t));
+  const datosSeg = v ? {
+    codigo_orden: v.viaje,
+    cliente_nombre: [v.conductor, v.placa_tracto].filter(Boolean).join(' · ') || 'Sin unidad asignada',
+    origen: v.origen, destino: v.destino, distancia_km: v.distancia_km, creado_fmt: v.fecha_viaje,
+    viajes: [{
+      viaje: v.viaje, estado: v.estado, conductor: v.conductor, placa_tracto: v.placa_tracto, placa_remolque: v.placa_remolque,
+      ejecucion: v.ejecucion, tercero_nombre: v.tercero_nombre, vinculado_en: v.fecha_viaje, fecha_inicio: v.fecha_inicio, fecha_fin: v.fecha_fin,
+      km_recorrido_gps: v.km_recorrido_gps, conductor_telefono: v.conductor_telefono,
+    }],
+  } : null;
   return (
-    <Sheet ancho open={!!v} onClose={onClose} title={v ? `Viaje ${v.viaje}` : ''}
+    <Sheet extra open={!!v} onClose={onClose}
+      title={v ? <TituloFicha codigo={`Viaje ${v.viaje}`} estado={<Pastilla tono={css(tono(v.estado)) as string}>{v.estado}</Pastilla>}
+        sub={[`Programado el ${fmtFecha(v.fecha_viaje)}`, v.ordenes_list ? `Órdenes ${v.ordenes_list}` : null].filter(Boolean).join(' · ')} /> : ''}
       footer={
         <>
           {onEliminar && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={onEliminar}>Eliminar</Button>}
@@ -381,51 +385,38 @@ function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onE
           {!onEliminar && !onEditar && !onIniciar && !onFinalizar && <Button variant="secondary" onClick={onClose}>Cerrar</Button>}
         </>
       }>
-      {v && (
-        <div className="vj">
-          <nav className="vj-tabs" role="tablist" aria-label="Secciones del viaje">
-            {TABS_VIAJE.map(t => (
-              <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={`vj-tab${tab === t.id ? ' vj-tab--on' : ''}`}
-                onClick={() => { haptic('selection'); setTab(t.id); }}>
-                {t.icono}{t.label}
-                {t.id === 'ordenes' && n(v.cant_ordenes) > 0 && <span className="vj-tab__n">{n(v.cant_ordenes)}</span>}
-              </button>
-            ))}
-          </nav>
+      {v && datosSeg && (
+        <div className="fd">
+          <FichaGrid>
+            <FichaCard icono={<Route size={17} />} label="Ruta" valor={v.ruta || [v.origen, v.destino].filter(Boolean).join(' - ') || 'Sin ruta'} sub={km ? `${km.toLocaleString('es-PE')} km` : null} />
+            <FichaCard icono={<Truck size={17} />} label="Unidad" valor={v.placa_tracto ? `${v.placa_tracto}${v.placa_remolque ? ` / ${v.placa_remolque}` : ''}` : (v.tercero_nombre || 'Sin asignar')}
+              sub={[v.configuracion_tracto, v.configuracion_remolque].filter(Boolean).join(' + ') || null} />
+            <FichaCard icono={<UserRound size={17} />} label="Conductor" valor={v.conductor || '—'} sub={v.conductor_telefono || null} />
+            <FichaCard icono={<Building2 size={17} />} label="Ejecuta" valor={tercero ? 'Transportista tercero' : 'Flota propia'} sub={tercero ? v.tercero_nombre : null} />
+            <FichaCard icono={<Package size={17} />} label="Peso total" valor={`${(n(v.peso_ida) + n(v.peso_retorno)).toLocaleString('es-PE')} kg`} sub="Lo completan las guías" />
+            <FichaCard icono={<ClipboardList size={17} />} label="Órdenes de servicio" valor={n(v.cant_ordenes)} sub={v.ordenes_list} />
+            <FichaCard icono={<Gauge size={17} />} label="Recorrido" valor={recorrido > 0 ? `${recorrido.toLocaleString('es-PE')} km` : 'Sin kilometraje'}
+              sub={v.kilometraje_final == null && n(v.km_recorrido_gps) > 0 ? 'Según GPS' : null} />
+          </FichaGrid>
+          <PuntosStrip
+            carga={{ titulo: v.origen, detalle: v.direccion_partida, extra: v.ubigeo_partida ? `Ubigeo ${v.ubigeo_partida}` : null }}
+            descarga={{ titulo: v.destino, detalle: v.direccion_llegada, extra: v.ubigeo_llegada ? `Ubigeo ${v.ubigeo_llegada}` : null }} />
+          <SeguimientoServicio tipo="viaje" parte="avance" estado={etapaDelViaje(v)} o={datosSeg} />
+          <Pestanas tabs={tabs} valor={tab} onChange={setTab} />
 
           <div className="vj-panel" key={tab} role="tabpanel">
             {tab === 'resumen' && (
               <>
-                <SeguimientoServicio tipo="viaje" estado={etapaDelViaje(v)} o={{
-                  codigo_orden: v.viaje,
-                  cliente_nombre: [v.conductor, v.placa_tracto].filter(Boolean).join(' · ') || 'Sin unidad asignada',
-                  origen: v.origen, destino: v.destino, distancia_km: v.distancia_km, creado_fmt: v.fecha_viaje,
-                  viajes: [{
-                    viaje: v.viaje, estado: v.estado, conductor: v.conductor, placa_tracto: v.placa_tracto, placa_remolque: v.placa_remolque,
-                    ejecucion: v.ejecucion, tercero_nombre: v.tercero_nombre, vinculado_en: v.fecha_viaje, fecha_inicio: v.fecha_inicio, fecha_fin: v.fecha_fin,
-                    km_recorrido_gps: v.km_recorrido_gps, conductor_telefono: v.conductor_telefono,
-                  }],
-                }} />
-                <section>
-                  <h4 className="vj-titulo">Ficha operativa</h4>
-                  <div className="vj-tiles">
-                    <Bloque label="Ejecuta" valor={tercero ? 'Transportista tercero' : 'Flota propia'} nota={tercero ? v.tercero_nombre : null} />
-                    <Bloque label="Peso total" valor={`${(n(v.peso_ida) + n(v.peso_retorno)).toLocaleString('es-PE')} kg`} nota="Lo completan las guías" />
-                    <Bloque label="Tracto" valor={v.placa_tracto} mono nota={v.configuracion_tracto} />
-                    <Bloque label="Remolque" valor={v.placa_remolque} mono nota={v.configuracion_remolque} />
-                    <Bloque label="Órdenes de servicio" valor={n(v.cant_ordenes)} nota={v.ordenes_list} />
-                    <Bloque label="Escolta" valor={v.escolta} />
-                    {tercero && <Bloque label="Costo del tercero" valor={n(v.tercero_costo) ? `${moneda} ${n(v.tercero_costo).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : ''} nota={[v.tercero_ruc, v.tercero_documento].filter(Boolean).join(' · ') || null} />}
-                    <Bloque label="Km inicial" valor={v.kilometraje_inicial?.toLocaleString('es-PE')} mono />
-                    <Bloque label="Km final" valor={v.kilometraje_final?.toLocaleString('es-PE')} mono />
-                    <Bloque label="Recorrido" valor={recorrido > 0 ? `${recorrido.toLocaleString('es-PE')} km` : ''} mono nota={v.kilometraje_final == null && n(v.km_recorrido_gps) > 0 ? 'Según GPS' : null} />
-                    <Bloque label="Horas motor remolque" valor={v.horas_motor_remolque} mono />
-                    <Bloque label="Punto de partida" valor={v.direccion_partida} nota={v.ubigeo_partida ? `Ubigeo ${v.ubigeo_partida}` : null} ancho />
-                    <Bloque label="Punto de llegada" valor={v.direccion_llegada} nota={v.ubigeo_llegada ? `Ubigeo ${v.ubigeo_llegada}` : null} ancho />
-                    <Bloque label="Observaciones" valor={v.observaciones} ancho />
-                    <Bloque label="Registrado por" valor={v.usuario_creacion} />
-                  </div>
-                </section>
+                <SeguimientoServicio tipo="viaje" parte="pie" estado={etapaDelViaje(v)} o={datosSeg} />
+                <div className="vj-tiles">
+                  <Dato label="Km inicial" valor={v.kilometraje_inicial?.toLocaleString('es-PE')} mono />
+                  <Dato label="Km final" valor={v.kilometraje_final?.toLocaleString('es-PE')} mono />
+                  <Dato label="Horas motor remolque" valor={v.horas_motor_remolque} mono />
+                  <Dato label="Escolta" valor={v.escolta} />
+                  {tercero && <Dato label="Costo del tercero" valor={n(v.tercero_costo) ? `${moneda} ${n(v.tercero_costo).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : ''} nota={[v.tercero_ruc, v.tercero_documento].filter(Boolean).join(' · ') || null} />}
+                  <Dato label="Registrado por" valor={v.usuario_creacion} />
+                  <Dato label="Observaciones" valor={v.observaciones} ancho />
+                </div>
               </>
             )}
             {tab === 'combustible' && <SeccionValesViaje codigo={v.viaje} placa={v.placa_tracto} />}

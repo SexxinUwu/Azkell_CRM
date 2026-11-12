@@ -30,7 +30,7 @@ const duracion = (min: number) => { const m = Math.max(1, Math.round(min)); cons
  * Seguimiento del servicio: estado, camión que avanza por la ruta, conductor e historial.
  * Todo sale de datos reales (fechas del viaje, kilómetros del GPS); la llegada se estima con una velocidad promedio.
  */
-export function SeguimientoServicio({ o, estado, tipo = 'servicio' }: { o: DatosSeguimiento; estado: string; tipo?: 'servicio' | 'viaje' }) {
+export function SeguimientoServicio({ o, estado, tipo = 'servicio', parte = 'todo' }: { o: DatosSeguimiento; estado: string; tipo?: 'servicio' | 'viaje'; parte?: 'todo' | 'avance' | 'pie' }) {
   const viaje = tipo === 'viaje';
   const etapas = viaje ? ['Registrado', 'Programado', 'En ruta', 'Finalizado'] : ETAPAS;
   const v = o.viajes?.[0];
@@ -109,7 +109,8 @@ export function SeguimientoServicio({ o, estado, tipo = 'servicio' }: { o: Datos
   const nombreConductor = tercero ? (v?.tercero_nombre ?? 'Transportista tercero') : (v?.conductor ?? '');
 
   return (
-    <section className={`seg${anulada ? ' seg--anulada' : ''}`} aria-label="Seguimiento del servicio">
+    <section className={`seg${anulada ? ' seg--anulada' : ''}${parte === 'pie' ? ' seg--plano' : ''}`} aria-label="Seguimiento del servicio">
+      {parte !== 'pie' && (<>
       <header className="seg__cab">
         <div className="seg__id">
           <span className="seg__orden"><BrandMark size={22} /> {o.codigo_orden}{o.es_retorno ? ' · retorno' : ''}</span>
@@ -119,9 +120,11 @@ export function SeguimientoServicio({ o, estado, tipo = 'servicio' }: { o: Datos
         <span className={`seg__pill${enRuta ? ' seg__pill--vivo' : ''}${anulada ? ' seg__pill--gris' : ''}`}><i />{(viaje ? { ...PILL, PENDIENTE: 'Registrado', ENTREGADO: 'Finalizado' } : PILL)[estado] ?? estado}</span>
       </header>
 
+      {parte === 'todo' && (
       <div className="seg__ruta">
         <strong>{tramo}</strong>{dist > 0 && <span>{dist.toLocaleString('es-PE')} km</span>}
       </div>
+      )}
 
       <div className="seg__escena">
         <div className="seg__pista">
@@ -160,7 +163,9 @@ export function SeguimientoServicio({ o, estado, tipo = 'servicio' }: { o: Datos
           ))}
         </div>
       </div>
+      </>)}
 
+      {parte !== 'avance' && (
       <div className={`seg__pie${v && nombreConductor ? '' : ' seg__pie--solo'}`}>
       {v && nombreConductor && (
         <div className="seg__conductor">
@@ -186,6 +191,7 @@ export function SeguimientoServicio({ o, estado, tipo = 'servicio' }: { o: Datos
         </ul>
       </div>
       </div>
+      )}
     </section>
   );
 }
