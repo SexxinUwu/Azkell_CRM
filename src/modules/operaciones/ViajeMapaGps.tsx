@@ -57,7 +57,7 @@ const hora = (seg: number) => new Date(seg * 1000).toLocaleString('es-PE', { day
 // Las fechas del viaje son hora de Perú (UTC-5, sin horario de verano): se envían con su desfase para que el servidor no dependa de su zona horaria
 const aIso = (s: string) => s.trim().replace(' ', 'T') + '-05:00';
 
-export function MapaRecorridoViaje({ placa, inicio, fin }: { placa: string; inicio: string; fin: string }) {
+export function MapaRecorridoViaje({ placa, inicio, fin, enCurso = false }: { placa: string; inicio: string; fin: string; enCurso?: boolean }) {
   const q = useQuery({
     queryKey: ['operaciones', 'gps-traza', placa, inicio, fin],
     retry: false,
@@ -124,8 +124,9 @@ export function MapaRecorridoViaje({ placa, inicio, fin }: { placa: string; inic
       const marca = (p: Punto, color: string, etiqueta: string) =>
         L.circleMarker([p.lat, p.lng], { radius: 8, color: '#ffffff', weight: 2, fillColor: color, fillOpacity: 1 })
           .addTo(mapa).bindPopup(`<b>${etiqueta}</b><br>${hora(p.t)}<br>${Math.round(p.vel)} km/h`);
-      marca(a, '#10b981', 'Inicio');
-      marca(b, '#dc2626', 'Fin');
+      // Mientras el viaje sigue en ruta, el último punto es dónde está el camión ahora, no una llegada
+      marca(a, '#10b981', 'Salida');
+      marca(b, enCurso ? '#2563eb' : '#dc2626', enCurso ? 'Posición actual' : 'Llegada');
       const grupoParadas = L.layerGroup();
       const grupoExcesos = L.layerGroup();
       (paradasPin ?? []).forEach(p => {

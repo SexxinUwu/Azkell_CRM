@@ -31,7 +31,7 @@ export function SeccionGpsViaje({ placa, inicio, fin }: { placa: string | null; 
       </div>
       {!pedida
         ? <EmptyState icon={<MapPin size={22} />} title="Recorrido del GPS">Muestra la ruta, la distancia, las paradas y los excesos de velocidad del viaje.</EmptyState>
-        : <MapaRecorridoViaje placa={p} inicio={ini} fin={fi} />}
+        : <MapaRecorridoViaje placa={p} inicio={ini} fin={fi} enCurso={!fin} />}
     </div>
   );
 }
