@@ -4,11 +4,12 @@ import './servicios.css';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Activity, ArrowRight, Building2, CalendarDays, CircleAlert, FileSpreadsheet, Link2, Link2Off, Package, PackageCheck, Pencil, Play, Plus, Receipt, Route, ScrollText, SearchX, Truck, UserRound, Wand2, XCircle } from 'lucide-react';
+import { ArrowRight, CircleAlert, FileSpreadsheet, Link2, Link2Off, LayoutGrid, Package, PackageCheck, Pencil, Play, Plus, Receipt, Route, ScrollText, SearchX, Wand2, XCircle } from 'lucide-react';
 import { OrdenServicioSheet, type OrdenParaEditar } from './OrdenServicioSheet';
 import { GenerarViajeSheet } from './GenerarViajeSheet';
 import { SeguimientoServicio } from './SeguimientoServicio';
-import { Dato, FichaCard, FichaGrid, Pestanas, PuntosStrip, TituloFicha } from './FichaCards';
+import { Dato, Pestanas, PuntosStrip, TituloFicha } from './FichaCards';
+import { HeroServicio, KpisServicio, PartesServicio, tarifaDe } from './ServicioResumen';
 import { AccionesCabecera } from '../../core/ui/AccionesCabecera';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -45,29 +46,14 @@ const n = (v: unknown) => Number(v) || 0;
 const estadoDe = (o: Orden) => String(o.estado_servicio ?? 'PENDIENTE').toUpperCase();
 const simbolo = (m: string | null) => (/DOL/i.test(String(m ?? '')) ? 'US$' : 'S/');
 const dinero = (o: Orden) => `${simbolo(o.moneda)} ${n(o.costo_flete).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const fechaCorta = (f?: string | null) => (f ? `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}` : '—');
-const plazoDias = (a?: string | null, b?: string | null) => {
-  if (!a || !b) return 'Sin fecha de entrega';
-  const d = Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86_400_000);
-  return d <= 0 ? 'Entrega el mismo día' : `${d} ${d === 1 ? 'día' : 'días'} de plazo`;
-};
-type TabOS = 'seguimiento' | 'viaje' | 'tarifa' | 'carga';
+type TabOS = 'resumen' | 'viaje' | 'tarifa' | 'carga';
 const tabsOS = (o: Orden): { id: TabOS; label: string; icono: ReactNode; n?: number }[] => [
-  { id: 'seguimiento', label: 'Seguimiento', icono: <Activity size={15} /> },
+  { id: 'resumen', label: 'Resumen', icono: <LayoutGrid size={15} /> },
   { id: 'viaje', label: 'Viaje', icono: <Route size={15} />, n: o.viajes_n || undefined },
   { id: 'tarifa', label: 'Tarifa', icono: <Receipt size={15} /> },
   { id: 'carga', label: 'Carga y guías', icono: <Package size={15} /> },
 ];
 const etiquetaTipoOS = (t: string | null) => (/LOCAL/i.test(String(t ?? '')) ? 'Local' : /NACIONAL/i.test(String(t ?? '')) ? 'Nacional' : t || '—');
-// Misma regla que usa Tesorería al crear la cuenta por cobrar: detracción del 4 % desde S/ 700
-function tarifaDe(neto: number) {
-  let total = neto > 700 ? Math.round(neto / 0.96) : neto;
-  let detr = total > 700 ? Math.round(total * 0.04) : 0;
-  while (total - detr < neto) { total++; detr = total > 700 ? Math.round(total * 0.04) : 0; }
-  while (total - detr > neto) { total--; detr = total > 700 ? Math.round(total * 0.04) : 0; }
-  const bi = total / 1.18;
-  return { total, detr, neto: total - detr, bi, igv: total - bi };
-}
 const cerrado = (e: string) => e === 'ENTREGADO' || e === 'ANULADO';
 
 function Pastilla({ estado }: { estado: string }) {
@@ -184,8 +170,8 @@ export function OrdenesServicioPage() {
   const [q, setQ] = useState('');
   const [estado, setEstado] = useState('');
   const [abiertoId, setAbiertoId] = useState<number | null>(null);
-  const [tabOS, setTabOS] = useState<TabOS>('seguimiento');
-  useEffect(() => { setTabOS('seguimiento'); }, [abiertoId]);
+  const [tabOS, setTabOS] = useState<TabOS>('resumen');
+  useEffect(() => { setTabOS('resumen'); }, [abiertoId]);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<{ orden: OrdenParaEditar | null } | null>(null);
   const [iniciar, setIniciar] = useState<Orden | null>(null);
@@ -378,24 +364,21 @@ export function OrdenesServicioPage() {
         }>
         {o && (
           <div className="fd">
-            <FichaGrid>
-              <FichaCard icono={<Route size={17} />} label="Ruta" valor={[o.origen, o.destino].filter(Boolean).join(' → ') || 'Sin ruta'}
-                sub={[n(o.distancia_km) ? `${n(o.distancia_km).toLocaleString('es-PE')} km` : null, /LOCAL/i.test(String(o.tipo_servicio ?? '')) ? 'Local' : 'Nacional', o.es_retorno ? 'Retorno con carga' : 'Ida'].filter(Boolean).join(' · ')} />
-              <FichaCard icono={<Building2 size={17} />} label="Cliente" valor={o.cliente_nombre || 'Sin cliente'} sub={o.remitente_generador && o.remitente_generador !== o.cliente_nombre ? `Remitente: ${o.remitente_generador}` : null} />
-              <FichaCard icono={<UserRound size={17} />} label="Destinatario" valor={o.destinatario || '—'} />
-              <FichaCard icono={<Receipt size={17} />} label="Flete" valor={dinero(o)} sub={o.impuesto} />
-              <FichaCard icono={<Package size={17} />} label="Peso" valor={n(o.peso_estimado) ? `${n(o.peso_estimado).toLocaleString('es-PE')} kg` : 'Sin peso'} sub="Lo completan las guías" />
-              <FichaCard icono={<CalendarDays size={17} />} label="Fechas" valor={`${fechaCorta(o.fecha_fmt)} → ${fechaCorta(o.fecha_entrega_fmt)}`} sub={plazoDias(o.fecha_fmt, o.fecha_entrega_fmt)} />
-              <FichaCard icono={<Truck size={17} />} label="Unidad" valor={o.placa_tracto || o.tercero_nombre || 'Sin asignar'}
-                sub={o.viaje ? [o.conductor, o.ejecucion === 'TERCERO' ? 'Tercero' : 'Flota propia'].filter(Boolean).join(' · ') : 'Aún sin viaje'} />
-            </FichaGrid>
-            <PuntosStrip
-              carga={{ titulo: o.origen, detalle: o.direccion_origen, extra: o.ubigeo_origen ? `Ubigeo ${o.ubigeo_origen}` : null }}
-              descarga={{ titulo: o.destino, detalle: o.direccion_destino, extra: o.ubigeo_destino ? `Ubigeo ${o.ubigeo_destino}` : null }} />
-            <SeguimientoServicio o={o} estado={estadoDe(o)} parte="avance" />
+            <HeroServicio o={o} estado={estadoDe(o)} datos={<SeguimientoServicio o={o} estado={estadoDe(o)} parte="pista" />} />
+            <KpisServicio o={o} />
             <Pestanas tabs={tabsOS(o)} valor={tabOS} onChange={setTabOS} />
             <div className="vj-panel" key={tabOS} role="tabpanel">
-              {tabOS === 'seguimiento' && <SeguimientoServicio o={o} estado={estadoDe(o)} parte="pie" />}
+              {tabOS === 'resumen' && (
+                <>
+                  <div className="vr">
+                    <PartesServicio o={o} />
+                    <SeguimientoServicio o={o} estado={estadoDe(o)} parte="pie" />
+                  </div>
+                  <PuntosStrip
+                    carga={{ titulo: o.origen, detalle: o.direccion_origen, extra: o.ubigeo_origen ? `Ubigeo ${o.ubigeo_origen}` : null }}
+                    descarga={{ titulo: o.destino, detalle: o.direccion_destino, extra: o.ubigeo_destino ? `Ubigeo ${o.ubigeo_destino}` : null }} />
+                </>
+              )}
               {tabOS === 'viaje' && (
                 <>
             <div className="os-viaje">
@@ -423,7 +406,7 @@ export function OrdenesServicioPage() {
                 </>
               )}
               {tabOS === 'tarifa' && (() => {
-                if (!n(o.costo_flete)) return <p className="os-nota">Esta orden todavía no tiene flete acordado.</p>;
+                if (!n(o.costo_flete)) return <EmptyState icon={<Receipt size={22} />} title="Sin tarifa">Esta orden todavía no tiene flete acordado.</EmptyState>;
                 const t = tarifaDe(n(o.costo_flete));
                 const m = (x: number) => `${simbolo(o.moneda)} ${x.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 return (
@@ -435,7 +418,6 @@ export function OrdenesServicioPage() {
                       <Dato label="Neto a cobrar" valor={m(t.neto)} />
                       <Dato label="Base imponible" valor={m(t.bi)} />
                       <Dato label="IGV 18 %" valor={m(t.igv)} />
-                      {/DOL/i.test(String(o.moneda ?? '')) && <Dato label="Tipo de cambio" valor={n(o.tipo_cambio).toFixed(3)} />}
                     </div>
                     <p className="os-nota">La cuenta por cobrar se crea en Tesorería cuando el servicio entra en ejecución.</p>
                   </>

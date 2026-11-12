@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeftRight, Bell, CheckCircle2, CircleAlert, ClipboardList, Eye, FileSpreadsheet, FolderOpen, Fuel, LayoutGrid, MapPin, Paperclip, Pencil, Play, RefreshCw, SearchX, Ticket, Trash2, Truck, Wallet,
+  CheckCircle2, CircleAlert, ClipboardList, FileSpreadsheet, FolderOpen, LayoutGrid, MapPin, Pencil, Play, RefreshCw, SearchX, Trash2, Truck, Wallet,
 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -25,9 +25,8 @@ import { SeguimientoServicio } from './SeguimientoServicio';
 import { Pestanas, PuntosStrip, TituloFicha } from './FichaCards';
 import { BitacoraViaje, HeroViaje, KpisViaje, UnidadCargaViaje } from './ViajeResumen';
 import './seguimiento.css';
-import { SeccionDocumentosViaje, SeccionGastosViaje, SeccionOrdenesServicioViaje, SeccionSinRegistros } from './ViajeExtras';
-import { SeccionGpsViaje, SeccionValesViaje } from './ViajeCombustibleGps';
-import { MonitoreoViajeSheet, type ViajeMonitoreo } from './ViajeMonitoreo';
+import { SeccionGastosViaje, SeccionOrdenesServicioViaje } from './ViajeExtras';
+import { SeccionGpsViaje } from './ViajeCombustibleGps';
 import { usePlacas } from '../placas/api';
 
 interface Viaje {
@@ -149,7 +148,6 @@ export function OrdenesViajePage() {
   const [nuevaOS, setNuevaOS] = useState<string | null>(null);
   const [sincronizar, setSincronizar] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
-  const [monitoreo, setMonitoreo] = useState<ViajeMonitoreo | null>(null);
 
   const { data, isLoading, isError, error } = useViajes(q);
   const docsVencidos = useDocumentosVencidos();
@@ -232,7 +230,6 @@ export function OrdenesViajePage() {
                 <tr key={v.viaje} className="tabla-redim__fila--click" onClick={() => { haptic('selection'); setAbiertoId(v.viaje); }}>
                   <Celda>
                     <span style={{ display: 'inline-flex', gap: 2 }}>
-                      <IconoFila texto="Ver monitoreo del viaje" tono="azul" icono={<Eye size={15} />} onClick={() => setMonitoreo(v)} />
                       {puedeEditar && v.estado !== 'FINALIZADO' && v.estado !== 'LIQUIDADO' && v.estado !== 'ANULADO' && (
                         <IconoFila texto="Editar" tono="ambar" icono={<Pencil size={15} />} onClick={() => setFormulario({ viaje: v })} />
                       )}
@@ -276,7 +273,6 @@ export function OrdenesViajePage() {
         onNuevaOS={puedeEditar && abierto ? () => { setNuevaOS(abierto.viaje); setAbiertoId(null); } : undefined}
         puedeEditarViaje={puedeEditar}
       />
-      <MonitoreoViajeSheet viaje={monitoreo} onClose={() => setMonitoreo(null)} />
       <OrdenServicioSheet open={!!nuevaOS} orden={null} viajeInicial={nuevaOS ?? ''} onClose={() => { setNuevaOS(null); refrescar(); }} />
       <ConfirmSheet open={sincronizar} onClose={() => !sincronizando && setSincronizar(false)} loading={sincronizando}
         title="¿Sincronizar viajes con MarsisaSoft?" message="Trae los viajes nuevos desde la base externa. Los que ya existen no se duplican." confirmLabel="Sincronizar"
@@ -299,47 +295,13 @@ export function OrdenesViajePage() {
   );
 }
 
-// Resumen financiero del viaje: flete pactado, gastos de ruta (combustible + viáticos), margen y % de rentabilidad
-interface FilaRentabilidad { viaje: string; flete: number; combustible: number; viaticos: number; gastos_ruta: number; margen: number; rentabilidad_pct: number | null }
-function ResumenFinanciero({ viaje }: { viaje: Viaje }) {
-  const mes = String(viaje.fecha_viaje ?? '').slice(0, 7);
-  const q = useQuery({
-    queryKey: ['operaciones', 'rentabilidad', mes],
-    enabled: /^\d{4}-\d{2}$/.test(mes),
-    queryFn: () => api<{ viajes?: FilaRentabilidad[] }>(`/operaciones/rentabilidad?mes=${mes}`),
-  });
-  const codigo = String(viaje.viaje).trim().toUpperCase();
-  const fila = q.data?.viajes?.find(x => String(x.viaje).trim().toUpperCase() === codigo);
-  const soles = (n: number) => `S/\u00a0${n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  return (
-    <div aria-label="Resumen financiero">
-      <p className="tarjeta__grupo-titulo">Resumen financiero</p>
-      {q.isLoading ? <PageLoader /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : !fila ? (
-        <p className="t-callout c-secondary">Sin datos financieros para este viaje.</p>
-      ) : (
-        <div className="tarjeta__lista">
-          <div className="dato"><span className="dato__label">Flete pactado</span><span className="dato__valor">{soles(fila.flete)}</span></div>
-          <div className="dato"><span className="dato__label">Gastos de ruta</span><span className="dato__valor">{soles(fila.gastos_ruta)}</span><span className="t-caption c-secondary">Combustible {soles(fila.combustible)} · Viáticos {soles(fila.viaticos)}</span></div>
-          <div className="dato"><span className="dato__label">Margen bruto</span><span className="dato__valor dato__valor--mono" style={{ color: fila.margen < 0 ? 'var(--red-ink)' : 'var(--green-ink)' }}>{soles(fila.margen)}</span></div>
-          <div className="dato"><span className="dato__label">Rentabilidad</span><span className="dato__valor dato__valor--mono">{fila.rentabilidad_pct == null ? '—' : `${fila.rentabilidad_pct} %`}</span></div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-type TabViaje = 'resumen' | 'combustible' | 'ordenes' | 'documentos' | 'gps' | 'adjuntos' | 'liquidaciones' | 'eventos' | 'cambios' | 'peajes';
+type TabViaje = 'resumen' | 'ordenes' | 'guias' | 'gps' | 'liquidaciones';
 const TABS_VIAJE: { id: TabViaje; label: string; icono: ReactNode }[] = [
   { id: 'resumen', label: 'Resumen', icono: <LayoutGrid size={15} /> },
-  { id: 'combustible', label: 'Combustible', icono: <Fuel size={15} /> },
   { id: 'ordenes', label: 'Órdenes', icono: <ClipboardList size={15} /> },
-  { id: 'documentos', label: 'Documentos', icono: <FolderOpen size={15} /> },
+  { id: 'guias', label: 'Guías', icono: <FolderOpen size={15} /> },
   { id: 'gps', label: 'GPS', icono: <MapPin size={15} /> },
-  { id: 'adjuntos', label: 'Adjuntos', icono: <Paperclip size={15} /> },
-  { id: 'liquidaciones', label: 'Liquidaciones', icono: <Wallet size={15} /> },
-  { id: 'eventos', label: 'Eventos', icono: <Bell size={15} /> },
-  { id: 'cambios', label: 'Cambios', icono: <ArrowLeftRight size={15} /> },
-  { id: 'peajes', label: 'Peajes', icono: <Ticket size={15} /> },
+  { id: 'liquidaciones', label: 'Liquidación', icono: <Wallet size={15} /> },
 ];
 
 // El estado del viaje expresado en las etapas del seguimiento
@@ -400,20 +362,10 @@ function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onE
                   descarga={{ titulo: v.destino, detalle: v.direccion_llegada, extra: v.ubigeo_llegada ? `Ubigeo ${v.ubigeo_llegada}` : null }} />
               </>
             )}
-            {tab === 'combustible' && <SeccionValesViaje codigo={v.viaje} placa={v.placa_tracto} />}
             {tab === 'ordenes' && <SeccionOrdenesServicioViaje codigo={v.viaje} onNueva={onNuevaOS ?? (() => undefined)} puedeCrear={!!onNuevaOS} />}
-            {tab === 'documentos' && <SeccionDocumentosViaje codigo={v.viaje} />}
+            {tab === 'guias' && <EmptyState icon={<FolderOpen size={22} />} title="Sin guías vinculadas">Las guías de remisión se vincularán a las órdenes de este viaje más adelante.</EmptyState>}
             {tab === 'gps' && <SeccionGpsViaje placa={v.placa_tracto} inicio={v.fecha_inicio ?? v.fecha_viaje} fin={v.fecha_fin} />}
-            {tab === 'adjuntos' && <SeccionSinRegistros titulo="Archivos adjuntos" mensaje="No se registran archivos adjuntos para este viaje." />}
-            {tab === 'liquidaciones' && (
-              <>
-                <ResumenFinanciero viaje={v} />
-                <SeccionGastosViaje codigo={v.viaje} conductor={v.conductor} placa={v.placa_tracto} puedeEditar={puedeEditarViaje} />
-              </>
-            )}
-            {tab === 'eventos' && <SeccionSinRegistros titulo="Eventos operativos" mensaje="No se registran eventos operativos para este viaje." />}
-            {tab === 'cambios' && <SeccionSinRegistros titulo="Cambios de conductor y remolque" mensaje="No se registran cambios de conductor ni de remolque para este viaje." />}
-            {tab === 'peajes' && <SeccionSinRegistros titulo="Peajes" mensaje="No se registran peajes asociados a este viaje." />}
+            {tab === 'liquidaciones' && <SeccionGastosViaje codigo={v.viaje} conductor={v.conductor} placa={v.placa_tracto} puedeEditar={puedeEditarViaje} />}
           </div>
         </div>
       )}

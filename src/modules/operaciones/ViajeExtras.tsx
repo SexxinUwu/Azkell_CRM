@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, Plus, ScrollText, Trash2 } from 'lucide-react';
+import './seguimiento.css';
+import { CircleAlert, Plus, Receipt, ScrollText, Trash2, Wallet } from 'lucide-react';
 import { Sheet, ConfirmSheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
-import { Notice } from '../../core/ui/Display';
+import { EmptyState, Notice } from '../../core/ui/Display';
+import { IconoFila } from '../../core/ui/IconoFila';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useToast } from '../../core/ui/Toast';
@@ -20,11 +23,26 @@ const money = (v: unknown) => num(v).toLocaleString('es-PE', { minimumFractionDi
 // Soles con S/ y espacio no divisible
 const soles = (v: unknown) => 'S/ ' + money(v);
 
-interface OSViaje { id: number; codigo_orden: string; cliente_nombre: string | null; estado_servicio: string | null; costo_flete: number | string | null; moneda: string | null; fecha_fmt: string | null }
+interface OSViaje { id: number; codigo_orden: string; cliente_nombre: string | null; estado_servicio: string | null; costo_flete: number | string | null; moneda: string | null; fecha_fmt: string | null; origen?: string | null; destino?: string | null; es_retorno?: number | boolean | null }
 interface CajaViaje { id: number; fecha: string | null; motivo: string | null; importe_total: number | string | null; estado: string | null; serie: string | null; numero: string | null }
 interface LiquidacionViaje { gastos: Gasto[]; total_depositado: number | string; total_rendido: number | string; saldo_diferencia: number | string; estado_balance: string }
 
-// Órdenes de servicio asignadas a este viaje (viaje_asignado) — son sus rutas: cada OS lleva ruta, guías y flete
+const TONO_OS: Record<string, string> = { PENDIENTE: 'amber', PROGRAMADO: 'accent', EN_EJECUCION: 'accent', ENTREGADO: 'green', ANULADO: 'gray' };
+const ETIQUETA_OS: Record<string, string> = { PENDIENTE: 'Pendiente', PROGRAMADO: 'Programado', EN_EJECUCION: 'En ejecución', ENTREGADO: 'Entregado', ANULADO: 'Anulado' };
+function PastillaOS({ estado }: { estado: string | null }) {
+  const k = String(estado ?? 'PENDIENTE').toUpperCase();
+  const t = TONO_OS[k] ?? 'gray';
+  return <span style={{ display: 'inline-block', padding: '1px 8px', borderRadius: 999, background: `var(--${t}-tint)`, color: `var(--${t}-ink)`, fontSize: '0.6875rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{ETIQUETA_OS[k] ?? k}</span>;
+}
+const COLUMNAS_OS_VIAJE: ColumnaTabla[] = [
+  { id: 'orden', titulo: 'Orden', ancho: 150, minimo: 120 },
+  { id: 'cliente', titulo: 'Cliente', ancho: 240, minimo: 140 },
+  { id: 'tramo', titulo: 'Tramo', ancho: 220, minimo: 140 },
+  { id: 'estado', titulo: 'Estado', ancho: 120 },
+  { id: 'flete', titulo: 'Flete', ancho: 130, alinear: 'right' },
+];
+
+// Órdenes de servicio del viaje: cada una lleva su cliente, tramo y flete
 export function SeccionOrdenesServicioViaje({ codigo, onNueva, puedeCrear }: { codigo: string; onNueva: () => void; puedeCrear: boolean }) {
   const q = useQuery({
     queryKey: ['operaciones', 'os-viaje', codigo],
@@ -33,28 +51,27 @@ export function SeccionOrdenesServicioViaje({ codigo, onNueva, puedeCrear }: { c
   });
   const lista = q.data ?? [];
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <p className="tarjeta__grupo-titulo">Órdenes de servicio del viaje ({lista.length})</p>
+    <div className="vo">
+      <div className="vo__cab">
+        <h4 className="vj-titulo" style={{ margin: 0 }}>Órdenes de servicio · {lista.length}</h4>
         {puedeCrear && <Button variant="secondary" icon={<Plus size={15} />} onClick={onNueva}>Nueva OS</Button>}
       </div>
       {q.isError && <Notice tone="error">{errorMessage(q.error)}</Notice>}
-      {!q.isError && lista.length === 0 && !q.isLoading && (
-        <div className="tarjeta__lista"><div className="dato"><span className="dato__valor" style={{ color: 'var(--label-2)' }}>Este viaje aún no tiene órdenes de servicio.</span></div></div>
+      {!q.isError && !q.isLoading && lista.length === 0 && (
+        <EmptyState icon={<ScrollText size={22} />} title="Sin órdenes de servicio">Este viaje todavía no lleva ninguna orden.</EmptyState>
       )}
       {lista.length > 0 && (
-        <div className="tarjeta__lista">
+        <TablaRedimensionable id="viaje-ordenes" columnas={COLUMNAS_OS_VIAJE} ariaLabel="Órdenes de servicio del viaje" className="tabla-redim--compacta">
           {lista.map(o => (
-            <div key={o.id} className="dato" style={{ alignItems: 'center' }}>
-              <span className="dato__label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <ScrollText size={14} /> <span style={{ fontFamily: 'var(--font-mono)' }}>{o.codigo_orden}</span>
-              </span>
-              <span className="dato__valor" style={{ textAlign: 'right' }}>
-                {o.cliente_nombre || 'Sin cliente'} · {String(o.estado_servicio ?? 'PENDIENTE')} · {/DOL/i.test(String(o.moneda ?? '')) ? 'US$ ' : 'S/ '}{money(o.costo_flete)}
-              </span>
-            </div>
+            <tr key={o.id}>
+              <Celda mono>{o.codigo_orden}{o.es_retorno ? ' · retorno' : ''}</Celda>
+              <Celda>{o.cliente_nombre || 'Sin cliente'}</Celda>
+              <Celda>{[o.origen, o.destino].filter(Boolean).join(' → ') || '—'}</Celda>
+              <Celda><PastillaOS estado={o.estado_servicio} /></Celda>
+              <Celda alinear="right" mono>{/DOL/i.test(String(o.moneda ?? '')) ? 'US$ ' : 'S/ '}{money(o.costo_flete)}</Celda>
+            </tr>
           ))}
-        </div>
+        </TablaRedimensionable>
       )}
     </div>
   );
@@ -267,13 +284,13 @@ export function SeccionGastosViaje({ codigo, conductor, placa, puedeEditar }: { 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--s-2)' }}>
-        <p className="tarjeta__grupo-titulo">Gastos del viaje</p>
+        <h4 className="vj-titulo" style={{ margin: 0 }}>Liquidación del viaje</h4>
         {puedeEditar && <Button variant="secondary" icon={<Plus size={15} />} onClick={() => setNuevo(true)}>Registrar gasto</Button>}
       </div>
-      <div className="inv-metricas">
-        <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1rem' }}>{soles(liq.data?.total_depositado)}</span><span className="inv-metrica__label">Depositado</span></div>
-        <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1rem' }}>{soles(liq.data?.total_rendido)}</span><span className="inv-metrica__label">Rendido</span></div>
-        <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1rem' }}>{soles(liq.data?.saldo_diferencia)}</span><span className="inv-metrica__label">{etiquetaBalance || 'Saldo'}</span></div>
+      <div className="vk">
+        <div className="vk__t"><span className="vk__l">Depositado</span><strong>{soles(liq.data?.total_depositado)}</strong></div>
+        <div className="vk__t"><span className="vk__l">Rendido</span><strong>{soles(liq.data?.total_rendido)}</strong></div>
+        <div className="vk__t"><span className="vk__l">{etiquetaBalance || 'Saldo'}</span><strong>{soles(liq.data?.saldo_diferencia)}</strong></div>
       </div>
       {tipoComp && (
         <div className="field field--wide" style={{ marginTop: 'var(--s-2)' }}>
@@ -290,31 +307,30 @@ export function SeccionGastosViaje({ codigo, conductor, placa, puedeEditar }: { 
         </div>
       )}
       {(caja.isError || liq.isError) && <Notice tone="error">No se pudieron cargar los gastos del viaje.</Notice>}
-      <div className="tarjeta__lista" style={{ marginTop: 'var(--s-2)' }}>
-        {depositos.map(d => (
-          <div key={`c${d.id}`} className="dato">
-            <span className="dato__label">Depósito {d.serie && d.numero ? `${d.serie}-${d.numero}` : ''}</span>
-            <span className="dato__valor">{soles(d.importe_total)}</span>
-          </div>
-        ))}
-        {gastos.map((g, i) => (
-          <div key={`g${g.id ?? i}`} className="dato" style={{ alignItems: 'center' }}>
-            <span className="dato__label">
-              {g.id != null ? `G-${String(g.id).padStart(4, '0')} · ` : ''}{g.sub_motivo || g.tipo_gasto || 'Gasto'}
-              {g.detalle && <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--label-2)' }}>{g.detalle}</span>}
-            </span>
-            <span className="dato__valor" style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--s-2)' }}>
-              {soles(g.importe)}{g.estado ? ` · ${g.estado}` : ''}
-              {puedeEditar && g.id != null && (
-                <Button variant="secondary" iconOnly icon={<Trash2 size={15} />} aria-label={`Eliminar gasto G-${String(g.id).padStart(4, '0')}`} onClick={() => setPorEliminar(g)}>{''}</Button>
-              )}
-            </span>
-          </div>
-        ))}
-        {!caja.isLoading && !liq.isLoading && depositos.length === 0 && gastos.length === 0 && (
-          <div className="dato"><span className="dato__valor" style={{ color: 'var(--label-2)' }}>Sin depósitos ni gastos registrados para este viaje.</span></div>
-        )}
-      </div>
+      {!caja.isLoading && !liq.isLoading && depositos.length === 0 && gastos.length === 0 ? (
+        <EmptyState icon={<Wallet size={22} />} title="Sin movimientos">Este viaje no tiene depósitos ni gastos registrados.</EmptyState>
+      ) : (
+        <ul className="vb__lista">
+          {depositos.map(d => (
+            <li key={`c${d.id}`} className="vb__fila">
+              <span className="vb__ico vb__ico--verde" aria-hidden><Wallet size={16} /></span>
+              <div className="vb__txt"><strong>Depósito</strong><span>{d.serie && d.numero ? `${d.serie}-${d.numero}` : d.motivo || 'Caja'}</span></div>
+              <strong className="vb__monto">{soles(d.importe_total)}</strong>
+            </li>
+          ))}
+          {gastos.map((g, i) => (
+            <li key={`g${g.id ?? i}`} className="vb__fila">
+              <span className="vb__ico vb__ico--violeta" aria-hidden><Receipt size={16} /></span>
+              <div className="vb__txt">
+                <strong>{g.sub_motivo || g.tipo_gasto || 'Gasto'}</strong>
+                <span>{[g.id != null ? `G-${String(g.id).padStart(4, '0')}` : null, g.detalle, g.estado].filter(Boolean).join(' · ')}</span>
+              </div>
+              <strong className="vb__monto">{soles(g.importe)}</strong>
+              {puedeEditar && g.id != null && <IconoFila texto="Eliminar gasto" tono="rojo" icono={<Trash2 size={15} />} onClick={() => setPorEliminar(g)} />}
+            </li>
+          ))}
+        </ul>
+      )}
 
       <NuevoGastoSheet open={nuevo} codigo={codigo} conductor={conductor} onClose={() => setNuevo(false)} onGuardado={refrescar} />
       {tipoComp && (

@@ -1,9 +1,8 @@
 import './seguimiento.css';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, FilePlus2, Flag, Fuel, MessageCircle, Phone, Play, Receipt, ShieldAlert } from 'lucide-react';
+import { ArrowRight, FilePlus2, Flag, MessageCircle, Phone, Play, ShieldAlert } from 'lucide-react';
 import { api } from '../../core/api/client';
-import type { Gasto } from '../tesoreria/liq-utils';
 import { aFecha, avanceReal, duracion, hora, num, SeguimientoServicio } from './SeguimientoServicio';
 
 /** Lo que el resumen necesita de un viaje (la página de viajes lo cumple de forma estructural). */
@@ -18,29 +17,20 @@ export interface ViajeBase {
 }
 export interface AlertaDoc { placa: string; tipo: string; vence: string }
 
-interface Vale { id?: number | string; correlativo?: string | null; fecha?: string | null; estacion?: string | null; galones?: number | string | null; importe?: number | string | null }
-interface FilaRentabilidad { viaje: string; flete: number; combustible: number; viaticos: number; gastos_ruta: number; margen: number; rentabilidad_pct: number | null }
+/** Orden de servicio tal como la devuelve el listado filtrado por viaje. */
+export interface OSDelViaje {
+  id: number; codigo_orden: string; cliente_nombre: string | null; estado_servicio: string | null; costo_flete: number | string | null; moneda: string | null;
+  origen?: string | null; destino?: string | null; es_retorno?: number | boolean | null; fecha_fmt?: string | null;
+}
 
 const fmt = (v: unknown, d = 0) => num(v).toLocaleString('es-PE', { minimumFractionDigits: d, maximumFractionDigits: d });
 
-/** Vales, gastos y rentabilidad del viaje: las mismas consultas de las pestañas (comparten caché). */
-export function useDatosViaje(v: ViajeBase | null) {
-  const codigo = v?.viaje ?? '';
-  const mes = String(v?.fecha_viaje ?? '').slice(0, 7);
-  const vales = useQuery({
-    queryKey: ['operaciones', 'vales-viaje', codigo], enabled: !!codigo, staleTime: 15_000,
-    queryFn: () => api<{ data?: Vale[] }>(`/combustible/vales?viaje=${encodeURIComponent(codigo)}&limit=20`).then(r => r.data ?? []),
+/** Órdenes de servicio del viaje: la misma consulta que usa la pestaña de órdenes (comparten caché). */
+export function useOrdenesViaje(codigo: string) {
+  return useQuery({
+    queryKey: ['operaciones', 'os-viaje', codigo], enabled: !!codigo, staleTime: 15_000,
+    queryFn: () => api<{ data?: OSDelViaje[] }>(`/operaciones/ordenes-servicio?viaje=${encodeURIComponent(codigo)}`).then(r => r.data ?? []),
   });
-  const liq = useQuery({
-    queryKey: ['operaciones', 'liq-viaje', codigo], enabled: !!codigo, staleTime: 15_000,
-    queryFn: () => api<{ gastos?: Gasto[] }>(`/tesoreria/liquidaciones-gastos?orden_viaje=${encodeURIComponent(codigo)}`),
-  });
-  const rent = useQuery({
-    queryKey: ['operaciones', 'rentabilidad', mes], enabled: /^\d{4}-\d{2}$/.test(mes),
-    queryFn: () => api<{ viajes?: FilaRentabilidad[] }>(`/operaciones/rentabilidad?mes=${mes}`),
-  });
-  const fila = rent.data?.viajes?.find(x => String(x.viaje).trim().toUpperCase() === codigo.trim().toUpperCase());
-  return { vales: vales.data ?? [], gastos: liq.data?.gastos ?? [], fila };
 }
 
 const ETAPA_PILL: Record<string, string> = { PENDIENTE: 'Registrado', PROGRAMADO: 'Programado', EN_EJECUCION: 'En ruta', ENTREGADO: 'Finalizado', ANULADO: 'Anulado' };
@@ -90,45 +80,50 @@ export function HeroViaje({ v, etapa, datos }: { v: ViajeBase; etapa: string; da
   );
 }
 
-/** Indicadores del viaje con lo que realmente se registró: recorrido, combustible, rendimiento, gasto y margen. */
+/** Indicadores de Operaciones: recorrido, duración, órdenes y flete de lo que lleva el viaje. */
 export function KpisViaje({ v }: { v: ViajeBase }) {
-  const { vales, fila } = useDatosViaje(v);
+  const os = useOrdenesViaje(v.viaje);
+  const lista = os.data ?? [];
   const dist = num(v.distancia_km);
   const odometro = v.kilometraje_inicial != null && v.kilometraje_final != null ? v.kilometraje_final - v.kilometraje_inicial : 0;
   const recorrido = odometro > 0 ? odometro : num(v.km_recorrido_gps);
-  const galones = vales.reduce((s, x) => s + num(x.galones), 0);
-  const rend = recorrido > 0 && galones > 0 ? recorrido / galones : null;
+  const ini = aFecha(v.fecha_inicio);
+  const fin = aFecha(v.fecha_fin);
+  const minutos = ini ? Math.max(0, ((fin ?? new Date()).getTime() - ini.getTime()) / 60_000) : null;
+  const flete = (moneda: 'S/' | 'US$') => lista.filter(o => (/DOL/i.test(String(o.moneda ?? '')) ? 'US$' : 'S/') === moneda).reduce((s, o) => s + num(o.costo_flete), 0);
+  const soles = flete('S/');
+  const dolares = flete('US$');
+  const tercero = v.ejecucion === 'TERCERO' && num(v.tercero_costo) > 0;
   return (
     <div className="vk">
       <div className="vk__t"><span className="vk__l">Recorrido</span><strong>{recorrido > 0 ? <>{fmt(recorrido)} <small>km</small></> : '—'}</strong><em>{dist > 0 ? `de ${fmt(dist)} km` : odometro > 0 ? 'Por odómetro' : 'Sin kilometraje'}</em></div>
-      <div className="vk__t"><span className="vk__l">Combustible</span><strong>{galones > 0 ? <>{fmt(galones, 1)} <small>gal</small></> : '—'}</strong><em>{vales.length} {vales.length === 1 ? 'vale' : 'vales'}</em></div>
-      <div className="vk__t"><span className="vk__l">Rendimiento</span><strong>{rend != null ? <>{fmt(rend, 1)} <small>km/gal</small></> : '—'}</strong><em>Recorrido ÷ galones</em></div>
-      <div className="vk__t"><span className="vk__l">Gasto de ruta</span><strong>{fila ? <>{fmt(fila.gastos_ruta)} <small>soles</small></> : '—'}</strong><em>Combustible y viáticos</em></div>
-      <div className="vk__t"><span className="vk__l">Margen</span><strong style={{ color: fila && fila.margen < 0 ? 'var(--red-ink)' : undefined }}>{fila ? <>{fmt(fila.margen)} <small>soles</small></> : '—'}</strong><em>{fila?.rentabilidad_pct != null ? `${fila.rentabilidad_pct} % del flete` : 'Sin flete registrado'}</em></div>
+      <div className="vk__t"><span className="vk__l">Duración</span><strong>{minutos != null ? duracion(minutos) : '—'}</strong><em>{!ini ? 'Aún no inicia' : fin ? 'Viaje completo' : 'En curso'}</em></div>
+      <div className="vk__t"><span className="vk__l">Órdenes</span><strong>{lista.length || v.cant_ordenes}</strong><em>{lista.length ? lista.map(o => o.codigo_orden).join(' · ') : 'Servicios que lleva'}</em></div>
+      <div className="vk__t"><span className="vk__l">Flete</span><strong>{soles > 0 || dolares > 0 ? <>{soles > 0 ? `S/ ${fmt(soles)}` : ''}{soles > 0 && dolares > 0 ? ' + ' : ''}{dolares > 0 ? `US$ ${fmt(dolares)}` : ''}</> : '—'}</strong><em>Suma de sus órdenes</em></div>
+      {tercero
+        ? <div className="vk__t"><span className="vk__l">Costo del tercero</span><strong>{/DOL/i.test(String(v.tercero_moneda ?? '')) ? 'US$' : 'S/'} {fmt(v.tercero_costo)}</strong><em>{v.tercero_nombre ?? 'Transportista tercero'}</em></div>
+        : <div className="vk__t"><span className="vk__l">Peso</span><strong>{num(v.peso_ida) + num(v.peso_retorno) > 0 ? <>{fmt(num(v.peso_ida) + num(v.peso_retorno))} <small>kg</small></> : '—'}</strong><em>Lo completan las guías</em></div>}
     </div>
   );
 }
 
-interface Evento { t: Date; titulo: string; detalle: string; tono: 'verde' | 'ambar' | 'violeta' | 'azul' | 'gris'; icono: ReactNode }
+interface Evento { t: Date; titulo: string; detalle: string; tono: 'verde' | 'azul' | 'gris'; icono: ReactNode }
 const etiquetaFecha = (d: Date) => {
   const hoy = new Date();
   const mismo = d.getFullYear() === hoy.getFullYear() && d.getMonth() === hoy.getMonth() && d.getDate() === hoy.getDate();
   return mismo ? hora(d) : `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${hora(d)}`;
 };
 
-/** Bitácora armada solo con hechos registrados: creación, salida, vales, gastos y llegada. */
+/** Bitácora armada solo con hechos registrados del viaje: creación, salida y llegada. */
 export function BitacoraViaje({ v }: { v: ViajeBase }) {
-  const { vales, gastos } = useDatosViaje(v);
   const eventos = useMemo(() => {
     const lista: Evento[] = [];
     const push = (cuando: string | null | undefined, e: Omit<Evento, 't'>) => { const d = aFecha(cuando ?? null); if (d && !Number.isNaN(d.getTime())) lista.push({ ...e, t: d }); };
     push(v.registrado_fmt, { titulo: 'Viaje creado', detalle: `${v.cant_ordenes} ${v.cant_ordenes === 1 ? 'orden de servicio asignada' : 'órdenes de servicio asignadas'}`, tono: 'gris', icono: <FilePlus2 size={16} /> });
     push(v.fecha_inicio, { titulo: 'Viaje iniciado', detalle: v.kilometraje_inicial != null ? `Km de salida ${fmt(v.kilometraje_inicial)}` : 'Salida registrada', tono: 'verde', icono: <Play size={16} /> });
-    push(v.fecha_fin, { titulo: 'Viaje finalizado', detalle: v.kilometraje_final != null ? `Km final ${fmt(v.kilometraje_final)}` : 'Llegada registrada', tono: 'azul', icono: <Flag size={16} /> });
-    vales.forEach(x => push(x.fecha, { titulo: 'Vale de combustible', detalle: [`${fmt(x.galones, 1)} gal`, `S/ ${fmt(x.importe, 2)}`, x.estacion].filter(Boolean).join(' · '), tono: 'ambar', icono: <Fuel size={16} /> }));
-    gastos.forEach(g => push(g.fecha, { titulo: 'Gasto registrado', detalle: [g.sub_motivo || g.tipo_gasto, `S/ ${fmt(g.importe, 2)}`].filter(Boolean).join(' · '), tono: 'violeta', icono: <Receipt size={16} /> }));
+    push(v.fecha_fin, { titulo: 'Viaje finalizado', detalle: v.kilometraje_final != null ? `Km de llegada ${fmt(v.kilometraje_final)}` : 'Llegada registrada', tono: 'azul', icono: <Flag size={16} /> });
     return lista.sort((a, b) => b.t.getTime() - a.t.getTime());
-  }, [v, vales, gastos]);
+  }, [v]);
   return (
     <section className="vb">
       <h4 className="vj-titulo">Bitácora del viaje</h4>
@@ -159,8 +154,8 @@ export function UnidadCargaViaje({ v, alertas }: { v: ViajeBase; alertas: Alerta
     ['Carga de ida', num(v.peso_ida) > 0 ? `${fmt(v.peso_ida)} kg` : null],
     ['Carga de retorno', num(v.peso_retorno) > 0 ? `${fmt(v.peso_retorno)} kg` : null],
     ['Escolta', v.escolta || null],
-    ['Costo del tercero', tercero && num(v.tercero_costo) > 0 ? `${/DOL/i.test(String(v.tercero_moneda ?? '')) ? 'US$' : 'S/'} ${fmt(v.tercero_costo, 2)}` : null],
     ['RUC del tercero', tercero ? (v.tercero_ruc || null) : null],
+    ['Documento del tercero', tercero ? (v.tercero_documento || null) : null],
     ['Registrado por', v.usuario_creacion || null],
   ];
   return (

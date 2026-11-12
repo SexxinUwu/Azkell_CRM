@@ -215,3 +215,17 @@
 .vu__fila dt { color: var(--label); font-weight: 500; }
 .vu__fila dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; color: var(--label-2); display: flex; align-items: center; gap: 8px; }
 .vu__fila dd small { font-size: 0.6875rem; color: var(--label-3); }
+
+/* Secciones del viaje: órdenes, GPS y liquidación */
+.vo, .vg { display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
+.vo__cab { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.vb__monto { font-size: 0.875rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Cabecera de la orden de servicio */
+.vh--os .vh__ruta { font-size: 1.625rem; }
+.vh__tramo { margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.9375rem; color: var(--label-2); }
+.vh__tramo strong { color: var(--label); font-weight: 650; }
+.vh__tramo svg { color: var(--green); }
+.vh__tramo span { margin-left: 4px; color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+.vh__card > strong { overflow-wrap: anywhere; }
+.vh--os .vh__card strong { font-size: 1.125rem; }
