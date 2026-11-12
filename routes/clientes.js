@@ -39,6 +39,7 @@ module.exports = function (db, logAudit) {
             c.ruc_dni,
             c.razon_social,
             c.direccion,
+            c.ubigeo,
             c.telefono,
             c.email,
             c.estado,
@@ -52,7 +53,7 @@ module.exports = function (db, logAudit) {
                 REPLACE(REPLACE(REPLACE(UPPER(p.cliente) COLLATE utf8mb4_general_ci, '.', ''), ' ', ''), '-', '') = 
                 REPLACE(REPLACE(REPLACE(UPPER(c.razon_social) COLLATE utf8mb4_general_ci, '.', ''), ' ', ''), '-', '')
             )
-        GROUP BY c.id, c.ruc_dni, c.razon_social, c.direccion, c.telefono, c.email, c.estado, c.notas, c.fecha_creacion
+        GROUP BY c.id, c.ruc_dni, c.razon_social, c.direccion, c.ubigeo, c.telefono, c.email, c.estado, c.notas, c.fecha_creacion
         ORDER BY c.razon_social ASC;
         `;
         tdb.query(sql, (err, rows) => {
@@ -148,18 +149,20 @@ module.exports = function (db, logAudit) {
     // ── POST /api/clientes (Crear nuevo cliente y homlogar placas) ─────────────────────────
     router.post('/', (req, res) => {
         const tdb = getDb(req);
-        const { ruc_dni, razon_social, direccion, telefono, email, estado, notas } = req.body;
+        const { ruc_dni, razon_social, direccion, telefono, email, estado, notas, ubigeo } = req.body;
         if (!razon_social) return res.status(400).json({ error: 'La Razón Social es requerida' });
+        const cleanUbigeo = /^\d{6}$/.test(String(ubigeo || '')) ? String(ubigeo) : null;
 
         const cleanRuc = (ruc_dni || '').trim();
         const cleanRazon = razon_social.trim().toUpperCase();
 
         const sql = `
-        INSERT INTO clientes (ruc_dni, razon_social, direccion, telefono, email, estado, notas)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO clientes (ruc_dni, razon_social, direccion, ubigeo, telefono, email, estado, notas)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
             ruc_dni = VALUES(ruc_dni),
             direccion = VALUES(direccion),
+            ubigeo = VALUES(ubigeo),
             telefono = VALUES(telefono),
             email = VALUES(email),
             estado = VALUES(estado),
@@ -169,6 +172,7 @@ module.exports = function (db, logAudit) {
             cleanRuc,
             cleanRazon,
             (direccion || '').trim(),
+            cleanUbigeo,
             (telefono || '').trim(),
             (email || '').trim().toLowerCase(),
             estado || 'Activo',
@@ -286,8 +290,9 @@ module.exports = function (db, logAudit) {
     router.put('/:id', (req, res) => {
         const tdb = getDb(req);
         const id = req.params.id;
-        const { ruc_dni, razon_social, direccion, telefono, email, estado, notas } = req.body;
+        const { ruc_dni, razon_social, direccion, telefono, email, estado, notas, ubigeo } = req.body;
         if (!razon_social) return res.status(400).json({ error: 'La Razón Social es requerida' });
+        const newUbigeo = /^\d{6}$/.test(String(ubigeo || '')) ? String(ubigeo) : null;
 
         const newRuc = (ruc_dni || '').trim();
         const newRazon = razon_social.trim().toUpperCase();
@@ -301,10 +306,10 @@ module.exports = function (db, logAudit) {
             // 2. Actualizar la tabla clientes
             const sqlUpdateClient = `
             UPDATE clientes 
-            SET ruc_dni = ?, razon_social = ?, direccion = ?, telefono = ?, email = ?, estado = ?, notas = ?
+            SET ruc_dni = ?, razon_social = ?, direccion = ?, ubigeo = ?, telefono = ?, email = ?, estado = ?, notas = ?
             WHERE id = ?;
             `;
-            const values = [newRuc, newRazon, (direccion || '').trim(), (telefono || '').trim(), (email || '').trim().toLowerCase(), estado || 'Activo', (notas || '').trim(), id];
+            const values = [newRuc, newRazon, (direccion || '').trim(), newUbigeo, (telefono || '').trim(), (email || '').trim().toLowerCase(), estado || 'Activo', (notas || '').trim(), id];
 
             tdb.query(sqlUpdateClient, values, (errUp) => {
                 if (errUp) return res.status(500).json({ error: errUp.message });

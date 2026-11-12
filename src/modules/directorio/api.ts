@@ -10,6 +10,7 @@ export interface Cliente {
   email?: string | null;
   telefono?: string | null;
   direccion?: string | null;
+  ubigeo?: string | null;
   empresa?: string | null;
   activo?: boolean | number | null;
   ruc_dni?: string | null;
@@ -35,6 +36,8 @@ export interface DatosSunat {
   direccion: string;
   estado: string;
   condicion: string;
+  /** Código de distrito (6 dígitos) con el que SUNAT registra el domicilio fiscal */
+  ubigeo: string;
 }
 
 /**
@@ -56,5 +59,31 @@ export async function consultarRucSunat(ruc: string): Promise<DatosSunat> {
     direccion: (d.direccion ?? '').trim(),
     estado: (d.estado ?? '').trim(),
     condicion: (d.condicion ?? '').trim(),
+    ubigeo: /^\d{6}$/.test(String(d.ubigeo ?? '').trim()) ? String(d.ubigeo).trim() : '',
   };
+}
+
+export type TipoDocumento = 'RUC' | 'DNI' | 'Otro' | '—';
+
+/** El tipo se deduce del número: 11 dígitos es RUC, 8 es DNI */
+export function tipoDocumento(doc?: string | null): TipoDocumento {
+  const d = (doc ?? '').trim();
+  if (/^\d{11}$/.test(d)) return 'RUC';
+  if (/^\d{8}$/.test(d)) return 'DNI';
+  return d ? 'Otro' : '—';
+}
+
+/** Busca el documento según su largo: RUC en SUNAT (razón social, domicilio y distrito) o DNI en RENIEC (nombre completo). */
+export async function consultarDocumento(numero: string): Promise<DatosSunat & { tipo: 'RUC' | 'DNI' }> {
+  if (/^\d{11}$/.test(numero)) return { ...(await consultarRucSunat(numero)), tipo: 'RUC' };
+  let d: Record<string, string | undefined>;
+  try {
+    d = await api<Record<string, string | undefined>>('/proxy/documento', { query: { tipo: 'DNI', numero } });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) throw new Error('RENIEC no encontró este DNI. Escribe el nombre a mano.');
+    throw new Error('No se pudo consultar RENIEC. Puedes escribir los datos a mano.');
+  }
+  const nombre = (d.nombre || d.razon_social || '').trim();
+  if (!nombre) throw new Error('RENIEC no devolvió el nombre de este DNI.');
+  return { razon_social: nombre, direccion: '', estado: '', condicion: '', ubigeo: '', tipo: 'DNI' };
 }
