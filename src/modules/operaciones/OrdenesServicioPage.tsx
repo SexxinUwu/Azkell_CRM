@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, CircleAlert, FileSpreadsheet, Link2, Link2Off, PackageCheck, Pencil, Play, Plus, Route, ScrollText, SearchX, Wand2, XCircle } from 'lucide-react';
 import { OrdenServicioSheet, type OrdenParaEditar } from './OrdenServicioSheet';
+import { GenerarViajeSheet } from './GenerarViajeSheet';
 import { AccionesCabecera } from '../../core/ui/AccionesCabecera';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -31,7 +32,7 @@ interface Orden {
   peso_estimado: number | string | null; moneda: string | null; tipo_cambio: number | string | null; costo_flete: number | string | null; impuesto: string | null;
   destinatario: string | null; remitente_generador: string | null; observaciones: string | null;
   viaje: string | null; viajes_n: number; viaje_estado: string | null; conductor: string | null; placa_tracto: string | null; placa_carreta: string | null;
-  ejecucion: string | null; tercero_nombre: string | null;
+  ejecucion: string | null; tercero_nombre: string | null; ruta?: string | null; distancia_km?: number | string | null;
 }
 interface Detalle extends Orden { viajes?: { viaje: string; estado: string | null; conductor: string | null; placa_tracto: string | null; ejecucion: string | null; tercero_nombre: string | null }[] }
 interface ViajeAbierto { viaje: string; fecha_viaje: string | null; conductor: string | null; placa_tracto: string | null; ruta: string | null; estado: string }
@@ -165,6 +166,8 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'fecha', titulo: 'Fecha', ancho: 110 },
   { id: 'cliente', titulo: 'Cliente', ancho: 220, minimo: 140 },
   { id: 'tramo', titulo: 'Tramo', ancho: 240, minimo: 150 },
+  { id: 'km', titulo: 'Distancia', ancho: 100, alinear: 'right' },
+  { id: 'peso', titulo: 'Peso', ancho: 100, alinear: 'right' },
   { id: 'viaje', titulo: 'Viaje', ancho: 140 },
   { id: 'unidad', titulo: 'Unidad y conductor', ancho: 210 },
   { id: 'flete', titulo: 'Flete', ancho: 130, alinear: 'right' },
@@ -185,6 +188,7 @@ export function OrdenesServicioPage() {
   const [formulario, setFormulario] = useState<{ orden: OrdenParaEditar | null } | null>(null);
   const [iniciar, setIniciar] = useState<Orden | null>(null);
   const [asignar, setAsignar] = useState<Orden | null>(null);
+  const [generar, setGenerar] = useState<Orden | null>(null);
   const [anular, setAnular] = useState<Orden | null>(null);
   const [entregar, setEntregar] = useState<Orden | null>(null);
   const [filtrando, setFiltrando] = useState(false);
@@ -237,8 +241,8 @@ export function OrdenesServicioPage() {
   }
   const cambiarEstado = (x: Orden, nuevo: string, aviso: string) =>
     lanzar(`${x.id}-${nuevo}`, () => api(`/operaciones/ordenes-servicio/${x.id}/estado`, { method: 'PUT', body: { estado_servicio: nuevo } }), aviso);
-  const generarViaje = (x: Orden) =>
-    lanzar(`${x.id}-gen`, () => api(`/operaciones/ordenes-servicio/${x.id}/generar-viaje`, { method: 'POST' }), 'Viaje generado');
+  // «Generar viaje» abre la ventana con los datos que pide el viaje
+  const generarViaje = (x: Orden) => setGenerar(x);
   const quitarDelViaje = (x: Orden) =>
     lanzar(`${x.id}-quitar`, () => api(`/operaciones/ordenes-servicio/${x.id}/viaje/${encodeURIComponent(x.viaje ?? '')}`, { method: 'DELETE' }), 'Servicio quitado del viaje');
 
@@ -252,8 +256,8 @@ export function OrdenesServicioPage() {
   async function exportar() {
     try {
       await exportarExcel('Ordenes-de-servicio', 'Órdenes',
-        ['Orden', 'Fecha', 'Cliente', 'Tipo', 'Sentido', 'Origen', 'Destino', 'Carga', 'Peso (kg)', 'Estado', 'Viaje', 'Conductor', 'Tracto', 'Moneda', 'Flete'],
-        visibles.map(x => [x.codigo_orden, x.fecha_fmt, x.cliente_nombre, x.tipo_servicio, x.es_retorno ? 'Retorno' : 'Ida', x.origen, x.destino, x.descripcion_carga, n(x.peso_estimado),
+        ['Orden', 'Fecha', 'Cliente', 'Tipo', 'Sentido', 'Origen', 'Destino', 'Distancia (km)', 'Carga', 'Peso (kg)', 'Estado', 'Viaje', 'Conductor', 'Tracto', 'Moneda', 'Flete'],
+        visibles.map(x => [x.codigo_orden, x.fecha_fmt, x.cliente_nombre, x.tipo_servicio, x.es_retorno ? 'Retorno' : 'Ida', x.origen, x.destino, n(x.distancia_km) || '', x.descripcion_carga, n(x.peso_estimado),
           ETIQUETA[estadoDe(x)], x.viaje, x.conductor, x.placa_tracto, x.moneda, n(x.costo_flete)]));
       haptic('success');
     } catch (err) { toast(errorMessage(err), 'error'); }
@@ -278,6 +282,7 @@ export function OrdenesServicioPage() {
         }
       />
 
+      <GenerarViajeSheet orden={generar} onClose={() => setGenerar(null)} onGenerado={() => { setGenerar(null); setAbiertoId(null); void refrescar(); }} />
       <OrdenServicioSheet open={!!formulario} orden={formulario?.orden ?? null} onClose={() => setFormulario(null)} />
       <AsignarViajeSheet orden={asignar} onClose={() => setAsignar(null)} onAsignado={() => { setAsignar(null); void refrescar(); }} />
       <IniciarServicioSheet orden={iniciar} onClose={() => setIniciar(null)} onIniciado={() => { setIniciar(null); void refrescar(); }} />
@@ -342,6 +347,8 @@ export function OrdenesServicioPage() {
                   <Celda mono>{x.fecha_fmt || '—'}</Celda>
                   <Celda>{x.cliente_nombre || 'Sin cliente'}</Celda>
                   <Celda>{[x.origen, x.destino].filter(Boolean).join(' → ') || '—'}</Celda>
+                  <Celda alinear="right" mono>{n(x.distancia_km) ? `${n(x.distancia_km).toLocaleString('es-PE')} km` : '—'}</Celda>
+                  <Celda alinear="right" mono>{n(x.peso_estimado) ? `${n(x.peso_estimado).toLocaleString('es-PE')} kg` : '—'}</Celda>
                   <Celda mono>{x.viaje ? `${x.viaje}${x.viajes_n > 1 ? ` +${x.viajes_n - 1}` : ''}` : '—'}</Celda>
                   <Celda>
                     {x.placa_tracto ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><LicensePlate plate={x.placa_tracto} size="sm" />{x.conductor}</span>
@@ -350,7 +357,7 @@ export function OrdenesServicioPage() {
                   <Celda alinear="right" mono>{dinero(x)}</Celda>
                   <Celda>
                     <span style={{ display: 'inline-flex', gap: 2 }}>
-                      {libre && !x.viaje && <IconoFila texto="Generar viaje" tono="violeta" icono={<Wand2 size={17} />} cargando={ocupado === `${x.id}-gen`} onClick={() => generarViaje(x)} />}
+                      {libre && !x.viaje && <IconoFila texto="Generar viaje" tono="violeta" icono={<Wand2 size={17} />} onClick={() => generarViaje(x)} />}
                       {libre && !x.viaje && <IconoFila texto="Asignar a un viaje" tono="azul" icono={<Link2 size={17} />} onClick={() => setAsignar(x)} />}
                       {libre && e === 'PROGRAMADO' && <IconoFila texto="Iniciar servicio" tono="verde" icono={<Play size={17} />} onClick={() => setIniciar(x)} />}
                       {puedeEditar && e === 'EN_EJECUCION' && <IconoFila texto="Marcar entregada" tono="verde" icono={<PackageCheck size={17} />} onClick={() => setEntregar(x)} />}
@@ -395,13 +402,13 @@ export function OrdenesServicioPage() {
                 {puedeEditar && !cerrado(est) && !o.viaje && (
                   <>
                     <Button variant="secondary" size="sm" icon={<Link2 size={15} />} onClick={() => setAsignar(o)}>Asignar</Button>
-                    <Button variant="primary" size="sm" icon={<Wand2 size={15} />} loading={ocupado === `${o.id}-gen`} onClick={() => generarViaje(o)}>Generar viaje</Button>
+                    <Button variant="primary" size="sm" icon={<Wand2 size={15} />} onClick={() => generarViaje(o)}>Generar viaje</Button>
                   </>
                 )}
               </span>
             </div>
             <div className="tarjeta__lista">
-              {fila('Cliente', o.cliente_nombre)}{fila('Servicio', `${etiquetaTipo(o.tipo_servicio)}${o.es_retorno ? ' · retorno con carga' : ''}`)}
+              {fila('Cliente', o.cliente_nombre)}{fila('Servicio', `${etiquetaTipo(o.tipo_servicio)}${o.es_retorno ? ' · retorno con carga' : ''}`)}{fila('Ruta', [o.ruta, n(o.distancia_km) ? `${n(o.distancia_km).toLocaleString('es-PE')} km` : ''].filter(Boolean).join(' · '))}
               {fila('Punto de carga', [o.origen, o.ubigeo_origen && `ubigeo ${o.ubigeo_origen}`].filter(Boolean).join(' · '))}{fila('Dirección de carga', o.direccion_origen)}
               {fila('Punto de entrega', [o.destino, o.ubigeo_destino && `ubigeo ${o.ubigeo_destino}`].filter(Boolean).join(' · '))}{fila('Dirección de entrega', o.direccion_destino)}{fila('Remitente', o.remitente_generador)}{fila('Destinatario', o.destinatario)}
               {fila('Carga', o.descripcion_carga)}{fila('Peso estimado', n(o.peso_estimado) ? `${n(o.peso_estimado).toLocaleString('es-PE')} kg` : null)}

@@ -1667,6 +1667,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
         SELECT os.*,
                DATE_FORMAT(os.fecha, '%Y-%m-%d') AS fecha_fmt,
                DATE_FORMAT(os.fecha_entrega, '%Y-%m-%d') AS fecha_entrega_fmt,
+               (SELECT MAX(m.km) FROM combustible_matriz_d2 m WHERE m.estado = 'ACTIVO' AND m.ruta COLLATE utf8mb4_unicode_ci = os.ruta COLLATE utf8mb4_unicode_ci) AS distancia_km,
                b.viaje AS viaje, COALESCE(b.n, 0) AS viajes_n,
                ov.estado AS viaje_estado, ov.conductor AS conductor, ov.placa_tracto AS placa_tracto,
                ov.placa_remolque AS placa_carreta, ov.ejecucion AS ejecucion, ov.tercero_nombre AS tercero_nombre
@@ -1723,14 +1724,16 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
             const sentido = String(req.query.sentido || '').toUpperCase() === 'RETORNO' ? 'RETORNO' : 'IDA';
             let matriz = [];
-            try { [matriz] = await tdb.query(`SELECT DISTINCT ruta FROM combustible_matriz_d2 WHERE estado = 'ACTIVO' AND sentido = ? AND TRIM(ruta) <> '' ORDER BY ruta`, [sentido]); } catch (e) { matriz = []; }
+            try { [matriz] = await tdb.query(`SELECT ruta, MAX(km) AS km FROM combustible_matriz_d2 WHERE estado = 'ACTIVO' AND sentido = ? AND TRIM(ruta) <> '' GROUP BY ruta ORDER BY ruta`, [sentido]); } catch (e) { matriz = []; }
+            let kmDe = new Map();
+            try { const [todas] = await tdb.query(`SELECT ruta, MAX(km) AS km FROM combustible_matriz_d2 WHERE estado = 'ACTIVO' GROUP BY ruta`); kmDe = new Map(todas.map(x => [String(x.ruta).trim().toUpperCase(), Number(x.km) || 0])); } catch (e) { kmDe = new Map(); }
             const [usadas] = await tdb.query(`SELECT ruta, COUNT(*) AS n FROM operaciones_ordenes_servicio WHERE ruta IS NOT NULL AND ruta <> '' AND es_retorno = ? GROUP BY ruta ORDER BY n DESC LIMIT 200`, [sentido === 'RETORNO' ? 1 : 0]);
             const vistas = new Set();
             const data = [];
             for (const r of [...matriz.map(x => ({ ruta: x.ruta, origen: 'matriz' })), ...usadas.map(x => ({ ruta: x.ruta, origen: 'usada' }))]) {
                 const clave = String(r.ruta).trim().toUpperCase();
                 if (!clave || vistas.has(clave)) continue;
-                vistas.add(clave); data.push({ ruta: clave, origen: r.origen });
+                vistas.add(clave); data.push({ ruta: clave, origen: r.origen, km: kmDe.get(clave) || null });
             }
             res.json({ ok: true, data });
         } catch (err) {
@@ -1927,10 +1930,17 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                 if (rows.length) { const p = parseInt(String(rows[0].viaje).replace(`${year}-`, ''), 10); if (!isNaN(p)) next = p + 1; }
                 const codigo = `${year}-${String(next).padStart(8, '0')}`;
                 const fechaViaje = `${osFecha(o.fecha instanceof Date ? o.fecha.toISOString() : o.fecha) || new Date().toISOString().slice(0, 10)} 00:00:00`;
+                const d = req.body || {};
+                const tercero = String(d.ejecucion || o.ejecucion || '').toUpperCase() === 'TERCERO';
+                if (tercero ? !osTexto(d.tercero_nombre, 150) && d.ejecucion : false) throw Object.assign(new Error('Indica el transportista tercero.'), { status: 400 });
+                const fechaElegida = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(String(d.fecha_viaje || '')) ? `${String(d.fecha_viaje).slice(0, 10)} ${String(d.fecha_viaje).slice(11, 16)}:00` : fechaViaje;
+                const idCond = Number.isInteger(Number(d.id_conductor)) && Number(d.id_conductor) > 0 ? Number(d.id_conductor) : null;
                 await con.query(
-                    `INSERT INTO operaciones_ordenes_viaje (viaje, fecha_viaje, conductor, placa_tracto, ruta, origen, destino, ubigeo_partida, direccion_partida, ubigeo_llegada, direccion_llegada, peso, ejecucion, estado, usuario_creacion)
-                     VALUES (?, ?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', ?)`,
-                    [codigo, fechaViaje, o.ruta || [o.origen, o.destino].filter(Boolean).join(' - '), o.origen, o.destino, o.ubigeo_origen, o.direccion_origen, o.ubigeo_destino, o.direccion_destino, o.peso_estimado || 0, o.ejecucion === 'TERCERO' ? 'TERCERO' : 'PROPIO', osUsuario(req)]);
+                    `INSERT INTO operaciones_ordenes_viaje (viaje, fecha_viaje, id_conductor, conductor, placa_tracto, placa_remolque, escolta, observaciones, ruta, origen, destino, ubigeo_partida, direccion_partida, ubigeo_llegada, direccion_llegada, peso, ejecucion, tercero_nombre, tercero_ruc, tercero_costo, tercero_moneda, tercero_documento, estado, usuario_creacion)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', ?)`,
+                    [codigo, fechaElegida, idCond, osTexto(d.conductor, 150) || '', (osTexto(d.placa_tracto, 20) || '').toUpperCase(), osTexto(d.placa_remolque, 20) ? osTexto(d.placa_remolque, 20).toUpperCase() : null, osTexto(d.escolta, 150), osTexto(d.observaciones, 5000), o.ruta || [o.origen, o.destino].filter(Boolean).join(' - '), o.origen, o.destino, o.ubigeo_origen, o.direccion_origen, o.ubigeo_destino, o.direccion_destino, o.peso_estimado || 0, tercero ? 'TERCERO' : 'PROPIO',
+                     tercero ? osTexto(d.tercero_nombre, 150) : null, tercero ? osTexto(d.tercero_ruc, 20) : null, tercero ? osNumero(d.tercero_costo) : null,
+                     tercero ? (/DOL/i.test(String(d.tercero_moneda || '')) ? 'DOLARES' : 'SOLES') : null, tercero ? osTexto(d.tercero_documento, 60) : null, osUsuario(req)]);
                 await con.query(
                     `INSERT INTO operaciones_ordenes_viaje_rutas (viaje, orden, ruta, tipo_servicio, es_retorno, peso_total) VALUES (?, ?, ?, ?, ?, ?)`,
                     [codigo, o.codigo_orden, o.ruta || [o.origen, o.destino].filter(Boolean).join(' - '), o.tipo_servicio || 'CARGA GENERAL', o.es_retorno ? 1 : 0, o.peso_estimado || 0]);
@@ -1941,7 +1951,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             } catch (e) { await con.rollback(); throw e; } finally { con.release(); }
         } catch (err) {
             console.error('Error al generar viaje desde servicio:', err);
-            res.status(500).json({ ok: false, error: err.message });
+            res.status(err.status || 500).json({ ok: false, error: err.message });
         }
     });
 

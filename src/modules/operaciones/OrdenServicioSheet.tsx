@@ -167,13 +167,14 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
   // Rutas de la matriz de combustible (según ida o retorno) y las usadas antes
   const rutas = useQuery({
     queryKey: ['operaciones', 'rutas-servicio', f.sentido], enabled: open, staleTime: 5 * 60_000,
-    queryFn: () => api<{ data?: { ruta: string; origen: 'matriz' | 'usada' }[] }>('/operaciones/ordenes-servicio/rutas', { query: { sentido: f.sentido } }).then(r => r.data ?? []),
+    queryFn: () => api<{ data?: { ruta: string; origen: 'matriz' | 'usada'; km: number | null }[] }>('/operaciones/ordenes-servicio/rutas', { query: { sentido: f.sentido } }).then(r => r.data ?? []),
   });
   const opcionesRutas = useMemo(() => {
-    const lista = (rutas.data ?? []).map(r => ({ value: r.ruta, label: r.ruta, description: r.origen === 'matriz' ? 'Matriz de combustible' : 'Usada antes' }));
+    const lista = (rutas.data ?? []).map(r => ({ value: r.ruta, label: r.ruta, description: r.km ? `${r.km.toLocaleString('es-PE')} km` : r.origen === 'matriz' ? 'Matriz de combustible' : 'Usada antes' }));
     if (f.ruta && !lista.some(o => o.value === f.ruta)) lista.unshift({ value: f.ruta, label: f.ruta, description: 'Escrita a mano' });
     return lista;
   }, [rutas.data, f.ruta]);
+  const kmRuta = (rutas.data ?? []).find(r => r.ruta === f.ruta)?.km ?? null;
   // Última dirección usada en ese distrito: primero la del mismo cliente; si no hay, la de cualquier cliente
   const sugerida = (tipo: 'origen' | 'destino', cliente: string, ubigeo: string) => {
     const filas = (recientes.data ?? []).filter(r => r.tipo === tipo && r.ubigeo === ubigeo);
@@ -367,7 +368,7 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
 
             {paso === 2 && (
               <>
-                <Field label="Ruta *" error={ver('ruta')} hint={rutas.isLoading ? 'Cargando rutas…' : opcionesRutas.length ? 'Sale de la matriz de combustible. Si no está, escríbela como ORIGEN - DESTINO.' : 'Escríbela como ORIGEN - DESTINO (ej. LIMA - AREQUIPA).'}>
+                <Field label="Ruta *" error={ver('ruta')} hint={rutas.isLoading ? 'Cargando rutas…' : kmRuta ? `Distancia: ${kmRuta.toLocaleString('es-PE')} km` : opcionesRutas.length ? 'Sale de la matriz de combustible. Si no está, escríbela como ORIGEN - DESTINO.' : 'Escríbela como ORIGEN - DESTINO (ej. LIMA - AREQUIPA).'}>
                   {p => <Combobox {...p} options={opcionesRutas} value={f.ruta || null} loading={rutas.isLoading} placeholder="Ej. LIMA - AREQUIPA" createLabel="Usar esta ruta" limit={60}
                     onChange={v => { set({ ruta: v ?? '' }); tocar('ruta'); }} onCreate={t => { set({ ruta: t.trim().toUpperCase() }); tocar('ruta'); }} />}
                 </Field>
@@ -429,7 +430,7 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
                   <FilaResumen label="Destinatario" valor={f.destinatario} />
                 </GrupoResumen>
                 <GrupoResumen titulo="Ruta" paso={2} onCambiar={ir}>
-                  <FilaResumen label="Ruta" valor={f.ruta} />
+                  <FilaResumen label="Ruta" valor={kmRuta ? `${f.ruta} · ${kmRuta.toLocaleString('es-PE')} km` : f.ruta} />
                   <FilaResumen label="Fecha" valor={fechaCorta(f.fecha)} />
                   <FilaResumen label="Entrega estimada" valor={fechaCorta(f.fecha_entrega)} />
                   <FilaResumen label="Punto de carga" valor={[etiquetaDe(f.origen), f.origen_dir].filter(Boolean).join(' · ')} />
