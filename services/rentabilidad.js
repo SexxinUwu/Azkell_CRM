@@ -30,7 +30,7 @@ async function rentabilidadPeriodo(pdb, desde, hasta) {
     const [rep] = await pdb.query(
         `SELECT o.placa AS placa, SUM(s.total_pen) AS total
          FROM salidas_inv s
-         JOIN ordenes_trabajo o ON (s.ticket_ot = o.ticket_entrada OR s.ticket_ot = o.id_ot)
+         JOIN ordenes_trabajo o ON (s.ticket_ot COLLATE utf8mb4_unicode_ci = o.ticket_entrada COLLATE utf8mb4_unicode_ci OR s.ticket_ot COLLATE utf8mb4_unicode_ci = o.id_ot COLLATE utf8mb4_unicode_ci)
          WHERE DATE(s.fecha) BETWEEN ? AND ? AND UPPER(s.estado) <> 'ANULADO'
          GROUP BY o.placa`,
         [desde, hasta]

@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { Field, SearchField, TextInput } from '../../core/ui/Field';
+import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { AccionesCabecera } from '../../core/ui/AccionesCabecera';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
@@ -42,6 +43,12 @@ interface Viaje {
   direccion_llegada: string | null;
   escolta: string | null;
   observaciones: string | null;
+  ejecucion?: string | null;
+  tercero_nombre?: string | null;
+  tercero_ruc?: string | null;
+  tercero_costo?: number | string | null;
+  tercero_moneda?: string | null;
+  tercero_documento?: string | null;
   estado: string;                       // ACTIVO | INICIADO | FINALIZADO | LIQUIDADO | ANULADO
   fecha_inicio: string | null;
   fecha_fin: string | null;
@@ -344,6 +351,9 @@ function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onE
             <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.0625rem' }}>{(n(v.peso_ida) + n(v.peso_retorno)).toLocaleString('es-PE')} kg</span><span className="inv-metrica__label">Peso total</span></div>
           </div>
           <div className="tarjeta__lista">
+            {fila('Ejecuta', v.ejecucion === 'TERCERO' ? `Tercero: ${v.tercero_nombre ?? ''}` : 'Flota propia')}
+            {v.ejecucion === 'TERCERO' && fila('Costo del tercero', n(v.tercero_costo) ? `${/DOL/i.test(String(v.tercero_moneda ?? '')) ? 'US$' : 'S/'} ${n(v.tercero_costo).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` : '')}
+            {v.ejecucion === 'TERCERO' && fila('RUC / documento del tercero', [v.tercero_ruc, v.tercero_documento].filter(Boolean).join(' · '))}
             {fila('Conductor', v.conductor)}{fila('Tracto', v.placa_tracto, true)}{fila('Remolque', v.placa_remolque, true)}{fila('Escolta', v.escolta)}
             {fila('Ruta', v.ruta)}{fila('Partida', v.direccion_partida)}{fila('Llegada', v.direccion_llegada)}
             {fila('Rutas', v.rutas_list)}{fila('Órdenes de servicio', v.ordenes_list)}
@@ -451,6 +461,7 @@ function FormularioViaje({ open, viaje, usuario, onClose, onGuardado }: {
     const base: Record<string, string> = {
       viaje: '', fecha_viaje: d.toISOString().slice(0, 16), conductor: '', id_conductor: '', placa_tracto: '', placa_remolque: '', ruta: '', peso: '',
       direccion_partida: '', direccion_llegada: '', ubigeo_partida: '', ubigeo_llegada: '', escolta: '', observaciones: '', kilometraje_inicial: '', horas_motor_remolque: '',
+      ejecucion: 'PROPIO', tercero_nombre: '', tercero_ruc: '', tercero_costo: '', tercero_moneda: 'SOLES', tercero_documento: '',
     };
     if (viaje) for (const k of Object.keys(base)) { const x = (viaje as unknown as Record<string, unknown>)[k]; if (x != null) base[k] = k === 'fecha_viaje' ? String(x).replace(' ', 'T').slice(0, 16) : String(x); }
     setV(base);
@@ -463,8 +474,12 @@ function FormularioViaje({ open, viaje, usuario, onClose, onGuardado }: {
 
   async function guardar() {
     const e: Record<string, string> = {};
-    if (!v.conductor.trim()) e.conductor = 'El conductor es obligatorio.';
-    if (!v.placa_tracto) e.placa_tracto = 'El tracto es obligatorio.';
+    if (v.ejecucion === 'TERCERO') {
+      if (!v.tercero_nombre.trim()) e.tercero_nombre = 'Indica el transportista tercero.';
+    } else {
+      if (!v.conductor.trim()) e.conductor = 'El conductor es obligatorio.';
+      if (!v.placa_tracto) e.placa_tracto = 'El tracto es obligatorio.';
+    }
     setErrCampos(e);
     if (Object.keys(e).length) { haptic('warning'); return; }
     setEnviando(true); setError(null);
@@ -499,13 +514,24 @@ function FormularioViaje({ open, viaje, usuario, onClose, onGuardado }: {
         {avisos.length > 0 && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{avisos.map(a => <div key={a}>{a}</div>)}</Notice></div>}
         {txt('viaje', 'N° de viaje', { disabled: true })}
         {txt('fecha_viaje', 'Fecha y hora', { type: 'datetime-local' })}
-        <Field label="Conductor" wide error={errCampos.conductor}>
+        <div className="field field--wide">
+          <SegmentedControl block label="Quién ejecuta el viaje" value={v.ejecucion === 'TERCERO' ? 'TERCERO' : 'PROPIO'} onChange={x => set('ejecucion', x)}
+            options={[{ value: 'PROPIO', label: 'Flota propia' }, { value: 'TERCERO', label: 'Transportista tercero' }]} />
+        </div>
+        {v.ejecucion === 'TERCERO' && (<>
+          <Field label="Transportista tercero *" wide error={errCampos.tercero_nombre}>{p => <TextInput {...p} value={v.tercero_nombre ?? ''} placeholder="Razón social del transportista" onChange={e => set('tercero_nombre', e.target.value)} />}</Field>
+          {txt('tercero_ruc', 'RUC del transportista', { mode: 'numeric' })}
+          {txt('tercero_documento', 'Documento del tercero')}
+          {txt('tercero_costo', 'Costo pactado', { mode: 'decimal' })}
+          <Field label="Moneda">{p => <SelectInput {...p} value={v.tercero_moneda ?? 'SOLES'} onChange={e => set('tercero_moneda', e.target.value)}><option value="SOLES">Soles (S/)</option><option value="DOLARES">Dólares (US$)</option></SelectInput>}</Field>
+        </>)}
+        <Field label={v.ejecucion === 'TERCERO' ? 'Conductor del tercero (opcional)' : 'Conductor'} wide error={errCampos.conductor}>
           {p => (<>
             <TextInput {...p} list="ov-conductores" value={v.conductor ?? ''} onChange={e => set('conductor', e.target.value)} />
             <datalist id="ov-conductores">{(conductores.data ?? []).map(c => <option key={c.id} value={c.nombre} />)}</datalist>
           </>)}
         </Field>
-        <Field label="Tracto" error={errCampos.placa_tracto}>
+        <Field label={v.ejecucion === 'TERCERO' ? 'Tracto del tercero (opcional)' : 'Tracto'} error={errCampos.placa_tracto}>
           {p => (<>
             <TextInput {...p} list="ov-tractos" value={v.placa_tracto ?? ''} onChange={e => set('placa_tracto', e.target.value.toUpperCase())} />
             <datalist id="ov-tractos">{tractos.map(t => <option key={t} value={t} />)}</datalist>

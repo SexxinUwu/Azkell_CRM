@@ -196,6 +196,12 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                     ov.direccion_llegada,
                     ov.escolta,
                     ov.observaciones,
+                    ov.ejecucion,
+                    ov.tercero_nombre,
+                    ov.tercero_ruc,
+                    ov.tercero_costo,
+                    ov.tercero_moneda,
+                    ov.tercero_documento,
                     ov.estado,
                     DATE_FORMAT(ov.fecha_inicio, '%Y-%m-%d %H:%i:%s') AS fecha_inicio,
                     DATE_FORMAT(ov.fecha_fin, '%Y-%m-%d %H:%i:%s') AS fecha_fin,
@@ -429,16 +435,32 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                 horas_motor_remolque,
                 configuracion_tracto,
                 configuracion_remolque,
-                rutas // array opcional con órdenes de servicio / rutas
+                rutas, // array opcional con órdenes de servicio / rutas
+                ejecucion,
+                tercero_nombre,
+                tercero_ruc,
+                tercero_costo,
+                tercero_moneda,
+                tercero_documento
             } = req.body;
 
             const codeViaje = (viaje && String(viaje).trim()) 
                 ? String(viaje).trim().toUpperCase() 
                 : `${serie || new Date().getFullYear()}-${String(numero || '1').padStart(8, '0')}`;
 
-            if (!placa_tracto || !conductor) {
-                return res.status(400).json({ ok: false, error: 'Conductor y Vehículo (Tracto) son obligatorios.' });
+            const esTercero = String(ejecucion || '').toUpperCase() === 'TERCERO';
+            if (esTercero ? !String(tercero_nombre || '').trim() : (!placa_tracto || !conductor)) {
+                return res.status(400).json({ ok: false, error: esTercero ? 'Indica el transportista tercero.' : 'Conductor y Vehículo (Tracto) son obligatorios.' });
             }
+            const costoTerc = parseFloat(tercero_costo);
+            const datosTercero = [
+                esTercero ? 'TERCERO' : 'PROPIO',
+                esTercero ? String(tercero_nombre).trim().slice(0, 200) : null,
+                esTercero && String(tercero_ruc || '').trim() ? String(tercero_ruc).trim().slice(0, 20) : null,
+                esTercero && Number.isFinite(costoTerc) ? costoTerc : null,
+                esTercero && String(tercero_moneda || '').trim() ? String(tercero_moneda).trim().slice(0, 20) : null,
+                esTercero && String(tercero_documento || '').trim() ? String(tercero_documento).trim().slice(0, 100) : null,
+            ];
             const vencidosViaje = await documentosVencidosPara(tdb, [placa_tracto, placa_remolque]);
             // Solo advertencia: el despacho sigue permitido mientras se renueva el documento
 
@@ -456,8 +478,9 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                     placa_tracto, placa_remolque, peso, ruta,
                     ubigeo_partida, direccion_partida, ubigeo_llegada, direccion_llegada,
                     escolta, observaciones, estado, usuario_creacion,
-                    kilometraje_inicial, horas_motor_remolque
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', ?, ?, ?)
+                    kilometraje_inicial, horas_motor_remolque,
+                    ejecucion, tercero_nombre, tercero_ruc, tercero_costo, tercero_moneda, tercero_documento
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     fecha_viaje = VALUES(fecha_viaje),
                     id_conductor = VALUES(id_conductor),
@@ -474,13 +497,19 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                     observaciones = VALUES(observaciones),
                     usuario_creacion = COALESCE(operaciones_ordenes_viaje.usuario_creacion, VALUES(usuario_creacion)),
                     kilometraje_inicial = COALESCE(VALUES(kilometraje_inicial), operaciones_ordenes_viaje.kilometraje_inicial),
-                    horas_motor_remolque = COALESCE(VALUES(horas_motor_remolque), operaciones_ordenes_viaje.horas_motor_remolque)
+                    horas_motor_remolque = COALESCE(VALUES(horas_motor_remolque), operaciones_ordenes_viaje.horas_motor_remolque),
+                    ejecucion = VALUES(ejecucion),
+                    tercero_nombre = VALUES(tercero_nombre),
+                    tercero_ruc = VALUES(tercero_ruc),
+                    tercero_costo = VALUES(tercero_costo),
+                    tercero_moneda = VALUES(tercero_moneda),
+                    tercero_documento = VALUES(tercero_documento)
             `, [
                 codeViaje,
                 fechaFinal,
                 id_conductor || null,
-                String(conductor).trim().toUpperCase(),
-                String(placa_tracto).trim().toUpperCase(),
+                String(conductor || '').trim().toUpperCase(),
+                String(placa_tracto || '').trim().toUpperCase(),
                 placa_remolque ? String(placa_remolque).trim().toUpperCase() : null,
                 parseFloat(peso) || 0.00,
                 ruta ? String(ruta).trim() : null,
@@ -492,7 +521,8 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                 observaciones || null,
                 userCreador,
                 kmIniVal,
-                hrRemVal
+                hrRemVal,
+                ...datosTercero
             ]);
 
             // Actualizar o guardar configuración en la tabla placas para tracto y carreta
@@ -709,12 +739,28 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                 kilometraje_inicial,
                 horas_motor_remolque,
                 configuracion_tracto,
-                configuracion_remolque
+                configuracion_remolque,
+                ejecucion,
+                tercero_nombre,
+                tercero_ruc,
+                tercero_costo,
+                tercero_moneda,
+                tercero_documento
             } = req.body;
 
-            if (!placa_tracto || !conductor) {
-                return res.status(400).json({ ok: false, error: 'Conductor y Vehículo (Tracto) son obligatorios.' });
+            const esTercero = String(ejecucion || '').toUpperCase() === 'TERCERO';
+            if (esTercero ? !String(tercero_nombre || '').trim() : (!placa_tracto || !conductor)) {
+                return res.status(400).json({ ok: false, error: esTercero ? 'Indica el transportista tercero.' : 'Conductor y Vehículo (Tracto) son obligatorios.' });
             }
+            const costoTerc = parseFloat(tercero_costo);
+            const datosTercero = [
+                esTercero ? 'TERCERO' : 'PROPIO',
+                esTercero ? String(tercero_nombre).trim().slice(0, 200) : null,
+                esTercero && String(tercero_ruc || '').trim() ? String(tercero_ruc).trim().slice(0, 20) : null,
+                esTercero && Number.isFinite(costoTerc) ? costoTerc : null,
+                esTercero && String(tercero_moneda || '').trim() ? String(tercero_moneda).trim().slice(0, 20) : null,
+                esTercero && String(tercero_documento || '').trim() ? String(tercero_documento).trim().slice(0, 100) : null,
+            ];
 
             const parsedKm = parseInt(kilometraje_inicial, 10);
             const kmIniVal = (!isNaN(parsedKm) && parsedKm >= 0) ? parsedKm : null;
@@ -740,13 +786,19 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                     escolta = ?,
                     observaciones = ?,
                     kilometraje_inicial = COALESCE(?, kilometraje_inicial),
-                    horas_motor_remolque = COALESCE(?, horas_motor_remolque)
+                    horas_motor_remolque = COALESCE(?, horas_motor_remolque),
+                    ejecucion = ?,
+                    tercero_nombre = ?,
+                    tercero_ruc = ?,
+                    tercero_costo = ?,
+                    tercero_moneda = ?,
+                    tercero_documento = ?
                 WHERE viaje = ?
             `, [
                 fecha_viaje || null,
                 id_conductor || null,
-                String(conductor).trim().toUpperCase(),
-                String(placa_tracto).trim().toUpperCase(),
+                String(conductor || '').trim().toUpperCase(),
+                String(placa_tracto || '').trim().toUpperCase(),
                 placa_remolque ? String(placa_remolque).trim().toUpperCase() : null,
                 configuracion_tracto ? String(configuracion_tracto).trim().toUpperCase() : null,
                 configuracion_remolque ? String(configuracion_remolque).trim().toUpperCase() : null,
@@ -760,6 +812,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                 observaciones || null,
                 kmIniVal,
                 hrRemVal,
+                ...datosTercero,
                 codeViaje
             ]);
 
@@ -1895,13 +1948,13 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             if (!(permitido[actual] || []).includes(nuevo)) return res.status(409).json({ ok: false, error: `No se puede pasar de ${actual} a ${nuevo}.` });
 
             const [vinc] = await tdb.query(
-                `SELECT ov.viaje, ov.estado, ov.conductor, ov.placa_tracto, ov.placa_remolque FROM operaciones_ordenes_viaje_rutas r
+                `SELECT ov.viaje, ov.estado, ov.conductor, ov.placa_tracto, ov.placa_remolque, ov.ejecucion, ov.tercero_nombre FROM operaciones_ordenes_viaje_rutas r
                  JOIN operaciones_ordenes_viaje ov ON ov.viaje COLLATE utf8mb4_unicode_ci = r.viaje COLLATE utf8mb4_unicode_ci WHERE r.orden = ? ORDER BY r.id LIMIT 1`, [o.codigo_orden]);
             const viaje = vinc[0] || null;
 
             if (nuevo === 'EN_EJECUCION') {
                 if (!viaje) return res.status(409).json({ ok: false, error: 'Asigna un viaje antes de iniciar el servicio.' });
-                if (!viaje.conductor || !viaje.placa_tracto) return res.status(409).json({ ok: false, error: `El viaje ${viaje.viaje} aún no tiene conductor y tracto.` });
+                if (viaje.ejecucion === 'TERCERO' ? !viaje.tercero_nombre : (!viaje.conductor || !viaje.placa_tracto)) return res.status(409).json({ ok: false, error: viaje.ejecucion === 'TERCERO' ? `El viaje ${viaje.viaje} aún no tiene transportista tercero.` : `El viaje ${viaje.viaje} aún no tiene conductor y tracto.` });
                 const fecha = fechaInicio || new Date().toISOString().slice(0, 10);
                 await tdb.query(`UPDATE operaciones_ordenes_servicio SET estado_servicio = 'EN_EJECUCION' WHERE id = ?`, [o.id]);
                 if (!['INICIADO', 'FINALIZADO'].includes(String(viaje.estado).toUpperCase())) {
