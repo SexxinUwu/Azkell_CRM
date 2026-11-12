@@ -11,31 +11,31 @@ export interface FiltrosPdf { periodo: string; estado: string; tipo: string; ban
 
 // Columnas: [título, ancho en px, alineación]
 const COLS: Array<[string, number, 'left' | 'right' | 'center']> = [
-  ['N°', 28, 'center'], ['Fecha', 62, 'center'], ['Tipo', 52, 'center'], ['Origen', 78, 'left'], ['Folio / OC', 66, 'left'],
-  ['Motivo', 100, 'left'], ['Sub motivo', 110, 'left'], ['Descripción', 200, 'left'], ['Beneficiario', 130, 'left'],
-  ['Banco / cuenta', 110, 'left'], ['N° oper.', 62, 'left'], ['N° factura', 66, 'left'], ['Placa', 56, 'left'],
-  ['Debe', 78, 'right'], ['Haber', 78, 'right'], ['Estado', 62, 'center'],
+  ['N°', 24, 'center'], ['Fecha', 56, 'center'], ['Folio / OC', 62, 'left'], ['Beneficiario', 160, 'left'], ['Motivo', 115, 'left'],
+  ['Descripción', 220, 'left'], ['Banco', 44, 'left'], ['N° oper.', 56, 'left'], ['N° factura', 78, 'left'],
+  ['Debe (ingreso)', 66, 'right'], ['Haber (egreso)', 66, 'right'], ['Estado', 56, 'center'],
 ];
 const ANCHO = COLS.reduce((a, c) => a + c[1], 0);
-const FILAS_PRIMERA = 31;
-const FILAS_RESTO = 38;
+const FILAS_PRIMERA = 36;
+const FILAS_RESTO = 43;
 
 function celda(txt: string, i: number, extra = '') {
   const [, w, al] = COLS[i];
-  return `<td title="${esc(txt)}" style="width:${w}px;max-width:${w}px;padding:2px 4px;border-bottom:1px solid #e2e8f0;text-align:${al};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${extra}">${esc(txt)}</td>`;
+  return `<td style="width:${w}px;max-width:${w}px;padding:2px 3px;border-bottom:1px solid #e2e8f0;text-align:${al};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${extra}">${esc(txt)}</td>`;
 }
+
+// "BCP (BANCO DE CRÉDITO DEL PERÚ) …" → "BCP"; las cajas quedan como "CAJA"
+const bancoCorto = (v: unknown) => limpio(v).split(/[\s(]/)[0];
 
 function filaHtml(m: MovimientoTesoreria, n: number): string {
   const ing = m.tipo_movimiento === 'INGRESO';
   const anulado = m.estado === 'ANULADO';
   const imp = monto(num(m.monto), m.moneda);
-  const color = ing ? '#15803d' : '#b91c1c';
   return `<tr style="${anulado ? 'color:#94a3b8;text-decoration:line-through' : ''}">
-    ${celda(String(n), 0)}${celda(formatFechaPe(m.fecha_valuta || m.fecha), 1)}
-    ${celda(m.tipo_movimiento, 2, `font-weight:700;color:${anulado ? '#94a3b8' : color}`)}${celda(limpio(m.tipo_origen), 3)}${celda(limpio(m.codigo_oc || m.caja_folio), 4)}
-    ${celda(limpio(m.motivo), 5)}${celda(limpio(m.sub_motivo), 6)}${celda(limpio(m.descripcion), 7)}${celda(limpio(m.beneficiario), 8)}
-    ${celda(limpio(m.banco_cuenta), 9)}${celda(limpio(m.numero_operacion), 10)}${celda(limpio(m.numero_factura), 11)}${celda(limpio(m.placa), 12)}
-    ${celda(ing ? imp : '', 13, 'font-weight:700')}${celda(ing ? '' : imp, 14, 'font-weight:700')}${celda(limpio(m.estado), 15)}
+    ${celda(String(n), 0)}${celda(formatFechaPe(m.fecha_valuta || m.fecha), 1)}${celda(limpio(m.codigo_oc || m.caja_folio), 2)}
+    ${celda(limpio(m.beneficiario), 3)}${celda(limpio(m.motivo), 4)}${celda(limpio(m.descripcion), 5)}${celda(bancoCorto(m.banco_cuenta), 6)}
+    ${celda(limpio(m.numero_operacion), 7)}${celda(limpio(m.numero_factura), 8)}
+    ${celda(ing ? imp : '', 9, 'font-weight:700;color:#15803d')}${celda(ing ? '' : imp, 10, 'font-weight:700;color:#b91c1c')}${celda(limpio(m.estado), 11)}
   </tr>`;
 }
 
@@ -58,8 +58,8 @@ function html(lista: MovimientoTesoreria[], f: FiltrosPdf): string {
   const filtros = [`Período: ${f.periodo}`, `Estado: ${f.estado || 'todos'}`, f.tipo && `Tipo: ${f.tipo}`, f.banco && `Banco: ${f.banco}`, f.busqueda && `Búsqueda: “${f.busqueda}”`]
     .filter(Boolean).join(' · ');
   const kpi = (et: string, sol: number, usd: number, rojo = false) =>
-    `<div style="border:1px solid #cbd5e1;border-radius:6px;padding:4px 10px;min-width:150px"><div style="font-size:8px;color:#64748b;font-weight:700;text-transform:uppercase">${et}</div>
-     <div style="font-size:13px;font-weight:800;color:${rojo && sol < 0 ? '#b91c1c' : '#0f172a'}">S/ ${fmt(sol)}</div>${hayUsd ? `<div style="font-size:9px;color:#475569">US$ ${fmt(usd)}</div>` : ''}</div>`;
+    `<div style="border:1px solid #cbd5e1;border-radius:6px;padding:4px 10px;min-width:100px"><div style="font-size:8px;color:#64748b;font-weight:700;text-transform:uppercase">${et}</div>
+     <div style="font-size:11px;font-weight:800;color:${rojo && sol < 0 ? '#b91c1c' : '#0f172a'}">S/ ${fmt(sol)}</div>${hayUsd ? `<div style="font-size:9px;color:#475569">US$ ${fmt(usd)}</div>` : ''}</div>`;
 
   const trozos: string[] = [];
   let i = 0;
@@ -71,13 +71,13 @@ function html(lista: MovimientoTesoreria[], f: FiltrosPdf): string {
 
   return `<div style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;width:${ANCHO}px;background:#fff;padding:0">
     <div style="display:flex;align-items:center;gap:12px;border-bottom:2px solid #1e293b;padding-bottom:6px;margin-bottom:6px">
-      <img src="/api/tenant-logo" alt="" style="height:36px" crossorigin="anonymous" />
+      <img src="/api/tenant-logo" alt="" style="height:30px" crossorigin="anonymous" />
       <div style="flex:1">
         <div style="font-size:9px;font-weight:700">${esc(f.empresa.toUpperCase())}</div>
-        <div style="font-size:16px;font-weight:800">Movimientos de Tesorería</div>
+        <div style="font-size:14px;font-weight:800">Movimientos de Tesorería</div>
         <div style="font-size:9px;color:#475569">${esc(filtros)} · ${lista.length} registro${lista.length === 1 ? '' : 's'}</div>
       </div>
-      <div style="display:flex;gap:8px">${kpi('Ingresos', t.ingSol, t.ingUsd)}${kpi('Egresos', t.egSol, t.egUsd)}${kpi('Balance neto', t.ingSol - t.egSol, t.ingUsd - t.egUsd, true)}</div>
+      <div style="display:flex;gap:6px">${kpi('Ingresos', t.ingSol, t.ingUsd)}${kpi('Egresos', t.egSol, t.egUsd)}${kpi('Balance neto', t.ingSol - t.egSol, t.ingUsd - t.egUsd, true)}</div>
     </div>
     ${paginas}
     <div style="margin-top:6px;font-size:8px;color:#64748b">Generado el ${esc(new Date().toLocaleString('es-PE'))} · Lo anulado no suma en los totales · Azkell Fleet</div>
