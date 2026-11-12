@@ -73,17 +73,19 @@ async function rentabilidadPeriodo(pdb, desde, hasta) {
 
     // Margen por viaje del periodo
     const [viajes] = await pdb.query(
-        `SELECT ov.viaje, ov.placa_tracto AS placa, DATE(ov.fecha_viaje) AS fecha
+        `SELECT ov.viaje, ov.placa_tracto AS placa, DATE(ov.fecha_viaje) AS fecha,
+                CASE WHEN ov.ejecucion = 'TERCERO' THEN COALESCE(ov.tercero_costo, 0) ELSE 0 END AS costo_tercero
          FROM operaciones_ordenes_viaje ov
          WHERE DATE(ov.fecha_viaje) BETWEEN ? AND ? AND UPPER(ov.estado) <> 'ANULADO'`,
         [desde, hasta]
     );
     const [flete] = await pdb.query(
-        `SELECT UPPER(TRIM(os.viaje_asignado)) AS viaje, SUM(os.costo_flete) AS total
-         FROM operaciones_ordenes_servicio os
-         JOIN operaciones_ordenes_viaje ov ON UPPER(TRIM(ov.viaje)) = UPPER(TRIM(os.viaje_asignado))
-         WHERE DATE(ov.fecha_viaje) BETWEEN ? AND ?
-         GROUP BY UPPER(TRIM(os.viaje_asignado))`,
+        `SELECT UPPER(TRIM(r.viaje)) AS viaje, SUM(os.costo_flete) AS total
+         FROM operaciones_ordenes_viaje_rutas r
+         JOIN operaciones_ordenes_servicio os ON os.codigo_orden COLLATE utf8mb4_unicode_ci = r.orden COLLATE utf8mb4_unicode_ci
+         JOIN operaciones_ordenes_viaje ov ON UPPER(TRIM(ov.viaje)) COLLATE utf8mb4_unicode_ci = UPPER(TRIM(r.viaje)) COLLATE utf8mb4_unicode_ci
+         WHERE DATE(ov.fecha_viaje) BETWEEN ? AND ? AND os.estado_servicio <> 'ANULADO'
+         GROUP BY UPPER(TRIM(r.viaje))`,
         [desde, hasta]
     );
     const [valesViaje] = await pdb.query(
@@ -111,7 +113,8 @@ async function rentabilidadPeriodo(pdb, desde, hasta) {
         const f = fleteDe.get(clave) || 0;
         const combustible = combustibleDe.get(clave) || 0;
         const viaticos = viaticosDe.get(clave) || 0;
-        const gastos = combustible + viaticos;
+        const tercero = num(v.costo_tercero);
+        const gastos = combustible + viaticos + tercero;
         const margen = f - gastos;
         return {
             viaje: v.viaje,
@@ -120,6 +123,7 @@ async function rentabilidadPeriodo(pdb, desde, hasta) {
             flete: redondear(f),
             combustible: redondear(combustible),
             viaticos: redondear(viaticos),
+            tercero: redondear(tercero),
             gastos_ruta: redondear(gastos),
             margen: redondear(margen),
             rentabilidad_pct: f > 0 ? +((margen / f) * 100).toFixed(1) : null,

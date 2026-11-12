@@ -1,0 +1,33 @@
+/* Órdenes de servicio: formulario por secciones y ficha */
+.os-form { display: flex; flex-direction: column; gap: var(--s-4); }
+.os-seccion { background: var(--fill-subtle); border-radius: var(--r-lg, 16px); padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-3); }
+.os-seccion__titulo { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.01em; color: var(--label-2); }
+.os-seccion__icono { width: 1.625rem; height: 1.625rem; border-radius: 8px; display: grid; place-items: center; background: var(--accent-tint); color: var(--accent); }
+.os-seccion__cuerpo { display: flex; flex-direction: column; gap: var(--s-3); }
+.os-fila { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); align-items: start; }
+.os-nota { margin: 0; font-size: 0.8125rem; color: var(--label-2); }
+@media (max-width: 560px) { .os-fila { grid-template-columns: 1fr; } }
+
+/* Ficha del servicio */
+.os-viaje { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-3) var(--s-4); border-radius: var(--r-md); background: var(--fill-subtle); }
+.os-viaje__datos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.os-viaje__codigo { font-weight: 700; font-variant-numeric: tabular-nums; }
+.os-viaje__detalle { font-size: 0.8125rem; color: var(--label-2); }
+.os-viaje--vacio { background: var(--amber-tint); color: var(--amber-ink); }
+.os-pasos { display: flex; gap: 6px; }
+.os-paso { flex: 1; height: 6px; border-radius: 999px; background: var(--fill); }
+.os-paso--on { background: var(--accent); }
+.os-pasos-leyenda { display: flex; justify-content: space-between; font-size: 0.6875rem; color: var(--label-3); }
+
+/* Chips de estado: responden al tocar (se hunden) y se mueven con un resorte suave */
+.os-chip { padding: 0.375rem 0.875rem; border-radius: var(--r-full); font-size: 0.875rem; font-weight: 600; border: 0; cursor: pointer; background: var(--fill); color: var(--label-2);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease, color 0.2s ease; }
+.os-chip:hover { background: var(--fill-strong, var(--fill)); }
+.os-chip:active { transform: scale(0.95); transition-duration: 0.08s; }
+.os-chip--on, .os-chip--on:hover { background: var(--ink); color: var(--label-inverse); }
+.os-chip__n { opacity: 0.7; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.os-viaje { transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease; }
+button.os-viaje:hover { background: var(--fill); }
+button.os-viaje:active { transform: scale(0.985); transition-duration: 0.08s; }
+.os-paso { transition: background-color 0.4s ease; }
+@media (prefers-reduced-motion: reduce) { .os-chip, .os-viaje, .os-paso { transition: background-color 0.2s ease, color 0.2s ease; } .os-chip:active, button.os-viaje:active { transform: none; } }

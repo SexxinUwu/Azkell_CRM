@@ -1597,97 +1597,72 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
         }
     });
 
-    // 1. Correlativo para nueva Orden de Servicio
+    // ════════════════════════════════════════════════════════════════
+    // ÓRDENES DE SERVICIO (rediseño 2026-11-12)
+    // El servicio es lo que se vende al cliente; el viaje es lo que ejecuta la unidad. Un viaje agrupa varios
+    // servicios (ida, retorno, locales) a través de operaciones_ordenes_viaje_rutas (viaje + orden = código del servicio).
+    // Estados: PENDIENTE → PROGRAMADO (ya tiene viaje) → EN_EJECUCION → ENTREGADO; ANULADO en cualquier punto antes de entregar.
+    // ════════════════════════════════════════════════════════════════
+    const OS_CERRADOS = ['ENTREGADO', 'ANULADO'];
+    const osTexto = (v, max) => { const t = String(v ?? '').trim(); return t ? t.slice(0, max) : null; };
+    const osNumero = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+    const osFecha = (v) => (/^\d{4}-\d{2}-\d{2}/.test(String(v || '')) ? String(v).slice(0, 10) : null);
+    const osUsuario = (req) => (req.user && req.user.nombre) || 'ADMINISTRADOR';
+
+    // Servicio con su viaje (el primero, y cuántos tiene)
+    const OS_SELECT = `
+        SELECT os.*,
+               DATE_FORMAT(os.fecha, '%Y-%m-%d') AS fecha_fmt,
+               DATE_FORMAT(os.fecha_entrega, '%Y-%m-%d') AS fecha_entrega_fmt,
+               b.viaje AS viaje, COALESCE(b.n, 0) AS viajes_n,
+               ov.estado AS viaje_estado, ov.conductor AS conductor, ov.placa_tracto AS placa_tracto,
+               ov.placa_remolque AS placa_carreta, ov.ejecucion AS ejecucion, ov.tercero_nombre AS tercero_nombre
+        FROM operaciones_ordenes_servicio os
+        LEFT JOIN (SELECT orden, MIN(viaje) AS viaje, COUNT(*) AS n FROM operaciones_ordenes_viaje_rutas GROUP BY orden) b
+               ON b.orden COLLATE utf8mb4_unicode_ci = os.codigo_orden COLLATE utf8mb4_unicode_ci
+        LEFT JOIN operaciones_ordenes_viaje ov ON ov.viaje COLLATE utf8mb4_unicode_ci = b.viaje COLLATE utf8mb4_unicode_ci`;
+
+    async function siguienteCodigoServicio(tdb) {
+        const year = new Date().getFullYear().toString();
+        const [rows] = await tdb.query(`SELECT numero FROM operaciones_ordenes_servicio WHERE serie = ? ORDER BY id DESC LIMIT 1`, [year]);
+        let next = 1;
+        if (rows && rows.length) { const p = parseInt(rows[0].numero, 10); if (!isNaN(p)) next = p + 1; }
+        const numero = String(next).padStart(8, '0');
+        return { serie: year, numero, codigo_orden: `${year}-${numero}` };
+    }
+
     router.get('/ordenes-servicio/correlativo', async (req, res) => {
         try {
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
-
-            const year = new Date().getFullYear().toString();
-            const [rows] = await tdb.query(
-                `SELECT numero FROM operaciones_ordenes_servicio WHERE serie = ? ORDER BY id DESC LIMIT 1`,
-                [year]
-            );
-
-            let nextNum = 1;
-            if (rows && rows.length > 0) {
-                const parsed = parseInt(rows[0].numero, 10);
-                if (!isNaN(parsed)) nextNum = parsed + 1;
-            }
-
-            const formattedNum = String(nextNum).padStart(8, '0');
-            res.json({
-                ok: true,
-                serie: year,
-                numero: formattedNum,
-                codigo_orden: `${year}-${formattedNum}`
-            });
+            res.json({ ok: true, ...(await siguienteCodigoServicio(tdb)) });
         } catch (err) {
             console.error('Error al obtener correlativo de orden de servicio:', err);
             res.status(500).json({ ok: false, error: err.message });
         }
     });
 
-    // 2. Listar Órdenes de Servicio
     router.get('/ordenes-servicio', async (req, res) => {
         try {
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
-
-            const { fecha_desde, fecha_hasta, cliente, q, viaje } = req.query;
-
-            let sql = `
-                SELECT 
-                    os.*,
-                    DATE_FORMAT(os.fecha, '%Y-%m-%d') AS fecha_fmt,
-                    DATE_FORMAT(os.fecha_fin, '%Y-%m-%d') AS fecha_fin_fmt,
-                    COALESCE(doc_cnt.total_docs, 0) AS carga_doc,
-                    COALESCE(doc_cnt.total_peso, 0) AS peso_documentos,
-                    COALESCE(doc_cnt.total_volumen, 0) AS volumen_documentos
-                FROM operaciones_ordenes_servicio os
-                LEFT JOIN (
-                    SELECT 
-                        orden_servicio_id, 
-                        COUNT(*) AS total_docs,
-                        SUM(peso) AS total_peso,
-                        SUM(volumen) AS total_volumen
-                    FROM operaciones_ordenes_servicio_docs
-                    GROUP BY orden_servicio_id
-                ) doc_cnt ON os.id = doc_cnt.orden_servicio_id
-                WHERE 1=1
-            `;
+            const { fecha_desde, fecha_hasta, cliente, q, viaje, estado } = req.query;
+            let sql = `${OS_SELECT} WHERE 1=1`;
             const params = [];
-
-            if (viaje && String(viaje).trim() !== '') {
-                sql += ` AND os.viaje_asignado = ?`;
+            if (viaje && String(viaje).trim()) {
+                sql += ` AND os.codigo_orden IN (SELECT orden FROM operaciones_ordenes_viaje_rutas WHERE viaje = ?)`;
                 params.push(String(viaje).trim());
             }
-            if (fecha_desde) {
-                sql += ` AND os.fecha >= ?`;
-                params.push(fecha_desde);
-            }
-            if (fecha_hasta) {
-                sql += ` AND os.fecha <= ?`;
-                params.push(fecha_hasta);
-            }
-            if (cliente && String(cliente).trim() !== '' && cliente !== 'TODOS') {
-                sql += ` AND (os.cliente_nombre = ? OR os.cliente_id = ?)`;
-                params.push(cliente, cliente);
-            }
-            if (q && String(q).trim() !== '') {
+            if (estado && String(estado).trim()) { sql += ` AND os.estado_servicio = ?`; params.push(String(estado).trim().toUpperCase()); }
+            if (fecha_desde) { sql += ` AND os.fecha >= ?`; params.push(fecha_desde); }
+            if (fecha_hasta) { sql += ` AND os.fecha <= ?`; params.push(fecha_hasta); }
+            if (cliente && String(cliente).trim() && cliente !== 'TODOS') { sql += ` AND (os.cliente_nombre = ? OR os.cliente_id = ?)`; params.push(cliente, cliente); }
+            if (q && String(q).trim()) {
                 const term = `%${String(q).trim()}%`;
-                sql += ` AND (
-                    os.codigo_orden LIKE ? OR 
-                    os.cliente_nombre LIKE ? OR 
-                    os.conductor LIKE ? OR 
-                    os.viaje_asignado LIKE ? OR
-                    os.tipo_servicio LIKE ?
-                )`;
-                params.push(term, term, term, term, term);
+                sql += ` AND (os.codigo_orden LIKE ? OR os.cliente_nombre LIKE ? OR os.origen LIKE ? OR os.destino LIKE ? OR os.tipo_servicio LIKE ? OR b.viaje LIKE ? OR ov.conductor LIKE ? OR ov.placa_tracto LIKE ?)`;
+                params.push(term, term, term, term, term, term, term, term);
             }
-
             sql += ` ORDER BY os.fecha DESC, os.id DESC LIMIT 1500`;
-
             const [rows] = await tdb.query(sql, params);
             res.json({ ok: true, data: rows });
         } catch (err) {
@@ -1696,736 +1671,249 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
         }
     });
 
-    // 3. Obtener detalle de una Orden de Servicio (con sus documentos y rutas adjuntas)
     router.get('/ordenes-servicio/:id', async (req, res) => {
         try {
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
-
-            const [rows] = await tdb.query(
-                `SELECT *, DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha_fmt, DATE_FORMAT(fecha_fin, '%Y-%m-%d') AS fecha_fin_fmt FROM operaciones_ordenes_servicio WHERE id = ? OR codigo_orden = ?`,
-                [req.params.id, req.params.id]
-            );
-            if (!rows || rows.length === 0) {
-                return res.status(404).json({ ok: false, error: 'Orden de servicio no encontrada' });
-            }
-
-            const orden = rows[0];
-            const [docs] = await tdb.query(
-                `SELECT *, DATE_FORMAT(fecha_carga, '%Y-%m-%d') AS fecha_carga_fmt, DATE_FORMAT(fecha_entrega, '%Y-%m-%d') AS fecha_entrega_fmt 
-                 FROM operaciones_ordenes_servicio_docs 
-                 WHERE orden_servicio_id = ? 
-                 ORDER BY id ASC`,
-                [orden.id]
-            );
-
-            const [rutas] = await tdb.query(
-                `SELECT id, ruta, distancia_km, galones 
-                 FROM operaciones_ordenes_servicio_rutas 
-                 WHERE orden_servicio_id = ? 
-                 ORDER BY id ASC`,
-                [orden.id]
-            );
-
-            orden.documentos = docs || [];
-            orden.rutas = rutas || [];
-            res.json({ ok: true, data: orden });
+            const [rows] = await tdb.query(`${OS_SELECT} WHERE os.id = ? OR os.codigo_orden = ? LIMIT 1`, [req.params.id, req.params.id]);
+            if (!rows.length) return res.status(404).json({ ok: false, error: 'Orden de servicio no encontrada' });
+            const o = rows[0];
+            const [viajes] = await tdb.query(
+                `SELECT r.viaje, ov.estado, ov.conductor, ov.placa_tracto, ov.placa_remolque, ov.ejecucion, ov.tercero_nombre, DATE_FORMAT(ov.fecha_viaje, '%Y-%m-%d') AS fecha_viaje
+                 FROM operaciones_ordenes_viaje_rutas r LEFT JOIN operaciones_ordenes_viaje ov ON ov.viaje COLLATE utf8mb4_unicode_ci = r.viaje COLLATE utf8mb4_unicode_ci
+                 WHERE r.orden COLLATE utf8mb4_unicode_ci = ? COLLATE utf8mb4_unicode_ci ORDER BY r.id`, [o.codigo_orden]);
+            // documentos y rutas ya no se manejan aquí (las guías se vincularán más adelante); se devuelven vacíos por compatibilidad
+            res.json({ ok: true, data: { ...o, viajes, documentos: [], rutas: [] } });
         } catch (err) {
             console.error('Error al obtener orden de servicio:', err);
             res.status(500).json({ ok: false, error: err.message });
         }
     });
 
-    // 4. Crear nueva Orden de Servicio
+    function camposServicio(b) {
+        return {
+            fecha: osFecha(b.fecha) || new Date().toISOString().slice(0, 10),
+            fecha_entrega: osFecha(b.fecha_entrega),
+            moneda: osTexto(b.moneda, 20) || 'SOLES',
+            tipo_cambio: osNumero(b.tipo_cambio) ?? 3.75,
+            tipo_contratacion: osTexto(b.tipo_contratacion, 50) || 'CLIENTE DIRECTO',
+            cliente_id: Number.isInteger(Number(b.cliente_id)) && Number(b.cliente_id) > 0 ? Number(b.cliente_id) : null,
+            cliente_nombre: osTexto(b.cliente_nombre, 255),
+            tipo_servicio: osTexto(b.tipo_servicio, 100) || 'CARGA GENERAL',
+            es_retorno: b.es_retorno === true || b.es_retorno === 1 || b.es_retorno === '1' ? 1 : 0,
+            origen: osTexto(b.origen, 150),
+            destino: osTexto(b.destino, 150),
+            descripcion_carga: osTexto(b.descripcion_carga, 255),
+            peso_estimado: osNumero(b.peso_estimado),
+            impuesto: osTexto(b.impuesto, 50) || 'INCLUYE IGV',
+            costo_flete: osNumero(b.costo_flete) ?? 0,
+            destinatario: osTexto(b.destinatario, 255),
+            remitente_generador: osTexto(b.remitente_generador, 255),
+            observaciones: osTexto(b.observaciones, 5000),
+        };
+    }
+
     router.post('/ordenes-servicio', async (req, res) => {
         try {
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
-
-            const {
-                serie,
-                numero,
-                viaje_asignado,
-                fecha,
-                fecha_fin,
-                moneda,
-                tipo_cambio,
-                tipo_contratacion,
-                modalidad_ejecucion,
-                cliente_id,
-                cliente_nombre,
-                tipo_servicio,
-                es_retorno,
-                tipo_costo,
-                impuesto,
-                costo_flete,
-                puntos_carga,
-                puntos_destino,
-                destinatario,
-                observaciones,
-                documentos,
-                rutas,
-                placa_tracto,
-                placa_carreta,
-                proveedor_tercero_nombre,
-                proveedor_tercero_ruc,
-                costo_tercero,
-                doc_tercero,
-                remitente_generador
-            } = req.body;
-
-            const yearSerie = serie || new Date().getFullYear().toString();
-            let numFinal = numero;
-            if (!numFinal) {
-                const [r] = await tdb.query(`SELECT numero FROM operaciones_ordenes_servicio WHERE serie = ? ORDER BY id DESC LIMIT 1`, [yearSerie]);
-                let next = 1;
-                if (r && r.length > 0) {
-                    const p = parseInt(r[0].numero, 10);
-                    if (!isNaN(p)) next = p + 1;
-                }
-                numFinal = String(next).padStart(8, '0');
+            const c = camposServicio(req.body || {});
+            if (!c.cliente_nombre) return res.status(400).json({ ok: false, error: 'Indica el cliente.' });
+            if (!c.origen || !c.destino) return res.status(400).json({ ok: false, error: 'Indica el origen y el destino.' });
+            const cols = Object.keys(c);
+            let ultimo = null;
+            for (let intento = 0; intento < 3; intento++) {
+                const cod = await siguienteCodigoServicio(tdb);
+                try {
+                    const [r] = await tdb.query(
+                        `INSERT INTO operaciones_ordenes_servicio (serie, numero, codigo_orden, ${cols.join(', ')}, estado_servicio, usuario_creacion) VALUES (?, ?, ?, ${cols.map(() => '?').join(', ')}, 'PENDIENTE', ?)`,
+                        [cod.serie, cod.numero, cod.codigo_orden, ...cols.map(k => c[k]), osUsuario(req)]);
+                    if (logAudit) logAudit({ req, accion: 'CREAR_ORDEN_SERVICIO', modulo: 'OPERACIONES', detalle: `Creada orden de servicio ${cod.codigo_orden} (${c.cliente_nombre}: ${c.origen} → ${c.destino})` });
+                    return res.json({ ok: true, id: r.insertId, codigo_orden: cod.codigo_orden, message: `Orden de servicio ${cod.codigo_orden} creada.` });
+                } catch (e) { if (e && e.code === 'ER_DUP_ENTRY') { ultimo = e; continue; } throw e; }
             }
-
-            const codigo_orden = `${yearSerie}-${numFinal}`;
-
-            const [ins] = await tdb.query(`
-                INSERT INTO operaciones_ordenes_servicio (
-                    serie, numero, codigo_orden, viaje_asignado, fecha, fecha_fin, moneda, tipo_cambio,
-                    tipo_contratacion, modalidad_ejecucion, cliente_id, cliente_nombre,
-                    tipo_servicio, es_retorno, tipo_costo, impuesto, costo_flete, puntos_carga,
-                    puntos_destino, destinatario, observaciones, placa_tracto, placa_carreta, estado_servicio, estado_liquidacion,
-                    proveedor_tercero_nombre, proveedor_tercero_ruc, costo_tercero, doc_tercero, remitente_generador
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 'PENDIENTE'), 'PENDIENTE', ?, ?, ?, ?, ?)
-            `, [
-                yearSerie,
-                numFinal,
-                codigo_orden,
-                viaje_asignado || null,
-                fecha || new Date().toISOString().split('T')[0],
-                fecha_fin || null,
-                moneda || 'SOLES',
-                parseFloat(tipo_cambio) || 3.750,
-                tipo_contratacion || 'CLIENTE DIRECTO',
-                modalidad_ejecucion || 'PROPIO',
-                cliente_id || null,
-                cliente_nombre || 'CLIENTE GENERAL',
-                tipo_servicio || 'CARGA GENERAL',
-                parseInt(es_retorno, 10) || 0,
-                tipo_costo || 'COSTO TARIFA',
-                impuesto || 'INCLUYE IGV',
-                parseFloat(costo_flete) || 0.00,
-                parseInt(puntos_carga, 10) || 1,
-                parseInt(puntos_destino, 10) || 1,
-                destinatario || null,
-                observaciones || null,
-                placa_tracto || null,
-                placa_carreta || null,
-                req.body.estado_servicio || 'PENDIENTE',
-                proveedor_tercero_nombre || null,
-                proveedor_tercero_ruc || null,
-                parseFloat(costo_tercero) || 0.00,
-                doc_tercero || null,
-                remitente_generador || null
-            ]);
-
-            const osId = ins.insertId;
-
-            // Anexar rutas si vienen en el payload
-            if (Array.isArray(rutas) && rutas.length > 0) {
-                for (const r of rutas) {
-                    await tdb.query(`
-                        INSERT INTO operaciones_ordenes_servicio_rutas (
-                            orden_servicio_id, codigo_orden, ruta, distancia_km, galones
-                        ) VALUES (?, ?, ?, ?, ?)
-                    `, [
-                        osId,
-                        codigo_orden,
-                        r.ruta || '',
-                        parseFloat(r.distancia_km) || 0,
-                        parseFloat(r.galones) || 0
-                    ]);
-
-                    if (viaje_asignado) {
-                        try {
-                            await tdb.query(`
-                                INSERT INTO operaciones_ordenes_viaje_rutas (
-                                    viaje, orden, ruta, distancia_km, galones, tipo_servicio
-                                ) VALUES (?, ?, ?, ?, ?, ?)
-                                ON DUPLICATE KEY UPDATE ruta = VALUES(ruta), distancia_km = VALUES(distancia_km), galones = VALUES(galones)
-                            `, [
-                                viaje_asignado,
-                                codigo_orden,
-                                r.ruta || '',
-                                parseFloat(r.distancia_km) || 0,
-                                parseFloat(r.galones) || 0,
-                                tipo_servicio || 'CARGA GENERAL'
-                            ]);
-                        } catch (ignore) {}
-                    }
-                }
-            }
-
-            // Anexar documentos (GREs) si vienen en el payload
-            if (Array.isArray(documentos) && documentos.length > 0) {
-                for (const doc of documentos) {
-                    await tdb.query(`
-                        INSERT INTO operaciones_ordenes_servicio_docs (
-                            orden_servicio_id, codigo_orden, guia_remision_id, numero_documento,
-                            tipo_documento, gr_remitente, numero_transporte, placa_referencia,
-                            volumen, cantidad, peso, remitente, destinatario, fecha_carga, fecha_entrega
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    `, [
-                        osId,
-                        codigo_orden,
-                        doc.guia_remision_id || null,
-                        doc.numero_documento || doc.numero_guia || 'GRE',
-                        doc.tipo_documento || 'GRE',
-                        doc.gr_remitente || null,
-                        doc.numero_transporte || null,
-                        doc.placa_referencia || doc.placa_tracto || null,
-                        parseFloat(doc.volumen || doc.volumen_m3) || 0.000,
-                        parseFloat(doc.cantidad) || 1.00,
-                        parseFloat(doc.peso || doc.peso_bruto_total) || 0.00,
-                        doc.remitente || doc.remitente_razon_social || null,
-                        doc.destinatario || doc.destinatario_razon_social || null,
-                        doc.fecha_carga || doc.fecha_traslado || null,
-                        doc.fecha_entrega || null
-                    ]);
-
-                    // Actualizar trazabilidad en la tabla guias_remision
-                    if (doc.guia_remision_id) {
-                        try {
-                            await tdb.query(
-                                `UPDATE guias_remision SET orden_servicio = ?, orden_viaje = COALESCE(?, orden_viaje) WHERE id = ?`,
-                                [codigo_orden, viaje_asignado || null, doc.guia_remision_id]
-                            );
-                        } catch (ignore) {}
-                    } else if (doc.numero_documento) {
-                        try {
-                            await tdb.query(
-                                `UPDATE guias_remision SET orden_servicio = ?, orden_viaje = COALESCE(?, orden_viaje) WHERE numero_guia = ?`,
-                                [codigo_orden, viaje_asignado || null, doc.numero_documento]
-                            );
-                        } catch (ignore) {}
-                    }
-                }
-            }
-
-            // ── Sincronizar automáticamente con Cuentas por Cobrar (Tesorería) ──
-            try {
-                // Obtener datos complementarios del viaje si existe
-                let conductorViaje = null;
-                let razonSocialViaje = '';
-                if (viaje_asignado) {
-                    const [vRows] = await tdb.query(`SELECT conductor, empresa_nombre FROM operaciones_ordenes_viaje WHERE viaje = ? LIMIT 1`, [viaje_asignado]);
-                    if (vRows && vRows.length > 0) {
-                        conductorViaje = vRows[0].conductor;
-                        razonSocialViaje = vRows[0].empresa_nombre || '';
-                    }
-                }
-
-                const fleteNum = parseFloat(costo_flete) || 0.00;
-                // Tarifa con 0% de comisión por defecto
-                const tarifaNum = fleteNum;
-                const biNum = tarifaNum;
-                const igvNum = parseFloat((biNum * 0.18).toFixed(2));
-                const totalNum = parseFloat((biNum + igvNum).toFixed(2));
-                const detraccionNum = totalNum > 700 ? Math.round(totalNum * 0.04) : 0.00;
-                const netoCobrarNum = parseFloat((totalNum - detraccionNum).toFixed(2));
-
-                let lugarStr = '';
-                if (Array.isArray(rutas) && rutas.length > 0) {
-                    lugarStr = rutas.map(r => r.ruta).filter(Boolean).join(' - ');
-                }
-
-                await tdb.query(`
-                    INSERT INTO tesoreria_cuentas (
-                        orden_servicio, numero_viaje, fecha_servicio, razon_social,
-                        placa_camion, placa_carreta, conductor, cliente, lugar,
-                        flete, comision_porcentaje, tarifa, gastos_operativos,
-                        base_imponible, igv, total, adelanto, detraccion, neto_cobrar,
-                        estado_servicio
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.00, ?, 0.00, ?, ?, ?, 0.00, ?, ?, 'PENDIENTE')
-                    ON DUPLICATE KEY UPDATE
-                        numero_viaje = VALUES(numero_viaje),
-                        fecha_servicio = VALUES(fecha_servicio),
-                        cliente = VALUES(cliente),
-                        flete = VALUES(flete),
-                        tarifa = VALUES(tarifa),
-                        base_imponible = VALUES(base_imponible),
-                        igv = VALUES(igv),
-                        total = VALUES(total),
-                        detraccion = VALUES(detraccion),
-                        neto_cobrar = VALUES(neto_cobrar)
-                `, [
-                    codigo_orden,
-                    viaje_asignado || '',
-                    fecha || new Date().toISOString().split('T')[0],
-                    razonSocialViaje,
-                    placa_tracto || '',
-                    placa_carreta || '',
-                    conductorViaje || '',
-                    cliente_nombre || 'CLIENTE GENERAL',
-                    lugarStr,
-                    fleteNum,
-                    tarifaNum,
-                    biNum,
-                    igvNum,
-                    totalNum,
-                    detraccionNum,
-                    netoCobrarNum
-                ]);
-            } catch (errSync) {
-                console.warn('[Operaciones -> Tesorería] Error sincronizando OS con Cuentas por Cobrar:', errSync.message);
-            }
-
-            if (logAudit) {
-                logAudit({
-                    req,
-                    accion: 'CREAR_ORDEN_SERVICIO',
-                    modulo: 'OPERACIONES',
-                    detalle: `Creada Orden de Servicio ${codigo_orden} para cliente ${cliente_nombre}`
-                });
-            }
-
-            res.json({
-                ok: true,
-                message: `Orden de Servicio ${codigo_orden} guardada exitosamente y sincronizada con Cuentas por Cobrar.`,
-                id: osId,
-                codigo_orden
-            });
+            throw ultimo;
         } catch (err) {
             console.error('Error al crear orden de servicio:', err);
             res.status(500).json({ ok: false, error: err.message });
         }
     });
 
-    // 5. Editar Orden de Servicio existente
     router.put('/ordenes-servicio/:id', async (req, res) => {
         try {
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
-
-            const osId = req.params.id;
-            const {
-                viaje_asignado,
-                fecha,
-                fecha_fin,
-                moneda,
-                tipo_cambio,
-                tipo_contratacion,
-                modalidad_ejecucion,
-                cliente_id,
-                cliente_nombre,
-                tipo_servicio,
-                es_retorno,
-                tipo_costo,
-                impuesto,
-                costo_flete,
-                puntos_carga,
-                puntos_destino,
-                destinatario,
-                observaciones,
-                estado_servicio,
-                documentos,
-                rutas,
-                placa_tracto,
-                placa_carreta,
-                proveedor_tercero_nombre,
-                proveedor_tercero_ruc,
-                costo_tercero,
-                doc_tercero,
-                remitente_generador
-            } = req.body;
-
-            const [prev] = await tdb.query(`SELECT codigo_orden, viaje_asignado FROM operaciones_ordenes_servicio WHERE id = ?`, [osId]);
-            if (!prev || prev.length === 0) {
-                return res.status(404).json({ ok: false, error: 'Orden de servicio no encontrada' });
-            }
-            const codigo_orden = prev[0].codigo_orden;
-
-            await tdb.query(`
-                UPDATE operaciones_ordenes_servicio SET
-                    viaje_asignado = COALESCE(?, viaje_asignado),
-                    fecha = COALESCE(?, fecha),
-                    fecha_fin = ?,
-                    moneda = COALESCE(?, moneda),
-                    tipo_cambio = COALESCE(?, tipo_cambio),
-                    tipo_contratacion = COALESCE(?, tipo_contratacion),
-                    modalidad_ejecucion = COALESCE(?, modalidad_ejecucion),
-                    cliente_id = ?,
-                    cliente_nombre = COALESCE(?, cliente_nombre),
-                    tipo_servicio = COALESCE(?, tipo_servicio),
-                    es_retorno = COALESCE(?, es_retorno),
-                    tipo_costo = COALESCE(?, tipo_costo),
-                    impuesto = COALESCE(?, impuesto),
-                    costo_flete = COALESCE(?, costo_flete),
-                    puntos_carga = COALESCE(?, puntos_carga),
-                    puntos_destino = COALESCE(?, puntos_destino),
-                    destinatario = ?,
-                    observaciones = ?,
-                    placa_tracto = COALESCE(?, placa_tracto),
-                    placa_carreta = COALESCE(?, placa_carreta),
-                    estado_servicio = COALESCE(?, estado_servicio),
-                    proveedor_tercero_nombre = ?,
-                    proveedor_tercero_ruc = ?,
-                    costo_tercero = COALESCE(?, costo_tercero, 0.00),
-                    doc_tercero = ?,
-                    remitente_generador = ?
-                WHERE id = ?
-            `, [
-                viaje_asignado !== undefined ? viaje_asignado : null,
-                fecha || null,
-                fecha_fin || null,
-                moneda || null,
-                parseFloat(tipo_cambio) || 3.750,
-                tipo_contratacion || null,
-                modalidad_ejecucion || null,
-                cliente_id || null,
-                cliente_nombre || null,
-                tipo_servicio || null,
-                es_retorno !== undefined ? parseInt(es_retorno, 10) : null,
-                tipo_costo || null,
-                impuesto || null,
-                parseFloat(costo_flete) || 0.00,
-                parseInt(puntos_carga, 10) || 1,
-                parseInt(puntos_destino, 10) || 1,
-                destinatario || null,
-                observaciones || null,
-                placa_tracto || null,
-                placa_carreta || null,
-                estado_servicio || null,
-                proveedor_tercero_nombre !== undefined ? proveedor_tercero_nombre : null,
-                proveedor_tercero_ruc !== undefined ? proveedor_tercero_ruc : null,
-                costo_tercero !== undefined ? parseFloat(costo_tercero) || 0.00 : 0.00,
-                doc_tercero !== undefined ? doc_tercero : null,
-                remitente_generador !== undefined ? remitente_generador : null,
-                osId
-            ]);
-
-            // Si se envían rutas, actualizar
-            if (Array.isArray(rutas)) {
-                await tdb.query(`DELETE FROM operaciones_ordenes_servicio_rutas WHERE orden_servicio_id = ?`, [osId]);
-                for (const r of rutas) {
-                    await tdb.query(`
-                        INSERT INTO operaciones_ordenes_servicio_rutas (
-                            orden_servicio_id, codigo_orden, ruta, distancia_km, galones
-                        ) VALUES (?, ?, ?, ?, ?)
-                    `, [
-                        osId,
-                        codigo_orden,
-                        r.ruta || '',
-                        parseFloat(r.distancia_km) || 0,
-                        parseFloat(r.galones) || 0
-                    ]);
-
-                    const finalViaje = viaje_asignado || prev[0].viaje_asignado;
-                    if (finalViaje) {
-                        try {
-                            await tdb.query(`
-                                INSERT INTO operaciones_ordenes_viaje_rutas (
-                                    viaje, orden, ruta, distancia_km, galones, tipo_servicio
-                                ) VALUES (?, ?, ?, ?, ?, ?)
-                                ON DUPLICATE KEY UPDATE ruta = VALUES(ruta), distancia_km = VALUES(distancia_km), galones = VALUES(galones)
-                            `, [
-                                finalViaje,
-                                codigo_orden,
-                                r.ruta || '',
-                                parseFloat(r.distancia_km) || 0,
-                                parseFloat(r.galones) || 0,
-                                tipo_servicio || 'CARGA GENERAL'
-                            ]);
-                        } catch (ignore) {}
-                    }
-                }
-            }
-
-            // Si se envían documentos, actualizar sincronizando guias_remision
-            if (Array.isArray(documentos)) {
-                // Liberar documentos anteriores vinculados a esta OS en guias_remision
-                try {
-                    await tdb.query(`UPDATE guias_remision SET orden_servicio = NULL WHERE orden_servicio = ?`, [codigo_orden]);
-                } catch (ignore) {}
-
-                // Limpiar tabla de docs para reemplazo limpio
-                await tdb.query(`DELETE FROM operaciones_ordenes_servicio_docs WHERE orden_servicio_id = ?`, [osId]);
-
-                for (const doc of documentos) {
-                    await tdb.query(`
-                        INSERT INTO operaciones_ordenes_servicio_docs (
-                            orden_servicio_id, codigo_orden, guia_remision_id, numero_documento,
-                            tipo_documento, gr_remitente, numero_transporte, placa_referencia,
-                            volumen, cantidad, peso, remitente, destinatario, fecha_carga, fecha_entrega
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    `, [
-                        osId,
-                        codigo_orden,
-                        doc.guia_remision_id || null,
-                        doc.numero_documento || doc.numero_guia || 'GRE',
-                        doc.tipo_documento || 'GRE',
-                        doc.gr_remitente || null,
-                        doc.numero_transporte || null,
-                        doc.placa_referencia || doc.placa_tracto || null,
-                        parseFloat(doc.volumen || doc.volumen_m3) || 0.000,
-                        parseFloat(doc.cantidad) || 1.00,
-                        parseFloat(doc.peso || doc.peso_bruto_total) || 0.00,
-                        doc.remitente || doc.remitente_razon_social || null,
-                        doc.destinatario || doc.destinatario_razon_social || null,
-                        doc.fecha_carga || doc.fecha_traslado || null,
-                        doc.fecha_entrega || null
-                    ]);
-
-                    // Actualizar trazabilidad en guias_remision
-                    const targetViaje = viaje_asignado !== undefined ? viaje_asignado : prev[0].viaje_asignado;
-                    if (doc.guia_remision_id) {
-                        try {
-                            await tdb.query(`UPDATE guias_remision SET orden_servicio = ?, orden_viaje = COALESCE(?, orden_viaje) WHERE id = ?`, [codigo_orden, targetViaje || null, doc.guia_remision_id]);
-                        } catch (ignore) {}
-                    } else if (doc.numero_documento) {
-                        try {
-                            await tdb.query(`UPDATE guias_remision SET orden_servicio = ?, orden_viaje = COALESCE(?, orden_viaje) WHERE numero_guia = ?`, [codigo_orden, targetViaje || null, doc.numero_documento]);
-                        } catch (ignore) {}
-                    }
-                }
-            }
-
-            if (logAudit) {
-                logAudit({
-                    req,
-                    accion: 'EDITAR_ORDEN_SERVICIO',
-                    modulo: 'OPERACIONES',
-                    detalle: `Actualizada Orden de Servicio ${codigo_orden}`
-                });
-            }
-
-            res.json({
-                ok: true,
-                message: `Orden de Servicio ${codigo_orden} actualizada correctamente.`
-            });
+            const [prev] = await tdb.query(`SELECT id, codigo_orden, estado_servicio FROM operaciones_ordenes_servicio WHERE id = ?`, [req.params.id]);
+            if (!prev.length) return res.status(404).json({ ok: false, error: 'Orden de servicio no encontrada' });
+            if (OS_CERRADOS.includes(String(prev[0].estado_servicio).toUpperCase())) return res.status(409).json({ ok: false, error: 'Una orden entregada o anulada ya no se edita.' });
+            const c = camposServicio(req.body || {});
+            if (!c.cliente_nombre) return res.status(400).json({ ok: false, error: 'Indica el cliente.' });
+            if (!c.origen || !c.destino) return res.status(400).json({ ok: false, error: 'Indica el origen y el destino.' });
+            const cols = Object.keys(c);
+            const [r] = await tdb.query(`UPDATE operaciones_ordenes_servicio SET ${cols.map(k => `${k} = ?`).join(', ')} WHERE id = ?`, [...cols.map(k => c[k]), req.params.id]);
+            // El tramo del vínculo con el viaje se mantiene al día
+            await tdb.query(`UPDATE operaciones_ordenes_viaje_rutas SET ruta = ?, tipo_servicio = ?, es_retorno = ?, peso_total = COALESCE(?, peso_total) WHERE orden = ?`,
+                [`${c.origen} - ${c.destino}`, c.tipo_servicio, c.es_retorno, c.peso_estimado, prev[0].codigo_orden]);
+            if (logAudit) logAudit({ req, accion: 'EDITAR_ORDEN_SERVICIO', modulo: 'OPERACIONES', detalle: `Editada orden de servicio ${prev[0].codigo_orden}` });
+            res.json({ ok: true, message: 'Orden de servicio actualizada.', filas: r.affectedRows });
         } catch (err) {
             console.error('Error al actualizar orden de servicio:', err);
             res.status(500).json({ ok: false, error: err.message });
         }
     });
 
-    // 6. Cambiar estado de servicio (ej: INICIADO / FINALIZADO / ANULADO) y sincronizar con Orden de Viaje
+    // Vincula un servicio a un viaje ya existente
+    async function vincularServicioViaje(tdb, os, viaje) {
+        await tdb.query(
+            `INSERT INTO operaciones_ordenes_viaje_rutas (viaje, orden, ruta, tipo_servicio, es_retorno, peso_total) VALUES (?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE ruta = VALUES(ruta), tipo_servicio = VALUES(tipo_servicio), es_retorno = VALUES(es_retorno), peso_total = VALUES(peso_total)`,
+            [viaje, os.codigo_orden, [os.origen, os.destino].filter(Boolean).join(' - '), os.tipo_servicio || 'CARGA GENERAL', os.es_retorno ? 1 : 0, os.peso_estimado || 0]);
+        await tdb.query(`UPDATE operaciones_ordenes_servicio SET estado_servicio = 'PROGRAMADO' WHERE id = ? AND estado_servicio = 'PENDIENTE'`, [os.id]);
+    }
+
+    router.post('/ordenes-servicio/:id/asignar-viaje', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+            const viaje = String((req.body || {}).viaje || '').trim().toUpperCase();
+            if (!viaje) return res.status(400).json({ ok: false, error: 'Elige el viaje.' });
+            const [os] = await tdb.query(`SELECT * FROM operaciones_ordenes_servicio WHERE id = ?`, [req.params.id]);
+            if (!os.length) return res.status(404).json({ ok: false, error: 'Orden de servicio no encontrada' });
+            if (OS_CERRADOS.includes(String(os[0].estado_servicio).toUpperCase())) return res.status(409).json({ ok: false, error: 'La orden ya está cerrada.' });
+            const [v] = await tdb.query(`SELECT viaje, estado FROM operaciones_ordenes_viaje WHERE viaje = ?`, [viaje]);
+            if (!v.length) return res.status(404).json({ ok: false, error: 'El viaje no existe.' });
+            if (['FINALIZADO', 'ANULADO'].includes(String(v[0].estado).toUpperCase())) return res.status(409).json({ ok: false, error: 'El viaje ya está cerrado.' });
+            await vincularServicioViaje(tdb, os[0], viaje);
+            if (logAudit) logAudit({ req, accion: 'ASIGNAR_SERVICIO_VIAJE', modulo: 'OPERACIONES', detalle: `Servicio ${os[0].codigo_orden} asignado al viaje ${viaje}` });
+            res.json({ ok: true, message: `Servicio asignado al viaje ${viaje}.`, viaje });
+        } catch (err) {
+            console.error('Error al asignar viaje:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // Crea un viaje nuevo con los datos del servicio (origen, destino, fecha, peso); conductor y placa se eligen después
+    router.post('/ordenes-servicio/:id/generar-viaje', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+            const [os] = await tdb.query(`SELECT * FROM operaciones_ordenes_servicio WHERE id = ?`, [req.params.id]);
+            if (!os.length) return res.status(404).json({ ok: false, error: 'Orden de servicio no encontrada' });
+            const o = os[0];
+            if (OS_CERRADOS.includes(String(o.estado_servicio).toUpperCase())) return res.status(409).json({ ok: false, error: 'La orden ya está cerrada.' });
+            const [ya] = await tdb.query(`SELECT viaje FROM operaciones_ordenes_viaje_rutas WHERE orden = ? LIMIT 1`, [o.codigo_orden]);
+            if (ya.length) return res.status(409).json({ ok: false, error: `Ya tiene el viaje ${ya[0].viaje}.` });
+
+            const year = new Date().getFullYear();
+            const con = await tdb.getConnection();
+            try {
+                await con.beginTransaction();
+                const [rows] = await con.query(`SELECT viaje FROM operaciones_ordenes_viaje WHERE viaje LIKE ? ORDER BY viaje DESC LIMIT 1 FOR UPDATE`, [`${year}-%`]);
+                let next = 1;
+                if (rows.length) { const p = parseInt(String(rows[0].viaje).replace(`${year}-`, ''), 10); if (!isNaN(p)) next = p + 1; }
+                const codigo = `${year}-${String(next).padStart(8, '0')}`;
+                const fechaViaje = `${osFecha(o.fecha instanceof Date ? o.fecha.toISOString() : o.fecha) || new Date().toISOString().slice(0, 10)} 00:00:00`;
+                await con.query(
+                    `INSERT INTO operaciones_ordenes_viaje (viaje, fecha_viaje, conductor, placa_tracto, ruta, origen, destino, peso, estado, usuario_creacion)
+                     VALUES (?, ?, '', '', ?, ?, ?, ?, 'ACTIVO', ?)`,
+                    [codigo, fechaViaje, [o.origen, o.destino].filter(Boolean).join(' - '), o.origen, o.destino, o.peso_estimado || 0, osUsuario(req)]);
+                await con.query(
+                    `INSERT INTO operaciones_ordenes_viaje_rutas (viaje, orden, ruta, tipo_servicio, es_retorno, peso_total) VALUES (?, ?, ?, ?, ?, ?)`,
+                    [codigo, o.codigo_orden, [o.origen, o.destino].filter(Boolean).join(' - '), o.tipo_servicio || 'CARGA GENERAL', o.es_retorno ? 1 : 0, o.peso_estimado || 0]);
+                const [u] = await con.query(`UPDATE operaciones_ordenes_servicio SET estado_servicio = 'PROGRAMADO' WHERE id = ? AND estado_servicio = 'PENDIENTE'`, [o.id]);
+                await con.commit();
+                if (logAudit) logAudit({ req, accion: 'GENERAR_VIAJE_DESDE_SERVICIO', modulo: 'OPERACIONES', detalle: `Viaje ${codigo} generado desde el servicio ${o.codigo_orden}` });
+                res.json({ ok: true, message: `Viaje ${codigo} generado.`, viaje: codigo, programado: u.affectedRows === 1 });
+            } catch (e) { await con.rollback(); throw e; } finally { con.release(); }
+        } catch (err) {
+            console.error('Error al generar viaje desde servicio:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // Quita el servicio de un viaje (solo antes de empezar)
+    router.delete('/ordenes-servicio/:id/viaje/:viaje', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
+            const [os] = await tdb.query(`SELECT id, codigo_orden, estado_servicio FROM operaciones_ordenes_servicio WHERE id = ?`, [req.params.id]);
+            if (!os.length) return res.status(404).json({ ok: false, error: 'Orden de servicio no encontrada' });
+            const est = String(os[0].estado_servicio).toUpperCase();
+            if (!['PENDIENTE', 'PROGRAMADO'].includes(est)) return res.status(409).json({ ok: false, error: 'Solo se puede quitar del viaje antes de iniciar el servicio.' });
+            const [d] = await tdb.query(`DELETE FROM operaciones_ordenes_viaje_rutas WHERE orden = ? AND viaje = ?`, [os[0].codigo_orden, req.params.viaje]);
+            const [resto] = await tdb.query(`SELECT COUNT(*) AS n FROM operaciones_ordenes_viaje_rutas WHERE orden = ?`, [os[0].codigo_orden]);
+            if (!resto[0].n) await tdb.query(`UPDATE operaciones_ordenes_servicio SET estado_servicio = 'PENDIENTE' WHERE id = ? AND estado_servicio = 'PROGRAMADO'`, [os[0].id]);
+            if (logAudit) logAudit({ req, accion: 'QUITAR_SERVICIO_VIAJE', modulo: 'OPERACIONES', detalle: `Servicio ${os[0].codigo_orden} quitado del viaje ${req.params.viaje}` });
+            res.json({ ok: true, message: 'Servicio quitado del viaje.', filas: d.affectedRows });
+        } catch (err) {
+            console.error('Error al quitar servicio del viaje:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // Cuenta por cobrar del servicio (Tesorería): se crea o actualiza cuando el servicio entra en ejecución
+    async function sincronizarCuentaPorCobrar(tdb, o, v, fechaServicio) {
+        const netoDeseado = parseFloat(o.costo_flete) || 0;
+        let total = netoDeseado > 700 ? Math.round(netoDeseado / 0.96) : netoDeseado;
+        let detr = total > 700 ? Math.round(total * 0.04) : 0;
+        while ((total - detr) < netoDeseado) { total++; detr = total > 700 ? Math.round(total * 0.04) : 0; }
+        while ((total - detr) > netoDeseado) { total--; detr = total > 700 ? Math.round(total * 0.04) : 0; }
+        const bi = parseFloat((total / 1.18).toFixed(2));
+        const igv = parseFloat((total - bi).toFixed(2));
+        const neto = parseFloat((total - detr).toFixed(2));
+        const lugar = [o.origen, o.destino].filter(Boolean).join(' - ');
+        const [ex] = await tdb.query(`SELECT id FROM tesoreria_cuentas WHERE orden_servicio = ? LIMIT 1`, [o.codigo_orden]);
+        if (ex.length) {
+            await tdb.query(
+                `UPDATE tesoreria_cuentas SET numero_viaje = ?, fecha_servicio = ?, placa_camion = ?, placa_carreta = ?, conductor = COALESCE(NULLIF(?, ''), conductor), cliente = ?, lugar = ?,
+                        flete = ?, tarifa = ?, base_imponible = ?, igv = ?, total = ?, detraccion = ?, neto_cobrar = ?, estado_servicio = 'PENDIENTE' WHERE id = ?`,
+                [v.viaje, fechaServicio, v.placa_tracto || '', v.placa_remolque || '', v.conductor || '', o.cliente_nombre || 'CLIENTE GENERAL', lugar, bi, bi, bi, igv, total, detr, neto, ex[0].id]);
+        } else {
+            await tdb.query(
+                `INSERT INTO tesoreria_cuentas (orden_servicio, numero_viaje, fecha_servicio, razon_social, placa_camion, placa_carreta, conductor, cliente, lugar,
+                        flete, comision_porcentaje, tarifa, gastos_operativos, base_imponible, igv, total, adelanto, detraccion, neto_cobrar, estado_servicio)
+                 VALUES (?, ?, ?, '', ?, ?, ?, ?, ?, ?, 0.00, ?, 0.00, ?, ?, ?, 0.00, ?, ?, 'PENDIENTE')`,
+                [o.codigo_orden, v.viaje, fechaServicio, v.placa_tracto || '', v.placa_remolque || '', v.conductor || '', o.cliente_nombre || 'CLIENTE GENERAL', lugar, bi, bi, bi, igv, total, detr, neto]);
+        }
+    }
+
     router.put('/ordenes-servicio/:id/estado', async (req, res) => {
         try {
             const tdb = getDb(req);
             if (!tdb) return res.status(500).json({ error: 'Base de datos no disponible' });
-
-            const { estado_servicio, fecha_inicio } = req.body;
+            const nuevo = String((req.body || {}).estado_servicio || '').trim().toUpperCase();
+            const fechaInicio = osFecha((req.body || {}).fecha_inicio);
             const [prev] = await tdb.query(`SELECT * FROM operaciones_ordenes_servicio WHERE id = ?`, [req.params.id]);
-            if (!prev || !prev.length) {
-                return res.status(404).json({ ok: false, error: 'Orden de servicio no encontrada' });
-            }
+            if (!prev.length) return res.status(404).json({ ok: false, error: 'Orden de servicio no encontrada' });
+            const o = prev[0];
+            const actual = String(o.estado_servicio || 'PENDIENTE').toUpperCase();
+            const permitido = { PENDIENTE: ['ANULADO'], PROGRAMADO: ['EN_EJECUCION', 'ANULADO'], EN_EJECUCION: ['ENTREGADO', 'ANULADO'], ENTREGADO: [], ANULADO: [] };
+            if (!(permitido[actual] || []).includes(nuevo)) return res.status(409).json({ ok: false, error: `No se puede pasar de ${actual} a ${nuevo}.` });
 
-            const osRow = prev[0];
-            const codOrden = osRow.codigo_orden;
-            const viajeCode = osRow.viaje_asignado;
-            const estUpper = String(estado_servicio || '').trim().toUpperCase();
+            const [vinc] = await tdb.query(
+                `SELECT ov.viaje, ov.estado, ov.conductor, ov.placa_tracto, ov.placa_remolque FROM operaciones_ordenes_viaje_rutas r
+                 JOIN operaciones_ordenes_viaje ov ON ov.viaje COLLATE utf8mb4_unicode_ci = r.viaje COLLATE utf8mb4_unicode_ci WHERE r.orden = ? ORDER BY r.id LIMIT 1`, [o.codigo_orden]);
+            const viaje = vinc[0] || null;
 
-            // Si se pasa fecha_inicio específica al iniciar, actualizarla también en la OS
-            if (fecha_inicio && estUpper === 'INICIADO') {
-                await tdb.query(
-                    `UPDATE operaciones_ordenes_servicio SET estado_servicio = ?, fecha = ? WHERE id = ?`,
-                    [estUpper, fecha_inicio, req.params.id]
-                );
-            } else {
-                await tdb.query(
-                    `UPDATE operaciones_ordenes_servicio SET estado_servicio = ? WHERE id = ?`,
-                    [estUpper, req.params.id]
-                );
-            }
-
-            // ── Sincronización Automática con la Orden de Viaje (OV) ──
-            if (viajeCode) {
-                try {
-                    const nowStr = fecha_inicio ? `${fecha_inicio} 00:00:00` : ahoraLima();
-                    if (estUpper === 'INICIADO') {
-                        // Al iniciar una OS: si la OV no está iniciada ni finalizada, pasa a INICIADO
-                        const [ovRows] = await tdb.query(`SELECT estado, fecha_inicio FROM operaciones_ordenes_viaje WHERE viaje = ?`, [viajeCode]);
-                        if (ovRows.length > 0) {
-                            const ovEst = String(ovRows[0].estado || '').toUpperCase();
-                            if (ovEst !== 'INICIADO' && ovEst !== 'FINALIZADO') {
-                                await tdb.query(`
-                                    UPDATE operaciones_ordenes_viaje 
-                                    SET estado = 'INICIADO',
-                                        fecha_inicio = COALESCE(fecha_inicio, ?)
-                                    WHERE viaje = ?
-                                `, [nowStr, viajeCode]);
-                            }
-                        }
-                    } else if (estUpper === 'FINALIZADO') {
-                        // Al finalizar una OS: verificar todas las OS vinculadas a este viaje
-                        const [todasOs] = await tdb.query(`
-                            SELECT id, estado_servicio 
-                            FROM operaciones_ordenes_servicio 
-                            WHERE viaje_asignado = ?
-                        `, [viajeCode]);
-
-                        const tienenPendientesOIniciadas = (todasOs || []).some(o => {
-                            const est = String(o.estado_servicio || '').toUpperCase();
-                            return est === 'INICIADO' || est === 'PENDIENTE';
-                        });
-
-                        if (!tienenPendientesOIniciadas && todasOs.length > 0) {
-                            const userFinaliza = (req.user && req.user.nombre) || 'ADMINISTRADOR DEL SISTEMA';
-                            await tdb.query(`
-                                UPDATE operaciones_ordenes_viaje 
-                                SET estado = 'FINALIZADO',
-                                    fecha_fin = COALESCE(fecha_fin, ?),
-                                    usuario_finalizacion = COALESCE(usuario_finalizacion, ?)
-                                WHERE viaje = ?
-                            `, [nowStr, userFinaliza, viajeCode]);
-                            await guardarRecorridoGpsViaje(req, tdb, viajeCode);
-                            await recalcularLiquidacionViaje(tdb, viajeCode).catch(() => {});
-                        }
-                    }
-                } catch (eSyncOv) {
-                    console.warn('[Operaciones] Error sincronizando estado de OS con OV:', eSyncOv.message);
+            if (nuevo === 'EN_EJECUCION') {
+                if (!viaje) return res.status(409).json({ ok: false, error: 'Asigna un viaje antes de iniciar el servicio.' });
+                if (!viaje.conductor || !viaje.placa_tracto) return res.status(409).json({ ok: false, error: `El viaje ${viaje.viaje} aún no tiene conductor y tracto.` });
+                const fecha = fechaInicio || new Date().toISOString().slice(0, 10);
+                await tdb.query(`UPDATE operaciones_ordenes_servicio SET estado_servicio = 'EN_EJECUCION' WHERE id = ?`, [o.id]);
+                if (!['INICIADO', 'FINALIZADO'].includes(String(viaje.estado).toUpperCase())) {
+                    await tdb.query(`UPDATE operaciones_ordenes_viaje SET estado = 'INICIADO', fecha_inicio = COALESCE(fecha_inicio, ?) WHERE viaje = ?`, [`${fecha} 00:00:00`, viaje.viaje]);
                 }
+                try { await sincronizarCuentaPorCobrar(tdb, o, viaje, fecha); }
+                catch (e) { console.warn('[Operaciones -> Tesorería] No se pudo crear la cuenta por cobrar:', e.message); }
+            } else if (nuevo === 'ENTREGADO') {
+                await tdb.query(`UPDATE operaciones_ordenes_servicio SET estado_servicio = 'ENTREGADO', fecha_entrega = COALESCE(fecha_entrega, CURDATE()) WHERE id = ?`, [o.id]);
+            } else if (nuevo === 'ANULADO') {
+                await tdb.query(`UPDATE operaciones_ordenes_servicio SET estado_servicio = 'ANULADO' WHERE id = ?`, [o.id]);
+                await tdb.query(`DELETE FROM operaciones_ordenes_viaje_rutas WHERE orden = ?`, [o.codigo_orden]);
+                try { await tdb.query(`UPDATE tesoreria_cuentas SET estado_servicio = 'ANULADO' WHERE orden_servicio = ?`, [o.codigo_orden]); } catch (e) { /* sin cuenta por cobrar */ }
             }
-
-            // ── Sincronización Automática con Cuentas por Cobrar (Tesorería) ──
-            if (codOrden) {
-                try {
-                    if (estUpper === 'INICIADO') {
-                        let conductorViaje = osRow.conductor || null;
-                        let razonSocialViaje = '';
-                        if (viajeCode) {
-                            try {
-                                const [vRows] = await tdb.query(`SELECT conductor FROM operaciones_ordenes_viaje WHERE viaje = ? LIMIT 1`, [viajeCode]);
-                                if (vRows && vRows.length > 0 && vRows[0].conductor) {
-                                    conductorViaje = vRows[0].conductor;
-                                }
-                            } catch(eViaje) {
-                                console.warn('[Operaciones -> Cuentas] Error consultando viaje:', eViaje.message);
-                            }
-                        }
-
-                        let lugarStr = '';
-                        try {
-                            const [rutasRows] = await tdb.query(`SELECT ruta FROM operaciones_ordenes_servicio_rutas WHERE orden_servicio_id = ?`, [req.params.id]);
-                            lugarStr = (rutasRows || []).map(r => r.ruta).filter(Boolean).join(' - ');
-                        } catch(eRuta) {}
-
-                        const netoDeseado = parseFloat(osRow.costo_flete) || 0.00;
-                        let totalNum = netoDeseado > 700 ? Math.round(netoDeseado / 0.96) : netoDeseado;
-                        let detraccionNum = totalNum > 700 ? Math.round(totalNum * 0.04) : 0.00;
-
-                        while ((totalNum - detraccionNum) < netoDeseado) {
-                            totalNum++;
-                            detraccionNum = totalNum > 700 ? Math.round(totalNum * 0.04) : 0.00;
-                        }
-                        while ((totalNum - detraccionNum) > netoDeseado) {
-                            totalNum--;
-                            detraccionNum = totalNum > 700 ? Math.round(totalNum * 0.04) : 0.00;
-                        }
-
-                        const biNum = parseFloat((totalNum / 1.18).toFixed(2));
-                        const igvNum = parseFloat((totalNum - biNum).toFixed(2));
-                        const tarifaNum = biNum;
-                        const fleteNum = biNum;
-                        const netoCobrarNum = parseFloat((totalNum - detraccionNum).toFixed(2));
-
-                        // Verificar si ya existe el registro de cuentas para esta orden de servicio
-                        const [cExist] = await tdb.query(`SELECT id FROM tesoreria_cuentas WHERE orden_servicio = ? LIMIT 1`, [codOrden]);
-                        if (cExist && cExist.length > 0) {
-                            await tdb.query(`
-                                UPDATE tesoreria_cuentas SET
-                                    numero_viaje = ?,
-                                    fecha_servicio = ?,
-                                    razon_social = COALESCE(NULLIF(?, ''), razon_social),
-                                    placa_camion = ?,
-                                    placa_carreta = ?,
-                                    conductor = COALESCE(NULLIF(?, ''), conductor),
-                                    cliente = ?,
-                                    lugar = ?,
-                                    flete = ?,
-                                    tarifa = ?,
-                                    base_imponible = ?,
-                                    igv = ?,
-                                    total = ?,
-                                    detraccion = ?,
-                                    neto_cobrar = ?,
-                                    estado_servicio = 'PENDIENTE'
-                                WHERE id = ?
-                            `, [
-                                viajeCode || '',
-                                fecha_inicio || osRow.fecha || new Date().toISOString().split('T')[0],
-                                razonSocialViaje,
-                                osRow.placa_tracto || '',
-                                osRow.placa_carreta || '',
-                                conductorViaje || '',
-                                osRow.cliente_nombre || 'CLIENTE GENERAL',
-                                lugarStr,
-                                fleteNum,
-                                tarifaNum,
-                                biNum,
-                                igvNum,
-                                totalNum,
-                                detraccionNum,
-                                netoCobrarNum,
-                                cExist[0].id
-                            ]);
-                        } else {
-                            await tdb.query(`
-                                INSERT INTO tesoreria_cuentas (
-                                    orden_servicio, numero_viaje, fecha_servicio, razon_social,
-                                    placa_camion, placa_carreta, conductor, cliente, lugar,
-                                    flete, comision_porcentaje, tarifa, gastos_operativos,
-                                    base_imponible, igv, total, adelanto, detraccion, neto_cobrar,
-                                    estado_servicio
-                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.00, ?, 0.00, ?, ?, ?, 0.00, ?, ?, 'PENDIENTE')
-                            `, [
-                                codOrden,
-                                viajeCode || '',
-                                fecha_inicio || osRow.fecha || new Date().toISOString().split('T')[0],
-                                razonSocialViaje,
-                                osRow.placa_tracto || '',
-                                osRow.placa_carreta || '',
-                                conductorViaje || '',
-                                osRow.cliente_nombre || 'CLIENTE GENERAL',
-                                lugarStr,
-                                fleteNum,
-                                tarifaNum,
-                                biNum,
-                                igvNum,
-                                totalNum,
-                                detraccionNum,
-                                netoCobrarNum
-                            ]);
-                        }
-                    } else if (estUpper.includes('ANULA') || estUpper.includes('CANCEL')) {
-                        await tdb.query(`UPDATE tesoreria_cuentas SET estado_servicio = 'ANULADO' WHERE orden_servicio = ?`, [codOrden]);
-                    }
-                } catch (eSync) {
-                    console.warn('[Operaciones -> Tesorería] Error actualizando estado en Cuentas por Cobrar:', eSync.message);
-                }
-            }
-
-            // Datos para retornar al frontend (permitir abrir caja cochera si aplica)
-            let datosCochera = null;
-            if (viajeCode && estUpper === 'INICIADO') {
-                try {
-                    const [vRows] = await tdb.query(`SELECT conductor, ruta FROM operaciones_ordenes_viaje WHERE viaje = ? LIMIT 1`, [viajeCode]);
-                    datosCochera = {
-                        id: req.params.id,
-                        codigo_orden: codOrden,
-                        viaje_asignado: viajeCode,
-                        placa_tracto: osRow.placa_tracto || '',
-                        conductor: vRows && vRows.length > 0 ? vRows[0].conductor : '',
-                        ruta: vRows && vRows.length > 0 ? vRows[0].ruta : ''
-                    };
-                } catch(eCoch) {}
-            }
-
-            res.json({
-                ok: true,
-                message: `Estado actualizado a ${estUpper}.`,
-                cochera: datosCochera
-            });
+            if (logAudit) logAudit({ req, accion: 'ESTADO_ORDEN_SERVICIO', modulo: 'OPERACIONES', detalle: `Servicio ${o.codigo_orden}: ${actual} → ${nuevo}` });
+            res.json({ ok: true, message: `Estado actualizado a ${nuevo}.` });
         } catch (err) {
             console.error('Error al cambiar estado de orden de servicio:', err);
             res.status(500).json({ ok: false, error: err.message });
