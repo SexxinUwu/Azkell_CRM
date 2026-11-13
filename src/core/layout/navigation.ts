@@ -69,14 +69,14 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Operaciones',
     items: [
-      { key: 'programacion', label: 'Programación', to: '/operaciones/programacion', icon: CalendarDays, permissions: ver('op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa' },
-      { key: 'ordenes-viaje', label: 'Órdenes de viaje', to: '/operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa' },
-      { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: ScrollText, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa' },
-      { key: 'ubigeos', label: 'Ubigeos', to: '/operaciones/ubigeos', icon: MapPin, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa' },
+      { key: 'programacion', label: 'Programación', to: '/operaciones/programacion', icon: CalendarDays, permissions: ver('op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa,trahesa' },
+      { key: 'ordenes-viaje', label: 'Órdenes de viaje', to: '/operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa,trahesa' },
+      { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: ScrollText, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa,trahesa' },
+      { key: 'ubigeos', label: 'Ubigeos', to: '/operaciones/ubigeos', icon: MapPin, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa,trahesa' },
       { key: 'clientes', label: 'Clientes', to: '/operaciones/clientes', icon: Users, permissions: ver('clientes') },
-      { key: 'reporte-viajes', label: 'Reporte de viajes', to: '/operaciones/reporte-viajes', icon: BarChart3, permissions: ver('op_reporte_viajes'), soloEmpresa: 'marsisa' },
+      { key: 'reporte-viajes', label: 'Reporte de viajes', to: '/operaciones/reporte-viajes', icon: BarChart3, permissions: ver('op_reporte_viajes'), soloEmpresa: 'marsisa,trahesa' },
       {
-        key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [], soloEmpresa: 'marsisa',
+        key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [], soloEmpresa: 'marsisa,trahesa',
         children: [
           { key: 'guias', label: 'Guías', to: '/operaciones/guias', icon: FileText, permissions: ver('op_guias_remision') },
           { key: 'guias-remitente', label: 'GRE Remitente', to: '/operaciones/guias-remitente', icon: FileText, permissions: ver('op_guias_remision') },
@@ -267,7 +267,7 @@ function filtrarItems(items: NavItem[], can: (...p: string[]) => boolean, empres
     .map(i => (i.children ? { ...i, children: filtrarItems(i.children, can, empresa, esFundador) } : i))
     .filter(i => {
       if (i.children && i.children.length === 0) return false;
-      if (i.soloEmpresa && !empresa.includes(i.soloEmpresa)) return false;
+      if (i.soloEmpresa && !i.soloEmpresa.split(',').some(e => empresa.includes(e))) return false;
       if (i.noEmpresa && empresa.includes(i.noEmpresa)) return false;
       if (i.soloFundador && !esFundador) return false;
       return can(...i.permissions);
