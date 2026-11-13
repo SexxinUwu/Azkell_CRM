@@ -66,6 +66,19 @@ module.exports = (db) => {
         try { res.json({ ok: true, plantilla: await plantillaGuardada(req), defecto: G.normalizarPlantilla({}) }); } catch (err) { responder(res, err, 'plantilla'); }
     });
 
+    // ── Guardar la plantilla (con el permiso de Operaciones; vive en integraciones_api) ──
+    router.put('/pdf-plantilla', async (req, res) => {
+        try {
+            const plantilla = G.normalizarPlantilla((req.body || {}).plantilla);
+            const valor = JSON.stringify(plantilla);
+            if (valor.length > 30000) throw aviso('La plantilla es demasiado grande.');
+            const usuario = String((req.user && (req.user.nombre || req.user.correo || req.user.email)) || 'sistema').slice(0, 150);
+            await P(req).query(`INSERT INTO integraciones_api (clave, valor, actualizado_por) VALUES (?, ?, ?)
+                                ON DUPLICATE KEY UPDATE valor = VALUES(valor), actualizado_por = VALUES(actualizado_por), actualizado_en = NOW()`, [G.CLAVE_PLANTILLA, valor, usuario]);
+            res.json({ ok: true, plantilla });
+        } catch (err) { responder(res, err, 'plantilla-guardar'); }
+    });
+
     // ── Vista previa: PDF de ejemplo con la plantilla que viene del formulario (no guarda nada) ──
     router.post('/pdf-plantilla/preview', async (req, res) => {
         try {

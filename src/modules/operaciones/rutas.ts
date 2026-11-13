@@ -78,6 +78,11 @@ export const RUTAS: RutaModulo[] = [
     Page: lazy(() => import('./GuiasPage').then(m => ({ default: m.GuiasPage }))),
   },
   {
+    path: 'operaciones/plantilla-guias/*',
+    permisos: ['op_guias_remision.ver', 'admin'],
+    Page: lazy(() => import('./PlantillaGuiasPage').then(m => ({ default: m.PlantillaGuiasPage }))),
+  },
+  {
     path: 'operaciones/guias-remitente/*',
     permisos: ['op_guias_remision.ver', 'admin'],
     Page: lazy(() => import('./GuiasRemitentePage').then(m => ({ default: m.GuiasRemitentePage }))),

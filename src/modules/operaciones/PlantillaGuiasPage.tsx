@@ -8,7 +8,6 @@ import { Field, TextInput } from '../../core/ui/Field';
 import { Switch } from '../../core/ui/Switch';
 import { useToast } from '../../core/ui/Toast';
 import { api, apiFetch, errorMessage } from '../../core/api/client';
-import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
 
 /** Plantilla del PDF de las guías de remisión (misma forma que services/gre_pdf.js) */
@@ -54,9 +53,8 @@ function Fila({ titulo, nota, valor, onChange }: { titulo: string; nota?: string
 export function PlantillaGuiasPage() {
   const toast = useToast();
   const qc = useQueryClient();
-  const { user } = useAuth();
   const q = useQuery({
-    queryKey: ['sistema', 'plantilla-guias'],
+    queryKey: ['operaciones', 'plantilla-guias'],
     queryFn: () => api<{ plantilla: Plantilla; defecto: Plantilla }>('/operaciones/gre/pdf-plantilla'),
   });
   const [p, setP] = useState<Plantilla | null>(null);
@@ -103,9 +101,9 @@ export function PlantillaGuiasPage() {
     if (!p) return;
     setGuardando(true);
     try {
-      await api('/integraciones', { method: 'PUT', body: { clave: 'gre_pdf_plantilla', valor: JSON.stringify(p), actualizado_por: user?.email ?? '' } });
+      await api('/operaciones/gre/pdf-plantilla', { method: 'PUT', body: { plantilla: p } });
       setGuardada(JSON.stringify(p));
-      await qc.invalidateQueries({ queryKey: ['sistema', 'plantilla-guias'] });
+      await qc.invalidateQueries({ queryKey: ['operaciones', 'plantilla-guias'] });
       haptic('success'); toast('Plantilla guardada');
     } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
     finally { setGuardando(false); }
@@ -129,7 +127,7 @@ export function PlantillaGuiasPage() {
   return (
     <Page wide>
       <PageHeader
-        eyebrow="Configuración"
+        eyebrow="Operaciones"
         title="Plantilla de guías"
         subtitle="Cómo se ve el PDF de las guías de remisión de esta empresa"
         actions={(
