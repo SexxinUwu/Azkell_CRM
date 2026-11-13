@@ -12,7 +12,7 @@ import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
-import { useOpcionesUbigeo } from './ubigeos';
+import { cargarUbigeos, ubigeoDeDireccion, useOpcionesUbigeo, useUbigeos } from './ubigeos';
 import type { Guia, LecturaGuia, TipoGuia } from './guiasApi';
 
 interface Form {
@@ -20,15 +20,16 @@ interface Form {
   remitente_ruc: string; remitente_nombre: string; destinatario_doc: string; destinatario_nombre: string;
   transportista_ruc: string; transportista_nombre: string; modalidad: '' | 'PUBLICO' | 'PRIVADO'; motivo: string;
   partida_ubigeo: string; partida_direccion: string; llegada_ubigeo: string; llegada_direccion: string;
-  peso: string; bultos: string; descripcion: string; placa: string; conductor_nombre: string; conductor_doc: string; licencia: string;
+  peso: string; bultos: string; descripcion: string; observaciones: string; placa: string; conductor_nombre: string; conductor_doc: string; licencia: string;
   fuente: 'XML' | 'IA' | 'MANUAL'; items: LecturaGuia['items']; trae_transporte: boolean;
 }
 type Campo = 'serie_numero' | 'emisor' | 'peso';
+type Lado = 'partida' | 'llegada';
 
 const VACIO: Form = {
   tipo: 'REMITENTE', serie_numero: '', fecha_emision: '', fecha_traslado: '', remitente_ruc: '', remitente_nombre: '', destinatario_doc: '', destinatario_nombre: '',
   transportista_ruc: '', transportista_nombre: '', modalidad: '', motivo: '', partida_ubigeo: '', partida_direccion: '', llegada_ubigeo: '', llegada_direccion: '',
-  peso: '', bultos: '', descripcion: '', placa: '', conductor_nombre: '', conductor_doc: '', licencia: '', fuente: 'MANUAL', items: [], trae_transporte: false,
+  peso: '', bultos: '', descripcion: '', observaciones: '', placa: '', conductor_nombre: '', conductor_doc: '', licencia: '', fuente: 'MANUAL', items: [], trae_transporte: false,
 };
 const s = (v: unknown) => (v == null ? '' : String(v));
 const desdeLectura = (l: LecturaGuia): Form => ({
@@ -36,15 +37,14 @@ const desdeLectura = (l: LecturaGuia): Form => ({
   remitente_ruc: s(l.remitente_ruc), remitente_nombre: s(l.remitente_nombre), destinatario_doc: s(l.destinatario_doc), destinatario_nombre: s(l.destinatario_nombre),
   transportista_ruc: s(l.transportista_ruc), transportista_nombre: s(l.transportista_nombre), modalidad: l.modalidad ?? '', motivo: s(l.motivo),
   partida_ubigeo: s(l.partida_ubigeo), partida_direccion: s(l.partida_direccion), llegada_ubigeo: s(l.llegada_ubigeo), llegada_direccion: s(l.llegada_direccion),
-  peso: l.peso_kg != null ? String(l.peso_kg) : '', bultos: s(l.bultos), descripcion: s(l.descripcion), placa: s(l.placa),
+  peso: l.peso_kg != null ? String(l.peso_kg) : '', bultos: s(l.bultos), descripcion: s(l.descripcion), observaciones: s(l.observaciones), placa: s(l.placa),
   conductor_nombre: s(l.conductor_nombre), conductor_doc: s(l.conductor_doc), licencia: s(l.licencia), fuente: l.fuente, items: l.items ?? [], trae_transporte: l.trae_transporte,
 });
 
 function Seccion({ titulo, nota, children }: { titulo: string; nota?: string; children: ReactNode }) {
   return (
     <section className="os-seccion">
-      <h3 className="os-seccion__titulo">{titulo}</h3>
-      {nota && <p className="os-nota">{nota}</p>}
+      <h3 className="os-seccion__titulo">{titulo}{nota && <span className="gr__nota"> · {nota}</span>}</h3>
       <div className="os-seccion__cuerpo">{children}</div>
     </section>
   );
@@ -55,6 +55,7 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: bool
   const toast = useToast();
   const qc = useQueryClient();
   const ubi = useOpcionesUbigeo();
+  const catalogo = useUbigeos();
   const entrada = useRef<HTMLInputElement>(null);
   const [fase, setFase] = useState<'subir' | 'leyendo' | 'revisar'>('subir');
   const [archivo, setArchivo] = useState<File | null>(null);
@@ -65,9 +66,11 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: bool
   const [error, setError] = useState<string | null>(null);
   const [arrastrando, setArrastrando] = useState(false);
   const [guardando, setGuardando] = useState<'solo' | 'vincular' | null>(null);
+  // Distritos que el sistema sacó de la dirección (se avisa para que la persona los confirme)
+  const [auto, setAuto] = useState<Record<Lado, boolean>>({ partida: false, llegada: false });
 
   useEffect(() => {
-    if (open) { setFase('subir'); setArchivo(null); setF(VACIO); setAdvertencias([]); setDuplicada(false); setTocados(new Set()); setError(null); setArrastrando(false); }
+    if (open) { setFase('subir'); setArchivo(null); setF(VACIO); setAdvertencias([]); setDuplicada(false); setTocados(new Set()); setError(null); setArrastrando(false); setAuto({ partida: false, llegada: false }); }
   }, [open]);
 
   const set = (p: Partial<Form>) => setF(x => ({ ...x, ...p }));
@@ -79,13 +82,32 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: bool
   if (!(Number(f.peso.replace(',', '.')) > 0)) errores.peso = 'Indica el peso bruto total en kilos.';
   const ver = (c: Campo) => (tocados.has(c) ? errores[c] ?? null : null);
 
+  // Si no hay distrito elegido, lo saca del final de la dirección («… - ATE - LIMA - LIMA»)
+  function detectar(lado: Lado) {
+    const ub = `${lado}_ubigeo` as const; const dir = `${lado}_direccion` as const;
+    if (f[ub] || !catalogo.data) return;
+    const u = ubigeoDeDireccion(f[dir], catalogo.data);
+    if (u) { set({ [ub]: u.codigo } as Partial<Form>); setAuto(a => ({ ...a, [lado]: true })); }
+  }
+
   async function leer(archivoElegido: File) {
     setArchivo(archivoElegido); setError(null); setFase('leyendo');
     try {
       const form = new FormData();
       form.append('archivo', archivoElegido);
       const r = await api<{ ok: boolean; datos: LecturaGuia; duplicada: { id: number } | null }>('/operaciones/gre/leer', { method: 'POST', body: form });
-      setF(desdeLectura(r.datos)); setAdvertencias(r.datos.advertencias ?? []); setDuplicada(!!r.duplicada); haptic('success');
+      const inicial = desdeLectura(r.datos);
+      const marcas: Record<Lado, boolean> = { partida: false, llegada: false };
+      try {
+        const lista = await cargarUbigeos();
+        for (const lado of ['partida', 'llegada'] as const) {
+          if (!inicial[`${lado}_ubigeo`]) {
+            const u = ubigeoDeDireccion(inicial[`${lado}_direccion`], lista);
+            if (u) { inicial[`${lado}_ubigeo`] = u.codigo; marcas[lado] = true; }
+          }
+        }
+      } catch { /* sin catálogo: la persona elige el distrito */ }
+      setF(inicial); setAuto(marcas); setAdvertencias(r.datos.advertencias ?? []); setDuplicada(!!r.duplicada); haptic('success');
       setFase('revisar');
     } catch (err) { setError(errorMessage(err)); setFase('subir'); haptic('warning'); }
   }
@@ -103,7 +125,7 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: bool
         remitente_ruc: f.remitente_ruc, remitente_nombre: f.remitente_nombre, destinatario_doc: f.destinatario_doc, destinatario_nombre: f.destinatario_nombre,
         transportista_ruc: f.transportista_ruc, transportista_nombre: f.transportista_nombre, modalidad: f.modalidad || null, motivo: f.motivo,
         partida_ubigeo: f.partida_ubigeo, partida_direccion: f.partida_direccion, llegada_ubigeo: f.llegada_ubigeo, llegada_direccion: f.llegada_direccion,
-        peso_kg: Number(f.peso.replace(',', '.')), bultos: f.bultos ? Number(f.bultos) : null, descripcion: f.descripcion, items: f.items,
+        peso_kg: Number(f.peso.replace(',', '.')), bultos: f.bultos ? Number(f.bultos) : null, descripcion: f.descripcion, observaciones: f.observaciones, items: f.items,
         placa: f.placa, conductor_nombre: f.conductor_nombre, conductor_doc: f.conductor_doc, licencia: f.licencia, trae_transporte: f.trae_transporte, fuente: f.fuente,
       }));
       if (archivo) cuerpo.append('archivo', archivo);
@@ -120,6 +142,7 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: bool
   }
 
   const ocupado = guardando !== null;
+  const pista = (lado: Lado) => (f[`${lado}_ubigeo`] ? (auto[lado] ? 'Detectado de la dirección · confírmalo' : `Ubigeo ${f[`${lado}_ubigeo`]}`) : 'Opcional · se detecta de la dirección');
   return (
     <Sheet ancho open={open} onClose={() => !ocupado && fase !== 'leyendo' && onClose()} title="Registrar guía"
       footer={fase === 'revisar' ? (
@@ -129,7 +152,7 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: bool
           <Button variant="primary" onClick={() => guardar(true)} loading={guardando === 'vincular'} disabled={ocupado}>Registrar y vincular a un servicio</Button>
         </>
       ) : <Button variant="secondary" onClick={onClose} disabled={fase === 'leyendo'}>Cancelar</Button>}>
-      <div className="gr">
+      <div className="gr gr--compacto">
         {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
 
         {fase === 'subir' && (
@@ -146,7 +169,7 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: bool
               <li><FileText size={16} aria-hidden /><span><b>XML:</b> se lee exacto, sin errores.</span></li>
               <li><Sparkles size={16} aria-hidden /><span><b>Foto o PDF:</b> la IA propone los datos y tú los confirmas antes de guardar.</span></li>
             </ul>
-            <Button variant="plain" icon={<PenLine size={16} />} onClick={() => { setF(VACIO); setAdvertencias([]); setFase('revisar'); }}>Prefiero llenarla a mano</Button>
+            <Button variant="plain" icon={<PenLine size={16} />} onClick={() => { setF(VACIO); setAdvertencias([]); setAuto({ partida: false, llegada: false }); setFase('revisar'); }}>Prefiero llenarla a mano</Button>
           </>
         )}
 
@@ -163,73 +186,63 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: bool
             {archivo && <p className="gr__archivo"><FileText size={15} aria-hidden /> {archivo.name} · {f.fuente === 'XML' ? 'leída del XML' : f.fuente === 'IA' ? 'leída con IA: revisa cada dato' : 'a mano'}</p>}
             {duplicada && <Notice tone="error" icon={<CircleAlert size={16} />}>Esta guía ya está registrada. Si guardas, el sistema lo impedirá; revisa el número y el RUC del emisor.</Notice>}
             {advertencias.length > 0 && <Notice tone="accent" icon={<CircleAlert size={16} />}>{advertencias.map(a => <div key={a}>{a}</div>)}</Notice>}
-            {f.trae_transporte && <Notice tone="accent">Esta guía ya trae los datos del transporte (transportista, placa, conductor y fecha de traslado). Según la norma de SUNAT, puede que no haga falta emitir nuestra GRE Transportista: confírmalo antes de decidir.</Notice>}
+            {f.trae_transporte && <Notice tone="accent">Esta guía ya trae los datos del transporte (transportista, vehículo, conductor y fecha de traslado). Según la norma de SUNAT, puede que no haga falta emitir nuestra GRE Transportista: confírmalo antes de decidir.</Notice>}
 
             <Seccion titulo="La guía">
               <SegmentedControl block label="Tipo de guía" value={f.tipo} onChange={v => set({ tipo: v })} options={[{ value: 'REMITENTE', label: 'GRE Remitente' }, { value: 'TRANSPORTISTA', label: 'GRE Transportista' }]} />
-              <div className="os-fila">
-                <Field label="Serie y número *" error={ver('serie_numero')} hint="Como está impresa, por ejemplo T001-00000123">
+              <div className="gr__g3">
+                <Field label="Serie y número *" error={ver('serie_numero')}>
                   {p => <TextInput {...p} value={f.serie_numero} placeholder="T001-00000123" style={{ textTransform: 'uppercase' }} onBlur={() => tocar('serie_numero')} onChange={e => set({ serie_numero: e.target.value })} />}
                 </Field>
                 <Field label="Emisión">{p => <TextInput {...p} type="date" value={f.fecha_emision} onChange={e => set({ fecha_emision: e.target.value })} />}</Field>
-              </div>
-              <div className="os-fila">
                 <Field label="Inicio del traslado">{p => <TextInput {...p} type="date" value={f.fecha_traslado} onChange={e => set({ fecha_traslado: e.target.value })} />}</Field>
-                <Field label="Motivo del traslado">{p => <TextInput {...p} value={f.motivo} placeholder="Venta" onChange={e => set({ motivo: e.target.value })} />}</Field>
               </div>
+              <Field label="Motivo del traslado">{p => <TextInput {...p} value={f.motivo} placeholder="Venta" onChange={e => set({ motivo: e.target.value })} />}</Field>
             </Seccion>
 
             <Seccion titulo="Quién envía y quién recibe">
-              <div className="os-fila">
-                <Field label={f.tipo === 'REMITENTE' ? 'RUC del remitente *' : 'RUC del remitente'} error={f.tipo === 'REMITENTE' ? ver('emisor') : null}>
+              <div className="gr__g4">
+                <Field label={f.tipo === 'REMITENTE' ? 'RUC remitente *' : 'RUC remitente'} error={f.tipo === 'REMITENTE' ? ver('emisor') : null}>
                   {p => <TextInput {...p} inputMode="numeric" maxLength={11} value={f.remitente_ruc} onBlur={() => tocar('emisor')} onChange={e => set({ remitente_ruc: e.target.value.replace(/\D/g, '') })} />}
                 </Field>
-                <Field label="Remitente">{p => <TextInput {...p} value={f.remitente_nombre} onChange={e => set({ remitente_nombre: e.target.value })} />}</Field>
-              </div>
-              <div className="os-fila">
-                <Field label="RUC o DNI del destinatario">{p => <TextInput {...p} inputMode="numeric" maxLength={11} value={f.destinatario_doc} onChange={e => set({ destinatario_doc: e.target.value.replace(/\D/g, '') })} />}</Field>
-                <Field label="Destinatario">{p => <TextInput {...p} value={f.destinatario_nombre} onChange={e => set({ destinatario_nombre: e.target.value })} />}</Field>
+                <div className="gr__s3"><Field label="Remitente">{p => <TextInput {...p} value={f.remitente_nombre} onChange={e => set({ remitente_nombre: e.target.value })} />}</Field></div>
+                <Field label="RUC o DNI destinatario">{p => <TextInput {...p} inputMode="numeric" maxLength={11} value={f.destinatario_doc} onChange={e => set({ destinatario_doc: e.target.value.replace(/\D/g, '') })} />}</Field>
+                <div className="gr__s3"><Field label="Destinatario">{p => <TextInput {...p} value={f.destinatario_nombre} onChange={e => set({ destinatario_nombre: e.target.value })} />}</Field></div>
               </div>
             </Seccion>
 
             <Seccion titulo="Punto de partida y de llegada">
-              <div className="os-fila">
-                <div className="os-punto">
-                  <Field label="Distrito de partida" hint={f.partida_ubigeo ? `Ubigeo ${f.partida_ubigeo}` : undefined}>
-                    {p => <Combobox {...p} options={ubi.opciones} value={f.partida_ubigeo || null} loading={ubi.cargando} placeholder="Busca el distrito" onChange={v => set({ partida_ubigeo: v ?? '' })} />}
-                  </Field>
-                  <Field label="Dirección de partida">{p => <TextInput {...p} value={f.partida_direccion} onChange={e => set({ partida_direccion: e.target.value })} />}</Field>
-                </div>
-                <div className="os-punto">
-                  <Field label="Distrito de llegada" hint={f.llegada_ubigeo ? `Ubigeo ${f.llegada_ubigeo}` : undefined}>
-                    {p => <Combobox {...p} options={ubi.opciones} value={f.llegada_ubigeo || null} loading={ubi.cargando} placeholder="Busca el distrito" onChange={v => set({ llegada_ubigeo: v ?? '' })} />}
-                  </Field>
-                  <Field label="Dirección de llegada">{p => <TextInput {...p} value={f.llegada_direccion} onChange={e => set({ llegada_direccion: e.target.value })} />}</Field>
-                </div>
+              <div className="gr__g2">
+                {(['partida', 'llegada'] as const).map(lado => (
+                  <div key={lado} className="gr__lado">
+                    <Field label={lado === 'partida' ? 'Distrito de partida' : 'Distrito de llegada'} hint={pista(lado)}>
+                      {p => <Combobox {...p} options={ubi.opciones} value={f[`${lado}_ubigeo`] || null} loading={ubi.cargando} placeholder="Busca el distrito"
+                        onChange={v => { set({ [`${lado}_ubigeo`]: v ?? '' } as Partial<Form>); setAuto(a => ({ ...a, [lado]: false })); }} />}
+                    </Field>
+                    <Field label={lado === 'partida' ? 'Dirección de partida' : 'Dirección de llegada'}>
+                      {p => <TextInput {...p} value={f[`${lado}_direccion`]} title={f[`${lado}_direccion`]} onBlur={() => detectar(lado)} onChange={e => set({ [`${lado}_direccion`]: e.target.value } as Partial<Form>)} />}
+                    </Field>
+                  </div>
+                ))}
               </div>
             </Seccion>
 
-            <Seccion titulo="Carga">
-              <div className="os-fila">
-                <Field label="Peso bruto total (kg) *" error={ver('peso')} hint="Si la guía lo trae en toneladas, conviértelo a kilos">
+            <Seccion titulo="Carga y transporte" nota="el transporte solo si la guía lo trae">
+              <div className="gr__g4">
+                <Field label="Peso bruto (kg) *" error={ver('peso')}>
                   {p => <TextInput {...p} inputMode="decimal" value={f.peso} placeholder="0" onBlur={() => tocar('peso')} onChange={e => set({ peso: e.target.value.replace(/[^\d.,]/g, '') })} />}
                 </Field>
-                <Field label="Bultos o unidades">{p => <TextInput {...p} inputMode="numeric" value={f.bultos} onChange={e => set({ bultos: e.target.value.replace(/\D/g, '') })} />}</Field>
-              </div>
-              <Field label="Qué se transporta">{p => <TextInput {...p} value={f.descripcion} onChange={e => set({ descripcion: e.target.value })} />}</Field>
-            </Seccion>
-
-            <Seccion titulo="Transporte" nota="Solo si la guía lo trae. Sirve para saber si hace falta emitir nuestra guía de transportista.">
-              <div className="os-fila">
-                <Field label={f.tipo === 'TRANSPORTISTA' ? 'RUC del transportista *' : 'RUC del transportista'} error={f.tipo === 'TRANSPORTISTA' ? ver('emisor') : null}>
+                <Field label="Bultos">{p => <TextInput {...p} inputMode="numeric" value={f.bultos} onChange={e => set({ bultos: e.target.value.replace(/\D/g, '') })} />}</Field>
+                <div className="gr__s2"><Field label="Qué se transporta">{p => <TextInput {...p} value={f.descripcion} onChange={e => set({ descripcion: e.target.value })} />}</Field></div>
+                <Field label={f.tipo === 'TRANSPORTISTA' ? 'RUC transportista *' : 'RUC transportista'} error={f.tipo === 'TRANSPORTISTA' ? ver('emisor') : null}>
                   {p => <TextInput {...p} inputMode="numeric" maxLength={11} value={f.transportista_ruc} onBlur={() => tocar('emisor')} onChange={e => set({ transportista_ruc: e.target.value.replace(/\D/g, '') })} />}
                 </Field>
-                <Field label="Transportista">{p => <TextInput {...p} value={f.transportista_nombre} onChange={e => set({ transportista_nombre: e.target.value })} />}</Field>
-              </div>
-              <div className="os-fila">
+                <div className="gr__s3"><Field label="Transportista">{p => <TextInput {...p} value={f.transportista_nombre} onChange={e => set({ transportista_nombre: e.target.value })} />}</Field></div>
                 <Field label="Placa">{p => <TextInput {...p} value={f.placa} style={{ textTransform: 'uppercase' }} onChange={e => set({ placa: e.target.value })} />}</Field>
-                <Field label="Conductor">{p => <TextInput {...p} value={f.conductor_nombre} onChange={e => set({ conductor_nombre: e.target.value })} />}</Field>
+                <div className="gr__s2"><Field label="Conductor">{p => <TextInput {...p} value={f.conductor_nombre} onChange={e => set({ conductor_nombre: e.target.value })} />}</Field></div>
+                <Field label="Licencia">{p => <TextInput {...p} value={f.licencia} onChange={e => set({ licencia: e.target.value })} />}</Field>
               </div>
+              <Field label="Observaciones de la guía">{p => <TextInput {...p} value={f.observaciones} title={f.observaciones} onChange={e => set({ observaciones: e.target.value })} />}</Field>
             </Seccion>
           </>
         )}

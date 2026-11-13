@@ -32,3 +32,24 @@ export function useOpcionesUbigeo() {
   const porCodigo = useMemo(() => new Map((q.data ?? []).map(u => [u.codigo, u])), [q.data]);
   return { opciones, porCodigo, cargando: q.isLoading };
 }
+
+const normalizar = (v: unknown) => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+
+/**
+ * Detecta el distrito de una dirección que termina en «DISTRITO - PROVINCIA - DEPARTAMENTO» (como imprimen las guías de remisión),
+ * por ejemplo «CARRETERA CENTRAL KM 12 - ATE - LIMA - LIMA». Devuelve null si no hay una coincidencia clara.
+ */
+export function ubigeoDeDireccion(direccion: string | null | undefined, lista: Ubigeo[]): Ubigeo | null {
+  const partes = String(direccion ?? '').split(/\s+[-–]\s+|\s*,\s*/).map(normalizar).filter(Boolean);
+  const n = partes.length;
+  if (n < 2 || !lista.length) return null;
+  if (n >= 3) {
+    const [d, p, dep] = [partes[n - 3], partes[n - 2], partes[n - 1]];
+    const exacta = lista.filter(u => normalizar(u.distrito) === d && normalizar(u.provincia) === p && normalizar(u.departamento) === dep);
+    if (exacta.length === 1) return exacta[0];
+  }
+  // Solo «DISTRITO - PROVINCIA» o «DISTRITO - DEPARTAMENTO»: vale si es la única coincidencia
+  const [d, resto] = [partes[n - 2], partes[n - 1]];
+  const parcial = lista.filter(u => normalizar(u.distrito) === d && (normalizar(u.provincia) === resto || normalizar(u.departamento) === resto));
+  return parcial.length === 1 ? parcial[0] : null;
+}

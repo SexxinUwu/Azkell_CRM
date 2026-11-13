@@ -95,6 +95,7 @@ function leerXml(buffer) {
         bultos: valor(envio, 'cbc:TotalTransportHandlingUnitQuantity'),
         descripcion: lineas.map(l => l.descripcion).filter(Boolean).join('; ') || null,
         items: lineas,
+        observaciones: valor(raiz, 'cbc:Note'),
         placa, conductor_nombre: nombreConductor || null, conductor_doc: valor(conductor, 'cbc:ID'),
         licencia: valor(bloque(conductor, 'cac:IdentityDocumentReference'), 'cbc:ID'),
     }, 'XML', codigoTipo);
@@ -118,7 +119,9 @@ Devuelve SOLO un JSON con estas claves (usa null cuando el dato no se vea con cl
 - bultos: cantidad de bultos o unidades, si aparece como total
 - descripcion: resumen corto de los bienes
 - items: lista de bienes [{"descripcion": "...", "cantidad": 0, "unidad": "NIU"}]
-- placa: placa del vehículo sin guiones
+- indicador_vehiculos_conductores: SI o NO, según lo que diga "Indicador para registrar vehículos y conductores del transportista" (null si no aparece)
+- observaciones: el texto de Observaciones tal como está impreso (a veces trae placas y el conductor)
+- placa: placa del vehículo sin guiones, solo si está en el campo de vehículo de la guía (no la tomes de las observaciones)
 - conductor_nombre, conductor_doc (DNI, solo dígitos), licencia`;
 
 async function leerConIA(buffer, mimetype) {
@@ -183,12 +186,15 @@ function limpiar(j, fuente, codigoTipo) {
         peso_kg: peso != null && peso > 0 ? peso : null,
         bultos: numero(j.bultos) != null && numero(j.bultos) > 0 ? Math.round(numero(j.bultos)) : null,
         descripcion: texto(j.descripcion, 500), items,
+        observaciones: texto(j.observaciones, 1000),
         placa: texto(j.placa, 20) ? String(j.placa).toUpperCase().replace(/[^A-Z0-9]/g, '') : null,
         conductor_nombre: texto(j.conductor_nombre, 150), conductor_doc: soloDigitos(j.conductor_doc), licencia: texto(j.licencia, 30),
         fuente,
     };
-    // Una guía de remitente que ya trae los datos de transporte puede eximir al transportista de emitir la suya (RS 188-2010, art. 19 num. 12; la RS 108-2026 suma la fecha de inicio del traslado)
-    datos.trae_transporte = !!(datos.tipo === 'REMITENTE' && datos.transportista_ruc && datos.placa && datos.conductor_nombre && datos.fecha_traslado);
+    // Una guía de remitente que ya trae los datos de transporte (transportista, vehículo, conductor y fecha de traslado) puede eximir al transportista de emitir la suya
+    // (RS 188-2010, art. 19 num. 12; la RS 108-2026 suma la fecha de inicio del traslado). El indicador impreso en la guía manda; sin él se mira si trae placa y conductor.
+    const indicador = String(j.indicador_vehiculos_conductores || '').toUpperCase();
+    datos.trae_transporte = !!(datos.tipo === 'REMITENTE' && datos.transportista_ruc && datos.fecha_traslado && (indicador === 'SI' || (indicador !== 'NO' && datos.placa && datos.conductor_nombre)));
     return { ...datos, advertencias };
 }
 

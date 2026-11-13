@@ -25,7 +25,7 @@ export interface LecturaGuia {
   remitente_ruc: string | null; remitente_nombre: string | null; destinatario_doc: string | null; destinatario_nombre: string | null;
   transportista_ruc: string | null; transportista_nombre: string | null; modalidad: 'PUBLICO' | 'PRIVADO' | null; motivo: string | null;
   partida_ubigeo: string | null; partida_direccion: string | null; llegada_ubigeo: string | null; llegada_direccion: string | null;
-  peso_kg: number | null; bultos: number | null; descripcion: string | null; items: { descripcion: string | null; cantidad: number | null; unidad: string | null }[];
+  peso_kg: number | null; bultos: number | null; descripcion: string | null; observaciones: string | null; items: { descripcion: string | null; cantidad: number | null; unidad: string | null }[];
   placa: string | null; conductor_nombre: string | null; conductor_doc: string | null; licencia: string | null;
   trae_transporte: boolean; fuente: 'XML' | 'IA'; advertencias: string[];
 }
