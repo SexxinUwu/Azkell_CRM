@@ -219,6 +219,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'apariencia', label: 'Apariencia', to: '/perfil', icon: Palette, permissions: [] },
       { key: 'accesibilidad', label: 'Accesibilidad e idioma', to: '/sistema/accesibilidad', icon: Accessibility, permissions: [] },
       { key: 'integraciones', label: 'Integraciones', to: '/sistema/integraciones', icon: Cog, permissions: ver('integraciones', 'administracion') },
+      { key: 'plantilla-guias', label: 'Plantilla de guías', to: '/sistema/plantilla-guias', icon: FileText, permissions: ver('integraciones', 'administracion') },
     ],
   },
 ];
