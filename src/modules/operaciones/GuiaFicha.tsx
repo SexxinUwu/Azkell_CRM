@@ -81,8 +81,10 @@ export function GuiaFicha({ id, onClose, puedeEditar, onVincular }: { id: number
               descarga={{ titulo: distrito(g.llegada_ubigeo) || null, detalle: g.llegada_direccion, extra: g.llegada_ubigeo ? `Ubigeo ${g.llegada_ubigeo}` : null }} />
             {g.origen === 'EMITIDA' && (
               <Notice tone={g.apisunat_status === 'ACEPTADO' ? 'success' : g.apisunat_status === 'RECHAZADO' || g.apisunat_faults ? 'error' : 'accent'}>
-                Emitida por nosotros en <strong>{g.modo_emision === 'produccion' ? 'producción' : 'prueba'}</strong>{g.apisunat_status ? ` · APISUNAT: ${g.apisunat_status}` : ''}{g.apisunat_faults ? ` — ${g.apisunat_faults}` : ''}
+                Emitida por nosotros en <strong>{g.modo_emision === 'produccion' ? 'producción' : 'prueba'}</strong>{g.guias_incluidas ? ` · cubre ${g.guias_incluidas}` : ''}{g.apisunat_status ? ` · APISUNAT: ${g.apisunat_status}` : ''}{g.apisunat_faults ? ` — ${g.apisunat_faults}` : ''}
                 {g.pdf_url && <> · <a href={g.pdf_url} target="_blank" rel="noreferrer">Ver PDF <ExternalLink size={13} aria-hidden /></a></>}
+                {g.xml_url && <> · <a href={g.xml_url} target="_blank" rel="noreferrer">XML</a></>}
+                {g.cdr_url && <> · <a href={g.cdr_url} target="_blank" rel="noreferrer">Constancia SUNAT</a></>}
               </Notice>
             )}
             {!!g.trae_transporte && <Notice tone="accent">Esta guía ya trae los datos del transporte. Según la norma de SUNAT, puede que no haga falta emitir nuestra GRE Transportista: confírmalo antes de decidir.</Notice>}

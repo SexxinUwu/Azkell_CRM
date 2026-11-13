@@ -284,6 +284,7 @@ model GreGuia {
   modo_emision          String?  @db.VarChar(10)
   vehiculo_tuc          String?  @db.VarChar(30)
   vehiculo_autorizacion String?  @db.VarChar(30)
+  guias_relacionadas_ids String? @db.VarChar(255)
   @@unique([tipo, emisor_ruc, numero_completo], map: "uq_gre_guia")
   @@index([orden_servicio_id], map: "idx_gre_os")
   @@index([orden_servicio_codigo], map: "idx_gre_os_codigo")

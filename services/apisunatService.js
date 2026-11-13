@@ -483,12 +483,15 @@ class ApisunatService {
             'cbc:IssueTime': t(data.hora_emision),
             'cbc:DespatchAdviceTypeCode': t('31'),
         };
-        if (data.gre_relacionada_numero) {
-            body['cac:AdditionalDocumentReference'] = [{
-                'cbc:ID': t(String(data.gre_relacionada_numero).trim()),
-                'cbc:DocumentTypeCode': t(data.gre_relacionada_tipo || '09'),
-                ...(data.gre_relacionada_ruc ? { 'cac:IssuerParty': { 'cac:PartyIdentification': ruc(data.gre_relacionada_ruc, data.gre_relacionada_ruc) } } : {}),
-            }];
+        const relacionadas = Array.isArray(data.gre_relacionadas) && data.gre_relacionadas.length
+            ? data.gre_relacionadas
+            : (data.gre_relacionada_numero ? [{ numero: data.gre_relacionada_numero, ruc: data.gre_relacionada_ruc, tipo: data.gre_relacionada_tipo }] : []);
+        if (relacionadas.length) {
+            body['cac:AdditionalDocumentReference'] = relacionadas.map(r => ({
+                'cbc:ID': t(String(r.numero).trim()),
+                'cbc:DocumentTypeCode': t(r.tipo || '09'),
+                ...(r.ruc ? { 'cac:IssuerParty': { 'cac:PartyIdentification': ruc(r.ruc, r.ruc) } } : {}),
+            }));
         }
         body['cac:DespatchSupplierParty'] = {
             'cac:Party': {
