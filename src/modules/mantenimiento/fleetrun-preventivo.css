@@ -70,7 +70,10 @@
   border-radius: 999px; font-size: 0.8125rem; width: 100%;
 }
 .prev-barra__der { margin-left: auto; display: flex; align-items: center; gap: var(--s-2); }
-.prev-barra__buscar { width: 15rem; }
+.prev-barra__izq { display: flex; align-items: center; gap: var(--s-2); flex: 1 1 auto; min-width: 0; max-width: 36rem; }
+.prev-barra > .prev-barra__izq { flex: 1 1 auto; }
+.prev-barra__buscar { flex: 1 1 auto; min-width: 0; }
+.prev-barra__izq > button { height: 40px; min-height: 40px; font-size: 0.8125rem; white-space: nowrap; flex: none; border-radius: 999px; }
 .prev-barra__buscar input { height: 40px; min-height: 40px; font-size: 0.8125rem; }
 .prev-barra__der > button { height: 40px; min-height: 40px; font-size: 0.8125rem; white-space: nowrap; }
 .prev-barra__der > button.btn--icono { width: 40px; padding: 0; justify-content: center; }
@@ -171,7 +174,7 @@
   .prev-kpis { grid-template-columns: 1fr 1fr; }
   .prev-kpi__valor { font-size: 1.375rem; }
   .prev-barra { flex-wrap: wrap; overflow: visible; }
-  .prev-barra__empresa, .prev-barra__buscar { width: 100%; }
+  .prev-barra__izq { width: 100%; max-width: none; }
   .prev-barra__der { margin-left: 0; width: 100%; flex-wrap: wrap; }
   .prev-barra__der > * { flex: 1 1 auto; }
 }

@@ -4,8 +4,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Bus, ChevronDown, ChevronRight, Clock, Columns3, Download, FileDown, FileSpreadsheet, Gauge, History, ListChecks, MessageCircle, Pencil, Plus, SearchX, ShieldCheck, SlidersHorizontal, Trash2, Upload } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
-import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { SearchField, TextInput } from '../../core/ui/Field';
+import { ToggleChips } from '../../core/ui/Chips';
+import { GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { Sheet } from '../../core/ui/Sheet';
 import { DonaGrafico } from '../../core/ui/Graficos';
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
@@ -428,8 +429,6 @@ export function FleetrunPage() {
   const [importando, setImportando] = useState(false);
 
   const [busqueda, setBusqueda]   = useState('');
-  const [filtro, setFiltro]       = useState<string>('Todos');
-  const [empresaFiltro, setEmpresaFiltro] = useState('Todas');
   const [historial, setHistorial] = useState(false);
   const [pagina, setPagina]       = useState(1);
   const [abiertas, setAbiertas]   = useState<Set<string>>(() => new Set());
@@ -442,8 +441,8 @@ export function FleetrunPage() {
   const [fechaF, setFechaF]         = useState('');
   const [clientesF, setClientesF]   = useState<string[]>([]);
   const [utsF, setUtsF]             = useState<string[]>([]);
+  const [modelosF, setModelosF]     = useState<string[]>([]);
   const [estadosF, setEstadosF]     = useState<EstadoFR[]>([]);
-  const [buscarCliente, setBuscarCliente] = useState('');
   // Eliminar varios (clásico: modo selección + "Eliminar (N)"); null = modo apagado
   const [seleccion, setSeleccion]   = useState<Set<string> | null>(null);
   const [borrando, setBorrando]     = useState(false);
@@ -462,11 +461,11 @@ export function FleetrunPage() {
 
   const clienteDe = (placa: string) => placasActivas?.get(placa.toUpperCase())?.cliente ?? '';
 
-  // Registros de la empresa elegida (la dona y los KPI se calculan sobre ellos)
+  // Registros de los clientes elegidos en Filtros (la dona y los KPI se calculan sobre ellos)
   const filasEmpresa = useMemo(
-    () => (empresaFiltro === 'Todas' ? filas : filas.filter(f => clienteDe(frPlaca(f)) === empresaFiltro)),
+    () => (clientesF.length ? filas.filter(f => clientesF.includes(clienteDe(frPlaca(f)))) : filas),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [filas, empresaFiltro, placasActivas],
+    [filas, clientesF, placasActivas],
   );
 
   const ultimoCambio = useMemo(() => ultimoCambioPorPlaca(filas), [filas]);
@@ -502,23 +501,20 @@ export function FleetrunPage() {
   // KPIs de la flota (de la empresa elegida): misma función que el dashboard de taller
   const stats = useMemo(() => resumenPreventivo(filasEmpresa, placasData, umbrales, metricas, vivo), [filasEmpresa, placasData, umbrales, metricas, vivo]);
 
-  // Registros del estado elegido (sin la empresa ni la búsqueda): de aquí salen las empresas del filtro
+  // Registros de los estados elegidos en Filtros (sin la búsqueda ni los demás filtros)
   const porEstado = useMemo(() => {
-    const LABEL_A_ESTADO: Record<string, EstadoFR> = {
-      'Vencido': 'vencido', 'Por vencer': 'por_vencer', 'Vigente': 'vigente', 'Sin datos': 'sin_datos',
-    };
-    // Las casillas del filtro avanzado mandan sobre el segmento de estado (como el clásico)
-    const estados: EstadoFR[] | null = estadosF.length ? estadosF : filtro === 'Todos' ? null : [LABEL_A_ESTADO[filtro]];
-    if (!estados) return datosVista;
+    if (!estadosF.length) return datosVista;
     return datosVista.filter(f => {
       const placa = frPlaca(f).toUpperCase();
       const uts   = placasActivas?.get(placa)?.uts || frUts(f);
-      return estados.includes(calcularEstado(f, uts, umbrales, metricas, vivo));
+      return estadosF.includes(calcularEstado(f, uts, umbrales, metricas, vivo));
     });
-  }, [datosVista, filtro, estadosF, placasActivas, umbrales, metricas, vivo]);
+  }, [datosVista, estadosF, placasActivas, umbrales, metricas, vivo]);
 
   // UTS de la unidad (la del catálogo de placas o la del registro)
   const utsDe = (f: FleetrunFila) => placasActivas?.get(frPlaca(f).toUpperCase())?.uts || frUts(f);
+  // Modelo de la unidad (catálogo de placas)
+  const modeloDe = (f: FleetrunFila) => String(placasActivas?.get(frPlaca(f).toUpperCase())?.modelo ?? '').trim();
 
   // Opciones de los filtros avanzados: los clientes y UTS que aparecen en la lista de registros
   const clientesDisponibles = useMemo(() => {
@@ -533,23 +529,17 @@ export function FleetrunPage() {
     return [...set].sort((a, b) => a.localeCompare(b, 'es'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datosVista, placasActivas]);
-  const avanzadosActivos = (fechaF ? 1 : 0) + clientesF.length + utsF.length + estadosF.length;
-
-  // Solo las empresas que tienen registros en la lista que se ve
-  const empresas = useMemo(() => {
+  const modelosDisponibles = useMemo(() => {
     const set = new Set<string>();
-    for (const f of porEstado) {
-      const cliente = clienteDe(frPlaca(f));
-      if (cliente) set.add(cliente);
-    }
+    for (const f of datosVista) { const m = modeloDe(f); if (m) set.add(m); }
     return [...set].sort((a, b) => a.localeCompare(b, 'es'));
-  }, [porEstado, placasActivas]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [datosVista, placasActivas]);
+  const avanzadosActivos = (fechaF ? 1 : 0) + clientesF.length + utsF.length + estadosF.length + modelosF.length;
 
-  // Filtrado final: empresa elegida (si sigue en la lista) y búsqueda
-  const empresaActiva = empresaFiltro === 'Todas' || empresas.includes(empresaFiltro) ? empresaFiltro : 'Todas';
+  // Filtrado final: búsqueda y filtros
   const filtrados = useMemo(() => {
     let lista = porEstado;
-    if (empresaActiva !== 'Todas') lista = lista.filter(f => clienteDe(frPlaca(f)) === empresaActiva);
     if (busqueda) {
       const q = busqueda.toUpperCase();
       lista = lista.filter(f =>
@@ -561,9 +551,10 @@ export function FleetrunPage() {
     if (fechaF) lista = lista.filter(f => frFechaIso(f) === fechaF);
     if (clientesF.length) lista = lista.filter(f => clientesF.includes(clienteDe(frPlaca(f))));
     if (utsF.length) lista = lista.filter(f => utsF.includes(utsDe(f)));
+    if (modelosF.length) lista = lista.filter(f => modelosF.includes(modeloDe(f)));
     return lista;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [porEstado, empresaActiva, busqueda, placasActivas, fechaF, clientesF, utsF]);
+  }, [porEstado, busqueda, placasActivas, fechaF, clientesF, utsF, modelosF]);
 
   // Agrupar por placa en el orden en que aparecen, como el clásico (fila de placa que se despliega)
   const grupos = useMemo(() => {
@@ -617,12 +608,10 @@ export function FleetrunPage() {
   }
 
   function limpiarAvanzados() {
-    setFechaF(''); setClientesF([]); setUtsF([]); setEstadosF([]); setBuscarCliente(''); setPagina(1);
+    setFechaF(''); setClientesF([]); setUtsF([]); setEstadosF([]); setModelosF([]); setPagina(1);
   }
 
-  function cambiarFiltro(f: string) { setFiltro(f); setPagina(1); }
   function cambiarBusqueda(v: string) { setBusqueda(v); setPagina(1); }
-  function cambiarEmpresa(v: string) { setEmpresaFiltro(v); setPagina(1); }
   function alternarGrupo(placa: string) {
     haptic('selection');
     setAbiertas(prev => { const n = new Set(prev); if (n.has(placa)) n.delete(placa); else n.add(placa); return n; });
@@ -771,14 +760,6 @@ export function FleetrunPage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
-  const opcionesFiltro: Array<{ value: string; label: string }> = [
-    { value: 'Todos', label: 'Todos' },
-    { value: 'Vigente', label: 'Vigentes' },
-    { value: 'Por vencer', label: 'Por Vencer' },
-    { value: 'Vencido', label: 'Vencidos' },
-    ...(stats.sinDatos > 0 ? [{ value: 'Sin datos', label: 'Sin datos' }] : []),
-  ];
-
   const sinRegistros = grupos.length === 0;
 
   return (
@@ -802,31 +783,23 @@ export function FleetrunPage() {
         <div className="prev-page">
 
           {/* Logo, dona con su leyenda y KPI (formato del clásico) */}
-          {!historial && <EstadoMantenimientos stats={stats} empresa={empresa.data ?? ''} filtrada={empresaFiltro !== 'Todas'} />}
+          {!historial && <EstadoMantenimientos stats={stats} empresa={empresa.data ?? ''} filtrada={clientesF.length > 0} />}
 
-          {/* Filtros, búsqueda y herramientas */}
+          {/* Búsqueda con su botón de filtros, y las herramientas a la derecha */}
           <div className="prev-barra">
-            {!historial && (
-              <div className="prev-barra__estado">
-                <SegmentedControl value={filtro} onChange={cambiarFiltro} label="Filtrar por estado" options={opcionesFiltro} />
-              </div>
-            )}
-            {!historial && (
-              <div className="prev-barra__empresa">
-                <SelectInput aria-label="Filtrar por empresa" value={empresaActiva} onChange={e => cambiarEmpresa(e.target.value)}>
-                  <option value="Todas">Todas las empresas</option>
-                  {empresas.map(e => <option key={e} value={e}>{e}</option>)}
-                </SelectInput>
-              </div>
-            )}
-            <div className="prev-barra__der">
+            <div className="prev-barra__izq">
               <div className="prev-barra__buscar">
-                <SearchField value={busqueda} onChange={cambiarBusqueda} placeholder="Buscar placa" />
+                <SearchField value={busqueda} onChange={cambiarBusqueda} placeholder="Buscar placa, tipo o UTS" />
               </div>
+              <Button variant="secondary" icon={<SlidersHorizontal size={16} />} onClick={() => setAvanzados(true)}
+                aria-label={avanzadosActivos ? `Filtros, ${avanzadosActivos} activos` : 'Filtros'}>
+                <span className="placas-filtros__texto">Filtros</span>
+                {avanzadosActivos > 0 && <span className="placas-filtros__n t-numeric">{avanzadosActivos}</span>}
+              </Button>
+            </div>
+            <div className="prev-barra__der">
               <AccionIcono tip="Historial" color="violeta" icono={<History size={18} />} activo={historial}
-                onClick={() => { setHistorial(h => !h); setPagina(1); setBusqueda(''); setFiltro('Todos'); }} />
-              <AccionIcono tip={avanzadosActivos ? `Filtros (${avanzadosActivos})` : 'Filtros'} color="azul" icono={<SlidersHorizontal size={18} />}
-                onClick={() => setAvanzados(true)} />
+                onClick={() => { setHistorial(h => !h); setPagina(1); setBusqueda(''); }} />
               {puedeEliminar && (
                 <AccionIcono tip={seleccion ? 'Cancelar selección' : 'Seleccionar'} color="ambar" icono={<ListChecks size={18} />} activo={!!seleccion}
                   onClick={() => setSeleccion(s => (s ? null : new Set()))} />
@@ -977,54 +950,33 @@ export function FleetrunPage() {
         </div>
       )}
 
-      <Sheet open={avanzados} onClose={() => setAvanzados(false)} title="Filtros avanzados"
-        footer={<>
-          <Button variant="secondary" onClick={limpiarAvanzados} disabled={!avanzadosActivos}>Limpiar</Button>
-          <span style={{ flex: 1 }} />
-          <Button variant="primary" onClick={() => setAvanzados(false)}>Listo</Button>
-        </>}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-5)' }}>
-          <Field label="Fecha">
-            {p => <TextInput {...p} type="date" value={fechaF} onChange={e => { setFechaF(e.target.value); setPagina(1); }} />}
-          </Field>
-
-          <fieldset style={{ border: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <legend className="field__label" style={{ marginBottom: 6 }}>Estado</legend>
-            {(['vigente', 'por_vencer', 'vencido'] as EstadoFR[]).map(e => (
-              <label key={e} className="prev-col">
-                <input type="checkbox" checked={estadosF.includes(e)}
-                  onChange={() => { setEstadosF(prev => (prev.includes(e) ? prev.filter(x => x !== e) : [...prev, e])); setPagina(1); }} />
-                <span style={{ color: `var(--${estadoColor(e)}-ink)`, fontWeight: 600 }}>{estadoLabel(e)}</span>
-              </label>
-            ))}
-          </fieldset>
-
-          <fieldset style={{ border: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <legend className="field__label" style={{ marginBottom: 6 }}>Cliente</legend>
-            <SearchField value={buscarCliente} onChange={setBuscarCliente} placeholder="Buscar cliente" />
-            <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-              {clientesDisponibles.filter(c => c.toUpperCase().includes(buscarCliente.trim().toUpperCase())).map(c => (
-                <label key={c} className="prev-col">
-                  <input type="checkbox" checked={clientesF.includes(c)}
-                    onChange={() => { setClientesF(prev => (prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])); setPagina(1); }} />
-                  <span>{c}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <fieldset style={{ border: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <legend className="field__label" style={{ marginBottom: 6 }}>UTS</legend>
-            {utsDisponibles.map(u => (
-              <label key={u} className="prev-col">
-                <input type="checkbox" checked={utsF.includes(u)}
-                  onChange={() => { setUtsF(prev => (prev.includes(u) ? prev.filter(x => x !== u) : [...prev, u])); setPagina(1); }} />
-                <span>{u}</span>
-              </label>
-            ))}
-          </fieldset>
-        </div>
-      </Sheet>
+      <HojaFiltros open={avanzados} onClose={() => setAvanzados(false)} activos={avanzadosActivos} onLimpiar={limpiarAvanzados} resultado={filtrados.length} unidad="registro">
+        <GrupoFiltro titulo="Estado">
+          <ToggleChips<EstadoFR> label="Estado" value={estadosF} onChange={v => { setEstadosF(v); setPagina(1); }}
+            options={[
+              { value: 'vigente', label: 'Vigente' }, { value: 'por_vencer', label: 'Por vencer' }, { value: 'vencido', label: 'Vencido' },
+              ...(stats.sinDatos > 0 ? [{ value: 'sin_datos' as EstadoFR, label: 'Sin datos' }] : []),
+            ]} />
+        </GrupoFiltro>
+        {modelosDisponibles.length > 0 && (
+          <GrupoFiltro titulo="Modelo">
+            <ChipsBuscables etiqueta="Modelo" opciones={modelosDisponibles} valor={modelosF} onChange={v => { setModelosF(v); setPagina(1); }} />
+          </GrupoFiltro>
+        )}
+        {clientesDisponibles.length > 0 && (
+          <GrupoFiltro titulo="Cliente">
+            <ChipsBuscables etiqueta="Cliente" opciones={clientesDisponibles} valor={clientesF} onChange={v => { setClientesF(v); setPagina(1); }} />
+          </GrupoFiltro>
+        )}
+        {utsDisponibles.length > 0 && (
+          <GrupoFiltro titulo="UTS">
+            <ChipsBuscables etiqueta="UTS" opciones={utsDisponibles} valor={utsF} onChange={v => { setUtsF(v); setPagina(1); }} />
+          </GrupoFiltro>
+        )}
+        <GrupoFiltro titulo="Fecha del registro">
+          <TextInput type="date" aria-label="Fecha del registro" value={fechaF} onChange={e => { setFechaF(e.target.value); setPagina(1); }} />
+        </GrupoFiltro>
+      </HojaFiltros>
 
       <Sheet open={editandoColumnas} onClose={() => setEditandoColumnas(false)} title="Columnas de la tabla">
         <div className="prev-cols">
@@ -1054,4 +1006,17 @@ export function useFleetrunStats() {
   const { data: umbrales = {} } = useFleetrunUmbrales();
   const vivo = useKmVivo();
   return useMemo(() => resumenPreventivo(data ?? [], placasData, umbrales, metricas, vivo), [data, placasData, metricas, umbrales, vivo]);
+}
+
+/** Opciones como chips; con muchas opciones aparece un buscador para encontrarlas rápido. */
+function ChipsBuscables({ etiqueta, opciones, valor, onChange }: { etiqueta: string; opciones: string[]; valor: string[]; onChange: (v: string[]) => void }) {
+  const [q, setQ] = useState('');
+  const visibles = q.trim() ? opciones.filter(o => o.toUpperCase().includes(q.trim().toUpperCase())) : opciones;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+      {opciones.length > 8 && <SearchField value={q} onChange={setQ} placeholder={`Buscar ${etiqueta.toLowerCase()}`} />}
+      <ToggleChips<string> label={etiqueta} value={valor} onChange={onChange} options={visibles.map(o => ({ value: o, label: o }))} />
+      {visibles.length === 0 && <p className="t-footnote c-secondary" style={{ margin: 0 }}>Sin coincidencias.</p>}
+    </div>
+  );
 }
