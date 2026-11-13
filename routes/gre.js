@@ -310,6 +310,14 @@ module.exports = (db, logAudit) => {
         return r[0] || null;
     }
 
+    // En modo prueba, APISUNAT debe confirmar que la cuenta NO es de producción; si es de producción (o no responde) no se envía nada
+    async function verificarPrueba(cfg) {
+        if (cfg.modo !== 'prueba') return;
+        const r = await Apisunat.lastDocument({ personaId: cfg.persona_id, personaToken: cfg.persona_token, type: '31', serie: cfg.serie_grt, base: cfg.base_url });
+        if (!r.ok) throw aviso(`No se pudo comprobar la cuenta de pruebas en APISUNAT: ${String(typeof r.error === 'object' ? JSON.stringify(r.error) : r.error).slice(0, 200)}`, 422);
+        if (r.production !== false) throw aviso('Esta cuenta de APISUNAT es de PRODUCCIÓN, no de pruebas: no se envía nada. Usa una cuenta de pruebas o cambia el ambiente a Producción a propósito.', 409);
+    }
+
     // Configuración de APISUNAT de la empresa (sin token): modo, si está lista y por qué no
     router.get('/apisunat/estado', async (req, res) => {
         try { res.json({ ok: true, ...Apisunat.resumenConfig(await Apisunat.getConfigEmpresa(getDb(req))) }); } catch (err) { responder(res, err, 'apisunat-estado'); }
@@ -320,6 +328,7 @@ module.exports = (db, logAudit) => {
         try {
             const cfg = await Apisunat.getConfigEmpresa(getDb(req));
             if (cfg.bloqueo) throw aviso(cfg.bloqueo, 409);
+            await verificarPrueba(cfg);
             const r = await Apisunat.lastDocument({ personaId: cfg.persona_id, personaToken: cfg.persona_token, type: '31', serie: cfg.serie_grt, base: cfg.base_url });
             if (!r.ok) throw aviso(`APISUNAT respondió: ${String(typeof r.error === 'object' ? JSON.stringify(r.error) : r.error).slice(0, 200)}`, 422);
             res.json({ ok: true, modo: cfg.modo, produccion: r.production === true, siguiente: r.suggestedNumber, serie: cfg.serie_grt, message: `Conectado con APISUNAT (${cfg.modo === 'produccion' ? 'producción' : 'prueba'}). Siguiente número de ${cfg.serie_grt}: ${r.suggestedNumber}.` });
@@ -361,6 +370,7 @@ module.exports = (db, logAudit) => {
             };
             const faltan = faltanGrt(d);
             if (faltan.length) throw aviso(`Faltan datos para emitir: ${faltan.join(', ')}.`, 422);
+            await verificarPrueba(cfg);
 
             const existente = await grtExistente(p, g.id);
             if (existente && existente.apisunat_document_id) throw aviso(`Esta guía ya tiene la GRE Transportista ${existente.numero_completo} (${existente.apisunat_status || existente.estado}).`, 409);

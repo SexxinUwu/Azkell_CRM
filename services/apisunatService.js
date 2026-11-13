@@ -82,7 +82,7 @@ class ApisunatService {
         const prueba = modo === 'prueba';
         const persona_id = (prueba && m.apisunat_prueba_persona_id && m.apisunat_prueba_persona_token) ? m.apisunat_prueba_persona_id : (m.apisunat_persona_id || '');
         const persona_token = (prueba && m.apisunat_prueba_persona_id && m.apisunat_prueba_persona_token) ? m.apisunat_prueba_persona_token : (m.apisunat_persona_token || '');
-        const base_url = prueba ? String(m.apisunat_prueba_url || process.env.APISUNAT_PRUEBA_URL || '').trim().replace(/\/+$/, '') : BASE_URL_PRODUCCION;
+        const base_url = prueba ? String(m.apisunat_prueba_url || process.env.APISUNAT_PRUEBA_URL || BASE_URL_PRODUCCION).trim().replace(/\/+$/, '') : BASE_URL_PRODUCCION;
         const cfg = {
             modo, persona_id, persona_token, base_url,
             ruc_emisor: m.apisunat_ruc_emisor || m.sunat_ruc_emisor || '', razon_social: m.apisunat_razon_social || '',
@@ -93,7 +93,6 @@ class ApisunatService {
         if (String(process.env.SUNAT_EMISION_DESHABILITADA || '').trim() === '1') cfg.bloqueo = 'La emisión de guías está deshabilitada en el servidor.';
         else if (!cfg.persona_id || !cfg.persona_token) cfg.bloqueo = 'Falta configurar APISUNAT de esta empresa en Sistema › Integraciones.';
         else if (!/^\d{11}$/.test(cfg.ruc_emisor) || !cfg.razon_social) cfg.bloqueo = 'Falta el RUC y la razón social de la empresa en la configuración de APISUNAT (Sistema › Integraciones).';
-        else if (prueba && !cfg.base_url) cfg.bloqueo = 'Falta la dirección de pruebas de APISUNAT en Sistema › Integraciones. Hasta entonces no se envía nada.';
         return cfg;
     }
 
