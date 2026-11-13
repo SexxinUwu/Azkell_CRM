@@ -127,7 +127,7 @@ function GrupoResumen({ titulo, paso, onCambiar, children }: { titulo: string; p
  * El servicio es lo que se vende al cliente; conductor, placas y datos del tercero se completan en el viaje.
  * Al crear se puede generar el viaje en el mismo paso.
  */
-export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', onGuardado }: {
+export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', onGuardado, alCrearConViaje }: {
   open: boolean;
   orden: OrdenParaEditar | null;
   onClose: () => void;
@@ -135,6 +135,8 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
   viajeInicial?: string;
   /** Se llama tras guardar, con el id de la orden y, si se generó, el código del viaje */
   onGuardado?: (r: { id: number; viaje?: string }) => void;
+  /** «Generar OS y viaje»: tras crear la orden se abre la ventana del viaje para asignar conductor y unidad (en vez de crear un viaje vacío) */
+  alCrearConViaje?: (id: number) => void;
 }) {
   const toast = useToast();
   const qc = useQueryClient();
@@ -265,6 +267,14 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
       if (r.ok === false) throw new Error(r.error || 'No se pudo guardar la orden');
       const id = editando ? orden!.id : Number(r.id);
       let viaje: string | undefined;
+      if (!editando && generarViaje && alCrearConViaje) {
+        haptic('success');
+        toast('Orden creada: asigna ahora el conductor y la unidad del viaje');
+        await qc.invalidateQueries({ queryKey: ['operaciones'] });
+        onClose();
+        alCrearConViaje(id);
+        return;
+      }
       if (!editando && generarViaje) {
         const g = await api<{ ok?: boolean; error?: string; viaje?: string }>(`/operaciones/ordenes-servicio/${id}/generar-viaje`, { method: 'POST' });
         if (g.ok === false) throw new Error(`La orden se creó, pero no se pudo generar el viaje: ${g.error ?? 'error desconocido'}`);

@@ -210,6 +210,13 @@ export function OrdenesServicioPage() {
     lanzar(`${x.id}-${nuevo}`, () => api(`/operaciones/ordenes-servicio/${x.id}/estado`, { method: 'PUT', body: { estado_servicio: nuevo } }), aviso);
   // «Generar viaje» abre la ventana con los datos que pide el viaje
   const generarViaje = (x: Orden) => setGenerar(x);
+  // Tras «Generar OS y viaje»: se trae la orden recién creada y se abre la ventana del viaje
+  async function abrirViajeDe(id: number) {
+    try {
+      const r = await api<{ data: Detalle }>(`/operaciones/ordenes-servicio/${id}`);
+      setGenerar(r.data as unknown as Orden);
+    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
+  }
   const quitarDelViaje = (x: Orden) =>
     lanzar(`${x.id}-quitar`, () => api(`/operaciones/ordenes-servicio/${x.id}/viaje/${encodeURIComponent(x.viaje ?? '')}`, { method: 'DELETE' }), 'Servicio quitado del viaje');
 
@@ -247,7 +254,7 @@ export function OrdenesServicioPage() {
       />
 
       <GenerarViajeSheet orden={generar} onClose={() => setGenerar(null)} onGenerado={() => { setGenerar(null); setAbiertoId(null); void refrescar(); }} />
-      <OrdenServicioSheet open={!!formulario} orden={formulario?.orden ?? null} onClose={() => setFormulario(null)} />
+      <OrdenServicioSheet open={!!formulario} orden={formulario?.orden ?? null} onClose={() => setFormulario(null)} alCrearConViaje={abrirViajeDe} />
       <AsignarViajeSheet orden={asignar} onClose={() => setAsignar(null)} onAsignado={() => { setAsignar(null); void refrescar(); }} />
       <ConfirmSheet open={!!anular} onClose={() => setAnular(null)} title="Anular orden" confirmLabel="Anular orden" loading={!!ocupado}
         message={`Se anula la orden ${anular?.codigo_orden ?? ''} y se quita de su viaje. No se puede deshacer.`}
