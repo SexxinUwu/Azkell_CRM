@@ -5,7 +5,7 @@ import { AlertTriangle, Bus, ChevronDown, ChevronRight, Clock, Columns3, Downloa
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, TextInput } from '../../core/ui/Field';
-import { ToggleChips } from '../../core/ui/Chips';
+import { ListaMultiple } from '../../core/ui/ListaMultiple';
 import { GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { Sheet } from '../../core/ui/Sheet';
 import { DonaGrafico } from '../../core/ui/Graficos';
@@ -964,30 +964,30 @@ export function FleetrunPage() {
 
       <HojaFiltros open={avanzados} onClose={() => setAvanzados(false)} activos={avanzadosActivos} onLimpiar={limpiarAvanzados} resultado={filtrados.length} unidad="registro">
         <GrupoFiltro titulo="Estado">
-          <ToggleChips<EstadoFR> label="Estado" value={estadosF} onChange={v => { setEstadosF(v); setPagina(1); }}
-            options={[
+          <ListaMultiple<EstadoFR> etiqueta="Estado" valor={estadosF} onChange={v => { setEstadosF(v); setPagina(1); }}
+            opciones={[
               { value: 'vigente', label: 'Vigente' }, { value: 'por_vencer', label: 'Por vencer' }, { value: 'vencido', label: 'Vencido' },
               ...(stats.sinDatos > 0 ? [{ value: 'sin_datos' as EstadoFR, label: 'Sin datos' }] : []),
             ]} />
         </GrupoFiltro>
         {modelosDisponibles.length > 0 && (
           <GrupoFiltro titulo="Modelo de vehículo">
-            <ChipsBuscables etiqueta="Modelo de vehículo" opciones={modelosDisponibles} valor={modelosF} onChange={v => { setModelosF(v); setPagina(1); }} />
+            <ListaMultiple etiqueta="Modelo de vehículo" valor={modelosF} onChange={v => { setModelosF(v); setPagina(1); }} opciones={modelosDisponibles.map(m => ({ value: m, label: m }))} />
           </GrupoFiltro>
         )}
         {motoresDisponibles.length > 0 && (
           <GrupoFiltro titulo="Modelo de motor">
-            <ChipsBuscables etiqueta="Modelo de motor" opciones={motoresDisponibles} valor={motoresF} onChange={v => { setMotoresF(v); setPagina(1); }} />
+            <ListaMultiple etiqueta="Modelo de motor" valor={motoresF} onChange={v => { setMotoresF(v); setPagina(1); }} opciones={motoresDisponibles.map(m => ({ value: m, label: m }))} />
           </GrupoFiltro>
         )}
         {clientesDisponibles.length > 0 && (
           <GrupoFiltro titulo="Cliente">
-            <ChipsBuscables etiqueta="Cliente" opciones={clientesDisponibles} valor={clientesF} onChange={v => { setClientesF(v); setPagina(1); }} />
+            <ListaMultiple etiqueta="Cliente" valor={clientesF} onChange={v => { setClientesF(v); setPagina(1); }} opciones={clientesDisponibles.map(c => ({ value: c, label: c }))} />
           </GrupoFiltro>
         )}
         {utsDisponibles.length > 0 && (
           <GrupoFiltro titulo="UTS">
-            <ChipsBuscables etiqueta="UTS" opciones={utsDisponibles} valor={utsF} onChange={v => { setUtsF(v); setPagina(1); }} />
+            <ListaMultiple etiqueta="UTS" valor={utsF} onChange={v => { setUtsF(v); setPagina(1); }} opciones={utsDisponibles.map(u => ({ value: u, label: u }))} />
           </GrupoFiltro>
         )}
         <GrupoFiltro titulo="Fecha del registro">
@@ -1023,17 +1023,4 @@ export function useFleetrunStats() {
   const { data: umbrales = {} } = useFleetrunUmbrales();
   const vivo = useKmVivo();
   return useMemo(() => resumenPreventivo(data ?? [], placasData, umbrales, metricas, vivo), [data, placasData, metricas, umbrales, vivo]);
-}
-
-/** Opciones como chips; con muchas opciones aparece un buscador para encontrarlas rápido. */
-function ChipsBuscables({ etiqueta, opciones, valor, onChange }: { etiqueta: string; opciones: string[]; valor: string[]; onChange: (v: string[]) => void }) {
-  const [q, setQ] = useState('');
-  const visibles = q.trim() ? opciones.filter(o => o.toUpperCase().includes(q.trim().toUpperCase())) : opciones;
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
-      {opciones.length > 8 && <SearchField value={q} onChange={setQ} placeholder={`Buscar ${etiqueta.toLowerCase()}`} />}
-      <ToggleChips<string> label={etiqueta} value={valor} onChange={onChange} options={visibles.map(o => ({ value: o, label: o }))} />
-      {visibles.length === 0 && <p className="t-footnote c-secondary" style={{ margin: 0 }}>Sin coincidencias.</p>}
-    </div>
-  );
 }

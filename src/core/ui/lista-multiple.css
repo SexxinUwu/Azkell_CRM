@@ -1,0 +1,19 @@
+/* Lista desplegable de selección múltiple */
+.lm { display: flex; flex-direction: column; gap: var(--s-2); }
+.lm__campo { position: relative; }
+.lm__campo .input { width: 100%; padding-right: 2.75rem; }
+.lm__flecha { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border: 0; background: none; color: var(--label-3); display: grid; place-items: center; border-radius: 50%; cursor: pointer; transition: transform 0.2s ease; }
+.lm--abierta .lm__flecha { transform: translateY(-50%) rotate(180deg); }
+.lm__lista { max-height: 14rem; overflow-y: auto; border: 1px solid var(--separator); border-radius: 14px; background: var(--surface); padding: 4px; animation: lm-entra 0.18s ease; }
+@keyframes lm-entra { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.lm__op { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 10px 12px; border: 0; background: none; border-radius: 10px; font: inherit; font-size: 0.9375rem; color: var(--label); text-align: left; cursor: pointer; transition: background-color 0.12s ease; }
+.lm__op:hover { background: var(--fill); }
+.lm__op:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.lm__op--on { font-weight: 600; }
+.lm__op svg { color: var(--accent); flex: none; }
+.lm__vacio { margin: 0; padding: 12px; font-size: 0.8125rem; color: var(--label-2); }
+.lm__elegidos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.lm__chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 12px; border-radius: 999px; background: var(--accent-tint); color: var(--accent); font-size: 0.8125rem; font-weight: 600; }
+.lm__chip button { width: 18px; height: 18px; border: 0; border-radius: 50%; background: color-mix(in srgb, currentColor 18%, transparent); color: inherit; display: grid; place-items: center; cursor: pointer; }
+.lm__limpiar { border: 0; background: none; color: var(--label-2); font: inherit; font-size: 0.8125rem; text-decoration: underline; cursor: pointer; padding: 4px 6px; }
+@media (prefers-reduced-motion: reduce) { .lm__lista { animation: none; } .lm__flecha { transition: none; } }
