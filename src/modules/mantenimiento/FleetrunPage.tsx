@@ -704,10 +704,10 @@ export function FleetrunPage() {
       const d = datosFila(f);
       // La fecha va como fecha real de Excel (se puede agrupar por día, mes y año en una tabla dinámica), mostrada día/mes/año
       const fechaIso = frFechaIso(f);
-      return [d.placa, fechaIso ? { fechaIso, formato: 'dd/mm/yyyy' } : null, d.modelo, d.tipo, d.kmC || null, d.kmG || null, d.falta || null, d.kmP || null, d.frec || null, d.obs, estadoLabel(d.est), d.kmRec || null, d.ubicacion];
+      return [d.placa, fechaIso ? { fechaIso, formato: 'dd/mm/yyyy' } : null, d.modelo, motorDe(f) || null, d.tipo, d.kmC || null, d.kmG || null, d.falta || null, d.kmP || null, d.frec || null, d.obs, estadoLabel(d.est), d.kmRec || null, d.ubicacion];
     });
     await exportarExcel('mantenimiento-preventivo', 'Preventivo',
-      ['Placa', 'Fecha', 'Modelo', 'Tipo preventivo', 'Km cambio', 'Km actual (GPS)', 'Cuánto falta', 'Km próximo', 'Frecuencia', 'Observación', 'Estado', 'Km recorrido', 'Ubicación'],
+      ['Placa', 'Fecha', 'Modelo de vehículo', 'Modelo de motor', 'Tipo preventivo', 'Km cambio', 'Km actual (GPS)', 'Cuánto falta', 'Km próximo', 'Frecuencia', 'Observación', 'Estado', 'Km recorrido', 'Ubicación'],
       filasExcel);
   }
 
