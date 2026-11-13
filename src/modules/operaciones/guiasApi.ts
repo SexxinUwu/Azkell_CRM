@@ -18,6 +18,11 @@ export interface Guia {
   observaciones: string | null; usuario: string | null; creado_en: string | null;
   /** Solo en las guías que emitimos nosotros */
   placa_carreta?: string | null; viaje?: string | null; guia_relacionada_id?: number | null; apisunat_status?: string | null; apisunat_faults?: string | null; pdf_url?: string | null; modo_emision?: string | null;
+  xml_url?: string | null; cdr_url?: string | null; guias_relacionadas_ids?: string | null;
+  /** GRE Transportista nuestra que cubre esta guía de remitente (si ya se emitió) y su estado en SUNAT */
+  grt_numero?: string | null; grt_status?: string | null;
+  /** Solo en las guías emitidas: números de las guías de remitente que cubren */
+  guias_incluidas?: string | null;
 }
 
 /** Lo que devuelve el lector del archivo (XML, foto o PDF): se revisa antes de guardar */

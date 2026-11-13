@@ -35,7 +35,12 @@ module.exports = (db, logAudit) => {
         g.peso_kg, g.bultos, g.descripcion, g.items_json, g.placa, g.conductor_nombre, g.conductor_doc, g.licencia, g.vehiculo_tuc, g.vehiculo_autorizacion, g.trae_transporte,
         g.placa_carreta, g.viaje, g.guia_relacionada_id, g.apisunat_status, g.apisunat_faults, g.pdf_url, g.modo_emision,
         g.orden_servicio_id, g.orden_servicio_codigo, g.estado, g.fuente, g.archivo_url, g.archivo_nombre, g.observaciones, g.usuario,
-        DATE_FORMAT(g.creado_en, '%Y-%m-%d %H:%i') AS creado_en`;
+        DATE_FORMAT(g.creado_en, '%Y-%m-%d %H:%i') AS creado_en, g.xml_url, g.cdr_url, g.guias_relacionadas_ids,
+        (SELECT t.numero_completo FROM gre_guias t WHERE t.origen = 'EMITIDA' AND t.tipo = 'TRANSPORTISTA' AND t.estado <> 'ANULADA'
+            AND (t.guia_relacionada_id = g.id OR FIND_IN_SET(g.id, t.guias_relacionadas_ids)) ORDER BY t.id DESC LIMIT 1) AS grt_numero,
+        (SELECT t.apisunat_status FROM gre_guias t WHERE t.origen = 'EMITIDA' AND t.tipo = 'TRANSPORTISTA' AND t.estado <> 'ANULADA'
+            AND (t.guia_relacionada_id = g.id OR FIND_IN_SET(g.id, t.guias_relacionadas_ids)) ORDER BY t.id DESC LIMIT 1) AS grt_status,
+        (SELECT GROUP_CONCAT(r.numero_completo ORDER BY r.id SEPARATOR ', ') FROM gre_guias r WHERE g.origen = 'EMITIDA' AND FIND_IN_SET(r.id, g.guias_relacionadas_ids)) AS guias_incluidas`;
 
     // Peso real del servicio = suma de sus guías vigentes; pasa al tramo en su viaje y al peso del viaje
     async function recalcularPeso(p, codigoOrden) {
@@ -363,8 +368,45 @@ module.exports = (db, logAudit) => {
 
     async function grtExistente(p, guiaId) {
         const [r] = await p.query(`SELECT id, numero_completo, serie, numero, estado, apisunat_document_id, apisunat_status, apisunat_faults, pdf_url, modo_emision FROM gre_guias
-                                   WHERE guia_relacionada_id = ? AND tipo = 'TRANSPORTISTA' AND origen = 'EMITIDA' AND estado <> 'ANULADA' ORDER BY id DESC LIMIT 1`, [guiaId]);
+                                   WHERE (guia_relacionada_id = ? OR FIND_IN_SET(?, guias_relacionadas_ids)) AND tipo = 'TRANSPORTISTA' AND origen = 'EMITIDA' AND estado <> 'ANULADA' ORDER BY id DESC LIMIT 1`, [guiaId, guiaId]);
         return r[0] || null;
+    }
+
+    // Ítems de una guía de remitente, en el formato de la GRE Transportista
+    function itemsDeGuia(gu) {
+        let items = [];
+        try { items = JSON.parse(gu.items_json || '[]'); } catch (e) { items = []; }
+        return (items.length ? items : [{ descripcion: gu.descripcion || 'CARGA GENERAL', cantidad: 1, unidad: 'NIU' }]).map(it => ({
+            codigo: '', descripcion: String(it.descripcion || 'CARGA GENERAL').slice(0, 250), cantidad: Number(it.cantidad) || 1, unidad_medida: unidadSunat(it.unidad),
+        }));
+    }
+
+    // Guías de remitente del mismo viaje que se pueden incluir en la misma GRE Transportista: una GRE Transportista tiene un solo remitente,
+    // un solo destinatario y un solo punto de partida y de llegada, así que solo se agrupan las que coinciden.
+    async function candidatasGrt(p, base, viaje) {
+        let filas = [];
+        if (viaje) {
+            const [r] = await p.query(
+                `SELECT g.id, g.numero_completo, g.emisor_ruc, g.peso_kg, g.descripcion, g.items_json, g.remitente_ruc, g.destinatario_doc, g.partida_ubigeo, g.llegada_ubigeo, g.orden_servicio_codigo
+                 FROM gre_guias g JOIN operaciones_ordenes_viaje_rutas r ON r.orden COLLATE utf8mb4_unicode_ci = g.orden_servicio_codigo COLLATE utf8mb4_unicode_ci
+                 WHERE r.viaje COLLATE utf8mb4_unicode_ci = ? COLLATE utf8mb4_unicode_ci AND g.origen = 'RECIBIDA' AND g.tipo = 'REMITENTE' AND g.estado <> 'ANULADA'
+                   AND NOT EXISTS (SELECT 1 FROM gre_guias t WHERE t.origen = 'EMITIDA' AND t.tipo = 'TRANSPORTISTA' AND t.estado <> 'ANULADA' AND t.apisunat_document_id IS NOT NULL
+                                   AND (t.guia_relacionada_id = g.id OR FIND_IN_SET(g.id, t.guias_relacionadas_ids)))
+                 GROUP BY g.id ORDER BY g.id`, [viaje]);
+            filas = r;
+        }
+        if (!filas.some(f => f.id === base.id)) filas.unshift(base);
+        return filas.map(f => {
+            let motivo = '';
+            if (f.id !== base.id) {
+                if (String(f.remitente_ruc || '') !== String(base.remitente_ruc || '')) motivo = 'tiene otro remitente';
+                else if (String(f.destinatario_doc || '') !== String(base.destinatario_doc || '')) motivo = 'tiene otro destinatario';
+                else if (String(f.partida_ubigeo || '') !== String(base.partida_ubigeo || '')) motivo = 'parte de otro lugar';
+                else if (String(f.llegada_ubigeo || '') !== String(base.llegada_ubigeo || '')) motivo = 'llega a otro lugar';
+            }
+            return { id: f.id, numero_completo: f.numero_completo, emisor_ruc: f.emisor_ruc, peso_kg: Number(f.peso_kg) || 0, descripcion: f.descripcion, items_json: f.items_json,
+                servicio: f.orden_servicio_codigo, base: f.id === base.id, compatible: !motivo, motivo };
+        });
     }
 
     // En modo prueba, APISUNAT debe confirmar que la cuenta NO es de producción; si es de producción (o no responde) no se envía nada
@@ -400,6 +442,7 @@ module.exports = (db, logAudit) => {
             const { propuesta, viaje } = await propuestaGrt(p, g, cfg);
             res.json({
                 ok: true, viaje, propuesta, faltan: faltanGrt(propuesta), existente: await grtExistente(p, g.id),
+                guias: (await candidatasGrt(p, g, viaje)).map(c => ({ id: c.id, numero_completo: c.numero_completo, peso_kg: c.peso_kg, descripcion: c.descripcion, servicio: c.servicio, base: c.base, compatible: c.compatible, motivo: c.motivo })),
                 ambiente: { modo: cfg.modo, lista: !cfg.bloqueo, motivo: cfg.bloqueo },
                 guia_trae_transporte: !!g.trae_transporte,
             });
@@ -430,6 +473,16 @@ module.exports = (db, logAudit) => {
                 tuc_carreta: String(b.tuc_carreta ?? bp.tuc_carreta).trim().toUpperCase(),
                 aut_carreta: String(b.aut_carreta ?? bp.aut_carreta).trim(),
             };
+            // Guías de remitente que cubre esta GRE Transportista (por defecto solo la elegida): su peso y sus ítems se suman
+            const cand = await candidatasGrt(p, g, base.viaje);
+            const ids = new Set([g.id, ...(Array.isArray(b.guias_ids) ? b.guias_ids.map(Number).filter(Number.isInteger) : [])]);
+            const elegidas = cand.filter(c => ids.has(c.id));
+            if (elegidas.length !== ids.size) throw aviso('Alguna de las guías elegidas no pertenece a este viaje o ya tiene GRE Transportista.', 409);
+            const noJuntas = elegidas.find(c => !c.compatible);
+            if (noJuntas) throw aviso(`La guía ${noJuntas.numero_completo} no se puede agrupar con las demás: ${noJuntas.motivo}.`, 422);
+            d.peso_bruto_total = Math.round(elegidas.reduce((s, c) => s + c.peso_kg, 0) * 1000) / 1000;
+            d.items = elegidas.flatMap(c => itemsDeGuia(c)).map((it, i) => ({ ...it, codigo: String(i + 1).padStart(3, '0') }));
+
             const faltan = faltanGrt(d);
             if (faltan.length) throw aviso(`Faltan datos para emitir: ${faltan.join(', ')}.`, 422);
             if (d.fecha_traslado < hoyLima()) throw aviso('La fecha de inicio del traslado no puede ser anterior a la fecha de emisión (hoy). Corrígela.', 422);
@@ -458,10 +511,10 @@ module.exports = (db, logAudit) => {
                 remitente_ruc: d.remitente_ruc, remitente_nombre: texto(d.remitente_razon_social, 200), destinatario_doc: digitos(d.destinatario_ruc, 15), destinatario_nombre: texto(d.destinatario_razon_social, 200),
                 transportista_ruc: cfg.ruc_emisor, transportista_nombre: texto(cfg.razon_social, 200), modalidad: 'PUBLICO', motivo: texto(d.descripcion_motivo, 80),
                 partida_ubigeo: d.punto_partida_ubigeo, partida_direccion: texto(d.punto_partida_direccion, 255), llegada_ubigeo: d.punto_llegada_ubigeo, llegada_direccion: texto(d.punto_llegada_direccion, 255),
-                peso_kg: d.peso_bruto_total, descripcion: texto(g.descripcion, 500), items_json: JSON.stringify(d.items),
+                peso_kg: d.peso_bruto_total, descripcion: texto(elegidas.map(c => c.descripcion).filter(Boolean).join('; ') || g.descripcion, 500), items_json: JSON.stringify(d.items),
                 placa: d.placa_tracto, placa_carreta: d.placa_carreta || null, conductor_nombre: texto(`${d.conductor_nombre} ${d.conductor_apellidos}`.trim(), 150), conductor_doc: d.conductor_num_doc, licencia: texto(d.conductor_licencia, 30),
                 trae_transporte: 0, orden_servicio_id: g.orden_servicio_id, orden_servicio_codigo: g.orden_servicio_codigo, estado: 'VINCULADA', fuente: 'MANUAL',
-                usuario: usuarioDe(req), viaje: base.viaje || null, guia_relacionada_id: g.id, modo_emision: cfg.modo,
+                usuario: usuarioDe(req), viaje: base.viaje || null, guia_relacionada_id: g.id, guias_relacionadas_ids: elegidas.map(c => c.id).join(','), modo_emision: cfg.modo,
             };
             let id;
             if (existente) {
@@ -476,7 +529,7 @@ module.exports = (db, logAudit) => {
 
             const body = Apisunat.buildGrtUbl({
                 ...d, serie, numero, fecha_emision: fila.fecha_emision, hora_emision: horaLima(),
-                gre_relacionada_numero: g.numero_completo, gre_relacionada_ruc: g.emisor_ruc || g.remitente_ruc, gre_relacionada_tipo: '09',
+                gre_relacionadas: elegidas.map(c => ({ numero: c.numero_completo, ruc: c.emisor_ruc || d.remitente_ruc, tipo: '09' })),
             }, { ruc: cfg.ruc_emisor, razon_social: cfg.razon_social });
             const fileName = `${cfg.ruc_emisor}-31-${serie}-${numero}`;
             const r = await Apisunat.sendBill({ personaId: cfg.persona_id, personaToken: cfg.persona_token, fileName, documentBody: body, base: cfg.base_url });
