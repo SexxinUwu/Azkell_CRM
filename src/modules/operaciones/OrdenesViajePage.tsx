@@ -290,7 +290,7 @@ export function OrdenesViajePage() {
       <FormularioViaje open={!!formulario} viaje={formulario?.viaje ?? null} usuario={user?.name ?? ''} onClose={() => setFormulario(null)} onGuardado={refrescar} />
       <AccionViaje accion={accion} usuario={user?.name ?? ''} onClose={() => setAccion(null)} onHecho={refrescar} />
       <ConfirmSheet open={!!porEliminar} onClose={() => !ocupado && setPorEliminar(null)} onConfirm={eliminar} loading={ocupado}
-        title={`¿Eliminar el viaje ${porEliminar?.viaje ?? ''}?`} message="Se borran también sus rutas y órdenes de servicio asociadas. No se puede deshacer." confirmLabel="Eliminar" />
+        title={`¿Eliminar el viaje ${porEliminar?.viaje ?? ''}?`} message="Sus órdenes de servicio no se borran: vuelven a «Pendiente» para programarlas en otro viaje. No se puede deshacer." confirmLabel="Eliminar" />
     </Page>
   );
 }

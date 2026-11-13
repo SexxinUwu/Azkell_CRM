@@ -978,6 +978,19 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                 return res.status(404).json({ ok: false, error: `No se encontró la orden de viaje ${codeViaje}.` });
             }
 
+            // Un viaje con servicios ya en ejecución o entregados no se elimina: es historia de la operación
+            const [enCurso] = await tdb.query(
+                `SELECT COUNT(*) AS n FROM operaciones_ordenes_servicio os
+                 JOIN operaciones_ordenes_viaje_rutas r ON r.orden COLLATE utf8mb4_unicode_ci = os.codigo_orden COLLATE utf8mb4_unicode_ci
+                 WHERE r.viaje = ? AND os.estado_servicio IN ('EN_EJECUCION', 'ENTREGADO')`, [codeViaje]);
+            if (enCurso[0].n > 0) return res.status(409).json({ ok: false, error: 'Este viaje ya tiene servicios en ejecución o entregados: no se puede eliminar.' });
+
+            // Sus servicios programados vuelven a «pendiente» para programarlos en otro viaje
+            await tdb.query(
+                `UPDATE operaciones_ordenes_servicio os
+                 JOIN operaciones_ordenes_viaje_rutas r ON r.orden COLLATE utf8mb4_unicode_ci = os.codigo_orden COLLATE utf8mb4_unicode_ci
+                 SET os.estado_servicio = 'PENDIENTE' WHERE r.viaje = ? AND os.estado_servicio = 'PROGRAMADO'`, [codeViaje]);
+
             // Eliminar rutas asociadas al viaje
             await tdb.query('DELETE FROM operaciones_ordenes_viaje_rutas WHERE viaje = ?', [codeViaje]);
 
