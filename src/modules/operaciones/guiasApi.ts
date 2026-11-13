@@ -16,6 +16,8 @@ export interface Guia {
   orden_servicio_id: number | null; orden_servicio_codigo: string | null; servicio_cliente?: string | null;
   estado: EstadoGuia; fuente: 'XML' | 'IA' | 'MANUAL'; archivo_url: string | null; archivo_nombre: string | null; archivo_ver_url?: string | null;
   observaciones: string | null; usuario: string | null; creado_en: string | null;
+  /** Solo en las guías que emitimos nosotros */
+  placa_carreta?: string | null; viaje?: string | null; guia_relacionada_id?: number | null; apisunat_status?: string | null; apisunat_faults?: string | null; pdf_url?: string | null; modo_emision?: string | null;
 }
 
 /** Lo que devuelve el lector del archivo (XML, foto o PDF): se revisa antes de guardar */
@@ -34,6 +36,12 @@ export const ETIQUETA_ESTADO_GUIA: Record<EstadoGuia, string> = { REGISTRADA: 'R
 export const TONO_ESTADO_GUIA: Record<EstadoGuia, string> = { REGISTRADA: 'amber', VINCULADA: 'green', ANULADA: 'gray' };
 export const ETIQUETA_ORIGEN: Record<OrigenGuia, string> = { RECIBIDA: 'Recibida del cliente', EMITIDA: 'Emitida por nosotros' };
 export const ETIQUETA_TIPO: Record<TipoGuia, string> = { REMITENTE: 'Remitente', TRANSPORTISTA: 'Transportista' };
+
+/** Estado de una guía emitida según APISUNAT: texto y tono */
+export const ESTADO_SUNAT: Record<string, { texto: string; tono: string }> = {
+  ACEPTADO: { texto: 'Aceptada', tono: 'green' }, RECHAZADO: { texto: 'Rechazada', tono: 'red' }, PENDIENTE: { texto: 'Enviada', tono: 'amber' },
+  EXCEPCION: { texto: 'Con error', tono: 'red' }, ERROR_APISUNAT: { texto: 'No enviada', tono: 'red' },
+};
 
 export const kgDe = (v: unknown) => Number(v) || 0;
 export const fmtKg = (v: unknown) => `${kgDe(v).toLocaleString('es-PE', { maximumFractionDigits: 2 })} kg`;

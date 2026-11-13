@@ -102,7 +102,7 @@ export function GuiasPage() {
                     {puedeEditar && g.estado === 'VINCULADA' && <IconoFila texto="Cambiar de servicio" tono="ambar" icono={<Link2Off size={15} />} onClick={() => setAbiertaId(g.id)} />}
                   </span>
                 </Celda>
-                <Celda><PastillaGuia estado={g.estado} /></Celda>
+                <Celda><PastillaGuia estado={g.estado} guia={g} /></Celda>
                 <Celda mono>{g.numero_completo}</Celda>
                 <Celda>{ETIQUETA_ORIGEN[g.origen]}</Celda>
                 <Celda>GRE {ETIQUETA_TIPO[g.tipo]}</Celda>
