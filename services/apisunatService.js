@@ -457,6 +457,100 @@ class ApisunatService {
     }
 
     /**
+     * documentBody de la GRE Transportista (tipo 31, versión 2.0) en formato UBL, que es lo que pide APISUNAT
+     * (nodos cbc:/cac: con _text). La estructura sale del Generador JSON del portal de APISUNAT.
+     * data: serie, numero (8 dígitos), fecha_emision, hora_emision, fecha_traslado, peso_bruto_total, placa_tracto, placa_carreta,
+     *       tuc_tracto, aut_tracto, tuc_carreta, aut_carreta, conductor_*, remitente_*, destinatario_*, punto_*, items[], gre_relacionada_*
+     */
+    static buildGrtUbl(data, emisor) {
+        const t = v => ({ _text: v });
+        const docTipo = n => (String(n || '').length === 8 ? '1' : '6');
+        const ruc = (n, v) => ({ 'cbc:ID': { _attributes: { schemeID: docTipo(n) }, _text: String(v) } });
+        const kg = Math.round((Number(data.peso_bruto_total) || 0) * 1000) / 1000;
+        const aut = (v) => ({ 'cbc:ID': { _attributes: { schemeID: '06' }, _text: String(v) } });
+
+        const equipoSec = (data.placa_carreta && String(data.placa_carreta).trim()) ? [{
+            'cbc:ID': t(String(data.placa_carreta).trim().toUpperCase()),
+            ...(data.tuc_carreta ? { 'cac:ApplicableTransportMeans': { 'cbc:RegistrationNationalityID': t(String(data.tuc_carreta).trim()) } } : {}),
+            ...(data.aut_carreta ? { 'cac:ShipmentDocumentReference': aut(String(data.aut_carreta).trim()) } : {}),
+        }] : null;
+
+        const body = {
+            'cbc:UBLVersionID': t('2.1'),
+            'cbc:CustomizationID': t('2.0'),
+            'cbc:ID': t(`${data.serie}-${String(data.numero).padStart(8, '0')}`),
+            'cbc:IssueDate': t(data.fecha_emision),
+            'cbc:IssueTime': t(data.hora_emision),
+            'cbc:DespatchAdviceTypeCode': t('31'),
+        };
+        if (data.gre_relacionada_numero) {
+            body['cac:AdditionalDocumentReference'] = [{
+                'cbc:ID': t(String(data.gre_relacionada_numero).trim()),
+                'cbc:DocumentTypeCode': t(data.gre_relacionada_tipo || '09'),
+                ...(data.gre_relacionada_ruc ? { 'cac:IssuerParty': { 'cac:PartyIdentification': ruc(data.gre_relacionada_ruc, data.gre_relacionada_ruc) } } : {}),
+            }];
+        }
+        body['cac:DespatchSupplierParty'] = {
+            'cac:Party': {
+                'cac:PartyIdentification': { 'cbc:ID': { _attributes: { schemeID: '6' }, _text: String(emisor.ruc) } },
+                'cac:PartyLegalEntity': {
+                    'cbc:RegistrationName': t(emisor.razon_social),
+                    ...(emisor.direccion ? { 'cac:RegistrationAddress': { 'cac:AddressLine': { 'cbc:Line': t(emisor.direccion) } } } : {}),
+                },
+            },
+        };
+        body['cac:DeliveryCustomerParty'] = {
+            'cac:Party': {
+                'cac:PartyIdentification': ruc(data.destinatario_ruc, data.destinatario_ruc),
+                'cac:PartyLegalEntity': { 'cbc:RegistrationName': t(data.destinatario_razon_social) },
+            },
+        };
+        body['cac:Shipment'] = {
+            'cbc:ID': t('SUNAT_Envio'),
+            'cbc:GrossWeightMeasure': { _attributes: { unitCode: data.unidad_medida || 'KGM' }, _text: kg },
+            'cac:ShipmentStage': {
+                'cac:TransitPeriod': { 'cbc:StartDate': t(data.fecha_traslado) },
+                'cac:CarrierParty': {
+                    'cac:PartyIdentification': { 'cbc:ID': { _attributes: { schemeID: '6' } } },
+                    'cac:PartyLegalEntity': { 'cbc:CompanyID': t(String(data.registro_mtc).trim()) },
+                },
+                'cac:DriverPerson': [{
+                    'cbc:ID': { _attributes: { schemeID: docTipo(data.conductor_num_doc) === '1' ? '1' : '6' }, _text: String(data.conductor_num_doc) },
+                    'cbc:FirstName': t(String(data.conductor_nombre).trim()),
+                    'cbc:FamilyName': t(String(data.conductor_apellidos).trim()),
+                    'cbc:JobTitle': t('Principal'),
+                    'cac:IdentityDocumentReference': { 'cbc:ID': t(String(data.conductor_licencia).trim()) },
+                }],
+            },
+            'cac:Delivery': {
+                'cac:DeliveryAddress': { 'cbc:ID': t(data.punto_llegada_ubigeo), 'cac:AddressLine': { 'cbc:Line': t(String(data.punto_llegada_direccion).trim()) } },
+                'cac:Despatch': {
+                    'cac:DespatchAddress': { 'cbc:ID': t(data.punto_partida_ubigeo), 'cac:AddressLine': { 'cbc:Line': t(String(data.punto_partida_direccion).trim()) } },
+                    'cac:DespatchParty': {
+                        'cac:PartyIdentification': ruc(data.remitente_ruc, data.remitente_ruc),
+                        'cac:PartyLegalEntity': { 'cbc:RegistrationName': t(data.remitente_razon_social) },
+                    },
+                },
+            },
+            'cac:TransportHandlingUnit': {
+                'cac:TransportEquipment': {
+                    'cbc:ID': t(String(data.placa_tracto).trim().toUpperCase()),
+                    ...(data.tuc_tracto ? { 'cac:ApplicableTransportMeans': { 'cbc:RegistrationNationalityID': t(String(data.tuc_tracto).trim()) } } : {}),
+                    ...(equipoSec ? { 'cac:AttachedTransportEquipment': equipoSec } : {}),
+                    ...(data.aut_tracto ? { 'cac:ShipmentDocumentReference': aut(String(data.aut_tracto).trim()) } : {}),
+                },
+            },
+        };
+        body['cac:DespatchLine'] = (Array.isArray(data.items) && data.items.length ? data.items : [{ descripcion: 'CARGA GENERAL', cantidad: 1, unidad_medida: 'NIU' }]).map((it, i) => ({
+            'cbc:ID': t(i + 1),
+            'cbc:DeliveredQuantity': { _attributes: { unitCode: it.unidad_medida || 'NIU' }, _text: Number(it.cantidad) || 1 },
+            'cac:OrderLineReference': { 'cbc:LineID': t(i + 1) },
+            'cac:Item': { 'cbc:Description': t(String(it.descripcion || 'CARGA GENERAL').trim()) },
+        }));
+        return body;
+    }
+
+    /**
      * Construye el documentBody para Guía de Remisión - Remitente (Tipo 09 / Serie T)
      */
     static buildGreBody(data, rucEmisor, razonSocialEmisor) {
