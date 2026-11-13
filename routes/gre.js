@@ -327,6 +327,7 @@ module.exports = (db, logAudit) => {
             serie: cfg.serie_grt,
             // SUNAT no acepta que el traslado empiece antes de la emisión (error 3343): si la fecha de la guía del cliente ya pasó, se propone hoy
             fecha_traslado: [fecha, viaje && viaje.fecha_inicio].find(f => f && f >= hoyLima()) || hoyLima(),
+            fecha_traslado_guia: fecha || '',
             motivo_traslado: motivoCodigo(g.motivo), descripcion_motivo: String(g.motivo || 'VENTA').toUpperCase().slice(0, 100),
             remitente_ruc: g.remitente_ruc || '', remitente_razon_social: g.remitente_nombre || '',
             destinatario_ruc: g.destinatario_doc || '', destinatario_razon_social: g.destinatario_nombre || '',

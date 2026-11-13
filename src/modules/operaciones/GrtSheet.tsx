@@ -13,7 +13,7 @@ import { haptic } from '../../core/lib/haptics';
 import { fechaGuia, fmtKg, type Guia } from './guiasApi';
 
 interface Propuesta {
-  serie: string; fecha_traslado: string; descripcion_motivo: string;
+  serie: string; fecha_traslado: string; fecha_traslado_guia: string; descripcion_motivo: string;
   remitente_ruc: string; remitente_razon_social: string; destinatario_ruc: string; destinatario_razon_social: string;
   punto_partida_direccion: string; punto_llegada_direccion: string; peso_bruto_total: number;
   placa_tracto: string; placa_carreta: string; conductor_nombre: string; conductor_apellidos: string; conductor_num_doc: string; conductor_licencia: string; registro_mtc: string; tuc_tracto: string; aut_tracto: string; tuc_carreta: string; aut_carreta: string;
@@ -183,6 +183,9 @@ export function GrtSheet({ guia, onClose }: { guia: Guia | null; onClose: () => 
                 <div className="gr__s2"><Field label="Registro MTC de la empresa">{p => <TextInput {...p} value={f.registro_mtc} onChange={e => set({ registro_mtc: e.target.value.toUpperCase() })} />}</Field></div>
               </div>
               <p className="os-nota">Traslado desde {fechaGuia(f.fecha_traslado)}. Modalidad: transporte público.</p>
+              {f.fecha_traslado_guia && f.fecha_traslado_guia !== f.fecha_traslado && (
+                <p className="os-nota">La guía del cliente dice {fechaGuia(f.fecha_traslado_guia)}, pero SUNAT no acepta que el traslado empiece antes de la emisión: se propone la fecha de hoy.</p>
+              )}
             </div>
           </section>
 
