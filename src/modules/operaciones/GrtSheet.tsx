@@ -16,7 +16,7 @@ interface Propuesta {
   serie: string; fecha_traslado: string; descripcion_motivo: string;
   remitente_ruc: string; remitente_razon_social: string; destinatario_ruc: string; destinatario_razon_social: string;
   punto_partida_direccion: string; punto_llegada_direccion: string; peso_bruto_total: number;
-  placa_tracto: string; placa_carreta: string; conductor_nombre: string; conductor_num_doc: string; conductor_licencia: string; registro_mtc: string;
+  placa_tracto: string; placa_carreta: string; conductor_nombre: string; conductor_apellidos: string; conductor_num_doc: string; conductor_licencia: string; registro_mtc: string;
   items: { descripcion: string; cantidad: number; unidad_medida: string }[];
 }
 interface Respuesta {
@@ -25,7 +25,7 @@ interface Respuesta {
   ambiente: { modo: 'prueba' | 'produccion'; lista: boolean; motivo: string | null }; guia_trae_transporte: boolean;
 }
 
-const EDITABLES = /placa del tracto|DNI del conductor|licencia|registro MTC/;
+const EDITABLES = /placa del tracto|nombres y apellidos|DNI del conductor|licencia|registro MTC/;
 
 /** Emite nuestra GRE Transportista a partir de una guía de remitente recibida y vinculada: los datos salen de la guía y del viaje, la persona los revisa y confirma. */
 export function GrtSheet({ guia, onClose }: { guia: Guia | null; onClose: () => void }) {
@@ -47,6 +47,7 @@ export function GrtSheet({ guia, onClose }: { guia: Guia | null; onClose: () => 
   const propios: string[] = [];
   if (f) {
     if (!f.placa_tracto.trim()) propios.push('placa del tracto');
+    if (!f.conductor_nombre.trim() || !f.conductor_apellidos.trim()) propios.push('nombres y apellidos del conductor');
     if (!/^\d{8}$/.test(f.conductor_num_doc.trim())) propios.push('DNI del conductor (8 dígitos)');
     if (!f.conductor_licencia.trim()) propios.push('licencia del conductor');
     if (!f.registro_mtc.trim()) propios.push('registro MTC de la empresa');
@@ -126,7 +127,8 @@ export function GrtSheet({ guia, onClose }: { guia: Guia | null; onClose: () => 
                 <Field label="Inicio del traslado">{p => <TextInput {...p} type="date" value={f.fecha_traslado} onChange={e => set({ fecha_traslado: e.target.value })} />}</Field>
                 <Field label="Placa del tracto">{p => <TextInput {...p} value={f.placa_tracto} onChange={e => set({ placa_tracto: e.target.value.toUpperCase() })} />}</Field>
                 <Field label="Placa de la carreta">{p => <TextInput {...p} value={f.placa_carreta} onChange={e => set({ placa_carreta: e.target.value.toUpperCase() })} />}</Field>
-                <div className="gr__s2"><Field label="Conductor">{p => <TextInput {...p} value={f.conductor_nombre} onChange={e => set({ conductor_nombre: e.target.value })} />}</Field></div>
+                <Field label="Nombres del conductor">{p => <TextInput {...p} value={f.conductor_nombre} onChange={e => set({ conductor_nombre: e.target.value })} />}</Field>
+                <Field label="Apellidos del conductor">{p => <TextInput {...p} value={f.conductor_apellidos} onChange={e => set({ conductor_apellidos: e.target.value })} />}</Field>
                 <Field label="DNI">{p => <TextInput {...p} inputMode="numeric" maxLength={8} value={f.conductor_num_doc} onChange={e => set({ conductor_num_doc: e.target.value.replace(/\D/g, '') })} />}</Field>
                 <Field label="Licencia">{p => <TextInput {...p} value={f.conductor_licencia} onChange={e => set({ conductor_licencia: e.target.value.toUpperCase() })} />}</Field>
                 <div className="gr__s2"><Field label="Registro MTC de la empresa">{p => <TextInput {...p} value={f.registro_mtc} onChange={e => set({ registro_mtc: e.target.value.toUpperCase() })} />}</Field></div>

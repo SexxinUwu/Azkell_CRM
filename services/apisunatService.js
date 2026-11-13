@@ -408,6 +408,7 @@ class ApisunatService {
                 numDoc: condDoc,
                 tipoDoc: (data.conductor_tipo_doc === 'DNI' || condDoc.length === 8) ? '1' : '6',
                 nombres: (data.conductor_nombre || 'CONDUCTOR').trim(),
+                apellidos: (data.conductor_apellidos || '').trim(),
                 licencia: (data.conductor_licencia || 'Q00000000').trim()
             };
         }

@@ -30,6 +30,16 @@ function separarSerie(v) {
     return { serie, numero: m[2], completo: `${serie}-${m[2].padStart(8, '0')}` };
 }
 
+/** Peso impreso en la guía: en Perú la coma separa miles y el punto los decimales («13,000» son 13 mil; «13,5» son 13 y medio) */
+function pesoDeTexto(t) {
+    const s = String(t ?? '').replace(/[^\d.,]/g, '');
+    if (!s) return null;
+    if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) return Number(s.replace(/,/g, ''));
+    if (/^\d+(,\d{1,2})$/.test(s)) return Number(s.replace(',', '.'));
+    const n = Number(s.replace(/,/g, ''));
+    return Number.isFinite(n) ? n : null;
+}
+
 /** Pasa el peso a kilos según la unidad (KGM/kg o TNE/toneladas) */
 function aKilos(peso, unidad) {
     const n = numero(peso);
@@ -115,6 +125,7 @@ Devuelve SOLO un JSON con estas claves (usa null cuando el dato no se vea con cl
 - motivo: motivo del traslado (Venta, Compra, Traslado entre establecimientos, Importación, etc.)
 - partida_direccion: dirección del punto de partida; partida_ubigeo: código de 6 dígitos si aparece
 - llegada_direccion: dirección del punto de llegada; llegada_ubigeo: código de 6 dígitos si aparece
+- peso_texto: el peso bruto total EXACTAMENTE como está impreso, con sus comas y puntos (por ejemplo "13,000" o "1,250.50")
 - peso: peso bruto total como número; unidad_peso: KGM para kilogramos o TNE para toneladas, según lo impreso
 - bultos: cantidad de bultos o unidades, si aparece como total
 - descripcion: resumen corto de los bienes
@@ -175,7 +186,7 @@ function limpiar(j, fuente, codigoTipo) {
     }
     const doc = soloDigitos(j.destinatario_doc);
     if (doc && doc.length === 11 && !rucValido(doc)) advertencias.push(`El RUC ${doc} del destinatario no pasa la validación: revísalo.`);
-    const peso = aKilos(j.peso, j.unidad_peso);
+    const peso = aKilos(pesoDeTexto(j.peso_texto) ?? j.peso, j.unidad_peso);
     if (peso == null || peso <= 0) advertencias.push('No se leyó el peso bruto total.');
     else if (peso < 5) advertencias.push(`El peso leído es muy bajo (${peso} kg): verifica la unidad (kilos o toneladas).`);
     const ubigeo = v => { const d = soloDigitos(v); return d && d.length === 6 ? d : null; };

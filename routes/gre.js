@@ -246,6 +246,15 @@ module.exports = (db, logAudit) => {
     const hoyLima = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
     const horaLima = () => new Date().toLocaleTimeString('en-GB', { timeZone: 'America/Lima', hour12: false });
 
+    // El catálogo guarda el nombre completo («NOMBRES APELLIDOS»); APISUNAT pide nombres y apellidos por separado. La persona lo corrige en el formulario.
+    function partirNombre(completo) {
+        const t = String(completo || '').trim().split(/\s+/).filter(Boolean);
+        if (t.length < 2) return { nombres: t[0] || '', apellidos: '' };
+        if (t.length === 2) return { nombres: t[0], apellidos: t[1] };
+        if (t.length === 3) return { nombres: t[0], apellidos: t.slice(1).join(' ') };
+        return { nombres: t.slice(0, t.length - 2).join(' '), apellidos: t.slice(-2).join(' ') };
+    }
+
     // Datos de la GRE Transportista que se propone para una guía: salen de la guía, del viaje y del conductor; la persona los revisa
     async function propuestaGrt(p, g, cfg) {
         const [v] = g.orden_servicio_codigo ? await p.query(
@@ -274,7 +283,7 @@ module.exports = (db, logAudit) => {
             punto_llegada_ubigeo: g.llegada_ubigeo || '', punto_llegada_direccion: g.llegada_direccion || '',
             peso_bruto_total: Number(g.peso_kg) || 0, unidad_medida: 'KGM',
             placa_tracto: (viaje && viaje.placa_tracto) || '', placa_carreta: (viaje && viaje.placa_remolque) || '',
-            conductor_nombre: (cond && cond.nombre) || (viaje && viaje.conductor) || '', conductor_num_doc: (cond && cond.dni) || '', conductor_licencia: (cond && cond.licencia) || '',
+            ...(() => { const n = partirNombre((cond && cond.nombre) || (viaje && viaje.conductor) || ''); return { conductor_nombre: n.nombres, conductor_apellidos: n.apellidos }; })(), conductor_num_doc: (cond && cond.dni) || '', conductor_licencia: (cond && cond.licencia) || '',
             registro_mtc: cfg.registro_mtc || '', items,
         };
         return { propuesta, viaje: viaje ? viaje.viaje : null };
@@ -289,6 +298,7 @@ module.exports = (db, logAudit) => {
         if (!/^\d{6}$/.test(String(d.punto_llegada_ubigeo || '')) || !String(d.punto_llegada_direccion || '').trim()) f.push('punto de llegada (distrito y dirección)');
         if (!(Number(d.peso_bruto_total) > 0)) f.push('peso');
         if (!String(d.placa_tracto || '').trim()) f.push('placa del tracto');
+        if (!String(d.conductor_nombre || '').trim() || !String(d.conductor_apellidos || '').trim()) f.push('nombres y apellidos del conductor');
         if (!/^\d{8}$/.test(String(d.conductor_num_doc || '').trim())) f.push('DNI del conductor (8 dígitos)');
         if (!String(d.conductor_licencia || '').trim()) f.push('licencia del conductor');
         if (!String(d.registro_mtc || '').trim()) f.push('registro MTC de la empresa');
@@ -364,6 +374,7 @@ module.exports = (db, logAudit) => {
                 placa_tracto: String(b.placa_tracto ?? bp.placa_tracto).toUpperCase().replace(/[^A-Z0-9]/g, ''),
                 placa_carreta: String(b.placa_carreta ?? bp.placa_carreta).toUpperCase().replace(/[^A-Z0-9]/g, ''),
                 conductor_nombre: String(b.conductor_nombre ?? bp.conductor_nombre).trim(),
+                conductor_apellidos: String(b.conductor_apellidos ?? bp.conductor_apellidos).trim(),
                 conductor_num_doc: String(b.conductor_num_doc ?? bp.conductor_num_doc).replace(/\D/g, ''),
                 conductor_licencia: String(b.conductor_licencia ?? bp.conductor_licencia).trim().toUpperCase(),
                 registro_mtc: String(b.registro_mtc ?? bp.registro_mtc).trim().toUpperCase(),
@@ -396,7 +407,7 @@ module.exports = (db, logAudit) => {
                 transportista_ruc: cfg.ruc_emisor, transportista_nombre: texto(cfg.razon_social, 200), modalidad: 'PUBLICO', motivo: texto(d.descripcion_motivo, 80),
                 partida_ubigeo: d.punto_partida_ubigeo, partida_direccion: texto(d.punto_partida_direccion, 255), llegada_ubigeo: d.punto_llegada_ubigeo, llegada_direccion: texto(d.punto_llegada_direccion, 255),
                 peso_kg: d.peso_bruto_total, descripcion: texto(g.descripcion, 500), items_json: JSON.stringify(d.items),
-                placa: d.placa_tracto, placa_carreta: d.placa_carreta || null, conductor_nombre: texto(d.conductor_nombre, 150), conductor_doc: d.conductor_num_doc, licencia: texto(d.conductor_licencia, 30),
+                placa: d.placa_tracto, placa_carreta: d.placa_carreta || null, conductor_nombre: texto(`${d.conductor_nombre} ${d.conductor_apellidos}`.trim(), 150), conductor_doc: d.conductor_num_doc, licencia: texto(d.conductor_licencia, 30),
                 trae_transporte: 0, orden_servicio_id: g.orden_servicio_id, orden_servicio_codigo: g.orden_servicio_codigo, estado: 'VINCULADA', fuente: 'MANUAL',
                 usuario: usuarioDe(req), viaje: base.viaje || null, guia_relacionada_id: g.id, modo_emision: cfg.modo,
             };
