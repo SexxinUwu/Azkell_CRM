@@ -148,6 +148,8 @@ export function GuiasPage() {
   }
 
   const abrir = (url?: string | null) => { if (url) window.open(url, '_blank', 'noopener'); };
+  // El PDF con el diseño de la empresa (Sistema › Plantilla de guías); la sesión viaja por cookie
+  const verPdfPropio = (g: Guia) => window.open(`/api/operaciones/gre/guias/${g.id}/pdf-propio`, '_blank', 'noopener');
 
   const subtitulo = guias.isLoading ? 'Cargando…' : esRemitente
     ? `${remitentes.length} ${remitentes.length === 1 ? 'guía de remitente' : 'guías de remitente'}${sinVincular ? ` · ${sinVincular} sin vincular` : ''}${sinGrt ? ` · ${sinGrt} sin GRE Transportista` : ''}`
@@ -238,7 +240,8 @@ export function GuiasPage() {
               <tr key={g.id} className="tabla-redim__fila--click" onClick={() => { haptic('selection'); setAbiertaId(g.id); }}>
                 <Celda>
                   <span style={{ display: 'inline-flex', gap: 2 }}>
-                    {g.pdf_url && <IconoFila texto="Ver el comprobante (PDF)" tono="rojo" icono={<FileText size={15} />} onClick={() => abrir(g.pdf_url)} />}
+                    {g.apisunat_status && g.apisunat_status !== 'ERROR_APISUNAT' && <IconoFila texto="Ver el PDF con nuestro diseño" tono="azul" icono={<FileText size={15} />} onClick={() => verPdfPropio(g)} />}
+                    {g.pdf_url && <IconoFila texto="PDF de APISUNAT" tono="rojo" icono={<FileText size={15} />} onClick={() => abrir(g.pdf_url)} />}
                     {g.xml_url && <IconoFila texto="Descargar el XML firmado" tono="violeta" icono={<FileCode2 size={15} />} onClick={() => abrir(g.xml_url)} />}
                     {g.cdr_url && <IconoFila texto="Constancia de recepción de SUNAT" tono="verde" icono={<CheckCircle2 size={15} />} onClick={() => abrir(g.cdr_url)} />}
                     {puedeEditar && g.apisunat_status && g.apisunat_status !== 'ERROR_APISUNAT' && g.apisunat_status !== 'ACEPTADO' && <IconoFila texto="Actualizar estado en SUNAT" tono="azul" icono={<Search size={15} />} cargando={sincronizando === g.id} onClick={() => void sincronizar(g)} />}
