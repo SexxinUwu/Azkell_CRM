@@ -261,10 +261,10 @@ body{font-family:'Inter',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;col
 .marca .nom{font-size:13pt;font-weight:700;letter-spacing:-.01em;line-height:1.15}
 .marca .raz{color:var(--ink2);font-size:8pt;margin-top:.6mm}
 .marca .dato{color:var(--ink2);font-size:7.6pt;margin-top:1.2mm;line-height:1.45}
-.folio{background:var(--acento);color:#fff;border-radius:5mm;padding:4.6mm 5mm;display:flex;flex-direction:column;justify-content:center;gap:.7mm}
-.folio .ruc{font-size:7.8pt;font-weight:500;opacity:.88;letter-spacing:.02em}
-.folio .tit{font-size:8.6pt;font-weight:700;letter-spacing:.03em;line-height:1.25}
-.folio .num{font-size:17pt;font-weight:700;letter-spacing:-.01em;margin-top:1.4mm}
+.folio{background:var(--acento);color:#fff;border-radius:5mm;padding:4.6mm 5mm;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:1.2mm}
+.folio .ruc{font-size:9.4pt;font-weight:700;color:#fff;letter-spacing:.02em}
+.folio .tit{font-size:9.4pt;font-weight:700;color:#fff;letter-spacing:.03em;line-height:1.3}
+.folio .num{font-size:15pt;font-weight:700;color:#fff;letter-spacing:.01em;margin-top:.6mm}
 .fila-estado{display:flex;gap:2.4mm;margin:4.6mm 0 0;flex-wrap:wrap}
 .pastilla{display:inline-flex;align-items:center;gap:1.6mm;border-radius:99px;padding:1mm 3.2mm;font-size:7.4pt;font-weight:600}
 .pastilla::before{content:'';width:1.7mm;height:1.7mm;border-radius:50%;background:currentColor}
