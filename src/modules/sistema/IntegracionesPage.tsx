@@ -222,7 +222,7 @@ function Apisunat({ filas }: { filas: Fila[] }) {
         options={[{ value: 'prueba', label: 'Prueba' }, { value: 'produccion', label: 'Producción' }]} />
       <Notice tone={produccion ? 'error' : 'accent'}>{produccion
         ? 'Producción: las guías que emitas tienen validez tributaria ante SUNAT.'
-        : 'Prueba: las guías se envían a la dirección de pruebas y no tienen validez tributaria. Si no hay dirección de pruebas, no se envía nada.'}</Notice>
+        : 'Prueba: solo se envía si APISUNAT confirma que la cuenta es de pruebas (sin validez tributaria). Si la cuenta es de producción, no se envía nada.'}</Notice>
       <Field label="RUC de la empresa">{p => <TextInput {...p} inputMode="numeric" maxLength={11} value={v.ruc} onChange={set('ruc')} />}</Field>
       <Field label="Razón social">{p => <TextInput {...p} value={v.razon} onChange={set('razon')} />}</Field>
       <Field label="Registro MTC (transporte de carga)">{p => <TextInput {...p} value={v.mtc} onChange={set('mtc')} />}</Field>
@@ -234,7 +234,7 @@ function Apisunat({ filas }: { filas: Fila[] }) {
       <Field label="Token (producción)">{p => <PasswordInput {...p} value={v.token} onChange={set('token')} autoComplete="off" />}</Field>
       <Field label="Persona ID de pruebas (si APISUNAT te dio otra)">{p => <TextInput {...p} value={v.pid} onChange={set('pid')} autoComplete="off" />}</Field>
       <Field label="Token de pruebas">{p => <PasswordInput {...p} value={v.ptoken} onChange={set('ptoken')} autoComplete="off" />}</Field>
-      <Field label="Dirección de pruebas de APISUNAT">{p => <TextInput {...p} placeholder="https://…" value={v.purl} onChange={set('purl')} autoComplete="off" />}</Field>
+      <Field label="Dirección de pruebas (opcional; por defecto la de APISUNAT)">{p => <TextInput {...p} placeholder="https://…" value={v.purl} onChange={set('purl')} autoComplete="off" />}</Field>
       {res && <Notice tone={res.ok ? 'success' : 'error'} icon={res.ok ? <CheckCircle2 size={16} /> : <CircleAlert size={16} />}>{res.texto}</Notice>}
       <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
         <Button variant="secondary" onClick={() => guardarYProbar(false)} disabled={ocupado}>Guardar</Button>
