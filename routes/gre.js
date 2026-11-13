@@ -5,6 +5,8 @@ const express = require('express');
 const multer = require('multer');
 const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrlEstable } = require('../utils/s3');
 const { leerGuia, rucValido, separarSerie } = require('../services/gre_lectura');
+const Apisunat = require('../services/apisunatService');
+const SunatGr = require('../services/sunatGrService');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
@@ -228,6 +230,173 @@ module.exports = (db, logAudit) => {
             if (logAudit) logAudit({ req, accion: 'ELIMINAR_GUIA', modulo: 'OPERACIONES', detalle: `Eliminada guía ${g[0].numero_completo}` });
             res.json({ ok: true, message: 'Guía eliminada.' });
         } catch (err) { responder(res, err, 'eliminar'); }
+    });
+
+    // ───────────────────────── GRE Transportista propia, a partir de una guía recibida y vinculada ─────────────────────────
+    const MOTIVOS = [[/venta/i, '01'], [/compra/i, '02'], [/establecimientos|misma empresa/i, '04'], [/import/i, '08'], [/export/i, '09']];
+    const motivoCodigo = t => { const m = MOTIVOS.find(([re]) => re.test(String(t || ''))); return m ? m[1] : '13'; };
+    const UNIDADES_SUNAT = ['KGM', 'TNE', 'NIU', 'ZZ', 'BX', 'LTR', 'MTR', 'GLL'];
+    const unidadSunat = u => { const x = String(u || '').toUpperCase().trim(); return UNIDADES_SUNAT.includes(x) ? x : 'NIU'; };
+    const SERIE_GRT = 'V0A1';
+
+    // Datos de la GRE Transportista que se propone para una guía: salen de la guía, del viaje y del conductor; la persona los revisa
+    async function propuestaGrt(p, g) {
+        const [v] = g.orden_servicio_codigo ? await p.query(
+            `SELECT ov.viaje, ov.placa_tracto, ov.placa_remolque, ov.conductor, ov.id_conductor, ov.ejecucion, DATE_FORMAT(ov.fecha_inicio, '%Y-%m-%d') AS fecha_inicio
+             FROM operaciones_ordenes_viaje_rutas r JOIN operaciones_ordenes_viaje ov ON ov.viaje COLLATE utf8mb4_unicode_ci = r.viaje COLLATE utf8mb4_unicode_ci
+             WHERE r.orden COLLATE utf8mb4_unicode_ci = ? COLLATE utf8mb4_unicode_ci ORDER BY ov.id DESC LIMIT 1`, [g.orden_servicio_codigo]) : [[]];
+        const viaje = v[0] || null;
+        let cond = null;
+        if (viaje && (viaje.id_conductor || viaje.conductor)) {
+            const [c] = await p.query(`SELECT nombre, dni, licencia FROM conductores WHERE idConductor = ? OR nombre COLLATE utf8mb4_unicode_ci = ? COLLATE utf8mb4_unicode_ci LIMIT 1`, [viaje.id_conductor || 0, viaje.conductor || '']);
+            cond = c[0] || null;
+        }
+        let mtc = '';
+        try { const [m] = await p.query(`SELECT transportista_reg_mtc FROM guias_transportista WHERE transportista_reg_mtc IS NOT NULL AND transportista_reg_mtc <> '' AND transportista_reg_mtc <> '000000' ORDER BY id DESC LIMIT 1`); mtc = m[0] ? m[0].transportista_reg_mtc : ''; } catch (e) { /* la tabla aún no existe */ }
+        let items = [];
+        try { items = JSON.parse(g.items_json || '[]'); } catch (e) { items = []; }
+        items = (items.length ? items : [{ descripcion: g.descripcion || 'CARGA GENERAL', cantidad: 1, unidad: 'NIU' }]).map((it, i) => ({
+            codigo: String(i + 1).padStart(3, '0'), descripcion: String(it.descripcion || 'CARGA GENERAL').slice(0, 250), cantidad: Number(it.cantidad) || 1, unidad_medida: unidadSunat(it.unidad),
+        }));
+        const propuesta = {
+            serie: SERIE_GRT,
+            fecha_traslado: g.fecha_traslado || (viaje && viaje.fecha_inicio) || new Date().toISOString().slice(0, 10),
+            motivo_traslado: motivoCodigo(g.motivo), descripcion_motivo: String(g.motivo || 'VENTA').toUpperCase().slice(0, 100),
+            remitente_ruc: g.remitente_ruc || '', remitente_razon_social: g.remitente_nombre || '',
+            destinatario_ruc: g.destinatario_doc || '', destinatario_razon_social: g.destinatario_nombre || '',
+            punto_partida_ubigeo: g.partida_ubigeo || '', punto_partida_direccion: g.partida_direccion || '',
+            punto_llegada_ubigeo: g.llegada_ubigeo || '', punto_llegada_direccion: g.llegada_direccion || '',
+            peso_bruto_total: Number(g.peso_kg) || 0, unidad_medida: 'KGM',
+            placa_tracto: (viaje && viaje.placa_tracto) || '', placa_carreta: (viaje && viaje.placa_remolque) || '',
+            conductor_nombre: (cond && cond.nombre) || (viaje && viaje.conductor) || '', conductor_num_doc: (cond && cond.dni) || '', conductor_licencia: (cond && cond.licencia) || '',
+            registro_mtc: mtc, items,
+        };
+        return { propuesta, viaje: viaje ? viaje.viaje : null };
+    }
+
+    // Lo que falta para poder emitir; cada ítem se corrige en el formulario o en la guía
+    function faltanGrt(d) {
+        const f = [];
+        if (!/^\d{11}$/.test(String(d.remitente_ruc || '')) || !String(d.remitente_razon_social || '').trim()) f.push('RUC y nombre del remitente');
+        if (!String(d.destinatario_ruc || '').trim() || !String(d.destinatario_razon_social || '').trim()) f.push('documento y nombre del destinatario');
+        if (!/^\d{6}$/.test(String(d.punto_partida_ubigeo || '')) || !String(d.punto_partida_direccion || '').trim()) f.push('punto de partida (distrito y dirección)');
+        if (!/^\d{6}$/.test(String(d.punto_llegada_ubigeo || '')) || !String(d.punto_llegada_direccion || '').trim()) f.push('punto de llegada (distrito y dirección)');
+        if (!(Number(d.peso_bruto_total) > 0)) f.push('peso');
+        if (!String(d.placa_tracto || '').trim()) f.push('placa del tracto');
+        if (!/^\d{8}$/.test(String(d.conductor_num_doc || '').trim())) f.push('DNI del conductor (8 dígitos)');
+        if (!String(d.conductor_licencia || '').trim()) f.push('licencia del conductor');
+        if (!String(d.registro_mtc || '').trim()) f.push('registro MTC de la empresa');
+        return f;
+    }
+
+    async function guiaParaGrt(p, id) {
+        const [g] = await p.query(`SELECT * FROM gre_guias WHERE id = ?`, [id]);
+        if (!g.length) throw aviso('Guía no encontrada.', 404);
+        if (g[0].origen !== 'RECIBIDA' || g[0].tipo !== 'REMITENTE') throw aviso('La GRE Transportista se emite a partir de una guía de remitente recibida del cliente.', 409);
+        if (g[0].estado === 'ANULADA') throw aviso('La guía está anulada.', 409);
+        if (!g[0].orden_servicio_codigo) throw aviso('Vincula primero la guía a un servicio.', 409);
+        return { ...g[0], fecha_emision: g[0].fecha_emision, fecha_traslado: g[0].fecha_traslado ? new Date(g[0].fecha_traslado).toISOString().slice(0, 10) : null };
+    }
+
+    async function grtExistente(p, guiaId) {
+        try {
+            const [r] = await p.query(`SELECT id, numero_guia, estado, apisunat_status, apisunat_faults, pdf_url FROM guias_transportista WHERE gre_vinculada_id = ? AND estado <> 'ANULADA' ORDER BY id DESC LIMIT 1`, [guiaId]);
+            return r[0] || null;
+        } catch (e) { return null; }
+    }
+
+    router.get('/guias/:id/grt', async (req, res) => {
+        try {
+            const p = P(req);
+            const g = await guiaParaGrt(p, req.params.id);
+            const { propuesta, viaje } = await propuestaGrt(p, g);
+            const cfg = SunatGr.configuracionEmision();
+            res.json({
+                ok: true, viaje, propuesta, faltan: faltanGrt(propuesta), existente: await grtExistente(p, g.id),
+                ambiente: { nombre: cfg.ambiente, lista: cfg.prueba_lista, motivo: cfg.motivo },
+                guia_trae_transporte: !!g.trae_transporte,
+            });
+        } catch (err) { responder(res, err, 'grt-propuesta'); }
+    });
+
+    router.post('/guias/:id/grt', async (req, res) => {
+        try {
+            const p = P(req);
+            // Solo se emite al ambiente de prueba: sin SUNAT_GRE_AMBIENTE=beta y sus credenciales de prueba no se envía nada
+            const bloqueo = SunatGr.bloqueoEmision();
+            if (bloqueo) throw aviso(bloqueo, 409);
+            const g = await guiaParaGrt(p, req.params.id);
+            const b = req.body || {};
+            const base = (await propuestaGrt(p, g)).propuesta;
+            const d = {
+                ...base,
+                serie: String(b.serie || base.serie).trim().toUpperCase().slice(0, 4),
+                fecha_traslado: fechaOpc(b.fecha_traslado) || base.fecha_traslado,
+                placa_tracto: String(b.placa_tracto ?? base.placa_tracto).toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                placa_carreta: String(b.placa_carreta ?? base.placa_carreta).toUpperCase().replace(/[^A-Z0-9]/g, ''),
+                conductor_nombre: String(b.conductor_nombre ?? base.conductor_nombre).trim(),
+                conductor_num_doc: String(b.conductor_num_doc ?? base.conductor_num_doc).replace(/\D/g, ''),
+                conductor_licencia: String(b.conductor_licencia ?? base.conductor_licencia).trim().toUpperCase(),
+                registro_mtc: String(b.registro_mtc ?? base.registro_mtc).trim().toUpperCase(),
+                punto_partida_ubigeo: String(b.punto_partida_ubigeo ?? base.punto_partida_ubigeo).replace(/\D/g, ''),
+                punto_llegada_ubigeo: String(b.punto_llegada_ubigeo ?? base.punto_llegada_ubigeo).replace(/\D/g, ''),
+            };
+            const faltan = faltanGrt(d);
+            if (faltan.length) throw aviso(`Faltan datos para emitir: ${faltan.join(', ')}.`, 422);
+            if (!/^[A-Z0-9]{4}$/.test(d.serie)) throw aviso('La serie debe tener 4 caracteres.', 422);
+
+            const existente = await grtExistente(p, g.id);
+            if (existente && existente.estado !== 'BORRADOR') throw aviso(`Esta guía ya tiene la GRE Transportista ${existente.numero_guia} (${existente.estado}).`, 409);
+
+            const creds = await Apisunat.getCredenciales(getDb(req));
+            let guiaId; let correlativo; let numeroGuia;
+            if (existente) {
+                const [r] = await p.query(`SELECT id, serie, correlativo, numero_guia FROM guias_transportista WHERE id = ?`, [existente.id]);
+                guiaId = r[0].id; correlativo = r[0].correlativo; numeroGuia = r[0].numero_guia;
+                d.serie = r[0].serie;
+            } else {
+                const [u] = await p.query(`SELECT COALESCE(MAX(correlativo), 0) AS ultimo FROM guias_transportista WHERE serie = ?`, [d.serie]);
+                correlativo = (Number(u[0].ultimo) || 0) + 1;
+                try {
+                    const ap = await Apisunat.lastDocument({ personaId: creds.persona_id, personaToken: creds.persona_token, type: '31', serie: d.serie });
+                    if (ap.ok && ap.suggestedNumber) correlativo = Math.max(correlativo, parseInt(ap.suggestedNumber, 10) || 0);
+                } catch (e) { /* si APISUNAT no responde se usa el correlativo local */ }
+                numeroGuia = `${d.serie}-${String(correlativo).padStart(8, '0')}`;
+                const nombre = d.conductor_nombre;
+                const [ins] = await p.query(`INSERT INTO guias_transportista SET ?`, {
+                    numero_guia: numeroGuia, serie: d.serie, correlativo, fecha_emision: new Date().toISOString().slice(0, 10), fecha_traslado: d.fecha_traslado,
+                    transportista_ruc: creds.ruc_emisor, transportista_razon_social: creds.razon_social, transportista_reg_mtc: d.registro_mtc,
+                    remitente_ruc: d.remitente_ruc, remitente_razon_social: d.remitente_razon_social, remitente_tipo_doc: '6',
+                    destinatario_ruc: d.destinatario_ruc, destinatario_razon_social: d.destinatario_razon_social, destinatario_tipo_doc: d.destinatario_ruc.length === 8 ? '1' : '6',
+                    motivo_traslado: d.motivo_traslado, descripcion_motivo: d.descripcion_motivo, peso_total: d.peso_bruto_total, unidad_medida: 'KGM',
+                    partida_ubigeo: d.punto_partida_ubigeo, partida_direccion: d.punto_partida_direccion, llegada_ubigeo: d.punto_llegada_ubigeo, llegada_direccion: d.punto_llegada_direccion,
+                    vehiculo_placa: d.placa_tracto, vehiculo_secundario_placa: d.placa_carreta || null,
+                    conductor_tipo_doc: '1', conductor_num_doc: d.conductor_num_doc, conductor_nombres: nombre, conductor_licencia: d.conductor_licencia,
+                    estado: 'BORRADOR', gre_vinculada_id: g.id, gre_vinculada_numero: g.numero_completo, gre_vinculada_ruc: g.emisor_ruc || g.remitente_ruc, gre_vinculada_tipo: '09',
+                    orden_servicio: g.orden_servicio_codigo, orden_viaje: (await propuestaGrt(p, g)).viaje || null,
+                });
+                guiaId = ins.insertId;
+                for (let i = 0; i < d.items.length; i++) {
+                    const it = d.items[i];
+                    await p.query(`INSERT INTO guias_items SET ?`, { guia_tipo: 'GRT', guia_id: guiaId, item_numero: i + 1, codigo: it.codigo, descripcion: it.descripcion, cantidad: it.cantidad, unidad_medida: it.unidad_medida, peso_unitario: 0 });
+                }
+            }
+
+            const body = Apisunat.buildGrtBody({
+                ...d, correlativo, fecha_emision: new Date().toISOString().slice(0, 10),
+                gre_relacionada_numero: g.numero_completo, gre_relacionada_ruc: g.emisor_ruc || g.remitente_ruc, gre_relacionada_tipo: '09',
+            }, creds.ruc_emisor, creds.razon_social);
+            const fileName = `${creds.ruc_emisor}-31-${d.serie}-${String(correlativo).padStart(8, '0')}`;
+            const r = await Apisunat.sendBill({ personaId: creds.persona_id, personaToken: creds.persona_token, fileName, documentBody: body });
+            if (r.ok) {
+                await p.query(`UPDATE guias_transportista SET estado = 'EMITIDA', apisunat_document_id = ?, apisunat_status = 'PENDIENTE', apisunat_faults = NULL, datos_json = ? WHERE id = ?`, [r.documentId, JSON.stringify(body), guiaId]);
+                if (logAudit) logAudit({ req, accion: 'EMITIR_GRT', modulo: 'OPERACIONES', detalle: `GRE Transportista ${numeroGuia} (ambiente de prueba) para la guía ${g.numero_completo}` });
+                return res.json({ ok: true, id: guiaId, numero_guia: numeroGuia, message: `GRE Transportista ${numeroGuia} enviada a APISUNAT (ambiente de prueba).` });
+            }
+            const error = typeof r.error === 'object' ? JSON.stringify(r.error) : String(r.error || 'Error desconocido');
+            await p.query(`UPDATE guias_transportista SET apisunat_status = 'ERROR_APISUNAT', apisunat_faults = ?, datos_json = ? WHERE id = ?`, [error.slice(0, 2000), JSON.stringify(body), guiaId]);
+            throw aviso(`APISUNAT no aceptó la guía: ${error.slice(0, 300)}`, 422);
+        } catch (err) { responder(res, err, 'grt-emitir'); }
     });
 
     router.rucValido = rucValido;

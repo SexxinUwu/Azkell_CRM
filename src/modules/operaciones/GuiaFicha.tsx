@@ -1,7 +1,7 @@
 import './seguimiento.css';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ban, Building2, CalendarDays, ExternalLink, Link2, Link2Off, Package, Trash2, Truck, UserRound } from 'lucide-react';
+import { Ban, Building2, CalendarDays, ExternalLink, Link2, Link2Off, Package, Send, Trash2, Truck, UserRound } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
@@ -10,6 +10,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { FichaCard, FichaGrid, PuntosStrip, TituloFicha } from './FichaCards';
 import { ETIQUETA_ORIGEN, ETIQUETA_TIPO, fechaGuia, fmtKg, type Guia } from './guiasApi';
+import { GrtSheet } from './GrtSheet';
 import { PastillaGuia } from './PastillaGuia';
 import { useUbigeos } from './ubigeos';
 
@@ -20,6 +21,7 @@ export function GuiaFicha({ id, onClose, puedeEditar, onVincular }: { id: number
   const ubigeos = useUbigeos();
   const [accion, setAccion] = useState<'anular' | 'eliminar' | 'desvincular' | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [grt, setGrt] = useState(false);
 
   const q = useQuery<Guia>({
     queryKey: ['operaciones', 'guia', id], enabled: id != null, staleTime: 10_000,
@@ -57,6 +59,7 @@ export function GuiaFicha({ id, onClose, puedeEditar, onVincular }: { id: number
         footer={g && puedeEditar && g.estado !== 'ANULADA' ? (
           <>
             {!g.orden_servicio_codigo && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={() => setAccion('eliminar')}>Eliminar</Button>}
+            {g.orden_servicio_codigo && g.origen === 'RECIBIDA' && g.tipo === 'REMITENTE' && <Button variant="secondary" icon={<Send size={16} />} onClick={() => setGrt(true)}>GRE Transportista</Button>}
             <Button variant="secondary" icon={<Ban size={16} />} onClick={() => setAccion('anular')}>Anular</Button>
             {g.orden_servicio_codigo
               ? <Button variant="secondary" icon={<Link2Off size={16} />} onClick={() => setAccion('desvincular')}>Desvincular</Button>
@@ -84,6 +87,7 @@ export function GuiaFicha({ id, onClose, puedeEditar, onVincular }: { id: number
       </Sheet>
       <ConfirmSheet open={!!accion} onClose={() => !ocupado && setAccion(null)} onConfirm={ejecutar} loading={ocupado}
         title={accion ? MENSAJES[accion].titulo : ''} message={accion ? MENSAJES[accion].texto : ''} confirmLabel={accion ? MENSAJES[accion].boton : ''} />
+      <GrtSheet guia={grt && g ? g : null} onClose={() => setGrt(false)} />
     </>
   );
 }
