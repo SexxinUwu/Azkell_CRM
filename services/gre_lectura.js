@@ -132,20 +132,28 @@ async function leerConIA(buffer, mimetype) {
         generationConfig: { responseMimeType: 'application/json', temperature: 0 },
     });
     let ultimo = 'No se pudo leer la guía.';
-    for (const modelo of MODELOS) {
-        try {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave }, body: cuerpo, signal: AbortSignal.timeout(25000),
-            });
-            const data = await res.json().catch(() => null);
-            if (res.status === 429) { ultimo = 'La IA llegó a su límite por hoy. Intenta más tarde o registra los datos a mano.'; continue; }
-            if (!res.ok) { ultimo = (data && data.error && data.error.message) ? String(data.error.message).slice(0, 160) : `Error ${res.status}`; continue; }
-            const textos = ((data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || []).filter(p => p.text && !p.thought).map(p => p.text).join('');
-            const json = JSON.parse(textos.replace(/^```json\s*|```$/g, '').trim());
-            return limpiar(json, 'IA', null);
-        } catch (e) {
-            ultimo = e.name === 'TimeoutError' ? 'La IA tardó demasiado.' : (ultimo || e.message);
+    // Si todos los modelos están saturados (503) se reintenta una vez más tras una pausa corta
+    for (let ronda = 0; ronda < 2; ronda++) {
+        let saturado = false;
+        for (const modelo of MODELOS) {
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave }, body: cuerpo, signal: AbortSignal.timeout(25000),
+                });
+                const data = await res.json().catch(() => null);
+                if (res.status === 429) { ultimo = 'La IA llegó a su límite por hoy. Intenta más tarde o registra los datos a mano.'; continue; }
+                if (res.status === 503 || res.status === 500) { saturado = true; ultimo = 'La IA está saturada en este momento. Vuelve a intentarlo en un minuto o registra los datos a mano.'; continue; }
+                if (!res.ok) { ultimo = (data && data.error && data.error.message) ? String(data.error.message).slice(0, 160) : `Error ${res.status}`; continue; }
+                const textos = ((data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || []).filter(p => p.text && !p.thought).map(p => p.text).join('');
+                const json = JSON.parse(textos.replace(/^```json\s*|```$/g, '').trim());
+                return limpiar(json, 'IA', null);
+            } catch (e) {
+                saturado = true;
+                ultimo = e.name === 'TimeoutError' ? 'La IA tardó demasiado. Vuelve a intentarlo o registra los datos a mano.' : (ultimo || e.message);
+            }
         }
+        if (!saturado) break;
+        await new Promise(r => setTimeout(r, 3000));
     }
     throw aviso(ultimo, 502);
 }
