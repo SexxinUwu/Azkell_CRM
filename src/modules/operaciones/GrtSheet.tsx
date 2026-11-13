@@ -16,7 +16,7 @@ interface Propuesta {
   serie: string; fecha_traslado: string; descripcion_motivo: string;
   remitente_ruc: string; remitente_razon_social: string; destinatario_ruc: string; destinatario_razon_social: string;
   punto_partida_direccion: string; punto_llegada_direccion: string; peso_bruto_total: number;
-  placa_tracto: string; placa_carreta: string; conductor_nombre: string; conductor_apellidos: string; conductor_num_doc: string; conductor_licencia: string; registro_mtc: string;
+  placa_tracto: string; placa_carreta: string; conductor_nombre: string; conductor_apellidos: string; conductor_num_doc: string; conductor_licencia: string; registro_mtc: string; tuc_tracto: string; aut_tracto: string; tuc_carreta: string; aut_carreta: string;
   items: { descripcion: string; cantidad: number; unidad_medida: string }[];
 }
 interface Respuesta {
@@ -131,6 +131,10 @@ export function GrtSheet({ guia, onClose }: { guia: Guia | null; onClose: () => 
                 <Field label="Apellidos del conductor">{p => <TextInput {...p} value={f.conductor_apellidos} onChange={e => set({ conductor_apellidos: e.target.value })} />}</Field>
                 <Field label="DNI">{p => <TextInput {...p} inputMode="numeric" maxLength={8} value={f.conductor_num_doc} onChange={e => set({ conductor_num_doc: e.target.value.replace(/\D/g, '') })} />}</Field>
                 <Field label="Licencia">{p => <TextInput {...p} value={f.conductor_licencia} onChange={e => set({ conductor_licencia: e.target.value.toUpperCase() })} />}</Field>
+                <Field label="TUC del tracto">{p => <TextInput {...p} value={f.tuc_tracto} onChange={e => set({ tuc_tracto: e.target.value.toUpperCase() })} />}</Field>
+                <Field label="Autorización del tracto">{p => <TextInput {...p} value={f.aut_tracto} onChange={e => set({ aut_tracto: e.target.value })} />}</Field>
+                <Field label="TUC de la carreta">{p => <TextInput {...p} value={f.tuc_carreta} onChange={e => set({ tuc_carreta: e.target.value.toUpperCase() })} />}</Field>
+                <Field label="Autorización de la carreta">{p => <TextInput {...p} value={f.aut_carreta} onChange={e => set({ aut_carreta: e.target.value })} />}</Field>
                 <div className="gr__s2"><Field label="Registro MTC de la empresa">{p => <TextInput {...p} value={f.registro_mtc} onChange={e => set({ registro_mtc: e.target.value.toUpperCase() })} />}</Field></div>
               </div>
               <p className="os-nota">Traslado desde {fechaGuia(f.fecha_traslado)}. Modalidad: transporte público.</p>

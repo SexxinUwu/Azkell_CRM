@@ -240,8 +240,8 @@ module.exports = (db, logAudit) => {
     // Se guarda en gre_guias (origen EMITIDA) y se envía con la configuración de APISUNAT de la empresa (Sistema › Integraciones).
     const MOTIVOS = [[/venta/i, '01'], [/compra/i, '02'], [/establecimientos|misma empresa/i, '04'], [/import/i, '08'], [/export/i, '09']];
     const motivoCodigo = t => { const m = MOTIVOS.find(([re]) => re.test(String(t || ''))); return m ? m[1] : '13'; };
-    const UNIDADES_SUNAT = ['KGM', 'TNE', 'NIU', 'ZZ', 'BX', 'LTR', 'MTR', 'GLL'];
-    const unidadSunat = u => { const x = String(u || '').toUpperCase().trim(); return UNIDADES_SUNAT.includes(x) ? x : 'NIU'; };
+    const UNIDADES_SUNAT = ['KGM', 'TNE', 'NIU', 'ZZ', 'BX', 'BE', 'LTR', 'MTR', 'GLL'];
+    const unidadSunat = u => { const x = String(u || '').toUpperCase().trim(); if (/^FARDO/.test(x)) return 'BE'; return UNIDADES_SUNAT.includes(x) ? x : 'NIU'; };
     // Fecha y hora de Perú (el servidor está en UTC)
     const hoyLima = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
     const horaLima = () => new Date().toLocaleTimeString('en-GB', { timeZone: 'America/Lima', hour12: false });
@@ -253,6 +253,28 @@ module.exports = (db, logAudit) => {
         if (t.length === 2) return { nombres: t[0], apellidos: t[1] };
         if (t.length === 3) return { nombres: t[0], apellidos: t.slice(1).join(' ') };
         return { nombres: t.slice(0, t.length - 2).join(' '), apellidos: t.slice(-2).join(' ') };
+    }
+
+    // TUC y autorización del vehículo: se recuerdan de la última guía emitida con esa placa
+    async function vehiculoGuardado(p, placa) {
+        const vacio = { tuc: '', aut: '' };
+        const pl = String(placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (!pl) return vacio;
+        const [r] = await p.query(`SELECT datos_json FROM gre_guias WHERE origen = 'EMITIDA' AND tipo = 'TRANSPORTISTA' AND datos_json IS NOT NULL ORDER BY id DESC LIMIT 30`);
+        for (const row of r) {
+            try {
+                const te = JSON.parse(row.datos_json)['cac:Shipment']['cac:TransportHandlingUnit']['cac:TransportEquipment'];
+                for (const n of [te, ...(te['cac:AttachedTransportEquipment'] || [])]) {
+                    if (n && n['cbc:ID'] && String(n['cbc:ID']._text).toUpperCase() === pl) {
+                        return {
+                            tuc: n['cac:ApplicableTransportMeans'] ? String(n['cac:ApplicableTransportMeans']['cbc:RegistrationNationalityID']._text || '') : '',
+                            aut: n['cac:ShipmentDocumentReference'] ? String(n['cac:ShipmentDocumentReference']['cbc:ID']._text || '') : '',
+                        };
+                    }
+                }
+            } catch (e) { /* guía antigua con otro formato */ }
+        }
+        return vacio;
     }
 
     // Datos de la GRE Transportista que se propone para una guía: salen de la guía, del viaje y del conductor; la persona los revisa
@@ -273,9 +295,12 @@ module.exports = (db, logAudit) => {
             codigo: String(i + 1).padStart(3, '0'), descripcion: String(it.descripcion || 'CARGA GENERAL').slice(0, 250), cantidad: Number(it.cantidad) || 1, unidad_medida: unidadSunat(it.unidad),
         }));
         const fecha = g.fecha_traslado ? new Date(g.fecha_traslado).toISOString().slice(0, 10) : null;
+        const vt = await vehiculoGuardado(p, viaje && viaje.placa_tracto);
+        const vc = await vehiculoGuardado(p, viaje && viaje.placa_remolque);
         const propuesta = {
             serie: cfg.serie_grt,
-            fecha_traslado: fecha || (viaje && viaje.fecha_inicio) || hoyLima(),
+            // SUNAT no acepta que el traslado empiece antes de la emisión (error 3343): si la fecha de la guía del cliente ya pasó, se propone hoy
+            fecha_traslado: [fecha, viaje && viaje.fecha_inicio].find(f => f && f >= hoyLima()) || hoyLima(),
             motivo_traslado: motivoCodigo(g.motivo), descripcion_motivo: String(g.motivo || 'VENTA').toUpperCase().slice(0, 100),
             remitente_ruc: g.remitente_ruc || '', remitente_razon_social: g.remitente_nombre || '',
             destinatario_ruc: g.destinatario_doc || '', destinatario_razon_social: g.destinatario_nombre || '',
@@ -284,6 +309,7 @@ module.exports = (db, logAudit) => {
             peso_bruto_total: Number(g.peso_kg) || 0, unidad_medida: 'KGM',
             placa_tracto: (viaje && viaje.placa_tracto) || '', placa_carreta: (viaje && viaje.placa_remolque) || '',
             ...(() => { const n = partirNombre((cond && cond.nombre) || (viaje && viaje.conductor) || ''); return { conductor_nombre: n.nombres, conductor_apellidos: n.apellidos }; })(), conductor_num_doc: (cond && cond.dni) || '', conductor_licencia: (cond && cond.licencia) || '',
+            tuc_tracto: vt.tuc, aut_tracto: vt.aut, tuc_carreta: vc.tuc, aut_carreta: vc.aut,
             registro_mtc: cfg.registro_mtc || '', items,
         };
         return { propuesta, viaje: viaje ? viaje.viaje : null };
@@ -378,9 +404,14 @@ module.exports = (db, logAudit) => {
                 conductor_num_doc: String(b.conductor_num_doc ?? bp.conductor_num_doc).replace(/\D/g, ''),
                 conductor_licencia: String(b.conductor_licencia ?? bp.conductor_licencia).trim().toUpperCase(),
                 registro_mtc: String(b.registro_mtc ?? bp.registro_mtc).trim().toUpperCase(),
+                tuc_tracto: String(b.tuc_tracto ?? bp.tuc_tracto).trim().toUpperCase(),
+                aut_tracto: String(b.aut_tracto ?? bp.aut_tracto).trim(),
+                tuc_carreta: String(b.tuc_carreta ?? bp.tuc_carreta).trim().toUpperCase(),
+                aut_carreta: String(b.aut_carreta ?? bp.aut_carreta).trim(),
             };
             const faltan = faltanGrt(d);
             if (faltan.length) throw aviso(`Faltan datos para emitir: ${faltan.join(', ')}.`, 422);
+            if (d.fecha_traslado < hoyLima()) throw aviso('La fecha de inicio del traslado no puede ser anterior a la fecha de emisión (hoy). Corrígela.', 422);
             await verificarPrueba(cfg);
 
             const existente = await grtExistente(p, g.id);
@@ -422,10 +453,10 @@ module.exports = (db, logAudit) => {
                 id = ins.insertId;
             }
 
-            const body = Apisunat.buildGrtBody({
-                ...d, serie, correlativo: parseInt(numero, 10), fecha_emision: fila.fecha_emision, hora_emision: horaLima(),
+            const body = Apisunat.buildGrtUbl({
+                ...d, serie, numero, fecha_emision: fila.fecha_emision, hora_emision: horaLima(),
                 gre_relacionada_numero: g.numero_completo, gre_relacionada_ruc: g.emisor_ruc || g.remitente_ruc, gre_relacionada_tipo: '09',
-            }, cfg.ruc_emisor, cfg.razon_social);
+            }, { ruc: cfg.ruc_emisor, razon_social: cfg.razon_social });
             const fileName = `${cfg.ruc_emisor}-31-${serie}-${numero}`;
             const r = await Apisunat.sendBill({ personaId: cfg.persona_id, personaToken: cfg.persona_token, fileName, documentBody: body, base: cfg.base_url });
             if (r.ok) {
