@@ -5237,7 +5237,7 @@ app.use('/api/almacen', almacenRoutes);
 
 // ── Integraciones API (GET / PUT) ────────────────────────────────
 // Secretos: la lista nunca trae el valor completo. Solo indica si está configurado y, si el valor es largo, los últimos 4 caracteres.
-const CLAVES_SECRETAS = ['wialon_token', 'sunat_clave_sol', 'sunat_client_secret'];
+const CLAVES_SECRETAS = ['wialon_token', 'sunat_clave_sol', 'sunat_client_secret', 'apisunat_persona_token', 'apisunat_prueba_persona_token'];
 const MASCARA = '••••';
 const enmascararSecreto = (v) => {
     const texto = v ? String(v) : '';

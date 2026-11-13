@@ -5,6 +5,7 @@ import { CheckCircle2, CircleAlert, MapPin, ShieldCheck, Zap } from 'lucide-reac
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, PasswordInput, TextInput } from '../../core/ui/Field';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -37,7 +38,7 @@ const fecha = (s: string | null) => {
 
 type Resultado = { ok: boolean; texto: string } | null;
 
-// Sistema › Integraciones: credenciales de Wialon (GPS) y SUNAT (guías electrónicas).
+// Sistema › Integraciones: credenciales de Wialon (GPS) y APISUNAT (guías electrónicas), por empresa.
 export function IntegracionesPage() {
   const q = useQuery<Fila[]>({
     queryKey: ['sistema', 'integraciones-cfg'],
@@ -54,7 +55,7 @@ export function IntegracionesPage() {
       {q.isLoading ? <PageLoader /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-5)' }}>
           <Wialon filas={q.data ?? []} />
-          <Sunat filas={q.data ?? []} />
+          <Apisunat filas={q.data ?? []} />
         </div>
       )}
     </Page>
@@ -175,17 +176,21 @@ function Wialon({ filas }: { filas: Fila[] }) {
   );
 }
 
-function Sunat({ filas }: { filas: Fila[] }) {
+function Apisunat({ filas }: { filas: Fila[] }) {
   const toast = useToast();
   const guardar = useGuardar();
-  const [v, setV] = useState({ ruc: '', usuario: '', clave: '', id: '', secreto: '' });
+  const vacio = { modo: 'prueba', ruc: '', razon: '', mtc: '', serieGrt: 'V0A1', serieGre: 'T0A1', id: '', token: '', pid: '', ptoken: '', purl: '' };
+  const [v, setV] = useState(vacio);
   const [ocupado, setOcupado] = useState(false);
   const [res, setRes] = useState<Resultado>(null);
 
   useEffect(() => {
     setV({
-      ruc: valorDe(filas, 'sunat_ruc_emisor'), usuario: valorDe(filas, 'sunat_usuario_sol'), clave: valorDe(filas, 'sunat_clave_sol'),
-      id: valorDe(filas, 'sunat_client_id'), secreto: valorDe(filas, 'sunat_client_secret'),
+      modo: valorDe(filas, 'apisunat_modo') === 'produccion' ? 'produccion' : 'prueba',
+      ruc: valorDe(filas, 'apisunat_ruc_emisor') || valorDe(filas, 'sunat_ruc_emisor'), razon: valorDe(filas, 'apisunat_razon_social'), mtc: valorDe(filas, 'apisunat_registro_mtc'),
+      serieGrt: valorDe(filas, 'apisunat_serie_grt') || 'V0A1', serieGre: valorDe(filas, 'apisunat_serie_gre') || 'T0A1',
+      id: valorDe(filas, 'apisunat_persona_id'), token: valorDe(filas, 'apisunat_persona_token'),
+      pid: valorDe(filas, 'apisunat_prueba_persona_id'), ptoken: valorDe(filas, 'apisunat_prueba_persona_token'), purl: valorDe(filas, 'apisunat_prueba_url'),
     });
   }, [filas]);
 
@@ -193,28 +198,43 @@ function Sunat({ filas }: { filas: Fila[] }) {
     setOcupado(true); setRes(null);
     try {
       await guardar([
-        ['sunat_ruc_emisor', v.ruc], ['sunat_usuario_sol', v.usuario], ['sunat_clave_sol', v.clave],
-        ['sunat_client_id', v.id], ['sunat_client_secret', v.secreto], ['sunat_modo_entorno', 'produccion'],
+        ['apisunat_modo', v.modo], ['apisunat_ruc_emisor', v.ruc], ['apisunat_razon_social', v.razon], ['apisunat_registro_mtc', v.mtc.toUpperCase()],
+        ['apisunat_serie_grt', v.serieGrt.toUpperCase()], ['apisunat_serie_gre', v.serieGre.toUpperCase()],
+        ['apisunat_persona_id', v.id], ['apisunat_persona_token', v.token],
+        ['apisunat_prueba_persona_id', v.pid], ['apisunat_prueba_persona_token', v.ptoken], ['apisunat_prueba_url', v.purl],
       ]);
-      haptic('success'); toast('SUNAT guardado');
+      haptic('success'); toast('APISUNAT guardado');
       if (probar) {
-        const r = await api<{ ok?: boolean; error?: string }>('/guias-remision/test-token-sunat', { method: 'POST', body: {} });
-        if (!r.ok) throw new Error(r.error || 'Credenciales inválidas');
-        setRes({ ok: true, texto: 'Conectado con SUNAT: se generó el token OAuth 2.0' });
+        const r = await api<{ ok?: boolean; error?: string; message?: string }>('/operaciones/gre/apisunat/probar', { method: 'POST', body: {} });
+        if (r.ok === false) throw new Error(r.error || 'No se pudo conectar');
+        setRes({ ok: true, texto: r.message || 'Conectado con APISUNAT' });
       }
     } catch (err) { setRes({ ok: false, texto: errorMessage(err) }); haptic('warning'); }
     finally { setOcupado(false); }
   }
 
   const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setV(a => ({ ...a, [k]: e.target.value }));
+  const produccion = v.modo === 'produccion';
 
   return (
-    <Tarjeta icono={<ShieldCheck size={22} />} titulo="SUNAT · Guías de remisión electrónicas" estado={res && !res.ok ? 'error' : v.id ? 'ok' : 'pendiente'} meta={metaDe(filas, 'sunat_client_id')} onGuardar={() => guardarYProbar(false)}>
-      <Field label="RUC del emisor">{p => <TextInput {...p} inputMode="numeric" value={v.ruc} onChange={set('ruc')} />}</Field>
-      <Field label="Usuario SOL">{p => <TextInput {...p} value={v.usuario} onChange={set('usuario')} autoComplete="off" />}</Field>
-      <Field label="Clave SOL">{p => <PasswordInput {...p} value={v.clave} onChange={set('clave')} autoComplete="off" />}</Field>
-      <Field label="Client ID (API SUNAT)">{p => <TextInput {...p} value={v.id} onChange={set('id')} autoComplete="off" />}</Field>
-      <Field label="Client Secret (API SUNAT)">{p => <PasswordInput {...p} value={v.secreto} onChange={set('secreto')} autoComplete="off" />}</Field>
+    <Tarjeta icono={<ShieldCheck size={22} />} titulo="APISUNAT · Guías de remisión electrónicas" estado={res && !res.ok ? 'error' : v.id || v.pid ? 'ok' : 'pendiente'} meta={metaDe(filas, 'apisunat_modo') || 'Es de esta empresa: cada empresa guarda la suya.'} onGuardar={() => guardarYProbar(false)}>
+      <SegmentedControl block label="Ambiente de emisión" value={v.modo as 'prueba' | 'produccion'} onChange={m => setV(a => ({ ...a, modo: m }))}
+        options={[{ value: 'prueba', label: 'Prueba' }, { value: 'produccion', label: 'Producción' }]} />
+      <Notice tone={produccion ? 'error' : 'accent'}>{produccion
+        ? 'Producción: las guías que emitas tienen validez tributaria ante SUNAT.'
+        : 'Prueba: las guías se envían a la dirección de pruebas y no tienen validez tributaria. Si no hay dirección de pruebas, no se envía nada.'}</Notice>
+      <Field label="RUC de la empresa">{p => <TextInput {...p} inputMode="numeric" maxLength={11} value={v.ruc} onChange={set('ruc')} />}</Field>
+      <Field label="Razón social">{p => <TextInput {...p} value={v.razon} onChange={set('razon')} />}</Field>
+      <Field label="Registro MTC (transporte de carga)">{p => <TextInput {...p} value={v.mtc} onChange={set('mtc')} />}</Field>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
+        <Field label="Serie GRE Transportista">{p => <TextInput {...p} maxLength={4} value={v.serieGrt} onChange={set('serieGrt')} />}</Field>
+        <Field label="Serie GRE Remitente">{p => <TextInput {...p} maxLength={4} value={v.serieGre} onChange={set('serieGre')} />}</Field>
+      </div>
+      <Field label="Persona ID (producción)">{p => <TextInput {...p} value={v.id} onChange={set('id')} autoComplete="off" />}</Field>
+      <Field label="Token (producción)">{p => <PasswordInput {...p} value={v.token} onChange={set('token')} autoComplete="off" />}</Field>
+      <Field label="Persona ID de pruebas (si APISUNAT te dio otra)">{p => <TextInput {...p} value={v.pid} onChange={set('pid')} autoComplete="off" />}</Field>
+      <Field label="Token de pruebas">{p => <PasswordInput {...p} value={v.ptoken} onChange={set('ptoken')} autoComplete="off" />}</Field>
+      <Field label="Dirección de pruebas de APISUNAT">{p => <TextInput {...p} placeholder="https://…" value={v.purl} onChange={set('purl')} autoComplete="off" />}</Field>
       {res && <Notice tone={res.ok ? 'success' : 'error'} icon={res.ok ? <CheckCircle2 size={16} /> : <CircleAlert size={16} />}>{res.texto}</Notice>}
       <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
         <Button variant="secondary" onClick={() => guardarYProbar(false)} disabled={ocupado}>Guardar</Button>

@@ -55,8 +55,8 @@ export function GuiaFicha({ id, onClose, puedeEditar, onVincular }: { id: number
   return (
     <>
       <Sheet ancho open={id != null} onClose={onClose}
-        title={g ? <TituloFicha codigo={g.numero_completo} estado={<PastillaGuia estado={g.estado} />} sub={`GRE ${ETIQUETA_TIPO[g.tipo]} · ${ETIQUETA_ORIGEN[g.origen]}`} /> : ''}
-        footer={g && puedeEditar && g.estado !== 'ANULADA' ? (
+        title={g ? <TituloFicha codigo={g.numero_completo} estado={<PastillaGuia estado={g.estado} guia={g} />} sub={`GRE ${ETIQUETA_TIPO[g.tipo]} · ${ETIQUETA_ORIGEN[g.origen]}`} /> : ''}
+        footer={g && puedeEditar && g.estado !== 'ANULADA' && g.origen === 'RECIBIDA' ? (
           <>
             {!g.orden_servicio_codigo && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={() => setAccion('eliminar')}>Eliminar</Button>}
             {g.orden_servicio_codigo && g.origen === 'RECIBIDA' && g.tipo === 'REMITENTE' && <Button variant="secondary" icon={<Send size={16} />} onClick={() => setGrt(true)}>GRE Transportista</Button>}
@@ -79,6 +79,12 @@ export function GuiaFicha({ id, onClose, puedeEditar, onVincular }: { id: number
             <PuntosStrip
               carga={{ titulo: distrito(g.partida_ubigeo) || null, detalle: g.partida_direccion, extra: g.partida_ubigeo ? `Ubigeo ${g.partida_ubigeo}` : null }}
               descarga={{ titulo: distrito(g.llegada_ubigeo) || null, detalle: g.llegada_direccion, extra: g.llegada_ubigeo ? `Ubigeo ${g.llegada_ubigeo}` : null }} />
+            {g.origen === 'EMITIDA' && (
+              <Notice tone={g.apisunat_status === 'ACEPTADO' ? 'success' : g.apisunat_status === 'RECHAZADO' || g.apisunat_faults ? 'error' : 'accent'}>
+                Emitida por nosotros en <strong>{g.modo_emision === 'produccion' ? 'producción' : 'prueba'}</strong>{g.apisunat_status ? ` · APISUNAT: ${g.apisunat_status}` : ''}{g.apisunat_faults ? ` — ${g.apisunat_faults}` : ''}
+                {g.pdf_url && <> · <a href={g.pdf_url} target="_blank" rel="noreferrer">Ver PDF <ExternalLink size={13} aria-hidden /></a></>}
+              </Notice>
+            )}
             {!!g.trae_transporte && <Notice tone="accent">Esta guía ya trae los datos del transporte. Según la norma de SUNAT, puede que no haga falta emitir nuestra GRE Transportista: confírmalo antes de decidir.</Notice>}
             {g.archivo_ver_url && <a className="gv__archivo" href={g.archivo_ver_url} target="_blank" rel="noreferrer"><ExternalLink size={15} aria-hidden /> Ver el archivo original{g.archivo_nombre ? ` (${g.archivo_nombre})` : ''}</a>}
             <p className="os-nota">Registrada {g.creado_en ?? ''}{g.usuario ? ` por ${g.usuario}` : ''} · {g.fuente === 'XML' ? 'leída del XML' : g.fuente === 'IA' ? 'leída con IA y confirmada' : 'ingresada a mano'}</p>

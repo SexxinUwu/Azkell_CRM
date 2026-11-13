@@ -67,6 +67,44 @@ class ApisunatService {
     }
 
     /**
+     * Configuración de APISUNAT de UNA empresa (la base de la empresa de la petición), tal como se guarda en Sistema › Integraciones.
+     * Las pantallas nuevas de guías usan solo esto: sin credenciales en variables de entorno ni en el código.
+     * modo 'prueba' envía a la dirección de pruebas (con las credenciales de prueba si existen); 'produccion' envía a APISUNAT real.
+     * `bloqueo` trae el motivo por el que no se puede emitir (o null).
+     */
+    static async getConfigEmpresa(dbConn) {
+        const claves = ['apisunat_modo', 'apisunat_persona_id', 'apisunat_persona_token', 'apisunat_prueba_persona_id', 'apisunat_prueba_persona_token',
+            'apisunat_prueba_url', 'apisunat_ruc_emisor', 'sunat_ruc_emisor', 'apisunat_razon_social', 'apisunat_registro_mtc', 'apisunat_serie_grt', 'apisunat_serie_gre'];
+        const [rows] = await dbConn.promise().query('SELECT clave, valor FROM integraciones_api WHERE clave IN (?)', [claves]).catch(() => [[]]);
+        const m = {};
+        (rows || []).forEach(r => { m[r.clave] = String(r.valor || '').trim(); });
+        const modo = m.apisunat_modo === 'produccion' ? 'produccion' : 'prueba';
+        const prueba = modo === 'prueba';
+        const persona_id = (prueba && m.apisunat_prueba_persona_id && m.apisunat_prueba_persona_token) ? m.apisunat_prueba_persona_id : (m.apisunat_persona_id || '');
+        const persona_token = (prueba && m.apisunat_prueba_persona_id && m.apisunat_prueba_persona_token) ? m.apisunat_prueba_persona_token : (m.apisunat_persona_token || '');
+        const base_url = prueba ? String(m.apisunat_prueba_url || process.env.APISUNAT_PRUEBA_URL || '').trim().replace(/\/+$/, '') : BASE_URL_PRODUCCION;
+        const cfg = {
+            modo, persona_id, persona_token, base_url,
+            ruc_emisor: m.apisunat_ruc_emisor || m.sunat_ruc_emisor || '', razon_social: m.apisunat_razon_social || '',
+            registro_mtc: (m.apisunat_registro_mtc || '').toUpperCase(),
+            serie_grt: (m.apisunat_serie_grt || 'V0A1').toUpperCase(), serie_gre: (m.apisunat_serie_gre || 'T0A1').toUpperCase(),
+            bloqueo: null,
+        };
+        if (String(process.env.SUNAT_EMISION_DESHABILITADA || '').trim() === '1') cfg.bloqueo = 'La emisión de guías está deshabilitada en el servidor.';
+        else if (!cfg.persona_id || !cfg.persona_token) cfg.bloqueo = 'Falta configurar APISUNAT de esta empresa en Sistema › Integraciones.';
+        else if (!/^\d{11}$/.test(cfg.ruc_emisor) || !cfg.razon_social) cfg.bloqueo = 'Falta el RUC y la razón social de la empresa en la configuración de APISUNAT (Sistema › Integraciones).';
+        else if (prueba && !cfg.base_url) cfg.bloqueo = 'Falta la dirección de pruebas de APISUNAT en Sistema › Integraciones. Hasta entonces no se envía nada.';
+        return cfg;
+    }
+
+    /**
+     * Lo que ve el navegador de la configuración: nunca el token.
+     */
+    static resumenConfig(cfg) {
+        return { modo: cfg.modo, lista: !cfg.bloqueo, motivo: cfg.bloqueo, ruc_emisor: cfg.ruc_emisor, razon_social: cfg.razon_social, serie_grt: cfg.serie_grt, serie_gre: cfg.serie_gre, registro_mtc: cfg.registro_mtc };
+    }
+
+    /**
      * Guarda las credenciales de APISUNAT en integraciones_api
      */
     static async saveCredenciales(dbConn, { persona_id, persona_token, ruc_emisor, razon_social, modo }) {
@@ -95,9 +133,9 @@ class ApisunatService {
      * Consulta el último correlativo emitido y el número sugerido
      * @param {Object} params - { personaId, personaToken, type, serie }
      */
-    static async lastDocument({ personaId, personaToken, type, serie }) {
+    static async lastDocument({ personaId, personaToken, type, serie, base }) {
         try {
-            const resp = await fetch(`${baseUrl()}/personas/lastDocument`, {
+            const resp = await fetch(`${base || baseUrl()}/personas/lastDocument`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -136,7 +174,7 @@ class ApisunatService {
      * Emite un comprobante o Guía de Remisión a través de APISUNAT
      * @param {Object} params - { personaId, personaToken, fileName, documentBody, customerEmail }
      */
-    static async sendBill({ personaId, personaToken, fileName, documentBody, customerEmail }) {
+    static async sendBill({ personaId, personaToken, fileName, documentBody, customerEmail, base }) {
         try {
             const payload = {
                 personaId,
@@ -150,7 +188,7 @@ class ApisunatService {
             }
 
             console.log(`[APISUNAT] Enviando sendBill: ${fileName}...`);
-            const resp = await fetch(`${baseUrl()}/personas/v1/sendBill`, {
+            const resp = await fetch(`${base || baseUrl()}/personas/v1/sendBill`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -182,11 +220,11 @@ class ApisunatService {
      * Consulta el estado de procesamiento del comprobante y obtiene enlaces a XML / CDR
      * @param {string} documentId - ID retornado por sendBill
      */
-    static async getById(documentId) {
+    static async getById(documentId, base) {
         try {
             if (!documentId) return { ok: false, error: "documentId requerido." };
 
-            const resp = await fetch(`${baseUrl()}/documents/${encodeURIComponent(documentId)}/getById`, {
+            const resp = await fetch(`${base || baseUrl()}/documents/${encodeURIComponent(documentId)}/getById`, {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' }
             });
@@ -222,10 +260,10 @@ class ApisunatService {
     /**
      * Retorna la URL directa para descargar/visualizar el PDF oficial
      */
-    static getPdfUrl(documentId, fileName, format = 'A4') {
+    static getPdfUrl(documentId, fileName, format = 'A4', base) {
         if (!documentId || !fileName) return null;
         const cleanFile = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
-        return `${baseUrl()}/documents/${encodeURIComponent(documentId)}/getPDF/${encodeURIComponent(format)}/${encodeURIComponent(cleanFile)}`;
+        return `${base || baseUrl()}/documents/${encodeURIComponent(documentId)}/getPDF/${encodeURIComponent(format)}/${encodeURIComponent(cleanFile)}`;
     }
 
     /**

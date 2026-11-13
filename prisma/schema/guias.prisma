@@ -271,9 +271,21 @@ model GreGuia {
   creado_en             DateTime? @default(now()) @db.Timestamp(0)
   actualizado_en        DateTime? @default(now()) @updatedAt @db.Timestamp(0)
 
+  placa_carreta         String?  @db.VarChar(20)
+  viaje                 String?  @db.VarChar(60)
+  guia_relacionada_id   Int?
+  apisunat_document_id  String?  @db.VarChar(60)
+  apisunat_status       String?  @db.VarChar(30)
+  apisunat_faults       String?  @db.Text
+  pdf_url               String?  @db.Text
+  xml_url               String?  @db.Text
+  cdr_url               String?  @db.Text
+  datos_json            String?  @db.LongText
+  modo_emision          String?  @db.VarChar(10)
   @@unique([tipo, emisor_ruc, numero_completo], map: "uq_gre_guia")
   @@index([orden_servicio_id], map: "idx_gre_os")
   @@index([orden_servicio_codigo], map: "idx_gre_os_codigo")
+  @@index([guia_relacionada_id], map: "idx_gre_relacionada")
   @@index([estado], map: "idx_gre_estado")
   @@index([fecha_emision], map: "idx_gre_fecha")
   @@map("gre_guias")

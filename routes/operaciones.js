@@ -1706,8 +1706,8 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                DATE_FORMAT(os.fecha_entrega, '%Y-%m-%d') AS fecha_entrega_fmt,
                DATE_FORMAT(CONVERT_TZ(os.creado_en, @@session.time_zone, '-05:00'), '%Y-%m-%d %H:%i:%s') AS creado_fmt,
                (SELECT MAX(m.km) FROM combustible_matriz_d2 m WHERE m.estado = 'ACTIVO' AND m.ruta COLLATE utf8mb4_unicode_ci = os.ruta COLLATE utf8mb4_unicode_ci) AS distancia_km,
-               (SELECT COALESCE(SUM(g.peso_kg), 0) FROM gre_guias g WHERE g.orden_servicio_id = os.id AND g.estado <> 'ANULADA') AS peso_guias,
-               (SELECT COUNT(*) FROM gre_guias g WHERE g.orden_servicio_id = os.id AND g.estado <> 'ANULADA') AS guias_n,
+               (SELECT COALESCE(SUM(g.peso_kg), 0) FROM gre_guias g WHERE g.orden_servicio_id = os.id AND g.tipo = 'REMITENTE' AND g.estado <> 'ANULADA') AS peso_guias,
+               (SELECT COUNT(*) FROM gre_guias g WHERE g.orden_servicio_id = os.id AND g.tipo = 'REMITENTE' AND g.estado <> 'ANULADA') AS guias_n,
                b.viaje AS viaje, COALESCE(b.n, 0) AS viajes_n,
                ov.estado AS viaje_estado, ov.conductor AS conductor, ov.placa_tracto AS placa_tracto,
                ov.placa_remolque AS placa_carreta, ov.ejecucion AS ejecucion, ov.tercero_nombre AS tercero_nombre
@@ -1718,7 +1718,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
 
     // Peso del servicio: el real de sus guías vigentes; sin guías, el estimado
     async function pesoReal(tdb, os) {
-        const [r] = await tdb.query(`SELECT COALESCE(SUM(peso_kg), 0) AS kg FROM gre_guias WHERE orden_servicio_id = ? AND estado <> 'ANULADA'`, [os.id]);
+        const [r] = await tdb.query(`SELECT COALESCE(SUM(peso_kg), 0) AS kg FROM gre_guias WHERE orden_servicio_id = ? AND tipo = 'REMITENTE' AND estado <> 'ANULADA'`, [os.id]);
         const kg = Number(r[0].kg) || 0;
         return kg > 0 ? kg : (Number(os.peso_estimado) || 0);
     }

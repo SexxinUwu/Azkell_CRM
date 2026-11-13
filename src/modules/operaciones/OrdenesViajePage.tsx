@@ -305,13 +305,13 @@ function GuiasDelViaje({ viaje }: { viaje: string }) {
   if (!lista.length) return <EmptyState icon={<FolderOpen size={22} />} title="Sin guías vinculadas">Vincula las guías de los clientes a las órdenes de servicio de este viaje, desde Guías de remisión.</EmptyState>;
   return (
     <section>
-      <h4 className="vj-titulo">Guías del viaje · {lista.length} · {fmtKg(lista.reduce((s, g) => s + Number(g.peso_kg || 0), 0))}</h4>
+      <h4 className="vj-titulo">Guías del viaje · {lista.length} · {fmtKg(lista.filter(g => g.tipo === 'REMITENTE').reduce((s, g) => s + Number(g.peso_kg || 0), 0))}</h4>
       <ul className="vb__lista">
         {lista.map(g => (
           <li key={g.id} className="vb__fila">
             <span className="vb__ico vb__ico--azul" aria-hidden><FolderOpen size={16} /></span>
             <div className="vb__txt"><strong>{g.numero_completo}</strong><span>{[g.destinatario_nombre || g.remitente_nombre, g.orden_servicio_codigo ? `Servicio ${g.orden_servicio_codigo}` : null, fechaGuia(g.fecha_emision)].filter(Boolean).join(' · ')}</span></div>
-            <PastillaGuia estado={g.estado} />
+            <PastillaGuia estado={g.estado} guia={g} />
             <strong className="vb__monto">{fmtKg(g.peso_kg)}</strong>
           </li>
         ))}
