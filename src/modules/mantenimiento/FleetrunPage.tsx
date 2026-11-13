@@ -442,6 +442,7 @@ export function FleetrunPage() {
   const [clientesF, setClientesF]   = useState<string[]>([]);
   const [utsF, setUtsF]             = useState<string[]>([]);
   const [modelosF, setModelosF]     = useState<string[]>([]);
+  const [motoresF, setMotoresF]     = useState<string[]>([]);
   const [estadosF, setEstadosF]     = useState<EstadoFR[]>([]);
   // Eliminar varios (clásico: modo selección + "Eliminar (N)"); null = modo apagado
   const [seleccion, setSeleccion]   = useState<Set<string> | null>(null);
@@ -515,6 +516,8 @@ export function FleetrunPage() {
   const utsDe = (f: FleetrunFila) => placasActivas?.get(frPlaca(f).toUpperCase())?.uts || frUts(f);
   // Modelo de la unidad (catálogo de placas)
   const modeloDe = (f: FleetrunFila) => String(placasActivas?.get(frPlaca(f).toUpperCase())?.modelo ?? '').trim();
+  // Modelo del motor de la unidad (catálogo de placas)
+  const motorDe = (f: FleetrunFila) => String(placasActivas?.get(frPlaca(f).toUpperCase())?.modeloMotor ?? '').trim();
 
   // Opciones de los filtros avanzados: los clientes y UTS que aparecen en la lista de registros
   const clientesDisponibles = useMemo(() => {
@@ -535,7 +538,13 @@ export function FleetrunPage() {
     return [...set].sort((a, b) => a.localeCompare(b, 'es'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datosVista, placasActivas]);
-  const avanzadosActivos = (fechaF ? 1 : 0) + clientesF.length + utsF.length + estadosF.length + modelosF.length;
+  const motoresDisponibles = useMemo(() => {
+    const set = new Set<string>();
+    for (const f of datosVista) { const m = motorDe(f); if (m) set.add(m); }
+    return [...set].sort((a, b) => a.localeCompare(b, 'es'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [datosVista, placasActivas]);
+  const avanzadosActivos = (fechaF ? 1 : 0) + clientesF.length + utsF.length + estadosF.length + modelosF.length + motoresF.length;
 
   // Filtrado final: búsqueda y filtros
   const filtrados = useMemo(() => {
@@ -552,9 +561,10 @@ export function FleetrunPage() {
     if (clientesF.length) lista = lista.filter(f => clientesF.includes(clienteDe(frPlaca(f))));
     if (utsF.length) lista = lista.filter(f => utsF.includes(utsDe(f)));
     if (modelosF.length) lista = lista.filter(f => modelosF.includes(modeloDe(f)));
+    if (motoresF.length) lista = lista.filter(f => motoresF.includes(motorDe(f)));
     return lista;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [porEstado, busqueda, placasActivas, fechaF, clientesF, utsF, modelosF]);
+  }, [porEstado, busqueda, placasActivas, fechaF, clientesF, utsF, modelosF, motoresF]);
 
   // Agrupar por placa en el orden en que aparecen, como el clásico (fila de placa que se despliega)
   const grupos = useMemo(() => {
@@ -608,7 +618,7 @@ export function FleetrunPage() {
   }
 
   function limpiarAvanzados() {
-    setFechaF(''); setClientesF([]); setUtsF([]); setEstadosF([]); setModelosF([]); setPagina(1);
+    setFechaF(''); setClientesF([]); setUtsF([]); setEstadosF([]); setModelosF([]); setMotoresF([]); setPagina(1);
   }
 
   function cambiarBusqueda(v: string) { setBusqueda(v); setPagina(1); }
@@ -961,8 +971,13 @@ export function FleetrunPage() {
             ]} />
         </GrupoFiltro>
         {modelosDisponibles.length > 0 && (
-          <GrupoFiltro titulo="Modelo">
-            <ChipsBuscables etiqueta="Modelo" opciones={modelosDisponibles} valor={modelosF} onChange={v => { setModelosF(v); setPagina(1); }} />
+          <GrupoFiltro titulo="Modelo de vehículo">
+            <ChipsBuscables etiqueta="Modelo de vehículo" opciones={modelosDisponibles} valor={modelosF} onChange={v => { setModelosF(v); setPagina(1); }} />
+          </GrupoFiltro>
+        )}
+        {motoresDisponibles.length > 0 && (
+          <GrupoFiltro titulo="Modelo de motor">
+            <ChipsBuscables etiqueta="Modelo de motor" opciones={motoresDisponibles} valor={motoresF} onChange={v => { setMotoresF(v); setPagina(1); }} />
           </GrupoFiltro>
         )}
         {clientesDisponibles.length > 0 && (
