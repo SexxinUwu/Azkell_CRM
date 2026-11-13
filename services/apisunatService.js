@@ -87,7 +87,7 @@ class ApisunatService {
             modo, persona_id, persona_token, base_url,
             ruc_emisor: m.apisunat_ruc_emisor || m.sunat_ruc_emisor || '', razon_social: m.apisunat_razon_social || '',
             registro_mtc: (m.apisunat_registro_mtc || '').toUpperCase(),
-            serie_grt: (m.apisunat_serie_grt || 'V0A1').toUpperCase(), serie_gre: (m.apisunat_serie_gre || 'T0A1').toUpperCase(),
+            serie_grt: (m.apisunat_serie_grt || 'V001').toUpperCase(), serie_gre: (m.apisunat_serie_gre || 'T001').toUpperCase(),
             bloqueo: null,
         };
         if (String(process.env.SUNAT_EMISION_DESHABILITADA || '').trim() === '1') cfg.bloqueo = 'La emisión de guías está deshabilitada en el servidor.';

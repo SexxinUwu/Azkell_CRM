@@ -179,7 +179,7 @@ function Wialon({ filas }: { filas: Fila[] }) {
 function Apisunat({ filas }: { filas: Fila[] }) {
   const toast = useToast();
   const guardar = useGuardar();
-  const vacio = { modo: 'prueba', ruc: '', razon: '', mtc: '', serieGrt: 'V0A1', serieGre: 'T0A1', id: '', token: '', pid: '', ptoken: '' };
+  const vacio = { modo: 'prueba', ruc: '', razon: '', mtc: '', serieGrt: 'V001', serieGre: 'T001', id: '', token: '', pid: '', ptoken: '' };
   const [v, setV] = useState(vacio);
   const [ocupado, setOcupado] = useState(false);
   const [res, setRes] = useState<Resultado>(null);
@@ -188,7 +188,7 @@ function Apisunat({ filas }: { filas: Fila[] }) {
     setV({
       modo: valorDe(filas, 'apisunat_modo') === 'produccion' ? 'produccion' : 'prueba',
       ruc: valorDe(filas, 'apisunat_ruc_emisor') || valorDe(filas, 'sunat_ruc_emisor'), razon: valorDe(filas, 'apisunat_razon_social'), mtc: valorDe(filas, 'apisunat_registro_mtc'),
-      serieGrt: valorDe(filas, 'apisunat_serie_grt') || 'V0A1', serieGre: valorDe(filas, 'apisunat_serie_gre') || 'T0A1',
+      serieGrt: valorDe(filas, 'apisunat_serie_grt') || 'V001', serieGre: valorDe(filas, 'apisunat_serie_gre') || 'T001',
       id: valorDe(filas, 'apisunat_persona_id'), token: valorDe(filas, 'apisunat_persona_token'),
       pid: valorDe(filas, 'apisunat_prueba_persona_id'), ptoken: valorDe(filas, 'apisunat_prueba_persona_token'),
     });
