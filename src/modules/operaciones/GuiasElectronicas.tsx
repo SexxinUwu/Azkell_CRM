@@ -31,8 +31,8 @@ interface ResultadoMasivo { id: number; numeroGuia?: string; success: boolean; s
 interface FilaMasiva { id: number; numero: string; ok: boolean; texto: string }
 
 const CFG: Record<TipoGuia, { ruta: string; titulo: string; excel: string }> = {
-  remitente: { ruta: '/guia-remitente', titulo: 'Guías de remitente', excel: 'Guias-remitente' },
-  transportista: { ruta: '/guia-transportista', titulo: 'Guías de transportista', excel: 'Guias-transportista' },
+  remitente: { ruta: '/guia-remitente', titulo: 'GRE Remitente', excel: 'Guias-remitente' },
+  transportista: { ruta: '/guia-transportista', titulo: 'GRE Transportista', excel: 'Guias-transportista' },
 };
 
 const estadoDe = (g: Guia) => {

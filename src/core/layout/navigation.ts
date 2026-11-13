@@ -78,8 +78,8 @@ const SECCIONES_BASE: NavSection[] = [
       {
         key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [], soloEmpresa: 'marsisa',
         children: [
-          { key: 'guias-remitente', label: 'Guía de remisión electrónica (remitente)', to: '/operaciones/guias-remitente', icon: FileText, permissions: ver('op_guias_remision') },
-          { key: 'guias-transportista', label: 'Guía de remisión de transportista', to: '/operaciones/guias-transportista', icon: FileText, permissions: ver('op_guias_remision') },
+          { key: 'guias-remitente', label: 'GRE Remitente', to: '/operaciones/guias-remitente', icon: FileText, permissions: ver('op_guias_remision') },
+          { key: 'guias-transportista', label: 'GRE Transportista', to: '/operaciones/guias-transportista', icon: FileText, permissions: ver('op_guias_remision') },
         ],
       },
       {
