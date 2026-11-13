@@ -23,7 +23,7 @@ const VACIA: Placa = {
   placa: '', cliente: '', ruc: '', marca: '', modelo: '', tipo: '', subTipo: '', color: '', nroMotor: '', nroCaja: '',
   nroCorona: '', vin: '', configuracion: '', anio: '', combustible: 'Diésel', cargaUtil: '', pesoNeto: '', pesoBruto: '',
   estado: 'Activa', uts: '', motora: true, llantas: '', enUso: true, wialon: '', tanque1: '', tanque2: '', tanque3: '',
-  capacidadTanque: '', tara: '', modeloMotor: '',
+  capacidadTanque: '', tara: '', modeloMotor: '', tuc: '', autorizacionMtc: '',
 };
 
 type Campo = keyof Placa;
@@ -324,6 +324,13 @@ export function PlacaFormulario({ modo, placa, existentes, open, onClose, onGuar
             <Field label="VIN" wide>{props => <TextInput {...props} {...texto('vin', v => v.toUpperCase())} className="input--mono" />}</Field>
             <Field label="Llantas">{props => <TextInput {...props} {...texto('llantas')} inputMode="numeric" />}</Field>
           </div>
+          <details style={{ marginTop: 'var(--s-3)' }}>
+            <summary className="t-footnote c-secondary" style={{ cursor: 'pointer' }}>TUC y autorización para guías de remisión (opcional)</summary>
+            <div className="form-grid" style={{ marginTop: 'var(--s-3)' }}>
+              <Field label="TUC / CHV">{props => <TextInput {...props} {...texto('tuc', v => v.toUpperCase())} className="input--mono" />}</Field>
+              <Field label="Autorización especial">{props => <TextInput {...props} {...texto('autorizacionMtc')} className="input--mono" />}</Field>
+            </div>
+          </details>
         </section>
 
         <section className="form-section">

@@ -88,7 +88,10 @@ function leerXml(buffer) {
     }));
     const pesoXml = valor(envio, 'cbc:GrossWeightMeasure');
     const nombreConductor = [valor(conductor, 'cbc:FirstName'), valor(conductor, 'cbc:FamilyName')].filter(Boolean).join(' ');
-    const placa = valor(bloque(envio, 'cac:TransportEquipment') || bloque(envio, 'cac:TransportHandlingUnit'), 'cbc:ID');
+    const equipo = bloque(envio, 'cac:TransportEquipment') || bloque(envio, 'cac:TransportHandlingUnit');
+    const placa = valor(equipo, 'cbc:ID');
+    const vehiculoTuc = equipo ? valor(bloque(equipo, 'cac:ApplicableTransportMeans'), 'cbc:RegistrationNationalityID') : null;
+    const vehiculoAut = equipo ? valor(bloque(equipo, 'cac:ShipmentDocumentReference'), 'cbc:ID') : null;
     return limpiar({
         tipo: codigoTipo === '31' ? 'TRANSPORTISTA' : 'REMITENTE',
         serie_numero: id.completo,
@@ -106,7 +109,7 @@ function leerXml(buffer) {
         descripcion: lineas.map(l => l.descripcion).filter(Boolean).join('; ') || null,
         items: lineas,
         observaciones: valor(raiz, 'cbc:Note'),
-        placa, conductor_nombre: nombreConductor || null, conductor_doc: valor(conductor, 'cbc:ID'),
+        placa, vehiculo_tuc: vehiculoTuc, vehiculo_autorizacion: vehiculoAut, conductor_nombre: nombreConductor || null, conductor_doc: valor(conductor, 'cbc:ID'),
         licencia: valor(bloque(conductor, 'cac:IdentityDocumentReference'), 'cbc:ID'),
     }, 'XML', codigoTipo);
 }
@@ -133,6 +136,8 @@ Devuelve SOLO un JSON con estas claves (usa null cuando el dato no se vea con cl
 - indicador_vehiculos_conductores: SI o NO, según lo que diga "Indicador para registrar vehículos y conductores del transportista" (null si no aparece)
 - observaciones: el texto de Observaciones tal como está impreso (a veces trae placas y el conductor)
 - placa: placa del vehículo sin guiones, solo si está en el campo de vehículo de la guía (no la tomes de las observaciones)
+- vehiculo_tuc: número de TUCE o Certificado de Habilitación Vehicular del vehículo principal (null si no aparece)
+- vehiculo_autorizacion: número de autorización especial del vehículo (null si no aparece)
 - conductor_nombre, conductor_doc (DNI, solo dígitos), licencia`;
 
 async function leerConIA(buffer, mimetype) {
@@ -208,6 +213,7 @@ function limpiar(j, fuente, codigoTipo) {
         observaciones: texto(j.observaciones, 1000),
         placa: texto(j.placa, 20) ? String(j.placa).toUpperCase().replace(/[^A-Z0-9]/g, '') : null,
         conductor_nombre: texto(j.conductor_nombre, 150), conductor_doc: soloDigitos(j.conductor_doc), licencia: texto(j.licencia, 30),
+        vehiculo_tuc: texto(j.vehiculo_tuc, 30), vehiculo_autorizacion: texto(j.vehiculo_autorizacion, 30),
         fuente,
     };
     // Una guía de remitente que ya trae los datos de transporte (transportista, vehículo, conductor y fecha de traslado) puede eximir al transportista de emitir la suya

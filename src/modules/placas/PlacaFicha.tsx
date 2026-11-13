@@ -144,6 +144,8 @@ export function PlacaFicha({ placa, onClose, onEditar, onEliminar }: { placa: Pl
                     <Dato label="N.º de caja" value={p.nroCaja} mono />
                     <Dato label="N.º de corona" value={p.nroCorona} mono />
                     <Dato label="VIN" value={p.vin} mono />
+                    <Dato label="TUC / CHV" value={p.tuc} mono />
+                    <Dato label="Autorización especial" value={p.autorizacionMtc} mono />
                     <Dato label="Llantas" value={p.llantas} />
                   </Grupo>
                 </motion.div>
@@ -222,7 +224,7 @@ const NOMBRES: Record<string, string> = {
   nro_motor: 'N.º de motor', modelo_motor: 'Modelo de motor', nro_caja: 'N.º de caja', nro_corona: 'N.º de corona', nro_vin: 'VIN',
   configuracion: 'Configuración', tanque_1: 'Tanque 1', tanque_2: 'Tanque 2', tanque_3: 'Tanque 3', capacidad_tanque: 'Capacidad total',
   anio: 'Año', combustible: 'Combustible', tara: 'Tara', carga_util: 'Carga útil', peso_neto: 'Peso neto', peso_bruto: 'Peso bruto',
-  estado: 'Estado', uts: 'UTS', motora: 'Clase', llantas: 'Llantas', en_uso: 'En uso', metrica: 'Métrica', wialon_name: 'Wialon',
+  tuc: 'TUC / CHV', autorizacion_mtc: 'Autorización especial', estado: 'Estado', uts: 'UTS', motora: 'Clase', llantas: 'Llantas', en_uso: 'En uso', metrica: 'Métrica', wialon_name: 'Wialon',
 };
 
 // Historial de cambios (placa_auditoria): quién cambió qué y cuándo

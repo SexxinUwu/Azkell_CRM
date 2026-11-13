@@ -672,7 +672,9 @@ router.post('/:metodo', async (req, res) => {
                 r.tanque_3 || '',        // 26: Tanque 3
                 r.capacidad_tanque || '',// 27: Capacidad Tanque Total
                 r.tara || '',            // 28: Tara
-                r.modelo_motor || ''     // 29: Modelo de Motor
+                r.modelo_motor || '',    // 29: Modelo de Motor
+                r.tuc || '',             // 30: TUC / CHV
+                r.autorizacion_mtc || '' // 31: Autorización especial
             ]);
             return res.json({ data });
         });

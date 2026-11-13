@@ -4867,7 +4867,8 @@ app.put('/api/placas/:placa', (req, res) => {
     const campos  = ['cliente','ruc_dni','marca','modelo_uts','tipo','sub_tipo','color',
                      'nro_motor','modelo_motor','nro_caja','nro_corona','nro_vin','configuracion',
                      'tanque_1','tanque_2','tanque_3','capacidad_tanque',
-                     'anio','combustible','tara','carga_util','peso_neto','peso_bruto','estado','uts','motora','llantas','en_uso','metrica','wialon_name'];
+                     'anio','combustible','tara','carga_util','peso_neto','peso_bruto','estado','uts','motora','llantas','en_uso','metrica','wialon_name',
+                     'tuc','autorizacion_mtc'];
 
     targetDb.query('SELECT * FROM placas WHERE placa=?', [placa], (err, rows) => {
         if (err)  return res.status(500).json({ error: err.message });

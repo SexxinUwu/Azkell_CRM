@@ -74,7 +74,7 @@ class ApisunatService {
      */
     static async getConfigEmpresa(dbConn) {
         const claves = ['apisunat_modo', 'apisunat_persona_id', 'apisunat_persona_token', 'apisunat_prueba_persona_id', 'apisunat_prueba_persona_token',
-            'apisunat_prueba_url', 'apisunat_ruc_emisor', 'sunat_ruc_emisor', 'apisunat_razon_social', 'apisunat_registro_mtc', 'apisunat_serie_grt', 'apisunat_serie_gre'];
+            'apisunat_prueba_url', 'apisunat_ruc_emisor', 'sunat_ruc_emisor', 'apisunat_razon_social', 'apisunat_registro_mtc', 'apisunat_autorizacion_mtc', 'apisunat_serie_grt', 'apisunat_serie_gre'];
         const [rows] = await dbConn.promise().query('SELECT clave, valor FROM integraciones_api WHERE clave IN (?)', [claves]).catch(() => [[]]);
         const m = {};
         (rows || []).forEach(r => { m[r.clave] = String(r.valor || '').trim(); });
@@ -86,7 +86,7 @@ class ApisunatService {
         const cfg = {
             modo, persona_id, persona_token, base_url,
             ruc_emisor: m.apisunat_ruc_emisor || m.sunat_ruc_emisor || '', razon_social: m.apisunat_razon_social || '',
-            registro_mtc: (m.apisunat_registro_mtc || '').toUpperCase(),
+            registro_mtc: (m.apisunat_registro_mtc || '').toUpperCase(), autorizacion_mtc: m.apisunat_autorizacion_mtc || '',
             serie_grt: (m.apisunat_serie_grt || 'V001').toUpperCase(), serie_gre: (m.apisunat_serie_gre || 'T001').toUpperCase(),
             bloqueo: null,
         };

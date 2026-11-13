@@ -179,7 +179,7 @@ function Wialon({ filas }: { filas: Fila[] }) {
 function Apisunat({ filas }: { filas: Fila[] }) {
   const toast = useToast();
   const guardar = useGuardar();
-  const vacio = { modo: 'prueba', ruc: '', razon: '', mtc: '', serieGrt: 'V001', serieGre: 'T001', id: '', token: '', pid: '', ptoken: '' };
+  const vacio = { modo: 'prueba', ruc: '', razon: '', mtc: '', autorizacion: '', serieGrt: 'V001', serieGre: 'T001', id: '', token: '', pid: '', ptoken: '' };
   const [v, setV] = useState(vacio);
   const [ocupado, setOcupado] = useState(false);
   const [res, setRes] = useState<Resultado>(null);
@@ -187,7 +187,7 @@ function Apisunat({ filas }: { filas: Fila[] }) {
   useEffect(() => {
     setV({
       modo: valorDe(filas, 'apisunat_modo') === 'produccion' ? 'produccion' : 'prueba',
-      ruc: valorDe(filas, 'apisunat_ruc_emisor') || valorDe(filas, 'sunat_ruc_emisor'), razon: valorDe(filas, 'apisunat_razon_social'), mtc: valorDe(filas, 'apisunat_registro_mtc'),
+      ruc: valorDe(filas, 'apisunat_ruc_emisor') || valorDe(filas, 'sunat_ruc_emisor'), razon: valorDe(filas, 'apisunat_razon_social'), mtc: valorDe(filas, 'apisunat_registro_mtc'), autorizacion: valorDe(filas, 'apisunat_autorizacion_mtc'),
       serieGrt: valorDe(filas, 'apisunat_serie_grt') || 'V001', serieGre: valorDe(filas, 'apisunat_serie_gre') || 'T001',
       id: valorDe(filas, 'apisunat_persona_id'), token: valorDe(filas, 'apisunat_persona_token'),
       pid: valorDe(filas, 'apisunat_prueba_persona_id'), ptoken: valorDe(filas, 'apisunat_prueba_persona_token'),
@@ -198,7 +198,7 @@ function Apisunat({ filas }: { filas: Fila[] }) {
     setOcupado(true); setRes(null);
     try {
       await guardar([
-        ['apisunat_modo', v.modo], ['apisunat_ruc_emisor', v.ruc], ['apisunat_razon_social', v.razon], ['apisunat_registro_mtc', v.mtc.toUpperCase()],
+        ['apisunat_modo', v.modo], ['apisunat_ruc_emisor', v.ruc], ['apisunat_razon_social', v.razon], ['apisunat_registro_mtc', v.mtc.toUpperCase()], ['apisunat_autorizacion_mtc', v.autorizacion],
         ['apisunat_serie_grt', v.serieGrt.toUpperCase()], ['apisunat_serie_gre', v.serieGre.toUpperCase()],
         ['apisunat_persona_id', v.id], ['apisunat_persona_token', v.token],
         ['apisunat_prueba_persona_id', v.pid], ['apisunat_prueba_persona_token', v.ptoken],
@@ -226,6 +226,7 @@ function Apisunat({ filas }: { filas: Fila[] }) {
       <Field label="RUC de la empresa">{p => <TextInput {...p} inputMode="numeric" maxLength={11} value={v.ruc} onChange={set('ruc')} />}</Field>
       <Field label="Razón social">{p => <TextInput {...p} value={v.razon} onChange={set('razon')} />}</Field>
       <Field label="Registro MTC (transporte de carga)">{p => <TextInput {...p} value={v.mtc} onChange={set('mtc')} />}</Field>
+      <Field label="Autorización especial del MTC (opcional)">{p => <TextInput {...p} value={v.autorizacion} onChange={set('autorizacion')} />}</Field>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
         <Field label="Serie GRE Transportista">{p => <TextInput {...p} maxLength={4} value={v.serieGrt} onChange={set('serieGrt')} />}</Field>
         <Field label="Serie GRE Remitente">{p => <TextInput {...p} maxLength={4} value={v.serieGre} onChange={set('serieGre')} />}</Field>
