@@ -692,7 +692,9 @@ export function FleetrunPage() {
   async function exportar() {
     const filasExcel = filtrados.map(f => {
       const d = datosFila(f);
-      return [d.placa, d.fecha, d.modelo, d.tipo, d.kmC || null, d.kmG || null, d.falta || null, d.kmP || null, d.frec || null, d.obs, estadoLabel(d.est), d.kmRec || null, d.ubicacion];
+      // La fecha va como fecha real de Excel (se puede agrupar por día, mes y año en una tabla dinámica), mostrada día/mes/año
+      const fechaIso = frFechaIso(f);
+      return [d.placa, fechaIso ? { fechaIso, formato: 'dd/mm/yyyy' } : null, d.modelo, d.tipo, d.kmC || null, d.kmG || null, d.falta || null, d.kmP || null, d.frec || null, d.obs, estadoLabel(d.est), d.kmRec || null, d.ubicacion];
     });
     await exportarExcel('mantenimiento-preventivo', 'Preventivo',
       ['Placa', 'Fecha', 'Modelo', 'Tipo preventivo', 'Km cambio', 'Km actual (GPS)', 'Cuánto falta', 'Km próximo', 'Frecuencia', 'Observación', 'Estado', 'Km recorrido', 'Ubicación'],
