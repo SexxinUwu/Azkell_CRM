@@ -23,6 +23,8 @@ import type { ReactNode } from 'react';
 import { OrdenServicioSheet } from './OrdenServicioSheet';
 import { SeguimientoServicio } from './SeguimientoServicio';
 import { Pestanas, PuntosStrip, TituloFicha } from './FichaCards';
+import { fechaGuia, fmtKg, useGuias } from './guiasApi';
+import { PastillaGuia } from './PastillaGuia';
 import { BitacoraViaje, HeroViaje, KpisViaje, UnidadCargaViaje } from './ViajeResumen';
 import './seguimiento.css';
 import { SeccionGastosViaje, SeccionOrdenesServicioViaje } from './ViajeExtras';
@@ -295,6 +297,29 @@ export function OrdenesViajePage() {
   );
 }
 
+// Guías de las órdenes de servicio que lleva el viaje (su peso es el real)
+function GuiasDelViaje({ viaje }: { viaje: string }) {
+  const q = useGuias({ viaje });
+  const lista = (q.data ?? []).filter(g => g.estado !== 'ANULADA');
+  if (q.isLoading) return <PageLoader />;
+  if (!lista.length) return <EmptyState icon={<FolderOpen size={22} />} title="Sin guías vinculadas">Vincula las guías de los clientes a las órdenes de servicio de este viaje, desde Guías de remisión.</EmptyState>;
+  return (
+    <section>
+      <h4 className="vj-titulo">Guías del viaje · {lista.length} · {fmtKg(lista.reduce((s, g) => s + Number(g.peso_kg || 0), 0))}</h4>
+      <ul className="vb__lista">
+        {lista.map(g => (
+          <li key={g.id} className="vb__fila">
+            <span className="vb__ico vb__ico--azul" aria-hidden><FolderOpen size={16} /></span>
+            <div className="vb__txt"><strong>{g.numero_completo}</strong><span>{[g.destinatario_nombre || g.remitente_nombre, g.orden_servicio_codigo ? `Servicio ${g.orden_servicio_codigo}` : null, fechaGuia(g.fecha_emision)].filter(Boolean).join(' · ')}</span></div>
+            <PastillaGuia estado={g.estado} />
+            <strong className="vb__monto">{fmtKg(g.peso_kg)}</strong>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 type TabViaje = 'resumen' | 'ordenes' | 'guias' | 'gps' | 'liquidaciones';
 const TABS_VIAJE: { id: TabViaje; label: string; icono: ReactNode }[] = [
   { id: 'resumen', label: 'Resumen', icono: <LayoutGrid size={15} /> },
@@ -363,7 +388,7 @@ function DetalleViaje({ viaje: v, onClose, onEditar, onIniciar, onFinalizar, onE
               </>
             )}
             {tab === 'ordenes' && <SeccionOrdenesServicioViaje codigo={v.viaje} onNueva={onNuevaOS ?? (() => undefined)} puedeCrear={!!onNuevaOS} />}
-            {tab === 'guias' && <EmptyState icon={<FolderOpen size={22} />} title="Sin guías vinculadas">Las guías de remisión se vincularán a las órdenes de este viaje más adelante.</EmptyState>}
+            {tab === 'guias' && <GuiasDelViaje viaje={v.viaje} />}
             {tab === 'gps' && <SeccionGpsViaje placa={v.placa_tracto} inicio={v.fecha_inicio} fin={v.fecha_fin} />}
             {tab === 'liquidaciones' && <SeccionGastosViaje codigo={v.viaje} conductor={v.conductor} placa={v.placa_tracto} puedeEditar={puedeEditarViaje} />}
           </div>

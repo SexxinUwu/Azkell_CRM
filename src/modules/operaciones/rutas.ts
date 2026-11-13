@@ -73,6 +73,11 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'urea', label: 'Análisis de urea', to: '/operaciones/urea', icon: 'Droplets', permisos: ['operaciones.ver', 'admin'] },
   },
   {
+    path: 'operaciones/guias/*',
+    permisos: ['op_guias_remision.ver', 'admin'],
+    Page: lazy(() => import('./GuiasPage').then(m => ({ default: m.GuiasPage }))),
+  },
+  {
     path: 'operaciones/guias-remitente/*',
     permisos: ['op_guias_remision.ver', 'admin'],
     Page: lazy(() => import('./GuiasRemitentePage').then(m => ({ default: m.GuiasRemitentePage }))),

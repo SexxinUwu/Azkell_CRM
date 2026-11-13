@@ -1706,6 +1706,8 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                DATE_FORMAT(os.fecha_entrega, '%Y-%m-%d') AS fecha_entrega_fmt,
                DATE_FORMAT(CONVERT_TZ(os.creado_en, @@session.time_zone, '-05:00'), '%Y-%m-%d %H:%i:%s') AS creado_fmt,
                (SELECT MAX(m.km) FROM combustible_matriz_d2 m WHERE m.estado = 'ACTIVO' AND m.ruta COLLATE utf8mb4_unicode_ci = os.ruta COLLATE utf8mb4_unicode_ci) AS distancia_km,
+               (SELECT COALESCE(SUM(g.peso_kg), 0) FROM gre_guias g WHERE g.orden_servicio_id = os.id AND g.estado <> 'ANULADA') AS peso_guias,
+               (SELECT COUNT(*) FROM gre_guias g WHERE g.orden_servicio_id = os.id AND g.estado <> 'ANULADA') AS guias_n,
                b.viaje AS viaje, COALESCE(b.n, 0) AS viajes_n,
                ov.estado AS viaje_estado, ov.conductor AS conductor, ov.placa_tracto AS placa_tracto,
                ov.placa_remolque AS placa_carreta, ov.ejecucion AS ejecucion, ov.tercero_nombre AS tercero_nombre
@@ -1713,6 +1715,13 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
         LEFT JOIN (SELECT orden, MIN(viaje) AS viaje, COUNT(*) AS n FROM operaciones_ordenes_viaje_rutas GROUP BY orden) b
                ON b.orden COLLATE utf8mb4_unicode_ci = os.codigo_orden COLLATE utf8mb4_unicode_ci
         LEFT JOIN operaciones_ordenes_viaje ov ON ov.viaje COLLATE utf8mb4_unicode_ci = b.viaje COLLATE utf8mb4_unicode_ci`;
+
+    // Peso del servicio: el real de sus guías vigentes; sin guías, el estimado
+    async function pesoReal(tdb, os) {
+        const [r] = await tdb.query(`SELECT COALESCE(SUM(peso_kg), 0) AS kg FROM gre_guias WHERE orden_servicio_id = ? AND estado <> 'ANULADA'`, [os.id]);
+        const kg = Number(r[0].kg) || 0;
+        return kg > 0 ? kg : (Number(os.peso_estimado) || 0);
+    }
 
     async function siguienteCodigoServicio(tdb) {
         const year = new Date().getFullYear().toString();
@@ -1825,7 +1834,10 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                  FROM operaciones_ordenes_viaje_rutas r LEFT JOIN operaciones_ordenes_viaje ov ON ov.viaje COLLATE utf8mb4_unicode_ci = r.viaje COLLATE utf8mb4_unicode_ci
                  WHERE r.orden COLLATE utf8mb4_unicode_ci = ? COLLATE utf8mb4_unicode_ci ORDER BY r.id`, [o.codigo_orden]);
             // documentos y rutas ya no se manejan aquí (las guías se vincularán más adelante); se devuelven vacíos por compatibilidad
-            res.json({ ok: true, data: { ...o, viajes, documentos: [], rutas: [] } });
+            const [guias] = await tdb.query(
+                `SELECT id, tipo, origen, numero_completo, peso_kg, estado, DATE_FORMAT(fecha_emision, '%Y-%m-%d') AS fecha_emision, remitente_nombre, destinatario_nombre
+                 FROM gre_guias WHERE orden_servicio_id = ? ORDER BY id`, [o.id]);
+            res.json({ ok: true, data: { ...o, viajes, guias, documentos: [], rutas: [] } });
         } catch (err) {
             console.error('Error al obtener orden de servicio:', err);
             res.status(500).json({ ok: false, error: err.message });
@@ -1911,8 +1923,12 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             const cols = Object.keys(c);
             const [r] = await tdb.query(`UPDATE operaciones_ordenes_servicio SET ${cols.map(k => `${k} = ?`).join(', ')} WHERE id = ?`, [...cols.map(k => c[k]), req.params.id]);
             // El tramo del vínculo con el viaje se mantiene al día
-            await tdb.query(`UPDATE operaciones_ordenes_viaje_rutas SET ruta = ?, tipo_servicio = ?, es_retorno = ?, peso_total = COALESCE(?, peso_total) WHERE orden = ?`,
-                [c.ruta, c.tipo_servicio, c.es_retorno, c.peso_estimado, prev[0].codigo_orden]);
+            await tdb.query(`UPDATE operaciones_ordenes_viaje_rutas SET ruta = ?, tipo_servicio = ?, es_retorno = ? WHERE orden = ?`,
+                [c.ruta, c.tipo_servicio, c.es_retorno, prev[0].codigo_orden]);
+            const pesoNuevo = await pesoReal(tdb, { id: prev[0].id, peso_estimado: c.peso_estimado });
+            await tdb.query(`UPDATE operaciones_ordenes_viaje_rutas SET peso_total = ? WHERE orden = ?`, [pesoNuevo, prev[0].codigo_orden]);
+            const [viajesDe] = await tdb.query(`SELECT viaje FROM operaciones_ordenes_viaje_rutas WHERE orden = ?`, [prev[0].codigo_orden]);
+            for (const t of viajesDe) await tdb.query(`UPDATE operaciones_ordenes_viaje SET peso = (SELECT COALESCE(SUM(peso_total), 0) FROM operaciones_ordenes_viaje_rutas WHERE viaje = ?) WHERE viaje = ?`, [t.viaje, t.viaje]);
             if (logAudit) logAudit({ req, accion: 'EDITAR_ORDEN_SERVICIO', modulo: 'OPERACIONES', detalle: `Editada orden de servicio ${prev[0].codigo_orden}` });
             res.json({ ok: true, message: 'Orden de servicio actualizada.', filas: r.affectedRows });
         } catch (err) {
@@ -1923,10 +1939,11 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
 
     // Vincula un servicio a un viaje ya existente
     async function vincularServicioViaje(tdb, os, viaje) {
+        const pesoO = await pesoReal(tdb, os);
         await tdb.query(
             `INSERT INTO operaciones_ordenes_viaje_rutas (viaje, orden, ruta, tipo_servicio, es_retorno, peso_total) VALUES (?, ?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE ruta = VALUES(ruta), tipo_servicio = VALUES(tipo_servicio), es_retorno = VALUES(es_retorno), peso_total = VALUES(peso_total)`,
-            [viaje, os.codigo_orden, os.ruta || [os.origen, os.destino].filter(Boolean).join(' - '), os.tipo_servicio || 'CARGA GENERAL', os.es_retorno ? 1 : 0, os.peso_estimado || 0]);
+            [viaje, os.codigo_orden, os.ruta || [os.origen, os.destino].filter(Boolean).join(' - '), os.tipo_servicio || 'CARGA GENERAL', os.es_retorno ? 1 : 0, pesoO]);
         await tdb.query(`UPDATE operaciones_ordenes_servicio SET estado_servicio = 'PROGRAMADO' WHERE id = ? AND estado_servicio = 'PENDIENTE'`, [os.id]);
     }
 
@@ -1972,6 +1989,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                 if (rows.length) { const p = parseInt(String(rows[0].viaje).replace(`${year}-`, ''), 10); if (!isNaN(p)) next = p + 1; }
                 const codigo = `${year}-${String(next).padStart(8, '0')}`;
                 const fechaViaje = `${osFecha(o.fecha instanceof Date ? o.fecha.toISOString() : o.fecha) || new Date().toISOString().slice(0, 10)} 00:00:00`;
+                const pesoO = await pesoReal(con, o);
                 const d = req.body || {};
                 const tercero = String(d.ejecucion || o.ejecucion || '').toUpperCase() === 'TERCERO';
                 if (tercero ? !osTexto(d.tercero_nombre, 150) && d.ejecucion : false) throw Object.assign(new Error('Indica el transportista tercero.'), { status: 400 });
@@ -1980,12 +1998,12 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                 await con.query(
                     `INSERT INTO operaciones_ordenes_viaje (viaje, fecha_viaje, id_conductor, conductor, placa_tracto, placa_remolque, escolta, observaciones, ruta, origen, destino, ubigeo_partida, direccion_partida, ubigeo_llegada, direccion_llegada, peso, ejecucion, tercero_nombre, tercero_ruc, tercero_costo, tercero_moneda, tercero_documento, estado, usuario_creacion)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', ?)`,
-                    [codigo, fechaElegida, idCond, osTexto(d.conductor, 150) || '', (osTexto(d.placa_tracto, 20) || '').toUpperCase(), osTexto(d.placa_remolque, 20) ? osTexto(d.placa_remolque, 20).toUpperCase() : null, osTexto(d.escolta, 150), osTexto(d.observaciones, 5000), o.ruta || [o.origen, o.destino].filter(Boolean).join(' - '), o.origen, o.destino, o.ubigeo_origen, o.direccion_origen, o.ubigeo_destino, o.direccion_destino, o.peso_estimado || 0, tercero ? 'TERCERO' : 'PROPIO',
+                    [codigo, fechaElegida, idCond, osTexto(d.conductor, 150) || '', (osTexto(d.placa_tracto, 20) || '').toUpperCase(), osTexto(d.placa_remolque, 20) ? osTexto(d.placa_remolque, 20).toUpperCase() : null, osTexto(d.escolta, 150), osTexto(d.observaciones, 5000), o.ruta || [o.origen, o.destino].filter(Boolean).join(' - '), o.origen, o.destino, o.ubigeo_origen, o.direccion_origen, o.ubigeo_destino, o.direccion_destino, pesoO, tercero ? 'TERCERO' : 'PROPIO',
                      tercero ? osTexto(d.tercero_nombre, 150) : null, tercero ? osTexto(d.tercero_ruc, 20) : null, tercero ? osNumero(d.tercero_costo) : null,
                      tercero ? (/DOL/i.test(String(d.tercero_moneda || '')) ? 'DOLARES' : 'SOLES') : null, tercero ? osTexto(d.tercero_documento, 60) : null, osUsuario(req)]);
                 await con.query(
                     `INSERT INTO operaciones_ordenes_viaje_rutas (viaje, orden, ruta, tipo_servicio, es_retorno, peso_total) VALUES (?, ?, ?, ?, ?, ?)`,
-                    [codigo, o.codigo_orden, o.ruta || [o.origen, o.destino].filter(Boolean).join(' - '), o.tipo_servicio || 'CARGA GENERAL', o.es_retorno ? 1 : 0, o.peso_estimado || 0]);
+                    [codigo, o.codigo_orden, o.ruta || [o.origen, o.destino].filter(Boolean).join(' - '), o.tipo_servicio || 'CARGA GENERAL', o.es_retorno ? 1 : 0, pesoO]);
                 const [u] = await con.query(`UPDATE operaciones_ordenes_servicio SET estado_servicio = 'PROGRAMADO' WHERE id = ? AND estado_servicio = 'PENDIENTE'`, [o.id]);
                 await con.commit();
                 if (logAudit) logAudit({ req, accion: 'GENERAR_VIAJE_DESDE_SERVICIO', modulo: 'OPERACIONES', detalle: `Viaje ${codigo} generado desde el servicio ${o.codigo_orden}` });

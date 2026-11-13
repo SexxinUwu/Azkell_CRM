@@ -227,3 +227,54 @@ enum GuiasItemsGuiaTipo {
   GRE
   GRT
 }
+
+// Guías de remisión registradas por Operaciones (migración 30): las que entregan los clientes y, más adelante, las que emitimos
+model GreGuia {
+  id                    Int       @id @default(autoincrement())
+  origen                String    @default("RECIBIDA") @db.VarChar(10)
+  tipo                  String    @default("REMITENTE") @db.VarChar(15)
+  serie                 String    @db.VarChar(10)
+  numero                String    @db.VarChar(20)
+  numero_completo       String    @db.VarChar(32)
+  emisor_ruc            String    @default("") @db.VarChar(11)
+  fecha_emision         DateTime? @db.Date
+  fecha_traslado        DateTime? @db.Date
+  remitente_ruc         String?   @db.VarChar(15)
+  remitente_nombre      String?   @db.VarChar(200)
+  destinatario_doc      String?   @db.VarChar(15)
+  destinatario_nombre   String?   @db.VarChar(200)
+  transportista_ruc     String?   @db.VarChar(15)
+  transportista_nombre  String?   @db.VarChar(200)
+  modalidad             String?   @db.VarChar(10)
+  motivo                String?   @db.VarChar(80)
+  partida_ubigeo        String?   @db.VarChar(6)
+  partida_direccion     String?   @db.VarChar(255)
+  llegada_ubigeo        String?   @db.VarChar(6)
+  llegada_direccion     String?   @db.VarChar(255)
+  peso_kg               Decimal   @default(0.00) @db.Decimal(12, 2)
+  bultos                Int?
+  descripcion           String?   @db.VarChar(500)
+  items_json            String?   @db.LongText
+  placa                 String?   @db.VarChar(20)
+  conductor_nombre      String?   @db.VarChar(150)
+  conductor_doc         String?   @db.VarChar(15)
+  licencia              String?   @db.VarChar(30)
+  trae_transporte       Boolean   @default(false)
+  orden_servicio_id     Int?
+  orden_servicio_codigo String?   @db.VarChar(40)
+  estado                String    @default("REGISTRADA") @db.VarChar(15)
+  fuente                String    @default("MANUAL") @db.VarChar(10)
+  archivo_url           String?   @db.VarChar(500)
+  archivo_nombre        String?   @db.VarChar(200)
+  observaciones         String?   @db.Text
+  usuario               String?   @db.VarChar(150)
+  creado_en             DateTime? @default(now()) @db.Timestamp(0)
+  actualizado_en        DateTime? @default(now()) @updatedAt @db.Timestamp(0)
+
+  @@unique([tipo, emisor_ruc, numero_completo], map: "uq_gre_guia")
+  @@index([orden_servicio_id], map: "idx_gre_os")
+  @@index([orden_servicio_codigo], map: "idx_gre_os_codigo")
+  @@index([estado], map: "idx_gre_estado")
+  @@index([fecha_emision], map: "idx_gre_fecha")
+  @@map("gre_guias")
+}

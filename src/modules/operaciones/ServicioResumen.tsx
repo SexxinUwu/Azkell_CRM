@@ -7,7 +7,7 @@ import { num } from './SeguimientoServicio';
 export interface OrdenBase {
   codigo_orden: string; cliente_nombre: string | null; tipo_servicio: string | null; es_retorno: number | boolean | null;
   origen: string | null; destino: string | null; distancia_km?: number | string | null;
-  moneda: string | null; tipo_cambio: number | string | null; costo_flete: number | string | null; impuesto: string | null; peso_estimado: number | string | null;
+  moneda: string | null; tipo_cambio: number | string | null; costo_flete: number | string | null; impuesto: string | null; peso_estimado: number | string | null; peso_guias?: number | string | null; guias_n?: number;
   remitente_generador: string | null; destinatario: string | null; fecha_fmt: string | null; fecha_entrega_fmt: string | null; creado_fmt?: string | null;
   viaje: string | null; conductor: string | null; placa_tracto: string | null; ejecucion: string | null; tercero_nombre: string | null;
 }
@@ -80,7 +80,7 @@ export function KpisServicio({ o }: { o: OrdenBase }) {
       <div className="vk__t"><span className="vk__l">Flete</span><strong>{flete > 0 ? `${m} ${fmt(flete, 2)}` : '—'}</strong><em>{flete > 0 ? etiquetaIgv(o.impuesto) : 'Sin tarifa acordada'}</em></div>
       <div className="vk__t"><span className="vk__l">Neto a cobrar</span><strong>{flete > 0 ? `${m} ${fmt(t.neto, 2)}` : '—'}</strong><em>{flete > 0 ? (t.detr ? `Detracción ${m} ${fmt(t.detr, 2)}` : 'Sin detracción') : 'Tras la detracción'}</em></div>
       <div className="vk__t"><span className="vk__l">Distancia</span><strong>{dist > 0 ? <>{fmt(dist)} <small>km</small></> : '—'}</strong><em>{tipoServicio(o.tipo_servicio)}</em></div>
-      <div className="vk__t"><span className="vk__l">Peso</span><strong>{num(o.peso_estimado) > 0 ? <>{fmt(o.peso_estimado)} <small>kg</small></> : '—'}</strong><em>Lo completan las guías</em></div>
+      <div className="vk__t"><span className="vk__l">Peso</span><strong>{num(o.peso_guias) > 0 ? <>{fmt(o.peso_guias)} <small>kg</small></> : '—'}</strong><em>{num(o.peso_guias) > 0 ? `Según ${o.guias_n ?? ''} ${o.guias_n === 1 ? 'guía' : 'guías'}`.replace('  ', ' ') : 'Sin guías vinculadas'}</em></div>
       {dolares && <div className="vk__t"><span className="vk__l">Tipo de cambio</span><strong>{num(o.tipo_cambio).toFixed(3)}</strong><em>Dólares a soles</em></div>}
     </div>
   );

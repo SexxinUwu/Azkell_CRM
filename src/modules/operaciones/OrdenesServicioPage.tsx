@@ -4,7 +4,7 @@ import './servicios.css';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, FileSpreadsheet, Link2, Link2Off, LayoutGrid, Package, PackageCheck, Pencil, Plus, Receipt, Route, ScrollText, SearchX, Wand2, XCircle } from 'lucide-react';
+import { ArrowRight, FileSpreadsheet, FileText, Link2, Link2Off, LayoutGrid, Package, PackageCheck, Pencil, Plus, Receipt, Route, ScrollText, SearchX, Wand2, XCircle } from 'lucide-react';
 import { OrdenServicioSheet, type OrdenParaEditar } from './OrdenServicioSheet';
 import { GenerarViajeSheet } from './GenerarViajeSheet';
 import { SeguimientoServicio } from './SeguimientoServicio';
@@ -33,9 +33,10 @@ interface Orden {
   peso_estimado: number | string | null; moneda: string | null; tipo_cambio: number | string | null; costo_flete: number | string | null; impuesto: string | null;
   destinatario: string | null; remitente_generador: string | null; observaciones: string | null;
   viaje: string | null; viajes_n: number; viaje_estado: string | null; conductor: string | null; placa_tracto: string | null; placa_carreta: string | null;
-  ejecucion: string | null; tercero_nombre: string | null; ruta?: string | null; distancia_km?: number | string | null;
+  ejecucion: string | null; tercero_nombre: string | null; ruta?: string | null; distancia_km?: number | string | null; peso_guias?: number | string | null; guias_n?: number;
 }
-interface Detalle extends Orden { viajes?: { viaje: string; estado: string | null; conductor: string | null; placa_tracto: string | null; ejecucion: string | null; tercero_nombre: string | null }[] }
+interface GuiaDeServicio { id: number; numero_completo: string; tipo: string; peso_kg: number | string; estado: string; fecha_emision: string | null; remitente_nombre: string | null; destinatario_nombre: string | null }
+interface Detalle extends Orden { guias?: GuiaDeServicio[]; viajes?: { viaje: string; estado: string | null; conductor: string | null; placa_tracto: string | null; ejecucion: string | null; tercero_nombre: string | null }[] }
 interface ViajeAbierto { viaje: string; fecha_viaje: string | null; conductor: string | null; placa_tracto: string | null; ruta: string | null; estado: string }
 
 const ESTADOS = ['PENDIENTE', 'PROGRAMADO', 'EN_EJECUCION', 'ENTREGADO', 'ANULADO'] as const;
@@ -53,6 +54,25 @@ const tabsOS = (o: Orden): { id: TabOS; label: string; icono: ReactNode; n?: num
   { id: 'carga', label: 'Carga y guías', icono: <Package size={15} /> },
 ];
 const etiquetaTipoOS = (t: string | null) => (/LOCAL/i.test(String(t ?? '')) ? 'Local' : /NACIONAL/i.test(String(t ?? '')) ? 'Nacional' : t || '—');
+// Guías vinculadas a la orden (su peso es el real del servicio)
+function GuiasDelServicio({ guias }: { guias: GuiaDeServicio[] }) {
+  if (!guias.length) return <EmptyState icon={<FileText size={22} />} title="Sin guías vinculadas">Registra la guía del cliente en Guías de remisión y vincúlala a este servicio para que su peso llegue aquí y al viaje.</EmptyState>;
+  return (
+    <section>
+      <h4 className="vj-titulo">Guías vinculadas · {guias.length}</h4>
+      <ul className="vb__lista">
+        {guias.map(g => (
+          <li key={g.id} className="vb__fila">
+            <span className="vb__ico vb__ico--azul" aria-hidden><FileText size={16} /></span>
+            <div className="vb__txt"><strong>{g.numero_completo}</strong><span>{[g.tipo === 'TRANSPORTISTA' ? 'GRE Transportista' : 'GRE Remitente', g.remitente_nombre, g.estado === 'ANULADA' ? 'Anulada' : null].filter(Boolean).join(' · ')}</span></div>
+            <strong className="vb__monto">{n(g.peso_kg).toLocaleString('es-PE')} kg</strong>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 const cerrado = (e: string) => e === 'ENTREGADO' || e === 'ANULADO';
 
 function Pastilla({ estado }: { estado: string }) {
@@ -204,7 +224,7 @@ export function OrdenesServicioPage() {
     try {
       await exportarExcel('Ordenes-de-servicio', 'Órdenes',
         ['Orden', 'Fecha', 'Cliente', 'Tipo', 'Sentido', 'Origen', 'Destino', 'Distancia (km)', 'Carga', 'Peso (kg)', 'Estado', 'Viaje', 'Conductor', 'Tracto', 'Moneda', 'Flete'],
-        visibles.map(x => [x.codigo_orden, x.fecha_fmt, x.cliente_nombre, x.tipo_servicio, x.es_retorno ? 'Retorno' : 'Ida', x.origen, x.destino, n(x.distancia_km) || '', x.descripcion_carga, n(x.peso_estimado),
+        visibles.map(x => [x.codigo_orden, x.fecha_fmt, x.cliente_nombre, x.tipo_servicio, x.es_retorno ? 'Retorno' : 'Ida', x.origen, x.destino, n(x.distancia_km) || '', x.descripcion_carga, n(x.peso_guias),
           ETIQUETA[estadoDe(x)], x.viaje, x.conductor, x.placa_tracto, x.moneda, n(x.costo_flete)]));
       haptic('success');
     } catch (err) { toast(errorMessage(err), 'error'); }
@@ -294,7 +314,7 @@ export function OrdenesServicioPage() {
                   <Celda>{x.cliente_nombre || 'Sin cliente'}</Celda>
                   <Celda>{[x.origen, x.destino].filter(Boolean).join(' → ') || '—'}</Celda>
                   <Celda alinear="right" mono>{n(x.distancia_km) ? `${n(x.distancia_km).toLocaleString('es-PE')} km` : '—'}</Celda>
-                  <Celda alinear="right" mono>{n(x.peso_estimado) ? `${n(x.peso_estimado).toLocaleString('es-PE')} kg` : '—'}</Celda>
+                  <Celda alinear="right" mono>{n(x.peso_guias) ? `${n(x.peso_guias).toLocaleString('es-PE')} kg` : '—'}</Celda>
                   <Celda mono>{x.viaje ? `${x.viaje}${x.viajes_n > 1 ? ` +${x.viajes_n - 1}` : ''}` : '—'}</Celda>
                   <Celda>
                     {x.placa_tracto ? <span className="tbl-unidad"><span className="tbl-placa">{x.placa_tracto}</span>{x.conductor}</span>
@@ -367,12 +387,13 @@ export function OrdenesServicioPage() {
               {tabOS === 'carga' && (
                 <>
                   <div className="vj-tiles">
-                    <Dato label="Peso estimado" valor={n(o.peso_estimado) ? `${n(o.peso_estimado).toLocaleString('es-PE')} kg` : 'Sin peso'} nota="Lo completan las guías de remisión" />
+                    <Dato label="Peso según guías" valor={n(o.peso_guias) ? `${n(o.peso_guias).toLocaleString('es-PE')} kg` : 'Sin guías vinculadas'} nota={n(o.peso_guias) ? `${o.guias_n} ${o.guias_n === 1 ? 'guía' : 'guías'}` : 'Vincula la guía del cliente desde Guías de remisión'} />
+                    <Dato label="Peso estimado" valor={n(o.peso_estimado) ? `${n(o.peso_estimado).toLocaleString('es-PE')} kg` : null} nota="Lo que se calculó al crear la orden" />
                     <Dato label="Tipo de servicio" valor={etiquetaTipoOS(o.tipo_servicio)} nota={o.es_retorno ? 'Retorno con carga' : 'Ida'} />
                     <Dato label="Descripción de la carga" valor={o.descripcion_carga} ancho />
                     <Dato label="Observaciones" valor={o.observaciones} ancho />
                   </div>
-                  <p className="os-nota">Las guías de remisión se vincularán a esta orden más adelante.</p>
+                  <GuiasDelServicio guias={(o as Detalle).guias ?? []} />
                 </>
               )}
             </div>

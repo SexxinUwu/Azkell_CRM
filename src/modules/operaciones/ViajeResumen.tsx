@@ -102,7 +102,7 @@ export function KpisViaje({ v }: { v: ViajeBase }) {
       <div className="vk__t"><span className="vk__l">Flete</span><strong>{soles > 0 || dolares > 0 ? <>{soles > 0 ? `S/ ${fmt(soles)}` : ''}{soles > 0 && dolares > 0 ? ' + ' : ''}{dolares > 0 ? `US$ ${fmt(dolares)}` : ''}</> : '—'}</strong><em>Suma de sus órdenes</em></div>
       {tercero
         ? <div className="vk__t"><span className="vk__l">Costo del tercero</span><strong>{/DOL/i.test(String(v.tercero_moneda ?? '')) ? 'US$' : 'S/'} {fmt(v.tercero_costo)}</strong><em>{v.tercero_nombre ?? 'Transportista tercero'}</em></div>
-        : <div className="vk__t"><span className="vk__l">Peso</span><strong>{num(v.peso_ida) + num(v.peso_retorno) > 0 ? <>{fmt(num(v.peso_ida) + num(v.peso_retorno))} <small>kg</small></> : '—'}</strong><em>Lo completan las guías</em></div>}
+        : <div className="vk__t"><span className="vk__l">Peso</span><strong>{num(v.peso_ida) + num(v.peso_retorno) > 0 ? <>{fmt(num(v.peso_ida) + num(v.peso_retorno))} <small>kg</small></> : '—'}</strong><em>{num(v.peso_ida) + num(v.peso_retorno) > 0 ? 'Según las guías vinculadas' : 'Sin guías vinculadas'}</em></div>}
     </div>
   );
 }
