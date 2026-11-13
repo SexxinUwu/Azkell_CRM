@@ -37,6 +37,8 @@ export interface Placa {
   capacidadTanque: string;
   tara: string;
   modeloMotor: string;
+  tuc: string;
+  autorizacionMtc: string;
 }
 
 const txt = (v: unknown) => (v === null || v === undefined ? '' : String(v).trim());
@@ -73,6 +75,8 @@ function desdeFila(f: unknown[]): Placa {
     capacidadTanque: txt(f[27]),
     tara: txt(f[28]),
     modeloMotor: txt(f[29]),
+    tuc: txt(f[30]),
+    autorizacionMtc: txt(f[31]),
   };
 }
 
@@ -108,7 +112,7 @@ function columnas(p: Placa, metrica: string) {
     capacidad_tanque: p.capacidadTanque, anio: p.anio, combustible: p.combustible, tara: p.tara,
     carga_util: p.cargaUtil, peso_neto: p.pesoNeto, peso_bruto: p.pesoBruto, estado: p.estado, uts: p.uts,
     motora: p.motora ? 'Motora' : 'No Motora', llantas: p.llantas, en_uso: p.enUso ? 'Si' : 'No',
-    metrica, wialon_name: p.wialon,
+    metrica, wialon_name: p.wialon, tuc: p.tuc, autorizacion_mtc: p.autorizacionMtc,
   };
 }
 

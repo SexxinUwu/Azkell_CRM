@@ -12,7 +12,7 @@ export interface Guia {
   transportista_ruc: string | null; transportista_nombre: string | null; modalidad: string | null; motivo: string | null;
   partida_ubigeo: string | null; partida_direccion: string | null; llegada_ubigeo: string | null; llegada_direccion: string | null;
   peso_kg: number | string; bultos: number | null; descripcion: string | null; items_json: string | null;
-  placa: string | null; conductor_nombre: string | null; conductor_doc: string | null; licencia: string | null; trae_transporte: number | boolean;
+  placa: string | null; conductor_nombre: string | null; conductor_doc: string | null; licencia: string | null; vehiculo_tuc?: string | null; vehiculo_autorizacion?: string | null; trae_transporte: number | boolean;
   orden_servicio_id: number | null; orden_servicio_codigo: string | null; servicio_cliente?: string | null;
   estado: EstadoGuia; fuente: 'XML' | 'IA' | 'MANUAL'; archivo_url: string | null; archivo_nombre: string | null; archivo_ver_url?: string | null;
   observaciones: string | null; usuario: string | null; creado_en: string | null;
@@ -28,7 +28,7 @@ export interface LecturaGuia {
   transportista_ruc: string | null; transportista_nombre: string | null; modalidad: 'PUBLICO' | 'PRIVADO' | null; motivo: string | null;
   partida_ubigeo: string | null; partida_direccion: string | null; llegada_ubigeo: string | null; llegada_direccion: string | null;
   peso_kg: number | null; bultos: number | null; descripcion: string | null; observaciones: string | null; items: { descripcion: string | null; cantidad: number | null; unidad: string | null }[];
-  placa: string | null; conductor_nombre: string | null; conductor_doc: string | null; licencia: string | null;
+  placa: string | null; conductor_nombre: string | null; conductor_doc: string | null; licencia: string | null; vehiculo_tuc?: string | null; vehiculo_autorizacion?: string | null;
   trae_transporte: boolean; fuente: 'XML' | 'IA'; advertencias: string[];
 }
 

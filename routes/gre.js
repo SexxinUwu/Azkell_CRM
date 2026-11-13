@@ -32,7 +32,7 @@ module.exports = (db, logAudit) => {
         DATE_FORMAT(g.fecha_emision, '%Y-%m-%d') AS fecha_emision, DATE_FORMAT(g.fecha_traslado, '%Y-%m-%d') AS fecha_traslado,
         g.remitente_ruc, g.remitente_nombre, g.destinatario_doc, g.destinatario_nombre, g.transportista_ruc, g.transportista_nombre,
         g.modalidad, g.motivo, g.partida_ubigeo, g.partida_direccion, g.llegada_ubigeo, g.llegada_direccion,
-        g.peso_kg, g.bultos, g.descripcion, g.items_json, g.placa, g.conductor_nombre, g.conductor_doc, g.licencia, g.trae_transporte,
+        g.peso_kg, g.bultos, g.descripcion, g.items_json, g.placa, g.conductor_nombre, g.conductor_doc, g.licencia, g.vehiculo_tuc, g.vehiculo_autorizacion, g.trae_transporte,
         g.placa_carreta, g.viaje, g.guia_relacionada_id, g.apisunat_status, g.apisunat_faults, g.pdf_url, g.modo_emision,
         g.orden_servicio_id, g.orden_servicio_codigo, g.estado, g.fuente, g.archivo_url, g.archivo_nombre, g.observaciones, g.usuario,
         DATE_FORMAT(g.creado_en, '%Y-%m-%d %H:%i') AS creado_en`;
@@ -84,6 +84,7 @@ module.exports = (db, logAudit) => {
             items_json: Array.isArray(b.items) && b.items.length ? JSON.stringify(b.items.slice(0, 60)) : null,
             placa: texto(b.placa, 20) ? String(b.placa).toUpperCase().replace(/[^A-Z0-9]/g, '') : null,
             conductor_nombre: texto(b.conductor_nombre, 150), conductor_doc: digitos(b.conductor_doc, 15), licencia: texto(b.licencia, 30),
+            vehiculo_tuc: texto(b.vehiculo_tuc, 30), vehiculo_autorizacion: texto(b.vehiculo_autorizacion, 30),
             trae_transporte: b.trae_transporte ? 1 : 0,
             fuente: ['XML', 'IA', 'MANUAL'].includes(String(b.fuente).toUpperCase()) ? String(b.fuente).toUpperCase() : 'MANUAL',
             observaciones: texto(b.observaciones, 2000),
@@ -277,6 +278,18 @@ module.exports = (db, logAudit) => {
         return vacio;
     }
 
+    const normPlaca = v => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    // TUC y autorización registrados en la ficha de la placa
+    async function vehiculoDePlaca(p, placa) {
+        const pl = normPlaca(placa);
+        if (!pl) return { tuc: '', aut: '' };
+        try {
+            const [r] = await p.query(`SELECT tuc, autorizacion_mtc FROM placas WHERE REPLACE(REPLACE(UPPER(placa), '-', ''), ' ', '') = ? LIMIT 1`, [pl]);
+            if (r[0]) return { tuc: r[0].tuc || '', aut: r[0].autorizacion_mtc || '' };
+        } catch (e) { /* la columna aún no existe */ }
+        return { tuc: '', aut: '' };
+    }
+
     // Datos de la GRE Transportista que se propone para una guía: salen de la guía, del viaje y del conductor; la persona los revisa
     async function propuestaGrt(p, g, cfg) {
         const [v] = g.orden_servicio_codigo ? await p.query(
@@ -295,8 +308,16 @@ module.exports = (db, logAudit) => {
             codigo: String(i + 1).padStart(3, '0'), descripcion: String(it.descripcion || 'CARGA GENERAL').slice(0, 250), cantidad: Number(it.cantidad) || 1, unidad_medida: unidadSunat(it.unidad),
         }));
         const fecha = g.fecha_traslado ? new Date(g.fecha_traslado).toISOString().slice(0, 10) : null;
-        const vt = await vehiculoGuardado(p, viaje && viaje.placa_tracto);
-        const vc = await vehiculoGuardado(p, viaje && viaje.placa_remolque);
+        // TUC y autorización: primero la ficha de la placa, luego lo que trae la guía del cliente (si habla de ese mismo vehículo) y por último lo usado en la última guía emitida
+        const tracto = viaje && viaje.placa_tracto;
+        const carreta = viaje && viaje.placa_remolque;
+        const pT = await vehiculoDePlaca(p, tracto);
+        const pC = await vehiculoDePlaca(p, carreta);
+        const hT = await vehiculoGuardado(p, tracto);
+        const hC = await vehiculoGuardado(p, carreta);
+        const delCliente = normPlaca(g.placa) && normPlaca(g.placa) === normPlaca(tracto) ? { tuc: g.vehiculo_tuc || '', aut: g.vehiculo_autorizacion || '' } : { tuc: '', aut: '' };
+        const vt = { tuc: pT.tuc || delCliente.tuc || hT.tuc, aut: pT.aut || delCliente.aut || cfg.autorizacion_mtc || hT.aut };
+        const vc = { tuc: pC.tuc || hC.tuc, aut: pC.aut || cfg.autorizacion_mtc || hC.aut };
         const propuesta = {
             serie: cfg.serie_grt,
             // SUNAT no acepta que el traslado empiece antes de la emisión (error 3343): si la fecha de la guía del cliente ya pasó, se propone hoy
@@ -462,6 +483,10 @@ module.exports = (db, logAudit) => {
             if (r.ok) {
                 await p.query(`UPDATE gre_guias SET apisunat_document_id = ?, apisunat_status = 'PENDIENTE', apisunat_faults = NULL, datos_json = ?, pdf_url = ? WHERE id = ?`,
                     [r.documentId, JSON.stringify(body), Apisunat.getPdfUrl(r.documentId, fileName, 'A4', cfg.base_url), id]);
+                // El TUC usado se guarda en la ficha de la placa si todavía no tenía uno
+                for (const [pl, tuc] of [[d.placa_tracto, d.tuc_tracto], [d.placa_carreta, d.tuc_carreta]]) {
+                    if (pl && tuc) await p.query(`UPDATE placas SET tuc = ? WHERE REPLACE(REPLACE(UPPER(placa), '-', ''), ' ', '') = ? AND (tuc IS NULL OR tuc = '')`, [tuc, normPlaca(pl)]).catch(() => {});
+                }
                 if (logAudit) logAudit({ req, accion: 'EMITIR_GRT', modulo: 'OPERACIONES', detalle: `GRE Transportista ${numeroCompleto} (${cfg.modo}) para la guía ${g.numero_completo}` });
                 return res.json({ ok: true, id, numero_guia: numeroCompleto, message: `GRE Transportista ${numeroCompleto} enviada a APISUNAT (${cfg.modo === 'produccion' ? 'producción' : 'prueba'}).` });
             }

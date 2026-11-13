@@ -20,7 +20,7 @@ interface Form {
   remitente_ruc: string; remitente_nombre: string; destinatario_doc: string; destinatario_nombre: string;
   transportista_ruc: string; transportista_nombre: string; modalidad: '' | 'PUBLICO' | 'PRIVADO'; motivo: string;
   partida_ubigeo: string; partida_direccion: string; llegada_ubigeo: string; llegada_direccion: string;
-  peso: string; bultos: string; descripcion: string; observaciones: string; placa: string; conductor_nombre: string; conductor_doc: string; licencia: string;
+  peso: string; bultos: string; descripcion: string; observaciones: string; placa: string; conductor_nombre: string; conductor_doc: string; licencia: string; vehiculo_tuc: string; vehiculo_autorizacion: string;
   fuente: 'XML' | 'IA' | 'MANUAL'; items: LecturaGuia['items']; trae_transporte: boolean;
 }
 type Campo = 'serie_numero' | 'emisor' | 'peso';
@@ -29,7 +29,7 @@ type Lado = 'partida' | 'llegada';
 const VACIO: Form = {
   tipo: 'REMITENTE', serie_numero: '', fecha_emision: '', fecha_traslado: '', remitente_ruc: '', remitente_nombre: '', destinatario_doc: '', destinatario_nombre: '',
   transportista_ruc: '', transportista_nombre: '', modalidad: '', motivo: '', partida_ubigeo: '', partida_direccion: '', llegada_ubigeo: '', llegada_direccion: '',
-  peso: '', bultos: '', descripcion: '', observaciones: '', placa: '', conductor_nombre: '', conductor_doc: '', licencia: '', fuente: 'MANUAL', items: [], trae_transporte: false,
+  peso: '', bultos: '', descripcion: '', observaciones: '', placa: '', conductor_nombre: '', conductor_doc: '', licencia: '', vehiculo_tuc: '', vehiculo_autorizacion: '', fuente: 'MANUAL', items: [], trae_transporte: false,
 };
 const s = (v: unknown) => (v == null ? '' : String(v));
 const desdeLectura = (l: LecturaGuia): Form => ({
@@ -38,7 +38,7 @@ const desdeLectura = (l: LecturaGuia): Form => ({
   transportista_ruc: s(l.transportista_ruc), transportista_nombre: s(l.transportista_nombre), modalidad: l.modalidad ?? '', motivo: s(l.motivo),
   partida_ubigeo: s(l.partida_ubigeo), partida_direccion: s(l.partida_direccion), llegada_ubigeo: s(l.llegada_ubigeo), llegada_direccion: s(l.llegada_direccion),
   peso: l.peso_kg != null ? String(l.peso_kg) : '', bultos: s(l.bultos), descripcion: s(l.descripcion), observaciones: s(l.observaciones), placa: s(l.placa),
-  conductor_nombre: s(l.conductor_nombre), conductor_doc: s(l.conductor_doc), licencia: s(l.licencia), fuente: l.fuente, items: l.items ?? [], trae_transporte: l.trae_transporte,
+  conductor_nombre: s(l.conductor_nombre), conductor_doc: s(l.conductor_doc), licencia: s(l.licencia), vehiculo_tuc: s(l.vehiculo_tuc), vehiculo_autorizacion: s(l.vehiculo_autorizacion), fuente: l.fuente, items: l.items ?? [], trae_transporte: l.trae_transporte,
 });
 
 function Seccion({ titulo, nota, children }: { titulo: string; nota?: string; children: ReactNode }) {
@@ -126,7 +126,7 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: bool
         transportista_ruc: f.transportista_ruc, transportista_nombre: f.transportista_nombre, modalidad: f.modalidad || null, motivo: f.motivo,
         partida_ubigeo: f.partida_ubigeo, partida_direccion: f.partida_direccion, llegada_ubigeo: f.llegada_ubigeo, llegada_direccion: f.llegada_direccion,
         peso_kg: Number(f.peso.replace(',', '.')), bultos: f.bultos ? Number(f.bultos) : null, descripcion: f.descripcion, observaciones: f.observaciones, items: f.items,
-        placa: f.placa, conductor_nombre: f.conductor_nombre, conductor_doc: f.conductor_doc, licencia: f.licencia, trae_transporte: f.trae_transporte, fuente: f.fuente,
+        placa: f.placa, conductor_nombre: f.conductor_nombre, conductor_doc: f.conductor_doc, licencia: f.licencia, vehiculo_tuc: f.vehiculo_tuc, vehiculo_autorizacion: f.vehiculo_autorizacion, trae_transporte: f.trae_transporte, fuente: f.fuente,
       }));
       if (archivo) cuerpo.append('archivo', archivo);
       const r = await api<{ ok?: boolean; error?: string; id?: number; message?: string }>('/operaciones/gre/guias', { method: 'POST', body: cuerpo });

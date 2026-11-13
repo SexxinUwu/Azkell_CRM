@@ -2,7 +2,7 @@ import './servicios.css';
 import './seguimiento.css';
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ExternalLink, RefreshCw, Send } from 'lucide-react';
+import { ExternalLink, Plus, RefreshCw, Send } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
@@ -34,12 +34,21 @@ export function GrtSheet({ guia, onClose }: { guia: Guia | null; onClose: () => 
   const [f, setF] = useState<Propuesta | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [extra, setExtra] = useState(false);
 
   const q = useQuery<Respuesta>({
     queryKey: ['operaciones', 'grt', guia?.id], enabled: !!guia, staleTime: 0,
     queryFn: () => api<Respuesta & { ok: boolean }>(`/operaciones/gre/guias/${guia!.id}/grt`),
   });
-  useEffect(() => { if (q.data) setF(q.data.propuesta); setError(null); }, [q.data]);
+  useEffect(() => {
+    if (q.data) {
+      const pr = q.data.propuesta;
+      setF(pr);
+      // El TUC y la autorización son opcionales: la sección queda cerrada salvo que ya haya datos
+      setExtra(!!(pr.tuc_tracto || pr.aut_tracto || pr.tuc_carreta || pr.aut_carreta));
+    }
+    setError(null);
+  }, [q.data]);
 
   const r = q.data;
   const set = (parte: Partial<Propuesta>) => setF(prev => (prev ? { ...prev, ...parte } : prev));
@@ -131,10 +140,18 @@ export function GrtSheet({ guia, onClose }: { guia: Guia | null; onClose: () => 
                 <Field label="Apellidos del conductor">{p => <TextInput {...p} value={f.conductor_apellidos} onChange={e => set({ conductor_apellidos: e.target.value })} />}</Field>
                 <Field label="DNI">{p => <TextInput {...p} inputMode="numeric" maxLength={8} value={f.conductor_num_doc} onChange={e => set({ conductor_num_doc: e.target.value.replace(/\D/g, '') })} />}</Field>
                 <Field label="Licencia">{p => <TextInput {...p} value={f.conductor_licencia} onChange={e => set({ conductor_licencia: e.target.value.toUpperCase() })} />}</Field>
-                <Field label="TUC del tracto">{p => <TextInput {...p} value={f.tuc_tracto} onChange={e => set({ tuc_tracto: e.target.value.toUpperCase() })} />}</Field>
-                <Field label="Autorización del tracto">{p => <TextInput {...p} value={f.aut_tracto} onChange={e => set({ aut_tracto: e.target.value })} />}</Field>
-                <Field label="TUC de la carreta">{p => <TextInput {...p} value={f.tuc_carreta} onChange={e => set({ tuc_carreta: e.target.value.toUpperCase() })} />}</Field>
-                <Field label="Autorización de la carreta">{p => <TextInput {...p} value={f.aut_carreta} onChange={e => set({ aut_carreta: e.target.value })} />}</Field>
+                {extra ? (
+                  <>
+                    <Field label="TUC del tracto">{p => <TextInput {...p} value={f.tuc_tracto} onChange={e => set({ tuc_tracto: e.target.value.toUpperCase() })} />}</Field>
+                    <Field label="Autorización del tracto">{p => <TextInput {...p} value={f.aut_tracto} onChange={e => set({ aut_tracto: e.target.value })} />}</Field>
+                    <Field label="TUC de la carreta">{p => <TextInput {...p} value={f.tuc_carreta} onChange={e => set({ tuc_carreta: e.target.value.toUpperCase() })} />}</Field>
+                    <Field label="Autorización de la carreta">{p => <TextInput {...p} value={f.aut_carreta} onChange={e => set({ aut_carreta: e.target.value })} />}</Field>
+                  </>
+                ) : (
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <Button variant="plain" size="sm" icon={<Plus size={15} />} onClick={() => setExtra(true)}>Agregar TUC y autorización del vehículo (opcional)</Button>
+                  </div>
+                )}
                 <div className="gr__s2"><Field label="Registro MTC de la empresa">{p => <TextInput {...p} value={f.registro_mtc} onChange={e => set({ registro_mtc: e.target.value.toUpperCase() })} />}</Field></div>
               </div>
               <p className="os-nota">Traslado desde {fechaGuia(f.fecha_traslado)}. Modalidad: transporte público.</p>

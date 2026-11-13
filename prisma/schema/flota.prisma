@@ -131,6 +131,8 @@ model Placa {
   capacidad_tanque String  @default("") @db.VarChar(20)
   tara             String  @default("") @db.VarChar(20)
   modelo_motor     String? @db.VarChar(100)
+  tuc              String? @db.VarChar(30)
+  autorizacion_mtc String? @db.VarChar(30)
 
   @@map("placas")
 }
