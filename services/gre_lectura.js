@@ -135,7 +135,7 @@ async function leerConIA(buffer, mimetype) {
     for (const modelo of MODELOS) {
         try {
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave }, body: cuerpo, signal: AbortSignal.timeout(45000),
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave }, body: cuerpo, signal: AbortSignal.timeout(25000),
             });
             const data = await res.json().catch(() => null);
             if (res.status === 429) { ultimo = 'La IA llegó a su límite por hoy. Intenta más tarde o registra los datos a mano.'; continue; }
