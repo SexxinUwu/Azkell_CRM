@@ -40,7 +40,7 @@ module.exports = (db, logAudit) => {
             AND (t.guia_relacionada_id = g.id OR FIND_IN_SET(g.id, t.guias_relacionadas_ids)) ORDER BY t.id DESC LIMIT 1) AS grt_numero,
         (SELECT t.apisunat_status FROM gre_guias t WHERE t.origen = 'EMITIDA' AND t.tipo = 'TRANSPORTISTA' AND t.estado <> 'ANULADA'
             AND (t.guia_relacionada_id = g.id OR FIND_IN_SET(g.id, t.guias_relacionadas_ids)) ORDER BY t.id DESC LIMIT 1) AS grt_status,
-        (SELECT GROUP_CONCAT(r.numero_completo ORDER BY r.id SEPARATOR ', ') FROM gre_guias r WHERE g.origen = 'EMITIDA' AND FIND_IN_SET(r.id, g.guias_relacionadas_ids)) AS guias_incluidas`;
+        (SELECT GROUP_CONCAT(r.numero_completo ORDER BY r.id SEPARATOR ', ') FROM gre_guias r WHERE g.origen = 'EMITIDA' AND (FIND_IN_SET(r.id, g.guias_relacionadas_ids) OR r.id = g.guia_relacionada_id)) AS guias_incluidas`;
 
     // Peso real del servicio = suma de sus guías vigentes; pasa al tramo en su viaje y al peso del viaje
     async function recalcularPeso(p, codigoOrden) {

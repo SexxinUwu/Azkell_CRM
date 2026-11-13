@@ -8,6 +8,7 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../core/ui/FiltrosListado';
 import { IconoFila } from '../../core/ui/IconoFila';
+import { TextInput } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
@@ -57,6 +58,10 @@ const COLUMNAS_TRANSPORTISTA: ColumnaTabla[] = [
 const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const SECCION_KEY = 'fleet_guias_seccion';
 const seccionGuardada = (): Seccion => { try { return localStorage.getItem(SECCION_KEY) === 'TRANSPORTISTA' ? 'TRANSPORTISTA' : 'REMITENTE'; } catch { return 'REMITENTE'; } };
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const hoyIso = () => iso(new Date());
+const inicioMesIso = () => { const d = new Date(); d.setDate(1); return iso(d); };
+const fechaDe = (g: Guia) => g.fecha_emision ?? (g.creado_en ?? '').slice(0, 10);
 const estadoSunat = (g: Guia) => (g.origen === 'EMITIDA' ? (g.apisunat_status && ESTADO_SUNAT[g.apisunat_status] ? g.apisunat_status : 'ERROR_APISUNAT') : '');
 
 // Operaciones › Guías de remisión, en dos secciones: las GRE de remitente (las que entregan los clientes, que se vinculan a un servicio)
@@ -69,6 +74,9 @@ export function GuiasPage() {
   const ubigeos = useUbigeos();
   const [seccion, setSeccion] = useState<Seccion>(seccionGuardada);
   const [busqueda, setBusqueda] = useState('');
+  // Rango de fechas de emisión: por defecto, del primer día del mes a hoy
+  const [desde, setDesde] = useState(inicioMesIso);
+  const [hasta, setHasta] = useState(hoyIso);
   const [filtrando, setFiltrando] = useState(false);
   // Filtros de remitentes
   const [estado, setEstado] = useState('');
@@ -86,8 +94,11 @@ export function GuiasPage() {
   const puedeCrear = can('op_guias_remision.crear', 'op_guias_remision.editar');
   const puedeEditar = can('op_guias_remision.editar', 'op_guias_remision.crear');
 
-  const remitentes = useMemo(() => datos.filter(g => g.tipo === 'REMITENTE'), [datos]);
-  const transportistas = useMemo(() => datos.filter(g => g.tipo === 'TRANSPORTISTA'), [datos]);
+  const enRango = (g: Guia) => (!desde || fechaDe(g) >= desde) && (!hasta || fechaDe(g) <= hasta);
+  const remitentes = useMemo(() => datos.filter(g => g.tipo === 'REMITENTE' && enRango(g)), [datos, desde, hasta]); // eslint-disable-line react-hooks/exhaustive-deps
+  const transportistas = useMemo(() => datos.filter(g => g.tipo === 'TRANSPORTISTA' && enRango(g)), [datos, desde, hasta]); // eslint-disable-line react-hooks/exhaustive-deps
+  const fueraDeRango = datos.filter(g => g.tipo === seccion && !enRango(g)).length;
+  const esMes = desde === inicioMesIso() && hasta === hoyIso();
   const esRemitente = seccion === 'REMITENTE';
   const lista = esRemitente ? remitentes : transportistas;
 
@@ -163,10 +174,22 @@ export function GuiasPage() {
           : <Button variant="secondary" icon={<RefreshCw size={16} />} onClick={sincronizarPendientes} loading={sincronizando === 'todas'} disabled={!pendientes.length}>Actualizar estados</Button>} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-        <SegmentedControl block label="Sección de guías" value={seccion} onChange={cambiarSeccion}
-          options={[{ value: 'REMITENTE', label: `GRE Remitente · ${remitentes.length}` }, { value: 'TRANSPORTISTA', label: `GRE Transportista · ${transportistas.length}` }]} />
-
-        <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder={esRemitente ? 'Número, remitente, destinatario, placa o servicio' : 'Número, cliente, placa, conductor o viaje'} activos={activos} onAbrirFiltros={() => setFiltrando(true)} />
+        <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder={esRemitente ? 'Número, remitente, destinatario, placa o servicio' : 'Número, cliente, placa, conductor o viaje'} activos={activos} onAbrirFiltros={() => setFiltrando(true)}>
+          <SegmentedControl label="Sección de guías" value={seccion} onChange={cambiarSeccion}
+            options={[{ value: 'REMITENTE', label: `Remitente · ${remitentes.length}` }, { value: 'TRANSPORTISTA', label: `Transportista · ${transportistas.length}` }]} />
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <TextInput type="date" aria-label="Emitida desde" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} style={{ width: 150 }} />
+            <span className="t-footnote c-secondary" aria-hidden>→</span>
+            <TextInput type="date" aria-label="Emitida hasta" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} style={{ width: 150 }} />
+          </span>
+        </BarraFiltros>
+        {(fueraDeRango > 0 || !esMes) && (
+          <p className="t-footnote c-secondary" style={{ margin: 0 }}>
+            {fueraDeRango > 0 ? `Hay ${fueraDeRango} ${fueraDeRango === 1 ? 'guía' : 'guías'} de esta sección fuera de estas fechas. ` : ''}
+            {desde || hasta ? <button type="button" className="link-sutil" onClick={() => { setDesde(''); setHasta(''); }} style={{ all: 'unset', cursor: 'pointer', color: 'var(--blue-ink, #0a63c9)', fontWeight: 600 }}>Ver todas</button> : null}
+            {!esMes ? <>{desde || hasta ? ' · ' : ''}<button type="button" onClick={() => { setDesde(inicioMesIso()); setHasta(hoyIso()); }} style={{ all: 'unset', cursor: 'pointer', color: 'var(--blue-ink, #0a63c9)', fontWeight: 600 }}>Volver a este mes</button></> : null}
+          </p>
+        )}
         <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={activos} onLimpiar={limpiar} resultado={visibles.length} unidad="guía">
           {esRemitente ? (
             <>
