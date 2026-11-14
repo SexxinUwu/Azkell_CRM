@@ -10,9 +10,9 @@ import { Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { formatMoneda, formatSoles } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
-import { pagarEntrada, useEmpresaCuentas, type EntradaInv } from './api';
+import { pagarEntrada, useCuentasProveedor, useEmpresaCuentas, type EntradaInv } from './api';
 import { AplicarNotasCredito, type AplicacionElegida } from '../tesoreria/AplicarNotasCredito';
-import { codigoLimpio, esCredito, esDolares, etiquetaCuentaEmpresa, montoPago } from './entradaReglas';
+import { codigoLimpio, esCredito, esDolares, etiquetaCuentaEmpresa, etiquetaCuentaProveedor, montoPago } from './entradaReglas';
 
 const MAX_VOUCHER = 25 * 1024 * 1024; // mismo límite que el servidor
 
@@ -45,6 +45,16 @@ export function ConfirmarPagoSheet({ entrada: e, open, onClose, onPagado }: Prop
   // Notas de crédito del proveedor aplicadas a este pago (si las hay)
   const [ncs, setNcs] = useState<AplicacionElegida[]>([]);
   const [netoNc, setNetoNc] = useState<number | null>(null);
+  // Cuenta del proveedor a la que se paga (de las registradas) y, si la orden es en dólares y se paga en soles, el tipo de cambio del pago
+  const [destinoSel, setDestinoSel] = useState('');
+  const [tcPago, setTcPago] = useState('');
+  const ctasProv = useCuentasProveedor(e?.proveedor_id ? String(e.proveedor_id) : null, !!e);
+  const destinos = useMemo(() => (ctasProv.data ?? []).map(c => ({ label: etiquetaCuentaProveedor(c), usd: esDolares(c.moneda) })), [ctasProv.data]);
+  useEffect(() => {
+    if (!e || destinoSel || destinos.length === 0) return;
+    const guardada = e.cuenta_bancaria_proveedor ?? '';
+    setDestinoSel((destinos.find(d => d.label === guardada) ?? destinos.find(d => guardada && guardada.includes(d.label.split(' - ').pop() ?? '#')) ?? destinos[0]).label);
+  }, [e, destinos, destinoSel]);
 
   const cuentas = useMemo(() => (cuentasQ.data ?? []).map(c => ({
     label: etiquetaCuentaEmpresa(c),
@@ -63,9 +73,15 @@ export function ConfirmarPagoSheet({ entrada: e, open, onClose, onPagado }: Prop
   const cuenta = cuentas.find(c => c.label === cuentaSel) ?? null;
   const enDolares = cuenta ? cuenta.usd : !!e && esDolares(e.moneda);
   const tc = Number(e?.tipo_cambio) || 0;
-  const importe = e ? montoPago(Number(e.total_pen) || 0, tc, enDolares) : 0;
-  // Lo que sale del banco: el importe menos las notas de crédito aplicadas
-  const monto = ncs.length && netoNc != null ? netoNc : importe;
+  const mixto = !!e && esDolares(e.moneda) && !enDolares;
+  const tcPagoNum = Number(tcPago.replace(',', '.')) || 0;
+  const importe = e ? (mixto ? montoPago(Number(e.total_pen) || 0, tc, true) : montoPago(Number(e.total_pen) || 0, tc, enDolares)) : 0;
+  // Lo que sale del banco: el importe menos las notas de crédito aplicadas (en pago mixto: neto en US$ × tipo de cambio del pago)
+  const neto = ncs.length && netoNc != null ? netoNc : importe;
+  const monto = mixto ? Math.round(neto * (tcPagoNum || tc) * 100) / 100 : neto;
+  const difCambio = mixto ? Math.round(neto * ((tcPagoNum || tc) - tc) * 100) / 100 : 0;
+  const destino = destinos.find(d => d.label === destinoSel) ?? null;
+  const destinoUsd = destino ? destino.usd : null;
 
   function elegirVoucher(f: File | undefined) {
     if (!f) return;
@@ -85,6 +101,7 @@ export function ConfirmarPagoSheet({ entrada: e, open, onClose, onPagado }: Prop
     const totalmenteCompensada = ncs.length > 0 && monto <= 0;
     if (!constancia.trim() && !totalmenteCompensada) nuevos.constancia = 'Ingresa el número de constancia u operación.';
     if (!cuenta) nuevos.cuenta = 'Elige la cuenta de origen de la empresa.';
+    if (mixto && tcPago.trim() && !(tcPagoNum >= 1 && tcPagoNum <= 20)) nuevos.monto = 'El tipo de cambio del pago no parece válido (soles por dólar).';
     if (!(importe > 0)) {
       nuevos.monto = enDolares && tc <= 0
         ? 'La orden no tiene tipo de cambio: no se puede calcular el monto en US$.'
@@ -98,6 +115,8 @@ export function ConfirmarPagoSheet({ entrada: e, open, onClose, onPagado }: Prop
     fd.append('numero_constancia', constancia.trim());
     fd.append('cuenta_origen', cuenta.label);
     fd.append('moneda', enDolares ? 'USD' : 'PEN');
+    if (mixto) fd.append('tipo_cambio_pago', String(tcPagoNum || tc));
+    if (destinoSel) fd.append('cuenta_destino', destinoSel);
     fd.append('monto', String(monto));
     if (ncs.length) fd.append('nc_aplicaciones', JSON.stringify(ncs.map(a => ({ nc_id: a.nc_id, monto: a.monto }))));
     if (voucher) fd.append('voucher', voucher);
@@ -144,12 +163,12 @@ export function ConfirmarPagoSheet({ entrada: e, open, onClose, onPagado }: Prop
               <strong className="oc-total__monto">{formatMoneda(monto, enDolares ? 'USD' : 'PEN')}</strong>
             </div>
             <span className="oc-total__equivale">
-              {enDolares ? `Total ${formatSoles(Number(e.total_pen) || 0)} ÷ T/C ${tc > 0 ? tc : 'sin T/C'}` : 'Total de la orden en soles'}
+              {mixto ? `${formatMoneda(neto, 'USD')} × T/C ${tcPagoNum || tc}${difCambio ? ` · diferencia de cambio ${formatSoles(difCambio)}` : ''}` : enDolares ? `Total ${formatSoles(Number(e.total_pen) || 0)} ÷ T/C ${tc > 0 ? tc : 'sin T/C'}` : 'Total de la orden en soles'}
             </span>
             {errores.monto && <span className="field__error" role="alert">{errores.monto}</span>}
           </div>
 
-          <AplicarNotasCredito entradaId={e.id} sugeridas={(() => { try { const x = JSON.parse(e.nc_sugeridas || '[]'); return Array.isArray(x) ? x.map(Number) : []; } catch { return []; } })()} moneda={enDolares ? 'USD' : 'PEN'} importe={importe} onChange={(a, n) => { setNcs(a); setNetoNc(n); }} />
+          <AplicarNotasCredito entradaId={e.id} sugeridas={(() => { try { const x = JSON.parse(e.nc_sugeridas || '[]'); return Array.isArray(x) ? x.map(Number) : []; } catch { return []; } })()} moneda={enDolares || mixto ? 'USD' : 'PEN'} importe={importe} onChange={(a, n) => { setNcs(a); setNetoNc(n); }} />
 
           {cuentasQ.isError ? (
             <Notice tone="error">No se pudieron cargar las cuentas bancarias de la empresa.</Notice>
@@ -167,9 +186,22 @@ export function ConfirmarPagoSheet({ entrada: e, open, onClose, onPagado }: Prop
             )}
           </Field>
 
-          <Field label="Cuenta destino (proveedor)">
-            {p => <TextInput {...p} readOnly value={e.cuenta_bancaria_proveedor || 'No especificada'} />}
+          {mixto && (
+            <Field label="Tipo de cambio del pago (S/ por US$)" hint={`La orden está en dólares y la cuenta de origen es en soles: escribe el tipo de cambio del día o el acordado con el proveedor. Si lo dejas vacío se usa el de la orden (${tc}).`}>
+              {p => <TextInput {...p} inputMode="decimal" value={tcPago} placeholder={String(tc)} onChange={ev => { setTcPago(ev.target.value); setErrores(x => ({ ...x, monto: undefined })); }} />}
+            </Field>
+          )}
+
+          <Field label="Cuenta destino (proveedor)" hint={destinos.length === 0 && !ctasProv.isLoading ? 'El proveedor no tiene cuentas registradas: agrégalas en Almacén › Proveedores.' : undefined}>
+            {p => destinos.length > 0 ? (
+              <SelectInput {...p} value={destinoSel} onChange={ev => setDestinoSel(ev.target.value)}>
+                {destinos.map(d => <option key={d.label} value={d.label}>{d.label}</option>)}
+              </SelectInput>
+            ) : <TextInput {...p} readOnly value={ctasProv.isLoading ? 'Cargando cuentas…' : (e.cuenta_bancaria_proveedor || 'No especificada')} />}
           </Field>
+          {destinoUsd != null && cuenta && destinoUsd !== cuenta.usd && (
+            <Notice tone="accent">Pagas desde una cuenta {cuenta.usd ? 'en dólares' : 'en soles'} a una cuenta {destinoUsd ? 'en dólares' : 'en soles'} del proveedor: el banco convertirá con su propio tipo de cambio. Si el proveedor quiere soles, registra y elige su cuenta en soles.</Notice>
+          )}
 
           <Field label="N° de constancia / operación" error={errores.constancia}>
             {p => (

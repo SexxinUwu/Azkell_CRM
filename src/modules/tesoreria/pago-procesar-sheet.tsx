@@ -12,6 +12,8 @@ import { formatFechaPe, formatMoneda } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
 import { useBancos } from './api';
 import { AplicarNotasCredito, type AplicacionElegida } from './AplicarNotasCredito';
+import { useCuentasProveedor } from '../almacen/api';
+import { etiquetaCuentaProveedor } from '../almacen/entradaReglas';
 import { codigoOC, esUSD, importeOC, montoAPagar, redondear2, type OrdenPago } from './pago-datos';
 
 const MAX_VOUCHER = 25 * 1024 * 1024; // mismo límite que el servidor
@@ -51,6 +53,15 @@ export function PagoProcesarSheet({ oc, open, onClose }: { oc: OrdenPago | null;
   const [netoNc, setNetoNc] = useState<number | null>(null);
   // OC en dólares pagada desde una cuenta en soles: tipo de cambio del día del pago
   const [tcPago, setTcPago] = useState('');
+  // Cuenta del proveedor a la que se paga (de las registradas)
+  const [destinoSel, setDestinoSel] = useState('');
+  const ctasProv = useCuentasProveedor(oc?.proveedor_id ? String(oc.proveedor_id) : null, !!oc);
+  const destinos = useMemo(() => (ctasProv.data ?? []).map(c => ({ label: etiquetaCuentaProveedor(c), usd: esUSD(c.moneda ?? 'SOLES') })), [ctasProv.data]);
+  useEffect(() => {
+    if (!oc || destinoSel || destinos.length === 0) return;
+    const guardada = oc.cuenta_bancaria_proveedor ?? '';
+    setDestinoSel((destinos.find(d => d.label === guardada) ?? destinos.find(d => guardada && guardada.includes(d.label.split(' - ').pop() ?? '#')) ?? destinos[0]).label);
+  }, [oc, destinos, destinoSel]);
 
   const cuentas = useMemo<CuentaOrigen[]>(() =>
     (bancos.data ?? [])
@@ -80,6 +91,7 @@ export function PagoProcesarSheet({ oc, open, onClose }: { oc: OrdenPago | null;
   // Lo que sale del banco: el importe menos las notas de crédito aplicadas
   const neto = ncs.length && netoNc != null ? netoNc : importe;
   const monto = mixto ? redondear2(neto * (tcPagoNum || tc)) : neto;
+  const destino = destinos.find(d => d.label === destinoSel) ?? null;
   const difCambio = mixto ? redondear2(neto * ((tcPagoNum || tc) - tc)) : 0;
 
   const preview = useMemo(() => (voucher && voucher.type.startsWith('image/') ? URL.createObjectURL(voucher) : null), [voucher]);
@@ -115,6 +127,7 @@ export function PagoProcesarSheet({ oc, open, onClose }: { oc: OrdenPago | null;
     fd.append('cuenta_origen', cuenta?.label ?? '');
     fd.append('moneda', usd ? 'USD' : 'PEN');
     if (mixto) fd.append('tipo_cambio_pago', String(tcPagoNum || tc));
+    if (destinoSel) fd.append('cuenta_destino', destinoSel);
     fd.append('monto', String(redondear2(monto)));
     if (ncs.length) fd.append('nc_aplicaciones', JSON.stringify(ncs.map(a => ({ nc_id: a.nc_id, monto: a.monto }))));
     if (voucher) fd.append('voucher', voucher);
@@ -203,9 +216,16 @@ export function PagoProcesarSheet({ oc, open, onClose }: { oc: OrdenPago | null;
             )}
           </Field>
 
-          <Field label="Cuenta destino (proveedor)">
-            {p => <TextInput {...p} readOnly value={oc.cuenta_bancaria_proveedor || 'No especificada'} />}
+          <Field label="Cuenta destino (proveedor)" hint={destinos.length === 0 && !ctasProv.isLoading ? 'El proveedor no tiene cuentas registradas: agrégalas en Almacén › Proveedores.' : undefined}>
+            {p => destinos.length > 0 ? (
+              <SelectInput {...p} value={destinoSel} onChange={e => setDestinoSel(e.target.value)}>
+                {destinos.map(d => <option key={d.label} value={d.label}>{d.label}</option>)}
+              </SelectInput>
+            ) : <TextInput {...p} readOnly value={ctasProv.isLoading ? 'Cargando cuentas…' : (oc.cuenta_bancaria_proveedor || 'No especificada')} />}
           </Field>
+          {destino && cuenta && destino.usd !== cuenta.usd && (
+            <Notice tone="accent">Pagas desde una cuenta {cuenta.usd ? 'en dólares' : 'en soles'} a una cuenta {destino.usd ? 'en dólares' : 'en soles'} del proveedor: el banco convertirá con su propio tipo de cambio. Si el proveedor quiere soles, registra y elige su cuenta en soles.</Notice>
+          )}
 
           <Field label="Voucher o constancia (opcional)" hint="JPG, PNG o PDF · máximo 25 MB" error={errores.voucher}>
             {p => <ArchivoInput {...p} accept="image/*,application/pdf" onChange={a => elegirVoucher(a ?? undefined)} />}

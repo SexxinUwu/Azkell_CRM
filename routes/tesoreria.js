@@ -2407,6 +2407,7 @@ module.exports = function (db, broadcast, logAudit) {
             const numeroConstancia = (b.numero_constancia || b.numero_operacion || '').trim();
             const cuentaOrigen = (b.cuenta_origen || '').trim();
             const usuarioPago = (req.user && req.user.nombre) ? req.user.nombre : (b.usuario || 'Tesorería');
+            const cuentaDestinoElegida = String(b.cuenta_destino || '').trim().slice(0, 250);
 
             // Vale de combustible: se paga su caja ya aprobada (no se crea otro egreso)
             if (/^VC-\d{4}-\d+$/i.test(id)) {
@@ -2512,9 +2513,10 @@ module.exports = function (db, broadcast, logAudit) {
                     cuenta_bancaria_empresa = ?,
                     url_voucher = ?,
                     pagado_por = ?,
+                    cuenta_bancaria_proveedor = COALESCE(NULLIF(?, ''), cuenta_bancaria_proveedor),
                     fecha_pago = NOW()
                 WHERE id = ? AND LOWER(TRIM(estado)) IN ('aprobado', 'autorizado', 'pago parcial')
-            `, [numeroConstancia, cuentaOrigen, voucherUrl, usuarioPago, id]);
+            `, [numeroConstancia, cuentaOrigen, voucherUrl, usuarioPago, cuentaDestinoElegida, id]);
             if (!updOc || updOc.affectedRows === 0) {
                 if (ncAplicadas.detalle.length) await notasCredito.revertir(tdb, ncAplicadas.detalle, usuarioPago, 'La orden ya había sido procesada').catch(() => {});
                 return res.status(409).json({ error: 'La orden de compra ya fue procesada por otro pago. No se registró un nuevo egreso.' });
@@ -2594,7 +2596,7 @@ module.exports = function (db, broadcast, logAudit) {
                     totalFinal,
                     pagoMixto ? tcUsado : (oc.tipo_cambio || 1),
                     oc.motivo_entrada || descripcionPago,
-                    oc.cuenta_bancaria_proveedor || '',
+                    cuentaDestinoElegida || oc.cuenta_bancaria_proveedor || '',
                     cuentaOrigen || 'BCP - CTA CTE SOLES',
                     voucherUrl,
                     `PAGO DE REQUERIMIENTO OC ${id} | N° Constancia: ${numeroConstancia}${pagoMixto ? ` | OC en US$ pagada en soles: US$ ${netoUsdMixto.toFixed(2)} × T.C. ${tcUsado} (T.C. de la orden ${tcOc}); diferencia de cambio S/ ${(Math.round(netoUsdMixto * (tcUsado - tcOc) * 100) / 100).toFixed(2)}` : ''}${ncAplicadas.detalle.length ? ` | Neto tras notas de crédito (${ncAplicadas.detalle.map(d => `${d.codigo} ${d.monto.toFixed(2)}`).join(', ')})` : ''}`,
