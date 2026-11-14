@@ -2359,7 +2359,7 @@ module.exports = function (db, broadcast, logAudit) {
                 const estadosVale = estadoFiltro === 'todos' ? ['APROBADO', 'PROCESADO'] : (estadoFiltro === 'procesados' || estadoFiltro === 'pagados') ? ['PROCESADO'] : ['APROBADO'];
                 const [vales] = await tdb.query(
                     `SELECT c.*, v.codigo AS vale_codigo, v.galones, v.combustible, v.estacion_nombre, v.pagar_a, v.beneficiario_doc, v.voucher_url AS ticket_url,
-                            (SELECT CONCAT(cd.banco, ' - ', cd.numero_cuenta) FROM conductores cd WHERE v.pagar_a = 'CONDUCTOR' AND UPPER(cd.nombre) = UPPER(v.beneficiario_nombre) AND COALESCE(cd.numero_cuenta, '') <> '' LIMIT 1) AS cuenta_conductor
+                            (SELECT CONCAT(cd.banco, ' - ', cd.numero_cuenta) FROM conductores cd WHERE v.pagar_a = 'CONDUCTOR' AND UPPER(cd.nombre) COLLATE utf8mb4_unicode_ci = UPPER(v.beneficiario_nombre) COLLATE utf8mb4_unicode_ci AND COALESCE(cd.numero_cuenta, '') <> '' LIMIT 1) AS cuenta_conductor
                      FROM tesoreria_caja c JOIN viaje_vales_combustible v ON v.caja_id = c.id
                      WHERE c.origen = 'VALE_COMBUSTIBLE' AND v.anulado = 0 AND UPPER(c.estado) IN (?) ORDER BY c.fecha DESC, c.id DESC`, [estadosVale]);
                 for (const c of vales) {

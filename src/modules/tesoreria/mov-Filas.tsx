@@ -30,7 +30,7 @@ export function MovFilaTabla({ m, onAbrir }: { m: MovimientoTesoreria; onAbrir: 
       <Celda alinear="right" mono>{!ingreso ? importeMov(m.monto, m.moneda) : ''}</Celda>
       <Celda>{m.motivo || '—'}</Celda>
       <Celda>{limpio(m.sub_motivo) || '—'}</Celda>
-      <td><Badge tone={oc ? 'accent' : 'amber'}>{oc ? 'ORDEN DE COMPRA' : 'CAJA CHICA'}</Badge></td>
+      <td><Badge tone={oc ? 'accent' : m.tipo_origen === 'VALE DE COMBUSTIBLE' ? 'green' : 'amber'}>{oc ? 'ORDEN DE COMPRA' : m.tipo_origen === 'VALE DE COMBUSTIBLE' ? 'VALE DE COMBUSTIBLE' : 'CAJA CHICA'}</Badge></td>
       <Celda mono>{m.codigo_oc || m.caja_folio || '—'}</Celda>
       <Celda>{limpio(m.descripcion) || '—'}</Celda>
       <Celda mono>{formatFechaPe(m.fecha_valuta || m.fecha)}</Celda>

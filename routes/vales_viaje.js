@@ -104,8 +104,8 @@ module.exports = (db, logAudit) => {
             const q = texto(req.query.q, 60);
             const [rows] = await p.query(
                 `SELECT ov.viaje, ov.placa_tracto, ov.placa_remolque, ov.conductor, ov.ruta, DATE_FORMAT(ov.fecha_viaje, '%Y-%m-%d') AS fecha_viaje, ov.estado,
-                    (SELECT dni FROM conductores WHERE UPPER(nombre) = UPPER(ov.conductor) LIMIT 1) AS conductor_doc,
-                    (SELECT km_odometro FROM viaje_vales_combustible v WHERE v.placa = ov.placa_tracto AND v.km_odometro IS NOT NULL AND v.anulado = 0 ORDER BY v.fecha DESC, v.id DESC LIMIT 1) AS ultimo_km
+                    (SELECT dni FROM conductores WHERE UPPER(nombre) COLLATE utf8mb4_unicode_ci = UPPER(ov.conductor) COLLATE utf8mb4_unicode_ci LIMIT 1) AS conductor_doc,
+                    (SELECT km_odometro FROM viaje_vales_combustible v WHERE v.placa COLLATE utf8mb4_unicode_ci = ov.placa_tracto COLLATE utf8mb4_unicode_ci AND v.km_odometro IS NOT NULL AND v.anulado = 0 ORDER BY v.fecha DESC, v.id DESC LIMIT 1) AS ultimo_km
                  FROM operaciones_ordenes_viaje ov
                  WHERE ov.estado <> 'ANULADO' ${q ? "AND (ov.viaje LIKE ? OR ov.placa_tracto LIKE ? OR ov.conductor LIKE ?)" : ''}
                  ORDER BY ov.fecha_viaje DESC, ov.id DESC LIMIT 40`, q ? [`%${q}%`, `%${q}%`, `%${q}%`] : []);
