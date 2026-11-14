@@ -78,6 +78,11 @@ export const RUTAS: RutaModulo[] = [
     Page: lazy(() => import('./GuiasPage').then(m => ({ default: m.GuiasPage }))),
   },
   {
+    path: 'operaciones/vales-viaje/*',
+    permisos: ['combustible_vales.ver', 'op_ordenes_viaje.ver', 'admin'],
+    Page: lazy(() => import('./ValesViajePage').then(m => ({ default: m.ValesViajePage }))),
+  },
+  {
     path: 'operaciones/plantilla-guias/*',
     permisos: ['op_guias_remision.ver', 'admin'],
     Page: lazy(() => import('./PlantillaGuiasPage').then(m => ({ default: m.PlantillaGuiasPage }))),

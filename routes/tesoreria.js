@@ -2354,6 +2354,41 @@ module.exports = function (db, broadcast, logAudit) {
                 };
             }));
 
+            // Vales de combustible del viaje: su caja aprobada aparece aquí para pagarse, igual que una orden de compra
+            try {
+                const estadosVale = estadoFiltro === 'todos' ? ['APROBADO', 'PROCESADO'] : (estadoFiltro === 'procesados' || estadoFiltro === 'pagados') ? ['PROCESADO'] : ['APROBADO'];
+                const [vales] = await tdb.query(
+                    `SELECT c.*, v.codigo AS vale_codigo, v.galones, v.combustible, v.estacion_nombre, v.pagar_a, v.beneficiario_doc, v.voucher_url AS ticket_url,
+                            (SELECT CONCAT(cd.banco, ' - ', cd.numero_cuenta) FROM conductores cd WHERE v.pagar_a = 'CONDUCTOR' AND UPPER(cd.nombre) = UPPER(v.beneficiario_nombre) AND COALESCE(cd.numero_cuenta, '') <> '' LIMIT 1) AS cuenta_conductor
+                     FROM tesoreria_caja c JOIN viaje_vales_combustible v ON v.caja_id = c.id
+                     WHERE c.origen = 'VALE_COMBUSTIBLE' AND v.anulado = 0 AND UPPER(c.estado) IN (?) ORDER BY c.fecha DESC, c.id DESC`, [estadosVale]);
+                for (const c of vales) {
+                    const pagada = String(c.estado).toUpperCase() === 'PROCESADO';
+                    const esUsdVale = /D[OÓ]L|USD/i.test(String(c.moneda || ''));
+                    const monto = parseFloat(c.importe_total) || 0;
+                    let ticket = null;
+                    if (c.ticket_url) { const k = s3KeyFromUrl(c.ticket_url); ticket = k ? await getPresignedUrl(k).catch(() => c.ticket_url) : c.ticket_url; }
+                    let pagoVoucher = null;
+                    if (pagada && c.voucher_url && c.voucher_url !== c.ticket_url) { const k = s3KeyFromUrl(c.voucher_url); pagoVoucher = k ? await getPresignedUrl(k).catch(() => c.voucher_url) : c.voucher_url; }
+                    resultado.push({
+                        id: c.vale_codigo, folio: c.vale_codigo, fecha: c.fecha, fecha_vencimiento: null, created_at: c.creado_en,
+                        solicitante: c.usuario_creacion || '—', centro_costo: c.centro_costo || 'CC-100', sub_motivo: c.sub_motivo || 'Combustible', autoriza: c.usuario_aprobacion || '',
+                        motivo: c.descripcion, motivo_entrada: c.descripcion, tipo_orden: 'Vale de combustible',
+                        moneda: esUsdVale ? 'USD' : 'PEN', importe: monto, total_pen: esUsdVale ? 0 : monto, tipo_cambio: 1, tipo_igv: 'sin_igv',
+                        placa: c.placa || '', ot_id: c.orden_viaje || '', observaciones: '', documento_referencia: c.numero_factura || '', nc_sugeridas: null,
+                        creado_por: c.usuario_creacion, creador_nombre: c.usuario_creacion || 'SISTEMA', aprobado_por: c.usuario_aprobacion, aprobador_nombre: c.usuario_aprobacion || 'Gerencia',
+                        fecha_aprobacion: c.fecha_aprobacion || c.fecha, dias_credito: 0, dias_pagar: 0, condicion_pago: 'Al contado', prioridad: 'Normal',
+                        proveedor_id: null, proveedor_nombre: c.persona, proveedor_ruc: c.beneficiario_doc || '',
+                        cuenta_bancaria_proveedor: c.cuenta_conductor || '', cuenta_destino_moneda: esUsdVale ? 'USD' : 'PEN',
+                        cuenta_bancaria_empresa: pagada ? (c.cuenta_bancaria_empresa || '') : '', cuenta_origen_moneda: esUsdVale ? 'USD' : 'PEN',
+                        estado: pagada ? 'Procesado' : 'Aprobado', numero_operacion: c.numero_constancia_deposito || '', fecha_pago: pagada ? (c.actualizado_en || c.fecha) : null, pagado_por: pagada ? (c.usuario_aprobacion || '') : '',
+                        url_cotizacion: null, url_cotizacion_presigned: null, url_factura: c.ticket_url, url_factura_presigned: ticket,
+                        url_voucher: pagada ? c.voucher_url : null, url_voucher_presigned: pagoVoucher,
+                        items: [{ inventario_id: '', descripcion: `${c.combustible || 'Combustible'} · ${parseFloat(c.galones) || 0} gal · ${c.estacion_nombre || ''}`.trim(), cantidad: parseFloat(c.galones) || 1, costo_unitario: monto, moneda: esUsdVale ? 'USD' : 'PEN', importe: monto }],
+                    });
+                }
+            } catch (errVales) { console.warn('pago-requerimientos: vales de combustible:', errVales.message); }
+
             res.json({ ok: true, data: resultado });
         } catch (err) {
             console.error('Error en GET /api/tesoreria/pago-requerimientos:', err);
@@ -2372,6 +2407,27 @@ module.exports = function (db, broadcast, logAudit) {
             const numeroConstancia = (b.numero_constancia || b.numero_operacion || '').trim();
             const cuentaOrigen = (b.cuenta_origen || '').trim();
             const usuarioPago = (req.user && req.user.nombre) ? req.user.nombre : (b.usuario || 'Tesorería');
+
+            // Vale de combustible: se paga su caja ya aprobada (no se crea otro egreso)
+            if (/^VC-\d{4}-\d+$/i.test(id)) {
+                const [vr] = await tdb.query('SELECT caja_id, total, anulado FROM viaje_vales_combustible WHERE codigo = ?', [id]);
+                if (!vr.length || vr[0].anulado || !vr[0].caja_id) return res.status(404).json({ error: 'Vale no encontrado o anulado.' });
+                if (!numeroConstancia && !req.file) return res.status(400).json({ error: 'Adjunta el comprobante o escribe el número de operación: todo pago necesita su respaldo.' });
+                let voucherVale = null;
+                if (req.file) {
+                    const ext = (req.file.originalname.split('.').pop() || 'jpg').toLowerCase();
+                    voucherVale = await uploadToS3(req.file.buffer, `tesoreria/requerimientos/voucher_${id}_${Date.now()}.${ext}`, req.file.mimetype);
+                }
+                const [upV] = await tdb.query(
+                    `UPDATE tesoreria_caja SET estado = 'PROCESADO', numero_constancia_deposito = ?, cuenta_bancaria_empresa = ?, modalidad_pago = ?, voucher_url = COALESCE(?, voucher_url),
+                        fecha_valuta = CURDATE(), hora_valuta = CURTIME(), observacion = CONCAT(COALESCE(observacion, ''), ' | Pagado por ', ?)
+                     WHERE id = ? AND UPPER(estado) = 'APROBADO' AND origen = 'VALE_COMBUSTIBLE'`,
+                    [numeroConstancia, cuentaOrigen, cuentaOrigen.includes('CAJA') ? 'EFECTIVO' : 'TRANSFERENCIA', voucherVale, usuarioPago, vr[0].caja_id]);
+                if (!upV || upV.affectedRows !== 1) return res.status(409).json({ error: 'El vale no está aprobado o ya fue pagado.' });
+                if (typeof logAudit === 'function') logAudit(req, 'tesoreria/pago-requerimientos', 'PROCESÓ PAGO', `Pagó el vale de combustible ${id} (constancia ${numeroConstancia})`);
+                if (typeof broadcast === 'function') broadcast('tesoreria', 'pago_procesado');
+                return res.json({ ok: true, message: 'Vale pagado', id });
+            }
             const descripcionPago = (b.descripcion || `ORDEN DE COMPRA: ${id}`).trim();
             // 1. Obtener la Orden de Compra actual
             const [ocRows] = await tdb.query("SELECT * FROM entradas_inv WHERE id = ?", [id]);
@@ -2739,7 +2795,7 @@ module.exports = function (db, broadcast, logAudit) {
                                 (r.tipo_comprobante === 'ORDEN DE COMPRA' ? descStr.match(/(ENT-\d{4}-\d+|\d{4}-\d+)/i) : null);
                 const codigoOC = ocMatch ? ocMatch[1].replace(/^ENT-/i, '') : null;
                 const esOC = Boolean(codigoOC || (r.tipo_comprobante && r.tipo_comprobante.toUpperCase().includes('ORDEN')) || (r.sub_motivo && r.sub_motivo.toUpperCase().includes('REQUERIMIENTO')));
-                const tipoOrigen = esOC ? 'ORDEN DE COMPRA' : 'CAJA CHICA';
+                const tipoOrigen = r.origen === 'VALE_COMBUSTIBLE' ? 'VALE DE COMBUSTIBLE' : esOC ? 'ORDEN DE COMPRA' : 'CAJA CHICA';
                 const cajaFolioFinal = esOC && codigoOC ? codigoOC : (r.codigo_caja || `CJ-${r.id}`);
 
                 return {

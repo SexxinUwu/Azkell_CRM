@@ -5279,6 +5279,7 @@ app.use('/api/neumaticos', require('./routes/neumaticos-ciclo')(db));
 const combustibleRouter = require('./routes/combustible')(db, broadcast, logAudit);
 app.use('/api/combustible', combustibleRouter);
 // Guías de remisión (Operaciones): registro de las GRE de los clientes y vínculo con el servicio. Va antes de /api/operaciones.
+app.use('/api/operaciones/vales', require('./routes/vales_viaje')(db, logAudit));
 app.use('/api/operaciones/gre', require('./routes/gre_pdf')(db, logAudit));
 app.use('/api/operaciones/gre', require('./routes/gre')(db, logAudit));
 app.use('/api/operaciones', require('./routes/operaciones')(db, broadcast, logAudit, { recorridoWialon: combustibleRouter.recorridoWialon }));
