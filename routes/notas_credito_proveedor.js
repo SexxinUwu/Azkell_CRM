@@ -230,16 +230,53 @@ module.exports = (db, logAudit) => {
             if (!f.length) throw aviso('Nota de crédito no encontrada.', 404);
             const n = f[0];
             if (n.estado !== 'REGISTRADA') throw aviso(`La nota está ${n.estado}: solo se aprueba una nota registrada.`, 409);
-            if (!n.archivo_url) throw aviso('La nota no tiene archivo adjunto: no se puede aprobar.', 409);
+            // Una nota provisional (el proveedor aún no emite el documento) solo la puede aprobar un administrador; el documento se completa después
+            if (!n.archivo_url && !esAdmin(req)) throw aviso('La nota no tiene archivo adjunto: no se puede aprobar. Si el documento está pendiente, la aprueba un administrador.', 409);
             const usuario = usuarioDe(req);
             const mismo = norm(n.registrado_por) === norm(usuario);
             if (mismo && !esAdmin(req)) throw aviso('La nota debe aprobarla otra persona (Tesorería o Contabilidad), no quien la registró.', 403);
             const [upd] = await p.query("UPDATE compras_notas_credito SET estado = 'APROBADA', aprobado_por = ?, fecha_aprobacion = NOW() WHERE id = ? AND estado = 'REGISTRADA'", [usuario, id]);
             if (!upd || upd.affectedRows !== 1) throw aviso('La nota ya fue aprobada o cambió de estado.', 409);
-            await nc.historial(p, id, 'APROBADA', mismo ? 'Aprobada por el mismo usuario que la registró (administrador)' : 'Aprobada', usuario);
+            await nc.historial(p, id, 'APROBADA', `${mismo ? 'Aprobada por el mismo usuario que la registró (administrador)' : 'Aprobada'}${n.archivo_url ? '' : ' · con documento pendiente'}`, usuario);
             auditar(req, 'APROBÓ NC PROVEEDOR', `${n.codigo}${mismo ? ' (autoaprobación de administrador)' : ''}`);
             res.json({ ok: true });
         } catch (err) { responder(res, err, 'aprobar'); }
+    });
+
+    // ── Completar el documento de una nota provisional: serie, número, fecha y archivo reales (el monto no cambia) ──
+    router.post('/compras/notas-credito/:id/documento', upload.single('archivo'), async (req, res) => {
+        try {
+            const p = P(req);
+            const id = Number(req.params.id);
+            const b = req.body || {};
+            const [f] = await p.query('SELECT * FROM compras_notas_credito WHERE id = ?', [id]);
+            if (!f.length) throw aviso('Nota de crédito no encontrada.', 404);
+            const n = f[0];
+            if (n.archivo_url) throw aviso('Esta nota ya tiene su documento.', 409);
+            if (['ANULADA', 'REEMBOLSADA'].includes(n.estado)) throw aviso(`La nota está ${n.estado}.`, 409);
+            const serie = String(b.serie || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+            const numero = String(b.numero || '').trim().replace(/\D/g, '').slice(0, 20);
+            if (!serie || !numero || serie === 'PEND') throw aviso('Escribe la serie y el número reales de la nota de crédito (ej. E001 y 64).');
+            const fecha = String(b.fecha_emision || '').slice(0, 10);
+            if (!esFecha(fecha)) throw aviso('Indica la fecha de emisión de la nota.');
+            if (fecha > hoyLima()) throw aviso('La fecha de emisión no puede ser futura.');
+            if (!req.file) throw aviso('Adjunta el archivo de la nota de crédito (PDF, XML o foto).');
+            if (!ARCHIVO_OK.test(req.file.mimetype)) throw aviso('El archivo debe ser PDF, XML o imagen.');
+            const [dup] = await p.query("SELECT codigo, proveedor_id, proveedor_nombre FROM compras_notas_credito WHERE serie = ? AND numero = ? AND estado <> 'ANULADA' AND id <> ?", [serie, numero, id]);
+            const igual = dup.find(d => nc.mismoProveedor(d, n.proveedor_id, n.proveedor_nombre));
+            if (igual) throw aviso(`Esa nota ya está registrada: ${igual.codigo}.`, 409);
+            const base = b.base !== undefined && b.base !== '' ? redondear(num(b.base)) : null, igv = b.igv !== undefined && b.igv !== '' ? redondear(num(b.igv)) : null;
+            if (base != null && igv != null && Math.abs(base + igv - num(n.total)) > 0.02) throw aviso('La base más el IGV no coinciden con el total de la nota.');
+            const usuario = usuarioDe(req);
+            const ext = (String(req.file.originalname || '').split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '') || 'pdf';
+            const url = await uploadToS3(req.file.buffer, `tesoreria/notas-credito/${n.codigo}_${Date.now()}.${ext}`, req.file.mimetype);
+            const [upd] = await p.query('UPDATE compras_notas_credito SET serie = ?, numero = ?, fecha_emision = ?, archivo_url = ?, base = COALESCE(?, base), igv = COALESCE(?, igv) WHERE id = ? AND archivo_url IS NULL',
+                [serie, numero, fecha, url, base, igv, id]);
+            if (!upd || upd.affectedRows !== 1) throw aviso('La nota ya tiene su documento.', 409);
+            await nc.historial(p, id, 'DOCUMENTO COMPLETADO', `${n.serie}-${n.numero} → ${serie}-${numero}`, usuario);
+            auditar(req, 'COMPLETÓ DOCUMENTO NC PROVEEDOR', `${n.codigo} ${serie}-${numero}`);
+            res.json({ ok: true });
+        } catch (err) { responder(res, err, 'documento'); }
     });
 
     // ── Anular (con motivo; si ya se aplicó, primero se revierte la aplicación desde el pago) ───────────────

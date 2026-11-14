@@ -103,3 +103,10 @@ export const faltaSalida = (n: Pick<NotaCredito, 'motivo_sunat' | 'referencia_de
 export async function accionNc(id: number, accion: 'aprobar' | 'anular', cuerpo?: Record<string, unknown>) {
   return api(`/compras/notas-credito/${id}/${accion}`, { method: 'POST', body: cuerpo ?? {} });
 }
+
+/** Completa el documento real de una nota provisional (serie, número, fecha y archivo). */
+export async function completarDocumentoNc(id: number, datos: { serie: string; numero: string; fecha_emision: string; archivo: File }) {
+  const fd = new FormData();
+  fd.append('serie', datos.serie); fd.append('numero', datos.numero); fd.append('fecha_emision', datos.fecha_emision); fd.append('archivo', datos.archivo);
+  return api(`/compras/notas-credito/${id}/documento`, { method: 'POST', body: fd });
+}

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, ExternalLink, PackageMinus, Undo2, XCircle } from 'lucide-react';
+import { CheckCircle2, ExternalLink, FileUp, PackageMinus, Undo2, XCircle } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
@@ -14,7 +14,7 @@ import { formatFechaPe } from '../../core/lib/format';
 import { useEmpresaCuentas } from '../almacen/api';
 import { etiquetaCuentaEmpresa } from '../almacen/entradaReglas';
 import { Combobox } from '../../core/ui/Combobox';
-import { ETIQUETA_ESTADO, TONO_ESTADO, accionNc, enlazarSalida, faltaSalida, montoNc, useDetalleNc } from './nc-api';
+import { ETIQUETA_ESTADO, TONO_ESTADO, accionNc, completarDocumentoNc, enlazarSalida, faltaSalida, montoNc, useDetalleNc } from './nc-api';
 import { NcDevolucion } from './nc-Devolucion';
 import { useSalidasLibres } from './nc-Mercaderia';
 
@@ -33,6 +33,7 @@ export function NcDetalle({ id, onClose }: { id: number | null; onClose: () => v
   const [reembolsando, setReembolsando] = useState(false);
   const [enlazando, setEnlazando] = useState(false);
   const [devolviendo, setDevolviendo] = useState(false);
+  const [completando, setCompletando] = useState(false);
   const [salidaElegida, setSalidaElegida] = useState('');
   const libres = useSalidasLibres(d?.proveedor_nombre ?? null);
 
@@ -91,6 +92,12 @@ export function NcDetalle({ id, onClose }: { id: number | null; onClose: () => v
                     <Button size="sm" variant="primary" onClick={() => setDevolviendo(true)}>Devolver mercadería ahora</Button>
                   </div>
                 )}
+              </Notice>
+            )}
+            {!d.tiene_archivo && !['ANULADA', 'REEMBOLSADA'].includes(d.estado) && (
+              <Notice tone="accent" icon={<FileUp size={16} />}>
+                <b>Documento pendiente.</b> El proveedor aún no entrega la nota de crédito: el monto ya cuenta para descontar el pago, pero falta subir el documento real.
+                {puedeEditar && <div style={{ marginTop: 'var(--s-2)' }}><Button size="sm" variant="primary" onClick={() => setCompletando(true)}>Completar documento</Button></div>}
               </Notice>
             )}
             {d.estado === 'REGISTRADA' && <Notice>Falta la aprobación. {d.registrado_por ? `La registró ${d.registrado_por}: la aprueba otra persona (Tesorería o Contabilidad).` : ''}</Notice>}
@@ -154,6 +161,7 @@ export function NcDetalle({ id, onClose }: { id: number | null; onClose: () => v
         <NcDevolucion open={devolviendo} onClose={() => setDevolviendo(false)} inicial={{ proveedorId: d.proveedor_id ?? undefined, ocOrigen: d.oc_origen ?? undefined }}
           onHecha={r => { void enlazar(r.referencia); }} />
       )}
+      {d && <CompletarSheet open={completando} nota={d.codigo} id={d.id} fecha={d.fecha_emision} onClose={() => setCompletando(false)} onHecho={async () => { setCompletando(false); await refrescar(); }} />}
       {d && <AnularSheet open={anulando} nota={d.codigo} id={d.id} onClose={() => setAnulando(false)} onHecho={async () => { setAnulando(false); await refrescar(); }} />}
       {d && <ReembolsoSheet open={reembolsando} nota={d.codigo} id={d.id} monto={montoNc(d.saldo, d.moneda)} usd={d.moneda === 'USD'} onClose={() => setReembolsando(false)} onHecho={async () => { setReembolsando(false); await refrescar(); }} />}
     </>
@@ -163,6 +171,35 @@ export function NcDetalle({ id, onClose }: { id: number | null; onClose: () => v
 function Dato({ k, v }: { k: string; v: string | null | undefined }) {
   if (!v || !String(v).trim()) return null;
   return <div className="dato"><span className="dato__label">{k}</span><span className="dato__valor">{v}</span></div>;
+}
+
+function CompletarSheet({ open, nota, id, fecha, onClose, onHecho }: { open: boolean; nota: string; id: number; fecha: string; onClose: () => void; onHecho: () => Promise<void> }) {
+  const toast = useToast();
+  const [serie, setSerie] = useState('');
+  const [numero, setNumero] = useState('');
+  const [emision, setEmision] = useState(fecha?.slice(0, 10) ?? '');
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  async function guardar() {
+    if (!serie.trim() || !numero.trim()) { toast('Escribe la serie y el número reales (ej. E001 y 64).', 'error'); haptic('warning'); return; }
+    if (!archivo) { toast('Adjunta el archivo de la nota de crédito.', 'error'); haptic('warning'); return; }
+    setEnviando(true);
+    try { await completarDocumentoNc(id, { serie: serie.trim(), numero: numero.trim(), fecha_emision: emision, archivo }); haptic('success'); toast(`Documento de ${nota} completado`); await onHecho(); }
+    catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
+    finally { setEnviando(false); }
+  }
+  return (
+    <Sheet open={open} onClose={() => !enviando && onClose()} title={`Completar documento de ${nota}`}
+      footer={<><Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button><Button variant="primary" loading={enviando} onClick={guardar}>Guardar documento</Button></>}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+        <Notice>El monto no cambia: solo se reemplazan los datos provisionales por los del documento que emitió el proveedor.</Notice>
+        <Field label="Serie">{p => <TextInput {...p} value={serie} placeholder="E001" style={{ textTransform: 'uppercase' }} onChange={e => setSerie(e.target.value)} />}</Field>
+        <Field label="Número">{p => <TextInput {...p} inputMode="numeric" value={numero} placeholder="64" onChange={e => setNumero(e.target.value)} />}</Field>
+        <Field label="Fecha de emisión">{p => <TextInput {...p} type="date" value={emision} onChange={e => setEmision(e.target.value)} />}</Field>
+        <Field label="Archivo (PDF, XML o foto)">{p => <ArchivoInput {...p} accept="image/*,application/pdf,.xml" onChange={setArchivo} />}</Field>
+      </div>
+    </Sheet>
+  );
 }
 
 function AnularSheet({ open, nota, id, onClose, onHecho }: { open: boolean; nota: string; id: number; onClose: () => void; onHecho: () => Promise<void> }) {
