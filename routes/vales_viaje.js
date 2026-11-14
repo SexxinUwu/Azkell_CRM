@@ -208,7 +208,7 @@ module.exports = (db, logAudit) => {
             const [caja] = await conn.query(
                 `INSERT INTO tesoreria_caja (fecha, hora, fecha_valuta, hora_valuta, numero_factura, serie, numero, orden_viaje, conductor, ruta_viaje, placa, autoriza, motivo, centro_costo, sub_motivo,
                     modalidad_pago, moneda, tipo_persona, persona, tipo_movimiento, subtotal, retencion_detraccion, importe_total, tipo_cambio, descripcion, tipo_comprobante, voucher_url, estado, usuario_creacion, origen, origen_id)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Gastos de Viaje y Ruta', 'CC-100', 'Combustible', 'TRANSFERENCIA', ?, ?, ?, 'EGRESO', ?, 0, ?, 1, ?, 'VALE DE COMBUSTIBLE', ?, 'PENDIENTE', ?, 'VALE_COMBUSTIBLE', ?)`,
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Combustibles y Fluidos', 'CC-300', 'Diésel B5 / Gasolina de ruta', 'TRANSFERENCIA', ?, ?, ?, 'EGRESO', ?, 0, ?, 1, ?, 'VALE DE COMBUSTIBLE', ?, 'PENDIENTE', ?, 'VALE_COMBUSTIBLE', ?)`,
                 [fecha, horaLima(), fecha, '00:00:00', texto(b.numero_voucher, 100) || '', serieCaja, String(n).padStart(8, '0'), viaje, conductor, vj[0].ruta || '', placa, usuario,
                     moneda, pagarA === 'CONDUCTOR' ? 'CONDUCTOR' : 'PROVEEDOR', benNombre.slice(0, 190), total, total, descripcion, voucherUrl, usuario, ins.insertId]);
             if (caja.affectedRows !== 1) throw new Error('No se pudo crear la caja del vale.');

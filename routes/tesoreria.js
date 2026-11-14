@@ -2372,7 +2372,7 @@ module.exports = function (db, broadcast, logAudit) {
                     if (pagada && c.voucher_url && c.voucher_url !== c.ticket_url) { const k = s3KeyFromUrl(c.voucher_url); pagoVoucher = k ? await getPresignedUrl(k).catch(() => c.voucher_url) : c.voucher_url; }
                     resultado.push({
                         id: c.vale_codigo, folio: c.vale_codigo, fecha: c.fecha, fecha_vencimiento: null, created_at: c.creado_en,
-                        solicitante: c.usuario_creacion || '—', centro_costo: c.centro_costo || 'CC-100', sub_motivo: c.sub_motivo || 'Combustible', autoriza: c.usuario_aprobacion || '',
+                        solicitante: c.usuario_creacion || '—', centro_costo: c.centro_costo || 'CC-300', sub_motivo: c.sub_motivo || 'Diésel B5 / Gasolina de ruta', autoriza: c.usuario_aprobacion || '',
                         motivo: c.descripcion, motivo_entrada: c.descripcion, tipo_orden: 'Vale de combustible',
                         moneda: esUsdVale ? 'USD' : 'PEN', importe: monto, total_pen: esUsdVale ? 0 : monto, tipo_cambio: 1, tipo_igv: 'sin_igv',
                         placa: c.placa || '', ot_id: c.orden_viaje || '', observaciones: '', documento_referencia: c.numero_factura || '', nc_sugeridas: null,
