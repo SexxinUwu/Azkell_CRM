@@ -6,6 +6,7 @@ const express = require('express');
 const multer = require('multer');
 const { uploadToS3, s3KeyFromUrl, getPresignedUrlEstable } = require('../utils/s3');
 const { leerVoucher, combustibleDe } = require('../services/vale_lectura');
+const { datosGpsUnidad } = require('../services/wialon_unidad');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
@@ -113,7 +114,13 @@ module.exports = (db, logAudit) => {
         } catch (err) { responder(res, err, 'viajes'); }
     });
 
-    // Conductores o proveedores (estaciones) para elegir a quién se le paga
+    // Conductores o proveedores (estaciones) para elegir a quién se le paga. Cada uno trae sus cuentas bancarias para la caja.
+    // Se busca por nombre o por RUC/DNI; con `q` vacío devuelve la lista completa (hasta 300).
+    const etiquetaCuenta = c => {
+        const mon = String(c.moneda || 'SOLES').toUpperCase();
+        const usd = /D[OÓ]L|USD/.test(mon);
+        return `${c.banco || ''} - ${c.tipo_cuenta || 'CUENTA CORRIENTE'} [${usd ? 'DÓLARES' : 'SOLES'}] - ${String(c.numero_cuenta || '').trim()}${c.detraccion ? ' [DETRACCIÓN]' : ''}`;
+    };
     router.get('/beneficiarios', async (req, res) => {
         try {
             const p = P(req);
@@ -121,13 +128,26 @@ module.exports = (db, logAudit) => {
             const like = q ? `%${q}%` : null;
             if (String(req.query.tipo).toUpperCase() === 'CONDUCTOR') {
                 const [rows] = await p.query(
-                    `SELECT nombre, dni AS doc, banco, numero_cuenta FROM conductores WHERE estado = 'Activo' ${like ? 'AND (nombre LIKE ? OR dni LIKE ?)' : ''} ORDER BY nombre LIMIT 30`, like ? [like, like] : []);
-                return res.json({ ok: true, data: rows });
+                    `SELECT nombre, dni AS doc, banco, numero_cuenta FROM conductores WHERE estado = 'Activo' ${like ? 'AND (nombre LIKE ? OR dni LIKE ?)' : ''} ORDER BY nombre LIMIT 300`, like ? [like, like] : []);
+                return res.json({ ok: true, data: rows.map(r => ({ nombre: r.nombre, doc: r.doc, cuentas: r.numero_cuenta ? [{ label: `${r.banco || 'Banco'} - CUENTA DE AHORROS [SOLES] - ${String(r.numero_cuenta).trim()}`, usd: false }] : [] })) });
             }
             const [rows] = await p.query(
-                `SELECT nombre, numero_documento AS doc FROM proveedores_inv ${like ? 'WHERE nombre LIKE ? OR numero_documento LIKE ?' : ''} ORDER BY nombre LIMIT 30`, like ? [like, like] : []);
-            res.json({ ok: true, data: rows });
+                `SELECT id, nombre, numero_documento AS doc FROM proveedores_inv ${like ? 'WHERE nombre LIKE ? OR numero_documento LIKE ?' : ''} ORDER BY nombre LIMIT 300`, like ? [like, like] : []);
+            let cuentas = [];
+            if (rows.length) [cuentas] = await p.query('SELECT proveedor_id, banco, tipo_cuenta, moneda, numero_cuenta, detraccion FROM proveedor_cuentas_bancarias WHERE estado = 1 AND proveedor_id IN (?)', [rows.map(r => r.id)]);
+            res.json({ ok: true, data: rows.map(r => ({ nombre: r.nombre, doc: r.doc, cuentas: cuentas.filter(c => String(c.proveedor_id) === String(r.id)).map(c => ({ label: etiquetaCuenta(c), usd: /D[OÓ]L|USD/i.test(String(c.moneda || '')) })) })) });
         } catch (err) { responder(res, err, 'beneficiarios'); }
+    });
+
+    // Kilometraje que marca el GPS (Wialon) de la placa en este momento. Solo lectura; si el GPS no responde, el vale se llena a mano.
+    router.get('/gps-km', async (req, res) => {
+        try {
+            const placa = texto(req.query.placa, 20);
+            if (!placa) throw aviso('Indica la placa.');
+            const r = await datosGpsUnidad(getDb(req), placa);
+            if (!r.ok) return res.json({ ok: false, error: r.error });
+            res.json({ ok: true, km: r.km_gps, ultima_posicion: r.ultima_posicion, hace_minutos: r.hace_minutos, nombre_en_gps: r.nombre_en_gps });
+        } catch (err) { responder(res, err, 'gps-km'); }
     });
 
     // Lee la foto del voucher con IA y propone los datos + avisos. No guarda nada.
@@ -171,7 +191,7 @@ module.exports = (db, logAudit) => {
             if (!benNombre) throw aviso(pagarA === 'CONDUCTOR' ? 'Indica el conductor al que se le paga.' : 'Indica la estación a la que se le paga.');
             const benDoc = texto(b.beneficiario_doc, 20) || (pagarA === 'ESTACION' ? texto(b.estacion_ruc, 20) : texto(b.conductor_doc, 20));
             const placa = (texto(b.placa, 20) || vj[0].placa_tracto || '').toUpperCase();
-            const moneda = /D[OÓ]L|USD/i.test(String(b.moneda || '')) ? 'DOLARES' : 'SOLES';
+            const moneda = 'SOLES'; // el combustible se paga en soles
             if (!req.file && !texto(b.voucher_url, 600) && !texto(b.numero_voucher, 60)) throw aviso('Adjunta la foto del voucher o escribe su número: todo vale necesita su sustento.');
 
             const alertas = await alertasDe(conn, { galones, precio_galon: precio, total, placa, placa_voucher: texto(b.placa_voucher, 20), numero_voucher: texto(b.numero_voucher, 60), estacion_ruc: texto(b.estacion_ruc, 20), fecha, km_odometro: b.km_odometro ? Math.round(num(b.km_odometro)) : null }, 0);
@@ -187,6 +207,14 @@ module.exports = (db, logAudit) => {
             }
             const usuario = usuarioDe(req);
             const anio = fecha.slice(0, 4);
+            // Datos de la caja: quién autoriza, cómo se paga y a qué cuentas
+            const autoriza = texto(b.autoriza, 150) || usuario;
+            const modalidad = texto(b.modalidad_pago, 100) || 'TRANSFERENCIA BANCARIA';
+            const cuentaDestino = texto(b.cuenta_destino, 200) || '';
+            const cuentaEmpresa = texto(b.cuenta_empresa, 200) || '';
+            const nroComprobante = texto(b.numero_voucher, 100) || '';
+            const tipoComprobante = texto(b.tipo_comprobante, 100) || (/^F/i.test(nroComprobante) ? 'FACTURA' : /^B/i.test(nroComprobante) ? 'BOLETA DE VENTA' : 'VALE PROVISIONAL DE CAJA');
+            if (!cuentaDestino && modalidad !== 'EFECTIVO') throw aviso('Elige o escribe la cuenta de ' + (pagarA === 'CONDUCTOR' ? 'el conductor' : 'la estación') + ' a la que se le paga.');
 
             await conn.beginTransaction();
             const [maxV] = await conn.query("SELECT codigo FROM viaje_vales_combustible WHERE codigo LIKE ? ORDER BY id DESC LIMIT 1 FOR UPDATE", [`VC-${anio}-%`]);
@@ -206,13 +234,13 @@ module.exports = (db, logAudit) => {
             const [uc] = await conn.query('SELECT numero FROM tesoreria_caja WHERE serie = ? ORDER BY id DESC LIMIT 1 FOR UPDATE', [serieCaja]);
             let n = 1;
             if (uc.length && uc[0].numero) { const m = /\d+$/.exec(uc[0].numero); if (m) n = parseInt(m[0], 10) + 1; }
-            const descripcion = `Vale de combustible ${codigo} · ${galones} gal ${texto(b.combustible, 40) || ''} · ${estacion || 'estación'} · viaje ${viaje} · placa ${placa}`.replace(/\s+/g, ' ').trim();
+            const descripcion = `Vale de combustible ${codigo} · ${galones} ${combustibleDe(b.combustible) === 'GNV' ? 'm³' : combustibleDe(b.combustible) === 'GNL' ? 'kg' : 'gal'} ${combustibleDe(b.combustible) || texto(b.combustible, 40) || ''} · ${estacion || 'estación'} · viaje ${viaje} · placa ${placa}`.replace(/\s+/g, ' ').trim();
             const [caja] = await conn.query(
                 `INSERT INTO tesoreria_caja (fecha, hora, fecha_valuta, hora_valuta, numero_factura, serie, numero, orden_viaje, conductor, ruta_viaje, placa, autoriza, motivo, centro_costo, sub_motivo,
-                    modalidad_pago, moneda, tipo_persona, persona, tipo_movimiento, subtotal, retencion_detraccion, importe_total, tipo_cambio, descripcion, tipo_comprobante, voucher_url, estado, usuario_creacion, origen, origen_id)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Combustibles y Fluidos', 'CC-300', ?, 'TRANSFERENCIA', ?, ?, ?, 'EGRESO', ?, 0, ?, 1, ?, 'VALE DE COMBUSTIBLE', ?, 'PENDIENTE', ?, 'VALE_COMBUSTIBLE', ?)`,
-                [fecha, horaLima(), fecha, '00:00:00', texto(b.numero_voucher, 100) || '', serieCaja, String(n).padStart(8, '0'), viaje, conductor, vj[0].ruta || '', placa, usuario,
-                    subMotivoDe(combustibleDe(b.combustible)), moneda, pagarA === 'CONDUCTOR' ? 'CONDUCTOR' : 'PROVEEDOR', benNombre.slice(0, 190), total, total, descripcion, voucherUrl, usuario, ins.insertId]);
+                    modalidad_pago, moneda, tipo_persona, persona, tipo_movimiento, subtotal, retencion_detraccion, importe_total, tipo_cambio, descripcion, tipo_comprobante, cuenta_bancaria_persona, cuenta_bancaria_empresa, voucher_url, estado, usuario_creacion, origen, origen_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Combustibles y Fluidos', 'CC-300', ?, ?, ?, ?, ?, 'EGRESO', ?, 0, ?, 1, ?, ?, ?, ?, ?, 'PENDIENTE', ?, 'VALE_COMBUSTIBLE', ?)`,
+                [fecha, horaLima(), fecha, '00:00:00', nroComprobante, serieCaja, String(n).padStart(8, '0'), viaje, conductor, vj[0].ruta || '', placa, autoriza,
+                    subMotivoDe(combustibleDe(b.combustible)), modalidad, moneda, pagarA === 'CONDUCTOR' ? 'CONDUCTOR' : 'PROVEEDOR', benNombre.slice(0, 190), total, total, descripcion, tipoComprobante, cuentaDestino, cuentaEmpresa, voucherUrl, usuario, ins.insertId]);
             if (caja.affectedRows !== 1) throw new Error('No se pudo crear la caja del vale.');
             const [upd] = await conn.query('UPDATE viaje_vales_combustible SET caja_id = ? WHERE id = ?', [caja.insertId, ins.insertId]);
             if (upd.affectedRows !== 1) throw new Error('No se pudo enlazar la caja con el vale.');

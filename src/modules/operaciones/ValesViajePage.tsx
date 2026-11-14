@@ -6,12 +6,12 @@ import './vale-ticket.css';
 import { motion, useReducedMotion } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Ban, Check, CircleAlert, Fuel, Pencil, Image as ImagenIcono, Plus, SearchX, Sparkles, UploadCloud, UserRound, Store } from 'lucide-react';
+import { ArrowLeft, Ban, Check, CircleAlert, Fuel, Pencil, Satellite, Image as ImagenIcono, Plus, SearchX, Sparkles, UploadCloud, UserRound, Store } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { BarraFiltros } from '../../core/ui/FiltrosListado';
-import { Field, TextInput } from '../../core/ui/Field';
+import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { Combobox } from '../../core/ui/Combobox';
 import { IconoFila } from '../../core/ui/IconoFila';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
@@ -20,6 +20,9 @@ import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
+import { useEmpresaCuentas } from '../almacen/api';
+import { etiquetaCuentaEmpresa } from '../almacen/entradaReglas';
+import { AUTORIZAN, COMPROBANTES, MODALIDADES } from '../tesoreria/caja-lib';
 
 interface Alerta { nivel: 'rojo' | 'ambar'; texto: string }
 interface Vale {
@@ -33,7 +36,6 @@ interface Lectura {
   estacion_nombre: string | null; estacion_ruc: string | null; fecha: string | null; hora: string | null; numero_voucher: string | null; placa: string | null; combustible: string | null;
   galones: number | null; precio_galon: number | null; total: number | null; moneda: string; km_odometro: number | null; conductor_doc: string | null;
 }
-interface Beneficiario { nombre: string; doc: string | null }
 
 const COLUMNAS: ColumnaTabla[] = [
   { id: 'acc', titulo: '', ancho: 80, minimo: 70 },
@@ -168,15 +170,27 @@ interface Form {
   viaje: string; placa: string; conductor: string; conductor_doc: string; fecha: string; hora: string; estacion_nombre: string; estacion_ruc: string; combustible: string;
   galones: string; precio_galon: string; total: string; moneda: string; km_odometro: string; numero_voucher: string; placa_voucher: string; observacion: string;
   pagar_a: 'CONDUCTOR' | 'ESTACION'; beneficiario_nombre: string; beneficiario_doc: string;
+  // Lo que pide la caja
+  autoriza: string; modalidad_pago: string; cuenta_destino: string; cuenta_empresa: string; tipo_comprobante: string;
 }
-const VACIO: Form = { viaje: '', placa: '', conductor: '', conductor_doc: '', fecha: '', hora: '', estacion_nombre: '', estacion_ruc: '', combustible: '', galones: '', precio_galon: '', total: '', moneda: 'SOLES', km_odometro: '', numero_voucher: '', placa_voucher: '', observacion: '', pagar_a: 'ESTACION', beneficiario_nombre: '', beneficiario_doc: '' };
+const VACIO: Form = {
+  viaje: '', placa: '', conductor: '', conductor_doc: '', fecha: '', hora: '', estacion_nombre: '', estacion_ruc: '', combustible: '', galones: '', precio_galon: '', total: '', moneda: 'SOLES',
+  km_odometro: '', numero_voucher: '', placa_voucher: '', observacion: '', pagar_a: 'ESTACION', beneficiario_nombre: '', beneficiario_doc: '',
+  autoriza: '', modalidad_pago: 'TRANSFERENCIA BANCARIA', cuenta_destino: '', cuenta_empresa: '', tipo_comprobante: '',
+};
 const t = (v: unknown) => (v == null ? '' : String(v));
+const PASOS = ['Viaje y voucher', 'Consumo', 'Proveedor y pago', 'Confirmar'];
+interface Benef { nombre: string; doc: string | null; cuentas: Array<{ label: string; usd: boolean }> }
+/** Tipo de comprobante según la serie del voucher (F… factura, B… boleta) */
+const comprobanteDe = (nro: string) => (/^F/i.test(nro) ? 'FACTURA' : /^B/i.test(nro) ? 'BOLETA DE VENTA' : '');
+// Lo que la caja guarda como motivo y submotivo según el combustible (el centro de costo es CC-300)
+const subMotivoCaja = (c: string) => (c === 'Úrea / AdBlue' ? 'Úrea / AdBlue' : /^Gasolina/.test(c) ? 'Gasolina vehículos auxiliares/supervisión' : 'Diésel B5 / Gasolina de ruta');
 
 function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const qc = useQueryClient();
   const entrada = useRef<HTMLInputElement>(null);
-  const [fase, setFase] = useState<'subir' | 'leyendo' | 'revisar' | 'resumen' | 'listo'>('subir');
-  const [registrado, setRegistrado] = useState<{ codigo: string } | null>(null);
+  const [paso, setPaso] = useState(0);
+  const [leyendo, setLeyendo] = useState(false);
   const [f, setF] = useState<Form>(VACIO);
   const [archivo, setArchivo] = useState<File | null>(null);
   const [iaJson, setIaJson] = useState('');
@@ -184,49 +198,58 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [km, setKm] = useState<number | null>(null);
-  const qViaje = '';
-  const [qBen, setQBen] = useState('');
+  const [gps, setGps] = useState<{ km: number; hace: number | null } | null>(null);
+  const [gpsCargando, setGpsCargando] = useState(false);
+  const [registrado, setRegistrado] = useState<{ codigo: string } | null>(null);
 
-  useEffect(() => { if (open) { setFase('subir'); setF(VACIO); setArchivo(null); setIaJson(''); setAlertas([]); setError(null); setGuardando(false); setKm(null); setRegistrado(null); } }, [open]);
+  const reiniciar = () => { setPaso(0); setLeyendo(false); setF(VACIO); setArchivo(null); setIaJson(''); setAlertas([]); setError(null); setGuardando(false); setKm(null); setGps(null); setRegistrado(null); };
+  useEffect(() => { if (open) reiniciar(); }, [open]);
 
-  const viajes = useQuery<ViajeOpc[]>({ queryKey: ['operaciones', 'vales-viajes', qViaje], enabled: open, staleTime: 30_000, queryFn: () => api<{ data?: ViajeOpc[] }>('/operaciones/vales/viajes', { query: qViaje ? { q: qViaje } : {} }).then(r => r.data ?? []) });
-  const bens = useQuery<Beneficiario[]>({ queryKey: ['operaciones', 'vales-ben', f.pagar_a, qBen], enabled: open && fase === 'revisar', staleTime: 30_000,
-    queryFn: () => api<{ data?: Beneficiario[] }>('/operaciones/vales/beneficiarios', { query: { tipo: f.pagar_a, ...(qBen ? { q: qBen } : {}) } }).then(r => r.data ?? []) });
+  const viajes = useQuery<ViajeOpc[]>({ queryKey: ['operaciones', 'vales-viajes'], enabled: open, staleTime: 30_000, queryFn: () => api<{ data?: ViajeOpc[] }>('/operaciones/vales/viajes').then(r => r.data ?? []) });
+  const bens = useQuery<Benef[]>({ queryKey: ['operaciones', 'vales-ben', f.pagar_a], enabled: open && paso >= 2, staleTime: 60_000,
+    queryFn: () => api<{ data?: Benef[] }>('/operaciones/vales/beneficiarios', { query: { tipo: f.pagar_a } }).then(r => r.data ?? []) });
+  const cuentasEmpresa = useEmpresaCuentas();
 
   const set = (p: Partial<Form>) => setF(x => ({ ...x, ...p }));
   const viajeActual = viajes.data?.find(v => v.viaje === f.viaje);
+  const unidad = unidadDe(f.combustible);
+
+  async function traerKmGps(placa: string, sobrescribir = false) {
+    if (!placa) return;
+    setGpsCargando(true);
+    try {
+      const r = await api<{ ok: boolean; km?: number | null; hace_minutos?: number | null; error?: string }>('/operaciones/vales/gps-km', { query: { placa } });
+      if (r.ok && r.km) { setGps({ km: r.km, hace: r.hace_minutos ?? null }); setF(x => (sobrescribir || !x.km_odometro ? { ...x, km_odometro: String(r.km) } : x)); }
+      else setGps(null);
+    } catch { setGps(null); } finally { setGpsCargando(false); }
+  }
 
   function elegirViaje(codigo: string | null) {
     const v = viajes.data?.find(x => x.viaje === codigo);
     if (!v) { set({ viaje: '' }); return; }
     set({ viaje: v.viaje, placa: v.placa_tracto, conductor: v.conductor, conductor_doc: t(v.conductor_doc) });
     setKm(v.ultimo_km);
-  }
-
-  // Al cambiar a quién se paga se propone el conductor del viaje o la estación leída
-  function cambiarPagarA(p: 'CONDUCTOR' | 'ESTACION') {
-    set(p === 'CONDUCTOR'
-      ? { pagar_a: p, beneficiario_nombre: f.conductor, beneficiario_doc: f.conductor_doc }
-      : { pagar_a: p, beneficiario_nombre: f.estacion_nombre, beneficiario_doc: f.estacion_ruc });
+    void traerKmGps(v.placa_tracto);
   }
 
   async function leer(a: File) {
-    setArchivo(a); setError(null); setFase('leyendo');
+    setArchivo(a); setError(null); setLeyendo(true);
     try {
       const cuerpo = new FormData();
       cuerpo.append('archivo', a); cuerpo.append('placa', f.placa);
-      const r = await api<{ datos: Lectura; proveedor: Beneficiario | null; alertas: Alerta[] }>('/operaciones/vales/leer', { method: 'POST', body: cuerpo });
+      const r = await api<{ datos: Lectura; proveedor: { nombre: string; doc: string | null } | null; alertas: Alerta[] }>('/operaciones/vales/leer', { method: 'POST', body: cuerpo });
       const d = r.datos;
       const estacion = r.proveedor?.nombre || t(d.estacion_nombre);
+      const ruc = t(r.proveedor?.doc || d.estacion_ruc);
       setIaJson(JSON.stringify(d));
       setF(x => ({
-        ...x, estacion_nombre: estacion, estacion_ruc: t(r.proveedor?.doc || d.estacion_ruc), fecha: t(d.fecha) || hoyIso(), hora: t(d.hora), combustible: combustibleDe(t(d.combustible)),
-        galones: t(d.galones), precio_galon: t(d.precio_galon), total: t(d.total), moneda: d.moneda || 'SOLES', km_odometro: t(d.km_odometro), numero_voucher: t(d.numero_voucher), placa_voucher: t(d.placa),
-        conductor_doc: x.conductor_doc || t(d.conductor_doc),
-        beneficiario_nombre: x.pagar_a === 'ESTACION' ? estacion : x.beneficiario_nombre, beneficiario_doc: x.pagar_a === 'ESTACION' ? t(r.proveedor?.doc || d.estacion_ruc) : x.beneficiario_doc,
+        ...x, estacion_nombre: estacion, estacion_ruc: ruc, fecha: t(d.fecha) || hoyIso(), hora: t(d.hora), combustible: combustibleDe(t(d.combustible)),
+        galones: t(d.galones), precio_galon: t(d.precio_galon), total: t(d.total), km_odometro: d.km_odometro ? t(d.km_odometro) : x.km_odometro, numero_voucher: t(d.numero_voucher), placa_voucher: t(d.placa),
+        conductor_doc: x.conductor_doc || t(d.conductor_doc), tipo_comprobante: comprobanteDe(t(d.numero_voucher)) || x.tipo_comprobante,
+        beneficiario_nombre: x.pagar_a === 'ESTACION' ? estacion : x.beneficiario_nombre, beneficiario_doc: x.pagar_a === 'ESTACION' ? ruc : x.beneficiario_doc,
       }));
-      setAlertas(r.alertas ?? []); haptic('success'); setFase('revisar');
-    } catch (err) { setError(errorMessage(err)); setFase('subir'); haptic('warning'); }
+      setAlertas(r.alertas ?? []); haptic('success'); setPaso(1);
+    } catch (err) { setError(errorMessage(err)); haptic('warning'); } finally { setLeyendo(false); }
   }
 
   // Galones × precio calcula el total mientras se escribe (la persona puede corregirlo)
@@ -235,13 +258,51 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
     set({ ...p, ...(g > 0 && pr > 0 ? { total: (Math.round(g * pr * 100) / 100).toFixed(2) } : {}) });
   };
 
-  function irAlResumen() {
-    setError(null);
-    if (!f.combustible) { setError('Elige el tipo de combustible.'); return; }
-    if (!(n(f.galones) > 0)) { setError('Indica la cantidad.'); return; }
-    if (!(n(f.total) > 0)) { setError('Indica el total.'); return; }
-    if (!f.beneficiario_nombre.trim()) { setError(f.pagar_a === 'CONDUCTOR' ? 'Elige el conductor al que se le paga.' : 'Indica la estación a la que se le paga.'); return; }
-    haptic('selection'); setFase('resumen');
+  // A quién se le paga: la lista trae sus cuentas; al elegir se propone la primera en soles
+  function elegirBeneficiario(nombre: string | null, crear = false) {
+    const b = (bens.data ?? []).find(x => x.nombre === nombre);
+    const cuenta = b ? (b.cuentas.find(c => !c.usd) ?? b.cuentas[0])?.label ?? '' : '';
+    set({
+      beneficiario_nombre: nombre ?? '', beneficiario_doc: t(b?.doc), cuenta_destino: crear ? '' : cuenta,
+      ...(f.pagar_a === 'ESTACION' ? { estacion_nombre: nombre ?? '', estacion_ruc: b?.doc ? t(b.doc) : f.estacion_ruc } : {}),
+    });
+  }
+  function cambiarPagarA(p: 'CONDUCTOR' | 'ESTACION') {
+    set(p === 'CONDUCTOR'
+      ? { pagar_a: p, beneficiario_nombre: f.conductor, beneficiario_doc: f.conductor_doc, cuenta_destino: '' }
+      : { pagar_a: p, beneficiario_nombre: f.estacion_nombre, beneficiario_doc: f.estacion_ruc, cuenta_destino: '' });
+  }
+  const benActual = (bens.data ?? []).find(b => b.nombre === f.beneficiario_nombre) ?? null;
+  // Si se escribe un RUC completo que está en la lista de proveedores, se elige solo
+  useEffect(() => {
+    if (f.pagar_a !== 'ESTACION' || f.beneficiario_nombre || !/^\d{11}$/.test(f.estacion_ruc) || !bens.data) return;
+    const b = bens.data.find(x => x.doc === f.estacion_ruc);
+    if (b) elegirBeneficiario(b.nombre);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f.estacion_ruc, bens.data]);
+  // Preselecciona la cuenta de la empresa en soles si hay una sola
+  const cuentasSoles = useMemo(() => (cuentasEmpresa.data ?? []).map(etiquetaCuentaEmpresa).filter(c => /SOLES/i.test(c)), [cuentasEmpresa.data]);
+  useEffect(() => { if (paso >= 2 && !f.cuenta_empresa && cuentasSoles.length === 1) setF(x => ({ ...x, cuenta_empresa: cuentasSoles[0] })); }, [paso, cuentasSoles, f.cuenta_empresa]);
+
+  function validarConsumo(): string | null {
+    if (!f.viaje) return 'Elige el viaje.';
+    if (!f.combustible) return 'Elige el tipo de combustible.';
+    if (!(n(f.galones) > 0)) return 'Indica la cantidad.';
+    if (!(n(f.total) > 0)) return 'Indica el total.';
+    if (!f.fecha) return 'Indica la fecha.';
+    return null;
+  }
+  function validarPago(): string | null {
+    if (!f.beneficiario_nombre.trim()) return f.pagar_a === 'CONDUCTOR' ? 'Elige el conductor al que se le paga.' : 'Elige la estación (proveedor) a la que se le paga.';
+    if (f.modalidad_pago !== 'EFECTIVO' && !f.cuenta_destino.trim()) return `Indica la cuenta ${f.pagar_a === 'CONDUCTOR' ? 'del conductor' : 'de la estación'} a la que se paga.`;
+    if (!f.cuenta_empresa) return 'Elige la cuenta de la empresa desde la que se paga.';
+    if (!f.autoriza) return 'Elige quién autoriza.';
+    return null;
+  }
+  function siguiente(desde: number) {
+    const e = desde === 1 ? validarConsumo() : desde === 2 ? validarPago() : null;
+    if (e) { setError(e); haptic('warning'); return; }
+    setError(null); haptic('selection'); setPaso(desde + 1);
   }
 
   async function guardar(confirmar: boolean) {
@@ -250,6 +311,7 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
     try {
       const cuerpo = new FormData();
       Object.entries(f).forEach(([k, v]) => cuerpo.append(k, String(v)));
+      if (!f.tipo_comprobante) cuerpo.set('tipo_comprobante', comprobanteDe(f.numero_voucher));
       if (archivo) cuerpo.append('voucher', archivo);
       cuerpo.append('ia_json', iaJson);
       if (confirmar) cuerpo.append('confirmar_alertas', '1');
@@ -257,7 +319,7 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
       if (r.ok === false) throw new Error(r.error || 'No se pudo guardar el vale');
       haptic('success');
       await qc.invalidateQueries({ queryKey: ['operaciones', 'vales-viaje'] });
-      setRegistrado({ codigo: r.codigo ?? '' }); setFase('listo');
+      setRegistrado({ codigo: r.codigo ?? '' }); setPaso(4);
     } catch (err) {
       const cuerpoErr = (err as { body?: { alertas?: Alerta[] } }).body;
       if (cuerpoErr?.alertas) setAlertas(cuerpoErr.alertas);
@@ -267,40 +329,39 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
 
   const hayRojo = alertas.some(a => a.nivel === 'rojo');
   const opcionesViaje = (viajes.data ?? []).map(v => ({ value: v.viaje, label: v.viaje, description: [v.placa_tracto, v.conductor, v.ruta].filter(Boolean).join(' · ') }));
-  const opcionesBen = (bens.data ?? []).map(b => ({ value: b.nombre, label: b.nombre, description: b.doc ?? undefined }));
+  const opcionesBen = (bens.data ?? []).map(b => ({ value: b.nombre, label: b.nombre, description: b.doc ?? undefined, keywords: b.doc ?? undefined }));
+
+  const footer = paso === 0 ? <Button variant="secondary" onClick={onClose} disabled={leyendo}>Cancelar</Button>
+    : paso === 1 ? (<><Button variant="secondary" icon={<ArrowLeft size={16} />} onClick={() => setPaso(0)}>Otra foto</Button><Button variant="primary" onClick={() => siguiente(1)}>Siguiente</Button></>)
+    : paso === 2 ? (<><Button variant="secondary" icon={<ArrowLeft size={16} />} onClick={() => setPaso(1)}>Atrás</Button><Button variant="primary" onClick={() => siguiente(2)}>Revisar</Button></>)
+    : paso === 3 ? (<><Button variant="secondary" icon={<Pencil size={16} />} onClick={() => setPaso(2)} disabled={guardando}>Corregir</Button>
+        <Button variant="primary" onClick={() => guardar(hayRojo)} loading={guardando}>{hayRojo ? 'Registrar de todos modos' : 'Registrar vale'}</Button></>)
+    : (<><Button variant="secondary" onClick={onClose}>Cerrar</Button><Button variant="primary" icon={<Plus size={16} />} onClick={reiniciar}>Otro vale</Button></>);
+
+  const cuentasBen = benActual?.cuentas ?? [];
 
   return (
-    <Sheet ancho open={open} onClose={() => !guardando && fase !== 'leyendo' && onClose()} title="Nuevo vale de combustible"
-      footer={fase === 'revisar' ? (
-        <>
-          <Button variant="secondary" icon={<ArrowLeft size={16} />} onClick={() => setFase('subir')} disabled={guardando}>Otra foto</Button>
-          <Button variant="primary" onClick={irAlResumen}>Revisar el vale</Button>
-        </>
-      ) : fase === 'resumen' ? (
-        <>
-          <Button variant="secondary" icon={<Pencil size={16} />} onClick={() => setFase('revisar')} disabled={guardando}>Corregir</Button>
-          <Button variant="primary" onClick={() => guardar(hayRojo)} loading={guardando}>{hayRojo ? 'Registrar de todos modos' : 'Registrar vale'}</Button>
-        </>
-      ) : fase === 'listo' ? (
-        <>
-          <Button variant="secondary" onClick={onClose}>Cerrar</Button>
-          <Button variant="primary" icon={<Plus size={16} />} onClick={() => { setFase('subir'); setF(VACIO); setArchivo(null); setIaJson(''); setAlertas([]); setRegistrado(null); setKm(null); }}>Otro vale</Button>
-        </>
-      ) : <Button variant="secondary" onClick={onClose} disabled={fase === 'leyendo'}>Cancelar</Button>}>
+    <Sheet ancho open={open} onClose={() => !guardando && !leyendo && onClose()} title="Nuevo vale de combustible" footer={footer}>
       <div className="gr gr--compacto">
+        {paso < 4 && (
+          <ol className="vs-pasos" aria-label="Pasos">
+            {PASOS.map((nombre, i) => <li key={nombre} className={i === paso ? 'vs-pasos__on' : i < paso ? 'vs-pasos__hecho' : ''}><span>{i < paso ? <Check size={12} aria-hidden /> : i + 1}</span>{nombre}</li>)}
+          </ol>
+        )}
         {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
 
-        {(fase === 'subir' || fase === 'revisar') && <section className="os-seccion">
-          <h3 className="os-seccion__titulo">Viaje</h3>
-          <div className="os-seccion__cuerpo">
-            <Field label="Viaje *" hint={viajeActual ? [viajeActual.placa_tracto, viajeActual.conductor].filter(Boolean).join(' · ') : 'Se llenan solos la placa y el conductor'}>
-              {p => <Combobox {...p} options={opcionesViaje} value={f.viaje || null} onChange={elegirViaje} placeholder="Busca por viaje, placa o conductor" loading={viajes.isFetching} enHoja compacta tituloHoja="Elegir viaje" />}
-            </Field>
-          </div>
-        </section>}
-
-        {fase === 'subir' && (
+        {/* Paso 1: viaje y voucher */}
+        {paso === 0 && !leyendo && (
           <>
+            <section className="os-seccion">
+              <h3 className="os-seccion__titulo">Viaje</h3>
+              <div className="os-seccion__cuerpo">
+                {viajes.isError && <Notice tone="error">No se pudieron cargar los viajes: {errorMessage(viajes.error)}</Notice>}
+                <Field label="Viaje *" hint={viajeActual ? [viajeActual.placa_tracto, viajeActual.conductor].filter(Boolean).join(' · ') : 'Se llenan solos la placa y el conductor'}>
+                  {p => <Combobox {...p} options={opcionesViaje} value={f.viaje || null} onChange={elegirViaje} placeholder="Busca por viaje, placa o conductor" loading={viajes.isFetching} enHoja compacta tituloHoja="Elegir viaje" />}
+                </Field>
+              </div>
+            </section>
             <div className="gr__zona" role="button" tabIndex={0} aria-disabled={!f.viaje}
               onClick={() => f.viaje && entrada.current?.click()} onKeyDown={e => { if (f.viaje && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); entrada.current?.click(); } }}
               style={f.viaje ? undefined : { opacity: 0.5, cursor: 'not-allowed' }}>
@@ -309,76 +370,120 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
               <span>La IA lee la estación, los galones, el precio y el total. Tú solo confirmas.</span>
               <input ref={entrada} type="file" hidden accept="image/*,application/pdf,.pdf" onChange={e => { const a = e.target.files?.[0]; e.target.value = ''; if (a) void leer(a); }} />
             </div>
-            <ul className="gr__ayuda">
-              <li><Sparkles size={16} aria-hidden /><span>También avisa si algo no cuadra: total, placa distinta, voucher repetido o precio raro.</span></li>
-            </ul>
-            <Button variant="plain" disabled={!f.viaje} onClick={() => { setF(x => ({ ...x, fecha: hoyIso() })); setAlertas([]); setFase('revisar'); }}>Prefiero llenarlo a mano</Button>
+            <ul className="gr__ayuda"><li><Sparkles size={16} aria-hidden /><span>También avisa si algo no cuadra: total, placa distinta, voucher repetido o precio raro.</span></li></ul>
+            <Button variant="plain" disabled={!f.viaje} onClick={() => { setF(x => ({ ...x, fecha: x.fecha || hoyIso() })); setAlertas([]); setPaso(1); }}>Prefiero llenarlo a mano</Button>
           </>
         )}
+        {paso === 0 && leyendo && <div className="gr__leyendo"><PageLoader /><strong>Leyendo el voucher…</strong><span>{archivo?.name}</span></div>}
 
-        {fase === 'leyendo' && <div className="gr__leyendo"><PageLoader /><strong>Leyendo el voucher…</strong><span>{archivo?.name}</span></div>}
-
-        {fase === 'revisar' && (
+        {/* Paso 2: consumo */}
+        {paso === 1 && (
           <>
             {archivo && <p className="gr__archivo"><ImagenIcono size={15} aria-hidden /> {archivo.name}{iaJson ? ' · leído con IA: revisa cada dato' : ''}</p>}
-            {alertas.length > 0 && (
-              <Notice tone={hayRojo ? 'error' : 'accent'} icon={<CircleAlert size={16} />}>{alertas.map(a => <div key={a.texto}>{a.nivel === 'rojo' ? '● ' : '○ '}{a.texto}</div>)}</Notice>
-            )}
+            {alertas.length > 0 && <Notice tone={hayRojo ? 'error' : 'accent'} icon={<CircleAlert size={16} />}>{alertas.map(a => <div key={a.texto}>{a.nivel === 'rojo' ? '● ' : '○ '}{a.texto}</div>)}</Notice>}
             <section className="os-seccion">
               <h3 className="os-seccion__titulo">El consumo</h3>
               <div className="os-seccion__cuerpo">
                 <div className="gr__g3">
                   <Field label="Fecha *">{p => <TextInput {...p} type="date" value={f.fecha} max={hoyIso()} onChange={e => set({ fecha: e.target.value })} />}</Field>
                   <Field label="Hora">{p => <TextInput {...p} type="time" value={f.hora} onChange={e => set({ hora: e.target.value })} />}</Field>
-                  <Field label="N° de voucher">{p => <TextInput {...p} value={f.numero_voucher} onChange={e => set({ numero_voucher: e.target.value })} />}</Field>
-                </div>
-                <div className="gr__g3">
-                  <Field label={`Cantidad (${unidadDe(f.combustible)}) *`}>{p => <TextInput {...p} inputMode="decimal" value={f.galones} onChange={e => recalcular({ galones: e.target.value })} />}</Field>
-                  <Field label="Precio por galón">{p => <TextInput {...p} inputMode="decimal" value={f.precio_galon} onChange={e => recalcular({ precio_galon: e.target.value })} />}</Field>
-                  <Field label="Total *">{p => <TextInput {...p} inputMode="decimal" value={f.total} onChange={e => set({ total: e.target.value })} />}</Field>
+                  <Field label="N° de voucher">{p => <TextInput {...p} value={f.numero_voucher} onChange={e => set({ numero_voucher: e.target.value, tipo_comprobante: comprobanteDe(e.target.value) || f.tipo_comprobante })} />}</Field>
                 </div>
                 <div className="gr__g3">
                   <Field label="Combustible *">{p => <Combobox {...p} options={OPCIONES_COMBUSTIBLE} value={f.combustible || null} onChange={v => set({ combustible: v ?? '' })} placeholder="Elige el tipo" enHoja compacta tituloHoja="Tipo de combustible" />}</Field>
-                  <Field label="Km del odómetro" hint={km ? `Último vale: ${km.toLocaleString('es-PE')}` : undefined}>{p => <TextInput {...p} inputMode="numeric" value={f.km_odometro} onChange={e => set({ km_odometro: e.target.value.replace(/\D/g, '') })} />}</Field>
-                  <SegmentedControl block label="Moneda" value={f.moneda} onChange={v => set({ moneda: v })} options={[{ value: 'SOLES', label: 'Soles' }, { value: 'DOLARES', label: 'Dólares' }]} />
+                  <Field label={`Cantidad (${unidad}) *`}>{p => <TextInput {...p} inputMode="decimal" value={f.galones} onChange={e => recalcular({ galones: e.target.value })} />}</Field>
+                  <Field label="Precio por unidad">{p => <TextInput {...p} inputMode="decimal" value={f.precio_galon} onChange={e => recalcular({ precio_galon: e.target.value })} />}</Field>
                 </div>
-              </div>
-            </section>
-            <section className="os-seccion">
-              <h3 className="os-seccion__titulo">Estación</h3>
-              <div className="os-seccion__cuerpo">
                 <div className="gr__g3">
-                  <Field label="Estación / grifo">{p => <TextInput {...p} value={f.estacion_nombre} onChange={e => set({ estacion_nombre: e.target.value, ...(f.pagar_a === 'ESTACION' ? { beneficiario_nombre: e.target.value } : {}) })} />}</Field>
-                  <Field label="RUC">{p => <TextInput {...p} inputMode="numeric" maxLength={11} value={f.estacion_ruc} onChange={e => set({ estacion_ruc: e.target.value.replace(/\D/g, ''), ...(f.pagar_a === 'ESTACION' ? { beneficiario_doc: e.target.value.replace(/\D/g, '') } : {}) })} />}</Field>
+                  <Field label="Total (S/) *">{p => <TextInput {...p} inputMode="decimal" value={f.total} onChange={e => set({ total: e.target.value })} />}</Field>
+                  <Field label="Km del odómetro" hint={gpsCargando ? 'Consultando el GPS…' : gps ? `GPS: ${gps.km.toLocaleString('es-PE')} km${gps.hace != null ? ` · hace ${gps.hace} min` : ''}` : km ? `Último vale: ${km.toLocaleString('es-PE')}` : 'El GPS no devolvió el km: escríbelo si lo tienes'}>
+                    {p => <TextInput {...p} inputMode="numeric" value={f.km_odometro} onChange={e => set({ km_odometro: e.target.value.replace(/\D/g, '') })} />}
+                  </Field>
+                  <div style={{ alignSelf: 'end' }}><Button variant="secondary" icon={<Satellite size={16} />} loading={gpsCargando} disabled={!f.placa} onClick={() => void traerKmGps(f.placa, true)}>Usar km del GPS</Button></div>
                 </div>
               </div>
             </section>
+          </>
+        )}
+
+        {/* Paso 3: proveedor y pago (lo que pide la caja) */}
+        {paso === 2 && (
+          <>
             <section className="os-seccion">
               <h3 className="os-seccion__titulo">¿A quién se le paga?<span className="gr__nota"> · la caja se genera a su nombre</span></h3>
               <div className="os-seccion__cuerpo">
-                <SegmentedControl block label="Pagar a" value={f.pagar_a} onChange={cambiarPagarA} options={[{ value: 'ESTACION', label: 'Estación' }, { value: 'CONDUCTOR', label: 'Conductor' }]} />
-                <Field label={f.pagar_a === 'CONDUCTOR' ? 'Conductor *' : 'Proveedor (estación) *'} hint={f.beneficiario_doc ? `Documento ${f.beneficiario_doc}` : 'Elígelo de la lista o escribe el nombre'}>
-                  {p => <Combobox {...p} options={opcionesBen} value={f.beneficiario_nombre || null} loading={bens.isFetching} enHoja compacta tituloHoja={f.pagar_a === 'CONDUCTOR' ? 'Elegir conductor' : 'Elegir proveedor'} placeholder="Busca por nombre o documento"
-                    onChange={v => { const b = bens.data?.find(x => x.nombre === v); set({ beneficiario_nombre: v ?? '', beneficiario_doc: t(b?.doc) }); }}
-                    onCreate={txt => { setQBen(''); set({ beneficiario_nombre: txt.trim(), beneficiario_doc: '' }); }} createLabel="Usar" />}
+                <SegmentedControl block label="Pagar a" value={f.pagar_a} onChange={cambiarPagarA} options={[{ value: 'ESTACION', label: 'Estación (proveedor)' }, { value: 'CONDUCTOR', label: 'Conductor' }]} />
+                <Field label={f.pagar_a === 'CONDUCTOR' ? 'Conductor *' : 'Proveedor (estación) *'} hint={f.pagar_a === 'ESTACION' ? 'Busca por nombre o por RUC: al elegirlo se completa el otro dato' : undefined}>
+                  {p => <Combobox {...p} options={opcionesBen} value={f.beneficiario_nombre || null} loading={bens.isFetching} enHoja compacta tituloHoja={f.pagar_a === 'CONDUCTOR' ? 'Elegir conductor' : 'Elegir proveedor'} placeholder="Busca por nombre, RUC o DNI"
+                    onChange={v => elegirBeneficiario(v)} onCreate={txt => elegirBeneficiario(txt.trim(), true)} createLabel="Usar (no registrado)" />}
                 </Field>
+                {f.pagar_a === 'ESTACION' && (
+                  <Field label="RUC" hint={f.estacion_ruc && f.beneficiario_nombre && !benActual ? 'Este proveedor no está registrado: pide a Almacén que lo registre con su cuenta' : undefined}>
+                    {p => <TextInput {...p} inputMode="numeric" maxLength={11} value={f.estacion_ruc} onChange={e => { const r = e.target.value.replace(/\D/g, ''); set({ estacion_ruc: r, beneficiario_doc: r }); }} />}
+                  </Field>
+                )}
+              </div>
+            </section>
+            <section className="os-seccion">
+              <h3 className="os-seccion__titulo">Pago en Caja</h3>
+              <div className="os-seccion__cuerpo">
+                <Field label={`Cuenta ${f.pagar_a === 'CONDUCTOR' ? 'del conductor' : 'del proveedor'} *`} hint={cuentasBen.length === 0 ? 'No tiene cuentas registradas: escríbela (banco y número) o regístrala en su ficha' : undefined}>
+                  {p => cuentasBen.length > 0 ? (
+                    <SelectInput {...p} value={f.cuenta_destino} onChange={e => set({ cuenta_destino: e.target.value })}>
+                      {cuentasBen.map(c => <option key={c.label} value={c.label}>{c.label}</option>)}
+                    </SelectInput>
+                  ) : <TextInput {...p} value={f.cuenta_destino} placeholder="Ej. BCP - CUENTA CORRIENTE [SOLES] - 191-1234567-0-12" onChange={e => set({ cuenta_destino: e.target.value })} />}
+                </Field>
+                <Field label="Cuenta de la empresa (de dónde sale el pago) *">
+                  {p => <SelectInput {...p} value={f.cuenta_empresa} disabled={cuentasEmpresa.isLoading} onChange={e => set({ cuenta_empresa: e.target.value })}>
+                    <option value="">{cuentasEmpresa.isLoading ? 'Cargando cuentas…' : 'Elige una cuenta'}</option>
+                    {cuentasSoles.map(c => <option key={c} value={c}>{c}</option>)}
+                  </SelectInput>}
+                </Field>
+                <div className="gr__g3">
+                  <Field label="Modalidad de pago">{p => <SelectInput {...p} value={f.modalidad_pago} onChange={e => set({ modalidad_pago: e.target.value })}>{MODALIDADES.map(m => <option key={m} value={m}>{m}</option>)}</SelectInput>}</Field>
+                  <Field label="Comprobante" hint={f.numero_voucher ? `N° ${f.numero_voucher}` : undefined}>{p => <SelectInput {...p} value={f.tipo_comprobante || comprobanteDe(f.numero_voucher)} onChange={e => set({ tipo_comprobante: e.target.value })}><option value="">Vale provisional de caja</option>{COMPROBANTES.filter(c => c !== 'VALE PROVISIONAL DE CAJA').map(c => <option key={c} value={c}>{c}</option>)}</SelectInput>}</Field>
+                  <Field label="Autoriza *">{p => <SelectInput {...p} value={f.autoriza} onChange={e => set({ autoriza: e.target.value })}><option value="">Elige quién autoriza</option>{AUTORIZAN.map(a => <option key={a} value={a}>{a}</option>)}</SelectInput>}</Field>
+                </div>
               </div>
             </section>
           </>
         )}
 
-        {fase === 'resumen' && (
+        {/* Paso 4: confirmar */}
+        {paso === 3 && (
           <>
             {alertas.length > 0 && <Notice tone={hayRojo ? 'error' : 'accent'} icon={<CircleAlert size={16} />}>{alertas.map(a => <div key={a.texto}>{a.nivel === 'rojo' ? '● ' : '○ '}{a.texto}</div>)}</Notice>}
             <TicketVale f={f} titulo="Revisa antes de registrar" icono={<Fuel size={20} />} pie="Al registrar se crea su caja, pendiente de aprobación." />
+            <CajaPrevia f={f} />
           </>
         )}
 
-        {fase === 'listo' && registrado && (
+        {paso === 4 && registrado && (
           <TicketVale f={f} codigo={registrado.codigo} titulo="Vale registrado" icono={<Check size={22} />} ok pie="Su caja quedó pendiente de aprobación; al aprobarla aparecerá en Pago de requerimientos." animar />
         )}
       </div>
     </Sheet>
+  );
+}
+
+/** Lo que se va a generar en Caja al registrar el vale (egreso pendiente de aprobación) */
+function CajaPrevia({ f }: { f: Form }) {
+  const filas: Array<[string, string]> = [
+    ['Movimiento', 'Egreso · PENDIENTE de aprobación'],
+    ['Motivo', 'Combustibles y Fluidos'], ['Submotivo', subMotivoCaja(f.combustible)], ['Centro de costo', 'CC-300 Operaciones de Ruta (Costo Servicio)'],
+    ['Persona', `${f.pagar_a === 'CONDUCTOR' ? 'Conductor' : 'Proveedor'} · ${f.beneficiario_nombre}${f.beneficiario_doc ? ` (${f.beneficiario_doc})` : ''}`],
+    ['Cuenta de la persona', f.cuenta_destino || '—'], ['Cuenta de la empresa', f.cuenta_empresa || '—'], ['Modalidad de pago', f.modalidad_pago],
+    ['Comprobante', `${f.tipo_comprobante || comprobanteDe(f.numero_voucher) || 'VALE PROVISIONAL DE CAJA'}${f.numero_voucher ? ` · ${f.numero_voucher}` : ''}`],
+    ['Autoriza', f.autoriza || '—'], ['Viaje / placa', `${f.viaje} · ${f.placa}`], ['Importe', `S/ ${fmt(f.total)}`],
+  ];
+  return (
+    <section className="os-seccion" aria-label="Caja que se generará">
+      <h3 className="os-seccion__titulo">Se generará en Caja</h3>
+      <div className="os-seccion__cuerpo">
+        {filas.map(([k, v]) => <div className="vt__fila" key={k}><span>{k}</span><span>{v}</span></div>)}
+      </div>
+    </section>
   );
 }
 
