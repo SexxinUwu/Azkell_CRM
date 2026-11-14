@@ -20,7 +20,7 @@ import { usePersonalNombres } from '../mantenimiento/OTEditar';
 import { leerFallas, textoItem, type FallaGuardada, type SistemaCfg } from './fman';
 
 interface Marca { obs: string }
-interface Viaje { id?: number | string; viaje?: string | null; conductor?: string | null; placa_remolque?: string | null; ruta?: string | null; origen?: string | null; destino?: string | null; fecha_viaje_fmt?: string | null }
+interface Viaje { id?: number | string; viaje?: string | null; conductor?: string | null; placa_tracto?: string | null; placa_remolque?: string | null; ruta?: string | null; origen?: string | null; destino?: string | null; fecha_viaje_fmt?: string | null }
 interface IngresoSeg { conductor?: string | null; placa_carreta?: string | null; procedencia?: string | null; destino?: string | null; zona?: string | null }
 interface Backlog { id: number | string; backlog_id?: string | null; tarea?: string | null; tema?: string | null; ticket_ot?: string | null }
 type Registro = Record<string, unknown>;
@@ -214,6 +214,8 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
   const [qViajeDeb, setQViajeDeb] = useState('');
   const [viajes, setViajes] = useState<Viaje[]>([]);
   const [viajeSel, setViajeSel] = useState('');
+  const [viajeElegido, setViajeElegido] = useState<Viaje | null>(null);
+  const elegidoAMano = useRef(false);
   // Conductores que sugiere cada fuente; si difieren se avisa y la persona elige
   const [condViaje, setCondViaje] = useState('');
   const [condSeg, setCondSeg] = useState('');
@@ -251,7 +253,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
   useEffect(() => {
     if (!open) return;
     setError(null); setBusqueda(''); setAbiertos({}); setCritica(false); setFotos([]); setVideos([]); setBacklogSel({});
-    setViajeAbierto(false); setQViaje(''); setQViajeDeb('');
+    setViajeAbierto(false); setQViaje(''); setQViajeDeb(''); setViajeElegido(null); elegidoAMano.current = false;
     firma.current?.limpiar();
     if (reporte) {
       const t = marcasDe(leerFallas(reporte.fallas_tracto_json), 'tracto');
@@ -277,7 +279,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
   // Al escribir la placa del tracto (reporte nuevo o pendiente en edición): se completa con el último ingreso de seguridad y el último viaje.
   // La orden de viaje manda sobre seguridad en el conductor; lo ya escrito (o guardado) no se pisa.
   useEffect(() => {
-    setCondViaje(''); setCondSeg(''); setViajes([]); setViajeSel('');
+    setCondViaje(''); setCondSeg(''); setViajes([]); if (!elegidoAMano.current) setViajeSel('');
     if (!consultar || !PLACA_VALIDA.test(placaT)) return;
     let vigente = true;
     const t = setTimeout(async () => {
@@ -290,7 +292,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
       const s = seg?.data ?? null;
       const viaje = via?.data?.[0] ?? null;
       setViajes(via?.data ?? []);
-      if (viaje && !editando) setViajeSel(String(viaje.id ?? viaje.viaje ?? ''));
+      if (viaje && !editando && !elegidoAMano.current) setViajeSel(String(viaje.id ?? viaje.viaje ?? ''));
       const cs = (s?.conductor ?? '').trim();
       const cv = (viaje?.conductor ?? '').trim();
       if (!editando) { setCondSeg(cs); setCondViaje(cv); }
@@ -330,18 +332,24 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
     setViajeSel(id);
     const x = lista.find(w => String(w.id ?? w.viaje ?? '') === id);
     if (!x) return;
+    elegidoAMano.current = true;
+    setViajeElegido(x);
     setCondViaje((x.conductor ?? '').trim());
     setV(a => ({
       ...a,
       orden_viaje: x.viaje || a.orden_viaje,
       conductor: x.conductor?.trim() || a.conductor,
+      // El tracto del viaje se completa solo si todavía no se eligió uno (se puede reportar una carreta sola)
+      placa_tracto: (a.placa_tracto || x.placa_tracto || '').toUpperCase(),
       placa_remolque: (x.placa_remolque || a.placa_remolque || '').toUpperCase(),
       procedencia: x.ruta || x.origen || a.procedencia,
     }));
+    setError(null);
+    setViajeAbierto(false);
     haptic('selection');
   }
   const candidatosViaje = qViajeDeb.trim().length >= 2 ? (busquedaViajes.data ?? []) : viajes;
-  const viajeActual = [...viajes, ...(busquedaViajes.data ?? [])].find(w => String(w.id ?? w.viaje ?? '') === viajeSel);
+  const viajeActual = [viajeElegido, ...viajes, ...(busquedaViajes.data ?? [])].find(w => !!w && String(w.id ?? w.viaje ?? '') === viajeSel);
 
   // Mismo selector de placas que el resto del ERP (PlacaPicker), con las motoras y las carretas
   const opcionesTracto = (placas.data ?? []).filter(p => p.motora).map(p => ({ placa: p.placa, detalle: p.cliente }));
@@ -389,9 +397,10 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
   }
 
   async function guardar() {
-    if (!placaT) { setError('Indica la placa del tracto.'); return; }
+    if (!placaT && !placaR) { setError('Indica la placa del tracto o de la carreta (al menos una).'); return; }
     if (!v.conductor?.trim()) { setError('Indica el conductor.'); return; }
     if (!editando && total === 0) { setError('Marca al menos una falla, importa un backlog o escribe una falla manual.'); return; }
+    if (!placaT && manualesLlenos.some(m => m.unidad !== 'remolque')) { setError('Una falla manual es del camión, pero no hay placa de camión. Indícala o cambia la falla a carreta.'); return; }
     if (!placaR && manualesLlenos.some(m => m.unidad === 'remolque')) { setError('Una falla manual es de la carreta, pero no hay placa de carreta. Indícala o cambia la falla a camión.'); return; }
     const ahora = new Date().toISOString().slice(0, 16).replace('T', ' ');
     const armar = (m: Record<string, Marca>) => Object.entries(m).map(([k, x]) => {
@@ -536,15 +545,15 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
               ) : (
                 <p className="t-footnote c-secondary">{qViajeDeb.trim().length >= 2 ? 'Sin viajes para esa búsqueda.' : 'Escribe al menos 2 letras, o elige primero la placa del tracto para ver sus últimos viajes.'}</p>
               )}
-              {viajeActual && (
-                <Notice tone="accent">
-                  Vinculado al viaje <b>{viajeActual.viaje}</b>{viajeActual.ruta ? ` · ${viajeActual.ruta}` : ''}
-                  <span style={{ display: 'block', marginTop: 'var(--s-2)' }}>
-                    <Button variant="secondary" icon={<Unlink size={16} />} onClick={() => { setViajeSel(''); set('orden_viaje', ''); }}>Quitar vinculación</Button>
-                  </span>
-                </Notice>
-              )}
             </div>
+          )}
+          {viajeActual && (
+            <Notice tone="accent">
+              Vinculado al viaje <b>{viajeActual.viaje}</b>{viajeActual.ruta ? ` · ${viajeActual.ruta}` : ''}
+              <span style={{ display: 'block', marginTop: 'var(--s-2)' }}>
+                <Button variant="secondary" icon={<Unlink size={16} />} onClick={() => { setViajeSel(''); setViajeElegido(null); elegidoAMano.current = false; set('orden_viaje', ''); }}>Quitar vinculación</Button>
+              </span>
+            </Notice>
           )}
         </section>
 
@@ -563,7 +572,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
           <p className="ck-bloque__titulo">Datos del reporte</p>
           <div className="form-grid">
             <Field label="Fecha de registro">{p => <TextInput {...p} type="date" readOnly value={v.fecha ?? hoyLima()} />}</Field>
-            <Field label="Placa principal (tracto) *">{p => <PlacaPicker {...p} value={v.placa_tracto ?? ''} onChange={pl => set('placa_tracto', pl)} opciones={opcionesTracto} />}</Field>
+            <Field label="Placa principal (tracto)" hint="Indica el tracto, la carreta o ambos (al menos una placa).">{p => <PlacaPicker {...p} value={v.placa_tracto ?? ''} onChange={pl => set('placa_tracto', pl)} opciones={opcionesTracto} />}</Field>
             <Field label="Placa semirremolque / carreta" hint="Opcional. Si se elige, se genera una OT independiente para esta unidad.">{p => <PlacaPicker {...p} value={v.placa_remolque ?? ''} onChange={pl => set('placa_remolque', pl)} opciones={opcionesRemolque} />}</Field>
             <Field label="Conductor *">{p => <Combobox {...p} options={opcionesPersonal} value={v.conductor || null} onChange={c => set('conductor', c ?? '')} placeholder="Seleccione conductor…" />}</Field>
             <Field label="Procedencia" wide>{p => <TextInput {...p} value={v.procedencia ?? ''} onChange={e => set('procedencia', e.target.value)} />}</Field>
