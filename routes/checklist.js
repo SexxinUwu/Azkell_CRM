@@ -787,7 +787,7 @@ module.exports = function (db, broadcast, logAudit) {
 
                                 if (critica) {
                                     await abrirBacklogFallaCritica(tdb, {
-                                        folio, placa: repExistente.placa_tracto, km: kmFinalNum || kmInicialNum,
+                                        folio, placa: repExistente.placa_tracto || repExistente.placa_remolque, km: kmFinalNum || kmInicialNum,
                                         descripcion: textoFallasCriticas([mergedFallasT, mergedFallasR], fallas_libres_text || repExistente.fallas_libres_text),
                                         reportadoPor: creado_por,
                                     }).catch(e => console.error('Backlog falla crítica:', e.message));
@@ -889,7 +889,7 @@ module.exports = function (db, broadcast, logAudit) {
 
                     if (critica) {
                         await abrirBacklogFallaCritica(tdb, {
-                            folio, placa: (placa_tracto || '').trim().toUpperCase(), km: kmFinalNum || kmInicialNum,
+                            folio, placa: (placa_tracto || placa_remolque || '').trim().toUpperCase(), km: kmFinalNum || kmInicialNum,
                             descripcion: textoFallasCriticas([fallas_tracto || [], fallas_remolque || []], fallas_libres_text),
                             reportadoPor: creado_por,
                         }).catch(e => console.error('Backlog falla crítica:', e.message));
