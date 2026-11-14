@@ -49,6 +49,8 @@ export function PagoProcesarSheet({ oc, open, onClose }: { oc: OrdenPago | null;
   // Notas de crédito del proveedor aplicadas a este pago (si las hay)
   const [ncs, setNcs] = useState<AplicacionElegida[]>([]);
   const [netoNc, setNetoNc] = useState<number | null>(null);
+  // OC en dólares pagada desde una cuenta en soles: tipo de cambio del día del pago
+  const [tcPago, setTcPago] = useState('');
 
   const cuentas = useMemo<CuentaOrigen[]>(() =>
     (bancos.data ?? [])
@@ -69,10 +71,16 @@ export function PagoProcesarSheet({ oc, open, onClose }: { oc: OrdenPago | null;
 
   const cuenta = cuentas.find(c => c.label === cuentaSel) ?? null;
   const usd = cuenta ? cuenta.usd : !!oc && esUSD(oc.moneda);
-  const importe = oc ? montoAPagar(oc, usd) : 0;
-  // Lo que sale del banco: el importe menos las notas de crédito aplicadas
-  const monto = ncs.length && netoNc != null ? netoNc : importe;
   const tc = Number(oc?.tipo_cambio) || 0;
+  const mixto = !!oc && esUSD(oc.moneda) && !usd;
+  const importeUsd = oc && tc > 0 ? montoAPagar(oc, true) : 0;
+  const tcPagoNum = Number(tcPago.replace(',', '.')) || 0;
+  // En pago mixto el importe se calcula en dólares y se convierte; si no, como siempre
+  const importe = oc ? (mixto ? importeUsd : montoAPagar(oc, usd)) : 0;
+  // Lo que sale del banco: el importe menos las notas de crédito aplicadas
+  const neto = ncs.length && netoNc != null ? netoNc : importe;
+  const monto = mixto ? redondear2(neto * (tcPagoNum || tc)) : neto;
+  const difCambio = mixto ? redondear2(neto * ((tcPagoNum || tc) - tc)) : 0;
 
   const preview = useMemo(() => (voucher && voucher.type.startsWith('image/') ? URL.createObjectURL(voucher) : null), [voucher]);
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
@@ -92,6 +100,7 @@ export function PagoProcesarSheet({ oc, open, onClose }: { oc: OrdenPago | null;
     const totalmenteCompensada = ncs.length > 0 && monto <= 0;
     if (!constancia.trim() && !totalmenteCompensada) e.constancia = 'Ingresa el número de constancia u operación.';
     if (!cuenta) e.cuenta = 'Elige la cuenta de origen de la empresa.';
+    if (mixto && tcPago.trim() && !(tcPagoNum >= 1 && tcPagoNum <= 20)) e.monto = 'El tipo de cambio del pago no parece válido (soles por dólar).';
     if (!(importe > 0)) {
       e.monto = usd && tc <= 0
         ? 'La orden no tiene tipo de cambio: no se puede calcular el monto en US$.'
@@ -105,6 +114,7 @@ export function PagoProcesarSheet({ oc, open, onClose }: { oc: OrdenPago | null;
     fd.append('numero_constancia', constancia.trim());
     fd.append('cuenta_origen', cuenta?.label ?? '');
     fd.append('moneda', usd ? 'USD' : 'PEN');
+    if (mixto) fd.append('tipo_cambio_pago', String(tcPagoNum || tc));
     fd.append('monto', String(redondear2(monto)));
     if (ncs.length) fd.append('nc_aplicaciones', JSON.stringify(ncs.map(a => ({ nc_id: a.nc_id, monto: a.monto }))));
     if (voucher) fd.append('voucher', voucher);
@@ -157,18 +167,24 @@ export function PagoProcesarSheet({ oc, open, onClose }: { oc: OrdenPago | null;
             <span className="t-footnote c-secondary">Monto a pagar</span>
             <span className="pago-det__total">{formatMoneda(monto, usd ? 'USD' : 'PEN')}</span>
             <span className="t-footnote c-secondary">
-              {usd ? `Total en soles ÷ T.C. ${tc > 0 ? tc : 'sin T.C.'}` : 'Total de la orden en soles'}
+              {mixto ? `${formatMoneda(neto, 'USD')} × T.C. ${tcPagoNum || tc}${difCambio ? ` · diferencia de cambio ${formatMoneda(difCambio, 'PEN')}` : ''}` : usd ? `Total en soles ÷ T.C. ${tc > 0 ? tc : 'sin T.C.'}` : 'Total de la orden en soles'}
             </span>
             {errores.monto && <span className="field__error" role="alert">{errores.monto}</span>}
           </div>
 
-          <AplicarNotasCredito entradaId={oc.id} sugeridas={(() => { try { const x = JSON.parse(oc.nc_sugeridas || '[]'); return Array.isArray(x) ? x.map(Number) : []; } catch { return []; } })()} moneda={usd ? 'USD' : 'PEN'} importe={importe} onChange={(a, n) => { setNcs(a); setNetoNc(n); }} />
+          <AplicarNotasCredito entradaId={oc.id} sugeridas={(() => { try { const x = JSON.parse(oc.nc_sugeridas || '[]'); return Array.isArray(x) ? x.map(Number) : []; } catch { return []; } })()} moneda={usd || mixto ? 'USD' : 'PEN'} importe={importe} onChange={(a, n) => { setNcs(a); setNetoNc(n); }} />
 
           {bancos.isError ? (
             <Notice tone="error">No se pudieron cargar las cuentas bancarias.</Notice>
           ) : !bancos.isLoading && cuentas.length === 0 ? (
             <Notice>No hay cuentas bancarias activas. Regístralas en Tesorería › Bancos.</Notice>
           ) : null}
+
+          {mixto && (
+            <Field label="Tipo de cambio del pago (S/ por US$)" hint={`La orden está en dólares y la cuenta es en soles. Usa el de venta de la SBS del día o el que acordaste con el proveedor. T.C. de la orden: ${tc}`}>
+              {p => <TextInput {...p} inputMode="decimal" value={tcPago} placeholder={String(tc)} onChange={e => { setTcPago(e.target.value); setErrores(x => ({ ...x, monto: undefined })); }} />}
+            </Field>
+          )}
 
           <Field label="Cuenta bancaria de origen (empresa)" error={errores.cuenta}>
             {p => (

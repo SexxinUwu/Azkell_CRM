@@ -2453,7 +2453,15 @@ module.exports = function (db, broadcast, logAudit) {
             const importeOrigen = esUSD && tcOc > 0 ? Math.round((totalOc / tcOc) * 100) / 100 : totalOc;
             // Con pago parcial de caja chica, lo que se paga aquí es solo lo que falta
             const pendienteCajaChica = estadoOc === 'pago parcial' ? (await require('../services/caja_chica').pendienteOc(tdb, id)).pendiente : null;
-            const importeAPagar = pendienteCajaChica ?? importeOrigen;
+            // OC en dólares pagada desde una cuenta en soles: se calcula en dólares (con sus notas de crédito) y se convierte con el tipo de cambio DEL PAGO.
+            // Sin tipo de cambio del pago se usa el de la orden (como antes).
+            const ocEsUsd = aMoneda(oc.moneda) === 'USD';
+            const pagoMixto = ocEsUsd && !esUSD && estadoOc !== 'pago parcial' && tcOc > 0;
+            const tcPagoEnviado = parseFloat(String(b.tipo_cambio_pago || '').replace(',', '.')) || 0;
+            const tcUsado = pagoMixto ? (tcPagoEnviado > 0 ? tcPagoEnviado : tcOc) : 0;
+            if (pagoMixto && tcPagoEnviado > 0 && (tcPagoEnviado < 1 || tcPagoEnviado > 20)) return res.status(400).json({ error: 'El tipo de cambio del pago no parece válido (soles por dólar).' });
+            const importeUsdOc = Math.round((totalOc / (tcOc || 1)) * 100) / 100;
+            const importeAPagar = pagoMixto ? importeUsdOc : (pendienteCajaChica ?? importeOrigen);
             // Notas de crédito del proveedor aplicadas a este pago: lo que sale del banco es el importe menos lo compensado
             let aplicacionesNc = [];
             try { aplicacionesNc = typeof b.nc_aplicaciones === 'string' ? JSON.parse(b.nc_aplicaciones || '[]') : (Array.isArray(b.nc_aplicaciones) ? b.nc_aplicaciones : []); } catch (e) { aplicacionesNc = []; }
@@ -2462,7 +2470,7 @@ module.exports = function (db, broadcast, logAudit) {
             if (aplicacionesNc.length) {
                 try {
                     ncAplicadas = await notasCredito.aplicar(tdb, {
-                        entradaId: id, proveedorId: oc.proveedor_id, proveedorNombre: oc.proveedor_nombre, moneda: monedaPago, importe: importeAPagar,
+                        entradaId: id, proveedorId: oc.proveedor_id, proveedorNombre: oc.proveedor_nombre, moneda: pagoMixto ? 'USD' : monedaPago, importe: importeAPagar,
                         aplicaciones: aplicacionesNc, usuario: usuarioPago,
                     });
                 } catch (errNc) {
@@ -2470,9 +2478,13 @@ module.exports = function (db, broadcast, logAudit) {
                 }
             }
             const montoEnviado = parseFloat(b.monto || b.importe) || 0;
-            const montoPagado = ncAplicadas.detalle.length
-                ? Math.round((importeAPagar - ncAplicadas.total) * 100) / 100
-                : (montoEnviado > 0 ? montoEnviado : importeAPagar);
+            // En pago mixto: neto en dólares × tipo de cambio del pago = soles que salen del banco
+            const netoUsdMixto = Math.round((importeAPagar - ncAplicadas.total) * 100) / 100;
+            const montoPagado = pagoMixto
+                ? Math.round(netoUsdMixto * tcUsado * 100) / 100
+                : ncAplicadas.detalle.length
+                    ? Math.round((importeAPagar - ncAplicadas.total) * 100) / 100
+                    : (montoEnviado > 0 ? montoEnviado : importeAPagar);
             if (ncAplicadas.detalle.length && montoEnviado > 0 && Math.abs(montoEnviado - montoPagado) > 0.011) {
                 await notasCredito.revertir(tdb, ncAplicadas.detalle, usuarioPago, 'El monto del pago no coincide con el neto').catch(() => {});
                 return res.status(409).json({ error: `El monto a pagar (${montoEnviado.toFixed(2)}) no coincide con el importe menos las notas de crédito (${montoPagado.toFixed(2)}). Actualiza la pantalla.` });
@@ -2580,12 +2592,12 @@ module.exports = function (db, broadcast, logAudit) {
                     oc.proveedor_nombre || 'PROVEEDOR GENERAL',
                     totalFinal,
                     totalFinal,
-                    oc.tipo_cambio || 1,
+                    pagoMixto ? tcUsado : (oc.tipo_cambio || 1),
                     oc.motivo_entrada || descripcionPago,
                     oc.cuenta_bancaria_proveedor || '',
                     cuentaOrigen || 'BCP - CTA CTE SOLES',
                     voucherUrl,
-                    `PAGO DE REQUERIMIENTO OC ${id} | N° Constancia: ${numeroConstancia}${ncAplicadas.detalle.length ? ` | Neto tras notas de crédito (${ncAplicadas.detalle.map(d => `${d.codigo} ${d.monto.toFixed(2)}`).join(', ')})` : ''}`,
+                    `PAGO DE REQUERIMIENTO OC ${id} | N° Constancia: ${numeroConstancia}${pagoMixto ? ` | OC en US$ pagada en soles: US$ ${netoUsdMixto.toFixed(2)} × T.C. ${tcUsado} (T.C. de la orden ${tcOc}); diferencia de cambio S/ ${(Math.round(netoUsdMixto * (tcUsado - tcOc) * 100) / 100).toFixed(2)}` : ''}${ncAplicadas.detalle.length ? ` | Neto tras notas de crédito (${ncAplicadas.detalle.map(d => `${d.codigo} ${d.monto.toFixed(2)}`).join(', ')})` : ''}`,
                     oc.creado_por || usuarioPago,
                     oc.aprobado_por || oc.autoriza || usuarioPago
                 ]);
