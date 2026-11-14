@@ -160,7 +160,12 @@ export function GuiasPage() {
 
   const abrir = (url?: string | null) => { if (url) window.open(url, '_blank', 'noopener'); };
   // El PDF con el diseño de la empresa (Sistema › Plantilla de guías); la sesión viaja por cookie
-  const verPdfPropio = (g: Guia) => window.open(`/api/operaciones/gre/guias/${g.id}/pdf-propio`, '_blank', 'noopener');
+  const verPdfPropio = (g: Guia) => {
+    // SUNAT: la guía solo se entrega con la constancia de recepción aceptada
+    const st = String(g.apisunat_status || '').toUpperCase();
+    if (st !== 'ACEPTADO' && !window.confirm('Esta guía aún no figura como aceptada por SUNAT. No la entregues al cliente o al conductor hasta que lo esté. ¿Abrir el PDF de todos modos?')) return;
+    window.open(`/api/operaciones/gre/guias/${g.id}/pdf-propio`, '_blank', 'noopener');
+  };
 
   const subtitulo = guias.isLoading ? 'Cargando…' : esRemitente
     ? `${remitentes.length} ${remitentes.length === 1 ? 'guía de remitente' : 'guías de remitente'}${sinVincular ? ` · ${sinVincular} sin vincular` : ''}${sinGrt ? ` · ${sinGrt} sin GRE Transportista` : ''}`
