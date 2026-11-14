@@ -16,6 +16,8 @@ const PLANTILLA_BASE = {
     logo_url: '',
     // pequeno | mediano | grande: el logo va al lado del nombre y la dirección, en la misma fila
     logo_tam: 'grande',
+    // Marca de agua con el nombre de la empresa (muy suave). Texto vacío = nombre comercial o razón social. Nivel: suave | media
+    marca_agua: true, marca_agua_texto: '', marca_agua_nivel: 'suave',
     acento: '#0071e3',
     nombre_comercial: '', direccion: '', telefono: '', correo: '', web: '',
     // Bloques que se muestran en el documento
@@ -42,6 +44,8 @@ function normalizarPlantilla(crudo) {
         version: 1,
         logo_url: texto(p.logo_url, 600),
         logo_tam: ['pequeno', 'mediano', 'grande'].includes(p.logo_tam) ? p.logo_tam : base.logo_tam,
+        marca_agua: bool(p.marca_agua, base.marca_agua), marca_agua_texto: texto(p.marca_agua_texto, 40),
+        marca_agua_nivel: ['suave', 'media'].includes(p.marca_agua_nivel) ? p.marca_agua_nivel : base.marca_agua_nivel,
         acento: /^#[0-9a-fA-F]{6}$/.test(String(p.acento || '')) ? String(p.acento).toLowerCase() : base.acento,
         nombre_comercial: texto(p.nombre_comercial, 120), direccion: texto(p.direccion, 220),
         telefono: texto(p.telefono, 60), correo: texto(p.correo, 120), web: texto(p.web, 120),
@@ -302,6 +306,9 @@ tr{break-inside:avoid}
 .qr .nota{font-size:6.4pt;color:var(--ink2);margin-top:1.2mm;line-height:1.3}
 .qr.vacio{padding:6mm 3mm;color:var(--ink2);font-size:7pt}
 .leyenda{font-weight:600;font-size:8pt}.leyenda small{display:block;font-weight:400;color:var(--ink2);font-size:7.2pt;margin-top:1mm;line-height:1.5}
+.marca-fondo{position:fixed;left:0;right:0;top:132mm;text-align:center;transform:rotate(-24deg);font-size:88pt;font-weight:800;letter-spacing:.12em;white-space:nowrap;text-transform:uppercase;color:rgba(29,29,31,.05);pointer-events:none;z-index:0}
+.marca-fondo.media{color:rgba(29,29,31,.085)}
+.marca-fondo.baja{top:196mm;font-size:46pt}
 .marca-agua{position:fixed;left:0;right:0;top:112mm;text-align:center;transform:rotate(-26deg);font-size:96pt;font-weight:800;letter-spacing:.06em;color:rgba(199,106,0,.075);pointer-events:none;z-index:0}
 .fuera{position:relative;z-index:1}
 `;
@@ -349,9 +356,12 @@ function construirHtml(m, plantilla, rec = {}) {
     }
 
     const marcaAgua = m.ejemplo ? 'EJEMPLO' : m.prueba ? 'PRUEBA' : '';
+    // Marca de agua de la empresa: «Trahesa S.A.C.» se muestra como «TRAHESA». Si ya hay marca de prueba, la de la empresa va más baja y pequeña para no chocar.
+    const textoMarca = p.marca_agua ? (p.marca_agua_texto || p.nombre_comercial || String(m.emisor.razon || '').replace(/\b(S\.?\s?A\.?\s?C\.?|S\.?\s?A\.?|S\.?\s?R\.?\s?L\.?|E\.?\s?I\.?\s?R\.?\s?L\.?)\s*$/i, '').trim()) : '';
 
     return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(m.numero)}</title><style>${fuentes()}${CSS(p.acento)}</style></head><body>
 ${marcaAgua ? `<div class="marca-agua">${marcaAgua}</div>` : ''}
+${textoMarca ? `<div class="marca-fondo ${p.marca_agua_nivel}${marcaAgua ? ' baja' : ''}">${esc(textoMarca)}</div>` : ''}
 <div class="hoja fuera">
   <div class="cab">
     <div class="marca${rec.logo && p.logo_tam === 'grande' ? ' lg' : rec.logo && p.logo_tam === 'mediano' ? ' md' : ''}">

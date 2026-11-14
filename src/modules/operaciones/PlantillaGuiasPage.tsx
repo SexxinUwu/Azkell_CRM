@@ -13,7 +13,7 @@ import { haptic } from '../../core/lib/haptics';
 
 /** Plantilla del PDF de las guías de remisión (misma forma que services/gre_pdf.js) */
 interface Plantilla {
-  version: number; logo_url: string; logo_tam: string; acento: string;
+  version: number; logo_url: string; logo_tam: string; marca_agua: boolean; marca_agua_texto: string; marca_agua_nivel: string; acento: string;
   nombre_comercial: string; direccion: string; telefono: string; correo: string; web: string;
   bloques: Record<string, boolean>; columnas: Record<string, boolean>;
   pie: string; notas: string;
@@ -168,6 +168,17 @@ export function PlantillaGuiasPage() {
                   <input type="color" className="pg__color-libre" value={p.acento} onChange={e => set({ acento: e.target.value })} aria-label="Otro color" />
                 </div>
               </div>
+            </section>
+
+            <section className="pg__card">
+              <h2 className="pg__t">Marca de agua</h2>
+              <Fila titulo="Nombre de la empresa al fondo" nota="Muy suave, detrás del contenido; no estorba la lectura ni el QR" valor={!!p.marca_agua} onChange={v => set({ marca_agua: v })} />
+              {p.marca_agua && (
+                <>
+                  <Field label="Texto" hint="Si lo dejas vacío se usa el nombre comercial o la razón social">{f => <TextInput {...f} maxLength={40} value={p.marca_agua_texto} onChange={e => set({ marca_agua_texto: e.target.value })} />}</Field>
+                  <SegmentedControl block label="Intensidad" value={(p.marca_agua_nivel || 'suave') as 'suave' | 'media'} onChange={v => set({ marca_agua_nivel: v })} options={[{ value: 'suave', label: 'Suave' }, { value: 'media', label: 'Media' }]} />
+                </>
+              )}
             </section>
 
             <section className="pg__card">
