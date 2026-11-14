@@ -14,7 +14,7 @@ const CLAVE_PLANTILLA = 'gre_pdf_plantilla';
 const PLANTILLA_BASE = {
     version: 1,
     logo_url: '',
-    // pequeno | mediano | grande: con logo mediano o grande, el logo va arriba y el nombre y la dirección debajo
+    // pequeno | mediano | grande: el logo va al lado del nombre y la dirección, en la misma fila
     logo_tam: 'grande',
     acento: '#0071e3',
     nombre_comercial: '', direccion: '', telefono: '', correo: '', web: '',
@@ -258,19 +258,19 @@ const CSS = acento => `
 html,body{margin:0;padding:0;background:#fff}
 body{font-family:'Inter',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:var(--ink);font-size:8.6pt;line-height:1.4;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-feature-settings:'tnum' 1,'cv11' 1}
 .hoja{width:210mm;padding:2mm 14mm 4mm;position:relative}
-.cab{display:grid;grid-template-columns:1fr 74mm;gap:7mm;align-items:stretch}
+.cab{display:grid;grid-template-columns:1fr 72mm;gap:6mm;align-items:stretch}
 .marca{display:flex;gap:4mm;align-items:center}
 .marca img{max-height:19mm;max-width:46mm;object-fit:contain;border-radius:3mm}
-.marca.md,.marca.lg{flex-direction:column;align-items:flex-start;justify-content:center;gap:2.4mm}
-.marca.md img{max-height:24mm;max-width:56mm}
-.marca.lg img{max-height:31mm;max-width:80mm}
+.marca>div{min-width:0}
+.marca.md img{max-height:22mm;max-width:44mm}
+.marca.lg img{max-height:27mm;max-width:54mm}
 .marca .nom{font-size:13pt;font-weight:700;letter-spacing:-.01em;line-height:1.15}
 .marca .raz{color:var(--ink2);font-size:8pt;margin-top:.6mm}
 .marca .dato{color:var(--ink2);font-size:7.6pt;margin-top:1.2mm;line-height:1.45}
-.folio{background:var(--acento);color:#fff;border-radius:5mm;padding:4.6mm 5mm;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:1.2mm}
-.folio .ruc{font-size:9.4pt;font-weight:700;color:#fff;letter-spacing:.02em}
-.folio .tit{font-size:9.4pt;font-weight:700;color:#fff;letter-spacing:.03em;line-height:1.3}
-.folio .num{font-size:15pt;font-weight:700;color:#fff;letter-spacing:.01em;margin-top:.6mm}
+.folio{background:var(--acento);color:#fff;border-radius:5mm;padding:3.6mm 4mm;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:1mm}
+.folio .ruc{font-size:9pt;font-weight:700;color:#fff;letter-spacing:.02em}
+.folio .tit{font-size:8.8pt;font-weight:700;color:#fff;letter-spacing:.03em;line-height:1.3}
+.folio .num{font-size:14.5pt;font-weight:700;color:#fff;letter-spacing:.01em;margin-top:.6mm}
 .fila-estado{display:flex;gap:2.4mm;margin:4.6mm 0 0;flex-wrap:wrap}
 .pastilla{display:inline-flex;align-items:center;gap:1.6mm;border-radius:99px;padding:1mm 3.2mm;font-size:7.4pt;font-weight:600}
 .pastilla::before{content:'';width:1.7mm;height:1.7mm;border-radius:50%;background:currentColor}
