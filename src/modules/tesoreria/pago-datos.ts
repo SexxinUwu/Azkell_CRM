@@ -41,6 +41,7 @@ export interface OrdenPago {
   fecha_aprobacion?: string | null;
   dias_credito?: number;
   condicion_pago?: string;
+  prioridad?: string;
   proveedor_id?: string | number | null;
   proveedor_nombre?: string;
   proveedor_ruc?: string;
