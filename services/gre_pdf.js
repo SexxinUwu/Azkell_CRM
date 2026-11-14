@@ -25,8 +25,8 @@ const PLANTILLA_BASE = {
     // Columnas y datos extra
     columnas: { unidad: true, peso_linea: false, placa_carreta: true, tuc: true, licencia: true, viaje: false, servicio: false },
     pie: '', notas: '',
-    // «Emitido desde …» al pie (vacío = no se muestra)
-    emitido_desde: 'Azkell Fleet',
+    // «Emitido desde …» al pie. Es opcional y no lo exige SUNAT para la GRE: por defecto no se muestra
+    emitido_desde: '',
 };
 
 const texto = (v, max) => String(v ?? '').trim().slice(0, max);
