@@ -297,21 +297,41 @@ export function OrdenesViajePage() {
   );
 }
 
-// Guías de las órdenes de servicio que lleva el viaje (su peso es el real)
+// Guías del viaje. Para no ver cada carga dos veces, la fila principal es la GRE Transportista (el documento que viaja con la carga) y las guías del cliente
+// que cubre van en su detalle. Las guías del cliente que todavía no tienen GRE Transportista aparecen aparte, marcadas «Falta emitir». El peso real es el de las guías del cliente.
 function GuiasDelViaje({ viaje }: { viaje: string }) {
   const q = useGuias({ viaje });
   const lista = (q.data ?? []).filter(g => g.estado !== 'ANULADA');
   if (q.isLoading) return <PageLoader />;
   if (!lista.length) return <EmptyState icon={<FolderOpen size={22} />} title="Sin guías vinculadas">Vincula las guías de los clientes a las órdenes de servicio de este viaje, desde Guías de remisión.</EmptyState>;
+  const clientes = lista.filter(g => g.tipo === 'REMITENTE');
+  const nuestras = lista.filter(g => g.tipo === 'TRANSPORTISTA');
+  const sinGrt = clientes.filter(g => !g.grt_numero);
+  const pesoReal = clientes.reduce((t, g) => t + Number(g.peso_kg || 0), 0);
+  const filas = nuestras.length + sinGrt.length;
   return (
     <section>
-      <h4 className="vj-titulo">Guías del viaje · {lista.length} · {fmtKg(lista.filter(g => g.tipo === 'REMITENTE').reduce((s, g) => s + Number(g.peso_kg || 0), 0))}</h4>
+      <h4 className="vj-titulo">Guías del viaje · {filas} · {fmtKg(pesoReal)}</h4>
       <ul className="vb__lista">
-        {lista.map(g => (
+        {nuestras.map(g => {
+          const cubre = clientes.filter(c => c.grt_numero === g.numero_completo);
+          return (
+            <li key={g.id} className="vb__fila">
+              <span className="vb__ico vb__ico--azul" aria-hidden><FolderOpen size={16} /></span>
+              <div className="vb__txt">
+                <strong>{g.numero_completo} <span style={{ fontWeight: 500, opacity: 0.7 }}>· GRE Transportista</span></strong>
+                <span>{[g.guias_incluidas ? `Cubre ${g.guias_incluidas}` : null, g.destinatario_nombre || g.remitente_nombre, cubre.length > 1 ? `${cubre.length} guías del cliente` : null, fechaGuia(g.fecha_emision)].filter(Boolean).join(' · ')}</span>
+              </div>
+              <PastillaGuia estado={g.estado} guia={g} />
+              <strong className="vb__monto">{fmtKg(g.peso_kg)}</strong>
+            </li>
+          );
+        })}
+        {sinGrt.map(g => (
           <li key={g.id} className="vb__fila">
             <span className="vb__ico vb__ico--azul" aria-hidden><FolderOpen size={16} /></span>
-            <div className="vb__txt"><strong>{g.numero_completo}</strong><span>{[g.destinatario_nombre || g.remitente_nombre, g.orden_servicio_codigo ? `Servicio ${g.orden_servicio_codigo}` : null, fechaGuia(g.fecha_emision)].filter(Boolean).join(' · ')}</span></div>
-            <PastillaGuia estado={g.estado} guia={g} />
+            <div className="vb__txt"><strong>{g.numero_completo} <span style={{ fontWeight: 500, opacity: 0.7 }}>· GRE Remitente del cliente</span></strong><span>{[g.destinatario_nombre || g.remitente_nombre, g.orden_servicio_codigo ? `Servicio ${g.orden_servicio_codigo}` : null, fechaGuia(g.fecha_emision)].filter(Boolean).join(' · ')}</span></div>
+            <span style={{ display: 'inline-block', padding: '1px 8px', borderRadius: 999, background: 'var(--amber-tint)', color: 'var(--amber-ink)', fontSize: '0.6875rem', fontWeight: 700, whiteSpace: 'nowrap' }}>Falta emitir GRE Transportista</span>
             <strong className="vb__monto">{fmtKg(g.peso_kg)}</strong>
           </li>
         ))}

@@ -6,13 +6,14 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, TextInput } from '../../core/ui/Field';
 import { Switch } from '../../core/ui/Switch';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { useToast } from '../../core/ui/Toast';
 import { api, apiFetch, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 
 /** Plantilla del PDF de las guías de remisión (misma forma que services/gre_pdf.js) */
 interface Plantilla {
-  version: number; logo_url: string; acento: string;
+  version: number; logo_url: string; logo_tam: string; acento: string;
   nombre_comercial: string; direccion: string; telefono: string; correo: string; web: string;
   bloques: Record<string, boolean>; columnas: Record<string, boolean>;
   pie: string; notas: string;
@@ -150,6 +151,7 @@ export function PlantillaGuiasPage() {
                 </div>
                 <input ref={entrada} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={e => { const a = e.target.files?.[0]; e.target.value = ''; if (a) void subirLogo(a); }} />
               </div>
+              {p.logo_url && <SegmentedControl block label="Tamaño del logo" value={(p.logo_tam || 'grande') as 'pequeno' | 'mediano' | 'grande'} onChange={v => set({ logo_tam: v })} options={[{ value: 'pequeno', label: 'Pequeño' }, { value: 'mediano', label: 'Mediano' }, { value: 'grande', label: 'Grande' }]} />}
               <Field label="Nombre comercial" hint="Si lo dejas vacío se usa la razón social">{f => <TextInput {...f} value={p.nombre_comercial} onChange={e => set({ nombre_comercial: e.target.value })} />}</Field>
               <Field label="Dirección">{f => <TextInput {...f} value={p.direccion} onChange={e => set({ direccion: e.target.value })} />}</Field>
               <div className="pg__2">

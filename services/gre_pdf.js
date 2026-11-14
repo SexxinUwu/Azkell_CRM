@@ -14,6 +14,8 @@ const CLAVE_PLANTILLA = 'gre_pdf_plantilla';
 const PLANTILLA_BASE = {
     version: 1,
     logo_url: '',
+    // pequeno | mediano | grande: con logo mediano o grande, el logo va arriba y el nombre y la dirección debajo
+    logo_tam: 'grande',
     acento: '#0071e3',
     nombre_comercial: '', direccion: '', telefono: '', correo: '', web: '',
     // Bloques que se muestran en el documento
@@ -39,6 +41,7 @@ function normalizarPlantilla(crudo) {
     return {
         version: 1,
         logo_url: texto(p.logo_url, 600),
+        logo_tam: ['pequeno', 'mediano', 'grande'].includes(p.logo_tam) ? p.logo_tam : base.logo_tam,
         acento: /^#[0-9a-fA-F]{6}$/.test(String(p.acento || '')) ? String(p.acento).toLowerCase() : base.acento,
         nombre_comercial: texto(p.nombre_comercial, 120), direccion: texto(p.direccion, 220),
         telefono: texto(p.telefono, 60), correo: texto(p.correo, 120), web: texto(p.web, 120),
@@ -258,6 +261,9 @@ body{font-family:'Inter',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;col
 .cab{display:grid;grid-template-columns:1fr 74mm;gap:7mm;align-items:stretch}
 .marca{display:flex;gap:4mm;align-items:center}
 .marca img{max-height:19mm;max-width:46mm;object-fit:contain;border-radius:3mm}
+.marca.md,.marca.lg{flex-direction:column;align-items:flex-start;justify-content:center;gap:2.4mm}
+.marca.md img{max-height:24mm;max-width:56mm}
+.marca.lg img{max-height:31mm;max-width:80mm}
 .marca .nom{font-size:13pt;font-weight:700;letter-spacing:-.01em;line-height:1.15}
 .marca .raz{color:var(--ink2);font-size:8pt;margin-top:.6mm}
 .marca .dato{color:var(--ink2);font-size:7.6pt;margin-top:1.2mm;line-height:1.45}
@@ -348,7 +354,7 @@ function construirHtml(m, plantilla, rec = {}) {
 ${marcaAgua ? `<div class="marca-agua">${marcaAgua}</div>` : ''}
 <div class="hoja fuera">
   <div class="cab">
-    <div class="marca">
+    <div class="marca${rec.logo && p.logo_tam === 'grande' ? ' lg' : rec.logo && p.logo_tam === 'mediano' ? ' md' : ''}">
       ${rec.logo ? `<img src="${rec.logo}" alt="">` : ''}
       <div>
         <div class="nom">${esc(nombre)}</div>
