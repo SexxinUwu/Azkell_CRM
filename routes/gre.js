@@ -482,7 +482,7 @@ module.exports = (db, logAudit) => {
             const noJuntas = elegidas.find(c => !c.compatible);
             if (noJuntas) throw aviso(`La guía ${noJuntas.numero_completo} no se puede agrupar con las demás: ${noJuntas.motivo}.`, 422);
             d.peso_bruto_total = Math.round(elegidas.reduce((s, c) => s + c.peso_kg, 0) * 1000) / 1000;
-            d.items = elegidas.flatMap(c => itemsDeGuia(c)).map((it, i) => ({ ...it, codigo: String(i + 1).padStart(3, '0') }));
+            d.items = elegidas.flatMap(c => itemsDeGuia(c).map((it, i) => ({ ...it, guia: c.numero_completo, guia_peso: i === 0 ? c.peso_kg : null }))).map((it, i) => ({ ...it, codigo: String(i + 1).padStart(3, '0') }));
 
             const faltan = faltanGrt(d);
             if (faltan.length) throw aviso(`Faltan datos para emitir: ${faltan.join(', ')}.`, 422);

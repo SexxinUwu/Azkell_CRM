@@ -16,7 +16,7 @@ interface Plantilla {
   version: number; logo_url: string; logo_tam: string; marca_agua: boolean; marca_agua_texto: string; marca_agua_nivel: string; acento: string;
   nombre_comercial: string; direccion: string; telefono: string; correo: string; web: string;
   bloques: Record<string, boolean>; columnas: Record<string, boolean>;
-  pie: string; notas: string;
+  pie: string; notas: string; emitido_desde: string;
 }
 
 const BLOQUES: Array<[string, string, string]> = [
@@ -195,6 +195,7 @@ export function PlantillaGuiasPage() {
               <h2 className="pg__t">Textos</h2>
               <Field label="Observaciones (se imprimen en todas las guías)">{f => <textarea {...f} className="input pg__area" rows={3} maxLength={600} value={p.notas} onChange={e => set({ notas: e.target.value })} />}</Field>
               <Field label="Pie de página">{f => <TextInput {...f} maxLength={300} value={p.pie} onChange={e => set({ pie: e.target.value })} />}</Field>
+              <Field label="Emitido desde" hint="Se imprime al pie como «Emitido desde …». Déjalo vacío para no mostrarlo">{f => <TextInput {...f} maxLength={60} value={p.emitido_desde ?? ''} onChange={e => set({ emitido_desde: e.target.value })} />}</Field>
               <Notice tone="accent">La guía siempre lleva los datos que exige SUNAT, la leyenda «Representación impresa de la Guía de Remisión Electrónica» y, cuando está aceptada, su QR.</Notice>
             </section>
           </div>

@@ -25,6 +25,8 @@ const PLANTILLA_BASE = {
     // Columnas y datos extra
     columnas: { unidad: true, peso_linea: false, placa_carreta: true, tuc: true, licencia: true, viaje: false, servicio: false },
     pie: '', notas: '',
+    // «Emitido desde …» al pie (vacío = no se muestra)
+    emitido_desde: 'Azkell Fleet',
 };
 
 const texto = (v, max) => String(v ?? '').trim().slice(0, max);
@@ -51,6 +53,7 @@ function normalizarPlantilla(crudo) {
         telefono: texto(p.telefono, 60), correo: texto(p.correo, 120), web: texto(p.web, 120),
         bloques, columnas,
         pie: texto(p.pie, 300), notas: texto(p.notas, 600),
+        emitido_desde: typeof p.emitido_desde === 'string' ? texto(p.emitido_desde, 60) : base.emitido_desde,
     };
 }
 
@@ -162,6 +165,13 @@ function modeloDesdeFila(fila, extra = {}) {
         try { items = JSON.parse(fila.items_json || '[]'); } catch (e) { items = []; }
         items.forEach((it, i) => m.lineas.push({ n: String(i + 1), descripcion: it.descripcion || '', cantidad: numero(it.cantidad), unidad: it.unidad_medida || it.unidad || 'NIU', codigo: '' }));
     }
+    // Guía del cliente de la que viene cada línea y su peso (solo en las guías emitidas con este dato)
+    try {
+        const extra = JSON.parse(fila.items_json || '[]');
+        if (Array.isArray(extra) && extra.length === m.lineas.length) {
+            extra.forEach((it, i) => { if (it && it.guia) { m.lineas[i].guia = it.guia; m.lineas[i].guiaPeso = it.guia_peso != null ? Number(it.guia_peso) : null; } });
+        }
+    } catch (e) { /* sin datos extra */ }
     return m;
 }
 
@@ -279,6 +289,7 @@ body{font-family:'Inter',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;col
 .pastilla{display:inline-flex;align-items:center;gap:1.6mm;border-radius:99px;padding:1mm 3.2mm;font-size:7.4pt;font-weight:600}
 .pastilla::before{content:'';width:1.7mm;height:1.7mm;border-radius:50%;background:currentColor}
 .pastilla.ok{background:#e4f6ec;color:var(--ok)}.pastilla.pend{background:#eeeef0;color:var(--ink2)}.pastilla.mal{background:#fde8ea;color:var(--mal)}.pastilla.prueba{background:#fff1de;color:var(--aviso)}
+.sub{color:var(--ink2);font-size:7.2pt;margin-top:.6mm}
 .sec{margin-top:4.4mm}
 .et{font-size:6.6pt;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);margin:0 0 1.6mm 1mm}
 .tarj{background:var(--fondo);border-radius:4mm;padding:3.4mm 4mm;break-inside:avoid}
@@ -325,12 +336,13 @@ function construirHtml(m, plantilla, rec = {}) {
     const nomUbi = u => nombreUbigeo(u);
     const rotulo = m.tipo === '09' ? 'REMITENTE' : 'TRANSPORTISTA';
 
+    const verPeso = c.peso_linea || m.lineas.some(l => l.guiaPeso != null);
     const lineasHtml = m.lineas.map((l, i) => `
         <tr><td style="width:7mm;color:var(--ink2)">${esc(l.n || i + 1)}</td>
-        <td>${esc(l.descripcion)}</td>
+        <td>${esc(l.descripcion)}${l.guia ? `<div class="sub">Guía del cliente ${esc(l.guia)}</div>` : ''}</td>
         ${c.unidad ? `<td>${esc(UNIDADES[l.unidad] || l.unidad)}</td>` : ''}
         <td class="d">${esc(nf(l.cantidad, 3))}</td>
-        ${c.peso_linea ? `<td class="d">${['KGM', 'TNE'].includes(l.unidad) ? esc(pesoTexto(l.unidad === 'TNE' ? l.cantidad * 1000 : l.cantidad, 'KGM')) : '—'}</td>` : ''}</tr>`).join('');
+        ${verPeso ? `<td class="d">${l.guiaPeso != null ? esc(pesoTexto(l.guiaPeso, 'KGM')) : l.guia ? '' : ['KGM', 'TNE'].includes(l.unidad) ? esc(pesoTexto(l.unidad === 'TNE' ? l.cantidad * 1000 : l.cantidad, 'KGM')) : '—'}</td>` : ''}</tr>`).join('');
 
     const vehiculosHtml = m.vehiculos.filter(v => c.placa_carreta || v.rol !== 'Carreta').map(v => `
         <div class="par"><div class="k">${esc(v.rol)}</div><div class="v"><span class="placa">${esc(v.placa)}</span></div></div>
@@ -406,7 +418,7 @@ ${textoMarca ? `<div class="marca-fondo ${p.marca_agua_nivel}${marcaAgua ? ' baj
   </div>` : ''}
 
   <div class="sec"><div class="et">Bienes por transportar</div>
-    <table><thead><tr><th>#</th><th>Descripción</th>${c.unidad ? '<th>Unidad</th>' : ''}<th class="d">Cantidad</th>${c.peso_linea ? '<th class="d">Peso</th>' : ''}</tr></thead>
+    <table><thead><tr><th>#</th><th>Descripción</th>${c.unidad ? '<th>Unidad</th>' : ''}<th class="d">Cantidad</th>${verPeso ? '<th class="d">Peso</th>' : ''}</tr></thead>
     <tbody>${lineasHtml || '<tr><td colspan="5" class="k">Sin ítems</td></tr>'}</tbody></table>
     <div class="tot"><span class="k">Peso bruto total</span><span class="n">${esc(pesoTexto(m.peso, m.unidadPeso))}</span></div>
   </div>
@@ -417,8 +429,8 @@ ${textoMarca ? `<div class="marca-fondo ${p.marca_agua_nivel}${marcaAgua ? ' baj
 
   <div class="pie">
     ${b.qr ? qrHtml : '<div></div>'}
-    <div class="leyenda">Representación impresa de la Guía de Remisión Electrónica
-      <small>${p.pie ? `${esc(p.pie)}<br>` : ''}Emitida el ${fecha(m.emision)}${m.hora ? ` ${esc(m.hora.slice(0, 5))}` : ''} · ${esc(m.emisor.razon)} · RUC ${esc(m.emisor.ruc)}</small></div>
+    <div class="leyenda">Representación impresa de la Guía de Remisión Electrónica ${rotulo === 'REMITENTE' ? 'Remitente' : 'Transportista'}
+      <small>${p.pie ? `${esc(p.pie)}<br>` : ''}Emitida el ${fecha(m.emision)}${m.hora ? ` ${esc(m.hora.slice(0, 5))}` : ''} · ${esc(m.emisor.razon)} · RUC ${esc(m.emisor.ruc)}${p.emitido_desde ? ` · Emitido desde ${esc(p.emitido_desde)}` : ''}</small></div>
   </div>
 </div></body></html>`;
 }
