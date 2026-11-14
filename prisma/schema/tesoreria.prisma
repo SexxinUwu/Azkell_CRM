@@ -57,6 +57,8 @@ model TesoreriaCaja {
   usuario_aprobacion         String?   @db.VarChar(150)
   fecha_aprobacion           DateTime? @db.DateTime(0)
   motivo_anulacion           String?   @db.Text
+  origen                     String?   @db.VarChar(30)
+  origen_id                  Int?
   creado_en                  DateTime? @default(now()) @db.Timestamp(0)
   actualizado_en             DateTime? @default(now()) @db.Timestamp(0)
 
@@ -202,4 +204,40 @@ model TesoreriaMotivoGasto {
 enum TesoreriaMotivosGastosEstado {
   ACTIVO
   INACTIVO
+}
+
+model ViajeValeCombustible {
+  id                  Int       @id @default(autoincrement())
+  codigo              String    @unique(map: "uq_vale_codigo") @db.VarChar(30)
+  viaje               String    @db.VarChar(60)
+  placa               String    @default("") @db.VarChar(20)
+  conductor           String    @default("") @db.VarChar(150)
+  conductor_doc       String?   @db.VarChar(20)
+  fecha               DateTime  @db.Date
+  hora                String?   @db.VarChar(10)
+  estacion_nombre     String    @default("") @db.VarChar(200)
+  estacion_ruc        String?   @db.VarChar(20)
+  combustible         String?   @db.VarChar(40)
+  galones             Decimal   @default(0) @db.Decimal(10, 3)
+  precio_galon        Decimal   @default(0) @db.Decimal(10, 4)
+  total               Decimal   @default(0) @db.Decimal(12, 2)
+  moneda              String    @default("SOLES") @db.VarChar(10)
+  km_odometro         Int?
+  numero_voucher      String?   @db.VarChar(60)
+  voucher_url         String?   @db.Text
+  pagar_a             String    @default("ESTACION") @db.VarChar(12)
+  beneficiario_nombre String    @default("") @db.VarChar(200)
+  beneficiario_doc    String?   @db.VarChar(20)
+  caja_id             Int?
+  ia_json             String?   @db.LongText
+  alertas_json        String?   @db.Text
+  anulado             Boolean   @default(false)
+  observacion         String?   @db.Text
+  usuario             String?   @db.VarChar(150)
+  creado_en           DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([viaje], map: "idx_vale_viaje")
+  @@index([placa], map: "idx_vale_placa")
+  @@index([caja_id], map: "idx_vale_caja")
+  @@map("viaje_vales_combustible")
 }

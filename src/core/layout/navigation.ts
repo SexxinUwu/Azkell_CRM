@@ -75,6 +75,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'ubigeos', label: 'Ubigeos', to: '/operaciones/ubigeos', icon: MapPin, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa,trahesa' },
       { key: 'clientes', label: 'Clientes', to: '/operaciones/clientes', icon: Users, permissions: ver('clientes') },
       { key: 'reporte-viajes', label: 'Reporte de viajes', to: '/operaciones/reporte-viajes', icon: BarChart3, permissions: ver('op_reporte_viajes'), soloEmpresa: 'marsisa,trahesa' },
+      { key: 'vales-viaje', label: 'Vales de combustible', to: '/operaciones/vales-viaje', icon: Fuel, permissions: ver('combustible_vales', 'op_ordenes_viaje'), soloEmpresa: 'trahesa' },
       {
         key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [], soloEmpresa: 'marsisa,trahesa',
         children: [
