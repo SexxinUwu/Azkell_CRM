@@ -13,6 +13,8 @@ const texto = (v, max) => { const t = String(v ?? '').trim(); return t ? t.slice
 const num = v => { const n = Number(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
 const redondear = (n, d = 2) => Math.round(n * 10 ** d) / 10 ** d;
 const fechaOpc = v => { const s = String(v ?? '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null; };
+// Submotivo de Caja según lo que se carga (el centro de costo es siempre CC-300 Operaciones de Ruta)
+const subMotivoDe = c => (c === 'Úrea / AdBlue' ? 'Úrea / AdBlue' : /^Gasolina/.test(c || '') ? 'Gasolina vehículos auxiliares/supervisión' : 'Diésel B5 / Gasolina de ruta');
 const hoyLima = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 const horaLima = () => new Date().toLocaleTimeString('en-GB', { timeZone: 'America/Lima' });
 
@@ -208,9 +210,9 @@ module.exports = (db, logAudit) => {
             const [caja] = await conn.query(
                 `INSERT INTO tesoreria_caja (fecha, hora, fecha_valuta, hora_valuta, numero_factura, serie, numero, orden_viaje, conductor, ruta_viaje, placa, autoriza, motivo, centro_costo, sub_motivo,
                     modalidad_pago, moneda, tipo_persona, persona, tipo_movimiento, subtotal, retencion_detraccion, importe_total, tipo_cambio, descripcion, tipo_comprobante, voucher_url, estado, usuario_creacion, origen, origen_id)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Combustibles y Fluidos', 'CC-300', 'Diésel B5 / Gasolina de ruta', 'TRANSFERENCIA', ?, ?, ?, 'EGRESO', ?, 0, ?, 1, ?, 'VALE DE COMBUSTIBLE', ?, 'PENDIENTE', ?, 'VALE_COMBUSTIBLE', ?)`,
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Combustibles y Fluidos', 'CC-300', ?, 'TRANSFERENCIA', ?, ?, ?, 'EGRESO', ?, 0, ?, 1, ?, 'VALE DE COMBUSTIBLE', ?, 'PENDIENTE', ?, 'VALE_COMBUSTIBLE', ?)`,
                 [fecha, horaLima(), fecha, '00:00:00', texto(b.numero_voucher, 100) || '', serieCaja, String(n).padStart(8, '0'), viaje, conductor, vj[0].ruta || '', placa, usuario,
-                    moneda, pagarA === 'CONDUCTOR' ? 'CONDUCTOR' : 'PROVEEDOR', benNombre.slice(0, 190), total, total, descripcion, voucherUrl, usuario, ins.insertId]);
+                    subMotivoDe(combustibleDe(b.combustible)), moneda, pagarA === 'CONDUCTOR' ? 'CONDUCTOR' : 'PROVEEDOR', benNombre.slice(0, 190), total, total, descripcion, voucherUrl, usuario, ins.insertId]);
             if (caja.affectedRows !== 1) throw new Error('No se pudo crear la caja del vale.');
             const [upd] = await conn.query('UPDATE viaje_vales_combustible SET caja_id = ? WHERE id = ?', [caja.insertId, ins.insertId]);
             if (upd.affectedRows !== 1) throw new Error('No se pudo enlazar la caja con el vale.');

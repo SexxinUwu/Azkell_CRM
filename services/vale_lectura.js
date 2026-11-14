@@ -8,10 +8,11 @@ const texto = (v, max = 200) => { const t = v == null ? '' : String(v).trim(); r
 const numero = v => { const n = Number(String(v ?? '').replace(/\s/g, '').replace(/,(\d{1,3})$/, '.$1').replace(/,/g, '')); return Number.isFinite(n) ? n : null; };
 const fechaISO = v => { const m = /(\d{4})-(\d{2})-(\d{2})/.exec(String(v ?? '')); if (m) return `${m[1]}-${m[2]}-${m[3]}`; const n = /(\d{2})[\/-](\d{2})[\/-](\d{4})/.exec(String(v ?? '')); return n ? `${n[3]}-${n[2]}-${n[1]}` : null; };
 /** Lleva lo que dice el ticket a los combustibles de uso en el Perú */
-const COMBUSTIBLES = ['Diésel B5', 'Diésel B5 S-50', 'Gasolina regular', 'Gasolina premium', 'GNV', 'GLP', 'GNL'];
+const COMBUSTIBLES = ['Diésel B5', 'Diésel B5 S-50', 'Gasolina regular', 'Gasolina premium', 'GNV', 'GLP', 'GNL', 'Úrea / AdBlue'];
 function combustibleDe(v) {
     const x = String(v ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
     if (!x.trim()) return null;
+    if (/urea|adblue|ad blue/.test(x)) return 'Úrea / AdBlue';
     if (/gnv/.test(x)) return 'GNV';
     if (/gnl/.test(x)) return 'GNL';
     if (/glp|gas licuado/.test(x)) return 'GLP';
@@ -31,7 +32,7 @@ const INSTRUCCIONES = `Eres un lector de vouchers y tickets de venta de combusti
  "hora": "HH:MM",
  "numero_voucher": "serie-número del ticket, boleta o factura (ej. B001-123456)",
  "placa": "placa del vehículo si figura",
- "combustible": "UNO de: Diésel B5, Diésel B5 S-50, Gasolina regular, Gasolina premium, GNV, GLP, GNL",
+ "combustible": "UNO de: Diésel B5, Diésel B5 S-50, Gasolina regular, Gasolina premium, GNV, GLP, GNL, Úrea / AdBlue",
  "galones": número de galones despachados (usa punto decimal),
  "precio_galon": precio por galón con IGV (punto decimal),
  "total": importe total pagado,

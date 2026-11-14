@@ -53,7 +53,7 @@ const COLUMNAS: ColumnaTabla[] = [
 const TONO: Record<Vale['estado'], 'amber' | 'accent' | 'green' | 'gray'> = { PENDIENTE: 'amber', APROBADO: 'accent', PAGADO: 'green', ANULADO: 'gray' };
 const ETIQUETA: Record<Vale['estado'], string> = { PENDIENTE: 'Pendiente', APROBADO: 'Aprobado', PAGADO: 'Pagado', ANULADO: 'Anulado' };
 // Combustibles que se usan en el Perú. La cantidad va en galones, salvo GNV (m³) y GNL (kg).
-const COMBUSTIBLES = ['Diésel B5', 'Diésel B5 S-50', 'Gasolina regular', 'Gasolina premium', 'GNV', 'GLP', 'GNL'];
+const COMBUSTIBLES = ['Diésel B5', 'Diésel B5 S-50', 'Gasolina regular', 'Gasolina premium', 'GNV', 'GLP', 'GNL', 'Úrea / AdBlue'];
 const OPCIONES_COMBUSTIBLE = [
   { value: 'Diésel B5', label: 'Diésel B5', description: 'Camiones y tractos (el más usado)' },
   { value: 'Diésel B5 S-50', label: 'Diésel B5 S-50', description: 'Diésel de bajo azufre' },
@@ -62,12 +62,14 @@ const OPCIONES_COMBUSTIBLE = [
   { value: 'GNV', label: 'GNV', description: 'Gas natural vehicular · m³' },
   { value: 'GLP', label: 'GLP', description: 'Gas licuado de petróleo' },
   { value: 'GNL', label: 'GNL', description: 'Gas natural licuado · kg' },
+  { value: 'Úrea / AdBlue', label: 'Úrea / AdBlue', description: 'Fluido para el sistema SCR' },
 ];
 const unidadDe = (c: string) => (c === 'GNV' ? 'm³' : c === 'GNL' ? 'kg' : 'gal');
 function combustibleDe(v: string): string {
   if (COMBUSTIBLES.includes(v)) return v;
   const x = v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   if (!x.trim()) return '';
+  if (/urea|adblue|ad blue/.test(x)) return 'Úrea / AdBlue';
   if (/gnv/.test(x)) return 'GNV';
   if (/gnl/.test(x)) return 'GNL';
   if (/glp|gas licuado/.test(x)) return 'GLP';
