@@ -21,7 +21,8 @@ import { BANCOS_PERU, tieneYapePlin } from '../almacen/bancosPeru';
 export type TipoCuentas = 'proveedores' | 'personal';
 
 interface Cuenta { id: number; banco: string; tipo_cuenta: string; moneda: string | null; numero_cuenta: string; cci: string | null; detraccion: number | boolean; principal: number | boolean; estado: number | boolean }
-interface Titular { titular: string; nombre: string; doc: string; origen: string; cuentas: Cuenta[] }
+interface Titular { titular: string; nombre: string; doc: string; tipo_doc?: string; origen: string; telefono?: string; email?: string; direccion?: string; estado?: string; estaciones?: string[]; cuentas: Cuenta[] }
+type Filtro = 'todos' | 'almacen' | 'estacion' | 'sin';
 interface Borrador { id: number | null; banco: string; tipo_cuenta: string; moneda: string; numero_cuenta: string; cci: string; detraccion: boolean; principal: boolean }
 
 const TEXTOS: Record<TipoCuentas, { titulo: string; unidad: string; plural: string; doc: string; buscar: string }> = {
@@ -29,13 +30,16 @@ const TEXTOS: Record<TipoCuentas, { titulo: string; unidad: string; plural: stri
   personal: { titulo: 'Cuentas del personal', unidad: 'persona', plural: 'personas', doc: 'DNI', buscar: 'Nombre o DNI…' },
 };
 const TIPOS_BASE = ['CUENTA CORRIENTE', 'CUENTA DE AHORROS', 'CUENTA REMUNERADA'];
-const COLUMNAS: ColumnaTabla[] = [
+const columnasDe = (tipo: TipoCuentas): ColumnaTabla[] => [
   { id: 'titular', titulo: 'Titular', ancho: 300, minimo: 160 },
   { id: 'doc', titulo: 'Documento', ancho: 130, minimo: 100 },
+  ...(tipo === 'proveedores' ? [{ id: 'origen', titulo: 'Origen', ancho: 170, minimo: 110 }] : []),
   { id: 'principal', titulo: 'Cuenta principal', ancho: 360, minimo: 180 },
   { id: 'cuentas', titulo: 'Cuentas', ancho: 90, minimo: 70 },
   { id: 'acciones', titulo: '', ancho: 90, minimo: 80 },
 ];
+const esEstacion = (t: Titular) => /estaci/i.test(t.origen);
+const esAlmacen = (t: Titular) => /Almac/i.test(t.origen);
 
 const si = (v: unknown) => v === true || v === 1 || v === '1';
 const monedaTxt = (m: string | null) => (/D[OÓ]L|USD/i.test(String(m ?? '')) ? 'Dólares' : 'Soles');
@@ -49,7 +53,7 @@ export function CuentasBancariasPage({ tipo }: { tipo: TipoCuentas }) {
   const toast = useToast();
   const [busqueda, setBusqueda] = useState('');
   const [q, setQ] = useState('');
-  const [filtro, setFiltro] = useState<'todos' | 'sin'>('todos');
+  const [filtro, setFiltro] = useState<Filtro>('todos');
   const [abierto, setAbierto] = useState<string | null>(null);
   const [form, setForm] = useState<Borrador | null>(null);
   const [errorForm, setErrorForm] = useState<string | null>(null);
@@ -67,7 +71,14 @@ export function CuentasBancariasPage({ tipo }: { tipo: TipoCuentas }) {
 
   const todos = lista.data ?? [];
   const sinCuenta = todos.filter(t => t.cuentas.length === 0).length;
-  const visibles = useMemo(() => (filtro === 'sin' ? todos.filter(t => t.cuentas.length === 0) : todos), [todos, filtro]);
+  const visibles = useMemo(() => todos.filter(t => filtro === 'sin' ? t.cuentas.length === 0 : filtro === 'almacen' ? esAlmacen(t) : filtro === 'estacion' ? esEstacion(t) : true), [todos, filtro]);
+  const nAlmacen = todos.filter(esAlmacen).length;
+  const nEstacion = todos.filter(esEstacion).length;
+  const opcionesFiltro: Array<{ value: Filtro; label: string }> = [
+    { value: 'todos', label: 'Todos' },
+    ...(tipo === 'proveedores' ? [{ value: 'almacen' as const, label: `Almacén (${nAlmacen})` }, { value: 'estacion' as const, label: `Estaciones (${nEstacion})` }] : []),
+    { value: 'sin', label: `Sin cuenta${sinCuenta ? ` (${sinCuenta})` : ''}` },
+  ];
   const actual = todos.find(t => t.titular === abierto) ?? null;
 
   const abrirNueva = () => { setErrorForm(null); setForm({ ...VACIA, principal: (actual?.cuentas.length ?? 0) === 0 }); };
@@ -114,22 +125,22 @@ export function CuentasBancariasPage({ tipo }: { tipo: TipoCuentas }) {
         <div className="cb-filtros">
           <SearchField value={busqueda} placeholder={tx.buscar}
             onChange={v => { setBusqueda(v); window.clearTimeout((window as unknown as { _cbT?: number })._cbT); (window as unknown as { _cbT?: number })._cbT = window.setTimeout(() => setQ(v.trim()), 350); }} />
-          <SegmentedControl label="Mostrar" value={filtro} onChange={setFiltro}
-            options={[{ value: 'todos', label: 'Todos' }, { value: 'sin', label: `Sin cuenta${sinCuenta ? ` (${sinCuenta})` : ''}` }]} />
+          <SegmentedControl label="Mostrar" value={filtro} onChange={setFiltro} options={opcionesFiltro} />
         </div>
 
         {lista.isLoading ? <PageLoader /> : lista.isError ? <Notice tone="error">{errorMessage(lista.error)}</Notice> : visibles.length === 0 ? (
-          <EmptyState icon={q || filtro === 'sin' ? <SearchX size={22} /> : <Landmark size={22} />} title={q || filtro === 'sin' ? 'Sin coincidencias' : `Sin ${tx.plural}`}>
-            {filtro === 'sin' ? `Todos los ${tx.plural} tienen una cuenta.` : q ? 'Prueba con otro texto.' : tipo === 'proveedores' ? 'Registra a los proveedores en Almacén y aquí cargas sus cuentas.' : 'Aquí aparecen los conductores y el personal para cargar sus cuentas.'}
+          <EmptyState icon={q || filtro !== 'todos' ? <SearchX size={22} /> : <Landmark size={22} />} title={q || filtro !== 'todos' ? 'Sin coincidencias' : `Sin ${tx.plural}`}>
+            {filtro === 'sin' ? `Todos los ${tx.plural} tienen una cuenta.` : filtro !== 'todos' ? 'No hay registros con ese filtro.' : q ? 'Prueba con otro texto.' : tipo === 'proveedores' ? 'Los proveedores de Almacén y las estaciones de servicio aparecen aquí para cargar sus cuentas.' : 'Aquí aparecen los conductores y el personal para cargar sus cuentas.'}
           </EmptyState>
         ) : (
-          <TablaRedimensionable id={`cuentas-bancarias-${tipo}`} columnas={COLUMNAS} ariaLabel={tx.titulo} altoMax="70vh">
+          <TablaRedimensionable id={`cuentas-bancarias-${tipo}`} columnas={columnasDe(tipo)} ariaLabel={tx.titulo} altoMax="70vh">
             {visibles.map(t => {
               const principal = t.cuentas.find(c => si(c.principal)) ?? t.cuentas[0];
               return (
                 <tr key={t.titular} onClick={() => setAbierto(t.titular)} style={{ cursor: 'pointer' }}>
                   <Celda>{t.nombre}{tipo === 'personal' && <span className="cb-origen"> · {t.origen}</span>}</Celda>
                   <Celda mono>{t.doc || '—'}</Celda>
+                  {tipo === 'proveedores' && <Celda><Badge tone={esEstacion(t) && !esAlmacen(t) ? 'amber' : esEstacion(t) ? 'green' : 'gray'}>{t.origen}</Badge></Celda>}
                   <Celda>{principal ? <span className="cb-principal"><b>{principal.banco}</b> · {monedaTxt(principal.moneda)} · <span className="cb-num">{numeroTxt(principal)}</span></span> : <Badge tone="amber">Sin cuenta</Badge>}</Celda>
                   <Celda>{t.cuentas.length || '—'}</Celda>
                   <Celda><Button variant="secondary" aria-label={`Cuentas de ${t.nombre}`} onClick={e => { e.stopPropagation(); setAbierto(t.titular); }}>Cuentas</Button></Celda>
@@ -146,7 +157,17 @@ export function CuentasBancariasPage({ tipo }: { tipo: TipoCuentas }) {
           : <><Button variant="secondary" onClick={() => setAbierto(null)}>Cerrar</Button>{puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={abrirNueva}>Agregar cuenta</Button>}</>}>
         {actual && !form && (
           <div className="cb-lista">
-            <p className="cb-sub">{tx.doc} {actual.doc || '—'}{actual.cuentas.length > 1 ? ' · la estrella marca la cuenta que sale por defecto' : ''}</p>
+            <dl className="cb-datos">
+              <div><dt>{actual.tipo_doc || tx.doc}</dt><dd>{actual.doc || '—'}</dd></div>
+              {tipo === 'proveedores' && <div><dt>Origen</dt><dd>{actual.origen}</dd></div>}
+              {actual.telefono ? <div><dt>Teléfono</dt><dd>{actual.telefono}</dd></div> : null}
+              {actual.email ? <div><dt>Correo</dt><dd>{actual.email}</dd></div> : null}
+              {actual.direccion ? <div className="cb-datos__ancho"><dt>Dirección</dt><dd>{actual.direccion}</dd></div> : null}
+              {actual.estaciones && actual.estaciones.length > 0 && (
+                <div className="cb-datos__ancho"><dt>Estaciones / sedes</dt><dd className="cb-sedes">{actual.estaciones.map(s => <span key={s}>{s}</span>)}</dd></div>
+              )}
+            </dl>
+            {actual.cuentas.length > 1 && <p className="cb-sub">La estrella marca la cuenta que sale por defecto.</p>}
             {actual.cuentas.length === 0 && (
               <Notice tone="accent" icon={<CircleAlert size={16} />}>Este {tx.unidad} no tiene cuentas. Agrega una y quedará como principal: es la que saldrá por defecto en los vales, las órdenes de compra y las cajas.</Notice>
             )}

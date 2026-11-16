@@ -418,7 +418,7 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
                     onChange={v => elegirBeneficiario(v)} onCreate={txt => elegirBeneficiario(txt.trim(), true)} createLabel="Usar (no registrado)" />}
                 </Field>
                 {f.pagar_a === 'ESTACION' && (
-                  <Field label="RUC" hint={f.estacion_ruc && f.beneficiario_nombre && !benActual ? 'Este proveedor no está registrado: pide a Almacén que lo registre con su cuenta' : undefined}>
+                  <Field label="RUC" hint={f.estacion_ruc && f.beneficiario_nombre && !benActual ? 'Este proveedor no está en la lista: escríbelo completo o regístralo en Almacén' : undefined}>
                     {p => <TextInput {...p} inputMode="numeric" maxLength={11} value={f.estacion_ruc} onChange={e => { const r = e.target.value.replace(/\D/g, ''); set({ estacion_ruc: r, beneficiario_doc: r }); }} />}
                   </Field>
                 )}

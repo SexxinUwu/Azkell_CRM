@@ -7,6 +7,13 @@
 .cb-cci { color: var(--label-3); }
 .cb-sub { margin: 0; color: var(--label-3); font-size: 0.8125rem; }
 
+.cb-datos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2) var(--s-4); margin: 0; padding: var(--s-3) var(--s-4); border-radius: 14px; background: var(--fill, rgba(120, 120, 128, 0.12)); }
+.cb-datos > div { min-width: 0; }
+.cb-datos__ancho { grid-column: 1 / -1; }
+.cb-datos dt { color: var(--label-3); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.cb-datos dd { margin: 2px 0 0; font-size: 0.9375rem; overflow-wrap: anywhere; }
+.cb-sedes { display: flex; flex-wrap: wrap; gap: 4px; }
+.cb-sedes span { padding: 1px 8px; border-radius: 999px; background: var(--bg, rgba(255, 255, 255, 0.6)); color: var(--label-2); font-size: 0.75rem; font-weight: 600; }
 .cb-lista { display: flex; flex-direction: column; gap: var(--s-3); }
 .cb-cuenta {
   display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-3);

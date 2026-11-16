@@ -4,6 +4,7 @@
 // Cada titular tiene una cuenta principal: la que sale por defecto al elegirlo en un vale, una OC o una caja.
 // Tablas y columnas: migración 35_cuentas_bancarias_principal.
 const express = require('express');
+const { proveedoresConEstaciones } = require('../services/proveedores_cuentas');
 
 const TIPOS_PROVEEDOR = ['CUENTA CORRIENTE', 'CUENTA DE AHORROS', 'CUENTA REMUNERADA', 'YAPE', 'PLIN'];
 const MONEDAS = ['SOLES', 'DOLARES'];
@@ -71,8 +72,8 @@ module.exports = (db, logAudit) => {
             const q = texto(req.query.q, 60); const like = q ? `%${q}%` : null;
             let titulares = [];
             if (req.params.tipo === 'proveedores') {
-                const [rows] = await p.query(`SELECT id, nombre, numero_documento AS doc FROM proveedores_inv ${like ? 'WHERE nombre LIKE ? OR numero_documento LIKE ?' : ''} ORDER BY nombre LIMIT 1000`, like ? [like, like] : []);
-                titulares = rows.map(r => ({ titular: String(r.id), nombre: r.nombre, doc: r.doc || '', origen: 'Proveedor' }));
+                // Proveedores de Almacén + estaciones de servicio en una sola lista, con todos sus datos
+                titulares = await proveedoresConEstaciones(p, q);
             } else {
                 // Conductores + personal de RRHH + quien ya tenga cuenta registrada, sin repetir el documento
                 const filtro = campos => (like ? `AND (${campos.map(c => `${c} LIKE ?`).join(' OR ')})` : '');

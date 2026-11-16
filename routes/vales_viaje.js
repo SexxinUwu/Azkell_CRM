@@ -7,6 +7,7 @@ const multer = require('multer');
 const { uploadToS3, s3KeyFromUrl, getPresignedUrlEstable } = require('../utils/s3');
 const { leerVoucher, combustibleDe } = require('../services/vale_lectura');
 const { datosGpsUnidad } = require('../services/wialon_unidad');
+const { proveedoresConEstaciones, estacionPorRuc } = require('../services/proveedores_cuentas');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
@@ -133,8 +134,8 @@ module.exports = (db, logAudit) => {
                 if (rows.length) [ctas] = await p.query('SELECT documento, banco, tipo_cuenta, moneda, numero_cuenta, cci, principal FROM persona_cuentas_bancarias WHERE estado = 1 AND documento IN (?) ORDER BY principal DESC, id', [rows.map(r => r.doc)]);
                 return res.json({ ok: true, data: rows.map(r => ({ nombre: r.nombre, doc: r.doc, cuentas: ctas.filter(c => c.documento === r.doc).map(c => ({ label: etiquetaCuenta(c), usd: /D[OÓ]L|USD/i.test(String(c.moneda || '')), principal: c.principal === 1 })) })) });
             }
-            const [rows] = await p.query(
-                `SELECT id, nombre, numero_documento AS doc FROM proveedores_inv ${like ? 'WHERE nombre LIKE ? OR numero_documento LIKE ?' : ''} ORDER BY nombre LIMIT 300`, like ? [like, like] : []);
+            // Estaciones: proveedores de Almacén y estaciones de servicio en una sola lista (la clave de las cuentas es `titular`)
+            const rows = (await proveedoresConEstaciones(p, q)).slice(0, 300).map(r => ({ id: r.titular, nombre: r.nombre, doc: r.doc }));
             let cuentas = [];
             if (rows.length) [cuentas] = await p.query('SELECT proveedor_id, banco, tipo_cuenta, moneda, numero_cuenta, cci, detraccion, principal FROM proveedor_cuentas_bancarias WHERE estado = 1 AND proveedor_id IN (?) ORDER BY principal DESC, id', [rows.map(r => r.id)]);
             res.json({ ok: true, data: rows.map(r => ({ nombre: r.nombre, doc: r.doc, cuentas: cuentas.filter(c => String(c.proveedor_id) === String(r.id)).map(c => ({ label: etiquetaCuenta(c), usd: /D[OÓ]L|USD/i.test(String(c.moneda || '')), principal: c.principal === 1 })) })) });
@@ -162,7 +163,7 @@ module.exports = (db, logAudit) => {
             let proveedor = null;
             if (d.estacion_ruc) {
                 const [r] = await p.query('SELECT nombre, numero_documento AS doc FROM proveedores_inv WHERE numero_documento = ? LIMIT 1', [d.estacion_ruc]);
-                proveedor = r[0] || null;
+                proveedor = r[0] || await estacionPorRuc(p, d.estacion_ruc);
             }
             const placaViaje = texto(req.body.placa, 20);
             const alertas = await alertasDe(p, { ...d, placa: placaViaje || d.placa, placa_voucher: d.placa }, 0);
