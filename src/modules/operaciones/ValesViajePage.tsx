@@ -339,6 +339,13 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
     : (<><Button variant="secondary" onClick={onClose}>Cerrar</Button><Button variant="primary" icon={<Plus size={16} />} onClick={reiniciar}>Otro vale</Button></>);
 
   const cuentasBen = benActual?.cuentas ?? [];
+  // La cuenta principal queda elegida de verdad (no solo a la vista): pasa al cambiar a «Conductor», al llegar la lista o al volver al paso
+  useEffect(() => {
+    if (paso < 2 || f.cuenta_destino || !benActual || cuentasBen.length === 0) return;
+    const c = cuentasBen.find(x => x.principal) ?? cuentasBen.find(x => !x.usd) ?? cuentasBen[0];
+    if (c) setF(x => ({ ...x, cuenta_destino: c.label }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paso, f.beneficiario_nombre, f.pagar_a, f.cuenta_destino, bens.data]);
 
   return (
     <Sheet ancho open={open} onClose={() => !guardando && !leyendo && onClose()} title="Nuevo vale de combustible" footer={footer}>
