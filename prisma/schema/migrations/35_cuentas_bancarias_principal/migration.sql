@@ -56,14 +56,14 @@ INSERT INTO `persona_cuentas_bancarias` (documento, nombre, banco, tipo_cuenta, 
 SELECT TRIM(c.dni), c.nombre, COALESCE(NULLIF(TRIM(c.banco), ''), 'Banco'), 'CUENTA DE AHORROS', 'SOLES', TRIM(c.numero_cuenta), 1
 FROM `conductores` c
 WHERE c.numero_cuenta IS NOT NULL AND TRIM(c.numero_cuenta) <> '' AND TRIM(c.dni) <> ''
-  AND NOT EXISTS (SELECT 1 FROM `persona_cuentas_bancarias` p WHERE p.documento = TRIM(c.dni) AND p.numero_cuenta = TRIM(c.numero_cuenta));
+  AND NOT EXISTS (SELECT 1 FROM `persona_cuentas_bancarias` p WHERE p.documento = TRIM(c.dni) COLLATE utf8mb4_unicode_ci AND p.numero_cuenta = TRIM(c.numero_cuenta) COLLATE utf8mb4_unicode_ci);
 
 -- 7) Datos: la CCI de haberes del personal de RRHH pasa a la tabla nueva
 INSERT INTO `persona_cuentas_bancarias` (documento, nombre, banco, tipo_cuenta, moneda, numero_cuenta, cci, principal)
 SELECT TRIM(r.numero_documento), TRIM(CONCAT(r.nombres, ' ', r.apellidos)), COALESCE(NULLIF(TRIM(r.banco_haberes), ''), 'Banco'), 'CUENTA DE AHORROS', 'SOLES', '', TRIM(r.cci_haberes), 0
 FROM `rrhh_personal` r
 WHERE r.cci_haberes IS NOT NULL AND TRIM(r.cci_haberes) <> ''
-  AND NOT EXISTS (SELECT 1 FROM `persona_cuentas_bancarias` p WHERE p.documento = TRIM(r.numero_documento) AND (p.cci = TRIM(r.cci_haberes) OR p.numero_cuenta = TRIM(r.cci_haberes)));
+  AND NOT EXISTS (SELECT 1 FROM `persona_cuentas_bancarias` p WHERE p.documento = TRIM(r.numero_documento) COLLATE utf8mb4_unicode_ci AND (p.cci = TRIM(r.cci_haberes) COLLATE utf8mb4_unicode_ci OR p.numero_cuenta = TRIM(r.cci_haberes) COLLATE utf8mb4_unicode_ci));
 
 -- 8) Datos: cada persona queda con una principal (la primera activa)
 UPDATE `persona_cuentas_bancarias` c
