@@ -33,7 +33,7 @@ export function useOpcionesUbigeo() {
   return { opciones, porCodigo, cargando: q.isLoading };
 }
 
-const normalizar = (v: unknown) => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+export const normalizar = (v: unknown) => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 
 /**
  * Detecta el distrito de una dirección que termina en «DISTRITO - PROVINCIA - DEPARTAMENTO» (como imprimen las guías de remisión),

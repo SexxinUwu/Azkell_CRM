@@ -1764,6 +1764,21 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
         }
     });
 
+    // Distancia y tiempo entre dos distritos (para el paso Ruta de la orden de servicio). Los textos son «Distrito, Provincia, Departamento»
+    router.get('/ordenes-servicio/distancia', async (req, res) => {
+        try {
+            const origen = String(req.query.origen || '').trim();
+            const destino = String(req.query.destino || '').trim();
+            if (!origen || !destino) return res.status(400).json({ ok: false, error: 'Faltan el origen y el destino.' });
+            if (origen.length > 160 || destino.length > 160) return res.status(400).json({ ok: false, error: 'Texto demasiado largo.' });
+            const r = await require('../services/ruta_distancia').distanciaEntre(origen, destino);
+            res.json({ ok: true, data: r });
+        } catch (err) {
+            console.error('Error al calcular la distancia del servicio:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
     // Rutas para elegir en el formulario: las de la matriz de combustible (según el sentido) y las ya usadas en otros servicios
     router.get('/ordenes-servicio/rutas', async (req, res) => {
         try {

@@ -14,7 +14,7 @@ import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import './servicios.css';
 import { useTipoCambioSunat } from '../almacen/api';
-import { etiquetaUbigeo, useOpcionesUbigeo } from './ubigeos';
+import { etiquetaUbigeo, normalizar, ubigeoDeDireccion, useOpcionesUbigeo, useUbigeos, type Ubigeo } from './ubigeos';
 
 // Lo que llega del detalle del servicio (GET /operaciones/ordenes-servicio/:id)
 export interface OrdenParaEditar {
@@ -151,11 +151,14 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
   const [tcManual, setTcManual] = useState(false);
   // Direcciones que se llenaron solas (se pueden reemplazar por la sugerida del distrito); si la persona escribe, dejan de ser automáticas
   const [auto, setAuto] = useState({ origen: false, destino: false });
+  // El distrito y la ruta se deducen solos mientras la persona no los elija a mano
+  const [ubiAuto, setUbiAuto] = useState({ origen: false, destino: false });
+  const [rutaManual, setRutaManual] = useState(false);
   const editando = !!orden;
   const ultimo = PASOS.length - 1;
 
   useEffect(() => {
-    if (open) { setF(formInicial(orden)); setPaso(0); setDireccion(1); setTocados(new Set()); setError(null); setTcManual(!!orden); setAuto({ origen: false, destino: false }); }
+    if (open) { setF(formInicial(orden)); setPaso(0); setDireccion(1); setTocados(new Set()); setError(null); setTcManual(!!orden); setAuto({ origen: false, destino: false }); setUbiAuto({ origen: false, destino: false }); setRutaManual(!!orden?.ruta); }
   }, [open, orden]);
 
   const clientes = useQuery({
@@ -197,6 +200,49 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
   const ubi = useOpcionesUbigeo();
   const etiquetaDe = (codigo: string) => { const u = ubi.porCodigo.get(codigo); return u ? etiquetaUbigeo(u) : ''; };
   const set = (p: Partial<Form>) => setF(x => ({ ...x, ...p }));
+
+  // 1) El distrito sale de la dirección («… - ATE - LIMA - LIMA»), salvo que la persona ya lo haya elegido a mano
+  const catalogo = useUbigeos();
+  useEffect(() => {
+    const lista = catalogo.data;
+    if (!open || !lista) return;
+    (['origen', 'destino'] as const).forEach(lado => {
+      if (f[lado] && !ubiAuto[lado]) return;
+      const u = ubigeoDeDireccion(lado === 'origen' ? f.origen_dir : f.destino_dir, lista);
+      if (u && u.codigo !== f[lado]) { setF(x => ({ ...x, [lado]: u.codigo })); setUbiAuto(a => ({ ...a, [lado]: true })); }
+    });
+  }, [open, f.origen_dir, f.destino_dir, catalogo.data]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 2) La ruta sale de los dos puntos: DEPARTAMENTO - DEPARTAMENTO, o la ruta de la matriz / usada antes si coincide por provincia
+  const uOrigen = ubi.porCodigo.get(f.origen);
+  const uDestino = ubi.porCodigo.get(f.destino);
+  const rutaSugerida = useMemo(() => {
+    if (!uOrigen || !uDestino) return '';
+    const dep = [uOrigen.departamento, uDestino.departamento], prov = [uOrigen.provincia, uDestino.provincia];
+    const candidatas = [[dep[0], dep[1]], [prov[0], prov[1]], [prov[0], dep[1]], [dep[0], prov[1]]].map(([a, b]) => `${a} - ${b}`.toUpperCase());
+    const conocidas = new Map((rutas.data ?? []).map(r => [normalizar(r.ruta), r.ruta]));
+    for (const c of candidatas) { const hit = conocidas.get(normalizar(c)); if (hit) return hit; }
+    return candidatas[0];
+  }, [uOrigen, uDestino, rutas.data]);
+  useEffect(() => {
+    if (open && !rutaManual && rutaSugerida && rutaSugerida !== f.ruta) setF(x => ({ ...x, ruta: rutaSugerida }));
+  }, [open, rutaManual, rutaSugerida]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 3) Distancia y tiempo: primero la matriz de combustible (dato oficial); si la ruta no está, se calcula entre los dos distritos
+  const textoUbi = (u?: Ubigeo) => (u ? `${u.distrito}, ${u.provincia}, ${u.departamento}` : '');
+  const distancia = useQuery({
+    queryKey: ['operaciones', 'distancia', f.origen, f.destino], enabled: open && !!uOrigen && !!uDestino && kmRuta == null, staleTime: Infinity, retry: false,
+    queryFn: () => api<{ data?: { km: number; horas: number; metodo: 'osrm' | 'recta' | 'google' } | null }>('/operaciones/ordenes-servicio/distancia', { query: { origen: textoUbi(uOrigen), destino: textoUbi(uDestino) } }).then(r => r.data ?? null),
+  });
+  const calc = kmRuta == null ? distancia.data ?? null : null;
+  const kmMostrar = kmRuta ?? calc?.km ?? null;
+  const horasTxt = (h: number) => (h < 1 ? `${Math.round(h * 60)} min` : `${h.toLocaleString('es-PE')} h`);
+  const hintRuta = rutas.isLoading ? 'Cargando rutas…'
+    : kmRuta ? `Distancia: ${kmRuta.toLocaleString('es-PE')} km (matriz de combustible)`
+    : distancia.isFetching ? 'Calculando la distancia…'
+    : calc ? `${calc.metodo === 'recta' ? 'Distancia aproximada' : 'Distancia calculada'}: ${calc.km.toLocaleString('es-PE')} km · viaje de ≈ ${horasTxt(calc.horas)} en camión`
+    : rutaSugerida && !rutaManual ? 'Se armó con los puntos de carga y entrega. Puedes cambiarla.'
+    : 'Elige los puntos de carga y entrega y la ruta se arma sola; o escríbela como ORIGEN - DESTINO.';
   // Elegir cliente: remitente por defecto = el mismo cliente; la dirección de carga se completa sola si estaba vacía
   const elegirCliente = (nombre: string) => {
     if (nombre && !f.remitente && !f.origen_dir && direccionDe.get(nombre)) setAuto(a => ({ ...a, origen: true }));
@@ -220,6 +266,7 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
     const previa = codigo ? sugerida(lado, f.cliente, codigo) : '';
     const reemplaza = previa && (!f[dirCampo] || auto[lado]);
     if (reemplaza) setAuto(a => ({ ...a, [lado]: true }));
+    setUbiAuto(a => ({ ...a, [lado]: false }));
     set(reemplaza ? { [lado]: codigo, [dirCampo]: previa } : { [lado]: codigo });
   };
 
@@ -351,7 +398,7 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
                 {f.ejecucion === 'TERCERO' && <p className="os-nota">Los datos del transportista (nombre, RUC y costo) se completan en el viaje.</p>}
                 <div className="os-fila">
                   <SegmentedControl block label="Tipo de servicio" value={f.tipo_servicio} onChange={v => set({ tipo_servicio: v })} options={TIPOS} />
-                  <SegmentedControl block label="Sentido" value={f.sentido} onChange={v => set({ sentido: v, ruta: '' })} options={SENTIDOS} />
+                  <SegmentedControl block label="Sentido" value={f.sentido} onChange={v => { setRutaManual(false); set({ sentido: v, ruta: '' }); }} options={SENTIDOS} />
                 </div>
                 {f.sentido === 'RETORNO' && <p className="os-nota">Un retorno con carga es un servicio adicional dentro del mismo viaje. Si regresa vacío no hace falta crear un servicio.</p>}
               </>
@@ -378,28 +425,28 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
 
             {paso === 2 && (
               <>
-                <Field label="Ruta *" error={ver('ruta')} hint={rutas.isLoading ? 'Cargando rutas…' : kmRuta ? `Distancia: ${kmRuta.toLocaleString('es-PE')} km` : opcionesRutas.length ? 'Sale de la matriz de combustible. Si no está, escríbela como ORIGEN - DESTINO.' : 'Escríbela como ORIGEN - DESTINO (ej. LIMA - AREQUIPA).'}>
-                  {p => <Combobox {...p} options={opcionesRutas} value={f.ruta || null} loading={rutas.isLoading} placeholder="Ej. LIMA - AREQUIPA" createLabel="Usar esta ruta" limit={60}
-                    onChange={v => { set({ ruta: v ?? '' }); tocar('ruta'); }} onCreate={t => { set({ ruta: t.trim().toUpperCase() }); tocar('ruta'); }} />}
-                </Field>
-                <div className="os-fila">
-                  <Field label="Fecha del servicio">{p => <TextInput {...p} type="date" value={f.fecha} onChange={e => set({ fecha: e.target.value })} />}</Field>
-                  <Field label="Entrega estimada">{p => <TextInput {...p} type="date" value={f.fecha_entrega} min={f.fecha} onChange={e => set({ fecha_entrega: e.target.value })} />}</Field>
-                </div>
-                <Subtitulo icono={<MapPin size={14} />} nota="Opcional. Se necesitan para emitir la guía de remisión; puedes completarlos después.">Punto de carga y de entrega</Subtitulo>
+                <Subtitulo icono={<MapPin size={14} />} nota="Con la dirección se deduce el distrito, y con los dos puntos se arma la ruta y se calcula la distancia. También se usan en la guía de remisión.">Punto de carga y de entrega</Subtitulo>
                 <div className="os-fila">
                   <div className="os-punto">
-                    <Field label="Punto de carga" hint={f.origen ? `Ubigeo ${f.origen}` : 'Busca por distrito, provincia o código'}>
+                    <Field label="Punto de carga" hint={f.origen ? `${ubiAuto.origen ? 'Deducido de la dirección · ' : ''}Ubigeo ${f.origen}` : 'Se deduce de la dirección o búscalo por distrito, provincia o código'}>
                       {p => <Combobox {...p} options={ubi.opciones} value={f.origen || null} loading={ubi.cargando} placeholder="Distrito de carga" onChange={v => elegirDistrito('origen', v ?? '')} />}
                     </Field>
                     <Field label="Dirección o planta" hint={auto.origen && f.origen_dir ? 'Completada con la última usada. Puedes corregirla.' : undefined}>{p => <TextInput {...p} value={f.origen_dir} placeholder="Calle, número o nombre de la planta" onChange={e => { setAuto(a => ({ ...a, origen: false })); set({ origen_dir: e.target.value }); }} />}</Field>
                   </div>
                   <div className="os-punto">
-                    <Field label="Punto de entrega" hint={f.destino ? `Ubigeo ${f.destino}` : 'Busca por distrito, provincia o código'}>
+                    <Field label="Punto de entrega" hint={f.destino ? `${ubiAuto.destino ? 'Deducido de la dirección · ' : ''}Ubigeo ${f.destino}` : 'Se deduce de la dirección o búscalo por distrito, provincia o código'}>
                       {p => <Combobox {...p} options={ubi.opciones} value={f.destino || null} loading={ubi.cargando} placeholder="Distrito de entrega" onChange={v => elegirDistrito('destino', v ?? '')} />}
                     </Field>
                     <Field label="Dirección o lugar de entrega" hint={auto.destino && f.destino_dir ? 'Completada con la última usada. Puedes corregirla.' : undefined}>{p => <TextInput {...p} value={f.destino_dir} placeholder="Calle, número o nombre del lugar" onChange={e => { setAuto(a => ({ ...a, destino: false })); set({ destino_dir: e.target.value }); }} />}</Field>
                   </div>
+                </div>
+                <Field label="Ruta *" error={ver('ruta')} hint={hintRuta}>
+                  {p => <Combobox {...p} options={opcionesRutas} value={f.ruta || null} loading={rutas.isLoading} placeholder="Se arma con los puntos de carga y entrega" createLabel="Usar esta ruta" limit={60}
+                    onChange={v => { setRutaManual(!!v); set({ ruta: v ?? '' }); tocar('ruta'); }} onCreate={t => { setRutaManual(true); set({ ruta: t.trim().toUpperCase() }); tocar('ruta'); }} />}
+                </Field>
+                <div className="os-fila">
+                  <Field label="Fecha del servicio">{p => <TextInput {...p} type="date" value={f.fecha} onChange={e => set({ fecha: e.target.value })} />}</Field>
+                  <Field label="Entrega estimada">{p => <TextInput {...p} type="date" value={f.fecha_entrega} min={f.fecha} onChange={e => set({ fecha_entrega: e.target.value })} />}</Field>
                 </div>
               </>
             )}
@@ -440,7 +487,7 @@ export function OrdenServicioSheet({ open, orden, onClose, viajeInicial = '', on
                   <FilaResumen label="Destinatario" valor={f.destinatario} />
                 </GrupoResumen>
                 <GrupoResumen titulo="Ruta" paso={2} onCambiar={ir}>
-                  <FilaResumen label="Ruta" valor={kmRuta ? `${f.ruta} · ${kmRuta.toLocaleString('es-PE')} km` : f.ruta} />
+                  <FilaResumen label="Ruta" valor={kmMostrar ? `${f.ruta} · ${kmMostrar.toLocaleString('es-PE')} km` : f.ruta} />
                   <FilaResumen label="Fecha" valor={fechaCorta(f.fecha)} />
                   <FilaResumen label="Entrega estimada" valor={fechaCorta(f.fecha_entrega)} />
                   <FilaResumen label="Punto de carga" valor={[etiquetaDe(f.origen), f.origen_dir].filter(Boolean).join(' · ')} />
