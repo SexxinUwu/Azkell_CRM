@@ -62,7 +62,7 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'operaciones/combustible-estaciones/*',
-    permisos: ['combustible_vales.ver', 'admin'],
+    permisos: ['combustible_vales.ver', 'op_ordenes_viaje.ver', 'admin'],
     Page: lazy(() => import('./EstacionesProveedoresPage').then(m => ({ default: m.EstacionesProveedoresPage }))),
     nav: { key: 'estaciones', label: 'Estaciones de proveedores', to: '/operaciones/combustible-estaciones', icon: 'MapPin', permisos: ['operaciones.ver', 'admin'] },
   },

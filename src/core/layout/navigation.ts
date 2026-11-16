@@ -76,6 +76,8 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'clientes', label: 'Clientes', to: '/operaciones/clientes', icon: Users, permissions: ver('clientes') },
       { key: 'reporte-viajes', label: 'Reporte de viajes', to: '/operaciones/reporte-viajes', icon: BarChart3, permissions: ver('op_reporte_viajes'), soloEmpresa: 'marsisa,trahesa' },
       { key: 'vales-viaje', label: 'Vales de combustible', to: '/operaciones/vales-viaje', icon: Fuel, permissions: ver('combustible_vales', 'op_ordenes_viaje'), soloEmpresa: 'trahesa' },
+      // En Marsisa vive dentro del grupo Combustible; Trahesa no tiene ese grupo y la necesita para elegir la estación del vale
+      { key: 'estaciones-trahesa', label: 'Estaciones de proveedores', to: '/operaciones/combustible-estaciones', icon: MapPin, permissions: ver('combustible_vales', 'op_ordenes_viaje'), soloEmpresa: 'trahesa' },
       {
         key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [], soloEmpresa: 'marsisa,trahesa',
         children: [
