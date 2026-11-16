@@ -24,7 +24,7 @@ export interface NavItem {
   permissions: string[];
   /** Solo en el subdominio de esa empresa (pantallas propias de una empresa) */
   soloEmpresa?: string;
-  /** Oculto en esta empresa (su versión propia está en otra sección) */
+  /** Oculto en estas empresas, separadas por coma (su versión propia está en otra sección) */
   noEmpresa?: string;
   /** Solo para Fundador o admin@azkell.com (misma regla que routes/superadmin.js en el servidor) */
   soloFundador?: boolean;
@@ -75,9 +75,6 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'ubigeos', label: 'Ubigeos', to: '/operaciones/ubigeos', icon: MapPin, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa,trahesa' },
       { key: 'clientes', label: 'Clientes', to: '/operaciones/clientes', icon: Users, permissions: ver('clientes') },
       { key: 'reporte-viajes', label: 'Reporte de viajes', to: '/operaciones/reporte-viajes', icon: BarChart3, permissions: ver('op_reporte_viajes'), soloEmpresa: 'marsisa,trahesa' },
-      { key: 'vales-viaje', label: 'Vales de combustible', to: '/operaciones/vales-viaje', icon: Fuel, permissions: ver('combustible_vales', 'op_ordenes_viaje'), soloEmpresa: 'trahesa' },
-      // En Marsisa vive dentro del grupo Combustible; Trahesa no tiene ese grupo y la necesita para elegir la estación del vale
-      { key: 'estaciones-trahesa', label: 'Estaciones de proveedores', to: '/operaciones/combustible-estaciones', icon: MapPin, permissions: ver('combustible_vales', 'op_ordenes_viaje'), soloEmpresa: 'trahesa' },
       {
         key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [], soloEmpresa: 'marsisa,trahesa',
         children: [
@@ -86,9 +83,11 @@ const SECCIONES_BASE: NavSection[] = [
         ],
       },
       {
-        key: 'combustible-grupo', label: 'Combustible', icon: Fuel, permissions: [], soloEmpresa: 'marsisa',
+        key: 'combustible-grupo', label: 'Combustible', icon: Fuel, permissions: [],
         children: [
-          { key: 'vales', noEmpresa: 'marsisa', label: 'Vales de combustible', to: '/operaciones/vales', icon: Fuel, permissions: ver('combustible_vales') },
+          // Trahesa registra el vale dentro del viaje; las demás empresas usan los vales generales
+          { key: 'vales-viaje', soloEmpresa: 'trahesa', label: 'Vales de combustible', to: '/operaciones/vales-viaje', icon: Fuel, permissions: ver('combustible_vales', 'op_ordenes_viaje') },
+          { key: 'vales', noEmpresa: 'marsisa,trahesa', label: 'Vales de combustible', to: '/operaciones/vales', icon: Fuel, permissions: ver('combustible_vales') },
           { key: 'matriz-combustible', noEmpresa: 'marsisa', label: 'Matriz de combustible (D2)', to: '/operaciones/matriz-combustible', icon: Target, permissions: ver('combustible_analisis') },
           { key: 'analisis-combustible', noEmpresa: 'marsisa', label: 'Análisis de combustible (D2)', to: '/operaciones/analisis-combustible', icon: Gauge, permissions: ver('combustible_analisis') },
           { key: 'urea', noEmpresa: 'marsisa', label: 'Análisis de urea', to: '/operaciones/urea', icon: Droplet, permissions: ver('urea_analisis', 'combustible_analisis') },
@@ -270,7 +269,7 @@ function filtrarItems(items: NavItem[], can: (...p: string[]) => boolean, empres
     .filter(i => {
       if (i.children && i.children.length === 0) return false;
       if (i.soloEmpresa && !i.soloEmpresa.split(',').some(e => empresa.includes(e))) return false;
-      if (i.noEmpresa && empresa.includes(i.noEmpresa)) return false;
+      if (i.noEmpresa && i.noEmpresa.split(',').some(e => empresa.includes(e))) return false;
       if (i.soloFundador && !esFundador) return false;
       return can(...i.permissions);
     });
