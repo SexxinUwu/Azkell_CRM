@@ -33,6 +33,18 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'cuentas', label: 'Cuentas por cobrar', to: '/tesoreria/cuentas', icon: 'FileText', permisos: ['tesoreria_cuentas.ver'] },
   },
   {
+    path: 'tesoreria/cuentas-proveedores/*',
+    permisos: ['tesoreria_bancos.ver', 'tesoreria_caja.ver', 'admin'],
+    Page: lazy(() => import('./CuentasBancariasPage').then(m => ({ default: m.CuentasProveedoresPage }))),
+    nav: { key: 'cuentas-proveedores', label: 'Cuentas de proveedores', to: '/tesoreria/cuentas-proveedores', icon: 'Landmark', permisos: ['tesoreria_bancos.ver', 'tesoreria_caja.ver'] },
+  },
+  {
+    path: 'tesoreria/cuentas-personal/*',
+    permisos: ['tesoreria_bancos.ver', 'tesoreria_caja.ver', 'admin'],
+    Page: lazy(() => import('./CuentasBancariasPage').then(m => ({ default: m.CuentasPersonalPage }))),
+    nav: { key: 'cuentas-personal', label: 'Cuentas del personal', to: '/tesoreria/cuentas-personal', icon: 'Landmark', permisos: ['tesoreria_bancos.ver', 'tesoreria_caja.ver'] },
+  },
+  {
     path: 'tesoreria/bancos/*',
     permisos: ['tesoreria_bancos.ver', 'tesoreria_caja.ver', 'admin'],
     Page: lazy(() => import('./BancosPage').then(m => ({ default: m.BancosPage }))),

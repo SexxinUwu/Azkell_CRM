@@ -187,6 +187,8 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'liquidaciones', label: 'Liquidación de gastos', to: '/tesoreria/liquidaciones', icon: ScrollText, permissions: ver('tesoreria_liquidaciones') },
       { key: 'cuentas', label: 'Cuentas por cobrar y pagar', to: '/tesoreria/cuentas', icon: FileText, permissions: ver('tesoreria_cuentas') },
       { key: 'bancos', label: 'Bancos', to: '/tesoreria/bancos', icon: Landmark, permissions: ver('tesoreria_bancos', 'tesoreria_caja') },
+      { key: 'cuentas-proveedores', label: 'Cuentas de proveedores', to: '/tesoreria/cuentas-proveedores', icon: Contact, permissions: ver('tesoreria_bancos', 'tesoreria_caja') },
+      { key: 'cuentas-personal', label: 'Cuentas del personal', to: '/tesoreria/cuentas-personal', icon: IdCard, permissions: ver('tesoreria_bancos', 'tesoreria_caja') },
       { key: 'centros-costos', label: 'Centros de costos', to: '/tesoreria/centros-costos', icon: Boxes, permissions: ver('tesoreria_centros_costos', 'tesoreria_caja') },
       { key: 'flujo-caja', label: 'Flujo de caja', to: '/tesoreria/flujo-caja', icon: BarChart3, permissions: ver('tesoreria_caja') },
     ],

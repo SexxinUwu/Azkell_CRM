@@ -119,7 +119,7 @@ module.exports = (db, logAudit) => {
     const etiquetaCuenta = c => {
         const mon = String(c.moneda || 'SOLES').toUpperCase();
         const usd = /D[OÓ]L|USD/.test(mon);
-        return `${c.banco || ''} - ${c.tipo_cuenta || 'CUENTA CORRIENTE'} [${usd ? 'DÓLARES' : 'SOLES'}] - ${String(c.numero_cuenta || '').trim()}${c.detraccion ? ' [DETRACCIÓN]' : ''}`;
+        return `${c.banco || ''} - ${c.tipo_cuenta || 'CUENTA CORRIENTE'} [${usd ? 'DÓLARES' : 'SOLES'}] - ${String(c.numero_cuenta || '').trim() || (c.cci ? `CCI ${String(c.cci).trim()}` : '')}${c.detraccion ? ' [DETRACCIÓN]' : ''}`;
     };
     router.get('/beneficiarios', async (req, res) => {
         try {
@@ -128,14 +128,16 @@ module.exports = (db, logAudit) => {
             const like = q ? `%${q}%` : null;
             if (String(req.query.tipo).toUpperCase() === 'CONDUCTOR') {
                 const [rows] = await p.query(
-                    `SELECT nombre, dni AS doc, banco, numero_cuenta FROM conductores WHERE estado = 'Activo' ${like ? 'AND (nombre LIKE ? OR dni LIKE ?)' : ''} ORDER BY nombre LIMIT 300`, like ? [like, like] : []);
-                return res.json({ ok: true, data: rows.map(r => ({ nombre: r.nombre, doc: r.doc, cuentas: r.numero_cuenta ? [{ label: `${r.banco || 'Banco'} - CUENTA DE AHORROS [SOLES] - ${String(r.numero_cuenta).trim()}`, usd: false }] : [] })) });
+                    `SELECT nombre, TRIM(dni) AS doc FROM conductores WHERE estado = 'Activo' ${like ? 'AND (nombre LIKE ? OR dni LIKE ?)' : ''} ORDER BY nombre LIMIT 300`, like ? [like, like] : []);
+                let ctas = [];
+                if (rows.length) [ctas] = await p.query('SELECT documento, banco, tipo_cuenta, moneda, numero_cuenta, cci, principal FROM persona_cuentas_bancarias WHERE estado = 1 AND documento IN (?) ORDER BY principal DESC, id', [rows.map(r => r.doc)]);
+                return res.json({ ok: true, data: rows.map(r => ({ nombre: r.nombre, doc: r.doc, cuentas: ctas.filter(c => c.documento === r.doc).map(c => ({ label: etiquetaCuenta(c), usd: /D[OÓ]L|USD/i.test(String(c.moneda || '')), principal: c.principal === 1 })) })) });
             }
             const [rows] = await p.query(
                 `SELECT id, nombre, numero_documento AS doc FROM proveedores_inv ${like ? 'WHERE nombre LIKE ? OR numero_documento LIKE ?' : ''} ORDER BY nombre LIMIT 300`, like ? [like, like] : []);
             let cuentas = [];
-            if (rows.length) [cuentas] = await p.query('SELECT proveedor_id, banco, tipo_cuenta, moneda, numero_cuenta, detraccion FROM proveedor_cuentas_bancarias WHERE estado = 1 AND proveedor_id IN (?)', [rows.map(r => r.id)]);
-            res.json({ ok: true, data: rows.map(r => ({ nombre: r.nombre, doc: r.doc, cuentas: cuentas.filter(c => String(c.proveedor_id) === String(r.id)).map(c => ({ label: etiquetaCuenta(c), usd: /D[OÓ]L|USD/i.test(String(c.moneda || '')) })) })) });
+            if (rows.length) [cuentas] = await p.query('SELECT proveedor_id, banco, tipo_cuenta, moneda, numero_cuenta, cci, detraccion, principal FROM proveedor_cuentas_bancarias WHERE estado = 1 AND proveedor_id IN (?) ORDER BY principal DESC, id', [rows.map(r => r.id)]);
+            res.json({ ok: true, data: rows.map(r => ({ nombre: r.nombre, doc: r.doc, cuentas: cuentas.filter(c => String(c.proveedor_id) === String(r.id)).map(c => ({ label: etiquetaCuenta(c), usd: /D[OÓ]L|USD/i.test(String(c.moneda || '')), principal: c.principal === 1 })) })) });
         } catch (err) { responder(res, err, 'beneficiarios'); }
     });
 
@@ -214,7 +216,7 @@ module.exports = (db, logAudit) => {
             const cuentaEmpresa = texto(b.cuenta_empresa, 200) || '';
             const nroComprobante = texto(b.numero_voucher, 100) || '';
             const tipoComprobante = texto(b.tipo_comprobante, 100) || (/^F/i.test(nroComprobante) ? 'FACTURA' : /^B/i.test(nroComprobante) ? 'BOLETA DE VENTA' : 'VALE PROVISIONAL DE CAJA');
-            if (!cuentaDestino && modalidad !== 'EFECTIVO') throw aviso('Elige o escribe la cuenta de ' + (pagarA === 'CONDUCTOR' ? 'el conductor' : 'la estación') + ' a la que se le paga.');
+            // Sin cuenta destino se registra igual (aviso, no bloqueo): la persona la registra en su módulo y edita la caja
 
             await conn.beginTransaction();
             const [maxV] = await conn.query("SELECT codigo FROM viaje_vales_combustible WHERE codigo LIKE ? ORDER BY id DESC LIMIT 1 FOR UPDATE", [`VC-${anio}-%`]);
@@ -246,7 +248,7 @@ module.exports = (db, logAudit) => {
             if (upd.affectedRows !== 1) throw new Error('No se pudo enlazar la caja con el vale.');
             await conn.commit();
             if (typeof logAudit === 'function') logAudit(req, 'OPERACIONES', 'VALES', 'CREÓ', `Vale ${codigo} · viaje ${viaje} · ${galones} gal · ${moneda} ${total}`);
-            res.json({ ok: true, id: ins.insertId, codigo, caja_id: caja.insertId, alertas });
+            res.json({ ok: true, id: ins.insertId, codigo, caja_id: caja.insertId, alertas, sin_cuenta_destino: !cuentaDestino && modalidad !== 'EFECTIVO' });
         } catch (err) {
             try { await conn.rollback(); } catch (e) { /* sin transacción */ }
             responder(res, err, 'crear');

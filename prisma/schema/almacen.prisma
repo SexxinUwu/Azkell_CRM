@@ -197,9 +197,31 @@ model ProveedorCuentaBancaria {
   estado        Boolean?                            @default(true)
   created_at    DateTime                            @default(now()) @db.Timestamp(0)
   moneda        String?                             @default("SOLES") @db.VarChar(20)
+  cci           String?                             @db.VarChar(40)
+  /// La cuenta que sale por defecto al elegir al proveedor (una por proveedor)
+  principal     Boolean                             @default(false)
 
   @@index([proveedor_id], map: "idx_prov_cuenta")
   @@map("proveedor_cuentas_bancarias")
+}
+
+/// Cuentas bancarias del personal (conductores y RRHH), con la misma forma que las de proveedores. Se identifican por documento (DNI).
+model PersonaCuentaBancaria {
+  id            Int       @id @default(autoincrement())
+  documento     String    @db.VarChar(20)
+  nombre        String    @default("") @db.VarChar(200)
+  banco         String    @default("") @db.VarChar(100)
+  tipo_cuenta   String    @default("CUENTA DE AHORROS") @db.VarChar(30)
+  moneda        String    @default("SOLES") @db.VarChar(20)
+  numero_cuenta String    @default("") @db.VarChar(100)
+  cci           String?   @db.VarChar(40)
+  principal     Boolean   @default(false)
+  estado        Boolean   @default(true)
+  created_at    DateTime? @default(now()) @db.Timestamp(0)
+  updated_at    DateTime? @default(now()) @updatedAt @db.Timestamp(0)
+
+  @@index([documento], map: "idx_persona_cuenta_doc")
+  @@map("persona_cuentas_bancarias")
 }
 
 model ProveedorContacto {
@@ -271,6 +293,8 @@ enum ProveedorCuentasBancariasTipoCuenta {
   CUENTA_CORRIENTE  @map("CUENTA CORRIENTE")
   CUENTA_DE_AHORROS @map("CUENTA DE AHORROS")
   CUENTA_REMUNERADA @map("CUENTA REMUNERADA")
+  YAPE
+  PLIN
 }
 
 enum ProveedoresInvTipoDocumento {

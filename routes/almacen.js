@@ -328,6 +328,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                            'numero_cuenta', c.numero_cuenta,
                            'cci', c.cci,
                            'detraccion', c.detraccion,
+                           'principal', c.principal,
                            'estado', c.estado
                        )
                    )
@@ -383,17 +384,26 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         });
     };
     // Filas de cuentas tal como se guardan: sin banco o sin número no se guardan
-    const filasCuentas = (proveedorId, cuentas) => cuentas.map(c => [
-        proveedorId,
-        c.banco || '',
-        c.moneda || 'SOLES',
-        c.tipo_cuenta || 'CUENTA CORRIENTE',
-        c.numero_cuenta || '',
-        c.cci || null,
-        c.detraccion ? 1 : 0,
-        c.estado !== false && c.estado !== 0 ? 1 : 0
-    ]).filter(c => c[1] && c[4]);
-    const INSERT_CUENTAS = 'INSERT INTO proveedor_cuentas_bancarias (proveedor_id,banco,moneda,tipo_cuenta,numero_cuenta,cci,detraccion,estado) VALUES ?';
+    // La cuenta principal se conserva al guardar (esta pantalla borra y vuelve a insertar las cuentas): queda una sola principal,
+    // y si ninguna venía marcada, la primera activa.
+    const filasCuentas = (proveedorId, cuentas) => {
+        const filas = cuentas.map(c => [
+            proveedorId,
+            c.banco || '',
+            c.moneda || 'SOLES',
+            c.tipo_cuenta || 'CUENTA CORRIENTE',
+            c.numero_cuenta || '',
+            c.cci || null,
+            c.detraccion ? 1 : 0,
+            c.estado !== false && c.estado !== 0 ? 1 : 0,
+            c.principal === true || c.principal === 1 || c.principal === '1' ? 1 : 0
+        ]).filter(c => c[1] && c[4]);
+        const activas = filas.filter(c => c[7] === 1);
+        const elegida = activas.find(c => c[8] === 1) || activas[0];
+        filas.forEach(c => { c[8] = c === elegida ? 1 : 0; });
+        return filas;
+    };
+    const INSERT_CUENTAS = 'INSERT INTO proveedor_cuentas_bancarias (proveedor_id,banco,moneda,tipo_cuenta,numero_cuenta,cci,detraccion,estado,principal) VALUES ?';
 
     // Contactos (asesores) del proveedor: sin nombre no se guardan; siempre hay uno principal si hay alguno
     const filasContactos = (proveedorId, contactos) => {
@@ -2242,7 +2252,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                             let ctaBancaria = ent.cuenta_bancaria_proveedor || '';
                             if (!ctaBancaria && ent.proveedor_id) {
                                 try {
-                                    const [ctas] = await promiseDb.query("SELECT banco, tipo_cuenta, numero_cuenta, moneda FROM proveedor_cuentas_bancarias WHERE proveedor_id = ? AND estado = 1 LIMIT 1", [ent.proveedor_id]);
+                                    const [ctas] = await promiseDb.query("SELECT banco, tipo_cuenta, numero_cuenta, moneda FROM proveedor_cuentas_bancarias WHERE proveedor_id = ? AND estado = 1 ORDER BY principal DESC, id ASC LIMIT 1", [ent.proveedor_id]);
                                     if (ctas && ctas.length > 0) {
                                         ctaBancaria = `${ctas[0].banco} - ${ctas[0].tipo_cuenta || 'Cta'} [${ctas[0].moneda || 'SOLES'}] - ${ctas[0].numero_cuenta}`;
                                     }

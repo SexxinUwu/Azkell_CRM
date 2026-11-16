@@ -453,7 +453,7 @@ module.exports = function (db, broadcast, logAudit) {
                             let ctaBancaria = ent.cuenta_bancaria_proveedor || '';
                             if (!ctaBancaria && ent.proveedor_id) {
                                 try {
-                                    const [ctas] = await tdb.query("SELECT banco, tipo_cuenta, numero_cuenta, moneda FROM proveedor_cuentas_bancarias WHERE proveedor_id = ? AND estado = 1 LIMIT 1", [ent.proveedor_id]);
+                                    const [ctas] = await tdb.query("SELECT banco, tipo_cuenta, numero_cuenta, moneda FROM proveedor_cuentas_bancarias WHERE proveedor_id = ? AND estado = 1 ORDER BY principal DESC, id ASC LIMIT 1", [ent.proveedor_id]);
                                     if (ctas && ctas.length > 0) {
                                         ctaBancaria = `${ctas[0].banco} - ${ctas[0].tipo_cuenta || 'Cta'} [${ctas[0].moneda || 'SOLES'}] - ${ctas[0].numero_cuenta}`;
                                     }

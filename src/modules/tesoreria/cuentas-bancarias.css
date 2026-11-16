@@ -1,0 +1,26 @@
+/* Tesorería › Cuentas de proveedores y del personal */
+.cb-filtros { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: flex-end; }
+.cb-filtros > :first-child { flex: 1 1 260px; }
+.cb-origen { color: var(--label-3); font-size: 0.75rem; }
+.cb-principal { color: var(--label-2); }
+.cb-num { font-family: var(--font-mono); font-size: 0.8125rem; letter-spacing: 0.01em; }
+.cb-cci { color: var(--label-3); }
+.cb-sub { margin: 0; color: var(--label-3); font-size: 0.8125rem; }
+
+.cb-lista { display: flex; flex-direction: column; gap: var(--s-3); }
+.cb-cuenta {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-3);
+  padding: var(--s-3) var(--s-4); border-radius: 14px; background: var(--fill, rgba(120, 120, 128, 0.12));
+  border: 1px solid transparent;
+}
+.cb-cuenta--principal { border-color: color-mix(in srgb, var(--green, #34c759) 55%, transparent); background: color-mix(in srgb, var(--green, #34c759) 8%, transparent); }
+.cb-cuenta__datos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cb-cuenta__banco { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-weight: 600; }
+.cb-cuenta__tipo { color: var(--label-3); font-size: 0.8125rem; }
+.cb-cuenta__acciones { display: inline-flex; gap: var(--s-1); flex-shrink: 0; }
+
+.cb-checks { display: flex; flex-direction: column; gap: var(--s-2); }
+.cb-check { display: inline-flex; align-items: center; gap: var(--s-2); font-size: 0.9375rem; cursor: pointer; }
+.cb-check input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) { .cb-cuenta { transition: none; } }

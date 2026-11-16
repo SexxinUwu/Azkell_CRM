@@ -6,6 +6,7 @@ import './vale-ticket.css';
 import { motion, useReducedMotion } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { ArrowLeft, Ban, Check, CircleAlert, Fuel, Pencil, Satellite, Image as ImagenIcono, Plus, SearchX, Sparkles, UploadCloud, UserRound, Store } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
@@ -180,7 +181,7 @@ const VACIO: Form = {
 };
 const t = (v: unknown) => (v == null ? '' : String(v));
 const PASOS = ['Viaje y voucher', 'Consumo', 'Proveedor y pago', 'Confirmar'];
-interface Benef { nombre: string; doc: string | null; cuentas: Array<{ label: string; usd: boolean }> }
+interface Benef { nombre: string; doc: string | null; cuentas: Array<{ label: string; usd: boolean; principal?: boolean }> }
 /** Tipo de comprobante según la serie del voucher (F… factura, B… boleta) */
 const comprobanteDe = (nro: string) => (/^F/i.test(nro) ? 'FACTURA' : /^B/i.test(nro) ? 'BOLETA DE VENTA' : '');
 // Lo que la caja guarda como motivo y submotivo según el combustible (el centro de costo es CC-300)
@@ -261,7 +262,7 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
   // A quién se le paga: la lista trae sus cuentas; al elegir se propone la primera en soles
   function elegirBeneficiario(nombre: string | null, crear = false) {
     const b = (bens.data ?? []).find(x => x.nombre === nombre);
-    const cuenta = b ? (b.cuentas.find(c => !c.usd) ?? b.cuentas[0])?.label ?? '' : '';
+    const cuenta = b ? (b.cuentas.find(c => c.principal) ?? b.cuentas.find(c => !c.usd) ?? b.cuentas[0])?.label ?? '' : '';
     set({
       beneficiario_nombre: nombre ?? '', beneficiario_doc: t(b?.doc), cuenta_destino: crear ? '' : cuenta,
       ...(f.pagar_a === 'ESTACION' ? { estacion_nombre: nombre ?? '', estacion_ruc: b?.doc ? t(b.doc) : f.estacion_ruc } : {}),
@@ -294,7 +295,6 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
   }
   function validarPago(): string | null {
     if (!f.beneficiario_nombre.trim()) return f.pagar_a === 'CONDUCTOR' ? 'Elige el conductor al que se le paga.' : 'Elige la estación (proveedor) a la que se le paga.';
-    if (f.modalidad_pago !== 'EFECTIVO' && !f.cuenta_destino.trim()) return `Indica la cuenta ${f.pagar_a === 'CONDUCTOR' ? 'del conductor' : 'de la estación'} a la que se paga.`;
     if (!f.cuenta_empresa) return 'Elige la cuenta de la empresa desde la que se paga.';
     if (!f.autoriza) return 'Elige quién autoriza.';
     return null;
@@ -427,13 +427,14 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
             <section className="os-seccion">
               <h3 className="os-seccion__titulo">Pago en Caja</h3>
               <div className="os-seccion__cuerpo">
-                <Field label={`Cuenta ${f.pagar_a === 'CONDUCTOR' ? 'del conductor' : 'del proveedor'} *`} hint={cuentasBen.length === 0 ? 'No tiene cuentas registradas: escríbela (banco y número) o regístrala en su ficha' : undefined}>
+                <Field label={`Cuenta ${f.pagar_a === 'CONDUCTOR' ? 'del conductor' : 'del proveedor'}`} hint={cuentasBen.length > 1 ? 'Sale la cuenta principal; puedes elegir otra.' : cuentasBen.length === 0 ? 'Opcional: puedes escribirla aquí o editar la caja después.' : undefined}>
                   {p => cuentasBen.length > 0 ? (
                     <SelectInput {...p} value={f.cuenta_destino} onChange={e => set({ cuenta_destino: e.target.value })}>
                       {cuentasBen.map(c => <option key={c.label} value={c.label}>{c.label}</option>)}
                     </SelectInput>
                   ) : <TextInput {...p} value={f.cuenta_destino} placeholder="Ej. BCP - CUENTA CORRIENTE [SOLES] - 191-1234567-0-12" onChange={e => set({ cuenta_destino: e.target.value })} />}
                 </Field>
+                <AvisoSinCuenta f={f} />
                 <Field label="Cuenta de la empresa (de dónde sale el pago) *">
                   {p => <SelectInput {...p} value={f.cuenta_empresa} disabled={cuentasEmpresa.isLoading} onChange={e => set({ cuenta_empresa: e.target.value })}>
                     <option value="">{cuentasEmpresa.isLoading ? 'Cargando cuentas…' : 'Elige una cuenta'}</option>
@@ -454,16 +455,33 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
         {paso === 3 && (
           <>
             {alertas.length > 0 && <Notice tone={hayRojo ? 'error' : 'accent'} icon={<CircleAlert size={16} />}>{alertas.map(a => <div key={a.texto}>{a.nivel === 'rojo' ? '● ' : '○ '}{a.texto}</div>)}</Notice>}
+            <AvisoSinCuenta f={f} />
             <TicketVale f={f} titulo="Revisa antes de registrar" icono={<Fuel size={20} />} pie="Al registrar se crea su caja, pendiente de aprobación." />
             <CajaPrevia f={f} />
           </>
         )}
 
         {paso === 4 && registrado && (
+          <>
+          <AvisoSinCuenta f={f} registrado />
           <TicketVale f={f} codigo={registrado.codigo} titulo="Vale registrado" icono={<Check size={22} />} ok pie="Su caja quedó pendiente de aprobación; al aprobarla aparecerá en Pago de requerimientos." animar />
+          </>
         )}
       </div>
     </Sheet>
+  );
+}
+
+/** Aviso (no bloquea) cuando se genera una caja a nombre de alguien sin cuenta bancaria predefinida */
+function AvisoSinCuenta({ f, registrado }: { f: Form; registrado?: boolean }) {
+  if (!f.beneficiario_nombre || f.modalidad_pago === 'EFECTIVO' || f.cuenta_destino.trim()) return null;
+  const conductor = f.pagar_a === 'CONDUCTOR';
+  const modulo = conductor ? 'Cuentas del personal' : 'Cuentas de proveedores';
+  return (
+    <Notice tone="accent" icon={<CircleAlert size={16} />}>
+      {registrado ? 'Se generó' : 'Se generará'} la caja de <b>{f.beneficiario_nombre}</b>, pero no tiene una cuenta bancaria predefinida.
+      {' '}Regístrala en Tesorería › {modulo} y luego edita la caja para que figure. <Link to={conductor ? '/tesoreria/cuentas-personal' : '/tesoreria/cuentas-proveedores'}>Ir a {modulo}</Link>
+    </Notice>
   );
 }
 
