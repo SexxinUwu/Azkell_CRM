@@ -27,3 +27,10 @@ test.txt
 
 # La app nueva se compila dentro de la imagen
 dist/
+
+# Modelos 3D del Scania que la app no usa (solo usa scania_s730_final.glb). Pesan ~153 MB y se copiaban dos veces en cada build.
+# Si algún día se cambia la ruta en nv3-escena.ts, quitar el modelo nuevo de esta lista.
+assets/3d/scania_s730_original.glb
+assets/3d/scania_s730.glb
+assets/3d/scania_s730_ligero.glb
+assets/3d/scania_s730_ligero2.glb
