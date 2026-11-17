@@ -60,12 +60,10 @@ const COLS: Col[] = [
   { id: 'tipo', titulo: 'Movimiento', min: 100, max: 120, texto: m => (m.tipo_movimiento === 'INGRESO' ? 'INGRESO' : 'EGRESO') },
   { id: 'caja', titulo: 'N° caja', min: 110, max: 170, texto: m => numeroDoc(m) },
   { id: 'estado', titulo: 'Estado', min: 110, max: 150, alinear: 'center', texto: m => estadoTexto(estadoDe(m)) },
-  { id: 'persona', titulo: 'Persona / beneficiario', min: 150, max: 300, texto: m => m.persona || m.conductor || '' },
-  { id: 'motivo', titulo: 'Motivo', min: 120, max: 260, texto: m => [m.motivo, m.sub_motivo].filter(Boolean).join(' · ') },
   { id: 'placa', titulo: 'Placa', min: 84, max: 110, texto: m => m.placa || '' },
+  { id: 'motivo', titulo: 'Motivo', min: 120, max: 260, texto: m => [m.motivo, m.sub_motivo].filter(Boolean).join(' · ') },
+  { id: 'persona', titulo: 'Persona / beneficiario', min: 150, max: 300, texto: m => m.persona || m.conductor || '' },
   { id: 'viaje', titulo: 'Orden de viaje', min: 120, max: 160, texto: m => m.orden_viaje || '' },
-  { id: 'cc', titulo: 'Centro de costo', min: 120, max: 150, texto: m => m.centro_costo || '' },
-  { id: 'importe', titulo: 'Importe', min: 110, max: 170, alinear: 'right', texto: m => montoCaja(m.importe_total, m.moneda) },
   { id: 'destino', titulo: 'Cuenta destino', min: 160, max: 340, texto: m => m.cuenta_bancaria_persona || '' },
   { id: 'origen', titulo: 'Cuenta origen (empresa)', min: 160, max: 340, texto: m => m.cuenta_bancaria_empresa || '' },
   { id: 'modalidad', titulo: 'Modalidad', min: 110, max: 200, texto: m => m.modalidad_pago || '' },
@@ -73,8 +71,10 @@ const COLS: Col[] = [
   { id: 'autoriza', titulo: 'Autoriza', min: 100, max: 180, texto: m => m.autoriza || '' },
   { id: 'aprobador', titulo: 'Usuario aprobación', min: 130, max: 210, texto: m => m.usuario_aprobacion || '' },
   { id: 'fechaAprob', titulo: 'Fecha aprobación', min: 130, max: 180, texto: m => (m.fecha_aprobacion ? formatFechaHoraPe(m.fecha_aprobacion) : '') },
-  { id: 'sustento', titulo: 'Sustento', min: 96, max: 110, alinear: 'center', texto: () => 'Ver sustento', fijo: 104 },
+  { id: 'importe', titulo: 'Importe', min: 110, max: 170, alinear: 'right', texto: m => montoCaja(m.importe_total, m.moneda) },
+  { id: 'cc', titulo: 'Centro de costo', min: 120, max: 150, texto: m => m.centro_costo || '' },
   { id: 'voucher', titulo: 'Voucher', min: 90, max: 110, alinear: 'center', texto: () => 'Ver voucher', fijo: 104 },
+  { id: 'sustento', titulo: 'Sustento', min: 96, max: 110, alinear: 'center', texto: () => 'Ver sustento', fijo: 104 },
 ];
 
 /** Ancho que cabe al texto (≈ 7 px por carácter + relleno), entre el mínimo y el tope de cada columna */
@@ -174,7 +174,7 @@ export function CajaPage() {
       puedeEditar && esEditable(m) && { label: 'Editar', icon: <Pencil size={17} />, onSelect: () => setFormulario({ mov: m }) },
       puedeSubir && { label: 'Subir documentos', icon: <Upload size={17} />, onSelect: () => abrir(m) },
     ];
-    return [
+    const celdasFila = [
       <Celda key="acc" alinear="center"><MenuOtros soloIcono label="Acciones" opciones={opciones} /></Celda>,
       <Celda key="fecha">{fechaHora(m)}</Celda>,
       <Celda key="tipo">
@@ -202,6 +202,9 @@ export function CajaPage() {
       <Celda key="sustento" alinear="center"><CeldaAdjunto url={sustento} texto="Ver sustento" tono="azul" puedeSubir={puedeSubir} onSubir={() => abrir(m)} /></Celda>,
       <Celda key="voucher" alinear="center"><CeldaAdjunto url={voucher} texto="Ver voucher" tono="rojo" puedeSubir={puedeSubir} onSubir={() => abrir(m)} /></Celda>,
     ];
+    const clave = (id: string) => (id === 'acciones' ? 'acc' : id);
+    const posicion = (e: { key: string | null }) => COLS.findIndex(c => clave(c.id) === e.key);
+    return celdasFila.sort((x, y) => posicion(x) - posicion(y));
   }
 
   return (
