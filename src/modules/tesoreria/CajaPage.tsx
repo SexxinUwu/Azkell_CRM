@@ -70,8 +70,6 @@ const COLS: Col[] = [
   { id: 'viaje', titulo: 'Orden de viaje', min: 120, max: 160, texto: m => m.orden_viaje || '', mono: true },
   { id: 'creador', titulo: 'Usuario registro', min: 120, max: 210, texto: m => m.usuario_creacion || '' },
   { id: 'autoriza', titulo: 'Autoriza', min: 100, max: 180, texto: m => m.autoriza || '' },
-  { id: 'aprobador', titulo: 'Usuario aprobación', min: 130, max: 210, texto: m => m.usuario_aprobacion || '' },
-  { id: 'fechaAprob', titulo: 'Fecha aprobación', min: 130, max: 180, texto: m => (m.fecha_aprobacion ? formatFechaHoraPe(m.fecha_aprobacion) : ''), mono: true },
   { id: 'importe', titulo: 'Importe', min: 110, max: 170, alinear: 'right', texto: m => montoCaja(m.importe_total, m.moneda), bold: true },
   { id: 'cc', titulo: 'Centro de costo', min: 120, max: 150, texto: m => m.centro_costo || '', mono: true, extra: 20, px: 11 },
   { id: 'voucher', titulo: 'Voucher', min: 90, max: 110, alinear: 'center', texto: () => 'Ver voucher', fijo: 104 },
@@ -213,8 +211,6 @@ export function CajaPage() {
       </Celda>,
       <Celda key="creador">{m.usuario_creacion || '—'}</Celda>,
       <Celda key="autoriza">{m.autoriza || '—'}</Celda>,
-      <Celda key="aprobador">{m.usuario_aprobacion || '—'}</Celda>,
-      <Celda key="fechaAprob">{m.fecha_aprobacion ? formatFechaHoraPe(m.fecha_aprobacion) : '—'}</Celda>,
       <Celda key="sustento" alinear="center"><CeldaAdjunto url={sustento} texto="Ver sustento" tono="azul" puedeSubir={puedeSubir} onSubir={() => abrir(m)} /></Celda>,
       <Celda key="voucher" alinear="center"><CeldaAdjunto url={voucher} texto="Ver voucher" tono="rojo" puedeSubir={puedeSubir} onSubir={() => abrir(m)} /></Celda>,
     ];
