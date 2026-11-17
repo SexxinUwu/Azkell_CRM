@@ -179,12 +179,12 @@ export function CajaPage() {
       <Celda key="acc" alinear="center"><MenuOtros soloIcono label="Acciones" opciones={opciones} /></Celda>,
       <Celda key="fecha">{fechaHora(m)}</Celda>,
       <Celda key="tipo">
-        <span className="oc-chip" style={{ color: ingreso ? 'var(--green-ink)' : 'var(--red-ink)' }}>
-          {ingreso ? <ArrowUpRight size={11} style={{ verticalAlign: '-1px' }} /> : <ArrowDownLeft size={11} style={{ verticalAlign: '-1px' }} />} {ingreso ? 'INGRESO' : 'EGRESO'}
+        <span className="oc-chip" style={{ color: ingreso ? 'var(--green-ink)' : 'var(--red-ink)', display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+          {ingreso ? <ArrowUpRight size={11} /> : <ArrowDownLeft size={11} />}{ingreso ? 'INGRESO' : 'EGRESO'}
         </span>
       </Celda>,
       <Celda key="caja"><button type="button" className="oc-codigo" onClick={() => abrir(m)} title="Ver detalle">{numeroDoc(m) || '—'}</button></Celda>,
-      <Celda key="estado" alinear="center"><span className={`badge ${estadoClase(est)}`}>{estadoTexto(est)}</span></Celda>,
+      <Celda key="estado" alinear="center"><span className={`badge ${estadoClase(est)}`} style={{ whiteSpace: 'nowrap' }}>{estadoTexto(est)}</span></Celda>,
       <Celda key="persona">{m.persona || m.conductor || '—'}</Celda>,
       <Celda key="motivo">{[m.motivo, m.sub_motivo].filter(Boolean).join(' · ') || '—'}</Celda>,
       <Celda key="placa" mono>{m.placa || '—'}</Celda>,
