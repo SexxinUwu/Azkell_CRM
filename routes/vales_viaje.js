@@ -40,16 +40,19 @@ module.exports = (db, logAudit) => {
         v.estacion_nombre, v.estacion_ruc, v.combustible, v.galones, v.precio_galon, v.total, v.moneda, v.km_odometro, v.numero_voucher,
         v.voucher_url, v.pagar_a, v.beneficiario_nombre, v.beneficiario_doc, v.caja_id, v.alertas_json, v.observacion, v.usuario,
         DATE_FORMAT(v.creado_en, '%Y-%m-%d %H:%i') AS creado_en, ${ESTADO_SQL} AS estado,
-        CONCAT(COALESCE(c.serie, ''), '-', COALESCE(c.numero, '')) AS caja_codigo`;
+        CONCAT(COALESCE(c.serie, ''), '-', COALESCE(c.numero, '')) AS caja_codigo, c.voucher_url AS pago_voucher_url`;
     const FROM = 'FROM viaje_vales_combustible v LEFT JOIN tesoreria_caja c ON c.id = v.caja_id';
 
     async function conUrl(fila) {
         let voucher_url_firmada = null;
         if (fila.voucher_url) { const k = s3KeyFromUrl(fila.voucher_url); try { voucher_url_firmada = k ? await getPresignedUrlEstable(k) : fila.voucher_url; } catch (e) { voucher_url_firmada = fila.voucher_url; } }
+        // Voucher de pago: el que sube Tesorería al pagar la caja (no es el comprobante que sube quien registra el vale)
+        let pago_voucher_firmada = null;
+        if (fila.pago_voucher_url && fila.pago_voucher_url !== fila.voucher_url) { const k = s3KeyFromUrl(fila.pago_voucher_url); try { pago_voucher_firmada = k ? await getPresignedUrlEstable(k) : fila.pago_voucher_url; } catch (e) { pago_voucher_firmada = fila.pago_voucher_url; } }
         let alertas = [];
         try { alertas = JSON.parse(fila.alertas_json || '[]'); } catch (e) { alertas = []; }
-        const { alertas_json, ...resto } = fila;
-        return { ...resto, alertas, voucher_url_firmada };
+        const { alertas_json, pago_voucher_url, ...resto } = fila;
+        return { ...resto, alertas, voucher_url_firmada, pago_voucher_firmada };
     }
 
     /** Avisos para revisar antes de confirmar; la persona decide (no bloquean) */

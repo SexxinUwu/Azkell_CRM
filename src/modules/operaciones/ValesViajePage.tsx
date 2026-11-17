@@ -17,6 +17,7 @@ import { Combobox } from '../../core/ui/Combobox';
 import { IconoFila } from '../../core/ui/IconoFila';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
+import '../almacen/entradas.css';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -30,7 +31,7 @@ interface Vale {
   id: number; codigo: string; viaje: string; placa: string; conductor: string; fecha: string; hora: string | null;
   estacion_nombre: string; estacion_ruc: string | null; combustible: string | null; galones: number | string; precio_galon: number | string; total: number | string; moneda: string;
   km_odometro: number | null; numero_voucher: string | null; pagar_a: 'CONDUCTOR' | 'ESTACION'; beneficiario_nombre: string;
-  estado: 'PENDIENTE' | 'APROBADO' | 'PAGADO' | 'ANULADO'; caja_codigo: string; alertas: Alerta[]; voucher_url_firmada: string | null;
+  estado: 'PENDIENTE' | 'APROBADO' | 'PAGADO' | 'ANULADO'; caja_codigo: string; alertas: Alerta[]; voucher_url_firmada: string | null; pago_voucher_firmada: string | null;
 }
 interface ViajeOpc { viaje: string; placa_tracto: string; conductor: string; ruta: string | null; fecha_viaje: string | null; conductor_doc: string | null; ultimo_km: number | null }
 interface Lectura {
@@ -39,7 +40,7 @@ interface Lectura {
 }
 
 const COLUMNAS: ColumnaTabla[] = [
-  { id: 'acc', titulo: '', ancho: 80, minimo: 70 },
+  { id: 'acc', titulo: '', ancho: 60, minimo: 50 },
   { id: 'estado', titulo: 'Estado', ancho: 110 },
   { id: 'codigo', titulo: 'Vale', ancho: 140 },
   { id: 'fecha', titulo: 'Fecha', ancho: 105 },
@@ -52,6 +53,8 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'total', titulo: 'Total', ancho: 110, alinear: 'right' },
   { id: 'km', titulo: 'Km', ancho: 95, alinear: 'right' },
   { id: 'pagara', titulo: 'Pagar a', ancho: 210, minimo: 130 },
+  { id: 'comprobante', titulo: 'Comprobante', ancho: 130, alinear: 'center' },
+  { id: 'voucher', titulo: 'Voucher', ancho: 110, alinear: 'center' },
 ];
 const TONO: Record<Vale['estado'], 'amber' | 'accent' | 'green' | 'gray'> = { PENDIENTE: 'amber', APROBADO: 'accent', PAGADO: 'green', ANULADO: 'gray' };
 const ETIQUETA: Record<Vale['estado'], string> = { PENDIENTE: 'Pendiente', APROBADO: 'Aprobado', PAGADO: 'Pagado', ANULADO: 'Anulado' };
@@ -141,7 +144,6 @@ export function ValesViajePage() {
               <tr key={v.id}>
                 <Celda>
                   <span style={{ display: 'inline-flex', gap: 2 }}>
-                    {v.voucher_url_firmada && <IconoFila texto="Ver el voucher" tono="azul" icono={<ImagenIcono size={15} />} onClick={() => window.open(v.voucher_url_firmada!, '_blank', 'noopener')} />}
                     {puedeCrear && v.estado !== 'ANULADO' && v.estado !== 'PAGADO' && <IconoFila texto="Anular el vale" tono="rojo" icono={<Ban size={15} />} cargando={anulando === v.id} onClick={() => void anular(v)} />}
                   </span>
                 </Celda>
@@ -157,6 +159,8 @@ export function ValesViajePage() {
                 <Celda alinear="right" mono>{monto(v)}</Celda>
                 <Celda alinear="right" mono>{v.km_odometro != null ? v.km_odometro.toLocaleString('es-PE') : '—'}</Celda>
                 <Celda><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{v.pagar_a === 'CONDUCTOR' ? <UserRound size={14} aria-hidden /> : <Store size={14} aria-hidden />}{v.beneficiario_nombre}</span></Celda>
+                <Celda alinear="center">{v.voucher_url_firmada ? <a href={v.voucher_url_firmada} target="_blank" rel="noreferrer" className="oc-adj oc-adj--verde">Ver comprobante</a> : <span style={{ color: 'var(--label-2)' }}>—</span>}</Celda>
+                <Celda alinear="center">{v.pago_voucher_firmada ? <a href={v.pago_voucher_firmada} target="_blank" rel="noreferrer" className="oc-adj oc-adj--rojo">Ver voucher</a> : <span style={{ color: 'var(--label-2)' }}>{v.estado === 'PAGADO' ? 'Sin voucher' : '—'}</span>}</Celda>
               </tr>
             ))}
           </TablaRedimensionable>
