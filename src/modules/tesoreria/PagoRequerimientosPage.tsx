@@ -14,7 +14,6 @@ import { exportarExcel } from '../../core/lib/excel';
 import { formatDolares, formatFechaHoraPe, formatFechaPe, formatMoneda, formatSoles } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
 import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
-import { PagoDetalleSheet } from './pago-detalle-sheet';
 import { PagoProcesarSheet } from './pago-procesar-sheet';
 import {
   codigoOC, esPagada, esPendiente, esUSD, esCredito, importeOC, usePagoRequerimientos, vencimiento,
@@ -103,7 +102,6 @@ export function PagoRequerimientosPage() {
   const [estado, setEstado] = useState<FiltroEstado>('aprobado');
   const [moneda, setMoneda] = useState<FiltroMoneda>('TODAS');
   const [busqueda, setBusqueda] = useState('');
-  const [detalle, setDetalle] = useState<{ oc: OrdenPago | null; abierto: boolean }>({ oc: null, abierto: false });
   const [procesar, setProcesar] = useState<{ oc: OrdenPago | null; abierto: boolean; sesion: number }>({ oc: null, abierto: false, sesion: 0 });
 
   const lista = usePagoRequerimientos(estado);
@@ -138,12 +136,7 @@ export function PagoRequerimientosPage() {
     });
   }, [ocs, moneda, busqueda]);
 
-  function abrirDetalle(oc: OrdenPago) {
-    setDetalle({ oc, abierto: true });
-  }
-
   function abrirProcesar(oc: OrdenPago) {
-    setDetalle(d => ({ ...d, abierto: false }));
     setProcesar(p => ({ oc, abierto: true, sesion: p.sesion + 1 }));
   }
 
@@ -252,9 +245,7 @@ export function PagoRequerimientosPage() {
             const importe = importeOC(oc);
             return (
               <li key={String(oc.id)} className="pago-lista__item">
-                <div className="pago-lista__abrir" role="button" tabIndex={0}
-                  onClick={() => abrirDetalle(oc)}
-                  onKeyDown={e => { if (e.key === 'Enter') abrirDetalle(oc); }}>
+                <div className="pago-lista__abrir">
                   <div className="pago-lista__cuerpo">
                     <span className="pago-lista__titulo">{oc.proveedor_nombre || 'Proveedor'}</span>
                     <span className="pago-lista__sub">{codigoOC(oc)} · {oc.motivo_entrada || oc.motivo || 'Sin motivo'}</span>
@@ -284,7 +275,7 @@ export function PagoRequerimientosPage() {
             const usdDestino = oc.cuenta_destino_moneda ? oc.cuenta_destino_moneda === 'USD' : usd;
             const usdOrigen = oc.cuenta_origen_moneda === 'USD';
             return (
-              <tr key={String(oc.id)} className="tabla-redim__fila--click" onClick={() => abrirDetalle(oc)}>
+              <tr key={String(oc.id)}>
                 <Celda>
                   {pendiente ? (
                     <Button className="pago-procesar" variant="primary" size="sm" onClick={e => { e.stopPropagation(); abrirProcesar(oc); }}>Procesar</Button>
@@ -328,12 +319,6 @@ export function PagoRequerimientosPage() {
         </TablaRedimensionable>
       )}
 
-      <PagoDetalleSheet
-        oc={detalle.oc}
-        open={detalle.abierto}
-        onClose={() => setDetalle(d => ({ ...d, abierto: false }))}
-        onProcesar={abrirProcesar}
-      />
       <PagoProcesarSheet
         key={procesar.sesion}
         oc={procesar.oc}
