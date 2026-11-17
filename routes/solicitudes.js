@@ -11,11 +11,11 @@ const MONEDAS = ['SOLES', 'DOLARES'];
 
 /** Campos de cada tipo: el formulario del frontend se arma con esta lista (key, etiqueta, tipo, requerido). */
 const CAMPOS_CUENTA = [ // (cada campo se agrupa en la tarjeta «grupo» del formulario)
-    { key: 'banco', label: 'Banco o caja', tipo: 'banco', requerido: true, ayuda: 'Elige de la lista o escribe otro' },
+    { key: 'banco', label: 'Banco o caja', tipo: 'banco', requerido: true, placeholder: 'Elige el banco o la caja de la lista…', ayuda: 'Si no está en la lista, escríbelo y elige «Usar este banco»' },
     { key: 'tipo_cuenta', label: 'Tipo de cuenta', tipo: 'select', opciones: BANCOS_TIPOS, defecto: 'CUENTA CORRIENTE' },
     { key: 'moneda', label: 'Moneda', tipo: 'select', opciones: MONEDAS, defecto: 'SOLES' },
-    { key: 'numero_cuenta', label: 'Número de cuenta', tipo: 'texto' },
-    { key: 'cci', label: 'CCI (20 dígitos)', tipo: 'texto' },
+    { key: 'numero_cuenta', label: 'Número de cuenta', tipo: 'texto', formato: 'cuenta', placeholder: 'Solo números, tal como figura en el banco' },
+    { key: 'cci', label: 'CCI', tipo: 'texto', formato: 'cci', placeholder: '20 dígitos, sin guiones', ayuda: 'Escribe el CCI o el número de cuenta (con uno basta)' },
 ];
 
 module.exports = (db, logAudit, generarCodigoAlmacen) => {
@@ -54,17 +54,14 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
             etiqueta: 'Agregar proveedor', icono: 'Truck',
             descripcion: 'Pide dar de alta un proveedor nuevo con sus datos clave. Al aprobarse queda en Terceros › Proveedores.',
             campos: [
-                { key: 'numero_documento', label: 'RUC o DNI', tipo: 'documento', requerido: true, autoconsulta: true, grupo: 'Datos del proveedor', ayuda: 'Con 8 dígitos es DNI y con 11 es RUC: los datos se completan solos' },
-                { key: 'razon_social', label: 'Razón social o nombre', tipo: 'texto', requerido: true, grupo: 'Datos del proveedor' },
-                { key: 'telefono', label: 'Teléfono', tipo: 'texto', requerido: true, grupo: 'Datos del proveedor' },
-                { key: 'email', label: 'Correo', tipo: 'texto', grupo: 'Datos del proveedor' },
-                { key: 'direccion', label: 'Dirección', tipo: 'texto', ancho: true, grupo: 'Datos del proveedor' },
-                { key: 'asesor_nombre', label: 'Asesor', tipo: 'texto', grupo: 'Asesor de la empresa', ayuda: 'Persona con quien se trata en esta empresa' },
-                { key: 'asesor_cargo', label: 'Cargo', tipo: 'texto', grupo: 'Asesor de la empresa' },
-                { key: 'asesor_telefono', label: 'Teléfono o WhatsApp del asesor', tipo: 'texto', grupo: 'Asesor de la empresa' },
-                { key: 'asesor_email', label: 'Correo del asesor', tipo: 'texto', grupo: 'Asesor de la empresa' },
+                { key: 'numero_documento', label: 'RUC o DNI', tipo: 'documento', requerido: true, autoconsulta: true, grupo: 'Datos del proveedor', placeholder: 'Escribe el DNI (8 dígitos) o el RUC (11 dígitos)', ayuda: 'Con 8 dígitos es DNI y con 11 es RUC: los datos se completan solos' },
+                { key: 'razon_social', label: 'Razón social o nombre', tipo: 'texto', requerido: true, grupo: 'Datos del proveedor', placeholder: 'Se completa solo al escribir el RUC o DNI' },
+                { key: 'telefono', label: 'Teléfono', tipo: 'texto', requerido: true, formato: 'telefono', grupo: 'Datos del proveedor', placeholder: 'Ej.: 987654321' },
+                { key: 'email', label: 'Correo', tipo: 'texto', formato: 'email', grupo: 'Datos del proveedor', placeholder: 'Ej.: ventas@empresa.com' },
+                { key: 'direccion', label: 'Dirección', tipo: 'texto', ancho: true, grupo: 'Datos del proveedor', placeholder: 'Se completa solo con el RUC; si no, escribe la dirección completa' },
+                { key: 'asesor_nombre', label: 'Nombre del asesor', tipo: 'texto', ancho: true, grupo: 'Datos del proveedor', placeholder: 'Nombre y apellido de la persona que te atiende en esa empresa' },
                 ...CAMPOS_CUENTA.map(c => ({ ...c, requerido: false, grupo: 'Cuenta bancaria (opcional)' })),
-                { key: 'observaciones', label: 'Observaciones', tipo: 'area', ancho: true, grupo: 'Otros' },
+                { key: 'observaciones', label: 'Observaciones', tipo: 'area', ancho: true, grupo: 'Otros', placeholder: 'Algo que Gerencia deba saber para aprobarlo (opcional)' },
             ],
             titulo: d => `Proveedor ${d.razon_social} (${d.numero_documento})`,
             async validar(req, d) {
@@ -72,6 +69,7 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
                 d.tipo_documento = tipoDeDocumento(doc);
                 d.numero_documento = doc;
                 if (soloDigitos(d.telefono).length < 6) throw aviso('Escribe un teléfono válido.');
+                if (d.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) throw aviso('El correo no es válido: debe parecerse a nombre@empresa.com.');
                 validarCuenta(d, false);
                 const [dup] = await P(req).query("SELECT id, nombre FROM proveedores_inv WHERE REPLACE(numero_documento,' ','') = ? LIMIT 1", [doc]);
                 if (dup.length) throw aviso(`Ese documento ya está registrado como proveedor: ${dup[0].nombre} (${dup[0].id}). No hace falta pedirlo.`, 409);
@@ -93,8 +91,7 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
                     if (c.affectedRows !== 1) throw new Error('No se pudo registrar la cuenta del proveedor.');
                 }
                 if (d.asesor_nombre) {
-                    const [k] = await conn.query('INSERT INTO proveedor_contactos (proveedor_id, nombre, cargo, telefono, email, principal, estado) VALUES (?,?,?,?,?,1,1)',
-                        [id, d.asesor_nombre, d.asesor_cargo || null, d.asesor_telefono || null, d.asesor_email || null]);
+                    const [k] = await conn.query('INSERT INTO proveedor_contactos (proveedor_id, nombre, principal, estado) VALUES (?,?,1,1)', [id, d.asesor_nombre]);
                     if (k.affectedRows !== 1) throw new Error('No se pudo registrar al asesor.');
                 }
                 return { entidad: 'proveedor', id, ver: '/terceros/proveedores' };
@@ -104,14 +101,13 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
             etiqueta: 'Agregar cliente', icono: 'Users',
             descripcion: 'Pide dar de alta un cliente nuevo. Al aprobarse queda en Terceros › Clientes.',
             campos: [
-                { key: 'ruc_dni', label: 'RUC o DNI', tipo: 'documento', requerido: true, autoconsulta: true, grupo: 'Datos del cliente', ayuda: 'Con 8 dígitos es DNI y con 11 es RUC: los datos se completan solos' },
-                { key: 'razon_social', label: 'Razón social o nombre', tipo: 'texto', requerido: true, grupo: 'Datos del cliente' },
-                { key: 'telefono', label: 'Teléfono', tipo: 'texto', requerido: true, grupo: 'Datos del cliente' },
-                { key: 'email', label: 'Correo', tipo: 'texto', grupo: 'Datos del cliente' },
-                { key: 'direccion', label: 'Dirección', tipo: 'texto', ancho: true, grupo: 'Datos del cliente' },
-                { key: 'contacto_nombre', label: 'Contacto', tipo: 'texto', grupo: 'Contacto de cobranza o coordinación', ayuda: 'Persona con quien se trata en esta empresa' },
-                { key: 'contacto_telefono', label: 'Teléfono o WhatsApp del contacto', tipo: 'texto', grupo: 'Contacto de cobranza o coordinación' },
-                { key: 'notas', label: 'Notas', tipo: 'area', ancho: true, grupo: 'Otros' },
+                { key: 'ruc_dni', label: 'RUC o DNI', tipo: 'documento', requerido: true, autoconsulta: true, grupo: 'Datos del cliente', placeholder: 'Escribe el DNI (8 dígitos) o el RUC (11 dígitos)', ayuda: 'Con 8 dígitos es DNI y con 11 es RUC: los datos se completan solos' },
+                { key: 'razon_social', label: 'Razón social o nombre', tipo: 'texto', requerido: true, grupo: 'Datos del cliente', placeholder: 'Se completa solo al escribir el RUC o DNI' },
+                { key: 'telefono', label: 'Teléfono', tipo: 'texto', requerido: true, formato: 'telefono', grupo: 'Datos del cliente', placeholder: 'Ej.: 987654321' },
+                { key: 'email', label: 'Correo', tipo: 'texto', formato: 'email', grupo: 'Datos del cliente', placeholder: 'Ej.: compras@empresa.com' },
+                { key: 'direccion', label: 'Dirección', tipo: 'texto', ancho: true, grupo: 'Datos del cliente', placeholder: 'Se completa solo con el RUC; si no, escribe la dirección completa' },
+                { key: 'contacto_nombre', label: 'Nombre del contacto', tipo: 'texto', ancho: true, grupo: 'Datos del cliente', placeholder: 'Nombre y apellido de la persona con quien se trata en esa empresa' },
+                { key: 'notas', label: 'Notas', tipo: 'area', ancho: true, grupo: 'Otros', placeholder: 'Condiciones de pago u otra información útil (opcional)' },
             ],
             titulo: d => `Cliente ${d.razon_social} (${d.ruc_dni})`,
             async validar(req, d) {
@@ -119,6 +115,7 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
                 tipoDeDocumento(doc);
                 d.ruc_dni = doc;
                 if (soloDigitos(d.telefono).length < 6) throw aviso('Escribe un teléfono válido.');
+                if (d.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) throw aviso('El correo no es válido: debe parecerse a nombre@empresa.com.');
                 const [dup] = await P(req).query("SELECT id, razon_social FROM clientes WHERE REPLACE(ruc_dni,' ','') = ? LIMIT 1", [doc]);
                 if (dup.length) throw aviso(`Ese documento ya está registrado como cliente: ${dup[0].razon_social}. No hace falta pedirlo.`, 409);
             },
@@ -129,7 +126,7 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
                 const [ins] = await conn.query(
                     'INSERT INTO clientes (ruc_dni, razon_social, direccion, telefono, email, estado, notas) VALUES (?,?,?,?,?,?,?)',
                     [d.ruc_dni, String(d.razon_social).toUpperCase(), d.direccion || '', d.telefono || '', String(d.email || '').toLowerCase(), 'Activo',
-                    [d.notas, d.contacto_nombre ? `Contacto: ${d.contacto_nombre}${d.contacto_telefono ? ' · ' + d.contacto_telefono : ''}` : ''].filter(Boolean).join(' | ')]);
+                    [d.notas, d.contacto_nombre ? `Contacto: ${d.contacto_nombre}` : ''].filter(Boolean).join(' | ')]);
                 if (ins.affectedRows !== 1) throw new Error('No se pudo crear el cliente.');
                 return { entidad: 'cliente', id: ins.insertId, ver: '/terceros/clientes' };
             },

@@ -7,6 +7,10 @@ export interface CampoSolicitud {
   tipo: 'texto' | 'select' | 'area' | 'banco' | 'documento' | 'titular' | 'oculto';
   /** Con RUC o DNI completo, el formulario trae solos la razón social, la dirección y el nombre */
   autoconsulta?: boolean;
+  /** Texto de ejemplo dentro de la casilla: orienta a quien llena qué escribir */
+  placeholder?: string;
+  /** Formato con control: solo deja escribir lo que corresponde */
+  formato?: 'telefono' | 'email' | 'cci' | 'cuenta';
   /** Tarjeta del formulario donde se muestra el campo */
   grupo?: string;
   requerido?: boolean;

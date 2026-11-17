@@ -60,6 +60,18 @@ export function NuevaSolicitudSheet({ open, onClose, onCreada }: { open: boolean
       setConsulta({ estado: 'no', texto: errorMessage(err) });
     }
   }
+  const ayudaCci = (c: CampoSolicitud): string | undefined => {
+    const n = (datos[c.key] ?? '').length;
+    return n === 0 ? c.ayuda : n === 20 ? 'CCI completo' : `Van ${n} de 20 dígitos`;
+  };
+  /** Solo deja escribir lo que corresponde a cada formato */
+  const limpiarFormato = (c: CampoSolicitud, v: string): string => {
+    if (c.formato === 'telefono') return v.replace(/[^\d+\s-]/g, '').slice(0, 20);
+    if (c.formato === 'email') return v.replace(/\s/g, '').toLowerCase().slice(0, 100);
+    if (c.formato === 'cci') return v.replace(/\D/g, '').slice(0, 20);
+    if (c.formato === 'cuenta') return v.replace(/[^\d-]/g, '').slice(0, 25);
+    return v;
+  };
   const ayudaDocumento = (c: CampoSolicitud): string | undefined => {
     const n = (datos[c.key] ?? '').length;
     if (consulta) return consulta.texto;
@@ -77,6 +89,20 @@ export function NuevaSolicitudSheet({ open, onClose, onCreada }: { open: boolean
       if (c.tipo !== 'documento' || e[c.key]) continue;
       const n = (datos[c.key] ?? '').length;
       if (n !== 8 && n !== 11) e[c.key] = 'El DNI tiene 8 dígitos y el RUC 11: revisa el número.';
+    }
+    for (const c of tipo.campos) {
+      const v = (datos[c.key] ?? '').trim();
+      if (e[c.key] || !c.formato || !v) continue;
+      if (c.formato === 'telefono' && v.replace(/\D/g, '').length < 7) e[c.key] = 'El teléfono parece incompleto: escribe al menos 7 dígitos.';
+      if (c.formato === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) e[c.key] = 'El correo no es válido. Debe parecerse a nombre@empresa.com';
+      if (c.formato === 'cci' && v.length !== 20) e[c.key] = 'El CCI tiene exactamente 20 dígitos.';
+    }
+    // La cuenta va completa: banco y número (o CCI), o nada
+    const tieneBanco = 'banco' in datos;
+    if (tieneBanco) {
+      const numero = (datos.numero_cuenta ?? '').trim() || (datos.cci ?? '').trim();
+      if (numero && !(datos.banco ?? '').trim() && !e.banco) e.banco = 'Elige el banco de esta cuenta.';
+      if ((datos.banco ?? '').trim() && !numero && !e.numero_cuenta) e.numero_cuenta = 'Escribe el número de cuenta o el CCI.';
     }
     setErrores(e);
     if (Object.keys(e).length) { haptic('warning'); return; }
@@ -105,27 +131,31 @@ export function NuevaSolicitudSheet({ open, onClose, onCreada }: { open: boolean
 
   function campo(c: CampoSolicitud) {
     if (c.tipo === 'oculto') return null;
-    const etiqueta = `${c.label}${c.requerido ? ' *' : ''}`;
-    const ayuda = c.tipo === 'documento' ? ayudaDocumento(c) : c.ayuda;
+    const opcional = !c.requerido && (c.tipo === 'texto' || c.tipo === 'area') && c.key !== 'cci' && c.key !== 'numero_cuenta' ? ' (opcional)' : '';
+    const etiqueta = `${c.label}${c.requerido ? ' *' : opcional}`;
+    const ayuda = c.tipo === 'documento' ? ayudaDocumento(c) : c.formato === 'cci' ? ayudaCci(c) : c.ayuda;
     return (
       <Field key={c.key} label={etiqueta} wide={c.ancho} error={errores[c.key]} hint={ayuda}>
         {p => c.tipo === 'select' ? (
           <Combobox {...p} enHoja tituloHoja={c.label} options={(c.opciones ?? []).map(o => ({ value: o, label: o }))} value={datos[c.key] || null}
-            onChange={v => poner(c.key, v ?? '')} placeholder="Elige…" />
+            onChange={v => poner(c.key, v ?? '')} placeholder={c.placeholder ?? 'Elige una opción…'} />
         ) : c.tipo === 'banco' ? (
           <Combobox {...p} enHoja tituloHoja="Banco o caja" options={BANCOS_PERU.map(b => ({ value: b, label: b }))} value={datos[c.key] || null}
-            onChange={v => poner(c.key, v ?? '')} onCreate={t => poner(c.key, t.trim())} createLabel="Usar este banco" placeholder="Busca el banco o la caja…" />
+            onChange={v => poner(c.key, v ?? '')} onCreate={t => poner(c.key, t.trim())} createLabel="Usar este banco" placeholder={c.placeholder ?? 'Busca el banco o la caja…'} />
         ) : c.tipo === 'titular' ? (
           <Combobox {...p} enHoja tituloHoja="Proveedor, cliente o persona" loading={titulares.isLoading}
             options={(titulares.data ?? []).map(t => ({ value: `${t.tipo}|${t.ref}`, label: t.nombre, description: `${ETIQUETA_TITULAR[t.tipo]}${t.doc ? ' · ' + t.doc : ''}` }))}
-            value={datos.titular_tipo ? `${datos.titular_tipo}|${datos.titular_ref}` : null} onChange={elegirTitular} placeholder="Busca por nombre o documento…" />
+            value={datos.titular_tipo ? `${datos.titular_tipo}|${datos.titular_ref}` : null} onChange={elegirTitular} placeholder={c.placeholder ?? 'Busca por nombre o documento…'} />
         ) : c.tipo === 'documento' ? (
-          <TextInput {...p} inputMode="numeric" maxLength={11} value={datos[c.key] ?? ''} placeholder="DNI (8) o RUC (11)" autoFocus
+          <TextInput {...p} inputMode="numeric" maxLength={11} value={datos[c.key] ?? ''} placeholder={c.placeholder ?? 'DNI (8) o RUC (11)'} autoFocus
             onChange={ev => { void cambiarDocumento(c, ev.target.value); }} />
         ) : c.tipo === 'area' ? (
-          <textarea {...p} className="textarea" rows={2} value={datos[c.key] ?? ''} onChange={ev => poner(c.key, ev.target.value)} />
+          <textarea {...p} className="textarea" rows={2} value={datos[c.key] ?? ''} placeholder={c.placeholder} onChange={ev => poner(c.key, ev.target.value)} />
         ) : (
-          <TextInput {...p} value={datos[c.key] ?? ''} onChange={ev => poner(c.key, ev.target.value)} />
+          <TextInput {...p} value={datos[c.key] ?? ''} placeholder={c.placeholder}
+            inputMode={c.formato === 'telefono' ? 'tel' : c.formato === 'email' ? 'email' : c.formato === 'cci' || c.formato === 'cuenta' ? 'numeric' : undefined}
+            autoComplete="off" autoCapitalize={c.formato === 'email' ? 'none' : undefined}
+            onChange={ev => poner(c.key, limpiarFormato(c, ev.target.value))} />
         )}
       </Field>
     );
