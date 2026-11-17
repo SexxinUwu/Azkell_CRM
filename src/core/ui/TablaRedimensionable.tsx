@@ -1,5 +1,5 @@
 import './tabla.css';
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as PointerReact, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as PointerReact, type ReactNode } from 'react';
 
 export interface ColumnaTabla {
   id: string;
@@ -26,6 +26,45 @@ interface Props {
   className?: string;
   // Cuántas columnas de la izquierda quedan fijas al desplazarse a los lados (máximo 6)
   fijas?: number;
+  // Cada columna se ajusta sola al texto que contiene (con un tope); lo que arrastra la persona manda. Con false, solo valen los anchos dados.
+  ajusteAuto?: boolean;
+}
+
+const TOPE_AUTO = 520;
+
+/** Mide el contenido real de cada columna (encabezado y filas) con la fuente de la tabla: el ancho se ajusta al texto */
+function medirColumnas(tabla: HTMLTableElement, columnas: ColumnaTabla[]): Record<string, number> {
+  const ctx = document.createElement('canvas').getContext('2d');
+  const out: Record<string, number> = {};
+  if (!ctx) return out;
+  const filas = Array.from(tabla.tBodies[0]?.rows ?? []).filter(f => f.cells.length === columnas.length).slice(0, 400);
+  if (!filas.length) return out;
+  columnas.forEach((c, i) => {
+    let ancho = 0;
+    let hayTexto = false;
+    const cab = tabla.tHead?.rows[0]?.cells[i];
+    const titulo = cab?.querySelector('.tabla-redim__titulo') as HTMLElement | null;
+    if (titulo) {
+      const st = getComputedStyle(titulo);
+      ctx.font = `${st.fontWeight} ${st.fontSize} ${st.fontFamily}`;
+      const t = (titulo.textContent ?? '').trim();
+      const texto = st.textTransform === 'uppercase' ? t.toUpperCase() : t;
+      ancho = ctx.measureText(texto).width + (parseFloat(st.letterSpacing) || 0) * texto.length + 14; // 14 = asa para redimensionar
+    }
+    let fuenteLista = false;
+    for (const f of filas) {
+      const td = f.cells[i];
+      const texto = (td.textContent ?? '').trim();
+      if (!texto) continue;
+      hayTexto = true;
+      if (!fuenteLista) { const st = getComputedStyle(td); ctx.font = `${st.fontWeight} ${st.fontSize} ${st.fontFamily}`; fuenteLista = true; }
+      // Botones, chips e insignias llevan su propio relleno
+      const extra = td.querySelector('button, .btn, .badge, [class*="chip"], [class*="badge"]') ? 26 : 0;
+      ancho = Math.max(ancho, ctx.measureText(texto).width + extra);
+    }
+    if (hayTexto) out[c.id] = Math.min(TOPE_AUTO, Math.max(c.minimo ?? 56, Math.ceil(ancho) + 28));
+  });
+  return out;
 }
 
 const CLAVE = (id: string) => `fleet_tabla_${id}`;
@@ -49,13 +88,25 @@ function guardarMapa(id: string, mapa: Record<string, number>) {
 
 // Tabla con columnas redimensionables como en Excel: arrastra el borde derecho del encabezado,
 // o haz doble clic para ajustar la columna al contenido más ancho.
-export function TablaRedimensionable({ id, columnas, children, altoMax = '70vh', ariaLabel, colorEncabezado, colorTextoEncabezado, className, fijas = 0 }: Props) {
+export function TablaRedimensionable({ id, columnas, children, altoMax = '70vh', ariaLabel, colorEncabezado, colorTextoEncabezado, className, fijas = 0, ajusteAuto = true }: Props) {
   const [mapa, setMapa] = useState<Record<string, number>>(() => leerMapa(id));
+  const [auto, setAuto] = useState<Record<string, number>>({});
   const tablaRef = useRef<HTMLTableElement>(null);
-  const anchos = columnas.map(c => Math.max(c.minimo ?? 56, mapa[c.id] ?? c.ancho));
+  // Orden de prioridad: lo que arrastró la persona, lo medido del contenido y, por último, el ancho dado
+  const anchos = columnas.map(c => Math.max(c.minimo ?? 56, mapa[c.id] ?? (ajusteAuto ? auto[c.id] : undefined) ?? c.ancho));
   const total = anchos.reduce((s, x) => s + x, 0);
 
   useEffect(() => { guardarMapa(id, mapa); }, [id, mapa]);
+
+  // Después de cada dibujo se mide el contenido; solo se actualiza si cambió algún ancho (así no se repite en bucle)
+  useLayoutEffect(() => {
+    if (!ajusteAuto || !tablaRef.current) return;
+    const medido = medirColumnas(tablaRef.current, columnas);
+    setAuto(prev => {
+      const claves = Object.keys(medido);
+      return claves.length === Object.keys(prev).length && claves.every(k => prev[k] === medido[k]) ? prev : medido;
+    });
+  });
 
   const fijar = (colId: string, ancho: number) => setMapa(m => ({ ...m, [colId]: ancho }));
 

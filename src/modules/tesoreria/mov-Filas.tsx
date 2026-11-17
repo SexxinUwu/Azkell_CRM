@@ -7,6 +7,13 @@ import type { MovimientoTesoreria } from './api';
 import { importeMov, limpio } from './mov-utilidades';
 import { tonoEstado } from './mov-estado';
 
+/** Folio de caja con 5 dígitos como las órdenes de compra: 2026-00001 (los antiguos de 8 dígitos se muestran igual) */
+export function folioMov(m: MovimientoTesoreria): string {
+  const f = String(m.codigo_oc || m.caja_folio || '').trim();
+  const x = /^(.*?)(\d+)$/.exec(f);
+  return x && !m.codigo_oc ? x[1] + String(parseInt(x[2], 10)).padStart(5, '0') : f;
+}
+
 // Fila de la tabla de escritorio: Debe/Haber como en el clásico (ingreso = Debe, egreso = Haber)
 export function MovFilaTabla({ m, onAbrir }: { m: MovimientoTesoreria; onAbrir: (m: MovimientoTesoreria) => void }) {
   const ingreso = m.tipo_movimiento === 'INGRESO';
@@ -31,7 +38,7 @@ export function MovFilaTabla({ m, onAbrir }: { m: MovimientoTesoreria; onAbrir: 
       <Celda>{m.motivo || '—'}</Celda>
       <Celda>{limpio(m.sub_motivo) || '—'}</Celda>
       <td><Badge tone={oc ? 'accent' : m.tipo_origen === 'VALE DE COMBUSTIBLE' ? 'green' : 'amber'}>{oc ? 'ORDEN DE COMPRA' : m.tipo_origen === 'VALE DE COMBUSTIBLE' ? 'VALE DE COMBUSTIBLE' : 'CAJA CHICA'}</Badge></td>
-      <Celda mono>{m.codigo_oc || m.caja_folio || '—'}</Celda>
+      <Celda mono>{folioMov(m) || '—'}</Celda>
       <Celda>{limpio(m.descripcion) || '—'}</Celda>
       <Celda mono>{formatFechaPe(m.fecha_valuta || m.fecha)}</Celda>
       <Celda mono>{limpio(m.numero_operacion) || '—'}</Celda>
@@ -62,7 +69,7 @@ export function MovFilaMovil({ m, onAbrir }: { m: MovimientoTesoreria; onAbrir: 
       <div className="mov-fila__cuerpo">
         <span className="mov-fila__titulo">{limpio(m.beneficiario) || limpio(m.sub_motivo) || m.motivo}</span>
         <span className="mov-fila__sub">
-          {[m.codigo_oc ? `OC ${m.codigo_oc}` : m.caja_folio, m.motivo, limpio(m.placa), formatFechaPe(m.fecha_valuta || m.fecha)].filter(Boolean).join(' · ')}
+          {[m.codigo_oc ? `OC ${m.codigo_oc}` : folioMov(m), m.motivo, limpio(m.placa), formatFechaPe(m.fecha_valuta || m.fecha)].filter(Boolean).join(' · ')}
         </span>
       </div>
       <div className="mov-fila__derecha">
