@@ -2813,7 +2813,7 @@ module.exports = function (db, broadcast, logAudit) {
                     c.*,
                     DATE_FORMAT(c.fecha, '%Y-%m-%d') AS fecha,
                     DATE_FORMAT(c.fecha_valuta, '%Y-%m-%d') AS fecha_valuta,
-                    CONCAT(COALESCE(c.serie, YEAR(c.fecha)), '-', LPAD(COALESCE(c.numero, c.id), 6, '0')) AS codigo_caja,
+                    CONCAT(COALESCE(c.serie, YEAR(c.fecha)), '-', LPAD(CAST(COALESCE(NULLIF(CAST(c.numero AS UNSIGNED), 0), c.id) AS CHAR), 5, '0')) AS codigo_caja,
                     COALESCE(c.importe_total, c.subtotal, 0) AS monto_total,
                     cc.nombre AS centro_costo_nombre
                 FROM tesoreria_caja c
@@ -2844,7 +2844,8 @@ module.exports = function (db, broadcast, logAudit) {
                                 (r.tipo_comprobante === 'ORDEN DE COMPRA' ? descStr.match(/(ENT-\d{4}-\d+|\d{4}-\d+)/i) : null);
                 const codigoOC = ocMatch ? ocMatch[1].replace(/^ENT-/i, '') : null;
                 const esOC = Boolean(codigoOC || (r.tipo_comprobante && r.tipo_comprobante.toUpperCase().includes('ORDEN')) || (r.sub_motivo && r.sub_motivo.toUpperCase().includes('REQUERIMIENTO')));
-                const tipoOrigen = r.origen === 'VALE_COMBUSTIBLE' ? 'VALE DE COMBUSTIBLE' : esOC ? 'ORDEN DE COMPRA' : 'CAJA CHICA';
+                // El egreso lo hace la caja: un vale de combustible también sale por su caja (el código del vale solo lo vincula al viaje)
+                const tipoOrigen = esOC ? 'ORDEN DE COMPRA' : 'CAJA';
                 const cajaFolioFinal = esOC && codigoOC ? codigoOC : (r.codigo_caja || `CJ-${r.id}`);
 
                 return {

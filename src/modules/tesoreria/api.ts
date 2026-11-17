@@ -73,7 +73,7 @@ export interface MovimientoTesoreria {
   id: number;
   caja_folio: string;
   codigo_oc: string | null;
-  tipo_origen: string;               // ORDEN DE COMPRA | CAJA CHICA
+  tipo_origen: string;               // ORDEN DE COMPRA | CAJA
   fecha: string | null;
   fecha_valuta: string | null;
   tipo_movimiento: string;           // INGRESO | EGRESO
