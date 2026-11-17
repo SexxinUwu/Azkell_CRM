@@ -1,7 +1,7 @@
 import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowDownLeft, ArrowUpRight, Banknote, Boxes, FileSpreadsheet, Plus, SearchX, Wallet } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Banknote, Boxes, FileSpreadsheet, Paperclip, Plus, SearchX, Wallet } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, TextInput } from '../../core/ui/Field';
@@ -9,12 +9,16 @@ import { ChoiceChips } from '../../core/ui/Chips';
 import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import '../../core/ui/acciones-iconos.css';
 import '../almacen/almacen.css';
+import './pago.css';
+import './mov.css';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { formatFechaPe, formatSoles } from '../../core/lib/format';
+import { formatFechaHoraPe, formatFechaPe, formatSoles } from '../../core/lib/format';
+import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useNavigate } from 'react-router-dom';
 import { useCaja, type CajaMovimiento } from './api';
 import {
@@ -23,6 +27,28 @@ import {
 } from './caja-lib';
 import { DetalleCaja } from './caja-detalle';
 import { FormularioCaja } from './caja-formulario';
+
+// Columnas de la tabla de escritorio (mismo estilo que Pago de requerimientos)
+const COLUMNAS: ColumnaTabla[] = [
+  { id: 'accion', titulo: 'Acción', ancho: 130 },
+  { id: 'tipo', titulo: 'Movimiento', ancho: 120 },
+  { id: 'importe', titulo: 'Importe', ancho: 140, alinear: 'right' },
+  { id: 'persona', titulo: 'Persona / beneficiario', ancho: 240 },
+  { id: 'motivo', titulo: 'Motivo', ancho: 220 },
+  { id: 'caja', titulo: 'N° caja', ancho: 140 },
+  { id: 'viaje', titulo: 'Viaje · placa', ancho: 170 },
+  { id: 'centro', titulo: 'Centro costo', ancho: 120 },
+  { id: 'fecha', titulo: 'Fecha registro', ancho: 150 },
+  { id: 'creador', titulo: 'Usuario registro', ancho: 160 },
+  { id: 'autoriza', titulo: 'Autoriza', ancho: 150 },
+  { id: 'aprobador', titulo: 'Usuario aprobación', ancho: 170 },
+  { id: 'fechaAprob', titulo: 'Fecha aprobación', ancho: 160 },
+  { id: 'modalidad', titulo: 'Modalidad', ancho: 170 },
+  { id: 'destino', titulo: 'Cuenta destino', ancho: 260 },
+  { id: 'origen', titulo: 'Cuenta origen (empresa)', ancho: 260 },
+  { id: 'comprobante', titulo: 'Comprobante', ancho: 170 },
+  { id: 'estado', titulo: 'Estado', ancho: 150 },
+];
 
 const ENCABEZADOS = [
   'Fecha', 'Hora', 'Estado', 'Movimiento', 'Número', 'Viaje', 'Conductor', 'Ruta', 'Autoriza', 'Placa', 'Centro de costos', 'Motivo',
@@ -33,6 +59,7 @@ const ENCABEZADOS = [
 // Tesorería › Caja: movimientos de caja chica con aprobación, documentos y anulación
 export function CajaPage() {
   const nav = useNavigate();
+  const movil = useMediaQuery(MOBILE_QUERY);
   const { can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
@@ -147,6 +174,7 @@ export function CajaPage() {
             {puedeCrear && !filtrado ? <>Registra el primero con <strong>Nuevo</strong>.</> : 'Prueba con otros filtros o un periodo más amplio.'}
           </EmptyState>
         ) : (
+          movil ? (
           <div className="tarjeta__lista">
             {lista.map(m => {
               const ingreso = m.tipo_movimiento === 'INGRESO';
@@ -170,6 +198,61 @@ export function CajaPage() {
               );
             })}
           </div>
+          ) : (
+          <TablaRedimensionable id="caja-tesoreria" columnas={COLUMNAS} ariaLabel="Movimientos de caja" altoMax="68vh">
+            {lista.map(m => {
+              const ingreso = m.tipo_movimiento === 'INGRESO';
+              const est = estadoDe(m);
+              const sustento = String(m.sustento_view_url ?? m.sustento_url ?? '');
+              const voucher = String(m.voucher_view_url ?? m.voucher_url ?? '');
+              const abrir = () => { haptic('selection'); setAbiertoId(m.id); };
+              return (
+                <tr key={m.id} className={`tabla-redim__fila--click${est === 'ANULADO' ? ' mov-tabla-anulada' : ''}`} onClick={abrir}>
+                  <Celda>
+                    <Button variant="secondary" size="sm" onClick={e => { e.stopPropagation(); abrir(); }}>Ver detalle</Button>
+                  </Celda>
+                  <Celda><Badge tone={ingreso ? 'green' : 'red'}>{ingreso ? 'INGRESO' : 'EGRESO'}</Badge></Celda>
+                  <Celda alinear="right" mono>
+                    <span style={{ color: ingreso ? 'var(--green-ink)' : undefined, fontWeight: 700 }}>{ingreso ? '+' : '-'}{montoCaja(m.importe_total, m.moneda)}</span>
+                  </Celda>
+                  <Celda>
+                    <span className="pago-prov">
+                      <span className="pago-prov__nombre">{m.persona || m.conductor || '—'}</span>
+                      {m.tipo_persona && <span className="pago-prov__ruc">{m.tipo_persona}</span>}
+                    </span>
+                  </Celda>
+                  <Celda>
+                    <span className="pago-prov">
+                      <span className="pago-prov__nombre">{m.motivo || '—'}</span>
+                      {m.sub_motivo && <span className="pago-prov__ruc">{m.sub_motivo}</span>}
+                    </span>
+                  </Celda>
+                  <Celda mono><span className="pago-codigo">{numeroDoc(m) || '—'}</span></Celda>
+                  <Celda mono>{[m.orden_viaje, m.placa].filter(Boolean).join(' · ') || '—'}</Celda>
+                  <Celda>{m.centro_costo || '—'}</Celda>
+                  <Celda mono>{formatFechaPe(m.fecha)}{m.hora ? ` ${m.hora.slice(0, 5)}` : ''}</Celda>
+                  <Celda>{m.usuario_creacion || '—'}</Celda>
+                  <Celda>{m.autoriza || '—'}</Celda>
+                  <Celda>{m.usuario_aprobacion || '—'}</Celda>
+                  <Celda mono>{m.fecha_aprobacion ? formatFechaHoraPe(m.fecha_aprobacion) : '—'}</Celda>
+                  <Celda>{m.modalidad_pago || '—'}</Celda>
+                  <Celda><span className="pago-cuenta__texto" title={m.cuenta_bancaria_persona ?? ''}>{m.cuenta_bancaria_persona || '—'}</span></Celda>
+                  <Celda><span className="pago-cuenta__texto" title={m.cuenta_bancaria_empresa ?? ''}>{m.cuenta_bancaria_empresa || '—'}</span></Celda>
+                  <Celda>
+                    <span className="pago-estado">
+                      <span className="t-footnote c-secondary">{m.tipo_comprobante || '—'}{m.numero_factura ? ` · ${m.numero_factura}` : ''}</span>
+                      <span style={{ display: 'inline-flex', gap: 6 }}>
+                        {sustento && <a className="btn btn--secondary btn--sm" href={sustento} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}><Paperclip size={13} /> Sustento</a>}
+                        {voucher && <a className="btn btn--secondary btn--sm" href={voucher} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}><Paperclip size={13} /> Voucher</a>}
+                      </span>
+                    </span>
+                  </Celda>
+                  <Celda><Badge tone={tonoEstado(est)}>{est}</Badge></Celda>
+                </tr>
+              );
+            })}
+          </TablaRedimensionable>
+          )
         )}
       </div>
 
