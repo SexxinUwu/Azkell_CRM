@@ -40,7 +40,7 @@ module.exports = (db, logAudit) => {
         v.estacion_nombre, v.estacion_ruc, v.combustible, v.galones, v.precio_galon, v.total, v.moneda, v.km_odometro, v.numero_voucher,
         v.voucher_url, v.pagar_a, v.beneficiario_nombre, v.beneficiario_doc, v.caja_id, v.alertas_json, v.observacion, v.usuario,
         DATE_FORMAT(v.creado_en, '%Y-%m-%d %H:%i') AS creado_en, ${ESTADO_SQL} AS estado,
-        CONCAT(COALESCE(c.serie, ''), '-', COALESCE(c.numero, '')) AS caja_codigo, c.voucher_url AS pago_voucher_url, v.orden_servicio`;
+        CONCAT(COALESCE(c.serie, ''), '-', COALESCE(c.numero, '')) AS caja_codigo, c.voucher_url AS pago_voucher_url, v.orden_servicio, v.estacion_sede`;
     const FROM = 'FROM viaje_vales_combustible v LEFT JOIN tesoreria_caja c ON c.id = v.caja_id';
 
     async function conUrl(fila) {
@@ -145,10 +145,10 @@ module.exports = (db, logAudit) => {
                 return res.json({ ok: true, data: rows.map(r => ({ nombre: r.nombre, doc: r.doc, cuentas: ctas.filter(c => c.documento === r.doc).map(c => ({ label: etiquetaCuenta(c), usd: /D[OÓ]L|USD/i.test(String(c.moneda || '')), principal: c.principal === 1 })) })) });
             }
             // Estaciones: proveedores de Almacén y estaciones de servicio en una sola lista (la clave de las cuentas es `titular`)
-            const rows = (await proveedoresConEstaciones(p, q)).slice(0, 300).map(r => ({ id: r.titular, nombre: r.nombre, doc: r.doc }));
+            const rows = (await proveedoresConEstaciones(p, q)).slice(0, 300).map(r => ({ id: r.titular, nombre: r.nombre, doc: r.doc, estaciones: r.estaciones || [] }));
             let cuentas = [];
             if (rows.length) [cuentas] = await p.query('SELECT proveedor_id, banco, tipo_cuenta, moneda, numero_cuenta, cci, detraccion, principal FROM proveedor_cuentas_bancarias WHERE estado = 1 AND proveedor_id IN (?) ORDER BY principal DESC, id', [rows.map(r => r.id)]);
-            res.json({ ok: true, data: rows.map(r => ({ nombre: r.nombre, doc: r.doc, cuentas: cuentas.filter(c => String(c.proveedor_id) === String(r.id)).map(c => ({ label: etiquetaCuenta(c), usd: /D[OÓ]L|USD/i.test(String(c.moneda || '')), principal: c.principal === 1 })) })) });
+            res.json({ ok: true, data: rows.map(r => ({ nombre: r.nombre, doc: r.doc, estaciones: r.estaciones, cuentas: cuentas.filter(c => String(c.proveedor_id) === String(r.id)).map(c => ({ label: etiquetaCuenta(c), usd: /D[OÓ]L|USD/i.test(String(c.moneda || '')), principal: c.principal === 1 })) })) });
         } catch (err) { responder(res, err, 'beneficiarios'); }
     });
 
@@ -204,6 +204,13 @@ module.exports = (db, logAudit) => {
             if (!benNombre) throw aviso(pagarA === 'CONDUCTOR' ? 'Indica el conductor al que se le paga.' : 'Indica la estación a la que se le paga.');
             const benDoc = texto(b.beneficiario_doc, 20) || (pagarA === 'ESTACION' ? texto(b.estacion_ruc, 20) : texto(b.conductor_doc, 20));
             const placa = (texto(b.placa, 20) || vj[0].placa_tracto || '').toUpperCase();
+            // Estación de servicio (sede) donde se cargó: un proveedor puede tener varias estaciones
+            let estacionSede = texto(b.estacion_sede, 150) || null;
+            if (pagarA === 'ESTACION' && benDoc) {
+                const prov = (await proveedoresConEstaciones(conn, '')).find(x => String(x.doc || '') === String(benDoc));
+                if (prov && (prov.estaciones || []).length > 0 && !estacionSede) throw aviso('Elige la estación de servicio (sede) donde se cargó.');
+            }
+            if (pagarA !== 'ESTACION') estacionSede = null;
             const moneda = 'SOLES'; // el combustible se paga en soles
             if (!req.file && !texto(b.voucher_url, 600) && !texto(b.numero_voucher, 60)) throw aviso('Adjunta la foto del voucher o escribe su número: todo vale necesita su sustento.');
 
@@ -244,10 +251,10 @@ module.exports = (db, logAudit) => {
 
             const [ins] = await conn.query(
                 `INSERT INTO viaje_vales_combustible (codigo, viaje, placa, conductor, conductor_doc, fecha, hora, estacion_nombre, estacion_ruc, combustible, galones, precio_galon, total, moneda,
-                    km_odometro, numero_voucher, voucher_url, pagar_a, beneficiario_nombre, beneficiario_doc, ia_json, alertas_json, observacion, usuario, orden_servicio)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    km_odometro, numero_voucher, voucher_url, pagar_a, beneficiario_nombre, beneficiario_doc, ia_json, alertas_json, observacion, usuario, orden_servicio, estacion_sede)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [codigo, viaje, placa, conductor, texto(b.conductor_doc, 20), fecha, texto(b.hora, 10), estacion, texto(b.estacion_ruc, 20), combustibleDe(b.combustible) || texto(b.combustible, 40), galones, precio, total, moneda,
-                    b.km_odometro ? Math.round(num(b.km_odometro)) : null, texto(b.numero_voucher, 60), voucherUrl, pagarA, benNombre, benDoc, texto(b.ia_json, 20000), JSON.stringify(alertas), texto(b.observacion, 500), usuario, ordenServicio]);
+                    b.km_odometro ? Math.round(num(b.km_odometro)) : null, texto(b.numero_voucher, 60), voucherUrl, pagarA, benNombre, benDoc, texto(b.ia_json, 20000), JSON.stringify(alertas), texto(b.observacion, 500), usuario, ordenServicio, estacionSede]);
             if (ins.affectedRows !== 1) throw new Error('No se pudo crear el vale.');
 
             // Caja automática (egreso PENDIENTE, ligado al viaje). Se aprueba en Tesorería y luego aparece en Pago de requerimientos.
@@ -255,7 +262,7 @@ module.exports = (db, logAudit) => {
             const [uc] = await conn.query('SELECT numero FROM tesoreria_caja WHERE serie = ? ORDER BY id DESC LIMIT 1 FOR UPDATE', [serieCaja]);
             let n = 1;
             if (uc.length && uc[0].numero) { const m = /\d+$/.exec(uc[0].numero); if (m) n = parseInt(m[0], 10) + 1; }
-            const descripcion = `Vale de combustible ${codigo} · ${galones} ${combustibleDe(b.combustible) === 'GNV' ? 'm³' : combustibleDe(b.combustible) === 'GNL' ? 'kg' : 'gal'} ${combustibleDe(b.combustible) || texto(b.combustible, 40) || ''} · ${estacion || 'estación'} · viaje ${viaje} · placa ${placa}`.replace(/\s+/g, ' ').trim();
+            const descripcion = `Vale de combustible ${codigo} · ${galones} ${combustibleDe(b.combustible) === 'GNV' ? 'm³' : combustibleDe(b.combustible) === 'GNL' ? 'kg' : 'gal'} ${combustibleDe(b.combustible) || texto(b.combustible, 40) || ''} · ${estacion || 'estación'}${estacionSede ? ' (' + estacionSede + ')' : ''} · viaje ${viaje} · placa ${placa}`.replace(/\s+/g, ' ').trim();
             const [caja] = await conn.query(
                 `INSERT INTO tesoreria_caja (fecha, hora, fecha_valuta, hora_valuta, numero_factura, serie, numero, orden_viaje, conductor, ruta_viaje, placa, autoriza, motivo, centro_costo, sub_motivo,
                     modalidad_pago, moneda, tipo_persona, persona, tipo_movimiento, subtotal, retencion_detraccion, importe_total, tipo_cambio, descripcion, tipo_comprobante, cuenta_bancaria_persona, cuenta_bancaria_empresa, sustento_url, estado, usuario_creacion, origen, origen_id)

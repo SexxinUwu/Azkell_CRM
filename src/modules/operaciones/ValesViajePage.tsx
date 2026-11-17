@@ -31,7 +31,7 @@ interface Vale {
   id: number; codigo: string; viaje: string; placa: string; conductor: string; fecha: string; hora: string | null;
   estacion_nombre: string; estacion_ruc: string | null; combustible: string | null; galones: number | string; precio_galon: number | string; total: number | string; moneda: string;
   km_odometro: number | null; numero_voucher: string | null; pagar_a: 'CONDUCTOR' | 'ESTACION'; beneficiario_nombre: string;
-  estado: 'PENDIENTE' | 'APROBADO' | 'PAGADO' | 'ANULADO'; caja_codigo: string; alertas: Alerta[]; voucher_url_firmada: string | null; pago_voucher_firmada: string | null; orden_servicio?: string | null;
+  estado: 'PENDIENTE' | 'APROBADO' | 'PAGADO' | 'ANULADO'; caja_codigo: string; alertas: Alerta[]; voucher_url_firmada: string | null; pago_voucher_firmada: string | null; orden_servicio?: string | null; estacion_sede?: string | null;
 }
 interface ServicioViaje { orden: string; es_retorno: boolean; cliente: string | null; ruta: string | null }
 interface ViajeOpc { servicios?: ServicioViaje[]; viaje: string; placa_tracto: string; conductor: string; ruta: string | null; fecha_viaje: string | null; conductor_doc: string | null; ultimo_km: number | null }
@@ -156,7 +156,7 @@ export function ValesViajePage() {
                 <Celda mono>{v.orden_servicio || '—'}</Celda>
                 <Celda mono>{v.placa || '—'}</Celda>
                 <Celda>{v.conductor || '—'}</Celda>
-                <Celda>{v.estacion_nombre || '—'}</Celda>
+                <Celda>{v.estacion_nombre || '—'}{v.estacion_sede ? ` · ${v.estacion_sede}` : ''}</Celda>
                 <Celda alinear="right" mono>{fmt(v.galones, 2)}</Celda>
                 <Celda alinear="right" mono>{fmt(v.precio_galon)}</Celda>
                 <Celda alinear="right" mono>{monto(v)}</Celda>
@@ -182,15 +182,17 @@ interface Form {
   autoriza: string; modalidad_pago: string; cuenta_destino: string; cuenta_empresa: string; tipo_comprobante: string;
   // Servicio (ida o regreso) al que pertenece el vale
   orden_servicio: string;
+  // Estación de servicio (sede) del proveedor donde se cargó
+  estacion_sede: string;
 }
 const VACIO: Form = {
   viaje: '', placa: '', conductor: '', conductor_doc: '', fecha: '', hora: '', estacion_nombre: '', estacion_ruc: '', combustible: '', galones: '', precio_galon: '', total: '', moneda: 'SOLES',
   km_odometro: '', numero_voucher: '', placa_voucher: '', observacion: '', pagar_a: 'ESTACION', beneficiario_nombre: '', beneficiario_doc: '',
-  autoriza: '', modalidad_pago: 'TRANSFERENCIA BANCARIA', cuenta_destino: '', cuenta_empresa: '', tipo_comprobante: '', orden_servicio: '',
+  autoriza: '', modalidad_pago: 'TRANSFERENCIA BANCARIA', cuenta_destino: '', cuenta_empresa: '', tipo_comprobante: '', orden_servicio: '', estacion_sede: '',
 };
 const t = (v: unknown) => (v == null ? '' : String(v));
 const PASOS = ['Viaje y voucher', 'Consumo', 'Proveedor y pago', 'Confirmar'];
-interface Benef { nombre: string; doc: string | null; cuentas: Array<{ label: string; usd: boolean; principal?: boolean }> }
+interface Benef { estaciones?: string[]; nombre: string; doc: string | null; cuentas: Array<{ label: string; usd: boolean; principal?: boolean }> }
 /** Tipo de comprobante según la serie del voucher (F… factura, B… boleta) */
 const comprobanteDe = (nro: string) => (/^F/i.test(nro) ? 'FACTURA' : /^B/i.test(nro) ? 'BOLETA DE VENTA' : '');
 // Lo que la caja guarda como motivo y submotivo según el combustible (el centro de costo es CC-300)
@@ -274,6 +276,7 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
     const cuenta = b ? (b.cuentas.find(c => c.principal) ?? b.cuentas.find(c => !c.usd) ?? b.cuentas[0])?.label ?? '' : '';
     set({
       beneficiario_nombre: nombre ?? '', beneficiario_doc: t(b?.doc), cuenta_destino: crear ? '' : cuenta,
+      estacion_sede: b?.estaciones?.length === 1 ? b.estaciones[0] : '',
       ...(f.pagar_a === 'ESTACION' ? { estacion_nombre: nombre ?? '', estacion_ruc: b?.doc ? t(b.doc) : f.estacion_ruc } : {}),
     });
   }
@@ -305,6 +308,7 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
   }
   function validarPago(): string | null {
     if (!f.beneficiario_nombre.trim()) return f.pagar_a === 'CONDUCTOR' ? 'Elige el conductor al que se le paga.' : 'Elige la estación (proveedor) a la que se le paga.';
+    if (f.pagar_a === 'ESTACION' && (benActual?.estaciones?.length ?? 0) > 0 && !f.estacion_sede) return 'Elige la estación de servicio (sede) donde se cargó.';
     if (!f.cuenta_empresa) return 'Elige la cuenta de la empresa desde la que se paga.';
     if (!f.autoriza) return 'Elige quién autoriza.';
     return null;
@@ -440,6 +444,15 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
                   {p => <Combobox {...p} options={opcionesBen} value={f.beneficiario_nombre || null} loading={bens.isFetching} enHoja compacta tituloHoja={f.pagar_a === 'CONDUCTOR' ? 'Elegir conductor' : 'Elegir proveedor'} placeholder="Busca por nombre, RUC o DNI"
                     onChange={v => elegirBeneficiario(v)} onCreate={txt => elegirBeneficiario(txt.trim(), true)} createLabel="Usar (no registrado)" />}
                 </Field>
+                {f.pagar_a === 'ESTACION' && f.beneficiario_nombre && (
+                  <Field label={`Estación de servicio (sede)${(benActual?.estaciones?.length ?? 0) > 0 ? ' *' : ' (opcional)'}`}
+                    hint={(benActual?.estaciones?.length ?? 0) > 0 ? 'Este proveedor tiene varias estaciones: elige en cuál se cargó' : 'Este proveedor no tiene estaciones registradas: escribe cuál es si quieres dejarlo anotado'}>
+                    {p => (benActual?.estaciones?.length ?? 0) > 0 ? (
+                      <Combobox {...p} options={benActual!.estaciones!.map(e => ({ value: e, label: e }))} value={f.estacion_sede || null} onChange={v => set({ estacion_sede: v ?? '' })}
+                        onCreate={txt => set({ estacion_sede: txt.trim() })} createLabel="Usar esta estación" placeholder="Elige la estación donde se cargó" enHoja compacta tituloHoja="Estación de servicio" />
+                    ) : <TextInput {...p} value={f.estacion_sede} placeholder="Ej.: Grifo de la Av. Industrial" onChange={e => set({ estacion_sede: e.target.value })} />}
+                  </Field>
+                )}
                 {f.pagar_a === 'ESTACION' && (
                   <Field label="RUC" hint={f.estacion_ruc && f.beneficiario_nombre && !benActual ? 'Este proveedor no está en la lista: escríbelo completo o regístralo en Almacén' : undefined}>
                     {p => <TextInput {...p} inputMode="numeric" maxLength={11} value={f.estacion_ruc} onChange={e => { const r = e.target.value.replace(/\D/g, ''); set({ estacion_ruc: r, beneficiario_doc: r }); }} />}
@@ -536,7 +549,7 @@ function TicketVale({ f, titulo, icono, pie, codigo, ok, animar }: { f: Form; ti
   const simbolo = /D[OÓ]L/i.test(f.moneda) ? 'US$' : 'S/';
   const filas: Array<[string, string]> = [
     ['Viaje', f.viaje], ['Placa', f.placa || '—'], ['Conductor', f.conductor || '—'], ['Fecha', `${fechaCorta(f.fecha)}${f.hora ? ` · ${f.hora}` : ''}`],
-    ['Estación', f.estacion_nombre || '—'], ...(f.estacion_ruc ? [['RUC', f.estacion_ruc] as [string, string]] : []),
+    ['Estación', `${f.estacion_nombre || '—'}${f.estacion_sede ? ` · ${f.estacion_sede}` : ''}`], ...(f.estacion_ruc ? [['RUC', f.estacion_ruc] as [string, string]] : []),
     ['Combustible', f.combustible || '—'], ['Cantidad', `${fmt(f.galones, 2)} ${unidad}`], ['Precio', `${simbolo} ${fmt(f.precio_galon)} / ${unidad}`],
     ...(f.km_odometro ? [['Odómetro', `${Number(f.km_odometro).toLocaleString('es-PE')} km`] as [string, string]] : []),
     ...(f.numero_voucher ? [['Voucher', f.numero_voucher] as [string, string]] : []),

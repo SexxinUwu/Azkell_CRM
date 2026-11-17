@@ -1,11 +1,20 @@
 -- Gastos del viaje ligados al SERVICIO (2026-11-18). Sirve para saber cuánto costó cada servicio (ida o regreso) y su rentabilidad.
--- Aditiva e idempotente: agrega la columna orden_servicio (código de la orden de servicio) a los vales de combustible y a los gastos rendidos del viaje.
+-- Aditiva e idempotente: agrega la columna orden_servicio (código de la orden de servicio) a los vales de combustible y a los gastos rendidos del viaje,
+-- y la sede de la estación de servicio (estacion_sede) a los vales.
 -- Los registros antiguos de un viaje con UN solo servicio se asignan solos; los de viajes con varios servicios quedan en blanco para asignarlos a mano.
 
 -- 1) vales de combustible
 SET @falta = (SELECT COUNT(*) FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'viaje_vales_combustible' AND COLUMN_NAME = 'orden_servicio');
 SET @sql = IF(@falta = 0, 'ALTER TABLE `viaje_vales_combustible` ADD COLUMN `orden_servicio` VARCHAR(40) NULL, ADD KEY `idx_vale_servicio` (`orden_servicio`)', 'DO 0');
+PREPARE st FROM @sql;
+EXECUTE st;
+DEALLOCATE PREPARE st;
+
+-- 1b) sede de la estación de servicio donde se cargó (el proveedor/razón social puede tener varias estaciones)
+SET @falta = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'viaje_vales_combustible' AND COLUMN_NAME = 'estacion_sede');
+SET @sql = IF(@falta = 0, 'ALTER TABLE `viaje_vales_combustible` ADD COLUMN `estacion_sede` VARCHAR(150) NULL', 'DO 0');
 PREPARE st FROM @sql;
 EXECUTE st;
 DEALLOCATE PREPARE st;
