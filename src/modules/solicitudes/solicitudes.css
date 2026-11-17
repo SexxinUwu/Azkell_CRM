@@ -18,11 +18,11 @@
 
 /* Casillas del formulario de solicitudes: más grises para que se distingan del fondo */
 .sol-form .input, .sol-form .textarea, .sol-form .select, .sol-form .combobox__input {
-  background: color-mix(in srgb, var(--label) 9%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--label) 12%, transparent);
+  background: color-mix(in srgb, var(--label) 5%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--label) 10%, transparent);
 }
 .sol-form .input:hover, .sol-form .textarea:hover, .sol-form .select:hover, .sol-form .combobox__input:hover {
-  background: color-mix(in srgb, var(--label) 12%, var(--surface));
+  background: color-mix(in srgb, var(--label) 7%, var(--surface));
 }
 .sol-form .input:focus, .sol-form .textarea:focus, .sol-form .select:focus, .sol-form .combobox__input:focus {
   background: var(--surface);
