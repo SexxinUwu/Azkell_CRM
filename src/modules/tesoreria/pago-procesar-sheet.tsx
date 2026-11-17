@@ -174,7 +174,7 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
       }
     >
       {oc && (
-        <div className="ga-det">
+        <div className="ga-det pago-proc">
           <div className="ga-det__col">
             <div className="ga-det__cab">
               <Badge tone="green">Aprobada</Badge>
@@ -209,7 +209,7 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
                 <Notice>No hay cuentas bancarias activas. Regístralas en Tesorería › Bancos.</Notice>
               ) : null}
 
-              <div className="ga-dos">
+              <div className="pago-proc__cuentas">
                 <Field label="Cuenta de origen (empresa)" error={errores.cuenta}>
                   {p => (
                     <SelectInput {...p} value={cuentaSel} disabled={bancos.isLoading || cuentas.length === 0}
@@ -219,6 +219,7 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
                     </SelectInput>
                   )}
                 </Field>
+                {cuenta && <span className="pago-proc__completa">{cuenta.label}</span>}
                 <Field label="Cuenta destino (proveedor)" hint={destinos.length === 0 && !ctasProv.isLoading ? 'El proveedor no tiene cuentas registradas: agrégalas en Almacén › Proveedores.' : undefined}>
                   {p => destinos.length > 0 ? (
                     <SelectInput {...p} value={destinoSel} onChange={e => setDestinoSel(e.target.value)}>
@@ -226,6 +227,7 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
                     </SelectInput>
                   ) : <TextInput {...p} readOnly value={ctasProv.isLoading ? 'Cargando cuentas…' : (oc.cuenta_bancaria_proveedor || 'No especificada')} />}
                 </Field>
+                {destino && <span className="pago-proc__completa">{destino.label}</span>}
               </div>
               {destino && cuenta && destino.usd !== cuenta.usd && (
                 <Notice tone="accent">Pagas desde una cuenta {cuenta.usd ? 'en dólares' : 'en soles'} a una cuenta {destino.usd ? 'en dólares' : 'en soles'} del proveedor: el banco convertirá con su propio tipo de cambio. Si el proveedor quiere soles, registra y elige su cuenta en soles.</Notice>
