@@ -1,14 +1,14 @@
 import '../mantenimiento/mant.css';
 import './gerencia.css';
-import { useMemo, useState, type CSSProperties } from 'react';
-import { CheckCircle, Coins, Eye, SearchX, XCircle } from 'lucide-react';
+import './gerencia-oc.css';
+import { useMemo, useRef, useState } from 'react';
+import {
+  Building2, CalendarDays, CheckCircle, ClipboardList, Coins, Eye, FileCheck, LayoutGrid, List, Receipt, RefreshCw,
+  SearchX, ShieldCheck, ThumbsUp, Truck, User, Wallet, XCircle,
+} from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { Field, TextInput } from '../../core/ui/Field';
-import { Combobox } from '../../core/ui/Combobox';
-import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import { EmptyState, Notice, Page } from '../../core/ui/Display';
 import { Sheet } from '../../core/ui/Sheet';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -16,6 +16,8 @@ import { formatDolares, formatFechaPe, formatSoles } from '../../core/lib/format
 import { haptic } from '../../core/lib/haptics';
 import { useMediaQuery } from '../../core/lib/useMediaQuery';
 import { esDolar } from '../tesoreria/mov-utilidades';
+import { categoriaOc } from './api';
+import { chipEstado, nombreLimpio } from './presentacion';
 
 interface CajaMov {
   id: string | number;
@@ -51,22 +53,18 @@ interface CajaMov {
   [key: string]: unknown;
 }
 
+// Celular: menos de 768 px. Ahí la lista son tarjetas, no tabla.
 const QUERY_MOVIL = '(max-width: 767px)';
-type Filtro = 'pendientes' | 'aprobados' | 'anulados' | 'todos';
 
-/** Estado de caja → chip (PENDIENTE/REGISTRADO por decidir, APROBADO, PROCESADO, ANULADO). */
-function chipCaja(estado: string | undefined) {
-  const s = (estado ?? '').trim().toUpperCase();
-  const clase = s === 'APROBADO' ? 'aprobada' : s === 'ANULADO' ? 'rechazada' : s === 'PENDIENTE' || s === 'REGISTRADO' || s === '' ? 'pendiente' : 'otra';
-  const texto = s === '' ? 'PENDIENTE' : s;
-  return <span className={`gerencia-chip gerencia-chip--${clase}`}>{texto}</span>;
-}
+type Pestana = 'todas' | 'pendientes' | 'aprobados' | 'anulados';
+type Vista = 'tarjetas' | 'tabla';
+type AccionCaja = 'aprobar' | 'anular';
 
 function esPendiente(m: CajaMov): boolean {
   const s = (m.estado ?? '').toUpperCase();
   return s === 'PENDIENTE' || s === 'REGISTRADO' || s === '';
 }
-
+const esAprobado = (m: CajaMov) => (m.estado ?? '').toUpperCase() === 'APROBADO';
 /** Como el clásico: ANULADO y RECHAZADO cuentan como anulados */
 function esAnulado(m: CajaMov): boolean {
   const s = (m.estado ?? '').toUpperCase();
@@ -91,6 +89,76 @@ function montoPorMoneda(lista: CajaMov[]): string {
 }
 
 const importeMov = (m: CajaMov) => (esDolar(m.moneda) ? formatDolares(numero(m.importe_total)) : formatSoles(numero(m.importe_total)));
+const codigoCaja = (m: CajaMov) => (m.serie || m.numero ? `CAJA-${m.serie ?? ''}-${m.numero ?? ''}` : `CAJA-${m.id}`);
+const beneficiario = (m: CajaMov) => m.persona || m.conductor || 'No especificado';
+const fechaDe = (m: CajaMov) => String(m.fecha ?? '').slice(0, 10);
+
+/** Tarjeta de un movimiento, igual que la de las OC: código, importe, datos, beneficiario, asignación, motivo y acciones */
+function TarjetaCaja({ m, puedeAccionar, onDetalle, onAccion }: {
+  m: CajaMov; puedeAccionar: boolean; onDetalle: () => void; onAccion: (tipo: AccionCaja) => void;
+}) {
+  const cat = categoriaOc(m.estado);
+  const accionable = esPendiente(m) && puedeAccionar;
+  return (
+    <article className={`ga-card ga-card--${cat}`}>
+      <div>
+        <div className="ga-card__cab">
+          <div className="ga-card__izq">
+            <button type="button" className="ga-codigo" onClick={onDetalle} title="Ver detalle">
+              <Eye size={12} aria-hidden style={{ verticalAlign: '-1px', marginRight: 4 }} />{codigoCaja(m)}
+            </button>
+            {m.tipo_movimiento && <span className="ga-prio">{m.tipo_movimiento}</span>}
+          </div>
+          <div className="ga-importe">
+            <div className="ga-importe__etiqueta">IMPORTE</div>
+            <div className="ga-importe__valor">{importeMov(m)}</div>
+          </div>
+        </div>
+
+        <div className="ga-meta" style={{ marginTop: 'var(--s-3)' }}>
+          <span><CalendarDays size={12} aria-hidden style={{ verticalAlign: '-1px' }} /> {formatFechaPe(m.fecha)}</span>
+          <span><User size={12} aria-hidden style={{ verticalAlign: '-1px' }} /> <b>{nombreLimpio(m.usuario_creacion)}</b></span>
+          {m.centro_costo && <span className="ga-cc"><Building2 size={11} aria-hidden style={{ verticalAlign: '-1px' }} /> {m.centro_costo}</span>}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)', marginTop: 'var(--s-3)' }}>
+          <div className="ga-bloque">
+            <span className="ga-bloque__etiqueta">Beneficiario</span>
+            <span className="ga-bloque__valor" title={beneficiario(m)}>{beneficiario(m)}</span>
+            {m.tipo_persona && <span className="ga-bloque__sub">{m.tipo_persona}</span>}
+          </div>
+          <div className="ga-bloque">
+            <span className="ga-bloque__etiqueta">Asignación</span>
+            <span className="ga-bloque__valor">{m.placa ? `Placa ${m.placa}` : 'Sin placa'}</span>
+            <span className="ga-bloque__sub">{m.orden_viaje ? `Viaje ${m.orden_viaje}` : m.ruta_viaje || 'Sin viaje'}</span>
+          </div>
+          <div className="ga-motivo">
+            <span className="ga-motivo__etiqueta">Motivo</span>
+            <div className="ga-motivo__texto" title={[m.motivo, m.sub_motivo].filter(Boolean).join(' · ')}>
+              {[m.motivo, m.sub_motivo].filter(Boolean).join(' · ') || 'Sin motivo especificado'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="ga-card__pie">
+        <button type="button" className="ga-btn ga-btn--detalle" onClick={onDetalle}>
+          <Eye size={14} aria-hidden /> Detalle
+        </button>
+        {accionable ? (
+          <div className="ga-card__acciones">
+            <button type="button" className="ga-btn ga-btn--aprobar" onClick={() => onAccion('aprobar')}>
+              <CheckCircle size={14} aria-hidden /> AUTORIZAR
+            </button>
+            <button type="button" className="ga-btn ga-btn--rechazar" onClick={() => onAccion('anular')}>
+              <XCircle size={14} aria-hidden /> ANULAR
+            </button>
+          </div>
+        ) : chipEstado(m.estado)}
+      </div>
+    </article>
+  );
+}
 
 export function AprobacionesCajaPage() {
   const qc = useQueryClient();
@@ -99,21 +167,21 @@ export function AprobacionesCajaPage() {
   const puedeAccionar = can('gerencia_aprobaciones_caja.aprobar');
   const movil = useMediaQuery(QUERY_MOVIL);
 
-  const [busqueda, setBusqueda] = useState('');
+  // Sin rango por defecto: una caja pendiente antigua no debe quedar oculta
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
+  const [busqueda, setBusqueda] = useState('');
   const [motivo, setMotivo] = useState('');
-  const [soloBusqueda, setSoloBusqueda] = useState(false);
-  const [filtrando, setFiltrando] = useState(false);
-  const filtrosActivos = (motivo ? 1 : 0) + (desde || hasta ? 1 : 0);
-  const [accion, setAccion] = useState<{ id: string | number; tipo: 'aprobar' | 'anular'; resumen: string } | null>(null);
-  const [motivoAnulacion, setMotivoAnulacion] = useState('');
+  const [pestana, setPestana] = useState<Pestana>('pendientes');
+  const [vista, setVista] = useState<Vista>('tarjetas');
+  const [detalle, setDetalle] = useState<CajaMov | null>(null);
+  const [accion, setAccion] = useState<{ tipo: AccionCaja; mov: CajaMov } | null>(null);
+  const [comentario, setComentario] = useState('');
+  const [confirmado, setConfirmado] = useState(false);
+  const [errCampo, setErrCampo] = useState<string | undefined>();
+  const [errAccion, setErrAccion] = useState<string | null>(null);
   const [procesando, setProcesando] = useState(false);
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
-  const [filtro, setFiltro] = useState<Filtro>('pendientes');
-  const [errMotivo, setErrMotivo] = useState<string | undefined>();
-  const [detalle, setDetalle] = useState<CajaMov | null>(null);
-  const [detalleAbierto, setDetalleAbierto] = useState(false);
 
   const { data, isLoading, isError, error } = useQuery<CajaMov[]>({
     queryKey: ['gerencia', 'aprobaciones-caja'],
@@ -124,414 +192,459 @@ export function AprobacionesCajaPage() {
       }),
     staleTime: 30_000,
   });
-
   const lista = useMemo(() => data ?? [], [data]);
-  const pendientes = useMemo(() => lista.filter(esPendiente), [lista]);
-  const aprobados = useMemo(() => lista.filter(m => (m.estado ?? '').toUpperCase() === 'APROBADO'), [lista]);
-  const anulados = useMemo(() => lista.filter(esAnulado), [lista]);
 
   // Motivos del filtro: los que existen en la lista, sin repetir y ordenados (como el clásico)
   const motivos = useMemo(() => Array.from(new Set(lista.map(m => (m.motivo || '').trim()).filter(Boolean))).sort(), [lista]);
 
-  const visibles = useMemo(() => {
-    // Fechas y motivo se aplican igual que en el clásico (obtenerCajasFiltradas)
-    const pasaFechaMotivo = (m: CajaMov) => {
-      const f = (m.fecha || '').slice(0, 10);
-      if (desde && f && f < desde) return false;
-      if (hasta && f && f > hasta) return false;
-      if (motivo && (m.motivo || '').trim() !== motivo) return false;
-      return true;
-    };
-    const base = filtro === 'pendientes' ? pendientes : filtro === 'aprobados' ? aprobados : filtro === 'anulados' ? anulados : lista;
-    const fuente = soloBusqueda || busqueda ? lista : base;
-    if (!busqueda) return fuente.filter(pasaFechaMotivo);
-    const q = busqueda.toUpperCase();
-    return lista.filter(m =>
-      String(m.conductor ?? '').toUpperCase().includes(q) ||
-      String(m.placa ?? '').toUpperCase().includes(q) ||
-      String(m.motivo ?? '').toUpperCase().includes(q) ||
-      String(m.orden_viaje ?? '').toUpperCase().includes(q) ||
-      String(m.persona ?? '').toUpperCase().includes(q)
-    ).filter(pasaFechaMotivo);
-  }, [lista, pendientes, aprobados, anulados, busqueda, soloBusqueda, filtro, desde, hasta, motivo]);
+  // Movimientos dentro del rango y del motivo: indicadores y pestañas salen de aquí
+  const enRango = useMemo(() => lista.filter(m => {
+    const f = fechaDe(m);
+    if (desde && f && f < desde) return false;
+    if (hasta && f && f > hasta) return false;
+    if (motivo && (m.motivo || '').trim() !== motivo) return false;
+    return true;
+  }), [lista, desde, hasta, motivo]);
 
-  const kpis: Array<{ key: Filtro; etiqueta: string; items: CajaMov[]; color: string }> = [
-    { key: 'pendientes', etiqueta: 'Pendientes', items: pendientes, color: 'var(--amber-ink)' },
-    { key: 'aprobados', etiqueta: 'Aprobados', items: aprobados, color: 'var(--green-ink)' },
-    { key: 'anulados', etiqueta: 'Anulados', items: anulados, color: 'var(--red-ink)' },
-    { key: 'todos', etiqueta: 'Total', items: lista, color: 'var(--label-1)' },
+  const grupos = useMemo(() => ({
+    pendientes: enRango.filter(esPendiente),
+    aprobados: enRango.filter(esAprobado),
+    anulados: enRango.filter(esAnulado),
+    todas: enRango,
+  }), [enRango]);
+
+  const visibles = useMemo(() => {
+    const q = busqueda.trim().toUpperCase();
+    const base = grupos[pestana];
+    if (!q) return base;
+    return base.filter(m =>
+      [m.conductor, m.persona, m.placa, m.motivo, m.sub_motivo, m.orden_viaje, m.serie, m.numero, codigoCaja(m)]
+        .some(v => String(v ?? '').toUpperCase().includes(q)),
+    );
+  }, [grupos, pestana, busqueda]);
+
+  const indicadores: Array<{ tono: string; etiqueta: string; pill: string; items: CajaMov[]; pie: string }> = [
+    { tono: 'ambar', etiqueta: 'Pendientes', pill: 'Por revisar', items: grupos.pendientes, pie: 'Importe acumulado' },
+    { tono: 'verde', etiqueta: 'Aprobados', pill: 'Autorizados', items: grupos.aprobados, pie: 'Monto autorizado' },
+    { tono: 'rojo', etiqueta: 'Anulados', pill: 'Desestimados', items: grupos.anulados, pie: 'No ejecutado' },
+    { tono: 'indigo', etiqueta: 'Total', pill: 'Todos', items: grupos.todas, pie: 'Movimientos del periodo' },
   ];
 
-  function abrirAccion(id: string | number, tipo: 'aprobar' | 'anular', m: CajaMov) {
+  const pestanas: Array<{ key: Pestana; etiqueta: string }> = [
+    { key: 'todas', etiqueta: 'Todos' },
+    { key: 'pendientes', etiqueta: 'Pendientes' },
+    { key: 'aprobados', etiqueta: 'Aprobados' },
+    { key: 'anulados', etiqueta: 'Anulados' },
+  ];
+
+  function abrirAccion(tipo: AccionCaja, mov: CajaMov) {
     if (!puedeAccionar) return;
     haptic('selection');
     setMsg(null);
-    setErrMotivo(undefined);
-    setMotivoAnulacion('');
-    setAccion({ id, tipo, resumen: `${m.conductor || m.persona || '—'} · ${importeMov(m)}` });
+    setErrAccion(null);
+    setErrCampo(undefined);
+    setComentario('');
+    setConfirmado(false);
+    setDetalle(null);
+    setAccion({ tipo, mov });
   }
 
   function cerrarAccion() {
     setAccion(null);
-    setMotivoAnulacion('');
-    setErrMotivo(undefined);
+    setComentario('');
+    setConfirmado(false);
+    setErrCampo(undefined);
+    setErrAccion(null);
   }
 
-  function abrirDetalle(m: CajaMov) {
-    haptic('selection');
-    setDetalle(m);
-    setDetalleAbierto(true);
-  }
-
-  // Aprobar o anular desde la ficha: cierra la ficha y abre la confirmación (una hoja a la vez)
-  function accionDesdeDetalle(tipo: 'aprobar' | 'anular') {
-    if (!detalle) return;
-    setDetalleAbierto(false);
-    abrirAccion(detalle.id, tipo, detalle);
-  }
-
-  async function ejecutarAccion() {
+  async function confirmarAccion() {
     if (!accion || procesando) return;
-    if (accion.tipo === 'anular' && !motivoAnulacion.trim()) {
-      setErrMotivo('Escribe el motivo de la anulación.');
+    const { tipo, mov } = accion;
+    const texto = comentario.trim();
+    if (tipo === 'aprobar' && !confirmado) return;
+    if (tipo === 'anular' && !texto) {
+      setErrCampo('Escribe el motivo de la anulación.');
       haptic('warning');
       return;
     }
     setProcesando(true);
+    setErrAccion(null);
     try {
       const usuario = localStorage.getItem('fleet_user') ?? 'Gerencia';
-      const endpoint = accion.tipo === 'aprobar' ? `/tesoreria/caja/${accion.id}/aprobar` : `/tesoreria/caja/${accion.id}/anular`;
-      await api(endpoint, {
+      await api(`/tesoreria/caja/${mov.id}/${tipo}`, {
         method: 'POST',
-        body: accion.tipo === 'anular'
-          ? { motivo: motivoAnulacion.trim(), usuario_anulacion: usuario }
-          : { usuario_aprobacion: usuario },
+        body: tipo === 'anular' ? { motivo: texto, usuario_anulacion: usuario } : { usuario_aprobacion: usuario },
       });
-      setMsg({ tipo: 'ok', texto: `Movimiento ${accion.tipo === 'aprobar' ? 'aprobado' : 'anulado'} correctamente.` });
-      haptic(accion.tipo === 'aprobar' ? 'success' : 'warning');
-      qc.invalidateQueries({ queryKey: ['gerencia', 'aprobaciones-caja'] });
+      setMsg({ tipo: 'ok', texto: `${codigoCaja(mov)} ${tipo === 'aprobar' ? 'aprobada' : 'anulada'} correctamente.` });
+      haptic(tipo === 'aprobar' ? 'success' : 'warning');
       cerrarAccion();
+      qc.invalidateQueries({ queryKey: ['gerencia', 'aprobaciones-caja'] });
     } catch (e) {
-      setMsg({ tipo: 'error', texto: errorMessage(e) });
+      setErrAccion(errorMessage(e));
       haptic('warning');
     } finally {
       setProcesando(false);
     }
   }
 
-  const titulo = accion?.tipo === 'aprobar' ? 'Aprobar movimiento' : 'Anular movimiento';
+  function limpiarFiltros() {
+    setDesde('');
+    setHasta('');
+    setMotivo('');
+    setBusqueda('');
+    setPestana('todas');
+  }
+
+  function accionesCelda(m: CajaMov) {
+    if (esPendiente(m) && puedeAccionar) {
+      return (
+        <div className="gerencia-acciones-fila">
+          <button type="button" className="gerencia-accion gerencia-accion--aprobar pressable" onClick={() => abrirAccion('aprobar', m)}>
+            <CheckCircle size={14} aria-hidden /> Autorizar
+          </button>
+          <button type="button" className="gerencia-accion gerencia-accion--rechazar pressable" onClick={() => abrirAccion('anular', m)}>
+            <XCircle size={14} aria-hidden /> Anular
+          </button>
+        </div>
+      );
+    }
+    return chipEstado(m.estado);
+  }
+
+  const hayFiltros = !!desde || !!hasta || !!motivo || !!busqueda || pestana !== 'pendientes';
 
   return (
     <Page>
-      <PageHeader
-        eyebrow="Gerencia"
-        title="Aprobación de caja"
-        subtitle={pendientes.length > 0 ? `${pendientes.length} pendientes · ${montoPorMoneda(pendientes)}` : 'Sin pendientes'}
-        actions={
-          <MenuOtros opciones={[
-            { label: 'Ver todos los registros', icon: <Coins size={17} />, onSelect: () => setSoloBusqueda(s => !s) },
-          ]} />
-        }
-      />
-
-      {msg && (
-        <div style={{ cursor: 'pointer' }} onClick={() => setMsg(null)}>
-          <Notice tone={msg.tipo === 'ok' ? 'success' : 'error'}>{msg.texto}</Notice>
-        </div>
-      )}
-      {isError && <Notice tone="error">{errorMessage(error)}</Notice>}
-
-      {isLoading ? <PageLoader /> : lista.length === 0 ? (
-        <EmptyState icon={<Coins size={28} />} title="Sin movimientos de caja">
-          No hay registros disponibles.
-        </EmptyState>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-          {/* KPI bento: tocarlos filtra la lista */}
-          <div className="gerencia-kpis">
-            {kpis.map(k => (
-              <button
-                key={k.key}
-                type="button"
-                className="gerencia-kpi pressable"
-                aria-pressed={filtro === k.key}
-                style={{ '--kpi': k.color } as CSSProperties}
-                onClick={() => { haptic('selection'); setFiltro(k.key); }}
-              >
-                <span className="gerencia-kpi__valor">{k.items.length}</span>
-                <span className="gerencia-kpi__etiqueta">{k.etiqueta}</span>
-                <span className="gerencia-kpi__monto">{montoPorMoneda(k.items)}</span>
-              </button>
-            ))}
+      <div className="ga-page">
+        {/* Cabecera */}
+        <header className="ga-cab">
+          <div>
+            <span className="ga-pill"><ShieldCheck size={13} aria-hidden /> Dirección ejecutiva</span>
+            <h1 className="ga-titulo">Aprobación de Caja</h1>
+            <p className="ga-sub">
+              Bandeja gerencial para autorizar o anular los egresos de caja antes de su pago
+              {grupos.pendientes.length > 0 ? ` · ${grupos.pendientes.length} pendientes` : ''}
+            </p>
           </div>
-
-          {!busqueda && !soloBusqueda && pendientes.length === 0 && (
-            <Notice tone="success">No hay movimientos pendientes de aprobación.</Notice>
-          )}
-
-          {/* Barra compacta: búsqueda y Filtros; fechas y motivo van en la hoja */}
-          <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Buscar por conductor, placa, motivo u OV…"
-            activos={filtrosActivos} onAbrirFiltros={() => setFiltrando(true)} />
-          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} resultado={visibles.length} unidad="movimiento"
-            onLimpiar={() => { setDesde(''); setHasta(''); setMotivo(''); }}>
-            <GrupoFiltro titulo="Fechas">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
-                <TextInput type="date" aria-label="Fecha desde" value={desde} onChange={e => setDesde(e.target.value)} />
-                <span className="t-footnote c-secondary">a</span>
-                <TextInput type="date" aria-label="Fecha hasta" value={hasta} onChange={e => setHasta(e.target.value)} />
-              </div>
-            </GrupoFiltro>
-            <GrupoFiltro titulo="Motivo">
-              <Combobox options={motivos.map(m => ({ value: m, label: m }))} value={motivo || null} onChange={v => setMotivo(v ?? '')} enHoja compacta
-                placeholder="Todos los motivos" tituloHoja="Motivo" />
-            </GrupoFiltro>
-          </HojaFiltros>
-
-          {visibles.length === 0 ? (
-            <EmptyState icon={<SearchX size={22} />} title="Sin coincidencias">
-              <button type="button" className="placas-limpiar" onClick={() => setBusqueda('')}>Limpiar</button>
-            </EmptyState>
-          ) : movil ? (
-            <div className="gerencia-lista-tarjetas">
-              {visibles.map((m, i) => {
-                const pend = esPendiente(m);
-                return (
-                  <article key={String(m.id || i)} className="gerencia-tarjeta">
-                    <div className="gerencia-tarjeta__cuerpo" role="button" tabIndex={0} style={{ cursor: 'pointer' }}
-                      onClick={() => abrirDetalle(m)}
-                      onKeyDown={e => { if (e.key === 'Enter') abrirDetalle(m); }}>
-                      <span className="gerencia-tarjeta__fila">
-                        <span className="gerencia-tarjeta__meta" style={{ marginTop: 0 }}>{formatFechaPe(m.fecha)}</span>
-                        {chipCaja(m.estado)}
-                      </span>
-                      <span className="gerencia-tarjeta__proveedor">{m.conductor || m.persona || '—'}</span>
-                      {m.placa && (
-                        <span style={{ display: 'block', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.78rem' }}>{m.placa}</span>
-                      )}
-                      <span className="gerencia-tarjeta__fila" style={{ marginTop: 4 }}>
-                        <span className="gerencia-tarjeta__meta" style={{ marginTop: 0 }}>
-                          {m.motivo ?? '—'}{m.sub_motivo ? ` · ${m.sub_motivo}` : ''}
-                        </span>
-                        <span className="gerencia-tarjeta__importe">{importeMov(m)}</span>
-                      </span>
-                    </div>
-                    {pend && puedeAccionar && (
-                      <div className="gerencia-tarjeta__acciones">
-                        <button type="button" className="gerencia-accion gerencia-accion--aprobar pressable" onClick={() => abrirAccion(m.id, 'aprobar', m)}>
-                          <CheckCircle size={16} aria-hidden /> Aprobar
-                        </button>
-                        <button type="button" className="gerencia-accion gerencia-accion--rechazar pressable" onClick={() => abrirAccion(m.id, 'anular', m)}>
-                          <XCircle size={16} aria-hidden /> Anular
-                        </button>
-                      </div>
-                    )}
-                  </article>
-                );
-              })}
+          <div className="ga-acciones">
+            <Button variant="secondary" icon={<RefreshCw size={15} />} onClick={() => { void qc.invalidateQueries({ queryKey: ['gerencia', 'aprobaciones-caja'] }); }}>
+              Actualizar
+            </Button>
+            <div className="ga-vista" role="group" aria-label="Forma de la lista">
+              <button type="button" aria-pressed={vista === 'tabla'} title="Lista" aria-label="Ver como lista" onClick={() => setVista('tabla')}><List size={16} /></button>
+              <button type="button" aria-pressed={vista === 'tarjetas'} title="Tarjetas" aria-label="Ver como tarjetas" onClick={() => setVista('tarjetas')}><LayoutGrid size={16} /></button>
             </div>
-          ) : (
-            <div className="gerencia-tabla-wrap">
-              <table className="gerencia-tabla" style={{ minWidth: '44rem' }}>
-                <thead>
-                  <tr>
-                    {['Fecha', 'Conductor / persona', 'Motivo', 'Importe', 'Estado', 'Acciones'].map(h => (
-                      <th key={h}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibles.map((m, i) => {
-                    const pend = esPendiente(m);
-                    return (
+          </div>
+        </header>
+
+        {msg && (
+          <div style={{ cursor: 'pointer' }} onClick={() => setMsg(null)}>
+            <Notice tone={msg.tipo === 'ok' ? 'success' : 'error'}>{msg.texto}</Notice>
+          </div>
+        )}
+        {isError && <Notice tone="error">{errorMessage(error)}</Notice>}
+
+        {isLoading ? <PageLoader /> : lista.length === 0 ? (
+          <EmptyState icon={<Coins size={28} />} title="Sin movimientos de caja">
+            No hay registros disponibles.
+          </EmptyState>
+        ) : (
+          <>
+            {/* Indicadores */}
+            <div className="ga-kpis">
+              {indicadores.map(k => (
+                <div key={k.etiqueta} className={`ga-kpi ga-kpi--${k.tono}`}>
+                  <div className="ga-kpi__cab">
+                    <span className="ga-kpi__etiqueta">{k.etiqueta}</span>
+                    <span className="ga-kpi__pill">{k.pill}</span>
+                  </div>
+                  <span className="ga-kpi__valor">{k.items.length}</span>
+                  <span className="ga-kpi__unidad">{k.items.length === 1 ? 'movimiento' : 'movimientos'}</span>
+                  <div className="ga-kpi__pie">
+                    <span>{k.pie}:</span>
+                    <b>{montoPorMoneda(k.items)}</b>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Filtros */}
+            <div className="ga-filtros">
+              <div className="ga-filtros__fila">
+                <div className="ga-campo">
+                  <span className="ga-campo__etiqueta">Fecha desde</span>
+                  <input type="date" className="input" aria-label="Fecha desde" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} />
+                </div>
+                <div className="ga-campo">
+                  <span className="ga-campo__etiqueta">Fecha hasta</span>
+                  <input type="date" className="input" aria-label="Fecha hasta" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} />
+                </div>
+                <div className="ga-campo">
+                  <span className="ga-campo__etiqueta">Motivo</span>
+                  <select className="input" aria-label="Motivo" value={motivo} onChange={e => setMotivo(e.target.value)}>
+                    <option value="">Todos los motivos</option>
+                    {motivos.map(x => <option key={x} value={x}>{x}</option>)}
+                  </select>
+                </div>
+                <div className="ga-campo ga-buscar">
+                  <span className="ga-campo__etiqueta">Búsqueda rápida</span>
+                  <input type="search" className="input" value={busqueda} onChange={e => setBusqueda(e.target.value)}
+                    placeholder="Buscar por conductor, persona, placa, motivo u OV…" aria-label="Buscar movimientos" />
+                </div>
+              </div>
+              <div className="ga-tabs" role="group" aria-label="Filtrar por estado">
+                {pestanas.map(p => (
+                  <button key={p.key} type="button" className="ga-tab" aria-pressed={pestana === p.key} onClick={() => { haptic('selection'); setPestana(p.key); }}>
+                    {p.etiqueta} <span className="ga-tab__n">{grupos[p.key].length}</span>
+                  </button>
+                ))}
+                {hayFiltros && <button type="button" className="ga-limpiar" onClick={limpiarFiltros}>Limpiar filtros</button>}
+              </div>
+            </div>
+
+            {/* Movimientos */}
+            {visibles.length === 0 ? (
+              <EmptyState icon={<SearchX size={22} />} title={pestana === 'pendientes' && !busqueda ? 'No hay movimientos pendientes' : 'Sin coincidencias'}>
+                <button type="button" className="placas-limpiar" onClick={limpiarFiltros}>Ver todos</button>
+              </EmptyState>
+            ) : vista === 'tabla' && !movil ? (
+              <div className="gerencia-tabla-wrap">
+                <table className="gerencia-tabla">
+                  <thead>
+                    <tr>
+                      {['Acción', 'Fecha', 'Usuario', 'Caja', 'Centro costo', 'Motivo', 'Beneficiario', 'Placa / viaje', 'Importe'].map(h => (
+                        <th key={h}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibles.map((m, i) => (
                       <tr key={String(m.id || i)}>
-                        <td style={{ whiteSpace: 'nowrap', color: 'var(--label-2)', fontSize: '0.8rem' }}>{formatFechaPe(m.fecha)}</td>
+                        <td>{accionesCelda(m)}</td>
+                        <td style={{ whiteSpace: 'nowrap', color: 'var(--label-2)' }}>{formatFechaPe(m.fecha)}</td>
+                        <td style={{ whiteSpace: 'nowrap', fontWeight: 600 }}>{nombreLimpio(m.usuario_creacion)}</td>
                         <td>
-                          <div style={{ fontWeight: 600 }}>{m.conductor || m.persona || '—'}</div>
-                          {m.placa && <div style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{m.placa}</div>}
+                          <button type="button" className="gerencia-codigo" onClick={() => setDetalle(m)} title="Ver detalle del movimiento">{codigoCaja(m)}</button>
                         </td>
-                        <td style={{ fontSize: '0.8rem', color: 'var(--label-2)', maxWidth: '12rem' }}>
-                          <div className="gerencia-celda-recorte">{m.motivo ?? '—'}</div>
-                          {m.sub_motivo && <div style={{ fontSize: '0.72rem' }}>{m.sub_motivo}</div>}
-                        </td>
-                        <td className="gerencia-tabla__num">{importeMov(m)}</td>
-                        <td>{chipCaja(m.estado)}</td>
+                        <td><span className="gerencia-chip">{m.centro_costo || '—'}</span></td>
                         <td>
-                          <div className="gerencia-acciones-fila">
-                            <button type="button" className="gerencia-accion gerencia-accion--ver pressable" onClick={() => abrirDetalle(m)}>
-                              <Eye size={14} aria-hidden /> Ver detalle
-                            </button>
-                            {pend && puedeAccionar && (
-                              <>
-                                <button type="button" className="gerencia-accion gerencia-accion--aprobar pressable" onClick={() => abrirAccion(m.id, 'aprobar', m)}>
-                                  <CheckCircle size={14} aria-hidden /> Aprobar
-                                </button>
-                                <button type="button" className="gerencia-accion gerencia-accion--rechazar pressable" onClick={() => abrirAccion(m.id, 'anular', m)}>
-                                  <XCircle size={14} aria-hidden /> Anular
-                                </button>
-                              </>
-                            )}
+                          <div className="gerencia-celda-recorte" title={[m.motivo, m.sub_motivo].filter(Boolean).join(' · ')}>
+                            {[m.motivo, m.sub_motivo].filter(Boolean).join(' · ') || 'Sin motivo'}
                           </div>
                         </td>
+                        <td>{beneficiario(m)}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{[m.placa, m.orden_viaje].filter(Boolean).join(' · ') || '—'}</td>
+                        <td className="gerencia-tabla__num">{importeMov(m)}</td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="ga-grid">
+                {visibles.map((m, i) => (
+                  <TarjetaCaja key={String(m.id || i)} m={m} puedeAccionar={puedeAccionar}
+                    onDetalle={() => { haptic('selection'); setDetalle(m); }}
+                    onAccion={tipo => abrirAccion(tipo, m)} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
-      {/* Confirmación: aprobar, o anular con motivo obligatorio */}
+      <DetalleCajaSheet caja={detalle} onClose={() => setDetalle(null)} puedeAccionar={puedeAccionar} onAccion={abrirAccion} />
+
+      {/* Conformidad: igual que la de las OC */}
       <Sheet
         open={!!accion}
-        onClose={cerrarAccion}
-        title={titulo}
+        onClose={() => !procesando && cerrarAccion()}
+        title={accion?.tipo === 'anular' ? 'Anular movimiento de caja' : 'Autorizar movimiento de caja'}
         footer={accion && (
           <>
-            <Button variant="secondary" onClick={cerrarAccion}>Cancelar</Button>
-            <Button variant={accion.tipo === 'aprobar' ? 'primary' : 'danger'} onClick={ejecutarAccion} loading={procesando}>
-              {accion.tipo === 'aprobar' ? 'Confirmar aprobación' : 'Confirmar anulación'}
+            <Button variant="secondary" onClick={cerrarAccion} disabled={procesando}>Cerrar</Button>
+            <Button variant={accion.tipo === 'aprobar' ? 'primary' : 'danger'} onClick={confirmarAccion} loading={procesando}
+              disabled={procesando || (accion.tipo === 'aprobar' && !confirmado)}>
+              {accion.tipo === 'aprobar' ? 'Autorizar ahora' : 'Anular movimiento'}
             </Button>
           </>
         )}
       >
-        {accion && (accion.tipo === 'anular' ? (
-          <div>
-            <p style={{ margin: '0 0 var(--s-3)', fontSize: '0.9rem', color: 'var(--label-2)' }}>{accion.resumen}</p>
-            <Field label="Motivo de anulación (obligatorio)" error={errMotivo}>
-              {p => (
-                <textarea {...p} value={motivoAnulacion} onChange={e => { setMotivoAnulacion(e.target.value); setErrMotivo(undefined); }}
-                  placeholder="Describe el motivo…" rows={3} style={{ width: '100%', borderRadius: 8, border: '1px solid var(--separator)', background: 'var(--fill-1)', color: 'var(--label-1)', padding: '8px 10px', fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }} />
-              )}
-            </Field>
-          </div>
-        ) : (
-          <div style={{ padding: '12px 0', color: 'var(--label-2)', fontSize: '0.875rem' }}>
-            <p style={{ margin: '0 0 var(--s-2)' }}>{accion.resumen}</p>
-            Confirma que deseas aprobar este movimiento de caja.
-          </div>
-        ))}
-      </Sheet>
+        {accion && (
+          <div className="ga-confirm">
+            <span className={`ga-confirm__icono ${accion.tipo === 'anular' ? 'ga-confirm__icono--rechazo' : ''}`}>
+              {accion.tipo === 'aprobar' ? <ThumbsUp size={28} aria-hidden /> : <XCircle size={28} aria-hidden />}
+            </span>
+            <p className="ga-confirm__mensaje">
+              {accion.tipo === 'aprobar'
+                ? 'Al autorizar, el movimiento queda aprobado y pasa a Tesorería para su pago.'
+                : 'El movimiento queda anulado. Escribe el motivo: quedará registrado para quien lo registró y para la auditoría.'}
+            </p>
+            <span className="ga-confirm__codigo">{codigoCaja(accion.mov)} · {beneficiario(accion.mov)}</span>
+            <span className="ga-confirm__monto">{importeMov(accion.mov)}</span>
 
-      <CajaDetalleSheet
-        caja={detalle}
-        abierto={detalleAbierto}
-        puedeAccionar={puedeAccionar}
-        onClose={() => setDetalleAbierto(false)}
-        onAccion={accionDesdeDetalle}
-      />
+            {accion.tipo === 'aprobar' && (
+              <>
+                <label className="ga-confirm__check">
+                  <input type="checkbox" checked={confirmado} onChange={e => setConfirmado(e.target.checked)} />
+                  <span>Confirmo realizar la autorización de este movimiento</span>
+                </label>
+                <span className="ga-confirm__traspaso">
+                  <CheckCircle size={14} aria-hidden style={{ verticalAlign: '-2px', marginRight: 4 }} />
+                  Tesorería verá este movimiento como aprobado.
+                </span>
+              </>
+            )}
+
+            {accion.tipo === 'anular' && (
+              <div className="ga-confirm__campo">
+                <label htmlFor="ga-caja-comentario">Motivo de la anulación (obligatorio)</label>
+                <textarea id="ga-caja-comentario" rows={3} value={comentario} placeholder="Escribe aquí…" aria-invalid={!!errCampo || undefined}
+                  onChange={e => { setComentario(e.target.value); setErrCampo(undefined); }} />
+                {errCampo && <span style={{ fontSize: '0.8rem', color: 'var(--red-ink)' }}>{errCampo}</span>}
+              </div>
+            )}
+
+            {errAccion && <div className="ga-confirm__error"><Notice tone="error">{errAccion}</Notice></div>}
+          </div>
+        )}
+      </Sheet>
     </Page>
   );
 }
 
-/** Ficha de una caja, como el clásico (verDetalleCaja): datos, concepto, adjuntos, financiero y auditoría. */
-function CajaDetalleSheet({ caja, abierto, puedeAccionar, onClose, onAccion }: {
-  caja: CajaMov | null;
-  abierto: boolean;
-  puedeAccionar: boolean;
-  onClose: () => void;
-  onAccion: (tipo: 'aprobar' | 'anular') => void;
-}) {
-  if (!caja) return null;
+const TEXTO_DECISION: Record<ReturnType<typeof categoriaOc>, string> = {
+  pendiente: 'Pendiente de aprobación por Gerencia.',
+  observada: 'Observado: falta sustento.',
+  aprobada: 'Aprobado. Tesorería puede pagarlo.',
+  rechazada: 'Anulado: el egreso fue desestimado.',
+  otra: 'Estado sin clasificar.',
+};
 
-  const estado = (caja.estado ?? 'REGISTRADO').toUpperCase();
-  const anulada = estado === 'ANULADO' || estado === 'RECHAZADO';
-  const aprobada = estado === 'APROBADO' || estado === 'PAGADO';
-  const tono = aprobada ? 'aprobada' : anulada ? 'rechazada' : 'pendiente';
-  const textoEstado = aprobada || anulada ? estado : 'POR APROBAR';
-  const moneda = (caja.moneda ?? 'SOLES').toUpperCase();
-  const monedaTc = moneda === 'SOLES' || moneda === 'PEN' ? 'SOLES' : `${moneda} (TC: ${caja.tipo_cambio || '1.000'})`;
-  const tieneAdjuntos = !!(caja.voucher_url || caja.sustento_url);
+/** Detalle del movimiento con el mismo diseño que el de una OC: datos a la izquierda, resumen y documentos a la derecha */
+function DetalleCajaSheet({ caja, onClose, puedeAccionar, onAccion }: {
+  caja: CajaMov | null; onClose: () => void; puedeAccionar: boolean; onAccion: (tipo: AccionCaja, m: CajaMov) => void;
+}) {
+  // Mientras la hoja se cierra, el contenido sigue visible
+  const ultima = useRef<CajaMov | null>(null);
+  if (caja) ultima.current = caja;
+  const c = caja ?? ultima.current;
+  const decidible = !!c && puedeAccionar && esPendiente(c);
+  const moneda = (c?.moneda ?? 'SOLES').toUpperCase();
+  const monedaTc = moneda === 'SOLES' || moneda === 'PEN' ? 'Soles' : `${moneda} (TC ${c?.tipo_cambio || '1.000'})`;
+  const adjuntos = c ? [
+    { titulo: 'Voucher de pago', url: c.voucher_url, Icono: Receipt },
+    { titulo: 'Sustento', url: c.sustento_url, Icono: FileCheck },
+  ] : [];
 
   return (
     <Sheet
-      open={abierto}
+      open={!!caja}
       onClose={onClose}
-      title={`CAJA-${caja.serie ?? ''}-${caja.numero ?? ''}`}
+      title={c ? codigoCaja(c) : 'Movimiento de caja'}
       ancho
-      footer={
+      footer={decidible && c ? (
         <>
-          <Button variant="secondary" onClick={onClose}>Cerrar</Button>
-          {puedeAccionar && !anulada && (
-            <>
-              <Button variant="danger" onClick={() => onAccion('anular')}>Anular caja</Button>
-              <Button variant="primary" onClick={() => onAccion('aprobar')}>Aprobar caja</Button>
-            </>
-          )}
+          <Button variant="danger" onClick={() => onAccion('anular', c)}>Anular</Button>
+          <Button variant="primary" onClick={() => onAccion('aprobar', c)}>Aprobar</Button>
         </>
-      }
+      ) : undefined}
     >
-      <div className="gerencia-ficha">
-        <div className="gerencia-ficha__cabecera">
-          <span className={`gerencia-chip gerencia-chip--${tono}`}>{textoEstado}</span>
-          <span className="t-footnote c-secondary">Registrado el {formatFechaPe(caja.fecha)} {caja.hora ?? ''}</span>
+      {c && (
+        <div className="ga-det">
+          <div className="ga-det__col">
+            <div className="ga-det__cab">
+              {chipEstado(c.estado)}
+              {c.tipo_movimiento && <span className="ga-prio">{c.tipo_movimiento}</span>}
+              <span className="ga-det__emitido">Registrado el {formatFechaPe(c.fecha)} {c.hora ?? ''}</span>
+            </div>
+
+            <section className="ga-sec" aria-label="Beneficiario y asignación">
+              <h3 className="ga-sec__titulo"><Truck size={16} aria-hidden /> Beneficiario y asignación</h3>
+              <div className="ga-dos">
+                <div className="ga-bloque">
+                  <span className="ga-bloque__etiqueta">Beneficiario</span>
+                  <span className="ga-bloque__valor">{beneficiario(c)}</span>
+                  <span className="ga-bloque__sub">Tipo: {c.tipo_persona || 'PERSONA'}</span>
+                  <span className="ga-bloque__sub">Cuenta destino: {c.cuenta_bancaria_persona || 'No registrada'}</span>
+                </div>
+                <div className="ga-bloque">
+                  <span className="ga-bloque__etiqueta">Asignación operativa</span>
+                  <span className="ga-bloque__valor">{c.placa ? `Placa ${c.placa}` : 'Sin placa'}</span>
+                  <span className="ga-bloque__sub">Viaje: {c.orden_viaje || '—'} · Ruta: {c.ruta_viaje || '—'}</span>
+                  <span className="ga-bloque__sub">Centro de costo: {c.centro_costo || 'General'}</span>
+                </div>
+              </div>
+            </section>
+
+            <section className="ga-sec" aria-label="Concepto del egreso">
+              <h3 className="ga-sec__titulo"><ShieldCheck size={16} aria-hidden /> Concepto del egreso</h3>
+              <div className="ga-dos">
+                <div className="ga-bloque">
+                  <span className="ga-bloque__etiqueta">Motivo</span>
+                  <span className="ga-bloque__valor">{c.motivo || '—'}</span>
+                  <span className="ga-bloque__sub">{c.sub_motivo || 'Sin submotivo'}</span>
+                </div>
+                <div className="ga-bloque">
+                  <span className="ga-bloque__etiqueta">Observaciones</span>
+                  <span className="ga-bloque__valor">{c.observacion || 'Ninguna'}</span>
+                </div>
+              </div>
+              <p className="ga-texto">{c.descripcion || 'Sin descripción adicional'}</p>
+            </section>
+
+            <section className="ga-sec" aria-label="Auditoría">
+              <h3 className="ga-sec__titulo"><User size={16} aria-hidden /> Auditoría del movimiento</h3>
+              <div className="ga-dos">
+                <div className="ga-bloque">
+                  <span className="ga-bloque__etiqueta">Registrado por</span>
+                  <span className="ga-bloque__valor">{nombreLimpio(c.usuario_creacion)}</span>
+                </div>
+                <div className="ga-bloque">
+                  <span className="ga-bloque__etiqueta">Aprobado por</span>
+                  <span className="ga-bloque__valor">{c.usuario_aprobacion ? nombreLimpio(c.usuario_aprobacion) : 'En espera'}</span>
+                  <span className="ga-bloque__sub">{c.fecha_aprobacion ? formatFechaPe(c.fecha_aprobacion) : 'Pendiente'}</span>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div className="ga-det__col">
+            <section className="ga-sec" aria-label="Resumen económico">
+              <h3 className="ga-sec__titulo"><Coins size={16} aria-hidden /> Resumen económico</h3>
+              <div className="ga-resumen">
+                <div className="ga-resumen__fila"><span>Modalidad</span><b>{c.modalidad_pago || 'Transferencia'}</b></div>
+                <div className="ga-resumen__fila"><span>Moneda</span><b>{monedaTc}</b></div>
+                <div className="ga-resumen__fila"><span>Comprobante</span><b>{c.tipo_comprobante || 'Sin comprobante'}</b></div>
+                <div className="ga-resumen__fila"><span>Cuenta origen</span><b>{c.cuenta_bancaria_empresa || 'Por definir'}</b></div>
+                <div className="ga-resumen__total"><span>Total egreso</span><b>{importeMov(c)}</b></div>
+              </div>
+            </section>
+
+            <section className="ga-sec" aria-label="Documentos adjuntos">
+              <h3 className="ga-sec__titulo">
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><ClipboardList size={16} aria-hidden /> Documentos adjuntos</span>
+                <span className="ga-sec__cuenta">{adjuntos.filter(a => !!a.url).length} adjuntos</span>
+              </h3>
+              <div className="ga-docs">
+                {adjuntos.map(({ titulo, url, Icono }) => (
+                  <div key={titulo} className={`ga-doc ${url ? '' : 'ga-doc--falta'}`}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icono size={16} aria-hidden /> {titulo}</span>
+                    {url ? <a href={url} target="_blank" rel="noopener noreferrer">Ver archivo</a> : <span>Sin archivo</span>}
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="ga-sec" aria-label="Estado de la decisión">
+              <h3 className="ga-sec__titulo"><Wallet size={16} aria-hidden /> Estado de la decisión</h3>
+              <div className="ga-decision">
+                <span>{TEXTO_DECISION[categoriaOc(c.estado)]}</span>
+              </div>
+            </section>
+          </div>
         </div>
-
-        <section className="gerencia-ficha__seccion">
-          <h3>Beneficiario / persona</h3>
-          <dl className="gerencia-datos">
-            <div><dt>Persona</dt><dd>{caja.persona || caja.conductor || 'No especificado'}</dd></div>
-            <div><dt>Tipo</dt><dd>{caja.tipo_persona || 'PERSONA'}</dd></div>
-            <div><dt>Cuenta destino</dt><dd>{caja.cuenta_bancaria_persona || 'No registrada'}</dd></div>
-          </dl>
-        </section>
-
-        <section className="gerencia-ficha__seccion">
-          <h3>Asignación operativa</h3>
-          <dl className="gerencia-datos">
-            <div><dt>Placa</dt><dd>{`${caja.placa || 'No asignada'}${caja.orden_viaje ? ` | Viaje: ${caja.orden_viaje}` : ''}`}</dd></div>
-            <div><dt>Ruta</dt><dd>{caja.ruta_viaje || 'No especificada'}</dd></div>
-            <div><dt>Centro de costos</dt><dd>{caja.centro_costo || 'General'}</dd></div>
-          </dl>
-        </section>
-
-        <section className="gerencia-ficha__seccion">
-          <h3>Concepto del egreso</h3>
-          <dl className="gerencia-datos">
-            <div><dt>Motivo</dt><dd>{caja.motivo || '—'}</dd></div>
-            <div><dt>Submotivo</dt><dd>{caja.sub_motivo || '—'}</dd></div>
-            <div><dt>Descripción</dt><dd>{caja.descripcion || 'Sin descripción adicional'}</dd></div>
-            <div><dt>Observaciones</dt><dd>{caja.observacion || 'Ninguna'}</dd></div>
-          </dl>
-        </section>
-
-        <section className="gerencia-ficha__seccion">
-          <h3>Comprobante y documentos adjuntos</h3>
-          {tieneAdjuntos ? (
-            <dl className="gerencia-datos">
-              {caja.voucher_url && (
-                <div><dt>Voucher de pago</dt><dd><a className="gerencia-accion gerencia-accion--observar" href={caja.voucher_url} target="_blank" rel="noreferrer">Ver voucher completo</a></dd></div>
-              )}
-              {caja.sustento_url && (
-                <div><dt>Documento de sustento</dt><dd><a className="gerencia-accion gerencia-accion--observar" href={caja.sustento_url} target="_blank" rel="noreferrer">Ver sustento adjunto</a></dd></div>
-              )}
-            </dl>
-          ) : (
-            <p className="t-footnote c-secondary" style={{ margin: 0 }}>No se adjuntaron comprobantes ni vouchers en este registro.</p>
-          )}
-        </section>
-
-        <section className="gerencia-ficha__seccion">
-          <h3>Detalle financiero</h3>
-          <dl className="gerencia-datos">
-            <div><dt>Modalidad de pago</dt><dd>{caja.modalidad_pago || 'TRANSFERENCIA BANCARIA'}</dd></div>
-            <div><dt>Moneda / TC</dt><dd>{monedaTc}</dd></div>
-            <div><dt>Tipo de comprobante</dt><dd>{caja.tipo_comprobante || 'SIN COMPROBANTE'}</dd></div>
-            <div><dt>Cuenta origen empresa</dt><dd>{caja.cuenta_bancaria_empresa || 'Caja Efectivo / Por definir'}</dd></div>
-            <div><dt>Total egreso</dt><dd>{importeMov(caja)}</dd></div>
-          </dl>
-        </section>
-
-        <section className="gerencia-ficha__seccion">
-          <h3>Auditoría del movimiento</h3>
-          <dl className="gerencia-datos">
-            <div><dt>Registrado por</dt><dd>{caja.usuario_creacion || 'Sistema'}</dd></div>
-            <div><dt>Aprobado por</dt><dd>{caja.usuario_aprobacion || 'En espera'}</dd></div>
-            <div><dt>Fecha de aprobación</dt><dd>{caja.fecha_aprobacion ? formatFechaPe(caja.fecha_aprobacion) : 'Pendiente'}</dd></div>
-          </dl>
-        </section>
-      </div>
+      )}
     </Sheet>
   );
 }
