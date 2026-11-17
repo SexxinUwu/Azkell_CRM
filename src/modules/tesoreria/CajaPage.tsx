@@ -22,7 +22,7 @@ import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { formatFechaHoraPe, formatFechaPe, formatSoles } from '../../core/lib/format';
+import { formatFechaPe, formatSoles } from '../../core/lib/format';
 import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
 import { useNavigate } from 'react-router-dom';
 import { useCaja, type CajaMovimiento } from './api';
