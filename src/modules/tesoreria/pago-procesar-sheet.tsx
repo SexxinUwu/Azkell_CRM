@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, CheckCircle2, ClipboardList, Coins, FileCheck, FileText, Package, Paperclip, Truck, Wallet, X } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { Check, CheckCircle2, ClipboardList, Coins, Copy, FileCheck, FileText, Package, Paperclip, Pencil, Truck, Wallet, X } from 'lucide-react';
 import '../gerencia/gerencia-oc.css';
 import './pago.css';
 import { api, errorMessage } from '../../core/api/client';
@@ -64,6 +65,54 @@ function CuentasElegibles({ titulo, cuentas, valor, onElegir, vacio, error }: {
   );
 }
 
+/** Copia al portapapeles (sin espacios) y confirma con un check */
+function Copiar({ texto, que }: { texto: string; que: string }) {
+  const toast = useToast();
+  const [ok, setOk] = useState(false);
+  return (
+    <button type="button" className={`pp-copiar${ok ? ' pp-copiar--ok' : ''}`} aria-label={`Copiar ${que}`} title={`Copiar ${que}`}
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(texto.replace(/\s/g, ''));
+          setOk(true); haptic('success'); toast(`${que} copiado`);
+          window.setTimeout(() => setOk(false), 1500);
+        } catch { toast('No se pudo copiar', 'error'); }
+      }}>
+      {ok ? <Check size={14} /> : <Copy size={14} />}
+    </button>
+  );
+}
+
+/** Una línea por cuenta: banco, moneda y tipo; número y CCI seleccionables y con botón de copiar */
+function CuentaFila({ etiqueta, cuenta, vacio, recien }: { etiqueta: string; cuenta: CuentaOrigen | null; vacio: string; recien: boolean }) {
+  return (
+    <div className="pp-fila">
+      <span className="pp-fila__etq">{etiqueta}</span>
+      {cuenta ? (
+        <div className="pp-fila__val">
+          <span className="pp-fila__banco">
+            <b>{bancoCorto(cuenta.banco)}</b>
+            <span className={`pp-cta__mon${cuenta.usd ? ' pp-cta__mon--usd' : ''}`}>{cuenta.usd ? 'US$' : 'S/'}</span>
+            <span className="pp-cta__tipo">{tipoCorto(cuenta.tipo)}{cuenta.detraccion ? ' · Detracción' : ''}</span>
+            <AnimatePresence>
+              {recien && (
+                <motion.span className="pp-fila__ok" initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+                  transition={{ type: 'spring', bounce: 0.35, duration: 0.4 }}>
+                  <Check size={12} strokeWidth={3} /> Elegida
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </span>
+          <span className="pp-fila__num"><span className="pp-sel">{cuenta.numero || '—'}</span>{cuenta.numero && <Copiar texto={cuenta.numero} que="Número de cuenta" />}</span>
+          {cuenta.cci && <span className="pp-fila__cci">CCI <span className="pp-sel">{cuenta.cci}</span><Copiar texto={cuenta.cci} que="CCI" /></span>}
+        </div>
+      ) : <span className="pp-fila__vacio">{vacio}</span>}
+    </div>
+  );
+}
+
+const animLista = { initial: { opacity: 0, height: 0 }, animate: { opacity: 1, height: 'auto' }, exit: { opacity: 0, height: 0 }, transition: { type: 'spring' as const, bounce: 0, duration: 0.35 } };
+
 interface Errores { constancia?: string; cuenta?: string; monto?: string; voucher?: string; confirmado?: string }
 
 // Etiqueta igual a la del clásico: "BCP - CTA CTE [SOLES] - 191-…". El servidor la usa para la moneda de la caja.
@@ -99,6 +148,11 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
   const [tcPago, setTcPago] = useState('');
   // Cuenta del proveedor a la que se paga (de las registradas)
   const [destinoSel, setDestinoSel] = useState('');
+  // Las cuentas vienen elegidas; «Editar» abre las tarjetas y al elegir una se cierra ese lado
+  const [editOrigen, setEditOrigen] = useState(false);
+  const [editDestino, setEditDestino] = useState(false);
+  const [recien, setRecien] = useState<'origen' | 'destino' | null>(null);
+  useEffect(() => { if (!recien) return; const t = window.setTimeout(() => setRecien(null), 1600); return () => window.clearTimeout(t); }, [recien]);
   const ctasProv = useCuentasProveedor(oc?.proveedor_id ? String(oc.proveedor_id) : null, !!oc);
   const destinos = useMemo<CuentaOrigen[]>(() => (ctasProv.data ?? []).map(c => {
     const x = c as typeof c & { cci?: string | null };
@@ -233,24 +287,29 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
 
             <section className="ga-sec" aria-label="Proveedor y orden">
               <h3 className="ga-sec__titulo"><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Truck size={16} aria-hidden /> Proveedor y orden</span></h3>
-              <div className="ga-dos">
-                <div className="ga-bloque">
-                  <span className="ga-bloque__etiqueta">Proveedor</span>
-                  <span className="ga-bloque__valor">{oc.proveedor_nombre || '—'}</span>
-                  <span className="ga-bloque__sub">RUC: {oc.proveedor_ruc || '—'}</span>
-                  <span className="ga-bloque__sub">Condición: {oc.condicion_pago || 'Al contado'}</span>
-                </div>
-                <div className="ga-bloque">
-                  <span className="ga-bloque__etiqueta">Motivo y destino</span>
-                  <span className="ga-bloque__valor">{oc.motivo_entrada || oc.motivo || '—'}</span>
-                  <span className="ga-bloque__sub">{[oc.sub_motivo, oc.centro_costo].filter(Boolean).join(' · ') || '—'}</span>
-                  <span className="ga-bloque__sub">Solicitó: {oc.solicitante || oc.creador_nombre || '—'}{oc.placa ? ` · Placa ${oc.placa}` : ''}</span>
-                </div>
-              </div>
+              <dl className="pp-dl">
+                <dt>Proveedor</dt>
+                <dd>
+                  <b>{oc.proveedor_nombre || '—'}</b>
+                  <span>RUC {oc.proveedor_ruc || '—'} · {oc.condicion_pago || 'Al contado'}</span>
+                </dd>
+                <dt>Motivo y destino</dt>
+                <dd>
+                  <b>{oc.motivo_entrada || oc.motivo || '—'}</b>
+                  {[oc.sub_motivo, oc.centro_costo].filter(Boolean).length > 0 && <span>{[oc.sub_motivo, oc.centro_costo].filter(Boolean).join(' · ')}</span>}
+                  <span>Solicitó: {oc.solicitante || oc.creador_nombre || '—'}{oc.placa ? ` · Placa ${oc.placa}` : ''}</span>
+                </dd>
+              </dl>
             </section>
 
             <section className="ga-sec" aria-label="Datos del pago">
-              <h3 className="ga-sec__titulo"><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Wallet size={16} aria-hidden /> Datos del pago</span></h3>
+              <h3 className="ga-sec__titulo">
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Wallet size={16} aria-hidden /> Datos del pago</span>
+                <Button variant="plain" size="sm" icon={(editOrigen || editDestino) ? <Check size={14} /> : <Pencil size={14} />}
+                  onClick={() => { const abrir = !(editOrigen || editDestino); setEditOrigen(abrir); setEditDestino(abrir); }}>
+                  {(editOrigen || editDestino) ? 'Listo' : 'Editar'}
+                </Button>
+              </h3>
 
               {bancos.isError ? (
                 <Notice tone="error">No se pudieron cargar las cuentas bancarias.</Notice>
@@ -258,12 +317,34 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
                 <Notice>No hay cuentas bancarias activas. Regístralas en Tesorería › Bancos.</Notice>
               ) : null}
 
-              <div className="pp-ctas-par">
-                <CuentasElegibles titulo="Pagar desde (empresa)" cuentas={cuentas} valor={cuentaSel} error={errores.cuenta}
-                  vacio={bancos.isLoading ? 'Cargando cuentas…' : 'Sin cuentas activas'}
-                  onElegir={l => { setCuentaSel(l); setErrores(x => ({ ...x, cuenta: undefined, monto: undefined })); }} />
-                <CuentasElegibles titulo="Depositar a (proveedor)" cuentas={destinos} valor={destinoSel} onElegir={setDestinoSel}
-                  vacio={ctasProv.isLoading ? 'Cargando cuentas…' : (oc.cuenta_bancaria_proveedor || 'Sin cuentas registradas. Agrégalas en Tesorería › Cuentas de proveedores.')} />
+              <div className="pp-filas">
+                <AnimatePresence initial={false} mode="popLayout">
+                  {editOrigen && cuentas.length > 0 ? (
+                    <motion.div key="lo" className="pp-editar" {...animLista}>
+                      <CuentasElegibles titulo="Pagar desde (empresa)" cuentas={cuentas} valor={cuentaSel} vacio=""
+                        onElegir={l => { setCuentaSel(l); setEditOrigen(false); setRecien('origen'); haptic('selection'); setErrores(x => ({ ...x, cuenta: undefined, monto: undefined })); }} />
+                    </motion.div>
+                  ) : (
+                    <motion.div key="fo" {...animLista}>
+                      <CuentaFila etiqueta="Empresa" cuenta={cuenta} recien={recien === 'origen'}
+                        vacio={bancos.isLoading ? 'Cargando cuentas…' : 'Sin cuenta elegida'} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                <AnimatePresence initial={false} mode="popLayout">
+                  {editDestino && destinos.length > 0 ? (
+                    <motion.div key="ld" className="pp-editar" {...animLista}>
+                      <CuentasElegibles titulo="Depositar a (proveedor)" cuentas={destinos} valor={destinoSel} vacio=""
+                        onElegir={l => { setDestinoSel(l); setEditDestino(false); setRecien('destino'); haptic('selection'); }} />
+                    </motion.div>
+                  ) : (
+                    <motion.div key="fd" {...animLista}>
+                      <CuentaFila etiqueta="Proveedor" cuenta={destino} recien={recien === 'destino'}
+                        vacio={ctasProv.isLoading ? 'Cargando cuentas…' : (oc.cuenta_bancaria_proveedor || 'Sin cuentas registradas. Agrégalas en Tesorería › Cuentas de proveedores.')} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                {errores.cuenta && <span className="field__error" role="alert">{errores.cuenta}</span>}
               </div>
               {destino && cuenta && destino.usd !== cuenta.usd && (
                 <Notice tone="accent">Pagas desde una cuenta {cuenta.usd ? 'en dólares' : 'en soles'} a una cuenta {destino.usd ? 'en dólares' : 'en soles'} del proveedor: el banco convertirá con su propio tipo de cambio. Si el proveedor quiere soles, registra y elige su cuenta en soles.</Notice>
