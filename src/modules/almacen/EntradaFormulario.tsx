@@ -75,7 +75,7 @@ function tcRespaldoDe(valor: string | undefined): number {
 }
 
 /** Tarjeta de una sección del formulario: cabecera con icono pastel, título, separador y cuerpo */
-function Seccion({ tono, icono, titulo, badge, accion, children }: {
+export function Seccion({ tono, icono, titulo, badge, accion, children }: {
   tono: 'azul' | 'ambar' | 'violeta' | 'verde' | 'rosa' | 'celeste';
   icono: ReactNode;
   titulo: string;

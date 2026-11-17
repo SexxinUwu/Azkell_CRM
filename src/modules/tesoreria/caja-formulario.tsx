@@ -1,24 +1,25 @@
 import { useEffect, useState } from 'react';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQuery } from '@tanstack/react-query';
-import { CircleAlert } from 'lucide-react';
+import { CircleAlert, CreditCard, FileText, Landmark, Package, Truck, Users } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { Combobox, type ComboboxOption } from '../../core/ui/Combobox';
 import { Field, TextInput } from '../../core/ui/Field';
 import { decimalInput, parseDecimal } from '../../core/ui/forms';
-import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
+import { Seccion } from '../almacen/EntradaFormulario';
+import '../almacen/entradas.css';
 import { dayKey, formatTime } from '../../core/lib/format';
 import {
   buscarOrdenesViaje, siguienteNumeroCaja, useBancos, useCentrosCostos, useMotivosGastos,
   type CajaMovimiento, type CentroCosto, type OrdenViajeCaja,
 } from './api';
-import { AUTORIZAN, CC_VIAJES, COMPROBANTES, MODALIDADES, MOTIVO_VIAJES, PERSONAS, num } from './caja-lib';
+import { AUTORIZAN, CC_VIAJES, COMPROBANTES, MODALIDADES, MOTIVO_VIAJES, PERSONAS, montoCaja, num } from './caja-lib';
 import './caja-formulario.css';
 
 interface Props {
@@ -270,11 +271,11 @@ export function FormularioCaja({ open, mov, onClose, onGuardado }: Props) {
   /** Lista desplegable moderna (la misma de Placas, Conductores y Personal) */
   const combo = (k: string, label: string, lista: ComboboxOption[], o: {
     wide?: boolean; hint?: string; placeholder?: string; onCambio?: (val: string) => void;
-    onCrear?: (texto: string) => void; crearTexto?: string;
+    onCrear?: (texto: string) => void; crearTexto?: string; disabled?: boolean;
   } = {}) => (
     <Field label={label} wide={o.wide} error={errCampos[k]} hint={o.hint}>
       {p => (
-        <Combobox {...p} options={lista} value={v[k] || null} placeholder={o.placeholder ?? 'Elige…'}
+        <Combobox {...p} enHoja tituloHoja={label} disabled={o.disabled} options={lista} value={v[k] || null} placeholder={o.placeholder ?? 'Elige…'}
           onChange={val => {
             if (o.onCambio) { o.onCambio(val ?? ''); return; }
             set(k, val ?? '');
@@ -283,25 +284,6 @@ export function FormularioCaja({ open, mov, onClose, onGuardado }: Props) {
           onCreate={o.onCrear} createLabel={o.crearTexto} />
       )}
     </Field>
-  );
-
-  /** Pestañas para pocas opciones (movimiento y moneda) */
-  const pestanas = (k: string, label: string, valores: Array<{ value: string; label: string }>, o: { wide?: boolean; hint?: string; bloqueado?: boolean; onCambio?: (val: string) => void } = {}) => (
-    <Field label={label} wide={o.wide} error={errCampos[k]} hint={o.hint}>
-      {() => (
-        <div style={o.bloqueado ? { opacity: 0.6, pointerEvents: 'none' } : undefined}>
-          <SegmentedControl block label={label} value={v[k] ?? valores[0].value} options={valores}
-            onChange={val => (o.onCambio ? o.onCambio(val) : (set(k, val), limpiar(k)))} />
-        </div>
-      )}
-    </Field>
-  );
-
-  const bloque = (titulo: string, hijos: React.ReactNode) => (
-    <section className="cf-bloque">
-      <h3 className="cf-bloque__titulo">{titulo}</h3>
-      <div className="cf-grid">{hijos}</div>
-    </section>
   );
 
   const ccActual = ccNormal(v.centro_costo);
@@ -319,98 +301,138 @@ export function FormularioCaja({ open, mov, onClose, onGuardado }: Props) {
     value: etiquetaCuenta(c), label: etiquetaCuenta(c), description: c.tipo_cuenta ?? undefined,
   }));
 
+  const codigoMostrado = editando ? `${mov?.serie ?? ''}-${mov?.numero ?? ''}` : (v.numero ? `${v.serie ?? ''}-${v.numero}` : '…');
+  const dolares = v.moneda === 'DOLARES';
+  const importe = dec(v.importe_total);
+  const tc = dec(v.tipo_cambio) || 1;
+  const esIngreso = v.tipo_movimiento === 'INGRESO';
+
+  const pie = (
+    <div className="oc-pie">
+      <div className="oc-pie__total">
+        <span className="oc-pie__etiqueta">{esIngreso ? 'Total ingreso' : 'Total egreso'}</span>
+        <span className="oc-pie__monto">
+          {montoCaja(importe, v.moneda)}
+          {dolares && importe > 0 && <small> ≈ {montoCaja(importe * tc, 'SOLES')}</small>}
+        </span>
+      </div>
+      <div className="oc-pie__acciones">
+        <Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
+        <Button variant="primary" onClick={guardar} loading={enviando} style={{ flex: 1 }}>
+          {editando ? 'Guardar cambios' : 'Registrar movimiento'}
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <Sheet open={open} ancho onClose={() => !enviando && onClose()}
       title={editando ? `Editar caja ${mov?.serie ?? ''}-${mov?.numero ?? ''}` : 'Nuevo movimiento de caja'}
-      footer={<>
-        <Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
-        <Button variant="primary" onClick={guardar} loading={enviando}>Guardar</Button>
-      </>}>
-      <div className="cf">
+      footer={pie}>
+      <div className="oc-form">
         {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
 
-        {bloque('Movimiento', <>
-          {pestanas('tipo_movimiento', 'Movimiento', [{ value: 'EGRESO', label: 'Egreso' }, { value: 'INGRESO', label: 'Ingreso' }], {
-            wide: true, bloqueado: editando,
-            hint: editando ? 'El tipo no cambia al editar' : 'Egreso sale de caja; ingreso entra a caja',
-          })}
-          {pestanas('moneda', 'Moneda', [{ value: 'SOLES', label: 'Soles (S/)' }, { value: 'DOLARES', label: 'Dólares (US$)' }], {
-            wide: true, onCambio: cambiarMoneda,
-          })}
-          {txt('numero', `N° (serie ${v.serie ?? ''})`, { readOnly: editando, hint: editando ? undefined : 'Se asigna al abrir' })}
-          {txt('fecha', 'Fecha', { type: 'date' })}
-          {txt('hora', 'Hora', { type: 'time' })}
-          {v.moneda === 'DOLARES' && txt('tipo_cambio', 'Tipo de cambio (S/ por US$)', { decimal: true })}
-          {txt('importe_total', 'Importe total', { decimal: true })}
-          {txt('retencion_detraccion', 'Retención / detracción', { decimal: true, hint: 'Opcional' })}
-        </>)}
+        <Seccion tono="azul" icono={<FileText size={15} />} titulo="Datos del movimiento" badge={codigoMostrado}>
+          <div className="oc-grid oc-grid--3">
+            {combo('tipo_movimiento', 'Tipo de movimiento', [{ value: 'EGRESO', label: 'EGRESO (sale de caja)' }, { value: 'INGRESO', label: 'INGRESO (entra a caja)' }], {
+              disabled: editando, hint: editando ? 'El tipo no cambia al editar' : undefined, placeholder: 'Elige el tipo',
+            })}
+            <Field label={`N° de caja (serie ${v.serie ?? ''})`} hint={editando ? undefined : 'Se asigna al abrir'}>
+              {p => <TextInput {...p} readOnly value={v.numero ?? ''} className="oc-mono" />}
+            </Field>
+            {txt('fecha', 'Fecha', { type: 'date' })}
+            {txt('hora', 'Hora', { type: 'time' })}
+            {combo('moneda', 'Moneda', [{ value: 'SOLES', label: 'Soles (S/)' }, { value: 'DOLARES', label: 'Dólares (US$)' }], { onCambio: cambiarMoneda, placeholder: 'Elige la moneda' })}
+            {dolares && txt('tipo_cambio', 'Tipo de cambio (S/ por US$)', { decimal: true })}
+          </div>
+        </Seccion>
 
-        {bloque('Clasificación', <>
-          {combo('motivo', 'Motivo', opciones(motivoOpciones, v.motivo), { wide: true, onCambio: cambiarMotivo, placeholder: 'Elige el motivo' })}
-          {combo('sub_motivo', 'Sub motivo', opciones(subOpciones, v.sub_motivo), { wide: true, onCambio: cambiarSub, placeholder: 'Elige el sub motivo' })}
-          <Field label="Centro de costos" wide error={errCampos.centro_costo} hint="Se sugiere según el motivo">
-            {p => (
-              <Combobox {...p} options={ccOpciones} value={ccActual || null} placeholder="Elige el centro de costos"
-                onChange={val => { set('centro_costo', val ?? ''); limpiar('centro_costo'); }} />
-            )}
-          </Field>
-        </>)}
+        <Seccion tono="ambar" icono={<Truck size={15} />} titulo="Viaje y vehículo">
+          <div className="oc-grid">
+            {combo('orden_viaje', 'Orden de viaje', viajesOpciones, {
+              wide: true, placeholder: 'Busca el viaje',
+              hint: 'Al elegir se completan conductor, placa y ruta',
+              onCambio: val => {
+                set('orden_viaje', val);
+                setQViaje(val.trim());
+                const o = (ordenes.data ?? []).find(x => x.viaje === val);
+                if (o) aplicarViaje(o);
+              },
+              onCrear: texto => { set('orden_viaje', texto); setQViaje(texto.trim()); void buscarViajeExacto(texto); },
+              crearTexto: 'Usar este viaje',
+            })}
+            {txt('conductor', 'Conductor')}
+            {txt('placa', 'Placa / unidad', { hint: placaRequerida ? 'Requerida por el centro de costos' : 'Opcional' })}
+            {txt('ruta_viaje', 'Ruta', { wide: true })}
+          </div>
+        </Seccion>
 
-        {bloque('Viaje', <>
-          {combo('orden_viaje', 'Orden de viaje', viajesOpciones, {
-            wide: true, placeholder: 'Busca el viaje',
-            hint: 'Al elegir se completan conductor, placa y ruta',
-            onCambio: val => {
-              set('orden_viaje', val);
-              setQViaje(val.trim());
-              const o = (ordenes.data ?? []).find(x => x.viaje === val);
-              if (o) aplicarViaje(o);
-            },
-            onCrear: texto => { set('orden_viaje', texto); setQViaje(texto.trim()); void buscarViajeExacto(texto); },
-            crearTexto: 'Usar este viaje',
-          })}
-          {txt('conductor', 'Conductor')}
-          {txt('ruta_viaje', 'Ruta')}
-          {txt('placa', 'Placa / unidad', { hint: placaRequerida ? 'Requerida por el centro de costos' : 'Opcional' })}
-        </>)}
+        <Seccion tono="violeta" icono={<Users size={15} />} titulo="Concepto y autorización">
+          <div className="oc-grid">
+            {combo('autoriza', 'Autoriza *', opciones(AUTORIZAN, v.autoriza), { placeholder: 'Selecciona al directivo…' })}
+            <Field label="Centro de costos *" error={errCampos.centro_costo} hint="Se sugiere según el motivo">
+              {p => (
+                <Combobox {...p} enHoja tituloHoja="Centro de costos" options={ccOpciones} value={ccActual || null} placeholder="Elige el centro de costos"
+                  onChange={val => { set('centro_costo', val ?? ''); limpiar('centro_costo'); }} />
+              )}
+            </Field>
+            {combo('motivo', 'Motivo (naturaleza del gasto) *', opciones(motivoOpciones, v.motivo), { onCambio: cambiarMotivo, placeholder: 'Elige el motivo' })}
+            {combo('sub_motivo', 'Sub motivo (detalle)', opciones(subOpciones, v.sub_motivo), { onCambio: cambiarSub, placeholder: 'Elige el sub motivo' })}
+          </div>
+        </Seccion>
 
-        {bloque('Pago', <>
-          {combo('autoriza', 'Autoriza', opciones(AUTORIZAN, v.autoriza), { placeholder: 'Elige quién autoriza' })}
-          {combo('tipo_persona', 'Tipo de persona', opciones(PERSONAS, v.tipo_persona), {
-            placeholder: 'Elige el tipo',
-            onCambio: t => { set('tipo_persona', t); limpiar('tipo_persona'); },
-          })}
-          {combo('persona', 'Persona', personasOpciones, {
-            wide: true, placeholder: 'Busca o escribe el nombre',
-            hint: tipo === 'BANCO' ? 'Nombre del banco o entidad financiera' : undefined,
-            onCambio: elegirPersona, onCrear: elegirPersona, crearTexto: 'Usar este nombre',
-          })}
-          {combo('modalidad_pago', 'Modalidad de pago', opciones(MODALIDADES, v.modalidad_pago), { placeholder: 'Elige la modalidad' })}
-          {combo('cuenta_bancaria_empresa', 'Cuenta de la empresa', opciones(cuentasEmpresa, v.cuenta_bancaria_empresa), { wide: true, placeholder: 'Elige la cuenta de la empresa' })}
-          {combo('cuenta_bancaria_persona', 'Cuenta de la persona', cuentasPersonaOpciones, {
-            wide: true, placeholder: 'Elige o escribe la cuenta',
-            hint: tipo === 'PROVEEDOR' ? 'Se sugiere la cuenta del proveedor' : undefined,
-            onCrear: t => { set('cuenta_bancaria_persona', t); limpiar('cuenta_bancaria_persona'); }, crearTexto: 'Usar esta cuenta',
-          })}
-          {combo('tipo_comprobante', 'Comprobante', opciones(COMPROBANTES, v.tipo_comprobante), { placeholder: 'Elige el comprobante' })}
-          {txt('numero_factura', 'N° de comprobante', { hint: 'Ej: F001-0029' })}
-          {txt('numero_constancia_deposito', 'N° de constancia', { hint: 'N° de operación' })}
-        </>)}
+        <Seccion tono="verde" icono={<Landmark size={15} />} titulo="Persona y cuentas bancarias">
+          <div className="oc-grid oc-grid--dos">
+            {combo('tipo_persona', 'Tipo de persona', opciones(PERSONAS, v.tipo_persona), {
+              placeholder: 'Elige el tipo',
+              onCambio: t => { set('tipo_persona', t); limpiar('tipo_persona'); },
+            })}
+            {combo('persona', 'Persona / entidad *', personasOpciones, {
+              placeholder: 'Busca o escribe el nombre',
+              hint: tipo === 'BANCO' ? 'Nombre del banco o entidad financiera' : undefined,
+              onCambio: elegirPersona, onCrear: elegirPersona, crearTexto: 'Usar este nombre',
+            })}
+            {combo('cuenta_bancaria_persona', 'Cuenta de la persona *', cuentasPersonaOpciones, {
+              placeholder: 'Elige o escribe la cuenta',
+              hint: tipo === 'PROVEEDOR' ? 'Se sugiere la cuenta del proveedor' : undefined,
+              onCrear: t => { set('cuenta_bancaria_persona', t); limpiar('cuenta_bancaria_persona'); }, crearTexto: 'Usar esta cuenta',
+            })}
+            {combo('cuenta_bancaria_empresa', 'Cuenta bancaria de la empresa', opciones(cuentasEmpresa, v.cuenta_bancaria_empresa), { placeholder: 'Selecciona la cuenta de la empresa…' })}
+          </div>
+        </Seccion>
 
-        {bloque('Adjuntos y notas', <>
-          <Field label="Voucher" hint={voucher?.name}>
-            {p => <ArchivoInput {...p} key={`v-${sesion}`} accept="image/*,application/pdf" onChange={setVoucher} />}
-          </Field>
-          <Field label="Sustento" hint={sustento?.name}>
-            {p => <ArchivoInput {...p} key={`s-${sesion}`} accept="image/*,application/pdf,.xlsx,.csv" onChange={setSustento} />}
-          </Field>
-          {txt('descripcion', 'Descripción', { wide: true })}
-          {txt('observacion', 'Observación', { wide: true })}
-          <label className="cf-check field--wide">
-            <input type="checkbox" checked={v.no_aplica_liquidacion === '1'} onChange={e => set('no_aplica_liquidacion', e.target.checked ? '1' : '0')} />
-            No aplica a liquidación de viaje
-          </label>
-        </>)}
+        <Seccion tono="rosa" icono={<CreditCard size={15} />} titulo="Pago e importe">
+          <div className="oc-grid">
+            {txt('importe_total', 'Importe total *', { decimal: true })}
+            {txt('retencion_detraccion', 'Retención / detracción', { decimal: true, hint: 'Opcional' })}
+            {combo('modalidad_pago', 'Modalidad de pago *', opciones(MODALIDADES, v.modalidad_pago), { placeholder: 'Elige la modalidad' })}
+            {combo('tipo_comprobante', 'Comprobante *', opciones(COMPROBANTES, v.tipo_comprobante), { placeholder: 'Elige el comprobante' })}
+            {txt('numero_factura', 'N° de comprobante', { hint: 'Ej: F001-0029' })}
+            {txt('numero_constancia_deposito', 'N° de constancia', { hint: 'N° de operación' })}
+          </div>
+        </Seccion>
+
+        <Seccion tono="celeste" icono={<Package size={15} />} titulo="Adjuntos y notas">
+          <div className="oc-grid">
+            <Field label="Voucher de pago" hint={voucher?.name ?? 'Opcional'}>
+              {p => <ArchivoInput {...p} key={`v-${sesion}`} accept="image/*,application/pdf" onChange={setVoucher} />}
+            </Field>
+            <Field label="Sustento / comprobante" hint={sustento?.name ?? 'Opcional, pero recomendado'}>
+              {p => <ArchivoInput {...p} key={`s-${sesion}`} accept="image/*,application/pdf,.xlsx,.csv" onChange={setSustento} />}
+            </Field>
+            {txt('descripcion', 'Descripción', { wide: true })}
+            <Field label="Observaciones y condiciones" wide>
+              {p => (
+                <textarea {...p} className="textarea" rows={2} value={v.observacion ?? ''} placeholder="Notas, acuerdos, aclaraciones…"
+                  onChange={e => set('observacion', e.target.value)} />
+              )}
+            </Field>
+            <label className="cf-check field--wide">
+              <input type="checkbox" checked={v.no_aplica_liquidacion === '1'} onChange={e => set('no_aplica_liquidacion', e.target.checked ? '1' : '0')} />
+              No aplica a liquidación de viaje
+            </label>
+          </div>
+        </Seccion>
       </div>
     </Sheet>
   );
