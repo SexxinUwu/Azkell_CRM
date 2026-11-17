@@ -20,15 +20,17 @@ import { claveSolicitudes, useSolicitudes, type Solicitud } from './api';
 import { NuevaSolicitudSheet } from './NuevaSolicitudSheet';
 import { claseEstado, DetalleSolicitudSheet, textoEstado } from './DetalleSolicitudSheet';
 
+/** Quien pidió ve «En revisión» mientras Gerencia no responde: así queda claro que todavía no se registró */
+const estadoPropio = (e: Solicitud['estado']) => (e === 'PENDIENTE' ? 'EN REVISIÓN' : textoEstado(e));
 const fecha = (s: Solicitud) => (s.created_at ? formatFechaPe(String(s.created_at).split('T')[0]) : '—');
 
 interface Col { id: string; titulo: string; min: number; max: number; texto: (s: Solicitud) => string; bold?: boolean; mono?: boolean; px?: number; extra?: number }
 const COLS: Col[] = [
   { id: 'codigo', titulo: 'Solicitud', min: 120, max: 170, texto: s => s.codigo, mono: true, bold: true, px: 15 },
   { id: 'fecha', titulo: 'Fecha', min: 100, max: 140, texto: fecha },
-  { id: 'tipo', titulo: 'Tipo', min: 150, max: 230, texto: s => s.tipo_etiqueta, bold: true, px: 11, extra: 20 },
+  { id: 'tipo', titulo: 'Qué pediste', min: 150, max: 230, texto: s => s.tipo_etiqueta, bold: true, px: 11, extra: 20 },
   { id: 'titulo', titulo: 'Detalle', min: 180, max: 460, texto: s => s.titulo },
-    { id: 'estado', titulo: 'Estado', min: 110, max: 160, texto: s => textoEstado(s.estado), bold: true, px: 11, extra: 26 },
+    { id: 'estado', titulo: 'Estado', min: 110, max: 160, texto: s => estadoPropio(s.estado), bold: true, px: 11, extra: 26 },
   { id: 'revisado', titulo: 'Revisada por', min: 120, max: 240, texto: s => s.revisado_por || '—' },
 ];
 
@@ -101,7 +103,7 @@ export function SolicitudesPage() {
                   <Celda>{fecha(s)}</Celda>
                   <Celda><span className="oc-chip">{s.tipo_etiqueta}</span></Celda>
                   <Celda>{s.titulo}</Celda>
-                  <Celda><span className={`badge ${claseEstado(s.estado)}`} style={{ whiteSpace: 'nowrap' }}>{textoEstado(s.estado)}</span></Celda>
+                  <Celda><span className={`badge ${claseEstado(s.estado)}`} style={{ whiteSpace: 'nowrap' }}>{estadoPropio(s.estado)}</span></Celda>
                   <Celda>{s.revisado_por || '—'}</Celda>
                 </tr>
               ))}
