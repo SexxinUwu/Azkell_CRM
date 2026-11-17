@@ -9,8 +9,8 @@ const BANCOS_TIPOS = ['CUENTA CORRIENTE', 'CUENTA DE AHORROS', 'CUENTA REMUNERAD
 const MONEDAS = ['SOLES', 'DOLARES'];
 
 /** Campos de cada tipo: el formulario del frontend se arma con esta lista (key, etiqueta, tipo, requerido). */
-const CAMPOS_CUENTA = [
-    { key: 'banco', label: 'Banco', tipo: 'texto', requerido: true, ayuda: 'Ej: BCP, BBVA, Interbank' },
+const CAMPOS_CUENTA = [ // (cada campo se agrupa en la tarjeta «grupo» del formulario)
+    { key: 'banco', label: 'Banco o caja', tipo: 'banco', requerido: true, ayuda: 'Elige de la lista o escribe otro' },
     { key: 'tipo_cuenta', label: 'Tipo de cuenta', tipo: 'select', opciones: BANCOS_TIPOS, defecto: 'CUENTA CORRIENTE' },
     { key: 'moneda', label: 'Moneda', tipo: 'select', opciones: MONEDAS, defecto: 'SOLES' },
     { key: 'numero_cuenta', label: 'Número de cuenta', tipo: 'texto' },
@@ -53,21 +53,24 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
             etiqueta: 'Agregar proveedor', icono: 'Truck',
             descripcion: 'Pide dar de alta un proveedor nuevo con sus datos clave. Al aprobarse queda en Terceros › Proveedores.',
             campos: [
-                { key: 'tipo_documento', label: 'Tipo de documento', tipo: 'select', opciones: ['RUC', 'DNI'], defecto: 'RUC' },
-                { key: 'numero_documento', label: 'RUC o DNI', tipo: 'texto', requerido: true },
-                { key: 'razon_social', label: 'Razón social o nombre', tipo: 'texto', requerido: true },
-                { key: 'telefono', label: 'Teléfono', tipo: 'texto' },
-                { key: 'email', label: 'Correo', tipo: 'texto' },
-                { key: 'direccion', label: 'Dirección', tipo: 'texto', ancho: true },
-                ...CAMPOS_CUENTA.map(c => ({ ...c, requerido: false })),
-                { key: 'observaciones', label: 'Observaciones', tipo: 'area', ancho: true },
+                { key: 'numero_documento', label: 'RUC o DNI', tipo: 'documento', requerido: true, autoconsulta: true, grupo: 'Datos del proveedor', ayuda: 'Con 8 dígitos es DNI y con 11 es RUC: los datos se completan solos' },
+                { key: 'razon_social', label: 'Razón social o nombre', tipo: 'texto', requerido: true, grupo: 'Datos del proveedor' },
+                { key: 'telefono', label: 'Teléfono', tipo: 'texto', requerido: true, grupo: 'Datos del proveedor' },
+                { key: 'email', label: 'Correo', tipo: 'texto', grupo: 'Datos del proveedor' },
+                { key: 'direccion', label: 'Dirección', tipo: 'texto', ancho: true, grupo: 'Datos del proveedor' },
+                { key: 'asesor_nombre', label: 'Asesor', tipo: 'texto', grupo: 'Asesor de la empresa', ayuda: 'Persona con quien se trata en esta empresa' },
+                { key: 'asesor_cargo', label: 'Cargo', tipo: 'texto', grupo: 'Asesor de la empresa' },
+                { key: 'asesor_telefono', label: 'Teléfono o WhatsApp del asesor', tipo: 'texto', grupo: 'Asesor de la empresa' },
+                { key: 'asesor_email', label: 'Correo del asesor', tipo: 'texto', grupo: 'Asesor de la empresa' },
+                ...CAMPOS_CUENTA.map(c => ({ ...c, requerido: false, grupo: 'Cuenta bancaria (opcional)' })),
+                { key: 'observaciones', label: 'Observaciones', tipo: 'area', ancho: true, grupo: 'Otros' },
             ],
             titulo: d => `Proveedor ${d.razon_social} (${d.numero_documento})`,
             async validar(req, d) {
                 const doc = soloDigitos(d.numero_documento);
-                if (d.tipo_documento === 'RUC' && doc.length !== 11) throw aviso('El RUC debe tener 11 dígitos.');
-                if (d.tipo_documento === 'DNI' && doc.length !== 8) throw aviso('El DNI debe tener 8 dígitos.');
+                d.tipo_documento = tipoDeDocumento(doc);
                 d.numero_documento = doc;
+                if (soloDigitos(d.telefono).length < 6) throw aviso('Escribe un teléfono válido.');
                 validarCuenta(d, false);
                 const [dup] = await P(req).query("SELECT id, nombre FROM proveedores_inv WHERE REPLACE(numero_documento,' ','') = ? LIMIT 1", [doc]);
                 if (dup.length) throw aviso(`Ese documento ya está registrado como proveedor: ${dup[0].nombre} (${dup[0].id}). No hace falta pedirlo.`, 409);
@@ -88,6 +91,11 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
                         [id, d.banco, d.tipo_cuenta || 'CUENTA CORRIENTE', d.numero_cuenta || '', d.moneda || 'SOLES', d.cci || null]);
                     if (c.affectedRows !== 1) throw new Error('No se pudo registrar la cuenta del proveedor.');
                 }
+                if (d.asesor_nombre) {
+                    const [k] = await conn.query('INSERT INTO proveedor_contactos (proveedor_id, nombre, cargo, telefono, email, principal, estado) VALUES (?,?,?,?,?,1,1)',
+                        [id, d.asesor_nombre, d.asesor_cargo || null, d.asesor_telefono || null, d.asesor_email || null]);
+                    if (k.affectedRows !== 1) throw new Error('No se pudo registrar al asesor.');
+                }
                 return { entidad: 'proveedor', id, ver: '/terceros/proveedores' };
             },
         },
@@ -95,18 +103,21 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
             etiqueta: 'Agregar cliente', icono: 'Users',
             descripcion: 'Pide dar de alta un cliente nuevo. Al aprobarse queda en Terceros › Clientes.',
             campos: [
-                { key: 'ruc_dni', label: 'RUC o DNI', tipo: 'texto', requerido: true },
-                { key: 'razon_social', label: 'Razón social o nombre', tipo: 'texto', requerido: true },
-                { key: 'telefono', label: 'Teléfono', tipo: 'texto' },
-                { key: 'email', label: 'Correo', tipo: 'texto' },
-                { key: 'direccion', label: 'Dirección', tipo: 'texto', ancho: true },
-                { key: 'notas', label: 'Notas', tipo: 'area', ancho: true },
+                { key: 'ruc_dni', label: 'RUC o DNI', tipo: 'documento', requerido: true, autoconsulta: true, grupo: 'Datos del cliente', ayuda: 'Con 8 dígitos es DNI y con 11 es RUC: los datos se completan solos' },
+                { key: 'razon_social', label: 'Razón social o nombre', tipo: 'texto', requerido: true, grupo: 'Datos del cliente' },
+                { key: 'telefono', label: 'Teléfono', tipo: 'texto', requerido: true, grupo: 'Datos del cliente' },
+                { key: 'email', label: 'Correo', tipo: 'texto', grupo: 'Datos del cliente' },
+                { key: 'direccion', label: 'Dirección', tipo: 'texto', ancho: true, grupo: 'Datos del cliente' },
+                { key: 'contacto_nombre', label: 'Contacto', tipo: 'texto', grupo: 'Contacto de cobranza o coordinación', ayuda: 'Persona con quien se trata en esta empresa' },
+                { key: 'contacto_telefono', label: 'Teléfono o WhatsApp del contacto', tipo: 'texto', grupo: 'Contacto de cobranza o coordinación' },
+                { key: 'notas', label: 'Notas', tipo: 'area', ancho: true, grupo: 'Otros' },
             ],
             titulo: d => `Cliente ${d.razon_social} (${d.ruc_dni})`,
             async validar(req, d) {
                 const doc = soloDigitos(d.ruc_dni);
-                if (doc.length !== 11 && doc.length !== 8) throw aviso('Escribe un RUC de 11 dígitos o un DNI de 8.');
+                tipoDeDocumento(doc);
                 d.ruc_dni = doc;
+                if (soloDigitos(d.telefono).length < 6) throw aviso('Escribe un teléfono válido.');
                 const [dup] = await P(req).query("SELECT id, razon_social FROM clientes WHERE REPLACE(ruc_dni,' ','') = ? LIMIT 1", [doc]);
                 if (dup.length) throw aviso(`Ese documento ya está registrado como cliente: ${dup[0].razon_social}. No hace falta pedirlo.`, 409);
             },
@@ -116,7 +127,8 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
                 if (dup.length) throw aviso(`Ya existe un cliente con ese documento: ${dup[0].razon_social}. Rechaza la solicitud.`, 409);
                 const [ins] = await conn.query(
                     'INSERT INTO clientes (ruc_dni, razon_social, direccion, telefono, email, estado, notas) VALUES (?,?,?,?,?,?,?)',
-                    [d.ruc_dni, String(d.razon_social).toUpperCase(), d.direccion || '', d.telefono || '', String(d.email || '').toLowerCase(), 'Activo', d.notas || '']);
+                    [d.ruc_dni, String(d.razon_social).toUpperCase(), d.direccion || '', d.telefono || '', String(d.email || '').toLowerCase(), 'Activo',
+                    [d.notas, d.contacto_nombre ? `Contacto: ${d.contacto_nombre}${d.contacto_telefono ? ' · ' + d.contacto_telefono : ''}` : ''].filter(Boolean).join(' | ')]);
                 if (ins.affectedRows !== 1) throw new Error('No se pudo crear el cliente.');
                 return { entidad: 'cliente', id: ins.insertId, ver: '/terceros/clientes' };
             },
@@ -125,15 +137,15 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
             etiqueta: 'Agregar cuenta bancaria', icono: 'Landmark',
             descripcion: 'Pide registrar una cuenta bancaria a un proveedor o a una persona del personal. Al aprobarse queda en Tesorería.',
             campos: [
-                { key: 'titular_tipo', label: 'La cuenta es de', tipo: 'select', opciones: ['PROVEEDOR', 'PERSONAL'], defecto: 'PROVEEDOR', requerido: true },
-                { key: 'titular_doc', label: 'RUC o DNI del titular', tipo: 'texto', requerido: true, ayuda: 'Debe estar registrado como proveedor o personal' },
-                { key: 'titular_nombre', label: 'Nombre del titular', tipo: 'texto', requerido: true },
-                ...CAMPOS_CUENTA,
+                { key: 'titular_tipo', label: 'La cuenta es de', tipo: 'select', opciones: ['PROVEEDOR', 'PERSONAL'], defecto: 'PROVEEDOR', requerido: true, grupo: 'Titular' },
+                { key: 'titular_doc', label: 'RUC o DNI del titular', tipo: 'documento', requerido: true, autoconsulta: true, grupo: 'Titular', ayuda: 'Debe estar registrado como proveedor o personal' },
+                { key: 'titular_nombre', label: 'Nombre del titular', tipo: 'texto', requerido: true, grupo: 'Titular' },
+                ...CAMPOS_CUENTA.map(c => ({ ...c, grupo: 'Cuenta bancaria' })),
             ],
             titulo: d => `Cuenta ${d.banco} de ${d.titular_nombre}`,
             async validar(req, d) {
                 d.titular_doc = soloDigitos(d.titular_doc);
-                if (!d.titular_doc) throw aviso('Escribe el RUC o DNI del titular.');
+                tipoDeDocumento(d.titular_doc);
                 validarCuenta(d, true);
                 await titularDe(P(req), d); // que exista
             },
@@ -155,6 +167,13 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
             },
         },
     };
+
+    /** 8 dígitos es DNI y 11 es RUC; cualquier otro largo está mal registrado */
+function tipoDeDocumento(doc) {
+        if (doc.length === 8) return 'DNI';
+        if (doc.length === 11) return 'RUC';
+        throw aviso('El documento no es válido: el DNI tiene 8 dígitos y el RUC 11.');
+    }
 
     /** Banco obligatorio, número o CCI, y CCI de 20 dígitos (mismas reglas que Tesorería › Cuentas) */
     function validarCuenta(d, obligatoria) {

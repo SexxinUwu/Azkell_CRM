@@ -15,3 +15,15 @@
 .sol-historial li { display: flex; align-items: flex-start; gap: 8px; font-size: 0.8125rem; color: var(--label-2); line-height: 1.4; }
 .sol-historial li svg { flex-shrink: 0; margin-top: 2px; }
 .sol-historial strong { color: var(--label); }
+
+/* Casillas del formulario de solicitudes: más grises para que se distingan del fondo */
+.sol-form .input, .sol-form .textarea, .sol-form .select, .sol-form .combobox__input {
+  background: color-mix(in srgb, var(--label) 9%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--label) 12%, transparent);
+}
+.sol-form .input:hover, .sol-form .textarea:hover, .sol-form .select:hover, .sol-form .combobox__input:hover {
+  background: color-mix(in srgb, var(--label) 12%, var(--surface));
+}
+.sol-form .input:focus, .sol-form .textarea:focus, .sol-form .select:focus, .sol-form .combobox__input:focus {
+  background: var(--surface);
+}

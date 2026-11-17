@@ -4,7 +4,11 @@ import { api } from '../../core/api/client';
 export interface CampoSolicitud {
   key: string;
   label: string;
-  tipo: 'texto' | 'select' | 'area';
+  tipo: 'texto' | 'select' | 'area' | 'banco' | 'documento';
+  /** Con RUC o DNI completo, el formulario trae solos la razón social, la dirección y el nombre */
+  autoconsulta?: boolean;
+  /** Tarjeta del formulario donde se muestra el campo */
+  grupo?: string;
   requerido?: boolean;
   opciones?: string[];
   defecto?: string;
