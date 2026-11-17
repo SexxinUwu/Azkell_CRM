@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, ClipboardList, Coins, FileCheck, FileText, Package, Paperclip, Truck, Wallet, X } from 'lucide-react';
+import { Check, CheckCircle2, ClipboardList, Coins, FileCheck, FileText, Package, Paperclip, Truck, Wallet, X } from 'lucide-react';
 import '../gerencia/gerencia-oc.css';
 import './pago.css';
 import { api, errorMessage } from '../../core/api/client';
 import { Button } from '../../core/ui/Button';
 import { Badge, Notice } from '../../core/ui/Display';
-import { Field, SelectInput, TextInput } from '../../core/ui/Field';
+import { Field, TextInput } from '../../core/ui/Field';
 import { Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { formatFechaPe, formatMoneda } from '../../core/lib/format';
@@ -20,7 +20,49 @@ import { codigoOC, esUSD, importeOC, montoAPagar, redondear2, type OrdenPago } f
 
 const MAX_VOUCHER = 25 * 1024 * 1024; // mismo límite que el servidor
 
-interface CuentaOrigen { label: string; usd: boolean; numero: string }
+interface CuentaOrigen { label: string; usd: boolean; numero: string; banco: string; tipo: string; cci: string; detraccion?: boolean }
+
+/** "BCP (BANCO DE CRÉDITO DEL PERÚ)" → "BCP" */
+const bancoCorto = (b: string) => (b.split(' (')[0] || b).trim() || '—';
+function tipoCorto(t: string): string {
+  const x = t.toUpperCase();
+  if (x.includes('AHORRO')) return 'Ahorros';
+  if (x.includes('DETRAC')) return 'Detracción';
+  if (x.includes('CORRIENTE') || x.includes('CTE')) return 'Corriente';
+  return t ? t.charAt(0) + t.slice(1).toLowerCase() : 'Cuenta';
+}
+
+/** Cuentas como tarjetas elegibles: se lee todo (banco, tipo, moneda, número y CCI) sin cortes */
+function CuentasElegibles({ titulo, cuentas, valor, onElegir, vacio, error }: {
+  titulo: string; cuentas: CuentaOrigen[]; valor: string; onElegir: (label: string) => void; vacio: string; error?: string;
+}) {
+  return (
+    <div className="pp-ctas">
+      <span className="pp-ctas__titulo">{titulo}</span>
+      {cuentas.length === 0 ? <span className="pp-ctas__vacio">{vacio}</span> : (
+        <div className="pp-ctas__lista" role="radiogroup" aria-label={titulo}>
+          {cuentas.map(c => {
+            const sel = c.label === valor;
+            return (
+              <button key={c.label} type="button" role="radio" aria-checked={sel} title={c.label}
+                className={`pp-cta${sel ? ' pp-cta--sel' : ''}`} onClick={() => onElegir(c.label)}>
+                <span className="pp-cta__fila">
+                  <b className="pp-cta__banco">{bancoCorto(c.banco)}</b>
+                  <span className={`pp-cta__mon${c.usd ? ' pp-cta__mon--usd' : ''}`}>{c.usd ? 'US$' : 'S/'}</span>
+                  <span className="pp-cta__tipo">{tipoCorto(c.tipo)}{c.detraccion ? ' · Detracción' : ''}</span>
+                  {sel && <Check size={15} className="pp-cta__check" aria-hidden />}
+                </span>
+                <span className="pp-cta__num">{c.numero || '—'}</span>
+                {c.cci && <span className="pp-cta__cci">CCI {c.cci}</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {error && <span className="field__error" role="alert">{error}</span>}
+    </div>
+  );
+}
 
 interface Errores { constancia?: string; cuenta?: string; monto?: string; voucher?: string; confirmado?: string }
 
@@ -58,7 +100,11 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
   // Cuenta del proveedor a la que se paga (de las registradas)
   const [destinoSel, setDestinoSel] = useState('');
   const ctasProv = useCuentasProveedor(oc?.proveedor_id ? String(oc.proveedor_id) : null, !!oc);
-  const destinos = useMemo(() => (ctasProv.data ?? []).map(c => ({ label: etiquetaCuentaProveedor(c), usd: esUSD(c.moneda ?? 'SOLES') })), [ctasProv.data]);
+  const destinos = useMemo<CuentaOrigen[]>(() => (ctasProv.data ?? []).map(c => {
+    const x = c as typeof c & { cci?: string | null };
+    return { label: etiquetaCuentaProveedor(c), usd: esUSD(c.moneda ?? 'SOLES'), numero: String(c.numero_cuenta ?? '').trim(),
+      banco: String(c.banco ?? ''), tipo: String(c.tipo_cuenta ?? ''), cci: String(x.cci ?? '').trim(), detraccion: !!c.detraccion && c.detraccion !== '0' };
+  }), [ctasProv.data]);
   useEffect(() => {
     if (!oc || destinoSel || destinos.length === 0) return;
     const guardada = oc.cuenta_bancaria_proveedor ?? '';
@@ -75,6 +121,9 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
           label: `${b.banco ?? ''} - ${b.tipo_cuenta || 'CTA CTE'} [${usd ? 'DÓLARES' : 'SOLES'}] - ${numero}`,
           usd,
           numero,
+          banco: String(b.banco ?? ''),
+          tipo: String(b.tipo_cuenta ?? ''),
+          cci: String(b.cci ?? '').trim(),
         };
       }), [bancos.data]);
 
@@ -174,7 +223,7 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
       }
     >
       {oc && (
-        <div className="ga-det pago-proc">
+        <div className="ga-det pp-hoja">
           <div className="ga-det__col">
             <div className="ga-det__cab">
               <Badge tone="green">Aprobada</Badge>
@@ -209,29 +258,12 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
                 <Notice>No hay cuentas bancarias activas. Regístralas en Tesorería › Bancos.</Notice>
               ) : null}
 
-              <div className="ga-dos pago-proc__cuentas">
-                <div className="pago-proc__col">
-                <Field label="Cuenta de origen (empresa)" error={errores.cuenta}>
-                  {p => (
-                    <SelectInput {...p} value={cuentaSel} disabled={bancos.isLoading || cuentas.length === 0}
-                      onChange={e => { setCuentaSel(e.target.value); setErrores(x => ({ ...x, cuenta: undefined, monto: undefined })); }}>
-                      <option value="">{bancos.isLoading ? 'Cargando cuentas…' : 'Elige una cuenta'}</option>
-                      {cuentas.map(c => <option key={c.label} value={c.label}>{c.label}</option>)}
-                    </SelectInput>
-                  )}
-                </Field>
-                {cuenta && <span className="pago-proc__completa">{cuenta.label}</span>}
-                </div>
-                <div className="pago-proc__col">
-                <Field label="Cuenta destino (proveedor)" hint={destinos.length === 0 && !ctasProv.isLoading ? 'El proveedor no tiene cuentas registradas: agrégalas en Almacén › Proveedores.' : undefined}>
-                  {p => destinos.length > 0 ? (
-                    <SelectInput {...p} value={destinoSel} onChange={e => setDestinoSel(e.target.value)}>
-                      {destinos.map(d => <option key={d.label} value={d.label}>{d.label}</option>)}
-                    </SelectInput>
-                  ) : <TextInput {...p} readOnly value={ctasProv.isLoading ? 'Cargando cuentas…' : (oc.cuenta_bancaria_proveedor || 'No especificada')} />}
-                </Field>
-                {destino && <span className="pago-proc__completa">{destino.label}</span>}
-                </div>
+              <div className="pp-ctas-par">
+                <CuentasElegibles titulo="Pagar desde (empresa)" cuentas={cuentas} valor={cuentaSel} error={errores.cuenta}
+                  vacio={bancos.isLoading ? 'Cargando cuentas…' : 'Sin cuentas activas'}
+                  onElegir={l => { setCuentaSel(l); setErrores(x => ({ ...x, cuenta: undefined, monto: undefined })); }} />
+                <CuentasElegibles titulo="Depositar a (proveedor)" cuentas={destinos} valor={destinoSel} onElegir={setDestinoSel}
+                  vacio={ctasProv.isLoading ? 'Cargando cuentas…' : (oc.cuenta_bancaria_proveedor || 'Sin cuentas registradas. Agrégalas en Tesorería › Cuentas de proveedores.')} />
               </div>
               {destino && cuenta && destino.usd !== cuenta.usd && (
                 <Notice tone="accent">Pagas desde una cuenta {cuenta.usd ? 'en dólares' : 'en soles'} a una cuenta {destino.usd ? 'en dólares' : 'en soles'} del proveedor: el banco convertirá con su propio tipo de cambio. Si el proveedor quiere soles, registra y elige su cuenta en soles.</Notice>
