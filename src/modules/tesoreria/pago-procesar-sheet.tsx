@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Check, CheckCircle2, ClipboardList, Coins, Copy, FileCheck, FileText, Package, Paperclip, Pencil, Truck, Wallet, X } from 'lucide-react';
 import '../gerencia/gerencia-oc.css';
@@ -153,12 +154,18 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
   const [editDestino, setEditDestino] = useState(false);
   const [recien, setRecien] = useState<'origen' | 'destino' | null>(null);
   useEffect(() => { if (!recien) return; const t = window.setTimeout(() => setRecien(null), 1600); return () => window.clearTimeout(t); }, [recien]);
-  const ctasProv = useCuentasProveedor(oc?.proveedor_id ? String(oc.proveedor_id) : null, !!oc);
-  const destinos = useMemo<CuentaOrigen[]>(() => (ctasProv.data ?? []).map(c => {
+  const esVale = !!oc?.cuentas_destino;
+  const ctasProv = useCuentasProveedor(oc?.proveedor_id ? String(oc.proveedor_id) : null, !!oc && !esVale);
+  const cuentasFuente = esVale ? (oc?.cuentas_destino ?? []) : (ctasProv.data ?? []);
+  const cargandoCuentas = !esVale && !!oc && ctasProv.isLoading;
+  const destinos = useMemo<CuentaOrigen[]>(() => cuentasFuente.map(c => {
     const x = c as typeof c & { cci?: string | null };
     return { label: etiquetaCuentaProveedor(c), usd: esUSD(c.moneda ?? 'SOLES'), numero: String(c.numero_cuenta ?? '').trim(),
       banco: String(c.banco ?? ''), tipo: String(c.tipo_cuenta ?? ''), cci: String(x.cci ?? '').trim(), detraccion: !!c.detraccion && c.detraccion !== '0' };
-  }), [ctasProv.data]);
+  }), [cuentasFuente]);
+  // Sin cuenta bancaria registrada del proveedor o beneficiario no se confirma ni se sube el pago
+  const sinCuentaDestino = !!oc && !cargandoCuentas && destinos.length === 0;
+  const rutaRegistro = oc?.pagar_a === 'CONDUCTOR' ? '/tesoreria/cuentas-personal' : '/tesoreria/cuentas-proveedores';
   useEffect(() => {
     if (!oc || destinoSel || destinos.length === 0) return;
     const guardada = oc.cuenta_bancaria_proveedor ?? '';
@@ -213,6 +220,7 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
 
   async function confirmar() {
     if (!oc || guardando) return;
+    if (sinCuentaDestino) { toast('No hay cuenta bancaria registrada del destinatario: no se puede pagar.', 'error'); haptic('warning'); return; }
     const e: Errores = {};
     const totalmenteCompensada = ncs.length > 0 && monto <= 0;
     if (!constancia.trim() && !totalmenteCompensada) e.constancia = 'Ingresa el número de constancia u operación.';
@@ -272,7 +280,7 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={guardando}>Cancelar</Button>
-          <Button variant="primary" icon={<CheckCircle2 size={16} />} loading={guardando} onClick={confirmar}>Confirmar pago</Button>
+          <Button variant="primary" icon={<CheckCircle2 size={16} />} loading={guardando} disabled={sinCuentaDestino || cargandoCuentas} onClick={confirmar}>Confirmar pago</Button>
         </>
       }
     >
@@ -339,13 +347,19 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
                     </motion.div>
                   ) : (
                     <motion.div key="fd" {...animLista}>
-                      <CuentaFila etiqueta="Proveedor" cuenta={destino} recien={recien === 'destino'}
-                        vacio={ctasProv.isLoading ? 'Cargando cuentas…' : (oc.cuenta_bancaria_proveedor || 'Sin cuentas registradas. Agrégalas en Tesorería › Cuentas de proveedores.')} />
+                      <CuentaFila etiqueta={oc.pagar_a === 'CONDUCTOR' ? 'Beneficiario' : 'Proveedor'} cuenta={destino} recien={recien === 'destino'}
+                        vacio={cargandoCuentas ? 'Cargando cuentas…' : 'Sin cuenta registrada'} />
                     </motion.div>
                   )}
                 </AnimatePresence>
                 {errores.cuenta && <span className="field__error" role="alert">{errores.cuenta}</span>}
               </div>
+              {sinCuentaDestino && (
+                <Notice tone="error">
+                  <strong>No hay cuenta bancaria registrada.</strong> {oc.pagar_a === 'CONDUCTOR' ? 'Este beneficiario' : 'Este proveedor'} no tiene una cuenta registrada, por eso no se puede confirmar ni subir el pago.
+                  {' '}<Link to={rutaRegistro} onClick={onClose}>Regístrala aquí</Link> y vuelve a abrir el pago.
+                </Notice>
+              )}
               {destino && cuenta && destino.usd !== cuenta.usd && (
                 <Notice tone="accent">Pagas desde una cuenta {cuenta.usd ? 'en dólares' : 'en soles'} a una cuenta {destino.usd ? 'en dólares' : 'en soles'} del proveedor: el banco convertirá con su propio tipo de cambio. Si el proveedor quiere soles, registra y elige su cuenta en soles.</Notice>
               )}
@@ -437,7 +451,7 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
 
             <section className="ga-sec" aria-label="Confirmación">
               <label className="pago-proc__confirmar">
-                <input type="checkbox" checked={confirmado}
+                <input type="checkbox" checked={confirmado} disabled={sinCuentaDestino}
                   onChange={e => { setConfirmado(e.target.checked); setErrores(x => ({ ...x, confirmado: undefined })); }} />
                 <span>Confirmo registrar este pago en Caja. No se puede revertir desde esta pantalla.</span>
               </label>

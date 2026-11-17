@@ -29,7 +29,8 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'solic', titulo: 'Solicitante', ancho: 150 },
   { id: 'centro', titulo: 'Centro costo', ancho: 120 },
   { id: 'motivo', titulo: 'Motivo', ancho: 240 },
-  { id: 'oc', titulo: 'Orden de compra', ancho: 150 },
+  { id: 'tipo', titulo: 'Tipo', ancho: 150 },
+  { id: 'oc', titulo: 'N° de documento', ancho: 150 },
   { id: 'creador', titulo: 'Usuario creación', ancho: 160 },
   { id: 'fecha', titulo: 'Fecha registro', ancho: 130 },
   { id: 'venc', titulo: 'Días restantes', ancho: 140, alinear: 'center' },
@@ -62,6 +63,14 @@ function estadoBadge(o: OrdenPago) {
   if (esPendiente(o)) return <Badge tone="amber">Por pagar</Badge>;
   if (esPagada(o)) return <Badge tone="green">Procesado</Badge>;
   return <Badge>{o.estado || '—'}</Badge>;
+}
+
+/** De dónde viene lo que se paga: una caja (vale de combustible) o una orden de compra / de servicio */
+export function TipoPago({ oc }: { oc: OrdenPago }) {
+  const caja = oc.origen_pago === 'CAJA' || /^VC-/i.test(String(oc.id));
+  if (caja) return <Badge tone="accent">CAJA</Badge>;
+  const servicio = /servicio/i.test(String(oc.tipo_orden ?? ''));
+  return <Badge tone="amber">{servicio ? 'ORDEN DE SERVICIO' : 'ORDEN DE COMPRA'}</Badge>;
 }
 
 function VencimientoCelda({ oc }: { oc: OrdenPago }) {
@@ -288,6 +297,7 @@ export function PagoRequerimientosPage() {
                 <Celda>{oc.solicitante || '—'}</Celda>
                 <Celda>{oc.centro_costo || '—'}</Celda>
                 <Celda>{oc.motivo_entrada || oc.motivo || '—'}</Celda>
+                <Celda><TipoPago oc={oc} /></Celda>
                 <Celda mono><span className="pago-codigo">{codigoOC(oc)}</span></Celda>
                 <Celda>{oc.creador_nombre || oc.creado_por || '—'}</Celda>
                 <Celda mono>{formatFechaPe(oc.fecha)}</Celda>

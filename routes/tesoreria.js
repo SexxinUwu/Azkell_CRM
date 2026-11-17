@@ -11,6 +11,33 @@ module.exports = function (db, broadcast, logAudit) {
     logAudit = envolverLogAudit(logAudit, db);
     const router = express.Router();
 
+    /**
+     * Cuentas bancarias registradas del destinatario de un pago: del personal (por DNI) o del proveedor / estación (por RUC o id).
+     * Solo cuentas activas, la principal primero. Si no hay ninguna, el pago no se puede registrar.
+     */
+    async function cuentasRegistradasDestino(tdb, { pagarA, doc, proveedorId }) {
+        const campos = 'banco, tipo_cuenta, moneda, numero_cuenta, cci, detraccion, principal';
+        const d = String(doc || '').trim();
+        try {
+            if (String(pagarA || '').toUpperCase() === 'CONDUCTOR') {
+                if (!d) return [];
+                const [r] = await tdb.query(`SELECT ${campos.replace(', detraccion', '')} FROM persona_cuentas_bancarias WHERE documento = ? AND estado = 1 ORDER BY principal DESC, id ASC`, [d]);
+                return r;
+            }
+            let ids = [];
+            if (proveedorId) ids.push(String(proveedorId));
+            else if (d) {
+                const [p] = await tdb.query('SELECT id FROM proveedores_inv WHERE TRIM(numero_documento) = ? LIMIT 1', [d]);
+                if (p.length) ids.push(String(p[0].id));
+                const [e] = await tdb.query('SELECT id FROM combustible_estaciones_proveedores WHERE TRIM(proveedor_ruc) = ? LIMIT 1', [d]).catch(() => [[]]);
+                if (e.length) ids.push('EST-' + e[0].id);
+            }
+            if (!ids.length) return [];
+            const [r] = await tdb.query(`SELECT ${campos} FROM proveedor_cuentas_bancarias WHERE proveedor_id IN (?) AND estado = 1 ORDER BY principal DESC, id ASC`, [ids]);
+            return r;
+        } catch (e) { console.warn('cuentasRegistradasDestino:', e.message); return []; }
+    }
+
     function getDb(req) {
         const d = (req && req.db) ? req.db : db;
         if (!d) return null;
@@ -2358,14 +2385,14 @@ module.exports = function (db, broadcast, logAudit) {
             try {
                 const estadosVale = estadoFiltro === 'todos' ? ['APROBADO', 'PROCESADO'] : (estadoFiltro === 'procesados' || estadoFiltro === 'pagados') ? ['PROCESADO'] : ['APROBADO'];
                 const [vales] = await tdb.query(
-                    `SELECT c.*, v.codigo AS vale_codigo, v.galones, v.combustible, v.estacion_nombre, v.pagar_a, v.beneficiario_doc, v.voucher_url AS ticket_url,
-                            (SELECT CONCAT(cd.banco, ' - ', cd.numero_cuenta) FROM conductores cd WHERE v.pagar_a = 'CONDUCTOR' AND UPPER(cd.nombre) COLLATE utf8mb4_unicode_ci = UPPER(v.beneficiario_nombre) COLLATE utf8mb4_unicode_ci AND COALESCE(cd.numero_cuenta, '') <> '' LIMIT 1) AS cuenta_conductor
+                    `SELECT c.*, v.codigo AS vale_codigo, v.galones, v.combustible, v.estacion_nombre, v.pagar_a, v.beneficiario_doc, v.voucher_url AS ticket_url
                      FROM tesoreria_caja c JOIN viaje_vales_combustible v ON v.caja_id = c.id
                      WHERE c.origen = 'VALE_COMBUSTIBLE' AND v.anulado = 0 AND UPPER(c.estado) IN (?) ORDER BY c.fecha DESC, c.id DESC`, [estadosVale]);
                 for (const c of vales) {
                     const pagada = String(c.estado).toUpperCase() === 'PROCESADO';
                     const esUsdVale = /D[OÓ]L|USD/i.test(String(c.moneda || ''));
                     const monto = parseFloat(c.importe_total) || 0;
+                    const cuentasDestino = await cuentasRegistradasDestino(tdb, { pagarA: c.pagar_a, doc: c.beneficiario_doc });
                     let ticket = null;
                     if (c.ticket_url) { const k = s3KeyFromUrl(c.ticket_url); ticket = k ? await getPresignedUrl(k).catch(() => c.ticket_url) : c.ticket_url; }
                     let pagoVoucher = null;
@@ -2379,7 +2406,7 @@ module.exports = function (db, broadcast, logAudit) {
                         creado_por: c.usuario_creacion, creador_nombre: c.usuario_creacion || 'SISTEMA', aprobado_por: c.usuario_aprobacion, aprobador_nombre: c.usuario_aprobacion || 'Gerencia',
                         fecha_aprobacion: c.fecha_aprobacion || c.fecha, dias_credito: 0, dias_pagar: 0, condicion_pago: 'Al contado', prioridad: 'Normal',
                         proveedor_id: null, proveedor_nombre: c.persona, proveedor_ruc: c.beneficiario_doc || '',
-                        cuenta_bancaria_proveedor: c.cuenta_conductor || '', cuenta_destino_moneda: esUsdVale ? 'USD' : 'PEN',
+                        cuenta_bancaria_proveedor: '', cuentas_destino: cuentasDestino, pagar_a: c.pagar_a, origen_pago: 'CAJA', cuenta_destino_moneda: esUsdVale ? 'USD' : 'PEN',
                         cuenta_bancaria_empresa: pagada ? (c.cuenta_bancaria_empresa || '') : '', cuenta_origen_moneda: esUsdVale ? 'USD' : 'PEN',
                         estado: pagada ? 'Procesado' : 'Aprobado', numero_operacion: c.numero_constancia_deposito || '', fecha_pago: pagada ? (c.actualizado_en || c.fecha) : null, pagado_por: pagada ? (c.usuario_aprobacion || '') : '',
                         url_cotizacion: null, url_cotizacion_presigned: null, url_factura: c.ticket_url, url_factura_presigned: ticket,
@@ -2411,8 +2438,10 @@ module.exports = function (db, broadcast, logAudit) {
 
             // Vale de combustible: se paga su caja ya aprobada (no se crea otro egreso)
             if (/^VC-\d{4}-\d+$/i.test(id)) {
-                const [vr] = await tdb.query('SELECT caja_id, total, anulado FROM viaje_vales_combustible WHERE codigo = ?', [id]);
+                const [vr] = await tdb.query('SELECT caja_id, total, anulado, pagar_a, beneficiario_doc FROM viaje_vales_combustible WHERE codigo = ?', [id]);
                 if (!vr.length || vr[0].anulado || !vr[0].caja_id) return res.status(404).json({ error: 'Vale no encontrado o anulado.' });
+                const ctasVale = await cuentasRegistradasDestino(tdb, { pagarA: vr[0].pagar_a, doc: vr[0].beneficiario_doc });
+                if (!ctasVale.length) return res.status(409).json({ error: 'sin_cuenta_destino', mensaje: 'El beneficiario no tiene una cuenta bancaria registrada. Regístrala antes de pagar.' });
                 if (!numeroConstancia && !req.file) return res.status(400).json({ error: 'Adjunta el comprobante o escribe el número de operación: todo pago necesita su respaldo.' });
                 let voucherVale = null;
                 if (req.file) {
@@ -2434,6 +2463,12 @@ module.exports = function (db, broadcast, logAudit) {
             const [ocRows] = await tdb.query("SELECT * FROM entradas_inv WHERE id = ?", [id]);
             if (!ocRows.length) return res.status(404).json({ error: 'Orden de Compra no encontrada' });
             const oc = ocRows[0];
+            let ncEnviadas = [];
+            try { ncEnviadas = typeof b.nc_aplicaciones === 'string' ? JSON.parse(b.nc_aplicaciones || '[]') : (Array.isArray(b.nc_aplicaciones) ? b.nc_aplicaciones : []); } catch (e) { ncEnviadas = []; }
+            if (!ncEnviadas.length) {
+                const ctasOc = await cuentasRegistradasDestino(tdb, { pagarA: 'PROVEEDOR', doc: '', proveedorId: oc.proveedor_id });
+                if (!ctasOc.length) return res.status(409).json({ error: 'sin_cuenta_destino', mensaje: 'El proveedor no tiene una cuenta bancaria registrada. Regístrala antes de pagar.' });
+            }
             // Solo se paga una orden aprobada o autorizada: una ya procesada no puede generar otro egreso
             const estadoOc = String(oc.estado || '').toLowerCase().trim();
             if (!['aprobado', 'autorizado', 'pago parcial'].includes(estadoOc)) {

@@ -43,6 +43,12 @@ export interface OrdenPago {
   condicion_pago?: string;
   prioridad?: string;
   proveedor_id?: string | number | null;
+  /** Vales de combustible: cuentas REGISTRADAS del beneficiario (las manda el servidor) */
+  cuentas_destino?: Array<{ banco: string | null; tipo_cuenta: string | null; moneda: string | null; numero_cuenta: string | null; cci: string | null; detraccion?: boolean | number | null }>;
+  /** CONDUCTOR, ESTACION o PROVEEDOR (solo vales) */
+  pagar_a?: string;
+  /** CAJA para los vales de combustible; el resto son órdenes de compra o de servicio */
+  origen_pago?: string;
   proveedor_nombre?: string;
   proveedor_ruc?: string;
   cuenta_bancaria_proveedor?: string;
