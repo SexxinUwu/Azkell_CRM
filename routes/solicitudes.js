@@ -366,16 +366,19 @@ function tipoDeDocumento(doc) {
     router.post('/:id/cancelar', async (req, res) => {
         const conn = await P(req).getConnection();
         try {
+            const motivoCancel = texto((req.body || {}).motivo, 500);
+            if (!motivoCancel) throw aviso('Escribe el motivo de la cancelación.');
             await conn.beginTransaction();
             const [r] = await conn.query('SELECT * FROM solicitudes WHERE id = ? FOR UPDATE', [req.params.id]);
             if (!r.length) throw aviso('Solicitud no encontrada.', 404);
             const s = r[0];
             if (s.solicitante !== usuarioDe(req) && !esAdmin(req)) throw aviso('Solo quien la pidió puede cancelarla.', 403);
             if (s.estado !== 'PENDIENTE') throw aviso(`La solicitud ya está ${s.estado.toLowerCase()}.`, 409);
-            const [u] = await conn.query("UPDATE solicitudes SET estado = 'CANCELADA' WHERE id = ? AND estado = 'PENDIENTE'", [s.id]);
+            const [u] = await conn.query("UPDATE solicitudes SET estado = 'CANCELADA', comentario_revision = ? WHERE id = ? AND estado = 'PENDIENTE'", [motivoCancel, s.id]);
             if (u.affectedRows !== 1) throw new Error('No se pudo cancelar.');
-            await historial(conn, s.id, 'CANCELADA', usuarioDe(req), null);
+            await historial(conn, s.id, 'CANCELADA', usuarioDe(req), motivoCancel);
             await conn.commit();
+            if (typeof logAudit === 'function') logAudit(req, 'SOLICITUDES', 'Solicitudes', 'CANCELÓ', `${s.codigo}: ${motivoCancel}`);
             res.json({ ok: true });
         } catch (e) { try { await conn.rollback(); } catch (x) { /* sin transacción */ } responder(res, e, 'cancelar'); } finally { conn.release(); }
     });

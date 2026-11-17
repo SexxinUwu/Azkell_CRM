@@ -113,7 +113,7 @@ export function SolicitudesPage() {
       )}
 
       <NuevaSolicitudSheet open={nueva} onClose={() => setNueva(false)} />
-      <DetalleSolicitudSheet id={abiertaId} onClose={() => setAbiertaId(null)} />
+      <DetalleSolicitudSheet id={abiertaId} onClose={() => setAbiertaId(null)} modo="solicitante" />
     </Page>
   );
 }

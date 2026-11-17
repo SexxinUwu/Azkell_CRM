@@ -96,8 +96,8 @@ export const aprobarSolicitud = (id: number, comentario?: string) =>
 export const rechazarSolicitud = (id: number, comentario: string) =>
   api<{ ok: boolean }>(`/solicitudes/${id}/rechazar`, { method: 'POST', body: { comentario } });
 
-export const cancelarSolicitud = (id: number) =>
-  api<{ ok: boolean }>(`/solicitudes/${id}/cancelar`, { method: 'POST' });
+export const cancelarSolicitud = (id: number, motivo: string) =>
+  api<{ ok: boolean }>(`/solicitudes/${id}/cancelar`, { method: 'POST', body: { motivo } });
 
 export interface Titular { tipo: 'PROVEEDOR' | 'CLIENTE' | 'PERSONAL'; ref: string; doc: string; nombre: string }
 
