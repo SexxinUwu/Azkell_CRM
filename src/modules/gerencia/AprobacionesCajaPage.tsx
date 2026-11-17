@@ -48,7 +48,9 @@ interface CajaMov {
   tipo_comprobante?: string;
   cuenta_bancaria_empresa?: string;
   voucher_url?: string;
+  voucher_view_url?: string;
   sustento_url?: string;
+  sustento_view_url?: string;
   fecha_aprobacion?: string;
   [key: string]: unknown;
 }
@@ -533,8 +535,8 @@ function DetalleCajaSheet({ caja, onClose, puedeAccionar, onAccion }: {
   const moneda = (c?.moneda ?? 'SOLES').toUpperCase();
   const monedaTc = moneda === 'SOLES' || moneda === 'PEN' ? 'Soles' : `${moneda} (TC ${c?.tipo_cambio || '1.000'})`;
   const adjuntos = c ? [
-    { titulo: 'Voucher de pago', url: c.voucher_url, Icono: Receipt },
-    { titulo: 'Sustento', url: c.sustento_url, Icono: FileCheck },
+    { titulo: 'Comprobante / ticket', url: c.sustento_view_url || c.sustento_url, Icono: FileCheck },
+    { titulo: 'Voucher de pago', url: c.voucher_view_url || c.voucher_url, Icono: Receipt },
   ] : [];
 
   return (
