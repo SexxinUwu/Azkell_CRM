@@ -281,6 +281,8 @@ export function AprobacionesCajaPage() {
       haptic(tipo === 'aprobar' ? 'success' : 'warning');
       cerrarAccion();
       qc.invalidateQueries({ queryKey: ['gerencia', 'aprobaciones-caja'] });
+      // Como en las OC: lo aprobado pasa a Tesorería (Caja y Movimientos) y debe verse al instante
+      qc.invalidateQueries({ queryKey: ['tesoreria'] });
     } catch (e) {
       setErrAccion(errorMessage(e));
       haptic('warning');

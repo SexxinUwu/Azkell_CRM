@@ -63,6 +63,8 @@ export function useCaja(f: CajaFiltros = {}) {
       return api(`/tesoreria/caja${qs ? '?' + qs : ''}`).then(r => arr<CajaMovimiento>(r));
     },
     staleTime: 30_000,
+    // Siempre al día al entrar: una caja aprobada en Gerencia no debe seguir saliendo "por aprobar"
+    refetchOnMount: 'always',
   });
 }
 
