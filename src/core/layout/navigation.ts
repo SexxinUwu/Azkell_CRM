@@ -159,6 +159,12 @@ const SECCIONES_BASE: NavSection[] = [
     ],
   },
   {
+    title: 'Solicitudes',
+    items: [
+      { key: 'solicitudes', label: 'Solicitudes', to: '/solicitudes', icon: ClipboardCheck, permissions: [] },
+    ],
+  },
+  {
     title: 'Gerencia',
     items: [
       { key: 'aprobaciones-oc', label: 'Aprobación de O/C', to: '/gerencia/aprobaciones-oc', icon: ClipboardCheck, permissions: ver('gerencia_aprobaciones_oc'), badge: 'aprob-oc' },

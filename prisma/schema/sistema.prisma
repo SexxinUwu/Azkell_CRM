@@ -180,3 +180,37 @@ model Usuario {
 
   @@map("usuarios")
 }
+
+model Solicitud {
+  id                  Int       @id @default(autoincrement())
+  codigo              String    @unique(map: "uq_solicitud_codigo") @db.VarChar(20)
+  tipo                String    @db.VarChar(40)
+  estado              String    @default("PENDIENTE") @db.VarChar(20)
+  titulo              String    @default("") @db.VarChar(200)
+  datos_json          String?   @db.LongText
+  motivo              String?   @db.VarChar(500)
+  solicitante         String    @default("") @db.VarChar(150)
+  revisado_por        String?   @db.VarChar(150)
+  revisado_en         DateTime? @db.DateTime(0)
+  comentario_revision String?   @db.VarChar(500)
+  resultado_json      String?   @db.Text
+  created_at          DateTime? @default(now()) @db.Timestamp(0)
+  updated_at          DateTime? @default(now()) @updatedAt @db.Timestamp(0)
+
+  @@index([estado], map: "idx_solicitud_estado")
+  @@index([tipo], map: "idx_solicitud_tipo")
+  @@index([solicitante], map: "idx_solicitud_solicitante")
+  @@map("solicitudes")
+}
+
+model SolicitudHistorial {
+  id           Int       @id @default(autoincrement())
+  solicitud_id Int
+  accion       String    @db.VarChar(30)
+  usuario      String    @default("") @db.VarChar(150)
+  comentario   String?   @db.VarChar(500)
+  created_at   DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([solicitud_id], map: "idx_solicitud_hist")
+  @@map("solicitudes_historial")
+}

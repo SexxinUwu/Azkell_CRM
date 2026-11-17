@@ -1,0 +1,17 @@
+/* Solicitudes: elegir el tipo y el historial */
+.sol-tipos { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.sol-tipo {
+  display: flex; align-items: flex-start; gap: 12px; padding: 14px; text-align: left; cursor: pointer; font: inherit; color: inherit;
+  background: var(--fill-subtle); border: 1.5px solid transparent; border-radius: var(--r-lg);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.sol-tipo:hover { background: var(--fill); border-color: var(--accent); }
+.sol-tipo__icono { display: grid; place-items: center; width: 38px; height: 38px; flex-shrink: 0; border-radius: 12px; background: var(--accent-tint); color: var(--accent-ink); }
+.sol-tipo__texto { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.sol-tipo__texto strong { font-size: 0.9375rem; }
+.sol-tipo__texto small { font-size: 0.78rem; color: var(--label-2); line-height: 1.35; }
+
+.sol-historial { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sol-historial li { display: flex; align-items: flex-start; gap: 8px; font-size: 0.8125rem; color: var(--label-2); line-height: 1.4; }
+.sol-historial li svg { flex-shrink: 0; margin-top: 2px; }
+.sol-historial strong { color: var(--label); }
