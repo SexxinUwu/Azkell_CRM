@@ -44,7 +44,9 @@ export function aSoles(m: Pick<CajaMovimiento, 'importe_total' | 'moneda' | 'tip
 export const hoyYMD = () => dayKey(new Date());
 export const inicioMesYMD = () => `${hoyYMD().slice(0, 8)}01`;
 
-export const numeroDoc = (m: Pick<CajaMovimiento, 'serie' | 'numero'>) => (m.serie && m.numero ? `${m.serie}-${m.numero}` : m.numero ?? '');
+/** Correlativo con 5 dígitos como las órdenes de compra (2026-00001); los antiguos de 8 dígitos se muestran igual */
+export const numero5 = (n: string | null | undefined) => (/^\d+$/.test(String(n ?? '')) ? String(parseInt(String(n), 10)).padStart(5, '0') : String(n ?? ''));
+export const numeroDoc = (m: Pick<CajaMovimiento, 'serie' | 'numero'>) => (m.serie && m.numero ? `${m.serie}-${numero5(m.numero)}` : numero5(m.numero));
 
 export type CampoOrden = 'fecha' | 'numero' | 'importe' | 'estado' | 'persona' | 'motivo';
 export interface Orden { campo: CampoOrden; asc: boolean }

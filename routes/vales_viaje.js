@@ -242,7 +242,7 @@ module.exports = (db, logAudit) => {
                 `INSERT INTO tesoreria_caja (fecha, hora, fecha_valuta, hora_valuta, numero_factura, serie, numero, orden_viaje, conductor, ruta_viaje, placa, autoriza, motivo, centro_costo, sub_motivo,
                     modalidad_pago, moneda, tipo_persona, persona, tipo_movimiento, subtotal, retencion_detraccion, importe_total, tipo_cambio, descripcion, tipo_comprobante, cuenta_bancaria_persona, cuenta_bancaria_empresa, sustento_url, estado, usuario_creacion, origen, origen_id)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Combustibles y Fluidos', 'CC-300', ?, ?, ?, ?, ?, 'EGRESO', ?, 0, ?, 1, ?, ?, ?, ?, ?, 'PENDIENTE', ?, 'VALE_COMBUSTIBLE', ?)`,
-                [fecha, horaLima(), fecha, '00:00:00', nroComprobante, serieCaja, String(n).padStart(8, '0'), viaje, conductor, vj[0].ruta || '', placa, autoriza,
+                [fecha, horaLima(), fecha, '00:00:00', nroComprobante, serieCaja, String(n).padStart(5, '0'), viaje, conductor, vj[0].ruta || '', placa, autoriza,
                     subMotivoDe(combustibleDe(b.combustible)), modalidad, moneda, pagarA === 'CONDUCTOR' ? 'CONDUCTOR' : 'PROVEEDOR', benNombre.slice(0, 190), total, total, descripcion, tipoComprobante, cuentaDestino, cuentaEmpresa, voucherUrl, usuario, ins.insertId]);
             if (caja.affectedRows !== 1) throw new Error('No se pudo crear la caja del vale.');
             const [upd] = await conn.query('UPDATE viaje_vales_combustible SET caja_id = ? WHERE id = ?', [caja.insertId, ins.insertId]);

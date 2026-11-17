@@ -341,7 +341,7 @@ module.exports = (db, logAudit) => {
                  VALUES (CURDATE(), CURTIME(), CURDATE(), CURTIME(), ?, ?, ?, ?, ?, 'DEVOLUCIÓN PROVEEDOR', 'CC-100', 'REEMBOLSO NOTA DE CRÉDITO',
                      'TRANSFERENCIA', ?, 'PROVEEDOR', ?, 'INGRESO', ?, 0, ?, 1, ?, 'NOTA DE CRÉDITO',
                      ?, ?, ?, 0, 'PROCESADO', ?, ?, NOW())`,
-                [constancia, `${n.serie}-${n.numero}`, anio, String(sig).padStart(8, '0'), usuario, n.moneda === 'USD' ? 'DOLARES' : 'SOLES', n.proveedor_nombre, monto, monto,
+                [constancia, `${n.serie}-${n.numero}`, anio, String(sig).padStart(5, '0'), usuario, n.moneda === 'USD' ? 'DOLARES' : 'SOLES', n.proveedor_nombre, monto, monto,
                     `REEMBOLSO NOTA DE CRÉDITO ${n.codigo} (${n.serie}-${n.numero})`, cuenta, voucherUrl, `Reembolso de la nota ${n.codigo} | Operación ${constancia}`, usuario, usuario]);
             await p.query('UPDATE compras_notas_credito SET reembolso_caja_id = ? WHERE id = ?', [caja.insertId, id]);
             await nc.historial(p, id, 'REEMBOLSADA', `Ingreso a Caja de ${n.moneda} ${monto.toFixed(2)} · operación ${constancia} · ${cuenta}`, usuario);

@@ -16,6 +16,7 @@ import { formatDolares, formatFechaPe, formatSoles } from '../../core/lib/format
 import { haptic } from '../../core/lib/haptics';
 import { useMediaQuery } from '../../core/lib/useMediaQuery';
 import { esDolar } from '../tesoreria/mov-utilidades';
+import { numero5 } from '../tesoreria/caja-lib';
 import { categoriaOc } from './api';
 import { chipEstado, nombreLimpio } from './presentacion';
 
@@ -91,7 +92,7 @@ function montoPorMoneda(lista: CajaMov[]): string {
 }
 
 const importeMov = (m: CajaMov) => (esDolar(m.moneda) ? formatDolares(numero(m.importe_total)) : formatSoles(numero(m.importe_total)));
-const codigoCaja = (m: CajaMov) => (m.serie || m.numero ? `CAJA-${m.serie ?? ''}-${m.numero ?? ''}` : `CAJA-${m.id}`);
+const codigoCaja = (m: CajaMov) => (m.serie || m.numero ? `CAJA-${m.serie ?? ''}-${numero5(m.numero)}` : `CAJA-${m.id}`);
 const beneficiario = (m: CajaMov) => m.persona || m.conductor || 'No especificado';
 const fechaDe = (m: CajaMov) => String(m.fecha ?? '').slice(0, 10);
 

@@ -123,7 +123,7 @@ async function siguienteNumeroCaja(tdb, serie) {
         const m = String(rows[0].numero).match(/\d+$/);
         if (m) siguiente = parseInt(m[0], 10) + 1;
     }
-    return String(siguiente).padStart(8, '0');
+    return String(siguiente).padStart(5, '0');
 }
 
 /** Egreso en la caja central de Tesorería (cuando se asigna o se repone un fondo) */

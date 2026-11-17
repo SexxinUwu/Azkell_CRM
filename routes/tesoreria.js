@@ -844,7 +844,7 @@ module.exports = function (db, broadcast, logAudit) {
                 const match = rows[0].numero.match(/\d+$/);
                 if (match) nextNum = parseInt(match[0], 10) + 1;
             }
-            const formatted = String(nextNum).padStart(8, '0');
+            const formatted = String(nextNum).padStart(5, '0');
             res.json({ ok: true, serie, numero: formatted });
         } catch (err) {
             console.error('Error al generar correlativo de caja:', err);
@@ -1969,7 +1969,7 @@ module.exports = function (db, broadcast, logAudit) {
                     const parsed = parseInt(lastNum[0].numero, 10);
                     if (!isNaN(parsed)) nextCorrelativo = parsed + 1;
                 }
-                const numeroFormateado = String(nextCorrelativo).padStart(8, '0');
+                const numeroFormateado = String(nextCorrelativo).padStart(5, '0');
                 const descFinal = descripcion || `Devolución de Viáticos - Orden de Viaje ${orden_viaje} - Conductor: ${conductor || 'Personal'} [Destino: ${destino_devolucion || 'CAJA_PRINCIPAL'}]`;
 
                 const [rCaja] = await tdb.query(`
@@ -2071,7 +2071,7 @@ module.exports = function (db, broadcast, logAudit) {
                         const parsed = parseInt(lastNum[0].numero, 10);
                         if (!isNaN(parsed)) nextCorrelativo = parsed + 1;
                     }
-                    const numeroFormateado = String(nextCorrelativo).padStart(8, '0');
+                    const numeroFormateado = String(nextCorrelativo).padStart(5, '0');
                     const descFinal = descripcion || `Reembolso por Liquidación [${itemConcepto.sub_motivo}] - Orden de Viaje ${orden_viaje} - Conductor: ${conductor || 'Personal'}`;
 
                     const [rCaja] = await tdb.query(`
@@ -2371,7 +2371,7 @@ module.exports = function (db, broadcast, logAudit) {
                     let pagoVoucher = null;
                     if (pagada && c.voucher_url && c.voucher_url !== c.ticket_url) { const k = s3KeyFromUrl(c.voucher_url); pagoVoucher = k ? await getPresignedUrl(k).catch(() => c.voucher_url) : c.voucher_url; }
                     resultado.push({
-                        id: c.vale_codigo, folio: c.vale_codigo, fecha: c.fecha, fecha_vencimiento: null, created_at: c.creado_en,
+                        id: c.vale_codigo, folio: `CAJA-${c.serie}-${String(parseInt(c.numero, 10) || 0).padStart(5, '0')}`, fecha: c.fecha, fecha_vencimiento: null, created_at: c.creado_en,
                         solicitante: c.usuario_creacion || '—', centro_costo: c.centro_costo || 'CC-300', sub_motivo: c.sub_motivo || 'Diésel B5 / Gasolina de ruta', autoriza: c.usuario_aprobacion || '',
                         motivo: c.descripcion, motivo_entrada: c.descripcion, tipo_orden: 'Vale de combustible',
                         moneda: esUsdVale ? 'USD' : 'PEN', importe: monto, total_pen: esUsdVale ? 0 : monto, tipo_cambio: 1, tipo_igv: 'sin_igv',
@@ -2535,7 +2535,7 @@ module.exports = function (db, broadcast, logAudit) {
                     const match = String(maxRow[0].numero).match(/\d+$/);
                     if (match) nextNum = parseInt(match[0], 10) + 1;
                 }
-                const formatted = String(nextNum).padStart(8, '0');
+                const formatted = String(nextNum).padStart(5, '0');
 
                 // Motivo y submotivo de Caja para el submotivo de la OC (equivalencias en services/tesoreria_motivos_oc.js)
                 const { equivalenciaOC } = require('../services/tesoreria_motivos_oc');

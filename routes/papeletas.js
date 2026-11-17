@@ -639,7 +639,7 @@ module.exports = (db, logAudit) => {
                         `INSERT INTO tesoreria_caja (fecha, hora, fecha_valuta, hora_valuta, numero_constancia_deposito, serie, numero, conductor, placa, autoriza, motivo, sub_motivo,
                             modalidad_pago, moneda, tipo_persona, persona, tipo_movimiento, subtotal, retencion_detraccion, importe_total, tipo_cambio, descripcion, voucher_url, estado, usuario_creacion)
                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Papeletas y multas', ?, ?, ?, 'ENTIDAD', ?, 'EGRESO', ?, 0, ?, 1, ?, ?, 'REGISTRADO', ?)`,
-                        [fecha, new Date().toLocaleTimeString('en-GB', { timeZone: 'America/Lima' }), fecha, '00:00:00', texto(b.nro_operacion, 80) || '', serie, String(n).padStart(8, '0'),
+                        [fecha, new Date().toLocaleTimeString('en-GB', { timeZone: 'America/Lima' }), fecha, '00:00:00', texto(b.nro_operacion, 80) || '', serie, String(n).padStart(5, '0'),
                             pap.conductor_nombre || '', pap.placa, usuario, pap.entidad_codigo, texto(b.medio, 40) || 'TRANSFERENCIA', pap.moneda === 'USD' ? 'USD' : 'SOLES', entNombre.slice(0, 190),
                             monto, monto, `Pago de papeleta ${pap.codigo} (${pap.tipo_documento} N° ${pap.numero}) · placa ${pap.placa}`, comprobante, usuario]);
                     await p.query('UPDATE papeletas_pagos SET caja_id = ? WHERE id = ?', [caja.insertId, ins.insertId]);
