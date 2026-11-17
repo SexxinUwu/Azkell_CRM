@@ -31,8 +31,16 @@ export function useNavBadges(activo: boolean): Record<string, number> {
     enabled: activo,
     staleTime: 30_000,
   });
+  const sol = useQuery({
+    queryKey: ['solicitudes', 'lista', 'gerencia'],
+    queryFn: () => api('/solicitudes', { query: { vista: 'gerencia' } }).then(r => lista<Estado>(r)),
+    enabled: activo,
+    staleTime: 30_000,
+    retry: false,
+  });
   return {
     'aprob-oc': (oc.data ?? []).filter(pendienteOC).length,
     'aprob-caja': (caja.data ?? []).filter(pendienteCaja).length,
+    'aprob-sol': (sol.data ?? []).filter(s => (s.estado ?? '').toUpperCase() === 'PENDIENTE').length,
   };
 }

@@ -33,7 +33,7 @@ export interface NavItem {
   /** Todavía no existe en la app: se muestra deshabilitado con "Pronto" */
   pronto?: boolean;
   /** Contador de pendientes que aparece junto al nombre */
-  badge?: 'aprob-oc' | 'aprob-caja';
+  badge?: 'aprob-oc' | 'aprob-caja' | 'aprob-sol';
 }
 
 export interface NavSection {
@@ -169,6 +169,7 @@ const SECCIONES_BASE: NavSection[] = [
     items: [
       { key: 'aprobaciones-oc', label: 'Aprobación de O/C', to: '/gerencia/aprobaciones-oc', icon: ClipboardCheck, permissions: ver('gerencia_aprobaciones_oc'), badge: 'aprob-oc' },
       { key: 'aprobaciones-caja', label: 'Aprobación de caja', to: '/gerencia/aprobaciones-caja', icon: ClipboardCheck, permissions: ver('gerencia_aprobaciones_caja'), badge: 'aprob-caja' },
+      { key: 'aprobaciones-solicitudes', label: 'Aprobación de solicitudes', to: '/gerencia/aprobaciones-solicitudes', icon: ClipboardCheck, permissions: ver('gerencia_aprobaciones_solicitudes'), badge: 'aprob-sol' },
     ],
   },
   {

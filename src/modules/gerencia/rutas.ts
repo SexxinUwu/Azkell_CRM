@@ -20,4 +20,10 @@ export const RUTAS: RutaModulo[] = [
     Page: lazy(() => import('./AprobacionesCajaPage').then(m => ({ default: m.AprobacionesCajaPage }))),
     nav: { key: 'aprobaciones-caja', label: 'Aprobación de caja', to: '/gerencia/aprobaciones-caja', icon: 'ClipboardCheck', permisos: ['gerencia_aprobaciones_oc.ver'] },
   },
+  {
+    path: 'gerencia/aprobaciones-solicitudes/*',
+    permisos: ['gerencia_aprobaciones_solicitudes.ver', 'admin'],
+    Page: lazy(() => import('./AprobacionesSolicitudesPage').then(m => ({ default: m.AprobacionesSolicitudesPage }))),
+    nav: { key: 'aprobaciones-solicitudes', label: 'Aprobación de solicitudes', to: '/gerencia/aprobaciones-solicitudes', icon: 'ClipboardCheck', permisos: ['gerencia_aprobaciones_solicitudes.ver'] },
+  },
 ];

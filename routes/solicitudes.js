@@ -1,6 +1,6 @@
 // Solicitudes: cualquier usuario pide algo (agregar proveedor, cliente o cuenta bancaria) y quien tiene el permiso de
 // aprobar ese tipo lo revisa. Al aprobarse, el sistema lo aplica solo. Todo paso queda en solicitudes_historial.
-// Tablas: migración 36_solicitudes. El permiso de aprobar de cada tipo es la acción «Aprobar» de su módulo (sol_*).
+// Tablas: migración 36_solicitudes. Cada usuario ve solo lo suyo; ver todo y aprobar es el permiso de Gerencia › Aprobación de solicitudes.
 const express = require('express');
 
 const texto = (v, max) => { const t = String(v ?? '').trim(); return t ? t.slice(0, max) : ''; };
@@ -29,21 +29,28 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
     };
     const usuarioDe = req => String((req.user && (req.user.nombre || req.user.correo)) || 'sistema').slice(0, 150);
 
-    // ── Permisos: pedir = cualquier usuario; aprobar = acción «Aprobar» del módulo del tipo (o administrador) ──
+    // ── Permisos: pedir = cualquier usuario y cada quien ve solo lo suyo. Gerencia › Aprobación de solicitudes (módulo
+    //    gerencia_aprobaciones_solicitudes): «Ver» permite ver todas y su historial; «Aprobar» permite aprobar y rechazar. ──
+    const MODULO_GERENCIA = 'gerencia_aprobaciones_solicitudes';
     const permisosDe = req => {
         try { const p = typeof req.user.permisos === 'string' ? JSON.parse(req.user.permisos) : req.user.permisos; return p || {}; } catch (e) { return {}; }
     };
     const esAdmin = req => !!req.user && (req.user.rol === 'Fundador' || permisosDe(req).admin === true);
-    const puedeAprobar = (req, tipo) => {
+    const puedeAprobar = req => {
         if (esAdmin(req)) return true;
-        const m = permisosDe(req)[TIPOS[tipo] && TIPOS[tipo].modulo];
+        const m = permisosDe(req)[MODULO_GERENCIA];
         return !!m && (m.a === 1 || m.a === true);
+    };
+    const puedeVerTodas = req => {
+        if (esAdmin(req)) return true;
+        const m = permisosDe(req)[MODULO_GERENCIA];
+        return !!m && (m.l === 1 || m.l === true || m.a === 1 || m.a === true);
     };
 
     // ── Tipos de solicitud ──
     const TIPOS = {
         proveedor: {
-            etiqueta: 'Agregar proveedor', modulo: 'sol_proveedor', icono: 'Truck',
+            etiqueta: 'Agregar proveedor', icono: 'Truck',
             descripcion: 'Pide dar de alta un proveedor nuevo con sus datos clave. Al aprobarse queda en Terceros › Proveedores.',
             campos: [
                 { key: 'tipo_documento', label: 'Tipo de documento', tipo: 'select', opciones: ['RUC', 'DNI'], defecto: 'RUC' },
@@ -85,7 +92,7 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
             },
         },
         cliente: {
-            etiqueta: 'Agregar cliente', modulo: 'sol_cliente', icono: 'Users',
+            etiqueta: 'Agregar cliente', icono: 'Users',
             descripcion: 'Pide dar de alta un cliente nuevo. Al aprobarse queda en Terceros › Clientes.',
             campos: [
                 { key: 'ruc_dni', label: 'RUC o DNI', tipo: 'texto', requerido: true },
@@ -115,7 +122,7 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
             },
         },
         cuenta_bancaria: {
-            etiqueta: 'Agregar cuenta bancaria', modulo: 'sol_cuenta', icono: 'Landmark',
+            etiqueta: 'Agregar cuenta bancaria', icono: 'Landmark',
             descripcion: 'Pide registrar una cuenta bancaria a un proveedor o a una persona del personal. Al aprobarse queda en Tesorería.',
             campos: [
                 { key: 'titular_tipo', label: 'La cuenta es de', tipo: 'select', opciones: ['PROVEEDOR', 'PERSONAL'], defecto: 'PROVEEDOR', requerido: true },
@@ -186,7 +193,7 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
     const fila = (r, req) => ({
         id: r.id, codigo: r.codigo, tipo: r.tipo, tipo_etiqueta: TIPOS[r.tipo] ? TIPOS[r.tipo].etiqueta : r.tipo, estado: r.estado, titulo: r.titulo,
         motivo: r.motivo, solicitante: r.solicitante, revisado_por: r.revisado_por, revisado_en: r.revisado_en, comentario_revision: r.comentario_revision,
-        created_at: r.created_at, puede_aprobar: r.estado === 'PENDIENTE' && puedeAprobar(req, r.tipo) && (esAdmin(req) || r.solicitante !== usuarioDe(req)),
+        created_at: r.created_at, puede_aprobar: r.estado === 'PENDIENTE' && puedeAprobar(req) && (esAdmin(req) || r.solicitante !== usuarioDe(req)),
         es_mia: r.solicitante === usuarioDe(req),
     });
 
@@ -194,25 +201,21 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
     router.get('/tipos', (req, res) => {
         res.json({
             ok: true,
-            data: Object.entries(TIPOS).map(([tipo, t]) => ({ tipo, etiqueta: t.etiqueta, descripcion: t.descripcion, icono: t.icono, campos: t.campos, puede_aprobar: puedeAprobar(req, tipo) })),
-            puede_aprobar_alguno: Object.keys(TIPOS).some(t => puedeAprobar(req, t)),
+            data: Object.entries(TIPOS).map(([tipo, t]) => ({ tipo, etiqueta: t.etiqueta, descripcion: t.descripcion, icono: t.icono, campos: t.campos, puede_aprobar: puedeAprobar(req) })),
+            puede_aprobar_alguno: puedeAprobar(req),
+            puede_ver_todas: puedeVerTodas(req),
         });
     });
 
-    // Lista: ?vista=mias (por defecto) | por_aprobar | todas (solo de los tipos que puede aprobar)
+    // Lista: ?vista=mias (por defecto: solo lo que subió este usuario) | gerencia (todas, para quien puede verlas)
     router.get('/', async (req, res) => {
         try {
             const vista = String(req.query.vista || 'mias');
-            const me = usuarioDe(req);
-            const aprobables = Object.keys(TIPOS).filter(t => puedeAprobar(req, t));
             let sql = 'SELECT * FROM solicitudes'; const params = [];
-            if (vista === 'por_aprobar') {
-                if (!aprobables.length) return res.json({ ok: true, data: [] });
-                sql += " WHERE estado = 'PENDIENTE' AND tipo IN (?)"; params.push(aprobables);
-            } else if (vista === 'todas') {
-                if (!aprobables.length) { sql += ' WHERE solicitante = ?'; params.push(me); } else { sql += ' WHERE (tipo IN (?) OR solicitante = ?)'; params.push(aprobables, me); }
-            } else { sql += ' WHERE solicitante = ?'; params.push(me); }
-            sql += ' ORDER BY id DESC LIMIT 500';
+            if (vista === 'gerencia') {
+                if (!puedeVerTodas(req)) throw aviso('No tienes permiso para ver todas las solicitudes.', 403);
+            } else { sql += ' WHERE solicitante = ?'; params.push(usuarioDe(req)); }
+            sql += ' ORDER BY id DESC LIMIT 1000';
             const [rows] = await P(req).query(sql, params);
             res.json({ ok: true, data: rows.map(r => fila(r, req)) });
         } catch (e) { responder(res, e, 'GET /'); }
@@ -223,7 +226,7 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
             const [r] = await P(req).query('SELECT * FROM solicitudes WHERE id = ?', [req.params.id]);
             if (!r.length) throw aviso('Solicitud no encontrada.', 404);
             const s = r[0];
-            if (s.solicitante !== usuarioDe(req) && !puedeAprobar(req, s.tipo)) throw aviso('No tienes acceso a esta solicitud.', 403);
+            if (s.solicitante !== usuarioDe(req) && !puedeVerTodas(req)) throw aviso('No tienes acceso a esta solicitud.', 403);
             const [h] = await P(req).query('SELECT accion, usuario, comentario, created_at FROM solicitudes_historial WHERE solicitud_id = ? ORDER BY id', [s.id]);
             let datos = {}; let resultado = null;
             try { datos = JSON.parse(s.datos_json || '{}'); } catch (e) { datos = {}; }
@@ -269,7 +272,7 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
             if (!r.length) throw aviso('Solicitud no encontrada.', 404);
             const s = r[0];
             if (s.estado !== 'PENDIENTE') throw aviso(`La solicitud ya está ${s.estado.toLowerCase()}.`, 409);
-            if (!puedeAprobar(req, s.tipo)) throw aviso('No tienes permiso para aprobar este tipo de solicitud.', 403);
+            if (!puedeAprobar(req)) throw aviso('No tienes permiso para aprobar solicitudes (Gerencia › Aprobación de solicitudes).', 403);
             if (!esAdmin(req) && s.solicitante === usuarioDe(req)) throw aviso('No puedes aprobar tu propia solicitud: debe hacerlo otra persona.', 403);
             const tipo = TIPOS[s.tipo];
             if (!tipo) throw aviso('Tipo de solicitud desconocido.');
@@ -296,7 +299,7 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
             if (!r.length) throw aviso('Solicitud no encontrada.', 404);
             const s = r[0];
             if (s.estado !== 'PENDIENTE') throw aviso(`La solicitud ya está ${s.estado.toLowerCase()}.`, 409);
-            if (!puedeAprobar(req, s.tipo)) throw aviso('No tienes permiso para revisar este tipo de solicitud.', 403);
+            if (!puedeAprobar(req)) throw aviso('No tienes permiso para revisar solicitudes (Gerencia › Aprobación de solicitudes).', 403);
             const [u] = await conn.query("UPDATE solicitudes SET estado = 'RECHAZADA', revisado_por = ?, revisado_en = NOW(), comentario_revision = ? WHERE id = ? AND estado = 'PENDIENTE'", [usuarioDe(req), comentario, s.id]);
             if (u.affectedRows !== 1) throw new Error('No se pudo cerrar la solicitud.');
             await historial(conn, s.id, 'RECHAZADA', usuarioDe(req), comentario);

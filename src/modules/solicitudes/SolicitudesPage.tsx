@@ -11,13 +11,12 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { BarraFiltros } from '../../core/ui/FiltrosListado';
 import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
-import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { errorMessage } from '../../core/api/client';
 import { anchoAjustado } from '../../core/lib/anchoColumnas';
 import { formatFechaPe } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
-import { claveSolicitudes, useSolicitudes, useTiposSolicitud, type Solicitud, type VistaSolicitudes } from './api';
+import { claveSolicitudes, useSolicitudes, type Solicitud } from './api';
 import { NuevaSolicitudSheet } from './NuevaSolicitudSheet';
 import { claseEstado, DetalleSolicitudSheet, textoEstado } from './DetalleSolicitudSheet';
 
@@ -29,19 +28,15 @@ const COLS: Col[] = [
   { id: 'fecha', titulo: 'Fecha', min: 100, max: 140, texto: fecha },
   { id: 'tipo', titulo: 'Tipo', min: 150, max: 230, texto: s => s.tipo_etiqueta, bold: true, px: 11, extra: 20 },
   { id: 'titulo', titulo: 'Detalle', min: 180, max: 460, texto: s => s.titulo },
-  { id: 'solicitante', titulo: 'Pedida por', min: 120, max: 240, texto: s => s.solicitante },
-  { id: 'estado', titulo: 'Estado', min: 110, max: 160, texto: s => textoEstado(s.estado), bold: true, px: 11, extra: 26 },
+    { id: 'estado', titulo: 'Estado', min: 110, max: 160, texto: s => textoEstado(s.estado), bold: true, px: 11, extra: 26 },
   { id: 'revisado', titulo: 'Revisada por', min: 120, max: 240, texto: s => s.revisado_por || '—' },
 ];
 
 /** Solicitudes: cualquier usuario pide (agregar proveedor, cliente o cuenta bancaria) y su encargado aprueba */
 export function SolicitudesPage() {
   const qc = useQueryClient();
-  const tipos = useTiposSolicitud();
-  const puedeAprobar = !!tipos.data?.puede_aprobar_alguno;
-  const [vistaElegida, setVista] = useState<VistaSolicitudes | null>(null);
-  const vista: VistaSolicitudes = vistaElegida ?? (puedeAprobar ? 'por_aprobar' : 'mias');
-  const { data, isLoading, isError, error } = useSolicitudes(vista);
+  // Cada usuario ve solo lo que subió él; las aprueba Gerencia › Aprobación de solicitudes
+  const { data, isLoading, isError, error } = useSolicitudes('mias');
   const [busqueda, setBusqueda] = useState('');
   const [nueva, setNueva] = useState(false);
   const [abiertaId, setAbiertaId] = useState<number | null>(null);
@@ -62,16 +57,11 @@ export function SolicitudesPage() {
     return { id: c.id, titulo: c.titulo, ancho, minimo: Math.min(c.min, ancho) };
   }), [lista]);
 
-  const opciones: Array<{ value: VistaSolicitudes; label: string }> = [
-    { value: 'mias', label: 'Mis solicitudes' },
-    ...(puedeAprobar ? [{ value: 'por_aprobar' as const, label: 'Por aprobar' }, { value: 'todas' as const, label: 'Todas' }] : []),
-  ];
-
   return (
     <Page>
       <PageHeader
         eyebrow="Solicitudes"
-        title="Solicitudes"
+        title="Mis solicitudes"
         subtitle={isLoading ? 'Cargando…' : `${(data ?? []).length} ${(data ?? []).length === 1 ? 'solicitud' : 'solicitudes'}${conteo.pendientes ? ` · ${conteo.pendientes} por aprobar` : ''}`}
         actions={
           <>
@@ -88,20 +78,19 @@ export function SolicitudesPage() {
       {isError ? <Notice tone="error">{errorMessage(error)}</Notice> : (
         <div>
           <div className="inv-kpis" style={{ marginBottom: 'var(--s-4)' }}>
-            <KpiTarjeta etiqueta="Por aprobar" valor={String(conteo.pendientes)} sub="Esperando respuesta" icono={<ClipboardList size={18} />} tono="warning" />
+            <KpiTarjeta etiqueta="En revisión" valor={String(conteo.pendientes)} sub="Esperando la respuesta de Gerencia" icono={<ClipboardList size={18} />} tono="warning" />
             <KpiTarjeta etiqueta="Aprobadas" valor={String(conteo.aprobadas)} sub="Ya registradas en el sistema" icono={<CircleCheck size={18} />} />
             <KpiTarjeta etiqueta="Rechazadas" valor={String(conteo.rechazadas)} sub="Con su motivo" icono={<XCircle size={18} />} />
           </div>
 
           <div style={{ marginBottom: 'var(--s-4)' }}>
             <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Código, detalle, solicitante o tipo" activos={0} onAbrirFiltros={() => undefined}>
-              {opciones.length > 1 && <SegmentedControl<VistaSolicitudes> label="Ver" value={vista} onChange={v => setVista(v)} options={opciones} />}
               <span className="badge">{lista.length} {lista.length === 1 ? 'registro' : 'registros'}</span>
             </BarraFiltros>
           </div>
 
           {isLoading ? <PageLoader /> : lista.length === 0 ? (
-            <EmptyState icon={busqueda ? <SearchX size={22} /> : <ClipboardList size={22} />} title={busqueda ? 'Ninguna solicitud coincide' : vista === 'por_aprobar' ? 'No hay solicitudes por aprobar' : 'Aún no hay solicitudes'}>
+            <EmptyState icon={busqueda ? <SearchX size={22} /> : <ClipboardList size={22} />} title={busqueda ? 'Ninguna solicitud coincide' : 'Aún no has pedido nada'}>
               {busqueda ? null : <>Crea la primera con <strong>Nueva solicitud</strong>.</>}
             </EmptyState>
           ) : (
@@ -112,7 +101,6 @@ export function SolicitudesPage() {
                   <Celda>{fecha(s)}</Celda>
                   <Celda><span className="oc-chip">{s.tipo_etiqueta}</span></Celda>
                   <Celda>{s.titulo}</Celda>
-                  <Celda>{s.solicitante}</Celda>
                   <Celda><span className={`badge ${claseEstado(s.estado)}`} style={{ whiteSpace: 'nowrap' }}>{textoEstado(s.estado)}</span></Celda>
                   <Celda>{s.revisado_por || '—'}</Celda>
                 </tr>

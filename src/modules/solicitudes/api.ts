@@ -47,14 +47,14 @@ export interface DetalleSolicitud extends Solicitud {
   campos: CampoSolicitud[];
 }
 
-export type VistaSolicitudes = 'mias' | 'por_aprobar' | 'todas';
+export type VistaSolicitudes = 'mias' | 'gerencia';
 
 const CLAVE = ['solicitudes'];
 
 export function useTiposSolicitud() {
   return useQuery({
     queryKey: [...CLAVE, 'tipos'],
-    queryFn: () => api<{ data: TipoSolicitud[]; puede_aprobar_alguno: boolean }>('/solicitudes/tipos'),
+    queryFn: () => api<{ data: TipoSolicitud[]; puede_aprobar_alguno: boolean; puede_ver_todas: boolean }>('/solicitudes/tipos'),
     staleTime: 5 * 60_000,
   });
 }
