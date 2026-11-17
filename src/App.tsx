@@ -21,8 +21,10 @@ const InspeccionesPage = lazy(() => import('./modules/inspecciones/InspeccionesP
 const RegistrarInspeccionPage = lazy(() => import('./modules/inspecciones/RegistrarInspeccionPage').then(m => ({ default: m.RegistrarInspeccionPage })));
 const EditarInspeccionPage = lazy(() => import('./modules/inspecciones/RegistrarInspeccionPage').then(m => ({ default: m.EditarInspeccionPage })));
 const CatalogoRuta = lazy(() => import('./modules/catalogos/CatalogoRuta').then(m => ({ default: m.CatalogoRuta })));
-const ConductoresPage = lazy(() => import('./modules/conductores/ConductoresPage').then(m => ({ default: m.ConductoresPage })));
-const PersonalPage = lazy(() => import('./modules/personal/PersonalPage').then(m => ({ default: m.PersonalPage })));
+const RRHHAdministrativos = lazy(() => import('./modules/personal/PersonalPaginas').then(m => ({ default: m.RRHHAdministrativos })));
+const RRHHConductores = lazy(() => import('./modules/personal/PersonalPaginas').then(m => ({ default: m.RRHHConductores })));
+const DirectorioAdministrativos = lazy(() => import('./modules/personal/PersonalPaginas').then(m => ({ default: m.DirectorioAdministrativos })));
+const DirectorioConductores = lazy(() => import('./modules/personal/PersonalPaginas').then(m => ({ default: m.DirectorioConductores })));
 
 /** En admin.azkell.com solo se entra al panel de empresas; cualquier otra pantalla vuelve ahí */
 function SoloPanelSaas({ children }: { children: ReactNode }) {
@@ -56,8 +58,10 @@ export default function App() {
           <Route path="mantenimiento/tipos-mp" element={<CatalogoRuta clave="tipos-mp" />} />
           <Route path="mantenimiento/personal" element={<CatalogoRuta clave="personal-taller" />} />
           <Route path="preferencias/situaciones" element={<CatalogoRuta clave="situaciones" />} />
-          <Route path="conductores" element={<RequirePermission any={['cond.ver']}><ConductoresPage /></RequirePermission>} />
-          <Route path="directorio/personal/:id?" element={<RequirePermission any={['rrhh_personal.ver']}><PersonalPage /></RequirePermission>} />
+          <Route path="conductores" element={<RequirePermission any={['cond.ver']}><DirectorioConductores /></RequirePermission>} />
+          <Route path="directorio/personal/:id?" element={<RequirePermission any={['rrhh_personal.ver']}><DirectorioAdministrativos /></RequirePermission>} />
+          <Route path="rrhh/personal/:id?" element={<RequirePermission any={['rrhh_personal.ver']}><RRHHAdministrativos /></RequirePermission>} />
+          <Route path="rrhh/conductores" element={<RequirePermission any={['cond.ver']}><RRHHConductores /></RequirePermission>} />
           {RUTAS_MODULOS.map(({ path, permisos, Page }) => (
             <Route key={path} path={path} element={<RequirePermission any={permisos}><Page /></RequirePermission>} />
           ))}

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { FileSpreadsheet, MessageCircle, Phone, Plus, SearchX, Upload } from 'lucide-react';
@@ -64,7 +65,9 @@ const COLUMNAS: ColumnaTabla[] = [
 ];
 
 // Directorio › Personal: consulta, alta, edición, importación y eliminación. Tabla en pantalla ancha y lista por letras en el celular.
-export function ConductoresPage() {
+export function ConductoresPage({ soloLectura = false, eyebrow = 'Directorio', titulo = 'Directorio', selector }: {
+  soloLectura?: boolean; eyebrow?: string; titulo?: string; selector?: ReactNode;
+} = {}) {
   const { data, isLoading, isError, error } = useConductores();
   const { can } = useAuth();
   const qc = useQueryClient();
@@ -80,9 +83,9 @@ export function ConductoresPage() {
   const [porEliminar, setPorEliminar] = useState<Conductor | null>(null);
   const [eliminando, setEliminando] = useState(false);
 
-  const puedeCrear = can('cond.crear');
-  const puedeEditar = can('cond.editar', 'cond.crear'); // la versión actual exige "crear" para guardar
-  const puedeEliminar = can('cond.eliminar');
+  const puedeCrear = !soloLectura && can('cond.crear');
+  const puedeEditar = !soloLectura && can('cond.editar', 'cond.crear'); // la versión actual exige "crear" para guardar
+  const puedeEliminar = !soloLectura && can('cond.eliminar');
 
   const conductores = data ?? [];
   const activas = useMemo(() => conductores.filter(activo).length, [conductores]);
@@ -120,11 +123,12 @@ export function ConductoresPage() {
   return (
     <Page>
       <PageHeader
-        eyebrow="Directorio"
-        title="Personal"
+        eyebrow={eyebrow}
+        title={titulo}
         subtitle={isLoading ? 'Cargando…' : `${conductores.length} personas · ${activas} activas`}
         actions={
           <>
+            {selector}
             <div className="acciones-iconos acciones-iconos--sinfondo" role="group" aria-label="Acciones del personal">
               <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Exportar Excel"
                 aria-label="Exportar Excel" icon={<FileSpreadsheet size={17} />}

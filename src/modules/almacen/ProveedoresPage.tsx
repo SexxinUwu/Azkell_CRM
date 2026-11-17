@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Building2, CircleAlert, Download, FileSpreadsheet, Mail, MessageCircle, Phone, Plus, SearchX, Star, Upload } from 'lucide-react';
@@ -64,7 +65,7 @@ const leerVista = (): Vista => { try { return localStorage.getItem('fleet_prov_v
 /** Una fila del directorio: un asesor (con su empresa) o, si la empresa no tiene contactos, la empresa misma */
 interface Entrada { clave: string; nombre: string; sub: string; cargo: string | null; telefono: string | null; correo: string | null; empresa: boolean; proveedor: ProveedorInv }
 
-export function ProveedoresPage() {
+export function ProveedoresPage({ eyebrow = 'Terceros', selector }: { eyebrow?: string; selector?: ReactNode } = {}) {
   const { data, isLoading, isError, error } = useProveedores();
   const { can } = useAuth();
   const qc = useQueryClient();
@@ -143,11 +144,12 @@ export function ProveedoresPage() {
   return (
     <Page>
       <PageHeader
-        eyebrow="Almacén"
+        eyebrow={eyebrow}
         title="Proveedores"
         subtitle={isLoading ? 'Cargando…' : `${proveedores.length} proveedores · ${totalContactos} contactos`}
         actions={
           <>
+            {selector}
             <div className="acciones-iconos acciones-iconos--sinfondo" role="group" aria-label="Acciones de proveedores">
               <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Exportar Excel"
                 aria-label="Exportar Excel" icon={<FileSpreadsheet size={17} />}

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
@@ -26,11 +27,13 @@ import './personal.css';
 
 type FiltroEstado = 'activos' | 'todos' | 'cesados';
 const DIVIDIDO = '(min-width: 900px)';
-const BASE = '/directorio/personal';
 
 // Directorio › Personal, al estilo de Contactos de Apple: lista alfabética por apellido con índice A–Z
 // y la tarjeta de la persona al lado (en el celular, la tarjeta entra encima de la lista).
-export function PersonalPage() {
+export function PersonalPage({ base = '/directorio/personal', soloLectura = false, eyebrow = 'Directorio', titulo = 'Directorio', selector }: {
+  base?: string; soloLectura?: boolean; eyebrow?: string; titulo?: string; selector?: ReactNode;
+} = {}) {
+  const BASE = base;
   const { data, isLoading, isError, error } = usePersonal();
   const { can } = useAuth();
   const qc = useQueryClient();
@@ -49,9 +52,9 @@ export function PersonalPage() {
   const [letraActiva, setLetraActiva] = useState<string | null>(null);
   const listaRef = useRef<HTMLDivElement>(null);
 
-  const puedeCrear = can('rrhh_personal.crear');
-  const puedeEditar = can('rrhh_personal.editar');
-  const puedeEliminar = can('rrhh_personal.eliminar');
+  const puedeCrear = !soloLectura && can('rrhh_personal.crear');
+  const puedeEditar = !soloLectura && can('rrhh_personal.editar');
+  const puedeEliminar = !soloLectura && can('rrhh_personal.eliminar');
 
   const personas = data ?? [];
   const seleccionada = id ? personas.find(p => String(p.id) === id) ?? null : null;
@@ -162,10 +165,10 @@ export function PersonalPage() {
     <Page>
       {!soloTarjeta && (
         <PageHeader
-          eyebrow="Directorio"
-          title="Personal"
+          eyebrow={eyebrow}
+          title={titulo}
           subtitle={isLoading ? 'Cargando…' : `${personas.length} ${personas.length === 1 ? 'contacto' : 'contactos'}${conAlertas ? ` · ${conAlertas} con documentos por vencer` : ''}`}
-          actions={<>{otros}{puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ persona: null })}>Nuevo</Button>}</>}
+          actions={<>{selector}{otros}{puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ persona: null })}>Nuevo</Button>}</>}
         />
       )}
 

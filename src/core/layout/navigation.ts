@@ -73,7 +73,6 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'ordenes-viaje', label: 'Órdenes de viaje', to: '/operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa,trahesa' },
       { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: ScrollText, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa,trahesa' },
       { key: 'ubigeos', label: 'Ubigeos', to: '/operaciones/ubigeos', icon: MapPin, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa,trahesa' },
-      { key: 'clientes', label: 'Clientes', to: '/operaciones/clientes', icon: Users, permissions: ver('clientes') },
       { key: 'reporte-viajes', label: 'Reporte de viajes', to: '/operaciones/reporte-viajes', icon: BarChart3, permissions: ver('op_reporte_viajes'), soloEmpresa: 'marsisa,trahesa' },
       {
         key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [], soloEmpresa: 'marsisa,trahesa',
@@ -155,7 +154,6 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'recepcion', label: 'Recepción de compras', to: '/almacen/recepcion-compras', icon: PackagePlus, permissions: ver('rec_compras', 'ent_inv', 'inv') },
       { key: 'salidas', label: 'Órdenes de salida', to: '/almacen/salidas', icon: PackageMinus, permissions: ver('sal_inv') },
       { key: 'kardex', label: 'Kardex', to: '/almacen/kardex', icon: History, permissions: ver('kardex') },
-      { key: 'proveedores', label: 'Proveedores', to: '/almacen/proveedores', icon: Warehouse, permissions: ver('prov_inv') },
       { key: 'almacen-notas-credito', label: 'Notas de crédito', to: '/almacen/notas-credito', icon: ReceiptText, permissions: ver('alm_nc') },
       { key: 'almacen-otros', label: 'Otros', to: '/almacen/otros', icon: Layers, permissions: ver('almacen_otros', 'inv', 'ent_inv', 'prov_inv', 'rec_compras', 'gerencia_aprobaciones_oc', 'cfg_mant') },
     ],
@@ -168,9 +166,15 @@ const SECCIONES_BASE: NavSection[] = [
     ],
   },
   {
+    title: 'Terceros',
+    items: [
+      { key: 'terceros', label: 'Clientes y proveedores', to: '/terceros/clientes', icon: Users, permissions: ver('clientes', 'prov_inv') },
+    ],
+  },
+  {
     title: 'RRHH',
     items: [
-      { key: 'personal', label: 'Legajos y contratos', to: '/directorio/personal', icon: Contact, permissions: ver('rrhh_personal') },
+      { key: 'personal', label: 'Personal', to: '/rrhh/personal', icon: Contact, permissions: ver('rrhh_personal', 'cond') },
       { key: 'asistencia', label: 'Asistencia y turnos', to: '/personas/asistencia', icon: ClipboardCheck, permissions: ver('rrhh_asistencia') },
       { key: 'nomina', label: 'Nómina y pagos', to: '/personas/nomina', icon: Banknote, permissions: ver('rrhh_nomina') },
     ],
@@ -209,7 +213,7 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Directorio',
     items: [
-      { key: 'conductores', label: 'Personal', to: '/conductores', icon: IdCard, permissions: ver('cond') },
+      { key: 'directorio', label: 'Directorio', to: '/directorio/personal', icon: IdCard, permissions: ver('rrhh_personal', 'cond') },
     ],
   },
   {

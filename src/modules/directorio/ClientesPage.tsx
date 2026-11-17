@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import '../mantenimiento/mant.css';
 import '../../core/ui/acciones-iconos.css';
 import './clientes.css';
@@ -40,7 +41,7 @@ const esActivo = (c: Cliente) => String(c.estado ?? 'Activo').toLowerCase() === 
 const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 // Operaciones › Clientes. Al guardar, el servidor actualiza el nombre del cliente en todas sus placas.
-export function ClientesPage() {
+export function ClientesPage({ eyebrow = 'Terceros', selector }: { eyebrow?: string; selector?: ReactNode } = {}) {
   const { data, isLoading, isError, error } = useClientes();
   const { can } = useAuth();
   const qc = useQueryClient();
@@ -97,10 +98,11 @@ export function ClientesPage() {
 
   return (
     <Page>
-      <PageHeader eyebrow="Operaciones" title="Clientes"
+      <PageHeader eyebrow={eyebrow} title="Clientes"
         subtitle={isLoading ? 'Cargando…' : `${lista.length.toLocaleString('es-PE')} clientes${sinDireccion ? ` · ${sinDireccion} sin dirección` : ''}`}
         actions={
           <>
+            {selector}
             <AccionesCabecera etiqueta="Acciones de clientes" acciones={[
               { label: 'Exportar Excel', icon: <FileSpreadsheet size={17} />, tono: 'verde', onClick: exportar },
               puedeCrear && { label: 'Importar desde Excel', icon: <Upload size={17} />, tono: 'azul', onClick: () => setImportando(true) },

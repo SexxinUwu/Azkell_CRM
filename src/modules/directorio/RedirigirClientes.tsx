@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom';
 
-// Clientes pasó al menú de Operaciones: los enlaces guardados de /directorio/clientes siguen funcionando
+// Clientes pasó a Terceros: los enlaces guardados de /operaciones/clientes, /directorio/clientes y /flota/clientes siguen funcionando
 export function RedirigirClientes() {
-  return <Navigate to="/operaciones/clientes" replace />;
+  return <Navigate to="/terceros/clientes" replace />;
 }

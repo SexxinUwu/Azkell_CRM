@@ -29,8 +29,8 @@ export const RUTAS: RutaModulo[] = [
   {
     path: 'almacen/proveedores/*',
     permisos: ['prov_inv.ver', 'admin'],
-    Page: lazy(() => import('./ProveedoresPage').then(m => ({ default: m.ProveedoresPage }))),
-    nav: { key: 'proveedores', label: 'Proveedores', to: '/almacen/proveedores', icon: 'Warehouse', permisos: ['prov_inv.ver'] },
+    // Almacén › Proveedores pasó a Terceros: el enlace anterior sigue funcionando
+    Page: lazy(() => import('../terceros/TercerosPaginas').then(m => ({ default: m.RedirigirProveedores }))),
   },
   {
     path: 'almacen/notas-credito/*',
