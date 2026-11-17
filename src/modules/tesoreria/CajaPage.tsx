@@ -1,14 +1,11 @@
 import '../mantenimiento/mant.css';
+import '../gerencia/gerencia-oc.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowDownLeft, ArrowUpRight, Banknote, Boxes, FileSpreadsheet, Paperclip, Plus, SearchX, Wallet } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Banknote, Boxes, FileSpreadsheet, Paperclip, Plus, RefreshCw, SearchX, ShieldCheck, Wallet } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { Field, TextInput } from '../../core/ui/Field';
-import { ChoiceChips } from '../../core/ui/Chips';
-import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
+import { Badge, EmptyState, Notice, Page } from '../../core/ui/Display';
 import '../../core/ui/acciones-iconos.css';
-import '../almacen/almacen.css';
 import './pago.css';
 import './mov.css';
 import { useToast } from '../../core/ui/Toast';
@@ -22,8 +19,8 @@ import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/Ta
 import { useNavigate } from 'react-router-dom';
 import { useCaja, type CajaMovimiento } from './api';
 import {
-  aSoles, CAMPOS_ORDEN, ESTADOS, esPendiente, estadoDe, hoyYMD, inicioMesYMD, montoCaja, num, numeroDoc, ordenar, ORDEN_INICIAL,
-  tonoEstado, type Orden,
+  aSoles, esPendiente, estadoDe, hoyYMD, inicioMesYMD, montoCaja, num, numeroDoc, ordenar, ORDEN_INICIAL,
+  tonoEstado,
 } from './caja-lib';
 import { DetalleCaja } from './caja-detalle';
 import { FormularioCaja } from './caja-formulario';
@@ -56,6 +53,22 @@ const ENCABEZADOS = [
   'Comprobante', 'N° factura', 'N° constancia', 'Usuario registro', 'Usuario aprobación',
 ];
 
+const PESTANAS: Array<{ key: Pestana; etiqueta: string }> = [
+  { key: 'todos', etiqueta: 'Todos' },
+  { key: 'pendientes', etiqueta: 'Por aprobar' },
+  { key: 'aprobados', etiqueta: 'Aprobados' },
+  { key: 'procesados', etiqueta: 'Procesados' },
+  { key: 'anulados', etiqueta: 'Anulados' },
+];
+type Pestana = 'todos' | 'pendientes' | 'aprobados' | 'procesados' | 'anulados';
+const PASA: Record<Pestana, (m: CajaMovimiento) => boolean> = {
+  todos: () => true,
+  pendientes: esPendiente,
+  aprobados: m => estadoDe(m) === 'APROBADO',
+  procesados: m => ['PROCESADO', 'PAGADO'].includes(estadoDe(m)),
+  anulados: m => estadoDe(m) === 'ANULADO',
+};
+
 // Tesorería › Caja: movimientos de caja chica con aprobación, documentos y anulación
 export function CajaPage() {
   const nav = useNavigate();
@@ -65,12 +78,11 @@ export function CajaPage() {
   const toast = useToast();
   const [busqueda, setBusqueda] = useState('');
   const [buscar, setBuscar] = useState('');
-  const [estado, setEstado] = useState('');
+  // Pestañas por estado (se filtran aquí; el servidor devuelve todo el periodo)
+  const [pestana, setPestana] = useState<Pestana>('todos');
   // Como el clásico: por defecto el mes en curso
   const [desde, setDesde] = useState(inicioMesYMD);
   const [hasta, setHasta] = useState(hoyYMD);
-  const [orden, setOrden] = useState<Orden>(ORDEN_INICIAL);
-  const [filtrando, setFiltrando] = useState(false);
   const [abiertoId, setAbiertoId] = useState<number | null>(null);
   const [formulario, setFormulario] = useState<{ mov: CajaMovimiento | null } | null>(null);
 
@@ -79,21 +91,22 @@ export function CajaPage() {
     return () => window.clearTimeout(t);
   }, [busqueda]);
 
-  const { data, isLoading, isError, error } = useCaja({ desde, hasta, estado, buscar });
-  const lista = useMemo(() => ordenar(data ?? [], orden), [data, orden]);
+  const { data, isLoading, isError, error } = useCaja({ desde, hasta, buscar });
+  const todos = useMemo(() => ordenar(data ?? [], ORDEN_INICIAL), [data]);
+  const lista = useMemo(() => todos.filter(PASA[pestana]), [todos, pestana]);
   const abierto = (data ?? []).find(m => m.id === abiertoId) ?? null;
   const puedeCrear = can('tesoreria_caja.crear');
   const periodoPorDefecto = desde === inicioMesYMD() && hasta === hoyYMD();
-  const activos = (estado ? 1 : 0) + (periodoPorDefecto ? 0 : 1);
-  const filtrado = !!buscar || activos > 0;
+  const hayFiltros = !!busqueda || !periodoPorDefecto || pestana !== 'todos';
+  const limpiarFiltros = () => { setBusqueda(''); setDesde(inicioMesYMD()); setHasta(hoyYMD()); setPestana('todos'); };
 
   // Ingresos y egresos en soles: los dólares se convierten con su tipo de cambio; los anulados no suman
   const resumen = useMemo(() => {
-    const validos = lista.filter(m => estadoDe(m) !== 'ANULADO');
+    const validos = todos.filter(m => estadoDe(m) !== 'ANULADO');
     const ingresos = validos.filter(m => m.tipo_movimiento === 'INGRESO').reduce((s, m) => s + aSoles(m), 0);
     const egresos = validos.filter(m => m.tipo_movimiento !== 'INGRESO').reduce((s, m) => s + aSoles(m), 0);
-    return { ingresos, egresos, saldo: ingresos - egresos, pendientes: lista.filter(esPendiente).length };
-  }, [lista]);
+    return { ingresos, egresos, saldo: ingresos - egresos, pendientes: todos.filter(esPendiente).length };
+  }, [todos]);
 
   async function exportar() {
     if (!lista.length) { toast('No hay movimientos para exportar', 'error'); return; }
@@ -114,12 +127,18 @@ export function CajaPage() {
 
   return (
     <Page>
-      <PageHeader
-        eyebrow="Tesorería"
-        title="Caja"
-        subtitle={isLoading ? 'Cargando…' : `${lista.length} movimientos · ${resumen.pendientes} por aprobar · ${periodo}`}
-        actions={
-          <>
+      <div className="ga-page">
+        <header className="ga-cab">
+          <div>
+            <span className="ga-pill"><ShieldCheck size={13} aria-hidden /> Tesorería</span>
+            <h1 className="ga-titulo">Caja</h1>
+            <p className="ga-sub">
+              Egresos e ingresos de caja con aprobación, documentos y anulación
+              {resumen.pendientes > 0 ? ` · ${resumen.pendientes} por aprobar` : ''} · {periodo}
+            </p>
+          </div>
+          <div className="ga-acciones">
+            <Button variant="secondary" icon={<RefreshCw size={15} />} onClick={() => { void refrescar(); }}>Actualizar</Button>
             <div className="acciones-iconos acciones-iconos--sinfondo" role="group" aria-label="Acciones de caja">
               <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Exportar Excel"
                 aria-label="Exportar Excel" icon={<FileSpreadsheet size={17} />} onClick={exportar} />
@@ -129,49 +148,64 @@ export function CajaPage() {
                 aria-label="Centros de costos" icon={<Boxes size={17} />} onClick={() => nav('/tesoreria/centros-costos')} />
             </div>
             {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ mov: null })}>Nuevo</Button>}
-          </>
-        }
-      />
+          </div>
+        </header>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-        <div className="inv-metricas inv-metricas--cuatro">
-          <div className="inv-metrica"><span className="inv-metrica__num" style={{ color: 'var(--green-ink)' }}>{formatSoles(resumen.ingresos)}</span><span className="inv-metrica__label">Ingresos</span></div>
-          <div className="inv-metrica"><span className="inv-metrica__num inv-metrica__num--critical">{formatSoles(resumen.egresos)}</span><span className="inv-metrica__label">Egresos</span></div>
-          <div className="inv-metrica"><span className="inv-metrica__num">{formatSoles(resumen.saldo)}</span><span className="inv-metrica__label">Saldo</span></div>
-          <div className="inv-metrica"><span className="inv-metrica__num">{resumen.pendientes}</span><span className="inv-metrica__label">Por aprobar</span></div>
+        <div className="ga-kpis">
+          <div className="ga-kpi ga-kpi--verde">
+            <div className="ga-kpi__cab"><span className="ga-kpi__etiqueta">Ingresos</span><span className="ga-kpi__pill">Entradas</span></div>
+            <span className="ga-kpi__valor">{formatSoles(resumen.ingresos)}</span>
+            <span className="ga-kpi__unidad">en soles, sin anulados</span>
+          </div>
+          <div className="ga-kpi ga-kpi--rojo">
+            <div className="ga-kpi__cab"><span className="ga-kpi__etiqueta">Egresos</span><span className="ga-kpi__pill">Salidas</span></div>
+            <span className="ga-kpi__valor">{formatSoles(resumen.egresos)}</span>
+            <span className="ga-kpi__unidad">en soles, sin anulados</span>
+          </div>
+          <div className="ga-kpi ga-kpi--indigo">
+            <div className="ga-kpi__cab"><span className="ga-kpi__etiqueta">Saldo</span><span className="ga-kpi__pill">Del periodo</span></div>
+            <span className="ga-kpi__valor">{formatSoles(resumen.saldo)}</span>
+            <span className="ga-kpi__unidad">ingresos − egresos</span>
+          </div>
+          <div className="ga-kpi ga-kpi--ambar">
+            <div className="ga-kpi__cab"><span className="ga-kpi__etiqueta">Por aprobar</span><span className="ga-kpi__pill">Por revisar</span></div>
+            <span className="ga-kpi__valor">{resumen.pendientes}</span>
+            <span className="ga-kpi__unidad">{resumen.pendientes === 1 ? 'movimiento' : 'movimientos'}</span>
+          </div>
         </div>
 
-        <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Persona, motivo, N°, placa, orden de viaje…"
-          activos={activos} onAbrirFiltros={() => setFiltrando(true)} />
-        <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={activos} resultado={lista.length} unidad="movimiento"
-          onLimpiar={() => { setEstado(''); setDesde(inicioMesYMD()); setHasta(hoyYMD()); }}>
-          <GrupoFiltro titulo="Estado">
-            <ChoiceChips label="Estado" value={estado} onChange={setEstado}
-              options={[{ value: '', label: 'Todos' }, ...ESTADOS.map(e => ({ value: e, label: e }))]} />
-          </GrupoFiltro>
-          <GrupoFiltro titulo="Periodo">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
-              <Field label="Desde">
-                {p => <TextInput {...p} type="date" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} />}
-              </Field>
-              <Field label="Hasta">
-                {p => <TextInput {...p} type="date" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} />}
-              </Field>
+        <div className="ga-filtros">
+          <div className="ga-filtros__fila">
+            <div className="ga-campo">
+              <span className="ga-campo__etiqueta">Fecha desde</span>
+              <input type="date" className="input" aria-label="Fecha desde" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} />
             </div>
-          </GrupoFiltro>
-          <GrupoFiltro titulo="Ordenar por">
-            <ChoiceChips label="Ordenar por" value={orden.campo} onChange={campo => setOrden(o => ({ ...o, campo }))} options={CAMPOS_ORDEN} />
-            <ChoiceChips label="Sentido" value={orden.asc ? 'asc' : 'desc'} onChange={s => setOrden(o => ({ ...o, asc: s === 'asc' }))}
-              options={[{ value: 'desc', label: 'Descendente' }, { value: 'asc', label: 'Ascendente' }]} />
-          </GrupoFiltro>
-        </HojaFiltros>
+            <div className="ga-campo">
+              <span className="ga-campo__etiqueta">Fecha hasta</span>
+              <input type="date" className="input" aria-label="Fecha hasta" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} />
+            </div>
+            <div className="ga-campo ga-buscar">
+              <span className="ga-campo__etiqueta">Búsqueda rápida</span>
+              <input type="search" className="input" value={busqueda} onChange={e => setBusqueda(e.target.value)}
+                placeholder="Persona, motivo, N°, placa, orden de viaje…" aria-label="Buscar movimientos" />
+            </div>
+          </div>
+          <div className="ga-tabs" role="group" aria-label="Filtrar por estado">
+            {PESTANAS.map(p => (
+              <button key={p.key} type="button" className="ga-tab" aria-pressed={pestana === p.key} onClick={() => { haptic('selection'); setPestana(p.key); }}>
+                {p.etiqueta} <span className="ga-tab__n">{todos.filter(PASA[p.key]).length}</span>
+              </button>
+            ))}
+            {hayFiltros && <button type="button" className="ga-limpiar" onClick={limpiarFiltros}>Limpiar filtros</button>}
+          </div>
+        </div>
 
         {isLoading ? <PageLoader /> : isError ? (
           <Notice tone="error">{errorMessage(error)}</Notice>
         ) : lista.length === 0 ? (
-          <EmptyState icon={filtrado ? <SearchX size={22} /> : <Wallet size={22} />}
-            title={filtrado ? 'Sin coincidencias' : 'Sin movimientos en este periodo'}>
-            {puedeCrear && !filtrado ? <>Registra el primero con <strong>Nuevo</strong>.</> : 'Prueba con otros filtros o un periodo más amplio.'}
+          <EmptyState icon={hayFiltros ? <SearchX size={22} /> : <Wallet size={22} />}
+            title={hayFiltros ? 'Sin coincidencias' : 'Sin movimientos en este periodo'}>
+            {puedeCrear && !hayFiltros ? <>Registra el primero con <strong>Nuevo</strong>.</> : 'Prueba con otros filtros o un periodo más amplio.'}
           </EmptyState>
         ) : (
           movil ? (
