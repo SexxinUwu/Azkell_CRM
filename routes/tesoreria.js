@@ -927,6 +927,7 @@ module.exports = function (db, broadcast, logAudit) {
                     serie,
                     numero,
                     orden_viaje,
+                    origen,
                     conductor,
                     ruta_viaje,
                     placa,
@@ -1647,7 +1648,7 @@ module.exports = function (db, broadcast, logAudit) {
                     const [cajas] = await tdb.query(`
                         SELECT tipo_movimiento, SUM(importe_total) AS total
                         FROM tesoreria_caja
-                        WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(TRIM(estado)) IN ('PROCESADO', 'REGISTRADO')
+                        WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(TRIM(estado)) IN ('PROCESADO', 'REGISTRADO') AND COALESCE(origen, '') <> 'VALE_COMBUSTIBLE'
                         GROUP BY tipo_movimiento
                     `, [v.viaje]);
 
@@ -1661,7 +1662,7 @@ module.exports = function (db, broadcast, logAudit) {
 
                     const [pendRows] = await tdb.query(`
                         SELECT COALESCE(SUM(importe_total), 0) AS total FROM tesoreria_caja
-                        WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(TRIM(estado)) NOT IN ('PROCESADO', 'REGISTRADO', 'ANULADO')
+                        WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(TRIM(estado)) NOT IN ('PROCESADO', 'REGISTRADO', 'ANULADO') AND COALESCE(origen, '') <> 'VALE_COMBUSTIBLE'
                     `, [v.viaje]);
                     const fondosPendientes = parseFloat((pendRows && pendRows[0] && pendRows[0].total) || 0);
 
@@ -1729,7 +1730,7 @@ module.exports = function (db, broadcast, logAudit) {
             // 2. Obtener depósitos/cajas asignados a este viaje (excluyendo ANULADO)
             const [cajas] = await tdb.query(`
                 SELECT id, DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha, serie, numero, motivo, sub_motivo,
-                       persona, importe_total, tipo_movimiento, estado, voucher_url, sustento_url,
+                       persona, importe_total, tipo_movimiento, estado, voucher_url, sustento_url, origen,
                        DATE_FORMAT(fecha_aprobacion, '%Y-%m-%d %H:%i') AS fecha_aprobacion
                 FROM tesoreria_caja
                 WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(estado) != 'ANULADO'
@@ -1743,6 +1744,8 @@ module.exports = function (db, broadcast, logAudit) {
             cajas.forEach(c => {
                 const imp = parseFloat(c.importe_total || 0);
                 const est = (c.estado || '').toUpperCase().trim();
+                // El combustible se paga directo a la estación: es un gasto del servicio, no un viático entregado al conductor
+                if (c.origen === 'VALE_COMBUSTIBLE') return;
                 if (est === 'PROCESADO' || est === 'REGISTRADO') {
                     if (c.tipo_movimiento === 'INGRESO') {
                         totalDevoluciones += imp;
@@ -2030,7 +2033,7 @@ module.exports = function (db, broadcast, logAudit) {
                 const [depRows] = await tdb.query(`
                     SELECT tipo_movimiento, SUM(importe_total) AS total
                     FROM tesoreria_caja
-                    WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(TRIM(estado)) IN ('PROCESADO', 'REGISTRADO')
+                    WHERE UPPER(TRIM(orden_viaje)) = UPPER(?) AND UPPER(TRIM(estado)) IN ('PROCESADO', 'REGISTRADO') AND COALESCE(origen, '') <> 'VALE_COMBUSTIBLE'
                     GROUP BY tipo_movimiento
                 `, [orden_viaje]);
                 let netoDepositado = 0;

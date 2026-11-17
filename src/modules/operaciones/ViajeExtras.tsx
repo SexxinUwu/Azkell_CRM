@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import './seguimiento.css';
-import { CircleAlert, Plus, Receipt, ScrollText, Trash2, Wallet } from 'lucide-react';
+import { CircleAlert, Plus, ScrollText, Trash2, Wallet } from 'lucide-react';
 import { Sheet, ConfirmSheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
-import { EmptyState, Notice } from '../../core/ui/Display';
+import { Badge, EmptyState, Notice } from '../../core/ui/Display';
 import { IconoFila } from '../../core/ui/IconoFila';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
@@ -24,7 +24,7 @@ const money = (v: unknown) => num(v).toLocaleString('es-PE', { minimumFractionDi
 const soles = (v: unknown) => 'S/ ' + money(v);
 
 interface OSViaje { id: number; codigo_orden: string; cliente_nombre: string | null; estado_servicio: string | null; costo_flete: number | string | null; moneda: string | null; fecha_fmt: string | null; origen?: string | null; destino?: string | null; es_retorno?: number | boolean | null }
-interface CajaViaje { id: number; fecha: string | null; motivo: string | null; importe_total: number | string | null; estado: string | null; serie: string | null; numero: string | null }
+interface CajaViaje { id: number; fecha: string | null; motivo: string | null; sub_motivo?: string | null; importe_total: number | string | null; estado: string | null; serie: string | null; numero: string | null; tipo_movimiento?: string | null; origen?: string | null; descripcion?: string | null }
 interface LiquidacionViaje { gastos: Gasto[]; total_depositado: number | string; total_rendido: number | string; saldo_diferencia: number | string; estado_balance: string }
 
 const TONO_OS: Record<string, string> = { PENDIENTE: 'amber', PROGRAMADO: 'accent', EN_EJECUCION: 'accent', ENTREGADO: 'green', ANULADO: 'gray' };
@@ -234,6 +234,15 @@ function NuevoGastoSheet({ open, codigo, conductor, onClose, onGuardado }: { ope
   );
 }
 
+const COLUMNAS_LIQ: ColumnaTabla[] = [
+  { id: 'tipo', titulo: 'Tipo', ancho: 130 },
+  { id: 'doc', titulo: 'Caja / gasto', ancho: 130 },
+  { id: 'concepto', titulo: 'Motivo › sub motivo', ancho: 260 },
+  { id: 'estado', titulo: 'Estado', ancho: 110 },
+  { id: 'importe', titulo: 'Importe', ancho: 120, alinear: 'right' },
+  { id: 'acc', titulo: '', ancho: 56, minimo: 48 },
+];
+
 // Depósitos (caja), gastos rendidos y balance del viaje. Se puede registrar un gasto, eliminarlo
 // y generar la caja de compensación cuando el balance no cuadra (igual que el clásico).
 export function SeccionGastosViaje({ codigo, conductor, placa, puedeEditar }: { codigo: string; conductor: string | null; placa: string | null; puedeEditar: boolean }) {
@@ -310,26 +319,32 @@ export function SeccionGastosViaje({ codigo, conductor, placa, puedeEditar }: { 
       {!caja.isLoading && !liq.isLoading && depositos.length === 0 && gastos.length === 0 ? (
         <EmptyState icon={<Wallet size={22} />} title="Sin movimientos">Este viaje no tiene depósitos ni gastos registrados.</EmptyState>
       ) : (
-        <ul className="vb__lista">
-          {depositos.map(d => (
-            <li key={`c${d.id}`} className="vb__fila">
-              <span className="vb__ico vb__ico--verde" aria-hidden><Wallet size={16} /></span>
-              <div className="vb__txt"><strong>Depósito</strong><span>{d.serie && d.numero ? `${d.serie}-${d.numero}` : d.motivo || 'Caja'}</span></div>
-              <strong className="vb__monto">{soles(d.importe_total)}</strong>
-            </li>
-          ))}
+        <TablaRedimensionable id="liquidacion-viaje-v1" columnas={COLUMNAS_LIQ} ariaLabel="Liquidación del viaje" className="tabla-redim--compacta">
+          {depositos.filter(d => String(d.estado ?? '').toUpperCase() !== 'ANULADO').map(d => {
+            const vale = d.origen === 'VALE_COMBUSTIBLE';
+            const ingreso = d.tipo_movimiento === 'INGRESO';
+            return (
+              <tr key={`c${d.id}`}>
+                <Celda><Badge tone={vale ? 'amber' : ingreso ? 'accent' : 'green'}>{vale ? 'Combustible' : ingreso ? 'Devolución' : 'Depósito'}</Badge></Celda>
+                <Celda mono>{d.serie && d.numero ? `${d.serie}-${String(parseInt(String(d.numero), 10) || 0).padStart(5, '0')}` : 'Caja'}</Celda>
+                <Celda>{[d.motivo, d.sub_motivo].filter(Boolean).join(' › ') || 'Caja'}{vale ? ' · pagado directo a la estación (no entra en esta liquidación)' : ''}</Celda>
+                <Celda>{d.estado ?? '—'}</Celda>
+                <Celda alinear="right" mono><span style={vale ? { color: 'var(--label-2)' } : undefined}>{ingreso ? '− ' : ''}{soles(d.importe_total)}</span></Celda>
+                <Celda alinear="center"><span /></Celda>
+              </tr>
+            );
+          })}
           {gastos.map((g, i) => (
-            <li key={`g${g.id ?? i}`} className="vb__fila">
-              <span className="vb__ico vb__ico--violeta" aria-hidden><Receipt size={16} /></span>
-              <div className="vb__txt">
-                <strong>{g.sub_motivo || g.tipo_gasto || 'Gasto'}</strong>
-                <span>{[g.id != null ? `G-${String(g.id).padStart(4, '0')}` : null, g.detalle, g.estado].filter(Boolean).join(' · ')}</span>
-              </div>
-              <strong className="vb__monto">{soles(g.importe)}</strong>
-              {puedeEditar && g.id != null && <IconoFila texto="Eliminar gasto" tono="rojo" icono={<Trash2 size={15} />} onClick={() => setPorEliminar(g)} />}
-            </li>
+            <tr key={`g${g.id ?? i}`}>
+              <Celda><Badge tone="accent">Gasto rendido</Badge></Celda>
+              <Celda mono>{g.id != null ? `G-${String(g.id).padStart(4, '0')}` : '—'}</Celda>
+              <Celda>{[g.sub_motivo || g.tipo_gasto || 'Gasto', g.detalle].filter(Boolean).join(' · ')}</Celda>
+              <Celda>{g.estado ?? '—'}</Celda>
+              <Celda alinear="right" mono>{soles(g.importe)}</Celda>
+              <Celda alinear="center">{puedeEditar && g.id != null ? <IconoFila texto="Eliminar gasto" tono="rojo" icono={<Trash2 size={15} />} onClick={() => setPorEliminar(g)} /> : <span />}</Celda>
+            </tr>
           ))}
-        </ul>
+        </TablaRedimensionable>
       )}
 
       <NuevoGastoSheet open={nuevo} codigo={codigo} conductor={conductor} onClose={() => setNuevo(false)} onGuardado={refrescar} />
