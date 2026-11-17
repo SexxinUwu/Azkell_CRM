@@ -164,6 +164,20 @@ function NuevoGastoSheet({ open, codigo, conductor, onClose, onGuardado }: { ope
   const [archivo, setArchivo] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [servicio, setServicio] = useState('');
+  // Servicios que lleva el viaje (ida y regreso): el gasto pertenece a uno de ellos
+  const servicios = useQuery({
+    queryKey: ['tesoreria', 'viaje-servicios', codigo],
+    enabled: open,
+    queryFn: () => api<{ data: Array<{ orden: string; es_retorno: boolean; cliente: string | null; ruta: string | null }> }>(`/tesoreria/viaje-servicios?viaje=${encodeURIComponent(codigo)}`).then(r => r.data ?? []),
+    staleTime: 60_000,
+  });
+  const lista = servicios.data ?? [];
+
+  useEffect(() => {
+    if (!open) return;
+    setServicio(lista.length === 1 ? lista[0].orden : '');
+  }, [open, lista.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!open) return;
@@ -179,10 +193,12 @@ function NuevoGastoSheet({ open, codigo, conductor, onClose, onGuardado }: { ope
     setError(null);
     if (!fecha) { setError('Indica la fecha del gasto.'); return; }
     if (!(parseFloat(importe) > 0)) { setError('Indica un importe mayor a cero.'); return; }
+    if (lista.length > 0 && !servicio) { setError('Elige a qué servicio pertenece el gasto (ida o regreso).'); return; }
     setEnviando(true);
     try {
       const f = new FormData();
       f.append('orden_viaje', codigo);
+      if (servicio) f.append('orden_servicio', servicio);
       f.append('fecha', fecha);
       f.append('conductor', conductor ?? '');
       f.append('tipo_gasto', 'Gastos de Viaje y Ruta');
@@ -213,6 +229,14 @@ function NuevoGastoSheet({ open, codigo, conductor, onClose, onGuardado }: { ope
       <div className="form-grid">
         <p className="field field--wide t-callout c-secondary" style={{ margin: 0 }}>Viaje {codigo}{conductor ? ` · Conductor: ${conductor}` : ''}</p>
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
+        {lista.length > 0 && (
+          <Field label="¿A qué servicio pertenece? *" wide hint={lista.length === 1 ? 'El viaje lleva un solo servicio' : 'Elige si el gasto es de la ida o del regreso'}>{p => (
+            <SelectInput {...p} value={servicio} onChange={e => setServicio(e.target.value)}>
+              {lista.length > 1 && <option value="">Elige el servicio…</option>}
+              {lista.map(x => <option key={x.orden} value={x.orden}>{x.orden} · {x.es_retorno ? 'Regreso' : 'Ida'}{x.cliente ? ` · ${x.cliente}` : ''}{x.ruta ? ` · ${x.ruta}` : ''}</option>)}
+            </SelectInput>
+          )}</Field>
+        )}
         <Field label="Fecha del gasto *">{p => <TextInput {...p} type="date" value={fecha} onChange={e => setFecha(e.target.value)} />}</Field>
         <Field label="Concepto / sub motivo *">{p => (
           <SelectInput {...p} value={subMotivo} onChange={e => setSubMotivo(e.target.value)}>

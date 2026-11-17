@@ -5298,6 +5298,7 @@ app.get('/api/tipo-cambio/sunat', async (req, res) => {
 });
 app.use('/api/tesoreria/cuentas-bancarias', require('./routes/cuentas_bancarias')(db, logAudit));
 app.use('/api/solicitudes', require('./routes/solicitudes')(db, logAudit, _generarCodigoAlmacen));
+app.use('/api/rentabilidad', require('./routes/rentabilidad')(db));
 app.use('/api/tesoreria/caja-chica', require('./routes/caja_chica')(db, broadcast, logAudit));
 app.use('/api/tesoreria', require('./routes/tesoreria')(db, broadcast, logAudit));
 app.use('/api/rrhh', require('./routes/rrhh')(db, broadcast, logAudit));

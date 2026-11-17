@@ -1789,6 +1789,17 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     // Registrar nuevo gasto de liquidación con comprobante adjunto
+    // Servicios que lleva un viaje (ida y regreso): un gasto del viaje pertenece a uno de ellos
+    router.get('/viaje-servicios', async (req, res) => {
+        try {
+            const [r] = await getDb(req).query(
+                `SELECT r.orden, r.es_retorno, os.cliente_nombre AS cliente, os.ruta FROM operaciones_ordenes_viaje_rutas r
+                 LEFT JOIN operaciones_ordenes_servicio os ON os.codigo_orden COLLATE utf8mb4_unicode_ci = r.orden COLLATE utf8mb4_unicode_ci
+                 WHERE UPPER(TRIM(r.viaje)) = UPPER(TRIM(?)) ORDER BY r.es_retorno ASC, r.id ASC`, [String(req.query.viaje || '')]);
+            res.json({ ok: true, data: r.map(x => ({ orden: x.orden, es_retorno: !!x.es_retorno, cliente: x.cliente, ruta: x.ruta })) });
+        } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+    });
+
     router.post('/liquidaciones-gastos', upload.single('sustento'), async (req, res) => {
         try {
             const tdb = getDb(req);
@@ -1853,6 +1864,18 @@ module.exports = function (db, broadcast, logAudit) {
                 const momento = b.registrado_en ? new Date(b.registrado_en) : null;
                 if (momento && !isNaN(momento)) { columnas.push('creado_en'); valores.push(momento); }
             }
+
+            // El gasto pertenece a un servicio del viaje: si el viaje lleva uno solo, se asigna solo; si lleva varios, hay que elegirlo
+            try {
+                const [svs] = await tdb.query('SELECT DISTINCT orden FROM operaciones_ordenes_viaje_rutas WHERE UPPER(TRIM(viaje)) = UPPER(TRIM(?))', [b.orden_viaje]);
+                let os = String(b.orden_servicio || '').trim() || null;
+                if (svs.length) {
+                    if (!os && svs.length === 1) os = svs[0].orden;
+                    if (!os) return res.status(400).json({ error: 'Elige a qué servicio pertenece el gasto (ida o regreso).' });
+                    if (!svs.some(x => x.orden === os)) return res.status(400).json({ error: 'Ese servicio no pertenece al viaje.' });
+                    columnas.push('orden_servicio'); valores.push(os);
+                }
+            } catch (eOs) { console.warn('liquidaciones-gastos: servicio:', eOs.message); }
 
             let result;
             try {

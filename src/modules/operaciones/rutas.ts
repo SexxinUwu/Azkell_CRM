@@ -27,6 +27,12 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: 'ClipboardList', permisos: ['operaciones.ver', 'admin'] },
   },
   {
+    path: 'operaciones/rentabilidad/*',
+    permisos: ['op_rentabilidad.ver', 'admin'],
+    Page: lazy(() => import('./RentabilidadPage').then(m => ({ default: m.RentabilidadPage }))),
+    nav: { key: 'rentabilidad', label: 'Rentabilidad', to: '/operaciones/rentabilidad', icon: 'TrendingUp', permisos: ['op_rentabilidad.ver'] },
+  },
+  {
     path: 'operaciones/ubigeos/*',
     permisos: ['op_ordenes_servicio.ver', 'op_ordenes_viaje.ver', 'op_programacion.ver', 'op_guias_remision.ver', 'admin'],
     Page: lazy(() => import('./UbigeosPage').then(m => ({ default: m.UbigeosPage }))),

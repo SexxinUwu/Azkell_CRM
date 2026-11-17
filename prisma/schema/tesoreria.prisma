@@ -180,7 +180,9 @@ model TesoreriaLiquidacionGasto {
   usuario_registro String?   @db.VarChar(150)
   creado_en        DateTime? @default(now()) @db.Timestamp(0)
   uuid_cliente     String?   @unique(map: "uq_liq_uuid_cliente") @db.VarChar(36)
+  orden_servicio   String?   @db.VarChar(40)
 
+  @@index([orden_servicio], map: "idx_liq_servicio")
   @@index([fecha], map: "idx_liq_fecha")
   @@index([orden_viaje], map: "idx_liq_viaje")
   @@map("tesoreria_liquidaciones_gastos")
@@ -235,7 +237,9 @@ model ViajeValeCombustible {
   observacion         String?   @db.Text
   usuario             String?   @db.VarChar(150)
   creado_en           DateTime? @default(now()) @db.Timestamp(0)
+  orden_servicio      String?   @db.VarChar(40)
 
+  @@index([orden_servicio], map: "idx_vale_servicio")
   @@index([viaje], map: "idx_vale_viaje")
   @@index([placa], map: "idx_vale_placa")
   @@index([caja_id], map: "idx_vale_caja")

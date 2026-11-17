@@ -31,9 +31,10 @@ interface Vale {
   id: number; codigo: string; viaje: string; placa: string; conductor: string; fecha: string; hora: string | null;
   estacion_nombre: string; estacion_ruc: string | null; combustible: string | null; galones: number | string; precio_galon: number | string; total: number | string; moneda: string;
   km_odometro: number | null; numero_voucher: string | null; pagar_a: 'CONDUCTOR' | 'ESTACION'; beneficiario_nombre: string;
-  estado: 'PENDIENTE' | 'APROBADO' | 'PAGADO' | 'ANULADO'; caja_codigo: string; alertas: Alerta[]; voucher_url_firmada: string | null; pago_voucher_firmada: string | null;
+  estado: 'PENDIENTE' | 'APROBADO' | 'PAGADO' | 'ANULADO'; caja_codigo: string; alertas: Alerta[]; voucher_url_firmada: string | null; pago_voucher_firmada: string | null; orden_servicio?: string | null;
 }
-interface ViajeOpc { viaje: string; placa_tracto: string; conductor: string; ruta: string | null; fecha_viaje: string | null; conductor_doc: string | null; ultimo_km: number | null }
+interface ServicioViaje { orden: string; es_retorno: boolean; cliente: string | null; ruta: string | null }
+interface ViajeOpc { servicios?: ServicioViaje[]; viaje: string; placa_tracto: string; conductor: string; ruta: string | null; fecha_viaje: string | null; conductor_doc: string | null; ultimo_km: number | null }
 interface Lectura {
   estacion_nombre: string | null; estacion_ruc: string | null; fecha: string | null; hora: string | null; numero_voucher: string | null; placa: string | null; combustible: string | null;
   galones: number | null; precio_galon: number | null; total: number | null; moneda: string; km_odometro: number | null; conductor_doc: string | null;
@@ -45,6 +46,7 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'codigo', titulo: 'Vale', ancho: 140 },
   { id: 'fecha', titulo: 'Fecha', ancho: 105 },
   { id: 'viaje', titulo: 'Viaje', ancho: 130 },
+  { id: 'servicio', titulo: 'Servicio', ancho: 130 },
   { id: 'placa', titulo: 'Placa', ancho: 100 },
   { id: 'conductor', titulo: 'Conductor', ancho: 190, minimo: 120 },
   { id: 'estacion', titulo: 'Estación', ancho: 200, minimo: 120 },
@@ -151,6 +153,7 @@ export function ValesViajePage() {
                 <Celda mono>{v.codigo}</Celda>
                 <Celda mono>{fechaCorta(v.fecha)}</Celda>
                 <Celda mono>{v.viaje}</Celda>
+                <Celda mono>{v.orden_servicio || '—'}</Celda>
                 <Celda mono>{v.placa || '—'}</Celda>
                 <Celda>{v.conductor || '—'}</Celda>
                 <Celda>{v.estacion_nombre || '—'}</Celda>
@@ -177,11 +180,13 @@ interface Form {
   pagar_a: 'CONDUCTOR' | 'ESTACION'; beneficiario_nombre: string; beneficiario_doc: string;
   // Lo que pide la caja
   autoriza: string; modalidad_pago: string; cuenta_destino: string; cuenta_empresa: string; tipo_comprobante: string;
+  // Servicio (ida o regreso) al que pertenece el vale
+  orden_servicio: string;
 }
 const VACIO: Form = {
   viaje: '', placa: '', conductor: '', conductor_doc: '', fecha: '', hora: '', estacion_nombre: '', estacion_ruc: '', combustible: '', galones: '', precio_galon: '', total: '', moneda: 'SOLES',
   km_odometro: '', numero_voucher: '', placa_voucher: '', observacion: '', pagar_a: 'ESTACION', beneficiario_nombre: '', beneficiario_doc: '',
-  autoriza: '', modalidad_pago: 'TRANSFERENCIA BANCARIA', cuenta_destino: '', cuenta_empresa: '', tipo_comprobante: '',
+  autoriza: '', modalidad_pago: 'TRANSFERENCIA BANCARIA', cuenta_destino: '', cuenta_empresa: '', tipo_comprobante: '', orden_servicio: '',
 };
 const t = (v: unknown) => (v == null ? '' : String(v));
 const PASOS = ['Viaje y voucher', 'Consumo', 'Proveedor y pago', 'Confirmar'];
@@ -232,7 +237,7 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
   function elegirViaje(codigo: string | null) {
     const v = viajes.data?.find(x => x.viaje === codigo);
     if (!v) { set({ viaje: '' }); return; }
-    set({ viaje: v.viaje, placa: v.placa_tracto, conductor: v.conductor, conductor_doc: t(v.conductor_doc) });
+    set({ viaje: v.viaje, placa: v.placa_tracto, conductor: v.conductor, conductor_doc: t(v.conductor_doc), orden_servicio: v.servicios?.length === 1 ? v.servicios[0].orden : '' });
     setKm(v.ultimo_km);
     void traerKmGps(v.placa_tracto);
   }
@@ -291,6 +296,7 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
 
   function validarConsumo(): string | null {
     if (!f.viaje) return 'Elige el viaje.';
+    if ((viajeActual?.servicios?.length ?? 0) > 0 && !f.orden_servicio) return 'Elige a qué servicio pertenece el vale (ida o regreso).';
     if (!f.combustible) return 'Elige el tipo de combustible.';
     if (!(n(f.galones) > 0)) return 'Indica la cantidad.';
     if (!(n(f.total) > 0)) return 'Indica el total.';
@@ -371,6 +377,12 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
                 <Field label="Viaje *" hint={viajeActual ? [viajeActual.placa_tracto, viajeActual.conductor].filter(Boolean).join(' · ') : 'Se llenan solos la placa y el conductor'}>
                   {p => <Combobox {...p} options={opcionesViaje} value={f.viaje || null} onChange={elegirViaje} placeholder="Busca por viaje, placa o conductor" loading={viajes.isFetching} enHoja compacta tituloHoja="Elegir viaje" />}
                 </Field>
+                {(viajeActual?.servicios?.length ?? 0) > 0 && (
+                  <Field label="¿A qué servicio pertenece? *" hint={viajeActual!.servicios!.length === 1 ? 'El viaje lleva un solo servicio' : 'Elige si el vale es de la ida o del regreso: así se sabe cuánto costó cada uno'}>
+                    {p => <Combobox {...p} options={viajeActual!.servicios!.map(x => ({ value: x.orden, label: `${x.orden} · ${x.es_retorno ? 'Regreso' : 'Ida'}`, description: [x.cliente, x.ruta].filter(Boolean).join(' · ') || undefined }))}
+                      value={f.orden_servicio || null} onChange={v => set({ orden_servicio: v ?? '' })} placeholder="Elige el servicio (ida o regreso)" enHoja compacta tituloHoja="Servicio del vale" />}
+                  </Field>
+                )}
               </div>
             </section>
             <div className="gr__zona" role="button" tabIndex={0} aria-disabled={!f.viaje}
