@@ -13,7 +13,7 @@ import { haptic } from '../../core/lib/haptics';
 import { Seccion } from '../almacen/EntradaFormulario';
 import { BANCOS_PERU } from '../almacen/bancosPeru';
 import { consultarDocumento } from '../directorio/api';
-import { claveSolicitudes, crearSolicitud, useTiposSolicitud, type CampoSolicitud, type TipoSolicitud } from './api';
+import { claveSolicitudes, crearSolicitud, useTiposSolicitud, useTitulares, type CampoSolicitud, type TipoSolicitud } from './api';
 
 const ICONOS: Record<string, LucideIcon> = { Truck, Users, Landmark };
 
@@ -30,6 +30,7 @@ export function NuevaSolicitudSheet({ open, onClose, onCreada }: { open: boolean
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const titulares = useTitulares(open && tipo?.campos.some(c => c.tipo === 'titular') === true);
   // Resultado de la consulta del documento (SUNAT o RENIEC)
   const [consulta, setConsulta] = useState<{ estado: 'buscando' | 'ok' | 'no'; texto: string } | null>(null);
 
@@ -92,7 +93,18 @@ export function NuevaSolicitudSheet({ open, onClose, onCreada }: { open: boolean
     } finally { setEnviando(false); }
   }
 
+  const ETIQUETA_TITULAR = { PROVEEDOR: 'Proveedor', CLIENTE: 'Cliente', PERSONAL: 'Personal' } as const;
+
+  /** Al elegir de la lista se guardan quién es (tipo, referencia, documento y nombre oficial) */
+  function elegirTitular(valor: string | null) {
+    const t = (titulares.data ?? []).find(x => `${x.tipo}|${x.ref}` === valor);
+    setDatos(d => ({ ...d, titular: t?.nombre ?? '', titular_tipo: t?.tipo ?? '', titular_ref: t?.ref ?? '', titular_doc: t?.doc ?? '', titular_nombre: t?.nombre ?? '' }));
+    setErrores(e => (e.titular ? { ...e, titular: '' } : e));
+    if (t) haptic('selection');
+  }
+
   function campo(c: CampoSolicitud) {
+    if (c.tipo === 'oculto') return null;
     const etiqueta = `${c.label}${c.requerido ? ' *' : ''}`;
     const ayuda = c.tipo === 'documento' ? ayudaDocumento(c) : c.ayuda;
     return (
@@ -103,6 +115,10 @@ export function NuevaSolicitudSheet({ open, onClose, onCreada }: { open: boolean
         ) : c.tipo === 'banco' ? (
           <Combobox {...p} enHoja tituloHoja="Banco o caja" options={BANCOS_PERU.map(b => ({ value: b, label: b }))} value={datos[c.key] || null}
             onChange={v => poner(c.key, v ?? '')} onCreate={t => poner(c.key, t.trim())} createLabel="Usar este banco" placeholder="Busca el banco o la caja…" />
+        ) : c.tipo === 'titular' ? (
+          <Combobox {...p} enHoja tituloHoja="Proveedor, cliente o persona" loading={titulares.isLoading}
+            options={(titulares.data ?? []).map(t => ({ value: `${t.tipo}|${t.ref}`, label: t.nombre, description: `${ETIQUETA_TITULAR[t.tipo]}${t.doc ? ' · ' + t.doc : ''}` }))}
+            value={datos.titular_tipo ? `${datos.titular_tipo}|${datos.titular_ref}` : null} onChange={elegirTitular} placeholder="Busca por nombre o documento…" />
         ) : c.tipo === 'documento' ? (
           <TextInput {...p} inputMode="numeric" maxLength={11} value={datos[c.key] ?? ''} placeholder="DNI (8) o RUC (11)" autoFocus
             onChange={ev => { void cambiarDocumento(c, ev.target.value); }} />
@@ -118,7 +134,7 @@ export function NuevaSolicitudSheet({ open, onClose, onCreada }: { open: boolean
   /** Los campos se muestran en tarjetas por grupo, en el orden en que aparecen */
   const grupos = (t: TipoSolicitud) => {
     const m = new Map<string, CampoSolicitud[]>();
-    for (const c of t.campos) { const g = c.grupo ?? 'Datos clave'; m.set(g, [...(m.get(g) ?? []), c]); }
+    for (const c of t.campos) { if (c.tipo === 'oculto') continue; const g = c.grupo ?? 'Datos clave'; m.set(g, [...(m.get(g) ?? []), c]); }
     return [...m.entries()];
   };
   const TONOS = ['azul', 'ambar', 'violeta', 'verde', 'rosa'] as const;

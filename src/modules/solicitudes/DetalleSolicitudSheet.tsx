@@ -124,7 +124,7 @@ export function DetalleSolicitudSheet({ id, onClose }: { id: number | null; onCl
                 <Dato etiqueta="Comentario" valor={s.comentario_revision || '—'} ancho />
               </Grupo>
               <Grupo titulo="Datos pedidos" ancho>
-                {s.campos.filter(c => (s.datos[c.key] ?? '') !== '').map(c => <Dato key={c.key} etiqueta={c.label} valor={s.datos[c.key]} ancho={c.ancho || c.tipo === 'area'} />)}
+                {s.campos.filter(c => c.tipo !== 'oculto' && (s.datos[c.key] ?? '') !== '').map(c => <Dato key={c.key} etiqueta={c.label} valor={s.datos[c.key]} ancho={c.ancho || c.tipo === 'area'} />)}
               </Grupo>
             </div>
 

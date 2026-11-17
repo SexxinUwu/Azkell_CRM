@@ -2,6 +2,7 @@
 // aprobar ese tipo lo revisa. Al aprobarse, el sistema lo aplica solo. Todo paso queda en solicitudes_historial.
 // Tablas: migración 36_solicitudes. Cada usuario ve solo lo suyo; ver todo y aprobar es el permiso de Gerencia › Aprobación de solicitudes.
 const express = require('express');
+const { proveedoresConEstaciones } = require('../services/proveedores_cuentas');
 
 const texto = (v, max) => { const t = String(v ?? '').trim(); return t ? t.slice(0, max) : ''; };
 const soloDigitos = v => String(v ?? '').replace(/\D/g, '');
@@ -135,35 +136,35 @@ module.exports = (db, logAudit, generarCodigoAlmacen) => {
         },
         cuenta_bancaria: {
             etiqueta: 'Agregar cuenta bancaria', icono: 'Landmark',
-            descripcion: 'Pide registrar una cuenta bancaria a un proveedor o a una persona del personal. Al aprobarse queda en Tesorería.',
+            descripcion: 'Elige al proveedor, cliente o persona, el banco y el número de cuenta. Al aprobarse queda en Tesorería.',
             campos: [
-                { key: 'titular_tipo', label: 'La cuenta es de', tipo: 'select', opciones: ['PROVEEDOR', 'PERSONAL'], defecto: 'PROVEEDOR', requerido: true, grupo: 'Titular' },
-                { key: 'titular_doc', label: 'RUC o DNI del titular', tipo: 'documento', requerido: true, autoconsulta: true, grupo: 'Titular', ayuda: 'Debe estar registrado como proveedor o personal' },
-                { key: 'titular_nombre', label: 'Nombre del titular', tipo: 'texto', requerido: true, grupo: 'Titular' },
+                { key: 'titular', label: 'Proveedor, cliente o persona', tipo: 'titular', requerido: true, grupo: 'Titular', ayuda: 'Elige de la lista; busca por nombre o documento' },
+                { key: 'titular_tipo', label: '', tipo: 'oculto', grupo: 'Titular' },
+                { key: 'titular_ref', label: '', tipo: 'oculto', grupo: 'Titular' },
+                { key: 'titular_doc', label: '', tipo: 'oculto', grupo: 'Titular' },
+                { key: 'titular_nombre', label: '', tipo: 'oculto', grupo: 'Titular' },
                 ...CAMPOS_CUENTA.map(c => ({ ...c, grupo: 'Cuenta bancaria' })),
             ],
             titulo: d => `Cuenta ${d.banco} de ${d.titular_nombre}`,
             async validar(req, d) {
-                d.titular_doc = soloDigitos(d.titular_doc);
-                tipoDeDocumento(d.titular_doc);
                 validarCuenta(d, true);
-                await titularDe(P(req), d); // que exista
+                await resolverTitular(P(req), d); // que exista y trae su nombre oficial
             },
-            clave: d => `${d.titular_doc}|${soloDigitos(d.numero_cuenta || d.cci)}`,
+            clave: d => `${d.titular_ref || d.titular_doc}|${soloDigitos(d.numero_cuenta || d.cci)}`,
             async aplicar(req, conn, d) {
-                const t = await titularDe(conn, d);
+                const t = await resolverTitular(conn, d);
                 if (t.tabla === 'proveedor_cuentas_bancarias') {
-                    const [r] = await conn.query('SELECT COUNT(*) n FROM proveedor_cuentas_bancarias WHERE proveedor_id = ? AND estado = 1', [t.id]);
+                    const [r] = await conn.query('SELECT COUNT(*) n FROM proveedor_cuentas_bancarias WHERE proveedor_id = ? AND estado = 1', [t.ref]);
                     const [c] = await conn.query('INSERT INTO proveedor_cuentas_bancarias (proveedor_id, banco, tipo_cuenta, numero_cuenta, moneda, cci, principal, estado) VALUES (?,?,?,?,?,?,?,1)',
-                        [t.id, d.banco, d.tipo_cuenta || 'CUENTA CORRIENTE', d.numero_cuenta || '', d.moneda || 'SOLES', d.cci || null, r[0].n === 0 ? 1 : 0]);
+                        [t.ref, d.banco, d.tipo_cuenta || 'CUENTA CORRIENTE', d.numero_cuenta || '', d.moneda || 'SOLES', d.cci || null, r[0].n === 0 ? 1 : 0]);
                     if (c.affectedRows !== 1) throw new Error('No se pudo registrar la cuenta.');
                     return { entidad: 'cuenta de proveedor', id: c.insertId, ver: '/tesoreria/cuentas-proveedores' };
                 }
-                const [r] = await conn.query('SELECT COUNT(*) n FROM persona_cuentas_bancarias WHERE documento = ? AND estado = 1', [d.titular_doc]);
+                const [r] = await conn.query('SELECT COUNT(*) n FROM persona_cuentas_bancarias WHERE documento = ? AND estado = 1', [t.doc]);
                 const [c] = await conn.query('INSERT INTO persona_cuentas_bancarias (documento, nombre, banco, tipo_cuenta, moneda, numero_cuenta, cci, principal, estado) VALUES (?,?,?,?,?,?,?,?,1)',
-                    [d.titular_doc, d.titular_nombre, d.banco, d.tipo_cuenta || 'CUENTA DE AHORROS', d.moneda || 'SOLES', d.numero_cuenta || '', d.cci || null, r[0].n === 0 ? 1 : 0]);
+                    [t.doc, t.nombre, d.banco, d.tipo_cuenta || 'CUENTA DE AHORROS', d.moneda || 'SOLES', d.numero_cuenta || '', d.cci || null, r[0].n === 0 ? 1 : 0]);
                 if (c.affectedRows !== 1) throw new Error('No se pudo registrar la cuenta.');
-                return { entidad: 'cuenta del personal', id: c.insertId, ver: '/tesoreria/cuentas-personal' };
+                return { entidad: t.tipo === 'CLIENTE' ? 'cuenta de cliente' : 'cuenta del personal', id: c.insertId, ver: '/tesoreria/cuentas-personal' };
             },
         },
     };
@@ -186,19 +187,56 @@ function tipoDeDocumento(doc) {
         if (d.moneda && !MONEDAS.includes(d.moneda)) throw aviso('Moneda no válida.');
     }
 
-    /** El titular debe existir: proveedor (por documento) o persona del personal / conductor (por DNI) */
-    async function titularDe(conn, d) {
-        if (d.titular_tipo === 'PROVEEDOR') {
-            const [p] = await conn.query("SELECT id FROM proveedores_inv WHERE REPLACE(numero_documento,' ','') = ? LIMIT 1", [d.titular_doc]);
-            if (!p.length) throw aviso('Ese proveedor no está registrado: primero pide «Agregar proveedor».');
-            return { tabla: 'proveedor_cuentas_bancarias', id: p[0].id };
+    /**
+     * El titular elegido debe existir: proveedor (de Almacén o estación de servicio), cliente o persona del personal.
+     * Devuelve su nombre oficial y dónde se guardan sus cuentas; no se confía en el nombre que mande el navegador.
+     */
+    async function resolverTitular(conn, d) {
+        const tipo = String(d.titular_tipo || '').toUpperCase();
+        const ref = String(d.titular_ref || '').trim();
+        const doc = soloDigitos(d.titular_doc);
+        let t = null;
+        if (tipo === 'PROVEEDOR') {
+            if (/^EST-\d+$/.test(ref)) {
+                const [e] = await conn.query('SELECT proveedor_razon_social n, proveedor_ruc doc FROM combustible_estaciones_proveedores WHERE id = ?', [ref.slice(4)]);
+                if (e.length) t = { tabla: 'proveedor_cuentas_bancarias', ref, nombre: e[0].n, doc: soloDigitos(e[0].doc) };
+            } else if (ref) {
+                const [p] = await conn.query('SELECT id, nombre, numero_documento doc FROM proveedores_inv WHERE id = ?', [ref]);
+                if (p.length) t = { tabla: 'proveedor_cuentas_bancarias', ref: p[0].id, nombre: p[0].nombre, doc: soloDigitos(p[0].doc) };
+            }
+        } else if (tipo === 'CLIENTE') {
+            const [c] = await conn.query("SELECT razon_social n, ruc_dni doc FROM clientes WHERE REPLACE(ruc_dni,' ','') = ? LIMIT 1", [doc]);
+            if (c.length) t = { tabla: 'persona_cuentas_bancarias', ref: doc, nombre: c[0].n, doc };
+        } else if (tipo === 'PERSONAL') {
+            const [c] = await conn.query('SELECT nombre n FROM conductores WHERE TRIM(dni) = ? LIMIT 1', [doc]);
+            let nombre = c.length ? c[0].n : '';
+            if (!nombre) { try { const [r] = await conn.query("SELECT TRIM(CONCAT(nombres,' ',apellidos)) n FROM rrhh_personal WHERE TRIM(numero_documento) = ? LIMIT 1", [doc]); if (r.length) nombre = r[0].n; } catch (e2) { /* sin RRHH */ } }
+            if (nombre) t = { tabla: 'persona_cuentas_bancarias', ref: doc, nombre, doc };
         }
-        const [c] = await conn.query('SELECT 1 FROM conductores WHERE TRIM(dni) = ? LIMIT 1', [d.titular_doc]);
-        let existe = c.length > 0;
-        if (!existe) { try { const [r] = await conn.query('SELECT 1 FROM rrhh_personal WHERE TRIM(numero_documento) = ? LIMIT 1', [d.titular_doc]); existe = r.length > 0; } catch (e) { /* sin RRHH */ } }
-        if (!existe) throw aviso('Esa persona no está registrada en RRHH › Personal.');
-        return { tabla: 'persona_cuentas_bancarias', id: d.titular_doc };
+        if (!t) throw aviso('Elige al proveedor, cliente o persona de la lista.');
+        t.tipo = tipo;
+        d.titular_nombre = t.nombre; d.titular_doc = t.doc; d.titular_ref = String(t.ref);
+        return t;
     }
+
+    // Lista para elegir el titular de una cuenta: proveedores (con estaciones de servicio), clientes y personal
+    router.get('/titulares', async (req, res) => {
+        try {
+            const p = P(req);
+            const out = [];
+            for (const x of await proveedoresConEstaciones(p)) out.push({ tipo: 'PROVEEDOR', ref: x.titular, doc: x.doc || '', nombre: x.nombre });
+            const [cli] = await p.query("SELECT TRIM(ruc_dni) doc, razon_social nombre FROM clientes WHERE COALESCE(TRIM(ruc_dni),'') <> '' ORDER BY razon_social LIMIT 3000");
+            for (const x of cli) out.push({ tipo: 'CLIENTE', ref: soloDigitos(x.doc), doc: soloDigitos(x.doc), nombre: x.nombre });
+            const vistos = new Set();
+            const [cond] = await p.query("SELECT TRIM(dni) doc, nombre FROM conductores WHERE COALESCE(TRIM(dni),'') <> '' ORDER BY nombre LIMIT 3000");
+            for (const x of cond) { vistos.add(soloDigitos(x.doc)); out.push({ tipo: 'PERSONAL', ref: soloDigitos(x.doc), doc: soloDigitos(x.doc), nombre: x.nombre }); }
+            try {
+                const [rr] = await p.query("SELECT TRIM(numero_documento) doc, TRIM(CONCAT(nombres,' ',apellidos)) nombre FROM rrhh_personal WHERE COALESCE(TRIM(numero_documento),'') <> '' ORDER BY nombres LIMIT 3000");
+                for (const x of rr) if (!vistos.has(soloDigitos(x.doc))) out.push({ tipo: 'PERSONAL', ref: soloDigitos(x.doc), doc: soloDigitos(x.doc), nombre: x.nombre });
+            } catch (e) { /* sin RRHH */ }
+            res.json({ ok: true, data: out });
+        } catch (e) { responder(res, e, 'GET /titulares'); }
+    });
 
     async function codigoNuevo(conn) {
         const anio = new Date().getFullYear();

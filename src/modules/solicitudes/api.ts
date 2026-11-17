@@ -4,7 +4,7 @@ import { api } from '../../core/api/client';
 export interface CampoSolicitud {
   key: string;
   label: string;
-  tipo: 'texto' | 'select' | 'area' | 'banco' | 'documento';
+  tipo: 'texto' | 'select' | 'area' | 'banco' | 'documento' | 'titular' | 'oculto';
   /** Con RUC o DNI completo, el formulario trae solos la razón social, la dirección y el nombre */
   autoconsulta?: boolean;
   /** Tarjeta del formulario donde se muestra el campo */
@@ -94,3 +94,15 @@ export const rechazarSolicitud = (id: number, comentario: string) =>
 
 export const cancelarSolicitud = (id: number) =>
   api<{ ok: boolean }>(`/solicitudes/${id}/cancelar`, { method: 'POST' });
+
+export interface Titular { tipo: 'PROVEEDOR' | 'CLIENTE' | 'PERSONAL'; ref: string; doc: string; nombre: string }
+
+/** Proveedores, clientes y personal para elegir de quién es una cuenta bancaria */
+export function useTitulares(activo: boolean) {
+  return useQuery({
+    queryKey: [...CLAVE, 'titulares'],
+    enabled: activo,
+    queryFn: () => api<{ data: Titular[] }>('/solicitudes/titulares').then(r => r.data ?? []),
+    staleTime: 5 * 60_000,
+  });
+}
