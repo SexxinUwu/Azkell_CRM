@@ -68,9 +68,6 @@ const COLS: Col[] = [
   { id: 'motivo', titulo: 'Motivo', min: 120, max: 460, texto: m => [m.motivo, m.sub_motivo].filter(Boolean).join(' · ') },
   { id: 'persona', titulo: 'Persona / beneficiario', min: 150, max: 420, texto: m => m.persona || m.conductor || '' },
   { id: 'viaje', titulo: 'Orden de viaje', min: 120, max: 160, texto: m => m.orden_viaje || '', mono: true },
-  { id: 'destino', titulo: 'Cuenta destino', min: 160, max: 560, texto: m => m.cuenta_bancaria_persona || '' },
-  { id: 'origen', titulo: 'Cuenta origen (empresa)', min: 160, max: 560, texto: m => m.cuenta_bancaria_empresa || '' },
-  { id: 'modalidad', titulo: 'Modalidad', min: 110, max: 200, texto: m => m.modalidad_pago || '' },
   { id: 'creador', titulo: 'Usuario registro', min: 120, max: 210, texto: m => m.usuario_creacion || '' },
   { id: 'autoriza', titulo: 'Autoriza', min: 100, max: 180, texto: m => m.autoriza || '' },
   { id: 'aprobador', titulo: 'Usuario aprobación', min: 130, max: 210, texto: m => m.usuario_aprobacion || '' },
@@ -214,9 +211,6 @@ export function CajaPage() {
       <Celda key="importe" alinear="right">
         <strong className="oc-importe" style={{ color: ingreso ? 'var(--green-ink)' : undefined }}>{ingreso ? '+' : '-'}{montoCaja(m.importe_total, m.moneda)}</strong>
       </Celda>,
-      <Celda key="destino">{m.cuenta_bancaria_persona || '—'}</Celda>,
-      <Celda key="origen">{m.cuenta_bancaria_empresa || '—'}</Celda>,
-      <Celda key="modalidad">{m.modalidad_pago || '—'}</Celda>,
       <Celda key="creador">{m.usuario_creacion || '—'}</Celda>,
       <Celda key="autoriza">{m.autoriza || '—'}</Celda>,
       <Celda key="aprobador">{m.usuario_aprobacion || '—'}</Celda>,
