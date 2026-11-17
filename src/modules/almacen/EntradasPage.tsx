@@ -22,6 +22,7 @@ import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import { useMediaQuery } from '../../core/lib/useMediaQuery';
 import { formatFechaPe, formatMoneda, formatSoles } from '../../core/lib/format';
+import { anchoAjustado } from '../../core/lib/anchoColumnas';
 import {
   anularEntrada, eliminarEntrada, useEmpresaDocumentos, useEntradas, useInventario,
   type EntradaInv, type ItemEntrada,
@@ -91,6 +92,47 @@ function totalOrden(o: EntradaInv): number {
   const tc = Number(o.tipo_cambio) || 0;
   return o.moneda === 'USD' && tc > 0 ? (Number(o.total_pen) || 0) / tc : (Number(o.total_pen) || 0);
 }
+
+/** Texto que muestra cada columna en una fila: sirve para medir cuánto ancho necesita */
+function textoColumna(id: string, o: EntradaInv, item: ItemEntrada | null, vista: Vista): string {
+  const items = o.items ?? [];
+  const moneda = o.moneda === 'USD' ? 'USD' : 'PEN';
+  const nc = Number(o.nc_aplicado) || 0;
+  const toc = totalOrden(o);
+  switch (id) {
+    case 'fecha': return o.fecha ? formatFechaPe(String(o.fecha).split('T')[0]) : '—';
+    case 'tipo': return esServicio(o.tipo_orden) ? 'ORDEN DE SERVICIO' : 'ORDEN DE COMPRA';
+    case 'orden': return codigoLimpio(o.id);
+    case 'estado': return etiquetaEstado(o.estado).texto;
+    case 'placa': return o.placa || '—';
+    case 'motivo': return o.motivo_entrada || '—';
+    case 'proveedor': return o.proveedor_nombre || '—';
+    case 'codigo': return vista === 'ordenes' ? `${items.length} ítems` : (item?.inventario_id || '—');
+    case 'articulo': {
+      if (vista !== 'ordenes') return item ? (descripcionArticulo(item.descripcion, item.inventario_id) || '—') : 'Sin artículos';
+      if (!items.length) return 'Sin artículos';
+      const primera = descripcionArticulo(items[0].descripcion, items[0].inventario_id) || items[0].inventario_id || '—';
+      return items.length === 1 ? primera : `${primera} · +${items.length - 1} más`;
+    }
+    case 'cant': return vista === 'ordenes' ? `${items.reduce((s, it) => s + (Number(it.cantidad) || 0), 0).toLocaleString('es-PE', { maximumFractionDigits: 2 })} u.` : (item ? String(Number(item.cantidad) || 0) : '—');
+    case 'costo': return vista === 'ordenes' || !item ? '—' : formatMoneda(Number(item.costo_unitario) || 0, moneda);
+    case 'total_oc': return formatMoneda(toc, moneda);
+    case 'total_soles': return formatSoles(Number(o.total_pen) || 0);
+    case 'nc': return nc > 0 ? `− ${formatMoneda(nc, moneda)}` : '—';
+    case 'pagado': return nc > 0 ? formatMoneda(Math.max(0, toc - nc), moneda) : '—';
+    case 'cc': return o.centro_costo || 'CC-100';
+    default: return '';
+  }
+}
+
+/** Cómo se dibuja cada columna (letra, negrita, chips) y hasta dónde puede crecer */
+const ESPEC_COLUMNA: Record<string, { mono?: boolean; bold?: boolean; px?: number; extra?: number; max?: number }> = {
+  fecha: {}, tipo: { bold: true, px: 11, extra: 20, max: 190 }, orden: { mono: true, bold: true, px: 15, max: 170 },
+  estado: { bold: true, px: 11, extra: 26, max: 160 }, placa: { mono: true, max: 120 }, motivo: { max: 480 }, proveedor: { max: 420 },
+  codigo: { mono: true, max: 160 }, articulo: { max: 520 }, cant: { max: 120 }, costo: { max: 150 },
+  total_oc: { bold: true, max: 170 }, total_soles: { bold: true, max: 170 }, nc: { bold: true, max: 170 }, pagado: { bold: true, max: 170 },
+  cc: { mono: true, px: 11, extra: 20, max: 150 },
+};
 
 /** Adjunto: enlace si existe; si no, "Subir" abre la hoja de adjuntos */
 function CeldaAdjunto({ url, texto, tono, onSubir }: { url?: string | null; texto: string; tono: 'rojo' | 'azul' | 'verde'; onSubir: () => void }) {
@@ -278,6 +320,15 @@ export function EntradasPage() {
     return out;
   }, [paginaOrdenes, vista, busqueda]);
 
+  /** Columnas con el ancho que cabe a su texto (como en Caja): una columna con texto largo es más ancha */
+  const columnas = useMemo(() => COLUMNAS.map(c => {
+    if (['acciones', 'voucher', 'cotizacion', 'factura'].includes(c.id)) return c;
+    const textos = filas.map(f => textoColumna(c.id, f.orden, f.item, vista));
+    const esp = ESPEC_COLUMNA[c.id] ?? {};
+    const ancho = anchoAjustado({ titulo: String(c.titulo), textos, min: c.minimo ?? 72, max: esp.max ?? 460, ...esp });
+    return { ...c, ancho, minimo: Math.min(c.minimo ?? 72, ancho) };
+  }), [filas, vista]);
+
   // ── Acciones ──────────────────────────────────────────────────────────────
 
   const acciones: AccionesFila = {
@@ -450,7 +501,7 @@ export function EntradasPage() {
             </EmptyState>
           ) : esTabla ? (
             <>
-              <TablaRedimensionable id="almacen-ordenes-compra" columnas={COLUMNAS} ariaLabel="Órdenes de compra" altoMax="68vh">
+              <TablaRedimensionable id="almacen-ordenes-compra-v2" columnas={columnas} ariaLabel="Órdenes de compra" altoMax="68vh">
                 {filas.map(f => (
                   <FilaOC key={f.key} orden={f.orden} item={f.item} vista={vista} {...acciones} />
                 ))}
