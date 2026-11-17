@@ -1,17 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
-import { Ban, CheckCircle2, Paperclip, Pencil, Trash2, Upload } from 'lucide-react';
+import '../../core/ui/acciones-iconos.css';
+import '../almacen/entradas.css';
+import { Ban, Check, CheckCircle2, CreditCard, FileCheck, Pencil, Shield, Trash2, Upload, X } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
-import { Badge, Notice } from '../../core/ui/Display';
+import { Notice } from '../../core/ui/Display';
 import { Field, TextInput } from '../../core/ui/Field';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
-import { formatFechaPe, formatSoles } from '../../core/lib/format';
+import { formatFechaHoraPe, formatFechaPe, formatSoles } from '../../core/lib/format';
+import { Dato, Grupo, LineaDeVida, type EstadoPaso } from '../almacen/EntradaDetalle';
+import { numeroALetras } from '../almacen/entradaReglas';
 import type { CajaMovimiento } from './api';
-import { estadoDe, esEditable, montoCaja, num, numeroDoc, tonoEstado } from './caja-lib';
+import { estadoDe, esEditable, montoCaja, num, numeroDoc } from './caja-lib';
 
 interface Props {
   mov: CajaMovimiento | null;
@@ -33,7 +37,7 @@ export function DetalleCaja({ mov: m, onClose, onEditar, onCambio }: Props) {
   const [motivo, setMotivo] = useState('');
   const [errMotivo, setErrMotivo] = useState<string | undefined>();
   const [borrando, setBorrando] = useState(false);
-  const [docs, setDocs] = useState(false);
+  const [subiendo, setSubiendo] = useState(false);
   const [voucher, setVoucher] = useState<File | null>(null);
   const [sustento, setSustento] = useState<File | null>(null);
   const [constancia, setConstancia] = useState('');
@@ -85,76 +89,128 @@ export function DetalleCaja({ mov: m, onClose, onEditar, onCambio }: Props) {
       async () => comprobar(await api('/tesoreria/caja/' + m!.id + '/subir-documentos', { method: 'POST', body: f })),
       'Documentos guardados',
     );
-    if (ok) setDocs(false);
+    if (ok) setSubiendo(false);
     else setErrDocs('No se pudieron guardar los documentos. Revisa los archivos e inténtalo de nuevo.');
   }
 
-  const fila = (label: string, valor: unknown, mono = false) => (valor === null || valor === undefined || valor === '' ? null : (
-    <div className="dato"><span className="dato__label">{label}</span><span className={`dato__valor${mono ? ' dato__valor--mono' : ''}`}>{String(valor)}</span></div>
-  ));
+  const aprobada = ['APROBADO', 'PROCESADO', 'PAGADO'].includes(estado);
+  const pagada = estado === 'PROCESADO' || estado === 'PAGADO';
+  const anulada = estado === 'ANULADO';
+  const dolares = m.moneda === 'DOLARES';
+  const monto = num(m.importe_total);
+  const tc = num(m.tipo_cambio) || 1;
+  const puedeAprobar = can('gerencia_aprobaciones_caja.aprobar', 'tesoreria_caja.editar') && editable;
+  const puedeAnular = can('gerencia_aprobaciones_caja.aprobar', 'tesoreria_caja.editar') && !anulada && estado !== 'PAGADO';
+  const sustentoUrl = String(m.sustento_view_url ?? m.sustento_url ?? '');
+  const voucherUrl = String(m.voucher_view_url ?? m.voucher_url ?? '');
+  const fechaCorta = (v: string | null | undefined) => (v ? formatFechaPe(String(v).split(/[T ]/)[0]) : '—');
+
+  let banner: { tono: string; titulo: string; texto: string };
+  if (anulada) banner = { tono: 'oc-banner--rojo', titulo: 'ANULADA', texto: m.motivo_anulacion ? `Motivo: ${m.motivo_anulacion}` : 'El movimiento fue anulado y no cuenta en el saldo.' };
+  else if (pagada) banner = { tono: 'oc-banner--verde', titulo: 'PROCESADA', texto: 'El movimiento ya fue pagado por Tesorería.' };
+  else if (aprobada) banner = { tono: 'oc-banner--ambar', titulo: 'APROBADA · PAGO PENDIENTE', texto: 'Aprobada por Gerencia. Tesorería puede registrar el pago y subir el voucher.' };
+  else banner = { tono: 'oc-banner--gris', titulo: 'POR APROBAR', texto: 'En espera de aprobación de Gerencia.' };
+
+  const docsOk = !!(sustentoUrl || voucherUrl);
+  const pasos: Array<{ titulo: string; texto: string; estado: EstadoPaso; icono: ReactNode }> = [
+    { titulo: 'Registro', texto: fechaCorta(m.fecha), estado: 'hecho', icono: <Check size={16} strokeWidth={2.4} /> },
+    { titulo: 'Aprobación', texto: m.usuario_aprobacion || '—', estado: anulada ? 'rojo' : aprobada ? 'hecho' : 'actual', icono: anulada ? <X size={16} /> : <Shield size={16} /> },
+    { titulo: 'Pago', texto: pagada ? 'Pago registrado' : aprobada ? 'Pendiente' : 'Tras la aprobación', estado: pagada ? 'hecho' : aprobada && !anulada ? 'actual' : 'pendiente', icono: <CreditCard size={16} /> },
+    { titulo: 'Documentos', texto: docsOk ? 'Adjuntados' : 'Sin adjuntos', estado: docsOk ? 'hecho' : 'pendiente', icono: <FileCheck size={16} /> },
+  ];
+  const avance = pasos.reduce((a, p) => a + (p.estado === 'hecho' ? 1 : p.estado === 'actual' ? 0.5 : 0), 0);
+  const fraccion = Math.min(1, Math.max(0, avance / (pasos.length - 1)));
+  const docs = [{ etiqueta: 'Sustento', url: sustentoUrl }, { etiqueta: 'Voucher de pago', url: voucherUrl }];
+  const comprobante = [m.tipo_comprobante, m.numero_factura].filter(Boolean).join(' ');
+
+  const icono = (texto: string, icon: ReactNode, onClick: () => void, extra = '') => (
+    <button type="button" className={`btn btn--secondary btn--icon oc-acciones__boton${extra}`} data-tip={texto} aria-label={texto} onClick={onClick} disabled={ocupado}>{icon}</button>
+  );
 
   return (
     <>
-      <Sheet open onClose={() => !ocupado && onClose()} title={`Caja ${numeroDoc(m)}`}
-        footer={
-          <>
-            {can('tesoreria_caja.eliminar') && editable && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={() => setBorrando(true)}>Eliminar</Button>}
-            {can('gerencia_aprobaciones_caja.aprobar', 'tesoreria_caja.editar') && estado !== 'ANULADO' && estado !== 'PAGADO' &&
-              <Button variant="secondary" icon={<Ban size={16} />} onClick={() => setAnulando(true)}>Anular</Button>}
-            {can('tesoreria_caja.editar', 'tesoreria_caja.crear') && editable &&
-              <Button variant="secondary" icon={<Pencil size={16} />} onClick={() => { onClose(); onEditar(m); }}>Editar</Button>}
-            {can('gerencia_aprobaciones_caja.aprobar', 'tesoreria_caja.editar') && editable &&
-              <Button variant="primary" icon={<CheckCircle2 size={16} />} loading={ocupado}
-                onClick={() => ejecutar(async () => comprobar(await api('/tesoreria/caja/' + m.id + '/aprobar', { method: 'POST', body: { usuario_aprobacion: user?.name } })), 'Caja aprobada')}>Aprobar</Button>}
-            {(estado === 'APROBADO' || estado === 'PROCESADO' || estado === 'PAGADO') && can('tesoreria_caja.editar', 'tesoreria_caja.crear') &&
-              <Button variant="primary" icon={<Upload size={16} />} onClick={() => setDocs(true)}>Subir documentos</Button>}
-          </>
-        }>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
-          <div className="inv-metricas">
-            <div className="inv-metrica">
-              <span className={`inv-metrica__num${ingreso ? '' : ' inv-metrica__num--critical'}`}>{montoCaja(m.importe_total, m.moneda)}</span>
-              <span className="inv-metrica__label">{ingreso ? 'Ingreso' : 'Egreso'}</span>
+      <Sheet open onClose={() => !ocupado && onClose()} title={`Caja ${numeroDoc(m)}`} ancho ligera>
+        <div className="oc-ficha">
+          <header className="oc-hero">
+            <div className="oc-hero__izq">
+              <span className="oc-hero__id">{ingreso ? 'Ingreso' : 'Egreso'} de caja N° {numeroDoc(m)}</span>
+              <h2 className="oc-hero__titulo">{m.persona || m.conductor || m.sub_motivo || m.motivo || 'Movimiento de caja'}</h2>
+              <span className={`badge ${anulada ? 'badge--red' : pagada ? 'oc-estado--verde' : aprobada ? 'oc-estado--azul' : 'badge--amber'}`}>{estado}</span>
             </div>
-            <div className="inv-metrica">
-              <span className="inv-metrica__num" style={{ fontSize: '1rem' }}><Badge tone={tonoEstado(estado)}>{estado}</Badge></span>
-              <span className="inv-metrica__label">Estado</span>
+          </header>
+
+          <div className="oc-acciones oc-acciones--sinfondo">
+            {puedeAprobar && icono('Aprobar caja', <CheckCircle2 size={17} />, () => { void ejecutar(async () => comprobar(await api('/tesoreria/caja/' + m.id + '/aprobar', { method: 'POST', body: { usuario_aprobacion: user?.name } })), 'Caja aprobada'); }, ' oc-acciones__boton--verde')}
+            {can('tesoreria_caja.editar', 'tesoreria_caja.crear') && editable && icono('Editar', <Pencil size={17} />, () => { onClose(); onEditar(m); })}
+            {aprobada && !anulada && can('tesoreria_caja.editar', 'tesoreria_caja.crear') && icono('Subir documentos', <Upload size={17} />, () => setSubiendo(true), ' oc-acciones__boton--violeta')}
+            {puedeAnular && icono('Anular caja', <Ban size={17} />, () => setAnulando(true), ' oc-acciones__boton--peligro')}
+            {can('tesoreria_caja.eliminar') && editable && icono('Eliminar', <Trash2 size={17} />, () => setBorrando(true), ' oc-acciones__boton--peligro')}
+          </div>
+
+          <div className={`oc-banner ${banner.tono}`} role="status">
+            <strong>{banner.titulo}</strong>
+            <span>{banner.texto}</span>
+          </div>
+
+          <LineaDeVida pasos={pasos} fraccion={fraccion} />
+
+          <div className="oc-datos">
+            <Grupo titulo="Beneficiario">
+              <Dato etiqueta="Persona" valor={m.persona || m.conductor || '—'} extra={m.tipo_persona || undefined} />
+              <Dato etiqueta="Autoriza" valor={m.autoriza || '—'} />
+              <Dato etiqueta="Cuenta destino" valor={m.cuenta_bancaria_persona || 'No registrada'} ancho />
+            </Grupo>
+            <Grupo titulo="Asignación operativa">
+              <Dato etiqueta="Placa" valor={m.placa || '—'} />
+              <Dato etiqueta="Orden de viaje" valor={m.orden_viaje || '—'} />
+              <Dato etiqueta="Centro de costos" valor={m.centro_costo || 'General'} />
+              <Dato etiqueta="Conductor" valor={m.conductor || '—'} />
+              <Dato etiqueta="Ruta" valor={m.ruta_viaje || '—'} ancho />
+            </Grupo>
+            <Grupo titulo="Pago">
+              <Dato etiqueta="Modalidad" valor={m.modalidad_pago || '—'} />
+              <Dato etiqueta="Moneda" valor={dolares ? `Dólares (T/C ${tc})` : 'Soles'} />
+              <Dato etiqueta="Comprobante" valor={comprobante || 'Sin comprobante'} />
+              <Dato etiqueta="Constancia de depósito" valor={m.numero_constancia_deposito || '—'} />
+              <Dato etiqueta="Cuenta origen (empresa)" valor={m.cuenta_bancaria_empresa || 'Por definir'} ancho />
+              {num(m.retencion_detraccion) > 0 && <Dato etiqueta="Retención / detracción" valor={formatSoles(num(m.retencion_detraccion))} />}
+              {m.no_aplica_liquidacion ? <Dato etiqueta="Liquidación de viaje" valor="No aplica" /> : null}
+            </Grupo>
+            <Grupo titulo="Auditoría">
+              <Dato etiqueta="Registrado por" valor={m.usuario_creacion || 'Sistema'} extra={`${fechaCorta(m.fecha)}${m.hora ? ' ' + m.hora.slice(0, 5) : ''}`} />
+              <Dato etiqueta="Aprobado por" valor={m.usuario_aprobacion || 'En espera'} extra={m.fecha_aprobacion ? formatFechaHoraPe(m.fecha_aprobacion) : undefined} />
+            </Grupo>
+            <Grupo titulo="Concepto del egreso" ancho>
+              <Dato etiqueta="Motivo" valor={m.motivo || '—'} />
+              <Dato etiqueta="Submotivo" valor={m.sub_motivo || '—'} />
+              <Dato etiqueta="Descripción" valor={m.descripcion || 'Sin descripción adicional'} ancho />
+            </Grupo>
+          </div>
+
+          <div>
+            <p className="oc-seccion">Documentos</p>
+            <div className="oc-docs">
+              {docs.map(d => d.url
+                ? <a key={d.etiqueta} className="oc-doc oc-doc--ok" href={d.url} target="_blank" rel="noreferrer">{d.etiqueta}</a>
+                : <span key={d.etiqueta} className="oc-doc oc-doc--falta">Sin {d.etiqueta.toLowerCase()}</span>)}
             </div>
           </div>
 
-          {m.moneda === 'DOLARES' && (
-            <p className="t-footnote c-secondary" style={{ margin: 0 }}>
-              Equivale a {formatSoles(num(m.importe_total) * (num(m.tipo_cambio) || 1))} con un tipo de cambio de {num(m.tipo_cambio) || 1}.
-            </p>
-          )}
-
-          <div className="tarjeta__lista">
-            {fila('Fecha', `${formatFechaPe(m.fecha)}${m.hora ? ' ' + m.hora.slice(0, 5) : ''}`, true)}
-            {fila('Motivo', [m.motivo, m.sub_motivo].filter(Boolean).join(' › '))}
-            {fila('Centro de costos', m.centro_costo)}
-            {fila('Persona', [m.tipo_persona, m.persona].filter(Boolean).join(' · '))}
-            {fila('Autoriza', m.autoriza)}{fila('Orden de viaje', m.orden_viaje, true)}{fila('Conductor', m.conductor)}
-            {fila('Ruta', m.ruta_viaje)}{fila('Placa', m.placa, true)}
-            {fila('Modalidad de pago', m.modalidad_pago)}
-            {fila('Comprobante', [m.tipo_comprobante, m.numero_factura].filter(Boolean).join(' '))}
-            {fila('Constancia de depósito', m.numero_constancia_deposito, true)}
-            {fila('Cuenta de la persona', m.cuenta_bancaria_persona, true)}
-            {fila('Cuenta de la empresa', m.cuenta_bancaria_empresa, true)}
-            {fila('Retención / detracción', num(m.retencion_detraccion) ? formatSoles(num(m.retencion_detraccion)) : '')}
-            {fila('Liquidación de viaje', m.no_aplica_liquidacion ? 'No aplica' : '')}
-            {fila('Descripción', m.descripcion)}
-            {fila('Observación', m.observacion)}
-            {fila('Motivo de anulación', m.motivo_anulacion)}
-            {fila('Registrado por', m.usuario_creacion)}
-            {fila('Aprobado por', m.usuario_aprobacion ? `${m.usuario_aprobacion}${m.fecha_aprobacion ? ' · ' + m.fecha_aprobacion : ''}` : '')}
-          </div>
-
-          {(m.voucher_url || m.sustento_url) && (
-            <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
-              {m.voucher_url && <a className="btn btn--secondary btn--sm" href={String(m.voucher_view_url ?? m.voucher_url)} target="_blank" rel="noreferrer"><Paperclip size={14} /> Voucher</a>}
-              {m.sustento_url && <a className="btn btn--secondary btn--sm" href={String(m.sustento_view_url ?? m.sustento_url)} target="_blank" rel="noreferrer"><Paperclip size={14} /> Sustento</a>}
+          {m.observacion && (
+            <div className="oc-bloque">
+              <p className="oc-seccion">Observaciones</p>
+              <p className="oc-texto">{m.observacion}</p>
             </div>
           )}
+
+          <div className="oc-total">
+            <span className="oc-total__son">SON: {numeroALetras(monto)} {dolares ? 'DÓLARES AMERICANOS' : 'SOLES'}</span>
+            <div className="oc-total__fila">
+              <span>{ingreso ? 'Total ingreso' : 'Total egreso'}</span>
+              <strong className="oc-total__monto">{montoCaja(m.importe_total, m.moneda)}</strong>
+            </div>
+            {dolares && <span className="oc-total__equivale">Equivale a {formatSoles(monto * tc)} (T/C {tc})</span>}
+          </div>
         </div>
       </Sheet>
 
@@ -168,8 +224,8 @@ export function DetalleCaja({ mov: m, onClose, onEditar, onCambio }: Props) {
         </div>
       </Sheet>
 
-      <Sheet open={docs} onClose={() => !ocupado && setDocs(false)} title="Subir documentos"
-        footer={<><Button variant="secondary" onClick={() => setDocs(false)} disabled={ocupado}>Cancelar</Button>
+      <Sheet open={subiendo} onClose={() => !ocupado && setSubiendo(false)} title="Subir documentos"
+        footer={<><Button variant="secondary" onClick={() => setSubiendo(false)} disabled={ocupado}>Cancelar</Button>
           <Button variant="primary" loading={ocupado} onClick={subirDocs}>Guardar</Button></>}>
         <div className="form-grid">
           {errDocs && <div className="field field--wide"><Notice tone="error">{errDocs}</Notice></div>}

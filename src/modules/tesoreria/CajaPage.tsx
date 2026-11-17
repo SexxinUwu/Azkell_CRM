@@ -1,13 +1,22 @@
 import '../mantenimiento/mant.css';
-import '../gerencia/gerencia-oc.css';
+import '../../core/ui/acciones-iconos.css';
+import '../almacen/almacen.css';
+import '../almacen/entradas.css';
+import './mov.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowDownLeft, ArrowUpRight, Banknote, Boxes, FileSpreadsheet, Paperclip, Plus, RefreshCw, SearchX, ShieldCheck, Wallet } from 'lucide-react';
+import {
+  ArrowDownLeft, ArrowUpRight, Banknote, Boxes, CircleCheck, ClipboardList, Coins, Eye, FileSpreadsheet, Pencil, Plus, RefreshCw, SearchX,
+  Upload, Wallet,
+} from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { Badge, EmptyState, Notice, Page } from '../../core/ui/Display';
-import '../../core/ui/acciones-iconos.css';
-import './pago.css';
-import './mov.css';
+import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
+import { TextInput } from '../../core/ui/Field';
+import { ChoiceChips } from '../../core/ui/Chips';
+import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
+import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
+import { MenuOtros } from '../../core/ui/MenuOtros';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -15,51 +24,14 @@ import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { formatFechaHoraPe, formatFechaPe, formatSoles } from '../../core/lib/format';
 import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
-import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useNavigate } from 'react-router-dom';
 import { useCaja, type CajaMovimiento } from './api';
 import {
-  aSoles, esPendiente, estadoDe, hoyYMD, inicioMesYMD, montoCaja, num, numeroDoc, ordenar, ORDEN_INICIAL,
-  tonoEstado,
+  aSoles, esEditable, esPendiente, estadoDe, hoyYMD, inicioMesYMD, montoCaja, num, numeroDoc, ordenar, ORDEN_INICIAL,
 } from './caja-lib';
 import { DetalleCaja } from './caja-detalle';
 import { FormularioCaja } from './caja-formulario';
 
-// Columnas de la tabla de escritorio (mismo estilo que Pago de requerimientos)
-const COLUMNAS: ColumnaTabla[] = [
-  { id: 'accion', titulo: 'Acción', ancho: 130 },
-  { id: 'tipo', titulo: 'Movimiento', ancho: 120 },
-  { id: 'importe', titulo: 'Importe', ancho: 140, alinear: 'right' },
-  { id: 'persona', titulo: 'Persona / beneficiario', ancho: 240 },
-  { id: 'motivo', titulo: 'Motivo', ancho: 220 },
-  { id: 'caja', titulo: 'N° caja', ancho: 140 },
-  { id: 'viaje', titulo: 'Viaje · placa', ancho: 170 },
-  { id: 'centro', titulo: 'Centro costo', ancho: 120 },
-  { id: 'fecha', titulo: 'Fecha registro', ancho: 150 },
-  { id: 'creador', titulo: 'Usuario registro', ancho: 160 },
-  { id: 'autoriza', titulo: 'Autoriza', ancho: 150 },
-  { id: 'aprobador', titulo: 'Usuario aprobación', ancho: 170 },
-  { id: 'fechaAprob', titulo: 'Fecha aprobación', ancho: 160 },
-  { id: 'modalidad', titulo: 'Modalidad', ancho: 170 },
-  { id: 'destino', titulo: 'Cuenta destino', ancho: 260 },
-  { id: 'origen', titulo: 'Cuenta origen (empresa)', ancho: 260 },
-  { id: 'comprobante', titulo: 'Comprobante', ancho: 170 },
-  { id: 'estado', titulo: 'Estado', ancho: 150 },
-];
-
-const ENCABEZADOS = [
-  'Fecha', 'Hora', 'Estado', 'Movimiento', 'Número', 'Viaje', 'Conductor', 'Ruta', 'Autoriza', 'Placa', 'Centro de costos', 'Motivo',
-  'Sub motivo', 'Tipo persona', 'Persona', 'Moneda', 'Importe total', 'TC', 'Modalidad de pago', 'Cuenta destino', 'Cuenta origen',
-  'Comprobante', 'N° factura', 'N° constancia', 'Usuario registro', 'Usuario aprobación',
-];
-
-const PESTANAS: Array<{ key: Pestana; etiqueta: string }> = [
-  { key: 'todos', etiqueta: 'Todos' },
-  { key: 'pendientes', etiqueta: 'Por aprobar' },
-  { key: 'aprobados', etiqueta: 'Aprobados' },
-  { key: 'procesados', etiqueta: 'Procesados' },
-  { key: 'anulados', etiqueta: 'Anulados' },
-];
 type Pestana = 'todos' | 'pendientes' | 'aprobados' | 'procesados' | 'anulados';
 const PASA: Record<Pestana, (m: CajaMovimiento) => boolean> = {
   todos: () => true,
@@ -69,7 +41,61 @@ const PASA: Record<Pestana, (m: CajaMovimiento) => boolean> = {
   anulados: m => estadoDe(m) === 'ANULADO',
 };
 
-// Tesorería › Caja: movimientos de caja chica con aprobación, documentos y anulación
+const ENCABEZADOS = [
+  'Fecha', 'Hora', 'Estado', 'Movimiento', 'Número', 'Viaje', 'Conductor', 'Ruta', 'Autoriza', 'Placa', 'Centro de costos', 'Motivo',
+  'Sub motivo', 'Tipo persona', 'Persona', 'Moneda', 'Importe total', 'TC', 'Modalidad de pago', 'Cuenta destino', 'Cuenta origen',
+  'Comprobante', 'N° factura', 'N° constancia', 'Usuario registro', 'Usuario aprobación',
+];
+
+const estadoClase = (e: string) =>
+  e === 'ANULADO' ? 'badge--red' : e === 'PROCESADO' || e === 'PAGADO' ? 'oc-estado--verde' : e === 'APROBADO' ? 'oc-estado--azul' : 'oc-estado--gris';
+const estadoTexto = (e: string) => (e === 'REGISTRADO' || e === 'PENDIENTE' ? 'POR APROBAR' : e);
+
+/** Columnas de la tabla: el ancho de cada una sale del texto más largo que contiene (con tope), como en Órdenes de compra */
+interface Col { id: string; titulo: string; min: number; max: number; alinear?: 'left' | 'right' | 'center'; texto: (m: CajaMovimiento) => string; fijo?: number }
+const fechaHora = (m: CajaMovimiento) => `${formatFechaPe(m.fecha)}${m.hora ? ` ${m.hora.slice(0, 5)}` : ''}`;
+const COLS: Col[] = [
+  { id: 'acciones', titulo: 'Acciones', min: 64, max: 72, alinear: 'center', texto: () => '', fijo: 72 },
+  { id: 'fecha', titulo: 'Fecha', min: 100, max: 160, texto: fechaHora },
+  { id: 'tipo', titulo: 'Movimiento', min: 100, max: 120, texto: m => (m.tipo_movimiento === 'INGRESO' ? 'INGRESO' : 'EGRESO') },
+  { id: 'caja', titulo: 'N° caja', min: 110, max: 170, texto: m => numeroDoc(m) },
+  { id: 'estado', titulo: 'Estado', min: 110, max: 150, alinear: 'center', texto: m => estadoTexto(estadoDe(m)) },
+  { id: 'persona', titulo: 'Persona / beneficiario', min: 150, max: 300, texto: m => m.persona || m.conductor || '' },
+  { id: 'motivo', titulo: 'Motivo', min: 120, max: 260, texto: m => [m.motivo, m.sub_motivo].filter(Boolean).join(' · ') },
+  { id: 'placa', titulo: 'Placa', min: 84, max: 110, texto: m => m.placa || '' },
+  { id: 'viaje', titulo: 'Orden de viaje', min: 120, max: 160, texto: m => m.orden_viaje || '' },
+  { id: 'cc', titulo: 'Centro de costo', min: 120, max: 150, texto: m => m.centro_costo || '' },
+  { id: 'importe', titulo: 'Importe', min: 110, max: 170, alinear: 'right', texto: m => montoCaja(m.importe_total, m.moneda) },
+  { id: 'destino', titulo: 'Cuenta destino', min: 160, max: 340, texto: m => m.cuenta_bancaria_persona || '' },
+  { id: 'origen', titulo: 'Cuenta origen (empresa)', min: 160, max: 340, texto: m => m.cuenta_bancaria_empresa || '' },
+  { id: 'modalidad', titulo: 'Modalidad', min: 110, max: 200, texto: m => m.modalidad_pago || '' },
+  { id: 'comprobante', titulo: 'Comprobante', min: 120, max: 240, texto: m => [m.tipo_comprobante, m.numero_factura].filter(Boolean).join(' · ') },
+  { id: 'creador', titulo: 'Usuario registro', min: 120, max: 210, texto: m => m.usuario_creacion || '' },
+  { id: 'autoriza', titulo: 'Autoriza', min: 100, max: 180, texto: m => m.autoriza || '' },
+  { id: 'aprobador', titulo: 'Usuario aprobación', min: 130, max: 210, texto: m => m.usuario_aprobacion || '' },
+  { id: 'fechaAprob', titulo: 'Fecha aprobación', min: 130, max: 180, texto: m => (m.fecha_aprobacion ? formatFechaHoraPe(m.fecha_aprobacion) : '') },
+  { id: 'sustento', titulo: 'Sustento', min: 96, max: 110, alinear: 'center', texto: () => 'Ver sustento', fijo: 104 },
+  { id: 'voucher', titulo: 'Voucher', min: 90, max: 110, alinear: 'center', texto: () => 'Ver voucher', fijo: 104 },
+];
+
+/** Ancho que cabe al texto (≈ 7 px por carácter + relleno), entre el mínimo y el tope de cada columna */
+function columnasAdaptadas(lista: CajaMovimiento[]): ColumnaTabla[] {
+  return COLS.map(c => {
+    if (c.fijo) return { id: c.id, titulo: c.titulo, ancho: c.fijo, minimo: c.min, alinear: c.alinear };
+    const largo = lista.reduce((mx, m) => Math.max(mx, c.texto(m).length), 0);
+    const ancho = Math.min(c.max, Math.max(c.min, Math.ceil(largo * 7.4) + 28, c.titulo.length * 8 + 30));
+    return { id: c.id, titulo: c.titulo, ancho, minimo: Math.min(c.min, ancho), alinear: c.alinear };
+  });
+}
+
+/** Adjunto: enlace si existe; si no, "Subir" (solo cuando ya se puede subir) abre el detalle */
+function CeldaAdjunto({ url, texto, tono, puedeSubir, onSubir }: { url?: string; texto: string; tono: 'rojo' | 'azul'; puedeSubir: boolean; onSubir: () => void }) {
+  if (url) return <a href={url} target="_blank" rel="noreferrer" className={`oc-adj oc-adj--${tono}`} onClick={e => e.stopPropagation()}>{texto}</a>;
+  if (puedeSubir) return <button type="button" className="oc-adj oc-adj--subir" onClick={e => { e.stopPropagation(); onSubir(); }}>Subir</button>;
+  return <span style={{ color: 'var(--label-2)' }}>—</span>;
+}
+
+// Tesorería › Caja: movimientos de caja con aprobación, documentos y anulación (mismo diseño que Órdenes de compra)
 export function CajaPage() {
   const nav = useNavigate();
   const movil = useMediaQuery(MOBILE_QUERY);
@@ -78,11 +104,11 @@ export function CajaPage() {
   const toast = useToast();
   const [busqueda, setBusqueda] = useState('');
   const [buscar, setBuscar] = useState('');
-  // Pestañas por estado (se filtran aquí; el servidor devuelve todo el periodo)
-  const [pestana, setPestana] = useState<Pestana>('todos');
+  const [estado, setEstado] = useState<Pestana>('todos');
   // Como el clásico: por defecto el mes en curso
   const [desde, setDesde] = useState(inicioMesYMD);
   const [hasta, setHasta] = useState(hoyYMD);
+  const [filtrando, setFiltrando] = useState(false);
   const [abiertoId, setAbiertoId] = useState<number | null>(null);
   const [formulario, setFormulario] = useState<{ mov: CajaMovimiento | null } | null>(null);
 
@@ -93,19 +119,29 @@ export function CajaPage() {
 
   const { data, isLoading, isError, error } = useCaja({ desde, hasta, buscar });
   const todos = useMemo(() => ordenar(data ?? [], ORDEN_INICIAL), [data]);
-  const lista = useMemo(() => todos.filter(PASA[pestana]), [todos, pestana]);
+  const lista = useMemo(() => todos.filter(PASA[estado]), [todos, estado]);
+  const columnas = useMemo(() => columnasAdaptadas(lista), [lista]);
   const abierto = (data ?? []).find(m => m.id === abiertoId) ?? null;
   const puedeCrear = can('tesoreria_caja.crear');
+  const puedeEditar = can('tesoreria_caja.editar', 'tesoreria_caja.crear');
   const periodoPorDefecto = desde === inicioMesYMD() && hasta === hoyYMD();
-  const hayFiltros = !!busqueda || !periodoPorDefecto || pestana !== 'todos';
-  const limpiarFiltros = () => { setBusqueda(''); setDesde(inicioMesYMD()); setHasta(hoyYMD()); setPestana('todos'); };
+  const filtrosActivos = (estado !== 'todos' ? 1 : 0) + (periodoPorDefecto ? 0 : 1);
+  const hayFiltros = !!buscar || filtrosActivos > 0;
+  const limpiarFiltros = () => { setBusqueda(''); setEstado('todos'); setDesde(inicioMesYMD()); setHasta(hoyYMD()); };
+  const conteo = useMemo(() => ({
+    todos: todos.length,
+    pendientes: todos.filter(PASA.pendientes).length,
+    aprobados: todos.filter(PASA.aprobados).length,
+    procesados: todos.filter(PASA.procesados).length,
+    anulados: todos.filter(PASA.anulados).length,
+  }), [todos]);
 
   // Ingresos y egresos en soles: los dólares se convierten con su tipo de cambio; los anulados no suman
   const resumen = useMemo(() => {
     const validos = todos.filter(m => estadoDe(m) !== 'ANULADO');
     const ingresos = validos.filter(m => m.tipo_movimiento === 'INGRESO').reduce((s, m) => s + aSoles(m), 0);
     const egresos = validos.filter(m => m.tipo_movimiento !== 'INGRESO').reduce((s, m) => s + aSoles(m), 0);
-    return { ingresos, egresos, saldo: ingresos - egresos, pendientes: todos.filter(esPendiente).length };
+    return { ingresos, egresos, saldo: ingresos - egresos };
   }, [todos]);
 
   async function exportar() {
@@ -123,172 +159,151 @@ export function CajaPage() {
   }
 
   const refrescar = () => qc.invalidateQueries({ queryKey: ['tesoreria'] });
+  const abrir = (m: CajaMovimiento) => { haptic('selection'); setAbiertoId(m.id); };
   const periodo = desde || hasta ? `${desde ? formatFechaPe(desde) : '…'} al ${hasta ? formatFechaPe(hasta) : '…'}` : 'Todas las fechas';
+
+  /** Celda de cada columna (en el orden de COLS) */
+  function celdas(m: CajaMovimiento) {
+    const ingreso = m.tipo_movimiento === 'INGRESO';
+    const est = estadoDe(m);
+    const aprobada = ['APROBADO', 'PROCESADO', 'PAGADO'].includes(est);
+    const sustento = String(m.sustento_view_url ?? m.sustento_url ?? '');
+    const voucher = String(m.voucher_view_url ?? m.voucher_url ?? '');
+    const puedeSubir = aprobada && puedeEditar;
+    const opciones = [
+      { label: 'Ver detalle', icon: <Eye size={17} />, onSelect: () => abrir(m) },
+      puedeEditar && esEditable(m) && { label: 'Editar', icon: <Pencil size={17} />, onSelect: () => setFormulario({ mov: m }) },
+      puedeSubir && { label: 'Subir documentos', icon: <Upload size={17} />, onSelect: () => abrir(m) },
+    ];
+    return [
+      <Celda key="acc" alinear="center"><MenuOtros soloIcono label="Acciones" opciones={opciones} /></Celda>,
+      <Celda key="fecha">{fechaHora(m)}</Celda>,
+      <Celda key="tipo">
+        <span className="oc-chip" style={{ color: ingreso ? 'var(--green-ink)' : 'var(--red-ink)' }}>
+          {ingreso ? <ArrowUpRight size={11} style={{ verticalAlign: '-1px' }} /> : <ArrowDownLeft size={11} style={{ verticalAlign: '-1px' }} />} {ingreso ? 'INGRESO' : 'EGRESO'}
+        </span>
+      </Celda>,
+      <Celda key="caja"><button type="button" className="oc-codigo" onClick={() => abrir(m)} title="Ver detalle">{numeroDoc(m) || '—'}</button></Celda>,
+      <Celda key="estado" alinear="center"><span className={`badge ${estadoClase(est)}`}>{estadoTexto(est)}</span></Celda>,
+      <Celda key="persona">{m.persona || m.conductor || '—'}</Celda>,
+      <Celda key="motivo">{[m.motivo, m.sub_motivo].filter(Boolean).join(' · ') || '—'}</Celda>,
+      <Celda key="placa" mono>{m.placa || '—'}</Celda>,
+      <Celda key="viaje" mono>{m.orden_viaje || '—'}</Celda>,
+      <Celda key="cc"><span className="oc-chip oc-chip--mono">{m.centro_costo || '—'}</span></Celda>,
+      <Celda key="importe" alinear="right">
+        <strong className="oc-importe" style={{ color: ingreso ? 'var(--green-ink)' : undefined }}>{ingreso ? '+' : '-'}{montoCaja(m.importe_total, m.moneda)}</strong>
+      </Celda>,
+      <Celda key="destino">{m.cuenta_bancaria_persona || '—'}</Celda>,
+      <Celda key="origen">{m.cuenta_bancaria_empresa || '—'}</Celda>,
+      <Celda key="modalidad">{m.modalidad_pago || '—'}</Celda>,
+      <Celda key="comprobante">{[m.tipo_comprobante, m.numero_factura].filter(Boolean).join(' · ') || '—'}</Celda>,
+      <Celda key="creador">{m.usuario_creacion || '—'}</Celda>,
+      <Celda key="autoriza">{m.autoriza || '—'}</Celda>,
+      <Celda key="aprobador">{m.usuario_aprobacion || '—'}</Celda>,
+      <Celda key="fechaAprob">{m.fecha_aprobacion ? formatFechaHoraPe(m.fecha_aprobacion) : '—'}</Celda>,
+      <Celda key="sustento" alinear="center"><CeldaAdjunto url={sustento} texto="Ver sustento" tono="azul" puedeSubir={puedeSubir} onSubir={() => abrir(m)} /></Celda>,
+      <Celda key="voucher" alinear="center"><CeldaAdjunto url={voucher} texto="Ver voucher" tono="rojo" puedeSubir={puedeSubir} onSubir={() => abrir(m)} /></Celda>,
+    ];
+  }
 
   return (
     <Page>
-      <div className="ga-page">
-        <header className="ga-cab">
-          <div>
-            <span className="ga-pill"><ShieldCheck size={13} aria-hidden /> Tesorería</span>
-            <h1 className="ga-titulo">Caja</h1>
-            <p className="ga-sub">
-              Egresos e ingresos de caja con aprobación, documentos y anulación
-              {resumen.pendientes > 0 ? ` · ${resumen.pendientes} por aprobar` : ''} · {periodo}
-            </p>
-          </div>
-          <div className="ga-acciones">
-            <Button variant="secondary" icon={<RefreshCw size={15} />} onClick={() => { void refrescar(); }}>Actualizar</Button>
-            <div className="acciones-iconos acciones-iconos--sinfondo" role="group" aria-label="Acciones de caja">
-              <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Exportar Excel"
-                aria-label="Exportar Excel" icon={<FileSpreadsheet size={17} />} onClick={exportar} />
-              <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Bancos"
-                aria-label="Bancos" icon={<Banknote size={17} />} onClick={() => nav('/tesoreria/bancos')} />
-              <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--ambar" data-tip="Centros de costos"
-                aria-label="Centros de costos" icon={<Boxes size={17} />} onClick={() => nav('/tesoreria/centros-costos')} />
-            </div>
-            {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ mov: null })}>Nuevo</Button>}
-          </div>
-        </header>
-
-        <div className="ga-kpis">
-          <div className="ga-kpi ga-kpi--verde">
-            <div className="ga-kpi__cab"><span className="ga-kpi__etiqueta">Ingresos</span><span className="ga-kpi__pill">Entradas</span></div>
-            <span className="ga-kpi__valor">{formatSoles(resumen.ingresos)}</span>
-            <span className="ga-kpi__unidad">en soles, sin anulados</span>
-          </div>
-          <div className="ga-kpi ga-kpi--rojo">
-            <div className="ga-kpi__cab"><span className="ga-kpi__etiqueta">Egresos</span><span className="ga-kpi__pill">Salidas</span></div>
-            <span className="ga-kpi__valor">{formatSoles(resumen.egresos)}</span>
-            <span className="ga-kpi__unidad">en soles, sin anulados</span>
-          </div>
-          <div className="ga-kpi ga-kpi--indigo">
-            <div className="ga-kpi__cab"><span className="ga-kpi__etiqueta">Saldo</span><span className="ga-kpi__pill">Del periodo</span></div>
-            <span className="ga-kpi__valor">{formatSoles(resumen.saldo)}</span>
-            <span className="ga-kpi__unidad">ingresos − egresos</span>
-          </div>
-          <div className="ga-kpi ga-kpi--ambar">
-            <div className="ga-kpi__cab"><span className="ga-kpi__etiqueta">Por aprobar</span><span className="ga-kpi__pill">Por revisar</span></div>
-            <span className="ga-kpi__valor">{resumen.pendientes}</span>
-            <span className="ga-kpi__unidad">{resumen.pendientes === 1 ? 'movimiento' : 'movimientos'}</span>
-          </div>
-        </div>
-
-        <div className="ga-filtros">
-          <div className="ga-filtros__fila">
-            <div className="ga-campo">
-              <span className="ga-campo__etiqueta">Fecha desde</span>
-              <input type="date" className="input" aria-label="Fecha desde" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} />
-            </div>
-            <div className="ga-campo">
-              <span className="ga-campo__etiqueta">Fecha hasta</span>
-              <input type="date" className="input" aria-label="Fecha hasta" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} />
-            </div>
-            <div className="ga-campo ga-buscar">
-              <span className="ga-campo__etiqueta">Búsqueda rápida</span>
-              <input type="search" className="input" value={busqueda} onChange={e => setBusqueda(e.target.value)}
-                placeholder="Persona, motivo, N°, placa, orden de viaje…" aria-label="Buscar movimientos" />
-            </div>
-          </div>
-          <div className="ga-tabs" role="group" aria-label="Filtrar por estado">
-            {PESTANAS.map(p => (
-              <button key={p.key} type="button" className="ga-tab" aria-pressed={pestana === p.key} onClick={() => { haptic('selection'); setPestana(p.key); }}>
-                {p.etiqueta} <span className="ga-tab__n">{todos.filter(PASA[p.key]).length}</span>
+      <PageHeader
+        eyebrow="Tesorería"
+        title="Caja"
+        subtitle={isLoading ? 'Cargando…' : `${todos.length} ${todos.length === 1 ? 'movimiento' : 'movimientos'}${conteo.pendientes ? ` · ${conteo.pendientes} por aprobar` : ''} · ${periodo}`}
+        actions={
+          <>
+            <div className="oc-acciones oc-acciones--sinfondo">
+              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--verde" data-tip="Exportar a Excel" aria-label="Exportar a Excel" onClick={exportar}>
+                <FileSpreadsheet size={17} />
               </button>
-            ))}
-            {hayFiltros && <button type="button" className="ga-limpiar" onClick={limpiarFiltros}>Limpiar filtros</button>}
-          </div>
-        </div>
+              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--azul" data-tip="Bancos" aria-label="Bancos" onClick={() => nav('/tesoreria/bancos')}>
+                <Banknote size={17} />
+              </button>
+              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--violeta" data-tip="Centros de costos" aria-label="Centros de costos" onClick={() => nav('/tesoreria/centros-costos')}>
+                <Boxes size={17} />
+              </button>
+              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--celeste" data-tip="Actualizar" aria-label="Actualizar" onClick={() => { void refrescar(); }}>
+                <RefreshCw size={17} />
+              </button>
+            </div>
+            {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ mov: null })}>Nuevo movimiento</Button>}
+          </>
+        }
+      />
 
-        {isLoading ? <PageLoader /> : isError ? (
-          <Notice tone="error">{errorMessage(error)}</Notice>
-        ) : lista.length === 0 ? (
-          <EmptyState icon={hayFiltros ? <SearchX size={22} /> : <Wallet size={22} />}
-            title={hayFiltros ? 'Sin coincidencias' : 'Sin movimientos en este periodo'}>
-            {puedeCrear && !hayFiltros ? <>Registra el primero con <strong>Nuevo</strong>.</> : 'Prueba con otros filtros o un periodo más amplio.'}
-          </EmptyState>
-        ) : (
-          movil ? (
-          <div className="tarjeta__lista">
-            {lista.map(m => {
-              const ingreso = m.tipo_movimiento === 'INGRESO';
-              const est = estadoDe(m);
-              return (
-                <button key={m.id} type="button" className="mov-fila pressable" onClick={() => { haptic('selection'); setAbiertoId(m.id); }}>
-                  <div className="mov-fila__icon" style={{ background: ingreso ? 'var(--green-tint)' : 'var(--red-tint)', color: ingreso ? 'var(--green-ink)' : 'var(--red-ink)' }}>
-                    {ingreso ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
-                  </div>
-                  <div className="mov-fila__cuerpo">
-                    <span className="mov-fila__titulo">{m.persona || m.sub_motivo || m.motivo || 'Movimiento'}</span>
-                    <span className="mov-fila__sub">{[numeroDoc(m), m.motivo, m.orden_viaje, m.placa, formatFechaPe(m.fecha)].filter(Boolean).join(' · ')}</span>
-                  </div>
-                  <div className="mov-fila__derecha">
-                    <span className="mov-fila__monto" style={{ color: ingreso ? 'var(--green-ink)' : undefined }}>
-                      {ingreso ? '+' : '-'}{montoCaja(m.importe_total, m.moneda)}
-                    </span>
-                    <Badge tone={tonoEstado(est)}>{est}</Badge>
-                  </div>
-                </button>
-              );
-            })}
+      {isLoading ? <PageLoader /> : isError ? (
+        <Notice tone="error">{errorMessage(error)}</Notice>
+      ) : (
+        <div>
+          <div className="inv-kpis" style={{ marginBottom: 'var(--s-4)' }}>
+            <KpiTarjeta etiqueta="Ingresos" valor={formatSoles(resumen.ingresos)} sub="En soles, sin anulados" icono={<ArrowUpRight size={18} />} />
+            <KpiTarjeta etiqueta="Egresos" valor={formatSoles(resumen.egresos)} sub="En soles, sin anulados" icono={<Coins size={18} />} tono="valor" />
+            <KpiTarjeta etiqueta="Saldo" valor={formatSoles(resumen.saldo)} sub="Ingresos − egresos" icono={<ClipboardList size={18} />} />
+            <KpiTarjeta etiqueta="Por aprobar" valor={String(conteo.pendientes)} sub="Estado por aprobar" icono={<CircleCheck size={18} />} tono="warning" />
           </div>
+
+          <div style={{ marginBottom: 'var(--s-4)' }}>
+            <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Persona, motivo, N°, placa u orden de viaje"
+              activos={filtrosActivos} onAbrirFiltros={() => setFiltrando(true)}>
+              <span className="badge">{lista.length} {lista.length === 1 ? 'registro' : 'registros'}</span>
+            </BarraFiltros>
+            <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} resultado={lista.length} unidad="registro"
+              onLimpiar={() => { setEstado('todos'); setDesde(inicioMesYMD()); setHasta(hoyYMD()); }}>
+              <GrupoFiltro titulo="Fechas">
+                <div className="oc-fechas">
+                  <TextInput type="date" aria-label="Desde" value={desde} max={hasta || undefined} onChange={ev => setDesde(ev.target.value)} />
+                  <span className="t-footnote c-secondary">a</span>
+                  <TextInput type="date" aria-label="Hasta" value={hasta} min={desde || undefined} onChange={ev => setHasta(ev.target.value)} />
+                  <button type="button" className="oc-cotizacion__quitar" aria-label="Quitar fechas" onClick={() => { setDesde(''); setHasta(''); }}>×</button>
+                </div>
+              </GrupoFiltro>
+              <GrupoFiltro titulo="Estado del movimiento">
+                <ChoiceChips label="Estado del movimiento" value={estado} onChange={v => setEstado(v as Pestana)} options={[
+                  { value: 'todos', label: `Todos (${conteo.todos})` }, { value: 'pendientes', label: `Por aprobar (${conteo.pendientes})` },
+                  { value: 'aprobados', label: `Aprobados (${conteo.aprobados})` }, { value: 'procesados', label: `Procesados (${conteo.procesados})` },
+                  { value: 'anulados', label: `Anulados (${conteo.anulados})` },
+                ]} />
+              </GrupoFiltro>
+            </HojaFiltros>
+          </div>
+
+          {lista.length === 0 ? (
+            <EmptyState icon={hayFiltros ? <SearchX size={22} /> : <Wallet size={22} />} title={hayFiltros ? 'Ningún movimiento coincide' : 'Sin movimientos en este periodo'}>
+              {hayFiltros
+                ? <button type="button" className="placas-limpiar" onClick={limpiarFiltros}>Quitar filtros</button>
+                : puedeCrear ? <>Registra el primero con <strong>Nuevo movimiento</strong>.</> : 'Prueba con un periodo más amplio.'}
+            </EmptyState>
+          ) : movil ? (
+            <div className="tarjeta__lista">
+              {lista.map(m => {
+                const ingreso = m.tipo_movimiento === 'INGRESO';
+                const est = estadoDe(m);
+                return (
+                  <button key={m.id} type="button" className="mov-fila pressable" onClick={() => abrir(m)}>
+                    <div className="mov-fila__icon" style={{ background: ingreso ? 'var(--green-tint)' : 'var(--red-tint)', color: ingreso ? 'var(--green-ink)' : 'var(--red-ink)' }}>
+                      {ingreso ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
+                    </div>
+                    <div className="mov-fila__cuerpo">
+                      <span className="mov-fila__titulo">{m.persona || m.sub_motivo || m.motivo || 'Movimiento'}</span>
+                      <span className="mov-fila__sub">{[numeroDoc(m), m.motivo, m.orden_viaje, m.placa, formatFechaPe(m.fecha)].filter(Boolean).join(' · ')}</span>
+                    </div>
+                    <div className="mov-fila__derecha">
+                      <span className="mov-fila__monto" style={{ color: ingreso ? 'var(--green-ink)' : undefined }}>{ingreso ? '+' : '-'}{montoCaja(m.importe_total, m.moneda)}</span>
+                      <span className={`badge ${estadoClase(est)}`}>{estadoTexto(est)}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           ) : (
-          <TablaRedimensionable id="caja-tesoreria" columnas={COLUMNAS} ariaLabel="Movimientos de caja" altoMax="68vh">
-            {lista.map(m => {
-              const ingreso = m.tipo_movimiento === 'INGRESO';
-              const est = estadoDe(m);
-              const sustento = String(m.sustento_view_url ?? m.sustento_url ?? '');
-              const voucher = String(m.voucher_view_url ?? m.voucher_url ?? '');
-              const abrir = () => { haptic('selection'); setAbiertoId(m.id); };
-              return (
-                <tr key={m.id} className={`tabla-redim__fila--click${est === 'ANULADO' ? ' mov-tabla-anulada' : ''}`} onClick={abrir}>
-                  <Celda>
-                    <Button variant="secondary" size="sm" onClick={e => { e.stopPropagation(); abrir(); }}>Ver detalle</Button>
-                  </Celda>
-                  <Celda><Badge tone={ingreso ? 'green' : 'red'}>{ingreso ? 'INGRESO' : 'EGRESO'}</Badge></Celda>
-                  <Celda alinear="right" mono>
-                    <span style={{ color: ingreso ? 'var(--green-ink)' : undefined, fontWeight: 700 }}>{ingreso ? '+' : '-'}{montoCaja(m.importe_total, m.moneda)}</span>
-                  </Celda>
-                  <Celda>
-                    <span className="pago-prov">
-                      <span className="pago-prov__nombre">{m.persona || m.conductor || '—'}</span>
-                      {m.tipo_persona && <span className="pago-prov__ruc">{m.tipo_persona}</span>}
-                    </span>
-                  </Celda>
-                  <Celda>
-                    <span className="pago-prov">
-                      <span className="pago-prov__nombre">{m.motivo || '—'}</span>
-                      {m.sub_motivo && <span className="pago-prov__ruc">{m.sub_motivo}</span>}
-                    </span>
-                  </Celda>
-                  <Celda mono><span className="pago-codigo">{numeroDoc(m) || '—'}</span></Celda>
-                  <Celda mono>{[m.orden_viaje, m.placa].filter(Boolean).join(' · ') || '—'}</Celda>
-                  <Celda>{m.centro_costo || '—'}</Celda>
-                  <Celda mono>{formatFechaPe(m.fecha)}{m.hora ? ` ${m.hora.slice(0, 5)}` : ''}</Celda>
-                  <Celda>{m.usuario_creacion || '—'}</Celda>
-                  <Celda>{m.autoriza || '—'}</Celda>
-                  <Celda>{m.usuario_aprobacion || '—'}</Celda>
-                  <Celda mono>{m.fecha_aprobacion ? formatFechaHoraPe(m.fecha_aprobacion) : '—'}</Celda>
-                  <Celda>{m.modalidad_pago || '—'}</Celda>
-                  <Celda><span className="pago-cuenta__texto" title={m.cuenta_bancaria_persona ?? ''}>{m.cuenta_bancaria_persona || '—'}</span></Celda>
-                  <Celda><span className="pago-cuenta__texto" title={m.cuenta_bancaria_empresa ?? ''}>{m.cuenta_bancaria_empresa || '—'}</span></Celda>
-                  <Celda>
-                    <span className="pago-estado">
-                      <span className="t-footnote c-secondary">{m.tipo_comprobante || '—'}{m.numero_factura ? ` · ${m.numero_factura}` : ''}</span>
-                      <span style={{ display: 'inline-flex', gap: 6 }}>
-                        {sustento && <a className="btn btn--secondary btn--sm" href={sustento} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}><Paperclip size={13} /> Sustento</a>}
-                        {voucher && <a className="btn btn--secondary btn--sm" href={voucher} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}><Paperclip size={13} /> Voucher</a>}
-                      </span>
-                    </span>
-                  </Celda>
-                  <Celda><Badge tone={tonoEstado(est)}>{est}</Badge></Celda>
-                </tr>
-              );
-            })}
-          </TablaRedimensionable>
-          )
-        )}
-      </div>
+            <TablaRedimensionable id="tesoreria-caja" columnas={columnas} ariaLabel="Movimientos de caja" altoMax="68vh">
+              {lista.map(m => <tr key={m.id} className={estadoDe(m) === 'ANULADO' ? 'mov-tabla-anulada' : undefined}>{celdas(m)}</tr>)}
+            </TablaRedimensionable>
+          )}
+        </div>
+      )}
 
       <DetalleCaja mov={abierto} onClose={() => setAbiertoId(null)} onEditar={m => setFormulario({ mov: m })} onCambio={refrescar} />
       <FormularioCaja open={!!formulario} mov={formulario?.mov ?? null} onClose={() => setFormulario(null)} onGuardado={refrescar} />

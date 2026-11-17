@@ -27,7 +27,7 @@ interface Props {
   unidadDe: (inventarioId: string | null) => string | null;
 }
 
-type EstadoPaso = 'hecho' | 'actual' | 'alerta' | 'rojo' | 'pendiente';
+export type EstadoPaso = 'hecho' | 'actual' | 'alerta' | 'rojo' | 'pendiente';
 
 const TONO_BADGE: Record<TonoEstado, string> = {
   gray: 'oc-estado--gris', green: 'oc-estado--verde', sky: 'oc-estado--azul', amber: 'badge--amber', red: 'badge--red',
@@ -277,7 +277,7 @@ export function EntradaDetalle({
 }
 
 /** Línea de vida: la barra crece al abrir y los pasos aparecen uno a uno; el paso actual pulsa */
-function LineaDeVida({ pasos, fraccion }: { pasos: Array<{ titulo: string; texto: string; estado: EstadoPaso; icono: ReactNode }>; fraccion: number }) {
+export function LineaDeVida({ pasos, fraccion }: { pasos: Array<{ titulo: string; texto: string; estado: EstadoPaso; icono: ReactNode }>; fraccion: number }) {
   const [listo, setListo] = useState(false);
   useEffect(() => {
     const t = window.setTimeout(() => setListo(true), 60);
@@ -301,7 +301,7 @@ function LineaDeVida({ pasos, fraccion }: { pasos: Array<{ titulo: string; texto
   );
 }
 
-function Grupo({ titulo, ancho, children }: { titulo: string; ancho?: boolean; children: ReactNode }) {
+export function Grupo({ titulo, ancho, children }: { titulo: string; ancho?: boolean; children: ReactNode }) {
   return (
     <section className={`oc-grupo${ancho ? ' oc-grupo--ancho' : ''}`}>
       <h3 className="oc-grupo__titulo">{titulo}</h3>
@@ -310,7 +310,7 @@ function Grupo({ titulo, ancho, children }: { titulo: string; ancho?: boolean; c
   );
 }
 
-function Dato({ etiqueta, valor, extra, ancho }: { etiqueta: string; valor: string; extra?: string; ancho?: boolean }) {
+export function Dato({ etiqueta, valor, extra, ancho }: { etiqueta: string; valor: string; extra?: string; ancho?: boolean }) {
   return (
     <div className={`oc-dato${ancho ? ' oc-dato--ancho' : ''}`}>
       <span className="oc-dato__etiqueta">{etiqueta}</span>
