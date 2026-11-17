@@ -52,37 +52,59 @@ const estadoClase = (e: string) =>
 const estadoTexto = (e: string) => (e === 'REGISTRADO' || e === 'PENDIENTE' ? 'POR APROBAR' : e);
 
 /** Columnas de la tabla: el ancho de cada una sale del texto más largo que contiene (con tope), como en Órdenes de compra */
-interface Col { id: string; titulo: string; min: number; max: number; alinear?: 'left' | 'right' | 'center'; texto: (m: CajaMovimiento) => string; fijo?: number }
+interface Col {
+  id: string; titulo: string; min: number; max: number; alinear?: 'left' | 'right' | 'center'; texto: (m: CajaMovimiento) => string; fijo?: number;
+  /** Letra del contenido: monoespaciada, negrita o de otro tamaño (px); y el relleno extra de chips o insignias */
+  mono?: boolean; bold?: boolean; px?: number; extra?: number;
+}
 const fechaHora = (m: CajaMovimiento) => `${formatFechaPe(m.fecha)}${m.hora ? ` ${m.hora.slice(0, 5)}` : ''}`;
 const COLS: Col[] = [
   { id: 'acciones', titulo: 'Acciones', min: 64, max: 72, alinear: 'center', texto: () => '', fijo: 72 },
-  { id: 'fecha', titulo: 'Fecha', min: 100, max: 160, texto: fechaHora },
-  { id: 'tipo', titulo: 'Movimiento', min: 100, max: 120, texto: m => (m.tipo_movimiento === 'INGRESO' ? 'INGRESO' : 'EGRESO') },
-  { id: 'caja', titulo: 'N° caja', min: 110, max: 170, texto: m => numeroDoc(m) },
-  { id: 'estado', titulo: 'Estado', min: 110, max: 150, alinear: 'center', texto: m => estadoTexto(estadoDe(m)) },
-  { id: 'placa', titulo: 'Placa', min: 84, max: 110, texto: m => m.placa || '' },
-  { id: 'motivo', titulo: 'Motivo', min: 120, max: 260, texto: m => [m.motivo, m.sub_motivo].filter(Boolean).join(' · ') },
-  { id: 'persona', titulo: 'Persona / beneficiario', min: 150, max: 300, texto: m => m.persona || m.conductor || '' },
-  { id: 'viaje', titulo: 'Orden de viaje', min: 120, max: 160, texto: m => m.orden_viaje || '' },
-  { id: 'destino', titulo: 'Cuenta destino', min: 160, max: 340, texto: m => m.cuenta_bancaria_persona || '' },
-  { id: 'origen', titulo: 'Cuenta origen (empresa)', min: 160, max: 340, texto: m => m.cuenta_bancaria_empresa || '' },
+  { id: 'fecha', titulo: 'Fecha', min: 100, max: 160, texto: fechaHora, mono: true },
+  { id: 'tipo', titulo: 'Movimiento', min: 100, max: 120, texto: m => (m.tipo_movimiento === 'INGRESO' ? 'INGRESO' : 'EGRESO'), extra: 44, bold: true, px: 11 },
+  { id: 'caja', titulo: 'N° caja', min: 110, max: 170, texto: m => numeroDoc(m), mono: true, bold: true, px: 15 },
+  { id: 'estado', titulo: 'Estado', min: 110, max: 150, alinear: 'center', texto: m => estadoTexto(estadoDe(m)), extra: 26, bold: true, px: 11 },
+  { id: 'placa', titulo: 'Placa', min: 84, max: 110, texto: m => m.placa || '', mono: true },
+  { id: 'motivo', titulo: 'Motivo', min: 120, max: 460, texto: m => [m.motivo, m.sub_motivo].filter(Boolean).join(' · ') },
+  { id: 'persona', titulo: 'Persona / beneficiario', min: 150, max: 420, texto: m => m.persona || m.conductor || '' },
+  { id: 'viaje', titulo: 'Orden de viaje', min: 120, max: 160, texto: m => m.orden_viaje || '', mono: true },
+  { id: 'destino', titulo: 'Cuenta destino', min: 160, max: 560, texto: m => m.cuenta_bancaria_persona || '' },
+  { id: 'origen', titulo: 'Cuenta origen (empresa)', min: 160, max: 560, texto: m => m.cuenta_bancaria_empresa || '' },
   { id: 'modalidad', titulo: 'Modalidad', min: 110, max: 200, texto: m => m.modalidad_pago || '' },
   { id: 'creador', titulo: 'Usuario registro', min: 120, max: 210, texto: m => m.usuario_creacion || '' },
   { id: 'autoriza', titulo: 'Autoriza', min: 100, max: 180, texto: m => m.autoriza || '' },
   { id: 'aprobador', titulo: 'Usuario aprobación', min: 130, max: 210, texto: m => m.usuario_aprobacion || '' },
-  { id: 'fechaAprob', titulo: 'Fecha aprobación', min: 130, max: 180, texto: m => (m.fecha_aprobacion ? formatFechaHoraPe(m.fecha_aprobacion) : '') },
-  { id: 'importe', titulo: 'Importe', min: 110, max: 170, alinear: 'right', texto: m => montoCaja(m.importe_total, m.moneda) },
-  { id: 'cc', titulo: 'Centro de costo', min: 120, max: 150, texto: m => m.centro_costo || '' },
+  { id: 'fechaAprob', titulo: 'Fecha aprobación', min: 130, max: 180, texto: m => (m.fecha_aprobacion ? formatFechaHoraPe(m.fecha_aprobacion) : ''), mono: true },
+  { id: 'importe', titulo: 'Importe', min: 110, max: 170, alinear: 'right', texto: m => montoCaja(m.importe_total, m.moneda), bold: true },
+  { id: 'cc', titulo: 'Centro de costo', min: 120, max: 150, texto: m => m.centro_costo || '', mono: true, extra: 20, px: 11 },
   { id: 'voucher', titulo: 'Voucher', min: 90, max: 110, alinear: 'center', texto: () => 'Ver voucher', fijo: 104 },
   { id: 'sustento', titulo: 'Sustento', min: 96, max: 110, alinear: 'center', texto: () => 'Ver sustento', fijo: 104 },
 ];
 
-/** Ancho que cabe al texto (≈ 7 px por carácter + relleno), entre el mínimo y el tope de cada columna */
+/** Mide el texto con la fuente real de la tabla (canvas): así la columna se ajusta al contenido, no a un cálculo aproximado */
+let lienzo: CanvasRenderingContext2D | null = null;
+function medir(texto: string, px: number, opciones: { mono?: boolean; bold?: boolean; espaciado?: number }): number {
+  try {
+    lienzo ??= document.createElement('canvas').getContext('2d');
+    if (!lienzo) throw new Error('sin canvas');
+    const raiz = getComputedStyle(document.documentElement);
+    const familia = opciones.mono ? (raiz.getPropertyValue('--font-mono').trim() || 'monospace') : getComputedStyle(document.body).fontFamily || 'sans-serif';
+    lienzo.font = `${opciones.bold ? 700 : 400} ${px}px ${familia}`;
+    return lienzo.measureText(texto).width + (opciones.espaciado ?? 0) * texto.length;
+  } catch {
+    return texto.length * px * 0.58;
+  }
+}
+
+/** Cada columna mide lo que ocupa su texto más largo (y su título) más el relleno de la celda; solo hay un tope generoso para cuentas muy largas */
 function columnasAdaptadas(lista: CajaMovimiento[]): ColumnaTabla[] {
   return COLS.map(c => {
     if (c.fijo) return { id: c.id, titulo: c.titulo, ancho: c.fijo, minimo: c.min, alinear: c.alinear };
-    const largo = lista.reduce((mx, m) => Math.max(mx, c.texto(m).length), 0);
-    const ancho = Math.min(c.max, Math.max(c.min, Math.ceil(largo * 7.4) + 28, c.titulo.length * 8 + 30));
+    const px = c.px ?? 13;
+    const contenido = lista.reduce((mx, m) => Math.max(mx, medir(c.texto(m), px, { mono: c.mono, bold: c.bold })), 0);
+    // Título: 11 px en negrita con 0.02em de espaciado, más el asa para redimensionar
+    const titulo = medir(c.titulo.toUpperCase(), 11, { bold: true, espaciado: 0.22 }) + 14;
+    const ancho = Math.min(c.max, Math.max(c.min, Math.ceil(Math.max(contenido + (c.extra ?? 0), titulo) + 28)));
     return { id: c.id, titulo: c.titulo, ancho, minimo: Math.min(c.min, ancho), alinear: c.alinear };
   });
 }
@@ -299,7 +321,7 @@ export function CajaPage() {
               })}
             </div>
           ) : (
-            <TablaRedimensionable id="tesoreria-caja" columnas={columnas} ariaLabel="Movimientos de caja" altoMax="68vh">
+            <TablaRedimensionable id="tesoreria-caja-v2" columnas={columnas} ariaLabel="Movimientos de caja" altoMax="68vh">
               {lista.map(m => <tr key={m.id} className={estadoDe(m) === 'ANULADO' ? 'mov-tabla-anulada' : undefined}>{celdas(m)}</tr>)}
             </TablaRedimensionable>
           )}
