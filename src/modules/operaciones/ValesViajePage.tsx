@@ -7,17 +7,19 @@ import { motion, useReducedMotion } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Ban, Check, CircleAlert, Fuel, Pencil, Satellite, Image as ImagenIcono, Plus, SearchX, Sparkles, UploadCloud, UserRound, Store } from 'lucide-react';
+import { ArrowLeft, Ban, Check, CheckCircle2, CircleAlert, ClipboardList, Coins, Fuel, Pencil, Satellite, Image as ImagenIcono, Plus, SearchX, Sparkles, UploadCloud, UserRound, Store, FileText, FileCheck, Truck, Wallet } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { BarraFiltros } from '../../core/ui/FiltrosListado';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { Combobox } from '../../core/ui/Combobox';
-import { IconoFila } from '../../core/ui/IconoFila';
+import { LicensePlate } from '../../core/ui/LicensePlate';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import '../almacen/entradas.css';
+import '../gerencia/gerencia-oc.css';
+import '../tesoreria/pago.css';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -41,13 +43,12 @@ interface Lectura {
 }
 
 const COLUMNAS: ColumnaTabla[] = [
-  { id: 'acc', titulo: '', ancho: 60, minimo: 50 },
-  { id: 'estado', titulo: 'Estado', ancho: 110 },
+  { id: 'estado', titulo: 'Estado', ancho: 130 },
   { id: 'codigo', titulo: 'Vale', ancho: 140 },
   { id: 'fecha', titulo: 'Fecha', ancho: 105 },
   { id: 'viaje', titulo: 'Viaje', ancho: 130 },
   { id: 'servicio', titulo: 'Servicio', ancho: 130 },
-  { id: 'placa', titulo: 'Placa', ancho: 100 },
+  { id: 'placa', titulo: 'Placa', ancho: 110 },
   { id: 'conductor', titulo: 'Conductor', ancho: 190, minimo: 120 },
   { id: 'estacion', titulo: 'Estación', ancho: 200, minimo: 120 },
   { id: 'galones', titulo: 'Galones', ancho: 95, alinear: 'right' },
@@ -104,6 +105,7 @@ export function ValesViajePage() {
   const [estado, setEstado] = useState<'' | Vale['estado']>('');
   const [nuevo, setNuevo] = useState(false);
   const [anulando, setAnulando] = useState<number | null>(null);
+  const [detalle, setDetalle] = useState<Vale | null>(null);
   const puedeCrear = can('combustible_vales.crear', 'op_guias_remision.crear', 'operaciones.crear');
   const lista = vales.data ?? [];
 
@@ -144,17 +146,12 @@ export function ValesViajePage() {
           <TablaRedimensionable id="vales-viaje-v1" columnas={COLUMNAS} ariaLabel="Vales de combustible" className="tabla-redim--compacta">
             {visibles.map(v => (
               <tr key={v.id}>
-                <Celda>
-                  <span style={{ display: 'inline-flex', gap: 2 }}>
-                    {puedeCrear && v.estado !== 'ANULADO' && v.estado !== 'PAGADO' && <IconoFila texto="Anular el vale" tono="rojo" icono={<Ban size={15} />} cargando={anulando === v.id} onClick={() => void anular(v)} />}
-                  </span>
-                </Celda>
-                <Celda><Badge tone={TONO[v.estado]}>{ETIQUETA[v.estado]}</Badge>{v.alertas.some(a => a.nivel === 'rojo') && <span title={v.alertas.map(a => a.texto).join(' · ')} style={{ marginLeft: 6, color: 'var(--red-ink)' }}><CircleAlert size={14} aria-label="Con avisos" /></span>}</Celda>
-                <Celda mono>{v.codigo}</Celda>
+                <Celda><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', whiteSpace: 'nowrap' }}><Badge tone={TONO[v.estado]}>{ETIQUETA[v.estado]}</Badge>{v.alertas.some(a => a.nivel === 'rojo') && <span title={v.alertas.map(a => a.texto).join(' · ')} style={{ display: 'inline-flex', color: 'var(--red-ink)' }}><CircleAlert size={14} aria-label="Con avisos" /></span>}</span></Celda>
+                <Celda mono><button type="button" className="oc-adj oc-adj--verde" style={{ cursor: 'pointer', font: 'inherit' }} title="Ver detalle del vale" onClick={() => setDetalle(v)}>{v.codigo}</button></Celda>
                 <Celda mono>{fechaCorta(v.fecha)}</Celda>
                 <Celda mono>{v.viaje}</Celda>
                 <Celda mono>{v.orden_servicio || '—'}</Celda>
-                <Celda mono>{v.placa || '—'}</Celda>
+                <Celda>{v.placa ? <LicensePlate plate={v.placa} size="sm" /> : '—'}</Celda>
                 <Celda>{v.conductor || '—'}</Celda>
                 <Celda>{v.estacion_nombre || '—'}{v.estacion_sede ? ` · ${v.estacion_sede}` : ''}</Celda>
                 <Celda alinear="right" mono>{fmt(v.galones, 2)}</Celda>
@@ -170,7 +167,92 @@ export function ValesViajePage() {
         )}
       </div>
       <NuevoValeSheet open={nuevo} onClose={() => setNuevo(false)} />
+      <ValeDetalleSheet vale={detalle} onClose={() => setDetalle(null)} puedeAnular={puedeCrear} anulando={anulando === detalle?.id} onAnular={v => { void anular(v).then(() => setDetalle(null)); }} />
     </Page>
+  );
+}
+
+/** Detalle de un vale, con el mismo diseño que «Procesar pago» de Pago de requerimientos */
+function ValeDetalleSheet({ vale, onClose, puedeAnular, anulando, onAnular }: { vale: Vale | null; onClose: () => void; puedeAnular: boolean; anulando: boolean; onAnular: (v: Vale) => void }) {
+  const v = vale;
+  const rojos = v ? v.alertas.filter(a => a.nivel === 'rojo') : [];
+  const docs = v ? [
+    { titulo: 'Comprobante del vale', url: v.voucher_url_firmada, Icono: FileText },
+    { titulo: 'Voucher del pago', url: v.pago_voucher_firmada, Icono: FileCheck },
+  ] : [];
+  return (
+    <Sheet ancho open={!!v} onClose={onClose} title={v ? `Vale · ${v.codigo}` : 'Vale'}
+      footer={<>
+        <Button variant="secondary" onClick={onClose}>Cerrar</Button>
+        {v && puedeAnular && v.estado !== 'ANULADO' && v.estado !== 'PAGADO' && <Button variant="danger" icon={<Ban size={16} />} loading={anulando} onClick={() => onAnular(v)}>Anular vale</Button>}
+      </>}>
+      {v && (
+        <div className="ga-det pp-hoja">
+          <div className="ga-det__col">
+            <div className="ga-det__cab">
+              <Badge tone={TONO[v.estado]}>{ETIQUETA[v.estado]}</Badge>
+              {v.caja_codigo && <Badge tone="gray">Caja {v.caja_codigo}</Badge>}
+              <span className="ga-det__emitido">Cargado el {fechaCorta(v.fecha)}{v.hora ? ` · ${v.hora}` : ''}</span>
+            </div>
+            {rojos.length > 0 && <Notice tone="error" icon={<CircleAlert size={16} />}>{rojos.map(a => <div key={a.texto}>{a.texto}</div>)}</Notice>}
+
+            <section className="ga-sec" aria-label="Viaje y unidad">
+              <h3 className="ga-sec__titulo"><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Truck size={16} aria-hidden /> Viaje y unidad</span></h3>
+              <dl className="pp-dl">
+                <dt>Viaje</dt>
+                <dd><b>{v.viaje || '—'}</b>{v.orden_servicio && <span>Servicio {v.orden_servicio}</span>}</dd>
+                <dt>Unidad</dt>
+                <dd><span>{v.placa ? <LicensePlate plate={v.placa} size="sm" /> : '—'}</span><span>Conductor: {v.conductor || '—'}</span></dd>
+              </dl>
+            </section>
+
+            <section className="ga-sec" aria-label="Consumo">
+              <h3 className="ga-sec__titulo"><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Fuel size={16} aria-hidden /> Consumo</span></h3>
+              <dl className="pp-dl">
+                <dt>Estación</dt>
+                <dd><b>{v.estacion_nombre || '—'}</b>{(v.estacion_sede || v.estacion_ruc) && <span>{[v.estacion_sede, v.estacion_ruc ? `RUC ${v.estacion_ruc}` : ''].filter(Boolean).join(' · ')}</span>}</dd>
+                <dt>Combustible</dt>
+                <dd><b>{v.combustible || '—'}</b><span>{fmt(v.galones, 2)} gal × {fmt(v.precio_galon)}{v.km_odometro != null ? ` · Odómetro ${v.km_odometro.toLocaleString('es-PE')} km` : ''}</span></dd>
+                <dt>N° de voucher</dt>
+                <dd><b>{v.numero_voucher || '—'}</b></dd>
+              </dl>
+            </section>
+          </div>
+
+          <div className="ga-det__col">
+            <section className="ga-sec" aria-label="Pago">
+              <h3 className="ga-sec__titulo"><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Wallet size={16} aria-hidden /> Pago</span></h3>
+              <dl className="pp-dl">
+                <dt>Se paga a</dt>
+                <dd><b>{v.beneficiario_nombre || '—'}</b><span>{v.pagar_a === 'CONDUCTOR' ? 'Conductor (reembolso)' : 'Estación de servicio'}</span></dd>
+              </dl>
+              <div className="ga-resumen">
+                <div className="ga-resumen__fila"><span>Galones</span><b>{fmt(v.galones, 2)}</b></div>
+                <div className="ga-resumen__fila"><span>Precio por galón</span><b>{fmt(v.precio_galon)}</b></div>
+                <div className="ga-resumen__total"><span>Total del vale</span><b>{monto(v)}</b></div>
+              </div>
+              {v.estado === 'PAGADO' && <p className="t-footnote c-secondary" style={{ margin: 0 }}><CheckCircle2 size={13} style={{ verticalAlign: '-2px' }} /> Pagado por Tesorería.</p>}
+            </section>
+
+            <section className="ga-sec" aria-label="Documentos">
+              <h3 className="ga-sec__titulo">
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><ClipboardList size={16} aria-hidden /> Documentos</span>
+                <span className="ga-sec__cuenta">{docs.filter(d => !!d.url).length} adjuntos</span>
+              </h3>
+              <div className="ga-docs">
+                {docs.map(({ titulo, url, Icono }) => (
+                  <div key={titulo} className={`ga-doc ${url ? '' : 'ga-doc--falta'}`}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icono size={16} aria-hidden /> {titulo}</span>
+                    {url ? <a href={url} target="_blank" rel="noopener noreferrer">Ver archivo</a> : <span>Sin archivo</span>}
+                  </div>
+                ))}
+              </div>
+            </section>
+            <p className="t-footnote c-secondary" style={{ margin: 0 }}><Coins size={13} style={{ verticalAlign: '-2px' }} /> El dinero lo mueve la caja; el código del vale solo lo vincula al viaje.</p>
+          </div>
+        </div>
+      )}
+    </Sheet>
   );
 }
 
