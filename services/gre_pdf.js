@@ -430,7 +430,7 @@ ${textoMarca ? `<div class="marca-fondo ${p.marca_agua_nivel}${marcaAgua ? ' baj
   <div class="pie">
     ${b.qr ? qrHtml : '<div></div>'}
     <div class="leyenda">Representación impresa de la Guía de Remisión Electrónica ${rotulo === 'REMITENTE' ? 'Remitente' : 'Transportista'}
-      <small>${p.pie ? `${esc(p.pie)}<br>` : ''}Emitida el ${fecha(m.emision)}${m.hora ? ` ${esc(m.hora.slice(0, 5))}` : ''} · ${esc(m.emisor.razon)} · RUC ${esc(m.emisor.ruc)}${p.emitido_desde ? ` · Emitido desde ${esc(p.emitido_desde)}` : ''}</small></div>
+      <small>${p.pie ? `${esc(p.pie)}<br>` : ''}Emitida el ${fecha(m.emision)}${m.hora ? ` ${esc(m.hora.slice(0, 5))}` : ''} · ${esc(m.emisor.razon)} · RUC ${esc(m.emisor.ruc)}${p.emitido_desde ? ` · Emitido desde <b style="font-weight:700;color:var(--ink)">${esc(p.emitido_desde)}</b>` : ''}</small></div>
   </div>
 </div></body></html>`;
 }

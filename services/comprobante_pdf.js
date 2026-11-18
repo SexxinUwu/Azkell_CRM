@@ -139,7 +139,7 @@ function construirHtml(m, plantilla, rec = {}) {
 
     const detHtml = m.detraccion && b.detraccion ? `
       <div class="sec"><div class="et">Información de la detracción</div><div class="tarj det">
-        <div class="par"><div class="k">Leyenda</div><div class="v" style="font-size:7.8pt">Operación sujeta al Sistema de Pago de Obligaciones Tributarias</div></div>
+        <div class="par"><div class="k">Leyenda</div><div class="v" style="font-size:7.8pt">Operación sujeta al Sistema de Pago de Obligaciones Tributarias con el Gobierno Central - Servicios de Transporte Carga</div></div>
         <div class="par"><div class="k">Bien o servicio</div><div class="v" style="font-size:7.8pt">027 · Servicio de transporte de carga</div></div>
         <div class="par"><div class="k">Medio de pago</div><div class="v" style="font-size:7.8pt">001 · Depósito en cuenta</div></div>
         <div class="par"><div class="k">N.º de cuenta Banco de la Nación</div><div class="v m">${esc(m.detraccion.cuenta || '—')}</div></div>
@@ -221,7 +221,7 @@ ${textoMarca ? `<div class="marca-fondo ${p.marca_agua_nivel}${marcaAgua ? ' baj
   <div class="pie">
     ${b.qr ? qrHtml : '<div></div>'}
     <div class="leyenda">Representación impresa de la ${esc(titulo.charAt(0) + titulo.slice(1).toLowerCase())}
-      <small>${p.pie ? `${esc(p.pie)}<br>` : ''}Emitida el ${fecha(m.emision)}${m.hora ? ` ${esc(m.hora.slice(0, 5))}` : ''} · ${esc(m.emisor.razon)} · RUC ${esc(m.emisor.ruc)}${p.emitido_desde ? ` · Emitido desde ${esc(p.emitido_desde)}` : ''}</small>
+      <small>${p.pie ? `${esc(p.pie)}<br>` : ''}Emitida el ${fecha(m.emision)}${m.hora ? ` ${esc(m.hora.slice(0, 5))}` : ''} · ${esc(m.emisor.razon)} · RUC ${esc(m.emisor.ruc)}${p.emitido_desde ? ` · Emitido desde <b style="font-weight:700;color:var(--ink)">${esc(p.emitido_desde)}</b>` : ''}</small>
       ${rec.hash && b.hash ? `<div class="hash">Código hash: ${esc(rec.hash)}</div>` : ''}</div>
   </div>
 </div></body></html>`;

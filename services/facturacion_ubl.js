@@ -130,7 +130,7 @@ function buildComprobanteUbl(d, emisor) {
     const c = d.calculo;
     const conDetraccion = c.detraccion > 0;
     const notas = [{ _attributes: { languageLocaleID: '1000' }, _text: montoEnLetras(c.total, cur) }];
-    if (conDetraccion) notas.push({ _attributes: { languageLocaleID: '2006' }, _text: 'Operación sujeta al Sistema de Pago de Obligaciones Tributarias' });
+    if (conDetraccion) notas.push({ _attributes: { languageLocaleID: '2006' }, _text: 'Operación sujeta al Sistema de Pago de Obligaciones Tributarias con el Gobierno Central - Servicios de Transporte Carga' });
     const body = {
         'cbc:UBLVersionID': t('2.1'),
         'cbc:CustomizationID': t('2.0'),
