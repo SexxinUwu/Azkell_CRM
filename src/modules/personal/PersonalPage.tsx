@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Contact, FileSpreadsheet, Plus, SearchX, TriangleAlert, UserPlus } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
+import '../../core/ui/acciones-iconos.css';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';

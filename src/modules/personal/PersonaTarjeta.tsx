@@ -2,6 +2,7 @@ import { Children, isValidElement, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { ChevronDown, ChevronLeft, Contact, IdCard, Mail, MessageCircle, Pencil, Phone, Printer, Trash2, TriangleAlert } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
+import '../../core/ui/acciones-iconos.css';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { spring } from '../../core/lib/motion';
