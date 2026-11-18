@@ -123,9 +123,9 @@ export function BancNuevaCuenta({ open, onClose }: Props) {
             </SelectInput>
           )}
         </Field>
-        <Field label="Tipo de cuenta">
+        <Field label="Tipo de cuenta" hint={tipo === 'DETRACCIONES' ? 'Es la cuenta del Banco de la Nación donde tus clientes depositan la detracción. La usa la facturación electrónica.' : undefined}>
           {p => (
-            <SelectInput {...p} value={tipo} onChange={e => setTipo(e.target.value)}>
+            <SelectInput {...p} value={tipo} onChange={e => { const t = e.target.value; setTipo(t); if (t === 'DETRACCIONES') { setEntidad('BANCO DE LA NACIÓN'); setMoneda('SOLES'); limpiar('entidad'); } }}>
               {TIPOS_CUENTA.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </SelectInput>
           )}

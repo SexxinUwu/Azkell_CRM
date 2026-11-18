@@ -41,13 +41,16 @@ module.exports = (db, logAudit) => {
     // Series y cuenta de detracciones de la empresa (Sistema › Integraciones), con las series habituales por defecto
     async function config(req) {
         const cfg = await Apisunat.getConfigEmpresa(getDb(req));
-        const [rows] = await P(req).query(`SELECT clave, valor FROM integraciones_api WHERE clave LIKE 'apisunat_serie_%' OR clave = 'apisunat_cuenta_detraccion'`).catch(() => [[]]);
+        const [rows] = await P(req).query(`SELECT clave, valor FROM integraciones_api WHERE clave LIKE 'apisunat_serie_%'`).catch(() => [[]]);
         const m = {}; (rows || []).forEach(r => { m[r.clave] = String(r.valor || '').trim(); });
         cfg.series = {
             '01': (m.apisunat_serie_factura || 'F001').toUpperCase(), '03': (m.apisunat_serie_boleta || 'B001').toUpperCase(),
             '07F': (m.apisunat_serie_nc_factura || 'FC01').toUpperCase(), '07B': (m.apisunat_serie_nc_boleta || 'BC01').toUpperCase(),
         };
-        cfg.cuenta_detraccion = m.apisunat_cuenta_detraccion || '';
+        // Cuenta de detracciones: la de tipo «Detracciones» registrada en Tesorería › Bancos o, si no hay, la cuenta en soles del Banco de la Nación
+        const [bn] = await P(req).query(`SELECT numero_cuenta FROM tesoreria_bancos WHERE UPPER(estado) = 'ACTIVO' AND UPPER(moneda) LIKE 'SOL%' AND (UPPER(tipo_cuenta) = 'DETRACCIONES' OR UPPER(banco) LIKE 'BANCO DE LA NACI%')
+                                         ORDER BY (UPPER(tipo_cuenta) = 'DETRACCIONES') DESC, id ASC LIMIT 1`).catch(() => [[]]);
+        cfg.cuenta_detraccion = bn && bn[0] ? String(bn[0].numero_cuenta || '') : '';
         return cfg;
     }
 
@@ -83,7 +86,7 @@ module.exports = (db, logAudit) => {
                 detraccion: { ...DETRACCION_TRANSPORTE, cuenta: !!cuentaDetraccion(cfg) }, motivos_nc: Object.entries(MOTIVOS_NC).map(([codigo, v]) => ({ codigo, texto: v.texto, total: v.total })) });
         } catch (err) { responder(res, err, 'config'); }
     });
-    const cuentaDetraccion = cfg => String(cfg.cuenta_detraccion || '').replace(/\s/g, '');
+    const cuentaDetraccion = cfg => String(cfg.cuenta_detraccion || '').replace(/\D/g, '');
 
     // ───────────── Servicios por facturar ─────────────
     router.get('/por-facturar', async (req, res) => {
@@ -193,7 +196,7 @@ module.exports = (db, logAudit) => {
             if (credito && !dias) throw aviso('Indica los días de crédito.', 422);
             const vence = credito ? sumarDias(fecha, dias) : null;
             const detPct = tipo === '01' ? Math.max(0, Math.min(100, num(b.detraccion_pct))) : 0;
-            if (detPct > 0 && !cuentaDetraccion(cfg)) throw aviso('Falta la cuenta de detracciones del Banco de la Nación de la empresa (Sistema › Integraciones › APISUNAT).', 409);
+            if (detPct > 0 && !cuentaDetraccion(cfg)) throw aviso('Falta la cuenta de detracciones del Banco de la Nación: regístrala en Tesorería › Bancos (tipo «Detracciones»).', 409);
             const calc = calcular(items, { afectoIgv: b.afecto_igv !== false, detraccionPct: detPct, tipoCambio: tipoCambio || 1, moneda });
             if (!(calc.total > 0)) throw aviso('El total debe ser mayor a cero.', 422);
             if (tipo === '03' && !doc && (moneda === 'USD' ? calc.total * tipoCambio : calc.total) >= 700) throw aviso('Una boleta de S/ 700 o más necesita el DNI del cliente.', 422);

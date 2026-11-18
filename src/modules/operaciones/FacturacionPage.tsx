@@ -284,7 +284,7 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
     if (!nombre.trim()) { setError('Falta la razón social del cliente.'); return; }
     if (lineas.some(l => !l.descripcion.trim() || !(n(l.valor_unitario) > 0) || !(n(l.cantidad) > 0))) { setError('Cada línea necesita descripción, cantidad y valor mayores a cero.'); return; }
     if (moneda === 'USD' && !(n(tc) > 0)) { setError('Indica el tipo de cambio.'); return; }
-    if (pctDet > 0 && !config.detraccion.cuenta) { setError('Falta la cuenta de detracciones: regístrala en Sistema › Integraciones.'); return; }
+    if (pctDet > 0 && !config.detraccion.cuenta) { setError('Falta la cuenta de detracciones: regístrala en Tesorería › Bancos (tipo «Detracciones»).'); return; }
     setEnviando(true);
     try {
       const r = await api<{ message?: string }>('/facturacion/emitir', {
@@ -352,7 +352,7 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
             </div>
             <Field label="Observación (opcional)">{p => <TextInput {...p} value={obs} onChange={e => setObs(e.target.value)} />}</Field>
             {sugiereDetraccion && <Notice tone="accent">Este monto supera S/ {config.detraccion.minimo}: normalmente el transporte de carga lleva detracción del {config.detraccion.pct} %. Si corresponde, escríbela arriba.</Notice>}
-            {pctDet > 0 && !config.detraccion.cuenta && <Notice tone="error">Falta la cuenta de detracciones de la empresa (Sistema › Integraciones › APISUNAT).</Notice>}
+            {pctDet > 0 && !config.detraccion.cuenta && <Notice tone="error">Falta la cuenta de detracciones de la empresa: regístrala en Tesorería › Bancos (tipo «Detracciones»).</Notice>}
           </section>
         </div>
 
