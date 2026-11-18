@@ -44,6 +44,7 @@ export const MODULOS_PERMISO: ModuloPermiso[] = [
   { grupo: 'ALMACÉN', key: 'alm_nc', nombre: 'Notas de crédito', desc: 'Registrar notas de crédito de proveedores, devolver mercadería y enlazar la salida (aprobarlas es de Tesorería)', lcad: true },
   { grupo: 'ALMACÉN', key: 'prov_inv', nombre: 'Proveedores', desc: 'Directorio de proveedores', lcad: true },
   { grupo: 'ALMACÉN', key: 'almacen_otros', nombre: 'Otros (Catálogos)', desc: 'Almacenes, familias, unidades, sistemas y marcas', lcad: true },
+  { grupo: 'CONTABILIDAD', key: 'contabilidad_sire', nombre: 'SIRE de SUNAT', desc: 'Ve los comprobantes de ventas y compras que SUNAT tiene en el SIRE y los trae de SUNAT', lcad: true },
   { grupo: 'OPERACIONES', key: 'op_facturacion', nombre: 'Facturación electrónica', desc: 'Ver los comprobantes y emitir facturas, boletas y notas de crédito a SUNAT', lcad: true },
   { grupo: 'OPERACIONES', key: 'op_rentabilidad', nombre: 'Rentabilidad de servicios', desc: 'Ve el ingreso, los gastos y la utilidad de cada servicio (información sensible)', lcad: false },
   { grupo: 'GERENCIA', key: 'gerencia_aprobaciones_oc', nombre: 'Aprobación de O/C', desc: 'Aprobación y autorización de órdenes de compra; «Aprobar» aprueba, rechaza y anula', lcad: true, aprobar: true },

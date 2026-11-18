@@ -5303,6 +5303,8 @@ app.use('/api/rentabilidad', require('./routes/rentabilidad')(db));
 app.use('/api/facturacion', require('./routes/facturacion')(db, logAudit));
 // SIRE de SUNAT: credenciales (cifradas) y prueba de conexión directa con SUNAT
 app.use('/api/sire', require('./routes/sire')(db, logAudit));
+// Contabilidad: copia local del SIRE de SUNAT (ventas y compras)
+app.use('/api/contabilidad', require('./routes/contabilidad')(db, logAudit));
 app.use('/api/tesoreria/caja-chica', require('./routes/caja_chica')(db, broadcast, logAudit));
 app.use('/api/tesoreria', require('./routes/tesoreria')(db, broadcast, logAudit));
 app.use('/api/rrhh', require('./routes/rrhh')(db, broadcast, logAudit));

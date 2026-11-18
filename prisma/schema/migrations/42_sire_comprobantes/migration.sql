@@ -1,0 +1,55 @@
+-- SIRE de SUNAT (2026-11-18): copia local de la propuesta del registro de ventas (RVIE) y de compras (RCE), para consultarla, filtrarla y cruzarla en el sistema.
+-- Cada descarga reemplaza el período completo (la propuesta es una foto de lo que SUNAT tiene). Aditiva e idempotente: solo crea tablas.
+
+CREATE TABLE IF NOT EXISTS `sire_comprobantes` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `libro` VARCHAR(10) NOT NULL,
+  `periodo` VARCHAR(6) NOT NULL,
+  `car_sunat` VARCHAR(40) NULL,
+  `fecha_emision` DATE NULL,
+  `fecha_vencimiento` DATE NULL,
+  `tipo_cp` VARCHAR(3) NULL,
+  `serie` VARCHAR(10) NULL,
+  `anio_dua` VARCHAR(4) NULL,
+  `numero` VARCHAR(20) NULL,
+  `numero_final` VARCHAR(20) NULL,
+  `doc_tipo` VARCHAR(2) NULL,
+  `doc_numero` VARCHAR(20) NULL,
+  `razon_social` VARCHAR(255) NULL,
+  `base_gravada` DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+  `igv` DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+  `exo_ina` DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+  `otros` DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+  `total` DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+  `moneda` VARCHAR(3) NULL,
+  `tipo_cambio` DECIMAL(8,3) NULL,
+  `mod_fecha` DATE NULL,
+  `mod_tipo` VARCHAR(3) NULL,
+  `mod_serie` VARCHAR(10) NULL,
+  `mod_numero` VARCHAR(20) NULL,
+  `detraccion` VARCHAR(20) NULL,
+  `tipo_nota` VARCHAR(5) NULL,
+  `estado_comp` VARCHAR(5) NULL,
+  `datos_json` LONGTEXT NULL,
+  `sincronizado_en` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_sire_libro_periodo` (`libro`, `periodo`),
+  KEY `idx_sire_doc` (`doc_numero`),
+  KEY `idx_sire_serie_numero` (`serie`, `numero`),
+  KEY `idx_sire_fecha` (`fecha_emision`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `sire_sincronizaciones` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `libro` VARCHAR(10) NOT NULL,
+  `periodo` VARCHAR(6) NOT NULL,
+  `estado` VARCHAR(12) NOT NULL DEFAULT 'EN_PROCESO',
+  `filas` INT NOT NULL DEFAULT 0,
+  `ticket` VARCHAR(30) NULL,
+  `mensaje` VARCHAR(300) NULL,
+  `usuario` VARCHAR(150) NULL,
+  `iniciado_en` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  `terminado_en` TIMESTAMP NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_sire_sync_libro_periodo` (`libro`, `periodo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

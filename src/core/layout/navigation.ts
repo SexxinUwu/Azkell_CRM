@@ -121,6 +121,12 @@ const SECCIONES_BASE: NavSection[] = [
     ],
   },
   {
+    title: 'Contabilidad',
+    items: [
+      { key: 'sire', label: 'SIRE · Ventas y compras', to: '/contabilidad/sire', icon: Landmark, permissions: ver('contabilidad_sire'), soloEmpresa: 'trahesa' },
+    ],
+  },
+  {
     title: 'Flota',
     items: [
       { key: 'placas', label: 'Placas', to: '/placas', icon: Truck, permissions: ver('placas') },

@@ -1,0 +1,56 @@
+// Contabilidad: copia local del SIRE de SUNAT (registro de ventas RVIE y de compras RCE)
+
+model SireComprobante {
+  id                Int       @id @default(autoincrement())
+  libro             String    @db.VarChar(10)
+  periodo           String    @db.VarChar(6)
+  car_sunat         String?   @db.VarChar(40)
+  fecha_emision     DateTime? @db.Date
+  fecha_vencimiento DateTime? @db.Date
+  tipo_cp           String?   @db.VarChar(3)
+  serie             String?   @db.VarChar(10)
+  anio_dua          String?   @db.VarChar(4)
+  numero            String?   @db.VarChar(20)
+  numero_final      String?   @db.VarChar(20)
+  doc_tipo          String?   @db.VarChar(2)
+  doc_numero        String?   @db.VarChar(20)
+  razon_social      String?   @db.VarChar(255)
+  base_gravada      Decimal   @default(0.00) @db.Decimal(14, 2)
+  igv               Decimal   @default(0.00) @db.Decimal(14, 2)
+  exo_ina           Decimal   @default(0.00) @db.Decimal(14, 2)
+  otros             Decimal   @default(0.00) @db.Decimal(14, 2)
+  total             Decimal   @default(0.00) @db.Decimal(14, 2)
+  moneda            String?   @db.VarChar(3)
+  tipo_cambio       Decimal?  @db.Decimal(8, 3)
+  mod_fecha         DateTime? @db.Date
+  mod_tipo          String?   @db.VarChar(3)
+  mod_serie         String?   @db.VarChar(10)
+  mod_numero        String?   @db.VarChar(20)
+  detraccion        String?   @db.VarChar(20)
+  tipo_nota         String?   @db.VarChar(5)
+  estado_comp       String?   @db.VarChar(5)
+  datos_json        String?   @db.LongText
+  sincronizado_en   DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([libro, periodo], map: "idx_sire_libro_periodo")
+  @@index([doc_numero], map: "idx_sire_doc")
+  @@index([serie, numero], map: "idx_sire_serie_numero")
+  @@index([fecha_emision], map: "idx_sire_fecha")
+  @@map("sire_comprobantes")
+}
+
+model SireSincronizacion {
+  id           Int       @id @default(autoincrement())
+  libro        String    @db.VarChar(10)
+  periodo      String    @db.VarChar(6)
+  estado       String    @default("EN_PROCESO") @db.VarChar(12)
+  filas        Int       @default(0)
+  ticket       String?   @db.VarChar(30)
+  mensaje      String?   @db.VarChar(300)
+  usuario      String?   @db.VarChar(150)
+  iniciado_en  DateTime? @default(now()) @db.Timestamp(0)
+  terminado_en DateTime? @db.Timestamp(0)
+
+  @@index([libro, periodo], map: "idx_sire_sync_libro_periodo")
+  @@map("sire_sincronizaciones")
+}
