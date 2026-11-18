@@ -10,7 +10,7 @@ WORKDIR /app
 # ─── 1. Compilar la app nueva ────────────────────────────────
 FROM base AS build
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 COPY . .
 RUN npm run build:app
 # Sitios públicos: azkell.com (cartera) y fleet.azkell.com (producto). Salen en dist/sitios.
@@ -27,12 +27,12 @@ ENV CHROME_PATH=/usr/bin/chromium
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates chromium fonts-liberation \
   && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 COPY . .
 COPY --from=build /app/dist ./dist
 
 EXPOSE 3000
-HEALTHCHECK --interval=20s --timeout=5s --start-period=60s --retries=4 \
+HEALTHCHECK --interval=20s --timeout=5s --start-period=15s --retries=4 \
   CMD curl -fsS http://localhost:${PORT:-3000}/api/ping || exit 1
 
 CMD ["npm", "start"]
