@@ -360,14 +360,37 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 delete r.contactos_json;
                 return r;
             });
-            res.json(procesados);
+            // Si el proveedor es una persona (DNI) con cuentas en Personal/Terceros, esas cuentas también se ofrecen en la orden
+            sumarCuentasPersonales(getDb(req), procesados, (ee, lista) => res.json(ee ? procesados : lista));
         }));
     });
 
+    // Cuentas de las personas (persona_cuentas_bancarias, por documento) que no están ya en las del proveedor
+    const sumarCuentasPersonales = (db, provs, cb) => {
+        const docs = [...new Set(provs.map(p => String(p.numero_documento || '').trim()).filter(Boolean))];
+        if (!docs.length) return cb(null, provs);
+        db.query('SELECT id, documento, banco, tipo_cuenta, moneda, numero_cuenta, cci, principal, estado FROM persona_cuentas_bancarias WHERE estado = 1 AND documento IN (?) ORDER BY principal DESC, id', [docs], (err, filas) => {
+            if (err) return cb(err);
+            provs.forEach(p => {
+                const propias = p.cuentas || [];
+                const ya = new Set(propias.map(c => String(c.numero_cuenta || '').trim()));
+                (filas || []).filter(f => f.documento === String(p.numero_documento || '').trim() && !ya.has(String(f.numero_cuenta || '').trim()))
+                    .forEach(f => propias.push({ id: 'p' + f.id, banco: f.banco, moneda: f.moneda || 'SOLES', tipo_cuenta: f.tipo_cuenta, numero_cuenta: f.numero_cuenta, cci: f.cci, detraccion: 0, principal: propias.length ? 0 : f.principal, estado: 1 }));
+                p.cuentas = propias;
+            });
+            cb(null, provs);
+        });
+    };
+
     router.get('/proveedores/:id/cuentas', (req, res) => {
-        getDb(req).query('SELECT * FROM proveedor_cuentas_bancarias WHERE proveedor_id = ? ORDER BY id ASC', [req.params.id], (err, rows) => {
+        const db = getDb(req);
+        db.query('SELECT * FROM proveedor_cuentas_bancarias WHERE proveedor_id = ? ORDER BY id ASC', [req.params.id], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
-            res.json(rows || []);
+            db.query('SELECT numero_documento FROM proveedores_inv WHERE id = ?', [req.params.id], (e2, pr) => {
+                if (e2 || !pr || !pr.length) return res.json(rows || []);
+                const p = { numero_documento: pr[0].numero_documento, cuentas: rows || [] };
+                sumarCuentasPersonales(db, [p], (e3) => res.json(e3 ? (rows || []) : p.cuentas));
+            });
         });
     });
 
