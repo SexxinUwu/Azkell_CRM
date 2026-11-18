@@ -1,7 +1,7 @@
 import '../flota/documentos.css';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, Eye, FileText, History, Plus, Trash2 } from 'lucide-react';
+import { CircleAlert, Contact, Eye, FileText, History, Plus, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
@@ -13,7 +13,7 @@ import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { formatFechaPe } from '../../core/lib/format';
 import {
-  configDoc, corregirDocumento, eliminarDocumento, estadoDoc, subirDocumento, TIPOS_DOC, useDocumentosPersona,
+  configDoc, corregirDocumento, eliminarDocumento, estadoDoc, etiqueta, nombreCompleto, OPCIONES, subirDocumento, TIPOS_DOC, useDocumentosPersona,
   type DocumentoPersona, type EstadoDoc, type Persona, type TipoDoc,
 } from './api';
 
@@ -48,11 +48,47 @@ export function PersonaDocumentos({ persona: p }: { persona: Persona }) {
   const tipos = TIPOS_DOC.filter(t => t.tipo !== 'OTRO' && (!t.soloConductor || esConductor || docs.some(d => d.tipo === t.tipo)));
   const otros = docs.filter(d => d.tipo === 'OTRO');
 
+  // Salud: de los documentos que se exigen a esta persona, cuántos están cargados y vigentes (como la «Salud» de las unidades en Flota)
+  const exigidos = tipos.filter(t => t.obligatorio);
+  const alDia = exigidos.filter(t => { const d = docs.find(x => x.tipo === t.tipo); return d && estadoDoc(d).estado !== 'vencido'; }).length;
+  const salud = exigidos.length ? Math.round((alDia / exigidos.length) * 100) : 100;
+  const colorSalud = salud >= 100 ? 'var(--green-ink)' : salud >= 50 ? 'var(--amber-ink)' : 'var(--red-ink)';
+  const faltan = exigidos.filter(t => !docs.some(x => x.tipo === t.tipo)).length;
+  const porVencer = docs.filter(d => estadoDoc(d).estado === 'por_vencer').length;
+  const vencidos = docs.filter(d => estadoDoc(d).estado === 'vencido').length;
+
   if (q.isLoading) return <PageLoader />;
   if (q.isError) return <div className="docp"><Notice tone="error">{errorMessage(q.error)}</Notice></div>;
 
   return (
     <div className="docp">
+      <section className="doc-ficha" aria-label={`Documentos de ${nombreCompleto(p)}`}>
+        <header className="doc-ficha__cab">
+          <span className="doc-ficha__icono"><Contact size={22} strokeWidth={1.8} /></span>
+          <div className="doc-ficha__titulo">
+            <div className="doc-ficha__linea">
+              <strong className="doc-ficha__persona">{nombreCompleto(p)}</strong>
+              {p.categoria_rol && <span className="doc-etiqueta">{etiqueta(OPCIONES.rol, p.categoria_rol).toUpperCase()}</span>}
+            </div>
+            <span className="doc-ficha__sub">{[p.cargo, `${p.tipo_documento || 'DNI'} ${p.numero_documento}`].filter(Boolean).join(' · ')}</span>
+          </div>
+          <div className="doc-salud" aria-label={`Salud de documentos ${salud}%`}>
+            <span className="doc-salud__texto">Salud</span>
+            <span className="doc-salud__barra"><span style={{ width: `${salud}%`, background: colorSalud }} /></span>
+            <strong>{salud}%</strong>
+          </div>
+        </header>
+
+        <div className="doc-alquiler">
+          <div className="doc-alquiler__chips">
+            <span className="doc-alquiler__chip">{docs.length === 0 ? 'Sin documentos cargados' : `${docs.length} ${docs.length === 1 ? 'documento cargado' : 'documentos cargados'}`}</span>
+            {faltan > 0 && <span className="doc-alquiler__chip doc-alquiler__chip--aviso">{faltan} por cargar</span>}
+            {porVencer > 0 && <span className="doc-alquiler__chip doc-alquiler__chip--aviso">{porVencer} por vencer</span>}
+            {vencidos > 0 && <span className="doc-alquiler__chip doc-alquiler__chip--aviso">{vencidos} vencido{vencidos === 1 ? '' : 's'}</span>}
+          </div>
+          {puedeEditar && <Button variant="secondary" size="sm" icon={<Plus size={14} />} onClick={() => setSubiendo({ tipo: 'OTRO', doc: null })}>Agregar otro documento</Button>}
+        </div>
+
       <div className="doc-tarjetas">
         {tipos.map((t, i) => {
           const historial = docs.filter(d => d.tipo === t.tipo); // el servidor los entrega del más nuevo al más antiguo
@@ -69,12 +105,7 @@ export function PersonaDocumentos({ persona: p }: { persona: Persona }) {
         ))}
       </div>
 
-      {puedeEditar && (
-        <div className="docp__otros-cab">
-          <span className="docp__vacio">Certificados, cursos, memorandos u otros papeles del colaborador.</span>
-          <Button variant="secondary" size="sm" icon={<Plus size={15} />} onClick={() => setSubiendo({ tipo: 'OTRO', doc: null })}>Agregar otro documento</Button>
-        </div>
-      )}
+      </section>
 
       <DocumentoSheet personaId={p.id} abierto={subiendo} onClose={() => setSubiendo(null)} />
       <VisorDocumento doc={viendo} onClose={() => setViendo(null)} />

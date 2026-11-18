@@ -243,3 +243,6 @@
 .docm-celda--vencido, .docm-celda--falta:not(.docm-celda--opcional) { background: color-mix(in srgb, var(--red-ink) 14%, transparent); color: var(--red-ink); }
 .docm-celda--opcional, .docm-celda--na { background: transparent; color: var(--label-3); font-weight: 500; }
 @media (prefers-reduced-motion: reduce) { .docp-tarjeta { transition: none; } }
+
+.doc-ficha__persona { font-size: 1.1rem; letter-spacing: -0.01em; }
+.docp .doc-ficha { box-shadow: none; padding: 0; background: none; }

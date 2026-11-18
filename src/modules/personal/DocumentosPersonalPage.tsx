@@ -9,6 +9,7 @@ import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/Ta
 import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { formatFechaPe } from '../../core/lib/format';
+import { VistaPersonal } from './VistaPersonal';
 import { estadoDoc, nombreCompleto, TIPOS_DOC, useDocumentosTodos, usePersonal, type DocumentoPersona, type EstadoDoc, type Persona, type TipoDocConfig } from './api';
 import './personal.css';
 
@@ -70,7 +71,7 @@ export function DocumentosPersonalPage() {
 
   return (
     <Page>
-      <PageHeader eyebrow="Recursos humanos" title="Documentos del personal"
+      <PageHeader eyebrow="Recursos humanos" title="Personal" actions={<VistaPersonal actual="vencimientos" />}
         subtitle={cargando ? 'Cargando…' : `${totales.vencidos} vencidos · ${totales.porVencer} por vencer · ${totales.faltan} por cargar`} />
 
       {cargando ? <PageLoader /> : error ? <Notice tone="error">{errorMessage(error)}</Notice> : filas.length === 0 ? (
