@@ -9,6 +9,7 @@ import { CircleAlert, FilePlus2, FileText, ReceiptText, RefreshCw, SearchX, Send
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { BarraFiltros } from '../../core/ui/FiltrosListado';
+import { Combobox } from '../../core/ui/Combobox';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
@@ -19,6 +20,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { formatFechaPe, formatMoneda } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
+import { consultarDocumento } from '../directorio/api';
 
 interface Config {
   modo: 'prueba' | 'produccion'; lista: boolean; motivo: string | null; ruc_emisor: string; razon_social: string;
@@ -36,6 +38,7 @@ interface Comprobante {
   apisunat_status: string | null; apisunat_faults: string | null; pdf_url: string | null; xml_url: string | null; cdr_url: string | null; doc_ref_numero: string | null; motivo_texto: string | null;
   modo_emision: string | null; usuario: string | null; referencia: string | null; servicios: string | null;
 }
+interface ClienteReg { id: number; razon_social: string; doc: string; direccion: string }
 interface Linea { orden_servicio: string | null; descripcion: string; cantidad: string; valor_unitario: string }
 
 const n = (v: unknown) => Number(v) || 0;
@@ -245,10 +248,15 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
   const [lineas, setLineas] = useState<Linea[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [clienteSel, setClienteSel] = useState<string | null>(null);
+  // El RUC lo escribió la persona (si no, viene del servicio): al cambiarlo se reemplazan el nombre y la dirección con los del nuevo documento
+  const [tocoDoc, setTocoDoc] = useState(false);
+  const [consulta, setConsulta] = useState<{ ok: boolean; texto: string } | null>(null);
+  const clientes = useQuery({ queryKey: ['facturacion', 'clientes'], enabled: open, staleTime: 120_000, queryFn: () => api<{ data: ClienteReg[] }>('/facturacion/clientes').then(r => r.data ?? []) });
 
   useEffect(() => {
     if (!open) return;
-    setError(null); setTipo('01'); setFecha(hoyIso()); setForma('CONTADO'); setDias('30'); setOc(''); setReferencia(''); setObs('');
+    setError(null); setTipo('01'); setClienteSel(null); setTocoDoc(false); setConsulta(null); setFecha(hoyIso()); setForma('CONTADO'); setDias('30'); setOc(''); setReferencia(''); setObs('');
     if (libre) {
       setDoc(''); setNombre(''); setDireccion(''); setMoneda('PEN'); setTc(''); setDetPct('0');
       setLineas([{ orden_servicio: null, descripcion: '', cantidad: '1', valor_unitario: '' }]);
@@ -265,6 +273,39 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
     })));
     setReferencia(servicios.map(s => s.codigo_orden).join(', ').slice(0, 120));
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Al completarse el RUC (o el DNI en boleta): primero se busca en los clientes registrados y, si no está, en SUNAT o RENIEC
+  useEffect(() => {
+    if (!open) return;
+    const largo = tipo === '01' ? 11 : 8;
+    if (doc.length !== largo) { setConsulta(null); return; }
+    const aplicar = (n: string, d: string) => {
+      setNombre(prev => (tocoDoc ? (n || prev) : (prev || n)));
+      setDireccion(prev => (tocoDoc ? (d || prev) : (prev || d)));
+    };
+    const local = (clientes.data ?? []).find(c => c.doc === doc);
+    if (local) { aplicar(local.razon_social, local.direccion); setConsulta({ ok: true, texto: 'Cliente registrado' }); return; }
+    if (!tocoDoc && nombre && direccion) return;
+    let vivo = true;
+    setConsulta({ ok: true, texto: 'Buscando en ' + (tipo === '01' ? 'SUNAT' : 'RENIEC') + '…' });
+    const t = window.setTimeout(async () => {
+      try {
+        const r = await consultarDocumento(doc);
+        if (!vivo) return;
+        aplicar(r.razon_social, r.direccion);
+        setConsulta({ ok: true, texto: `${r.tipo === 'RUC' ? 'SUNAT' : 'RENIEC'}${r.estado ? `: ${r.estado}` : ''}${r.condicion ? ` · ${r.condicion}` : ''}` });
+      } catch (err) { if (vivo) setConsulta({ ok: false, texto: errorMessage(err) }); }
+    }, 350);
+    return () => { vivo = false; window.clearTimeout(t); };
+  }, [doc, tipo, open, tocoDoc, clientes.data]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function elegirCliente(id: string | null) {
+    setClienteSel(id);
+    const c = (clientes.data ?? []).find(x => String(x.id) === id);
+    if (!c) return;
+    setTocoDoc(true); setDoc(c.doc.replace(/\D/g, '')); setNombre(c.razon_social); setDireccion(c.direccion || '');
+    if (c.doc.replace(/\D/g, '').length === 8) setTipo('03');
+  }
 
   const afecto = !servicios.some(s => /inafect|exoner/i.test(String(s.impuesto || '')));
   const base = r2(lineas.reduce((s, l) => s + r2(n(l.cantidad) * n(l.valor_unitario)), 0));
@@ -312,8 +353,12 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
           <section className="ga-sec" aria-label="Cliente">
             <h3 className="ga-sec__titulo"><span>Cliente</span></h3>
             <SegmentedControl block label="Comprobante" value={tipo} onChange={v => setTipo(v as '01' | '03')} options={[{ value: '01', label: 'Factura' }, { value: '03', label: 'Boleta' }]} />
+            <Field label="Cliente registrado" hint="Elígelo para completar su RUC y su dirección, o escribe el RUC abajo">
+              {p => <Combobox {...p} options={(clientes.data ?? []).map(c => ({ value: String(c.id), label: c.razon_social, description: c.doc }))} value={clienteSel} onChange={elegirCliente}
+                placeholder="Busca por nombre o RUC" loading={clientes.isLoading} enHoja compacta tituloHoja="Elegir cliente" />}
+            </Field>
             <div className="ga-dos">
-              <Field label={tipo === '01' ? 'RUC *' : 'DNI (opcional hasta S/ 700)'}>{p => <TextInput {...p} inputMode="numeric" maxLength={tipo === '01' ? 11 : 8} value={doc} onChange={e => setDoc(e.target.value.replace(/\D/g, ''))} />}</Field>
+              <Field label={tipo === '01' ? 'RUC *' : 'DNI (opcional hasta S/ 700)'} hint={consulta?.ok ? consulta.texto : undefined} error={consulta && !consulta.ok ? consulta.texto : undefined}>{p => <TextInput {...p} inputMode="numeric" maxLength={tipo === '01' ? 11 : 8} value={doc} onChange={e => { setDoc(e.target.value.replace(/\D/g, '')); setTocoDoc(true); setClienteSel(null); }} />}</Field>
               <Field label="Razón social / nombre *">{p => <TextInput {...p} value={nombre} onChange={e => setNombre(e.target.value)} />}</Field>
             </div>
             <Field label="Dirección">{p => <TextInput {...p} value={direccion} onChange={e => setDireccion(e.target.value)} />}</Field>

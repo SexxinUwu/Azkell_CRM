@@ -10,7 +10,7 @@
 //
 // Permisos: 'clave.ver' según la matriz de permisos actual (ver core/auth/permisos.ts). Los administradores ven todo.
 import {
-  Accessibility, Activity, TrendingUp, ReceiptText, ArrowLeftRight, Banknote, BarChart3, Boxes, Building2, Cog, Code, Contact, Disc3, Droplet, FileText, Fuel, Gauge, Gavel, HardHat, History, Hourglass, IdCard, Landmark, Layers, LayoutDashboard, List, MapPin, Package, PackageMinus, PackagePlus, Palette, Route, ScrollText, Settings, ShieldCheck, Tag, Target, Truck, UserCog, Users, Wallet, Warehouse, Wrench, CalendarDays, ClipboardCheck, ClipboardList, Clock, type LucideIcon, Bell,
+  Accessibility, Activity, Sparkles, TrendingUp, ReceiptText, ArrowLeftRight, Banknote, BarChart3, Boxes, Building2, Cog, Code, Contact, Disc3, Droplet, FileText, Fuel, Gauge, Gavel, HardHat, History, Hourglass, IdCard, Landmark, Layers, LayoutDashboard, List, MapPin, Package, PackageMinus, PackagePlus, Palette, Route, ScrollText, Settings, ShieldCheck, Tag, Target, Truck, UserCog, Users, Wallet, Warehouse, Wrench, CalendarDays, ClipboardCheck, ClipboardList, Clock, type LucideIcon, Bell,
 } from 'lucide-react';
 import type { RutaModulo } from '../../modules/personal/rutas.tipos';
 
@@ -64,6 +64,7 @@ const SECCIONES_BASE: NavSection[] = [
     title: 'Dashboard',
     items: [
       { key: 'inicio', label: 'Dashboard principal', to: '/', icon: LayoutDashboard, permissions: [] },
+      { key: 'novedades', label: 'Novedades', to: '/novedades', icon: Sparkles, permissions: [] },
     ],
   },
   {

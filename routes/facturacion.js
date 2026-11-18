@@ -102,8 +102,38 @@ module.exports = (db, logAudit) => {
                    AND NOT EXISTS (SELECT 1 FROM facturacion_items fi JOIN facturacion_comprobantes fc ON fc.id = fi.comprobante_id
                                    WHERE fi.orden_servicio ${COL} = os.codigo_orden ${COL} AND fc.tipo_doc IN ('01', '03') AND fc.estado NOT IN ('ANULADO', 'RECHAZADO'))
                  ORDER BY os.cliente_nombre, os.fecha DESC, os.id DESC LIMIT 800`);
+            const p = P(req);
+            const norm = t => String(t || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[.,]/g, '').replace(/\s+/g, ' ').trim();
+            const faltan = rows.filter(r => !r.cliente_doc || !r.cliente_direccion);
+            if (faltan.length) {
+                // a) catálogo de clientes por nombre normalizado (ignora puntos, comas y mayúsculas)
+                const [cls] = await p.query(`SELECT id, razon_social, TRIM(ruc_dni) AS doc, direccion FROM clientes`).catch(() => [[]]);
+                const porNombre = new Map(); cls.forEach(c => { const k = norm(c.razon_social); if (k && !porNombre.has(k)) porNombre.set(k, c); });
+                // b) guías vinculadas al servicio: si el cliente es el remitente o el destinatario, de ahí salen su RUC y su dirección
+                const [gs] = await p.query(
+                    `SELECT orden_servicio_codigo AS os, remitente_ruc, remitente_nombre, partida_direccion, destinatario_doc, destinatario_nombre, llegada_direccion
+                     FROM gre_guias WHERE estado <> 'ANULADA' AND orden_servicio_codigo IN (?)`, [faltan.map(r => r.codigo_orden)]).catch(() => [[]]);
+                for (const r of faltan) {
+                    const n = norm(r.cliente_nombre);
+                    const c = porNombre.get(n);
+                    if (c) { r.cliente_id = r.cliente_id || c.id; r.cliente_doc = r.cliente_doc || c.doc; r.cliente_direccion = r.cliente_direccion || c.direccion; }
+                    if (r.cliente_doc && r.cliente_direccion) continue;
+                    for (const g of gs.filter(x => x.os === r.codigo_orden)) {
+                        if (norm(g.remitente_nombre) === n && g.remitente_ruc) { r.cliente_doc = r.cliente_doc || g.remitente_ruc; r.cliente_direccion = r.cliente_direccion || g.partida_direccion; break; }
+                        if (norm(g.destinatario_nombre) === n && g.destinatario_doc) { r.cliente_doc = r.cliente_doc || g.destinatario_doc; r.cliente_direccion = r.cliente_direccion || g.llegada_direccion; break; }
+                    }
+                }
+            }
             res.json({ ok: true, data: rows });
         } catch (err) { responder(res, err, 'por-facturar'); }
+    });
+
+    // Clientes registrados (para elegir uno en la factura y completar su RUC y su dirección)
+    router.get('/clientes', async (req, res) => {
+        try {
+            const [rows] = await P(req).query(`SELECT id, razon_social, TRIM(ruc_dni) AS doc, COALESCE(direccion, '') AS direccion FROM clientes WHERE COALESCE(TRIM(ruc_dni), '') <> '' ORDER BY razon_social LIMIT 3000`);
+            res.json({ ok: true, data: rows });
+        } catch (err) { responder(res, err, 'clientes'); }
     });
 
     // ───────────── Lista y detalle ─────────────
@@ -237,6 +267,15 @@ module.exports = (db, logAudit) => {
             await p.query(`UPDATE facturacion_comprobantes SET estado = 'EMITIDO', apisunat_document_id = ?, apisunat_status = 'PENDIENTE', datos_json = ?, pdf_url = ? WHERE id = ?`,
                 [r.documentId, JSON.stringify(body), Apisunat.getPdfUrl(r.documentId, fileName, 'A4', cfg.base_url), id]);
             if (codigos.length) await p.query(`UPDATE operaciones_ordenes_servicio SET factura = ? WHERE codigo_orden IN (?)`, [numeroCompleto, codigos]).catch(() => {});
+            // El cliente queda en el catálogo (si no estaba) y los servicios se ligan a él: la próxima factura ya trae su RUC y su dirección
+            try {
+                if (docFinal && docFinal !== '00000000') {
+                    const [ex] = await p.query(`SELECT id FROM clientes WHERE REPLACE(ruc_dni, ' ', '') = ? LIMIT 1`, [docFinal]);
+                    let cid = ex[0] && ex[0].id;
+                    if (!cid) { const [ci] = await p.query(`INSERT INTO clientes (ruc_dni, razon_social, direccion, estado) VALUES (?, ?, ?, 'Activo')`, [docFinal, nombre.toUpperCase().slice(0, 255), texto(cl.direccion, 500) || '']); cid = ci.insertId; }
+                    if (cid && codigos.length) await p.query(`UPDATE operaciones_ordenes_servicio SET cliente_id = ? WHERE codigo_orden IN (?) AND cliente_id IS NULL`, [cid, codigos]);
+                }
+            } catch (e) { /* el comprobante ya salió: registrar al cliente es un extra */ }
             if (logAudit) logAudit({ req, accion: 'EMITIR_COMPROBANTE', modulo: 'OPERACIONES', detalle: `${TIPOS[tipo]} ${numeroCompleto} (${cfg.modo}) a ${nombre} por ${moneda} ${calc.total}` });
             res.json({ ok: true, id, numero: numeroCompleto, total: calc.total, message: `${TIPOS[tipo]} ${numeroCompleto} enviada a APISUNAT (${cfg.modo === 'produccion' ? 'producción' : 'prueba'}).` });
         } catch (err) {
