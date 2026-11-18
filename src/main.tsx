@@ -16,11 +16,13 @@ import App from './App';
 import { iniciarAcento } from './core/lib/accent';
 import { iniciarTema } from './core/lib/theme';
 import { aplicarPreferencias } from './core/lib/preferencias';
+import { iniciarEtiquetas } from './core/lib/etiquetas';
 import { iniciarColaGastos } from './modules/personas/portalConductorCola';
 
 iniciarTema(); // claro / oscuro / automático, antes de pintar
 iniciarAcento(); // color elegido, antes de pintar
 aplicarPreferencias(); // tamaño de texto, contraste y movimiento, antes de pintar
+iniciarEtiquetas(); // etiquetas de las fichas: «Centro de Costos» (regla universal)
 
 const queryClient = new QueryClient({
   defaultOptions: {
