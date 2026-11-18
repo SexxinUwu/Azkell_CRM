@@ -6,7 +6,11 @@ const Apisunat = require('../services/apisunatService');
 const { calcular, buildComprobanteUbl, buildNotaCreditoUbl, r2 } = require('../services/facturacion_ubl');
 const G = require('../services/gre_pdf');
 const CPDF = require('../services/comprobante_pdf');
-const { getPresignedUrlEstable, s3KeyFromUrl } = require('../utils/s3');
+const multer = require('multer');
+const { uploadToS3, getPresignedUrlEstable, s3KeyFromUrl } = require('../utils/s3');
+
+const subir = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
+const TIPOS_LOGO = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
 
 const texto = (v, max) => { const t = String(v ?? '').trim(); return t ? t.slice(0, max) : null; };
 const num = v => { const n = Number(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
@@ -90,6 +94,50 @@ module.exports = (db, logAudit) => {
         } catch (err) { responder(res, err, 'config'); }
     });
     const cuentaDetraccion = cfg => String(cfg.cuenta_detraccion || '').replace(/\D/g, '');
+
+    // ───────────── Plantilla del PDF (propia de los comprobantes; vive en integraciones_api, sin DDL) ─────────────
+    const leerS3 = async url => (/amazonaws\.com/.test(String(url)) ? getPresignedUrlEstable(s3KeyFromUrl(url)) : url);
+    async function plantillaGuardada(req) {
+        const leer = clave => P(req).query('SELECT valor FROM integraciones_api WHERE clave = ? LIMIT 1', [clave]).then(([r]) => (r && r[0] ? r[0].valor : null)).catch(() => null);
+        const propia = await leer(CPDF.CLAVE_PLANTILLA);
+        if (propia) return CPDF.normalizarPlantilla(propia);
+        // Mientras la empresa no guarde su plantilla de facturación, parte de la marca de las guías (logo, color y datos); al guardar queda independiente
+        let guias = {}; try { guias = JSON.parse((await leer(G.CLAVE_PLANTILLA)) || '{}'); } catch (e) { guias = {}; }
+        delete guias.bloques; delete guias.columnas;
+        return CPDF.normalizarPlantilla(guias);
+    }
+    router.get('/pdf-plantilla', async (req, res) => {
+        try { res.json({ ok: true, plantilla: await plantillaGuardada(req), defecto: CPDF.normalizarPlantilla({}) }); } catch (err) { responder(res, err, 'plantilla'); }
+    });
+    router.put('/pdf-plantilla', async (req, res) => {
+        try {
+            const plantilla = CPDF.normalizarPlantilla((req.body || {}).plantilla);
+            const valor = JSON.stringify(plantilla);
+            if (valor.length > 30000) throw aviso('La plantilla es demasiado grande.');
+            await P(req).query(`INSERT INTO integraciones_api (clave, valor, actualizado_por) VALUES (?, ?, ?)
+                                ON DUPLICATE KEY UPDATE valor = VALUES(valor), actualizado_por = VALUES(actualizado_por), actualizado_en = NOW()`, [CPDF.CLAVE_PLANTILLA, valor, usuarioDe(req)]);
+            res.json({ ok: true, plantilla });
+        } catch (err) { responder(res, err, 'plantilla-guardar'); }
+    });
+    // Vista previa: PDF de ejemplo con la plantilla que viene del formulario (no guarda nada)
+    router.post('/pdf-plantilla/preview', async (req, res) => {
+        try {
+            const plantilla = CPDF.normalizarPlantilla((req.body || {}).plantilla);
+            const pdf = await CPDF.generarPdf(CPDF.modeloEjemplo(), plantilla, { hash: 'AbCdEfGhIjKlMnOpQrStUvWxYz0=', leerS3 });
+            res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline; filename="vista-previa.pdf"', 'Cache-Control': 'no-store' });
+            res.send(pdf);
+        } catch (err) { responder(res, err, 'preview'); }
+    });
+    // Logo: se sube a S3 y se devuelve su URL (la pantalla la guarda con la plantilla)
+    router.post('/pdf-plantilla/logo', subir.single('logo'), async (req, res) => {
+        try {
+            if (!req.file) throw aviso('Elige una imagen PNG, JPG o WebP.');
+            const ext = TIPOS_LOGO[req.file.mimetype];
+            if (!ext) throw aviso('El logo debe ser PNG, JPG o WebP.');
+            const url = await uploadToS3(req.file.buffer, `facturacion/plantilla/logo_${Date.now()}.${ext}`, req.file.mimetype);
+            res.json({ ok: true, url });
+        } catch (err) { responder(res, err, 'logo'); }
+    });
 
     // ───────────── Servicios por facturar ─────────────
     router.get('/por-facturar', async (req, res) => {
@@ -397,7 +445,7 @@ module.exports = (db, logAudit) => {
         } catch (err) { responder(res, err, 'sincronizar'); }
     });
 
-    // PDF con el diseño de la empresa (la plantilla es la misma de las guías: Operaciones › Plantilla de guías). La sesión viaja por cookie.
+    // PDF con el diseño de la empresa (Operaciones › Plantilla de facturación). La sesión viaja por cookie.
     router.get('/:id/pdf-propio', async (req, res) => {
         try {
             const p = P(req); const cfg = await config(req);
@@ -408,9 +456,7 @@ module.exports = (db, logAudit) => {
             if (r[0].apisunat_document_id && (!r[0].xml_url || r[0].apisunat_status !== 'ACEPTADO')) { try { await sincronizar(p, cfg, r[0]); [r] = await consulta(); } catch (e) { /* se imprime con lo que hay */ } }
             const c = r[0];
             const [items] = await p.query(`SELECT descripcion, unidad, cantidad, valor_unitario, base FROM facturacion_items WHERE comprobante_id = ? ORDER BY linea`, [c.id]);
-            const [pl] = await p.query('SELECT valor FROM integraciones_api WHERE clave = ? LIMIT 1', [G.CLAVE_PLANTILLA]).catch(() => [[]]);
-            const plantilla = G.normalizarPlantilla(pl && pl[0] ? pl[0].valor : null);
-            const leerS3 = async url => (/amazonaws\.com/.test(String(url)) ? getPresignedUrlEstable(s3KeyFromUrl(url)) : url);
+            const plantilla = await plantillaGuardada(req);
             const modelo = CPDF.modeloDesdeComprobante(c, items, { ruc: cfg.ruc_emisor, razon: cfg.razon_social });
             const pdf = await CPDF.generarPdf(modelo, plantilla, { hash: await CPDF.hashDeXml(c.xml_url), leerS3 });
             res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="${String(c.numero_completo).replace(/[^\w.-]/g, '_')}.pdf"`, 'Cache-Control': 'no-store' });

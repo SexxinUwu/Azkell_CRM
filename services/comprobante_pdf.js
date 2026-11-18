@@ -12,6 +12,23 @@ const nfLibre = (n, min = 2, max = 4) => Number(n || 0).toLocaleString('en-US', 
 const UNIDADES = { ZZ: 'Servicio', NIU: 'Unidad', KGM: 'Kilogramos', TNE: 'Toneladas', BX: 'Cajas', LTR: 'Litros', GLL: 'Galones', MTR: 'Metros' };
 const TITULOS = { '01': 'FACTURA ELECTRÓNICA', '03': 'BOLETA DE VENTA ELECTRÓNICA', '07': 'NOTA DE CRÉDITO ELECTRÓNICA' };
 
+// ───────────────────────── Plantilla (propia de los comprobantes; la de las guías es otra) ─────────────────────────
+const CLAVE_PLANTILLA = 'comprobante_pdf_plantilla';
+const BLOQUES_BASE = { estado: true, detraccion: true, credito: true, observaciones: true, qr: true, hash: true };
+const COLUMNAS_BASE = { unidad: true, valor_unit: true, orden_compra: true };
+const bool = (v, defecto) => (typeof v === 'boolean' ? v : defecto);
+
+/** Marca y textos comunes (logo, color, datos de la empresa, marca de agua, pie) como en las guías; los bloques y columnas son los de los comprobantes */
+function normalizarPlantilla(crudo) {
+    let p = crudo;
+    if (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { p = {}; } }
+    if (!p || typeof p !== 'object') p = {};
+    const comun = G.normalizarPlantilla(p);
+    const bloques = {}; for (const k of Object.keys(BLOQUES_BASE)) bloques[k] = bool(p.bloques && p.bloques[k], BLOQUES_BASE[k]);
+    const columnas = {}; for (const k of Object.keys(COLUMNAS_BASE)) columnas[k] = bool(p.columnas && p.columnas[k], COLUMNAS_BASE[k]);
+    return { ...comun, bloques, columnas };
+}
+
 // ───────────────────────── Hash del XML firmado ─────────────────────────
 const cacheHash = new Map();
 /** DigestValue de la firma del XML que guarda APISUNAT (es el «código hash» que va impreso). null si no se pudo leer. */
@@ -88,6 +105,7 @@ function estadoPastilla(m) {
 function construirHtml(m, plantilla, rec = {}) {
     const p = plantilla;
     const b = p.bloques;
+    const c = p.columnas;
     const st = estadoPastilla(m);
     const nombre = p.nombre_comercial || m.emisor.razon;
     const contacto = [p.telefono && `Tel. ${esc(p.telefono)}`, p.correo && esc(p.correo), p.web && esc(p.web)].filter(Boolean).join(' · ');
@@ -98,12 +116,12 @@ function construirHtml(m, plantilla, rec = {}) {
     const lineasHtml = m.lineas.map(l => `
         <tr><td style="width:7mm;color:var(--ink2)">${l.n}</td>
         <td>${esc(l.descripcion)}</td>
-        <td>${esc(UNIDADES[l.unidad] || l.unidad)}</td>
+        ${c.unidad ? `<td>${esc(UNIDADES[l.unidad] || l.unidad)}</td>` : ''}
         <td class="d">${esc(nfLibre(l.cantidad, 0, 3))}</td>
-        <td class="d">${esc(nfLibre(l.vu, 2, 4))}</td>
+        ${c.valor_unit ? `<td class="d">${esc(nfLibre(l.vu, 2, 4))}</td>` : ''}
         <td class="d">${esc(nf(l.base))}</td></tr>`).join('');
 
-    const detHtml = m.detraccion ? `
+    const detHtml = m.detraccion && b.detraccion ? `
       <div class="sec"><div class="et">Información de la detracción</div><div class="tarj det">
         <div class="par"><div class="k">Leyenda</div><div class="v" style="font-size:7.8pt">Operación sujeta al Sistema de Pago de Obligaciones Tributarias</div></div>
         <div class="par"><div class="k">Bien o servicio</div><div class="v" style="font-size:7.8pt">027 · Servicio de transporte de carga</div></div>
@@ -113,7 +131,7 @@ function construirHtml(m, plantilla, rec = {}) {
         <div class="par"><div class="k">Monto neto pendiente de pago</div><div class="v m">${S} ${esc(nf(m.neto))}</div></div>
       </div></div>` : '';
 
-    const creditoHtml = !esNc && m.formaPago === 'CREDITO' ? `
+    const creditoHtml = !esNc && b.credito && m.formaPago === 'CREDITO' ? `
       <div class="sec"><div class="et">Forma de pago: crédito</div><div class="tarj">
         <div class="par"><div class="k">Monto neto pendiente de pago</div><div class="v m">${S} ${esc(nf(m.neto))}</div></div>
         <div class="par"><div class="k">Cuota 1 · vence el ${fecha(m.vence)}</div><div class="v m">${S} ${esc(nf(m.neto))}</div></div>
@@ -160,7 +178,7 @@ ${textoMarca ? `<div class="marca-fondo ${p.marca_agua_nivel}${marcaAgua ? ' baj
       <div class="par"><div class="k">Emisión</div><div class="v m">${fecha(m.emision)}${m.hora ? ` ${esc(m.hora.slice(0, 5))}` : ''}</div></div>
       <div class="par"><div class="k">Moneda</div><div class="v">${m.moneda === 'USD' ? 'Dólares (US$)' : 'Soles (S/)'}</div></div>
       ${esNc ? '' : `<div class="par"><div class="k">Forma de pago</div><div class="v">${m.formaPago === 'CREDITO' ? `Crédito (${m.dias} días)` : 'Contado'}</div></div>`}
-      ${m.ordenCompra ? `<div class="par"><div class="k">Orden de compra</div><div class="v m">${esc(m.ordenCompra)}</div></div>` : ''}
+      ${m.ordenCompra && c.orden_compra ? `<div class="par"><div class="k">Orden de compra</div><div class="v m">${esc(m.ordenCompra)}</div></div>` : ''}
     </div></div>
   </div>
 
@@ -169,7 +187,7 @@ ${textoMarca ? `<div class="marca-fondo ${p.marca_agua_nivel}${marcaAgua ? ' baj
     <div class="par"><div class="k">Motivo</div><div class="v">${esc(m.ref.motivo)}</div></div></div></div>` : ''}
 
   <div class="sec"><div class="et">Detalle</div>
-    <table><thead><tr><th>#</th><th>Descripción</th><th>Unidad</th><th class="d">Cant.</th><th class="d">Valor unit.</th><th class="d">Importe</th></tr></thead>
+    <table><thead><tr><th>#</th><th>Descripción</th>${c.unidad ? '<th>Unidad</th>' : ''}<th class="d">Cant.</th>${c.valor_unit ? '<th class="d">Valor unit.</th>' : ''}<th class="d">Importe</th></tr></thead>
     <tbody>${lineasHtml}</tbody></table>
     <div class="tot2 tarj" style="margin-top:3mm">
       <div class="par"><div class="k">${m.igv > 0 ? 'Op. gravada' : 'Op. inafecta'}</div><div class="v m">${S} ${esc(nf(m.base))}</div></div>
@@ -188,7 +206,7 @@ ${textoMarca ? `<div class="marca-fondo ${p.marca_agua_nivel}${marcaAgua ? ' baj
     ${b.qr ? qrHtml : '<div></div>'}
     <div class="leyenda">Representación impresa de la ${esc(titulo.charAt(0) + titulo.slice(1).toLowerCase())}
       <small>${p.pie ? `${esc(p.pie)}<br>` : ''}Emitida el ${fecha(m.emision)}${m.hora ? ` ${esc(m.hora.slice(0, 5))}` : ''} · ${esc(m.emisor.razon)} · RUC ${esc(m.emisor.ruc)}${p.emitido_desde ? ` · Emitido desde ${esc(p.emitido_desde)}` : ''}</small>
-      ${rec.hash ? `<div class="hash">Código hash: ${esc(rec.hash)}</div>` : ''}</div>
+      ${rec.hash && b.hash ? `<div class="hash">Código hash: ${esc(rec.hash)}</div>` : ''}</div>
   </div>
 </div></body></html>`;
 }
@@ -199,10 +217,10 @@ const contenidoQr = m => [m.emisor.ruc, m.tipo, m.serie, m.correlativo, nf(m.igv
 
 /** opciones: { hash, leerS3 } — hash: DigestValue del XML; leerS3: firma la URL del logo en S3 */
 async function generarPdf(modelo, plantillaCruda, opciones = {}) {
-    const plantilla = G.normalizarPlantilla(plantillaCruda);
+    const plantilla = normalizarPlantilla(plantillaCruda);
     const rec = { logo: await G.logoDataUrl(plantilla.logo_url, opciones.leerS3), qr: null, hash: opciones.hash || '' };
     if (plantilla.bloques.qr) rec.qr = { dataUrl: await G.qrDataUrl(contenidoQr(modelo)) };
     return htmlAPdf(construirHtml(modelo, plantilla, rec), modelo.numero || 'Comprobante', false, false, { margenV: 9, compactar: true });
 }
 
-module.exports = { modeloDesdeComprobante, modeloEjemplo, construirHtml, generarPdf, hashDeXml, contenidoQr };
+module.exports = { CLAVE_PLANTILLA, normalizarPlantilla, modeloDesdeComprobante, modeloEjemplo, construirHtml, generarPdf, hashDeXml, contenidoQr };

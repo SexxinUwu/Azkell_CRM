@@ -33,6 +33,12 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'facturacion', label: 'Facturación', to: '/operaciones/facturacion', icon: 'ReceiptText', permisos: ['op_facturacion.ver'] },
   },
   {
+    path: 'operaciones/plantilla-facturacion/*',
+    permisos: ['op_facturacion.ver', 'admin'],
+    Page: lazy(() => import('./PlantillaFacturacionPage').then(m => ({ default: m.PlantillaFacturacionPage }))),
+    nav: { key: 'plantilla-facturacion', label: 'Plantilla de facturación', to: '/operaciones/plantilla-facturacion', icon: 'Palette', permisos: ['op_facturacion.ver'] },
+  },
+  {
     path: 'operaciones/rentabilidad/*',
     permisos: ['op_rentabilidad.ver', 'admin'],
     Page: lazy(() => import('./RentabilidadPage').then(m => ({ default: m.RentabilidadPage }))),
