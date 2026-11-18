@@ -2,7 +2,7 @@ import '../mantenimiento/mant.css';
 import '../../core/ui/acciones-iconos.css';
 import './seguimiento.css';
 import { useMemo, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, FileCode2, FileText, Link2, Link2Off, Plus, RefreshCw, Search, SearchX, Send } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -71,6 +71,9 @@ export function GuiasPage() {
   const toast = useToast();
   const qc = useQueryClient();
   const guias = useGuias();
+  // Ambiente de SUNAT de la empresa: mientras esté en prueba, se dice claro que no tiene validez tributaria
+  const ambienteSunat = useQuery<{ modo?: string }>({ queryKey: ['operaciones', 'gre', 'apisunat-estado'], queryFn: () => api<{ modo?: string }>('/operaciones/gre/apisunat/estado'), staleTime: 60_000 });
+  const enPrueba = ambienteSunat.data?.modo === 'prueba';
   const ubigeos = useUbigeos();
   const [seccion, setSeccion] = useState<Seccion>(seccionGuardada);
   const [busqueda, setBusqueda] = useState('');
@@ -169,7 +172,7 @@ export function GuiasPage() {
 
   const subtitulo = guias.isLoading ? 'Cargando…' : esRemitente
     ? `${remitentes.length} ${remitentes.length === 1 ? 'guía de remitente' : 'guías de remitente'}${sinVincular ? ` · ${sinVincular} sin vincular` : ''}${sinGrt ? ` · ${sinGrt} sin GRE Transportista` : ''}`
-    : `${transportistas.length} ${transportistas.length === 1 ? 'guía de transportista' : 'guías de transportista'}${pendientes.length ? ` · ${pendientes.length} pendientes en SUNAT` : ''}`;
+    : `${transportistas.length} ${transportistas.length === 1 ? 'guía de transportista' : 'guías de transportista'}${pendientes.length ? ` · ${pendientes.length} pendientes en SUNAT` : ''}${enPrueba ? ' · Modo prueba' : ''}`;
 
   return (
     <Page>
@@ -179,6 +182,7 @@ export function GuiasPage() {
           : <Button variant="secondary" icon={<RefreshCw size={16} />} onClick={sincronizarPendientes} loading={sincronizando === 'todas'} disabled={!pendientes.length}>Actualizar estados</Button>} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+        {enPrueba && <Notice tone="accent">Modo prueba: las guías que se emiten ahora no tienen validez ante SUNAT. Al pasar a producción se usarán series y numeración reales.</Notice>}
         <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder={esRemitente ? 'Número, remitente, destinatario, placa o servicio' : 'Número, cliente, placa, conductor o viaje'} activos={activos} onAbrirFiltros={() => setFiltrando(true)}>
           <SegmentedControl label="Sección de guías" value={seccion} onChange={cambiarSeccion}
             options={[{ value: 'REMITENTE', label: `Remitente · ${remitentes.length}` }, { value: 'TRANSPORTISTA', label: `Transportista · ${transportistas.length}` }]} />
