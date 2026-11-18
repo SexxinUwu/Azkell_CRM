@@ -72,13 +72,15 @@ class ApisunatService {
      * modo 'prueba' envía a la dirección de pruebas (con las credenciales de prueba si existen); 'produccion' envía a APISUNAT real.
      * `bloqueo` trae el motivo por el que no se puede emitir (o null).
      */
-    static async getConfigEmpresa(dbConn) {
-        const claves = ['apisunat_modo', 'apisunat_persona_id', 'apisunat_persona_token', 'apisunat_prueba_persona_id', 'apisunat_prueba_persona_token',
+    static async getConfigEmpresa(dbConn, opciones = {}) {
+        const claves = ['apisunat_modo', 'apisunat_modo_facturacion', 'apisunat_persona_id', 'apisunat_persona_token', 'apisunat_prueba_persona_id', 'apisunat_prueba_persona_token',
             'apisunat_prueba_url', 'apisunat_ruc_emisor', 'sunat_ruc_emisor', 'apisunat_razon_social', 'apisunat_registro_mtc', 'apisunat_autorizacion_mtc', 'apisunat_serie_grt', 'apisunat_serie_gre'];
         const [rows] = await dbConn.promise().query('SELECT clave, valor FROM integraciones_api WHERE clave IN (?)', [claves]).catch(() => [[]]);
         const m = {};
         (rows || []).forEach(r => { m[r.clave] = String(r.valor || '').trim(); });
-        const modo = m.apisunat_modo === 'produccion' ? 'produccion' : 'prueba';
+        // opciones.documento = 'facturacion': usa el ambiente propio de la facturación (si no se definió, el mismo de las guías)
+        const modoElegido = opciones.documento === 'facturacion' && m.apisunat_modo_facturacion ? m.apisunat_modo_facturacion : m.apisunat_modo;
+        const modo = modoElegido === 'produccion' ? 'produccion' : 'prueba';
         const prueba = modo === 'prueba';
         const persona_id = (prueba && m.apisunat_prueba_persona_id && m.apisunat_prueba_persona_token) ? m.apisunat_prueba_persona_id : (m.apisunat_persona_id || '');
         const persona_token = (prueba && m.apisunat_prueba_persona_id && m.apisunat_prueba_persona_token) ? m.apisunat_prueba_persona_token : (m.apisunat_persona_token || '');

@@ -47,7 +47,7 @@ module.exports = (db, logAudit) => {
 
     // Series y cuenta de detracciones de la empresa (Sistema › Integraciones), con las series habituales por defecto
     async function config(req) {
-        const cfg = await Apisunat.getConfigEmpresa(getDb(req));
+        const cfg = await Apisunat.getConfigEmpresa(getDb(req), { documento: 'facturacion' });
         const [rows] = await P(req).query(`SELECT clave, valor FROM integraciones_api WHERE clave LIKE 'apisunat_serie_%'`).catch(() => [[]]);
         const m = {}; (rows || []).forEach(r => { m[r.clave] = String(r.valor || '').trim(); });
         cfg.series = {
@@ -71,7 +71,7 @@ module.exports = (db, logAudit) => {
 
     // Siguiente número de una serie: el mayor entre lo local y lo que dice APISUNAT
     async function siguienteNumero(p, cfg, tipo, serie) {
-        const [u] = await p.query(`SELECT COALESCE(MAX(CAST(numero AS UNSIGNED)), 0) AS ultimo FROM facturacion_comprobantes WHERE tipo_doc = ? AND serie = ?`, [tipo, serie]);
+        const [u] = await p.query(`SELECT COALESCE(MAX(CAST(numero AS UNSIGNED)), 0) AS ultimo FROM facturacion_comprobantes WHERE tipo_doc = ? AND serie = ? AND modo_emision = ?`, [tipo, serie, cfg.modo]);
         let n = (Number(u[0].ultimo) || 0) + 1;
         try {
             const ap = await Apisunat.lastDocument({ personaId: cfg.persona_id, personaToken: cfg.persona_token, type: tipo, serie, base: cfg.base_url });
@@ -143,9 +143,56 @@ module.exports = (db, logAudit) => {
         } catch (err) { responder(res, err, 'logo'); }
     });
 
+    // ───────────── Lista de verificación para pasar a producción ─────────────
+    // Solo consulta (a la base y a APISUNAT con las credenciales de producción): no emite ni guarda nada.
+    router.get('/preparacion', async (req, res) => {
+        try {
+            const p = P(req); const cfg = await config(req);
+            const [rows] = await p.query(`SELECT clave, valor FROM integraciones_api WHERE clave IN ('apisunat_persona_id', 'apisunat_persona_token')`).catch(() => [[]]);
+            const k = {}; (rows || []).forEach(r => { k[r.clave] = String(r.valor || '').trim(); });
+            const pasos = [];
+            const add = (clave, titulo, estado, detalle) => pasos.push({ clave, titulo, estado, detalle });
+
+            const empresaOk = rucValido(cfg.ruc_emisor) && !!cfg.razon_social;
+            add('empresa', 'RUC y razón social de la empresa', empresaOk ? 'ok' : 'falta', empresaOk ? `${cfg.ruc_emisor} · ${cfg.razon_social}` : 'Falta el RUC (válido) o la razón social: Sistema › Integraciones › APISUNAT › Empresa.');
+
+            const tieneProd = !!(k.apisunat_persona_id && k.apisunat_persona_token);
+            add('credenciales', 'Credenciales de producción de APISUNAT', tieneProd ? 'ok' : 'falta', tieneProd ? 'Persona ID y token de producción cargados.' : 'Falta el Persona ID y el token de PRODUCCIÓN: Sistema › Integraciones › APISUNAT › Conexión.');
+
+            if (tieneProd) {
+                const base = 'https://back.apisunat.com';
+                const series = [['01', cfg.series['01'], 'Serie de facturas'], ['03', cfg.series['03'], 'Serie de boletas'], ['07', cfg.series['07F'], 'Serie de notas de crédito (factura)'], ['07', cfg.series['07B'], 'Serie de notas de crédito (boleta)']];
+                for (const [tipo, serie, titulo] of series) {
+                    const r = await Apisunat.lastDocument({ personaId: k.apisunat_persona_id, personaToken: k.apisunat_persona_token, type: tipo, serie, base });
+                    if (!r.ok) add(`serie_${tipo}_${serie}`, `${titulo} ${serie}`, 'falta', `APISUNAT respondió: ${mensajeError(r).slice(0, 160)}. Revisa que la serie exista en tu cuenta de producción de APISUNAT.`);
+                    else if (r.production !== true) add(`serie_${tipo}_${serie}`, `${titulo} ${serie}`, 'falta', 'Este token NO es de producción: APISUNAT lo identifica como de pruebas.');
+                    else add(`serie_${tipo}_${serie}`, `${titulo} ${serie}`, 'ok', `Existe en producción. Siguiente número: ${r.suggestedNumber || '00000001'}.`);
+                }
+            }
+
+            const cuenta = String(cfg.cuenta_detraccion || '').replace(/\D/g, '');
+            add('detraccion', 'Cuenta de detracciones (Banco de la Nación)', cuenta ? 'ok' : 'aviso', cuenta ? `Cuenta terminada en ${cuenta.slice(-4)}.` : 'No hay cuenta registrada en Tesorería › Bancos (tipo «Detracciones»): sin ella no se pueden emitir facturas con detracción.');
+
+            const [pl] = await p.query(`SELECT clave FROM integraciones_api WHERE clave IN (?, ?)`, [CPDF.CLAVE_PLANTILLA, CPDF.CLAVE_PLANTILLA_NC]).catch(() => [[]]);
+            const propias = new Set((pl || []).map(x => x.clave));
+            const plOk = propias.has(CPDF.CLAVE_PLANTILLA) && propias.has(CPDF.CLAVE_PLANTILLA_NC);
+            add('plantillas', 'Plantillas de facturación y de nota de crédito', plOk ? 'ok' : 'aviso', plOk ? 'Guardadas.' : 'Aún usan la marca de las guías. Revisa Plantilla de facturación y Plantilla de nota de crédito y guárdalas.');
+
+            const [ix] = await p.query(`SELECT COUNT(*) n FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'facturacion_comprobantes' AND INDEX_NAME = 'uq_comprobante_numero' AND COLUMN_NAME = 'modo_emision'`);
+            add('migracion', 'Numeración separada de pruebas y producción', Number(ix[0].n) > 0 ? 'ok' : 'falta', Number(ix[0].n) > 0 ? 'Aplicada.' : 'Falta aplicar la migración 40: sin ella, las facturas de prueba chocarían con los números reales.');
+
+            const [pr] = await p.query(`SELECT COUNT(*) n FROM facturacion_comprobantes WHERE modo_emision = 'prueba'`);
+            add('pruebas', 'Comprobantes de prueba existentes', 'info', Number(pr[0].n) ? `${pr[0].n} comprobantes de prueba. Seguirán marcados como «Prueba» y no ocupan los números de producción ni bloquean la facturación real de sus servicios.` : 'No hay comprobantes de prueba.');
+            add('ambiente', 'Ambiente actual de la facturación', 'info', cfg.modo === 'produccion' ? 'PRODUCCIÓN: lo que se emite tiene validez tributaria.' : 'Prueba: lo que se emite no tiene validez tributaria.');
+
+            res.json({ ok: true, modo: cfg.modo, listo: pasos.every(x => x.estado !== 'falta'), pasos });
+        } catch (err) { responder(res, err, 'preparacion'); }
+    });
+
     // ───────────── Servicios por facturar ─────────────
     router.get('/por-facturar', async (req, res) => {
         try {
+            const modoActual = (await config(req)).modo;
             const [rows] = await P(req).query(
                 `SELECT os.id, os.codigo_orden, DATE_FORMAT(os.fecha, '%Y-%m-%d') AS fecha, os.cliente_id, os.cliente_nombre, os.ruta, os.es_retorno, os.tipo_servicio, os.estado_servicio,
                         os.moneda, os.tipo_cambio, os.costo_flete, os.impuesto, os.descripcion_carga,
@@ -155,8 +202,8 @@ module.exports = (db, logAudit) => {
                  FROM operaciones_ordenes_servicio os
                  WHERE os.estado_servicio IN ('ENTREGADO', 'EN_EJECUCION') AND COALESCE(os.costo_flete, 0) > 0
                    AND NOT EXISTS (SELECT 1 FROM facturacion_items fi JOIN facturacion_comprobantes fc ON fc.id = fi.comprobante_id
-                                   WHERE fi.orden_servicio ${COL} = os.codigo_orden ${COL} AND fc.tipo_doc IN ('01', '03') AND fc.estado NOT IN ('ANULADO', 'RECHAZADO'))
-                 ORDER BY os.cliente_nombre, os.fecha DESC, os.id DESC LIMIT 800`);
+                                   WHERE fi.orden_servicio ${COL} = os.codigo_orden ${COL} AND fc.tipo_doc IN ('01', '03') AND fc.estado NOT IN ('ANULADO', 'RECHAZADO') AND fc.modo_emision = ?)
+                 ORDER BY os.cliente_nombre, os.fecha DESC, os.id DESC LIMIT 800`, [modoActual]);
             const p = P(req);
             const norm = t => String(t || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[.,]/g, '').replace(/\s+/g, ' ').trim();
             const faltan = rows.filter(r => !r.cliente_doc || !r.cliente_direccion);
@@ -275,7 +322,7 @@ module.exports = (db, logAudit) => {
                 if (monedas.size > 1 || (monedas.size === 1 && !monedas.has(moneda))) throw aviso(`Los servicios están en ${[...monedas].join('/')} y el comprobante en ${moneda}. Deben coincidir.`, 422);
                 const [ya] = await p.query(
                     `SELECT fi.orden_servicio, fc.numero_completo FROM facturacion_items fi JOIN facturacion_comprobantes fc ON fc.id = fi.comprobante_id
-                     WHERE fi.orden_servicio IN (?) AND fc.tipo_doc IN ('01', '03') AND fc.estado NOT IN ('ANULADO', 'RECHAZADO')`, [codigos]);
+                     WHERE fi.orden_servicio IN (?) AND fc.tipo_doc IN ('01', '03') AND fc.estado NOT IN ('ANULADO', 'RECHAZADO') AND fc.modo_emision = ?`, [codigos, cfg.modo]);
                 if (ya.length) throw aviso(`El servicio ${ya[0].orden_servicio} ya está facturado en ${ya[0].numero_completo}.`, 409);
             }
 
@@ -329,7 +376,7 @@ module.exports = (db, logAudit) => {
             }
             await p.query(`UPDATE facturacion_comprobantes SET estado = 'EMITIDO', apisunat_document_id = ?, apisunat_status = 'PENDIENTE', datos_json = ?, pdf_url = ? WHERE id = ?`,
                 [r.documentId, JSON.stringify(body), Apisunat.getPdfUrl(r.documentId, fileName, 'A4', cfg.base_url), id]);
-            if (codigos.length) await p.query(`UPDATE operaciones_ordenes_servicio SET factura = ? WHERE codigo_orden IN (?)`, [numeroCompleto, codigos]).catch(() => {});
+            if (codigos.length && cfg.modo === 'produccion') await p.query(`UPDATE operaciones_ordenes_servicio SET factura = ? WHERE codigo_orden IN (?)`, [numeroCompleto, codigos]).catch(() => {});
             // El cliente queda en el catálogo (si no estaba) y los servicios se ligan a él: la próxima factura ya trae su RUC y su dirección
             try {
                 if (docFinal && docFinal !== '00000000') {

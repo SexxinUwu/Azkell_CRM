@@ -43,7 +43,7 @@ model FacturacionComprobante {
   usuario              String?   @db.VarChar(150)
   creado_en            DateTime? @default(now()) @db.Timestamp(0)
 
-  @@unique([tipo_doc, serie, numero], map: "uq_comprobante_numero")
+  @@unique([tipo_doc, serie, numero, modo_emision], map: "uq_comprobante_numero")
   @@index([cliente_doc], map: "idx_comp_cliente")
   @@index([fecha_emision], map: "idx_comp_fecha")
   @@index([doc_ref_id], map: "idx_comp_ref")

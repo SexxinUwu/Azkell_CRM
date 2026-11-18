@@ -196,7 +196,7 @@ function Wialon({ filas }: { filas: Fila[] }) {
 function Apisunat({ filas }: { filas: Fila[] }) {
   const toast = useToast();
   const guardar = useGuardar();
-  const vacio = { modo: 'prueba', ruc: '', razon: '', mtc: '', autorizacion: '', serieGrt: 'V001', serieGre: 'T001', serieFactura: 'F001', serieBoleta: 'B001', serieNcF: 'FC01', serieNcB: 'BC01', id: '', token: '', pid: '', ptoken: '' };
+  const vacio = { modo: 'prueba', modoFact: 'prueba', ruc: '', razon: '', mtc: '', autorizacion: '', serieGrt: 'V001', serieGre: 'T001', serieFactura: 'F001', serieBoleta: 'B001', serieNcF: 'FC01', serieNcB: 'BC01', id: '', token: '', pid: '', ptoken: '' };
   const [v, setV] = useState(vacio);
   const [ocupado, setOcupado] = useState(false);
   const [res, setRes] = useState<Resultado>(null);
@@ -206,6 +206,8 @@ function Apisunat({ filas }: { filas: Fila[] }) {
   useEffect(() => {
     setV({
       modo: valorDe(filas, 'apisunat_modo') === 'produccion' ? 'produccion' : 'prueba',
+      // La facturación tiene su propio ambiente; si nunca se definió, usa el mismo de las guías
+      modoFact: (valorDe(filas, 'apisunat_modo_facturacion') || valorDe(filas, 'apisunat_modo')) === 'produccion' ? 'produccion' : 'prueba',
       ruc: valorDe(filas, 'apisunat_ruc_emisor') || valorDe(filas, 'sunat_ruc_emisor'), razon: valorDe(filas, 'apisunat_razon_social'), mtc: valorDe(filas, 'apisunat_registro_mtc'), autorizacion: valorDe(filas, 'apisunat_autorizacion_mtc'),
       serieGrt: valorDe(filas, 'apisunat_serie_grt') || 'V001', serieGre: valorDe(filas, 'apisunat_serie_gre') || 'T001',
       serieFactura: valorDe(filas, 'apisunat_serie_factura') || 'F001', serieBoleta: valorDe(filas, 'apisunat_serie_boleta') || 'B001',
@@ -216,10 +218,15 @@ function Apisunat({ filas }: { filas: Fila[] }) {
   }, [filas]);
 
   async function guardarYProbar(probar: boolean) {
+    // Pasar un documento a producción es serio: lo que se emita tendrá validez tributaria y no se puede borrar
+    const guardadoGuias = valorDe(filas, 'apisunat_modo') === 'produccion';
+    const guardadoFact = (valorDe(filas, 'apisunat_modo_facturacion') || valorDe(filas, 'apisunat_modo')) === 'produccion';
+    const nuevos = [v.modo === 'produccion' && !guardadoGuias && 'las guías de remisión', v.modoFact === 'produccion' && !guardadoFact && 'la facturación electrónica'].filter(Boolean);
+    if (nuevos.length && !window.confirm(`Vas a pasar a PRODUCCIÓN ${nuevos.join(' y ')}. Lo que se emita tendrá validez tributaria ante SUNAT y no se puede borrar. ¿Continuar?`)) return;
     setOcupado(true); setRes(null);
     try {
       await guardar([
-        ['apisunat_modo', v.modo], ['apisunat_ruc_emisor', v.ruc], ['apisunat_razon_social', v.razon], ['apisunat_registro_mtc', v.mtc.toUpperCase()], ['apisunat_autorizacion_mtc', v.autorizacion],
+        ['apisunat_modo', v.modo], ['apisunat_modo_facturacion', v.modoFact], ['apisunat_ruc_emisor', v.ruc], ['apisunat_razon_social', v.razon], ['apisunat_registro_mtc', v.mtc.toUpperCase()], ['apisunat_autorizacion_mtc', v.autorizacion],
         ['apisunat_serie_grt', v.serieGrt.toUpperCase()], ['apisunat_serie_gre', v.serieGre.toUpperCase()],
         ['apisunat_serie_factura', v.serieFactura.toUpperCase()], ['apisunat_serie_boleta', v.serieBoleta.toUpperCase()],
         ['apisunat_serie_nc_factura', v.serieNcF.toUpperCase()], ['apisunat_serie_nc_boleta', v.serieNcB.toUpperCase()],
@@ -238,24 +245,23 @@ function Apisunat({ filas }: { filas: Fila[] }) {
 
   const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setV(a => ({ ...a, [k]: e.target.value }));
   const produccion = v.modo === 'produccion';
+  const produccionFact = v.modoFact === 'produccion';
 
   const Aviso = res && <Notice tone={res.ok ? 'success' : 'error'} icon={res.ok ? <CheckCircle2 size={16} /> : <CircleAlert size={16} />}>{res.texto}</Notice>;
   const serie = (k: keyof typeof v, etiqueta: string) => (
     <div className="int-mono" key={k}><Field label={etiqueta}>{p => <TextInput {...p} maxLength={4} value={v[k]} onChange={set(k)} />}</Field></div>
   );
-  const resumen = v.ruc ? `${produccion ? 'Producción' : 'Modo prueba'} · RUC ${v.ruc}${v.razon ? ` · ${v.razon}` : ''}` : 'Aún sin RUC de la empresa';
+  const resumen = v.ruc ? `RUC ${v.ruc}${v.razon ? ` · ${v.razon}` : ''} · Guías en ${produccion ? 'producción' : 'prueba'} · Facturación en ${produccionFact ? 'producción' : 'prueba'}` : 'Aún sin RUC de la empresa';
 
   return (
     <Tarjeta icono={<ShieldCheck size={20} />} tono="sunat" titulo="APISUNAT · Guías y facturación electrónica" estado={res && !res.ok ? 'error' : v.id || v.pid ? 'ok' : 'pendiente'}
       resumen={resumen} onGuardar={() => guardarYProbar(false)}>
       <div className="int-barra">
-        <SegmentedControl label="Ambiente de emisión" value={v.modo as 'prueba' | 'produccion'} onChange={m => setV(a => ({ ...a, modo: m }))}
-          options={[{ value: 'prueba', label: 'Prueba' }, { value: 'produccion', label: 'Producción' }]} />
         <SegmentedControl label="Sección" value={pestana} onChange={setPestana}
           options={[{ value: 'empresa', label: 'Empresa' }, { value: 'series', label: 'Series' }, { value: 'conexion', label: 'Conexión' }]} />
       </div>
-      <Notice tone={produccion ? 'error' : 'accent'}>{produccion
-        ? 'Producción: lo que emitas tiene validez tributaria ante SUNAT.'
+      <Notice tone={produccion || produccionFact ? 'error' : 'accent'}>{produccion || produccionFact
+        ? `Producción activa en ${[produccion && 'las guías', produccionFact && 'la facturación'].filter(Boolean).join(' y ')}: lo que se emita ahí tiene validez tributaria ante SUNAT.`
         : 'Prueba (modo DESARROLLO de APISUNAT): no se envía a SUNAT ni tiene validez tributaria. Solo se envía si APISUNAT confirma que el token es de desarrollo.'}</Notice>
 
       <AnimatePresence mode="wait" initial={false}>
@@ -285,18 +291,36 @@ function Apisunat({ filas }: { filas: Fila[] }) {
             </>
           )}
           {pestana === 'conexion' && (
+            <>
+            <div className="int-grupo">
+              <div className="int-grupo__titulo"><span>Ambiente de emisión</span></div>
+              <div className="int-dos">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span className="t-footnote c-secondary" style={{ fontWeight: 600 }}>Guías de remisión</span>
+                  <SegmentedControl block label="Ambiente de las guías" value={v.modo as 'prueba' | 'produccion'} onChange={m => setV(a => ({ ...a, modo: m }))}
+                    options={[{ value: 'prueba', label: 'Prueba' }, { value: 'produccion', label: 'Producción' }]} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span className="t-footnote c-secondary" style={{ fontWeight: 600 }}>Facturación electrónica</span>
+                  <SegmentedControl block label="Ambiente de la facturación" value={v.modoFact as 'prueba' | 'produccion'} onChange={m => setV(a => ({ ...a, modoFact: m }))}
+                    options={[{ value: 'prueba', label: 'Prueba' }, { value: 'produccion', label: 'Producción' }]} />
+                </div>
+              </div>
+              <p className="t-footnote c-secondary" style={{ margin: 0 }}>Cada documento tiene su propio ambiente: puedes pasar la facturación a producción y dejar las guías en prueba, o al revés. Antes de pasar la facturación, usa «Pasar a producción» en Operaciones › Facturación para revisar que todo esté listo.</p>
+            </div>
             <div className="int-dos">
-              <div className={`int-grupo${produccion ? ' int-grupo--activo' : ''}`}>
-                <div className="int-grupo__titulo"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><KeyRound size={13} aria-hidden /> Producción</span>{produccion && <span className="int-uso">En uso</span>}</div>
+              <div className={`int-grupo${produccion || produccionFact ? ' int-grupo--activo' : ''}`}>
+                <div className="int-grupo__titulo"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><KeyRound size={13} aria-hidden /> Producción</span><span style={{ display: 'inline-flex', gap: 4 }}>{produccion && <span className="int-uso">Guías</span>}{produccionFact && <span className="int-uso">Facturación</span>}</span></div>
                 <Field label="Persona ID">{p => <TextInput {...p} value={v.id} onChange={set('id')} autoComplete="off" />}</Field>
                 <Field label="Token">{p => <PasswordInput {...p} value={v.token} onChange={set('token')} autoComplete="off" />}</Field>
               </div>
-              <div className={`int-grupo${!produccion ? ' int-grupo--activo' : ''}`}>
-                <div className="int-grupo__titulo"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><KeyRound size={13} aria-hidden /> Desarrollo (pruebas)</span>{!produccion && <span className="int-uso">En uso</span>}</div>
+              <div className={`int-grupo${!produccion || !produccionFact ? ' int-grupo--activo' : ''}`}>
+                <div className="int-grupo__titulo"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><KeyRound size={13} aria-hidden /> Desarrollo (pruebas)</span><span style={{ display: 'inline-flex', gap: 4 }}>{!produccion && <span className="int-uso">Guías</span>}{!produccionFact && <span className="int-uso">Facturación</span>}</span></div>
                 <Field label="Persona ID">{p => <TextInput {...p} value={v.pid} onChange={set('pid')} autoComplete="off" />}</Field>
                 <Field label="Token">{p => <PasswordInput {...p} value={v.ptoken} onChange={set('ptoken')} autoComplete="off" />}</Field>
               </div>
             </div>
+            </>
           )}
         </motion.div>
       </AnimatePresence>

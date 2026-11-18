@@ -7,7 +7,8 @@ import '../tesoreria/pago.css';
 import './seguimiento.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, CheckCircle2, CircleAlert, Coins, FilePlus2, FileCode2, FileText, Package, Pencil, ReceiptText, RefreshCw, Search, SearchX, Send, Trash2, Undo2, Users, Wallet } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Check, CheckCircle2, CircleAlert, Coins, FilePlus2, FileCode2, FileText, Info, Package, Pencil, ReceiptText, RefreshCw, Search, SearchX, Send, ShieldCheck, Trash2, Undo2, Users, Wallet } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../core/ui/FiltrosListado';
@@ -123,6 +124,7 @@ export function FacturacionPage() {
   const [emitir, setEmitir] = useState<{ servicios: ServicioPF[] } | null>(null);
   const [nc, setNc] = useState<Comprobante | null>(null);
   const [sincronizando, setSincronizando] = useState<number | 'todas' | null>(null);
+  const [preparando, setPreparando] = useState(false);
 
   const config = useQuery({ queryKey: ['facturacion', 'config'], queryFn: () => api<Config>('/facturacion/config'), staleTime: 60_000 });
   const pend = useQuery({ queryKey: ['facturacion', 'por-facturar'], queryFn: () => api<{ data: ServicioPF[] }>('/facturacion/por-facturar').then(r => r.data ?? []), staleTime: 15_000, refetchOnMount: 'always' });
@@ -189,6 +191,7 @@ export function FacturacionPage() {
       <PageHeader eyebrow="Operaciones" title="Facturación" subtitle={subtitulo}
         actions={
           <div style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center' }}>
+            {puedeEmitir && cfg?.modo === 'prueba' && <Button variant="secondary" icon={<ShieldCheck size={16} />} onClick={() => setPreparando(true)}>Pasar a producción</Button>}
             <Button variant="secondary" icon={<RefreshCw size={16} />} onClick={() => { void sincronizarPendientes(); }} loading={sincronizando === 'todas'} disabled={!enviadas.length}>Actualizar estados</Button>
             {puedeEmitir && <Button variant="primary" icon={<FilePlus2 size={16} />} disabled={!cfg?.lista} onClick={() => setEmitir({ servicios: [] })}>Factura libre</Button>}
           </div>
@@ -332,8 +335,48 @@ export function FacturacionPage() {
 
       {cfg && <EmitirSheet open={!!emitir} servicios={emitir?.servicios ?? []} config={cfg} onClose={() => setEmitir(null)}
         onEmitido={() => { setEmitir(null); setSeleccion(new Set()); cambiarVista('comprobantes'); setDesde(inicioMesIso()); setHasta(hoyIso()); refrescar(); }} />}
+      <PreparacionSheet open={preparando} onClose={() => setPreparando(false)} />
       {cfg && <NotaCreditoSheet comprobante={nc} config={cfg} onClose={() => setNc(null)} onEmitida={() => { setNc(null); refrescar(); }} />}
     </Page>
+  );
+}
+
+interface PasoPrep { clave: string; titulo: string; estado: 'ok' | 'falta' | 'aviso' | 'info'; detalle: string }
+
+/** Lista de verificación antes de pasar la facturación a producción: solo consulta, no emite nada */
+function PreparacionSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const navigate = useNavigate();
+  const q = useQuery({ queryKey: ['facturacion', 'preparacion'], enabled: open, staleTime: 0, queryFn: () => api<{ listo: boolean; pasos: PasoPrep[] }>('/facturacion/preparacion') });
+  const icono = (e: PasoPrep['estado']) => (e === 'ok' ? <CheckCircle2 size={18} style={{ color: 'var(--green-ink)' }} aria-hidden />
+    : e === 'falta' ? <CircleAlert size={18} style={{ color: 'var(--red-ink)' }} aria-hidden /> : e === 'aviso' ? <CircleAlert size={18} style={{ color: 'var(--amber-ink)' }} aria-hidden /> : <Info size={18} style={{ color: 'var(--label-2)' }} aria-hidden />);
+  return (
+    <Sheet open={open} onClose={onClose} title="Lista para producción"
+      footer={<>
+        <Button variant="secondary" onClick={onClose}>Cerrar</Button>
+        <Button variant="secondary" icon={<RefreshCw size={16} />} loading={q.isFetching} onClick={() => { void q.refetch(); }}>Volver a revisar</Button>
+        <Button variant="primary" onClick={() => { onClose(); navigate('/sistema/integraciones'); }}>Ir a Integraciones</Button>
+      </>}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+        {q.isLoading ? <PageLoader /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : q.data && (
+          <>
+            <Notice tone={q.data.listo ? 'success' : 'error'} icon={q.data.listo ? <CheckCircle2 size={16} /> : <CircleAlert size={16} />}>
+              {q.data.listo
+                ? 'Todo está listo. Para activar la producción: Sistema › Integraciones › APISUNAT › Conexión, y en «Facturación electrónica» elige Producción.'
+                : 'Faltan cosas por resolver antes de pasar a producción (las marcadas en rojo).'}
+            </Notice>
+            {q.data.pasos.map(p => (
+              <div key={p.clave} style={{ display: 'flex', gap: 'var(--s-3)', alignItems: 'flex-start' }}>
+                <span style={{ paddingTop: 1 }}>{icono(p.estado)}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                  <strong style={{ fontSize: '0.9rem' }}>{p.titulo}</strong>
+                  <span className="t-footnote c-secondary" style={{ lineHeight: 1.45 }}>{p.detalle}</span>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+    </Sheet>
   );
 }
 
@@ -485,7 +528,7 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
         <div className="ga-det__col">
           <div className="ga-det__cab">
             <Badge tone="accent">{tipo === '01' ? 'Factura' : 'Boleta'} {config.series[tipo]}</Badge>
-            {config.modo === 'prueba' && <Badge tone="amber">Modo prueba</Badge>}
+            {config.modo === 'prueba' ? <Badge tone="amber">Modo prueba</Badge> : <Badge tone="red">Producción · validez tributaria</Badge>}
             <span className="ga-det__emitido">Emisión {formatFechaPe(fecha)}</span>
           </div>
           {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
@@ -600,7 +643,7 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
           <section className="ga-sec" aria-label="Confirmación">
             <label className="pago-proc__confirmar">
               <input type="checkbox" checked={confirmado} onChange={e => { setConfirmado(e.target.checked); setError(null); }} />
-              <span>Confirmo emitir esta {nombreTipo} a SUNAT. Un comprobante emitido no se borra: se corrige con una nota de crédito.</span>
+              <span>Confirmo emitir esta {nombreTipo} a SUNAT{config.modo === 'produccion' ? ', con validez tributaria' : ''}. Un comprobante emitido no se borra: se corrige con una nota de crédito.</span>
             </label>
             <p className="t-footnote c-secondary" style={{ margin: 0 }}>El número lo asigna APISUNAT al emitir (serie {config.series[tipo]}). Si SUNAT no lo acepta, no se guarda y los servicios siguen por facturar.</p>
           </section>
@@ -642,6 +685,7 @@ function NotaCreditoSheet({ comprobante: c, config, onClose, onEmitida }: { comp
       {c && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
           {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
+          {config.modo === 'produccion' && <Notice tone="error">Producción: la nota de crédito tiene validez tributaria ante SUNAT.</Notice>}
           <Notice>{NOMBRE_TIPO[c.tipo_doc]} {c.numero_completo} · {c.cliente_nombre} · {formatMoneda(n(c.total), mon)}</Notice>
           <Field label="Motivo">{p => <SelectInput {...p} value={motivo} onChange={e => setMotivo(e.target.value)}>{config.motivos_nc.map(x => <option key={x.codigo} value={x.codigo}>{x.texto}{x.total ? '' : ' (parcial)'}</option>)}</SelectInput>}</Field>
           {m && !m.total && <Field label="Monto a descontar (sin IGV)" hint={`Hasta ${formatMoneda(n(c.base), mon)}`}>{p => <TextInput {...p} inputMode="decimal" value={monto} onChange={e => setMonto(e.target.value)} />}</Field>}
