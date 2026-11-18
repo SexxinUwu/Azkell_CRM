@@ -4,6 +4,9 @@
 const express = require('express');
 const Apisunat = require('../services/apisunatService');
 const { calcular, buildComprobanteUbl, buildNotaCreditoUbl, r2 } = require('../services/facturacion_ubl');
+const G = require('../services/gre_pdf');
+const CPDF = require('../services/comprobante_pdf');
+const { getPresignedUrlEstable, s3KeyFromUrl } = require('../utils/s3');
 
 const texto = (v, max) => { const t = String(v ?? '').trim(); return t ? t.slice(0, max) : null; };
 const num = v => { const n = Number(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
@@ -392,6 +395,27 @@ module.exports = (db, logAudit) => {
             const st = await sincronizar(p, cfg, r[0]);
             res.json({ ok: true, apisunat_status: st, message: `${r[0].numero_completo}: ${st || 'sin estado'}` });
         } catch (err) { responder(res, err, 'sincronizar'); }
+    });
+
+    // PDF con el diseño de la empresa (la plantilla es la misma de las guías: Operaciones › Plantilla de guías). La sesión viaja por cookie.
+    router.get('/:id/pdf-propio', async (req, res) => {
+        try {
+            const p = P(req); const cfg = await config(req);
+            const consulta = () => p.query(`SELECT *, DATE_FORMAT(fecha_emision, '%Y-%m-%d') AS f_emision, DATE_FORMAT(fecha_vencimiento, '%Y-%m-%d') AS f_vence FROM facturacion_comprobantes WHERE id = ?`, [req.params.id]);
+            let [r] = await consulta();
+            if (!r.length) throw aviso('Comprobante no encontrado.', 404);
+            // Estado y XML al día: el hash que va impreso sale del XML firmado
+            if (r[0].apisunat_document_id && (!r[0].xml_url || r[0].apisunat_status !== 'ACEPTADO')) { try { await sincronizar(p, cfg, r[0]); [r] = await consulta(); } catch (e) { /* se imprime con lo que hay */ } }
+            const c = r[0];
+            const [items] = await p.query(`SELECT descripcion, unidad, cantidad, valor_unitario, base FROM facturacion_items WHERE comprobante_id = ? ORDER BY linea`, [c.id]);
+            const [pl] = await p.query('SELECT valor FROM integraciones_api WHERE clave = ? LIMIT 1', [G.CLAVE_PLANTILLA]).catch(() => [[]]);
+            const plantilla = G.normalizarPlantilla(pl && pl[0] ? pl[0].valor : null);
+            const leerS3 = async url => (/amazonaws\.com/.test(String(url)) ? getPresignedUrlEstable(s3KeyFromUrl(url)) : url);
+            const modelo = CPDF.modeloDesdeComprobante(c, items, { ruc: cfg.ruc_emisor, razon: cfg.razon_social });
+            const pdf = await CPDF.generarPdf(modelo, plantilla, { hash: await CPDF.hashDeXml(c.xml_url), leerS3 });
+            res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="${String(c.numero_completo).replace(/[^\w.-]/g, '_')}.pdf"`, 'Cache-Control': 'no-store' });
+            res.send(pdf);
+        } catch (err) { responder(res, err, 'pdf-propio'); }
     });
 
     // Actualiza todos los comprobantes que siguen pendientes de respuesta de SUNAT

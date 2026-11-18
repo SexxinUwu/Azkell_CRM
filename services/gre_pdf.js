@@ -469,5 +469,5 @@ function modeloEjemplo(plantilla) {
 
 module.exports = {
     CLAVE_PLANTILLA, PLANTILLA_BASE, normalizarPlantilla, modeloDesdeFila, modeloEjemplo, construirHtml,
-    urlQrDeCdr, generarPdf, primerArchivoZip, nombreUbigeo,
+    urlQrDeCdr, generarPdf, primerArchivoZip, nombreUbigeo, logoDataUrl, qrDataUrl, fuentes, CSS,
 };

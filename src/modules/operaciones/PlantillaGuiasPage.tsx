@@ -130,7 +130,7 @@ export function PlantillaGuiasPage() {
       <PageHeader
         eyebrow="Operaciones"
         title="Plantilla de guías"
-        subtitle="Cómo se ve el PDF de las guías de remisión de esta empresa"
+        subtitle="Cómo se ve el PDF de las guías de remisión de esta empresa. El logo, el color, los datos de la empresa, la marca de agua y el pie también se usan en las facturas, boletas y notas de crédito"
         actions={(
           <>
             <Button variant="secondary" icon={<RotateCcw size={16} />} onClick={restablecer} disabled={!p}>Valores por defecto</Button>

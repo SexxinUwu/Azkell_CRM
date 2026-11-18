@@ -94,6 +94,11 @@ const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart
 const inicioMesIso = () => { const d = new Date(); d.setDate(1); return iso(d); };
 const fechaCorta = (f?: string | null) => (f ? `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}` : '—');
 const abrir = (url?: string | null) => { if (url) window.open(url, '_blank', 'noopener'); };
+// El PDF con el diseño de la empresa (la misma plantilla de las guías); la sesión viaja por cookie
+const verPdfPropio = (c: Comprobante) => {
+  if (c.apisunat_status !== 'ACEPTADO' && !window.confirm('Este comprobante aún no figura como aceptado por SUNAT. No lo entregues al cliente hasta que lo esté. ¿Abrir el PDF de todos modos?')) return;
+  window.open(`/api/facturacion/${c.id}/pdf-propio`, '_blank', 'noopener');
+};
 const SECCION_KEY = 'fleet_facturacion_vista';
 const vistaGuardada = (): 'pendientes' | 'comprobantes' => { try { return localStorage.getItem(SECCION_KEY) === 'comprobantes' ? 'comprobantes' : 'pendientes'; } catch { return 'pendientes'; } };
 
@@ -299,6 +304,7 @@ export function FacturacionPage() {
                   <tr key={c.id}>
                     <Celda>
                       <span style={{ display: 'inline-flex', gap: 2 }}>
+                        {c.apisunat_status && <IconoFila texto="Ver el PDF con nuestro diseño" tono="azul" icono={<FileText size={15} />} onClick={() => verPdfPropio(c)} />}
                         {c.pdf_url && <IconoFila texto="PDF de APISUNAT" tono="rojo" icono={<FileText size={15} />} onClick={() => abrir(c.pdf_url)} />}
                         {c.xml_url && <IconoFila texto="Descargar el XML firmado" tono="violeta" icono={<FileCode2 size={15} />} onClick={() => abrir(c.xml_url)} />}
                         {c.cdr_url && <IconoFila texto="Constancia de recepción de SUNAT" tono="verde" icono={<CheckCircle2 size={15} />} onClick={() => abrir(c.cdr_url)} />}
