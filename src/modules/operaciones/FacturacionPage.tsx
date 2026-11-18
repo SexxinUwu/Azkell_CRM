@@ -6,7 +6,7 @@ import '../gerencia/gerencia-oc.css';
 import '../tesoreria/pago.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, CircleAlert, Coins, FilePlus2, FileText, Package, Pencil, ReceiptText, RefreshCw, SearchX, Send, Undo2, Users, Wallet } from 'lucide-react';
+import { Check, CircleAlert, Coins, FilePlus2, FileText, Package, Pencil, ReceiptText, RefreshCw, SearchX, Send, Trash2, Undo2, Users, Wallet } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { BarraFiltros } from '../../core/ui/FiltrosListado';
@@ -259,11 +259,13 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
   const [editCliente, setEditCliente] = useState(false);
   const [editCond, setEditCond] = useState(false);
   const [confirmado, setConfirmado] = useState(false);
+  // Solo en factura libre: venta sin IGV (inafecta o exonerada). Con servicios, el IGV sale de cada servicio
+  const [sinIgv, setSinIgv] = useState(false);
   const clientes = useQuery({ queryKey: ['facturacion', 'clientes'], enabled: open, staleTime: 120_000, queryFn: () => api<{ data: ClienteReg[] }>('/facturacion/clientes').then(r => r.data ?? []) });
 
   useEffect(() => {
     if (!open) return;
-    setError(null); setTipo('01'); setClienteSel(null); setTocoDoc(false); setConsulta(null); setFecha(hoyIso()); setForma('CONTADO'); setDias('30'); setOc(''); setReferencia(''); setObs(''); setConfirmado(false);
+    setError(null); setTipo('01'); setClienteSel(null); setTocoDoc(false); setConsulta(null); setFecha(hoyIso()); setForma('CONTADO'); setDias('30'); setOc(''); setReferencia(''); setObs(''); setConfirmado(false); setSinIgv(false);
     if (libre) {
       setDoc(''); setNombre(''); setDireccion(''); setMoneda('PEN'); setTc(''); setDetPct('0'); setEditCliente(true); setEditCond(true);
       setLineas([{ orden_servicio: null, descripcion: '', cantidad: '1', valor_unitario: '' }]);
@@ -319,7 +321,7 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
   // IGV del servicio: «Incluye IGV» (el valor de venta es el flete ÷ 1.18), «Más IGV» (el flete ya es el valor de venta) o «No aplica»
   const modos = new Set(servicios.map(s => s.modo_igv));
   const mixto = modos.size > 1;
-  const afecto = !(servicios.length > 0 && modos.size === 1 && modos.has('NO'));
+  const afecto = libre ? !sinIgv : !(modos.size === 1 && modos.has('NO'));
   const base = r2(lineas.reduce((s, l) => s + r2(n(l.cantidad) * n(l.valor_unitario)), 0));
   const igv = afecto ? r2(lineas.reduce((s, l) => s + r2(n(l.cantidad) * n(l.valor_unitario) * 0.18), 0)) : 0;
   const total = r2(base + igv);
@@ -410,7 +412,7 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
             {tituloSeccion(<Package size={16} aria-hidden />, 'Detalle del comprobante', <span className="ga-sec__cuenta">{lineas.length} {lineas.length === 1 ? 'línea' : 'líneas'} · valores sin IGV</span>)}
             <div className="ga-tabla-wrap">
               <table className="ga-tabla">
-                <thead><tr><th>Descripción</th><th className="num" style={{ width: 64 }}>Cant.</th><th className="num" style={{ width: 120 }}>Valor unit.</th><th className="num" style={{ width: 120 }}>Importe</th></tr></thead>
+                <thead><tr><th>Descripción</th><th className="num" style={{ width: 64 }}>Cant.</th><th className="num" style={{ width: 120 }}>Valor unit.</th><th className="num" style={{ width: 120 }}>Importe</th><th style={{ width: 36 }} aria-label="Quitar" /></tr></thead>
                 <tbody>
                   {lineas.map((l, i) => {
                     const s = servicios.find(x => x.codigo_orden === l.orden_servicio);
@@ -423,13 +425,17 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
                         <td className="num">{s ? l.cantidad : <TextInput aria-label="Cantidad" inputMode="decimal" value={l.cantidad} onChange={e => setLinea(i, { cantidad: e.target.value })} />}</td>
                         <td className="num">{s ? formatMoneda(n(l.valor_unitario), moneda) : <TextInput aria-label="Valor unitario" inputMode="decimal" value={l.valor_unitario} onChange={e => setLinea(i, { valor_unitario: e.target.value })} />}</td>
                         <td className="num">{formatMoneda(r2(n(l.cantidad) * n(l.valor_unitario)), moneda)}</td>
+                        <td>{!s && lineas.length > 1 && <Button variant="plain" size="sm" iconOnly icon={<Trash2 size={14} />} aria-label="Quitar línea" onClick={() => setLineas(x => x.filter((_, j) => j !== i))} />}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-            {libre && <Button variant="plain" size="sm" onClick={() => setLineas(l => [...l, { orden_servicio: null, descripcion: '', cantidad: '1', valor_unitario: '' }])}>+ Agregar línea</Button>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', flexWrap: 'wrap' }}>
+              <Button variant="plain" size="sm" onClick={() => setLineas(l => [...l, { orden_servicio: null, descripcion: '', cantidad: '1', valor_unitario: '' }])}>+ Agregar línea</Button>
+              {!libre && <span className="t-footnote c-secondary">Para un adicional, una estadía o un peaje: escríbelo con su valor sin IGV.</span>}
+            </div>
             {!libre && modos.size === 1 && modos.has('INCLUYE') && <p className="t-footnote c-secondary" style={{ margin: 0 }}>El flete acordado ya incluye IGV: el valor de venta es el flete ÷ 1.18 y el IGV el resto, así el total facturado es el mismo flete.</p>}
           </section>
 
@@ -444,6 +450,7 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
                 <dd><b>{forma === 'CREDITO' ? `Crédito a ${n(dias)} días` : 'Contado'}</b>{venceEl && <span>Vence el {formatFechaPe(venceEl)}</span>}</dd>
                 <dt>Moneda</dt>
                 <dd><b>{moneda === 'USD' ? `Dólares · T.C. ${tc || '—'}` : 'Soles'}</b></dd>
+                {libre && <><dt>IGV</dt><dd><b>{sinIgv ? 'Sin IGV (inafecta o exonerada)' : 'Gravado 18 %'}</b></dd></>}
                 {tipo === '01' && <><dt>Detracción</dt><dd><b>{pctDet > 0 ? `${pctDet} % · ${formatMoneda(detraccion, 'PEN')}` : 'Sin detracción'}</b>{pctDet > 0 && <span>Se deposita en la cuenta del Banco de la Nación</span>}</dd></>}
                 {(oc || obs) && <><dt>Referencias</dt><dd>{oc && <b>OC del cliente: {oc}</b>}{obs && <span>{obs}</span>}</dd></>}
               </dl>
@@ -453,6 +460,7 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
                   <Field label="Fecha de emisión" hint="SUNAT acepta hasta 3 días atrás">{p => <TextInput {...p} type="date" max={hoyIso()} value={fecha} onChange={e => setFecha(e.target.value)} />}</Field>
                   <Field label="Moneda">{p => <SelectInput {...p} value={moneda} onChange={e => setMoneda(e.target.value as 'PEN' | 'USD')}><option value="PEN">Soles (S/)</option><option value="USD">Dólares (US$)</option></SelectInput>}</Field>
                   {moneda === 'USD' && <Field label="Tipo de cambio (S/ por US$)">{p => <TextInput {...p} inputMode="decimal" value={tc} onChange={e => setTc(e.target.value)} />}</Field>}
+                  {libre && <Field label="IGV" hint="Sin IGV es para ventas inafectas o exoneradas">{p => <SelectInput {...p} value={sinIgv ? 'SIN' : 'GRAVADO'} onChange={e => setSinIgv(e.target.value === 'SIN')}><option value="GRAVADO">Gravado 18 %</option><option value="SIN">Sin IGV</option></SelectInput>}</Field>}
                   <Field label="Forma de pago">{p => <SelectInput {...p} value={forma} onChange={e => setForma(e.target.value as 'CONTADO' | 'CREDITO')}><option value="CONTADO">Contado</option><option value="CREDITO">Crédito</option></SelectInput>}</Field>
                   {forma === 'CREDITO' && <Field label="Días de crédito" hint="Vence la fecha de emisión más estos días">{p => <TextInput {...p} inputMode="numeric" value={dias} onChange={e => setDias(e.target.value.replace(/\D/g, ''))} />}</Field>}
                   {tipo === '01' && <Field label="Detracción (%)" hint={`Transporte de carga: ${config.detraccion.pct} % desde S/ ${config.detraccion.minimo}`}>{p => <TextInput {...p} inputMode="decimal" value={detPct} onChange={e => setDetPct(e.target.value)} />}</Field>}

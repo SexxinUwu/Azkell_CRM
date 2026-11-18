@@ -145,7 +145,7 @@ function buildComprobanteUbl(d, emisor) {
         ...partes(emisor, d.cliente),
     };
     if (conDetraccion) {
-        body['cac:PaymentMeans'] = { 'cbc:ID': t('Detraccion'), 'cbc:PaymentMeansCode': t('999'), 'cac:PayeeFinancialAccount': { 'cbc:ID': t(String(d.cuenta_detraccion)) } };
+        body['cac:PaymentMeans'] = { 'cbc:ID': t('Detraccion'), 'cbc:PaymentMeansCode': t('001'), 'cac:PayeeFinancialAccount': { 'cbc:ID': t(String(d.cuenta_detraccion)) } };
     }
     const terminos = [];
     if (conDetraccion) terminos.push({ 'cbc:ID': t('Detraccion'), 'cbc:PaymentMeansID': t('027'), 'cbc:PaymentPercent': t(num(d.detraccion_pct)), 'cbc:Amount': mon(c.detraccion, 'PEN') });
