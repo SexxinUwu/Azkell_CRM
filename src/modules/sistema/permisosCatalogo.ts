@@ -57,7 +57,7 @@ export const MODULOS_PERMISO: ModuloPermiso[] = [
   { grupo: 'GERENCIA', key: 'gerencia_aprobaciones_solicitudes', nombre: 'Aprobación de solicitudes', desc: 'Ve todas las solicitudes del sistema y su historial; «Aprobar» aprueba y rechaza. Cualquier usuario puede pedir solicitudes sin permiso y solo ve las suyas', lcad: true, aprobar: true },
   { grupo: 'GERENCIA', key: 'gerencia_aprobaciones_caja', nombre: 'Aprobación de Caja', desc: 'Aprobación de vales y gastos de caja; «Aprobar» aprueba y anula', lcad: true, aprobar: true },
   { grupo: 'DIRECTORIO', key: 'cond', nombre: 'Personal', desc: 'Directorio: consulta de conductores (contactos y fichas)', lcad: true },
-  { grupo: 'RRHH', key: 'rrhh_personal', nombre: 'Legajos y contratos', desc: 'Gestión de personal: legajos, contratos y datos laborales', lcad: true },
+  { grupo: 'RRHH', key: 'rrhh_personal', nombre: 'Legajos y contratos', desc: 'Gestión de personal: legajos, contratos, datos laborales y documentos (DNI, licencia, EMO, SCTR). Subir y reemplazar pide Crear o Editar; borrar, Eliminar', lcad: true },
   { grupo: 'RRHH', key: 'rrhh_asistencia', nombre: 'Asistencia', desc: 'Tareo y control de asistencia', lcad: true },
   { grupo: 'RRHH', key: 'rrhh_nomina', nombre: 'Nómina y Pagos', desc: 'Gestión de pagos y nómina', lcad: true },
   { grupo: 'TESORERÍA', key: 'tesoreria_caja', nombre: 'Caja', desc: 'Movimientos de caja, ingresos y egresos', lcad: true },

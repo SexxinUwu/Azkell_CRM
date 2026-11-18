@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Contact, FileSpreadsheet, Plus, SearchX, TriangleAlert, UserPlus } from 'lucide-react';
@@ -39,6 +39,7 @@ export function PersonalPage({ base = '/directorio/personal', soloLectura = fals
   const toast = useToast();
   const reduce = useReducedMotion();
   const navigate = useNavigate();
+  const { search } = useLocation();
   const { id } = useParams();
   const dividido = useMediaQuery(DIVIDIDO);
   const [busqueda, setBusqueda] = useState('');
@@ -102,7 +103,7 @@ export function PersonalPage({ base = '/directorio/personal', soloLectura = fals
     return () => ro.disconnect();
   }, [dividido, isLoading, personas.length]);
 
-  const abrir = (p: Persona) => { haptic('selection'); navigate(`${BASE}/${p.id}`, { replace: dividido }); };
+  const abrir = (p: Persona) => { haptic('selection'); navigate(`${BASE}/${p.id}${search}`, { replace: dividido }); };
 
   // Índice A–Z: tocar o deslizar el dedo por las letras salta a esa sección
   function irALetra(l: string) {

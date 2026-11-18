@@ -340,3 +340,97 @@ export async function comprimirFoto(archivo: File): Promise<string> {
     URL.revokeObjectURL(url);
   }
 }
+
+// ─── Documentos del personal (DNI por ambas caras, licencia, antecedentes, EMO, SCTR, contrato…) ───
+
+export type TipoDoc = 'DNI_A' | 'DNI_B' | 'LICENCIA' | 'ANTECEDENTES' | 'EMO' | 'SCTR' | 'CONTRATO' | 'OTRO';
+
+export interface TipoDocConfig {
+  tipo: TipoDoc;
+  titulo: string;
+  /** Título corto para la matriz */
+  corto: string;
+  /** Tiene fecha de vencimiento */
+  vence: boolean;
+  /** Se exige a todo el personal (la licencia, solo a los conductores) */
+  obligatorio: boolean;
+  soloConductor?: boolean;
+}
+
+export const TIPOS_DOC: TipoDocConfig[] = [
+  { tipo: 'DNI_A', titulo: 'DNI · cara frontal', corto: 'DNI frontal', vence: false, obligatorio: true },
+  { tipo: 'DNI_B', titulo: 'DNI · cara posterior', corto: 'DNI posterior', vence: false, obligatorio: true },
+  { tipo: 'LICENCIA', titulo: 'Licencia de conducir', corto: 'Licencia', vence: true, obligatorio: true, soloConductor: true },
+  { tipo: 'ANTECEDENTES', titulo: 'Certificado de antecedentes', corto: 'Antecedentes', vence: true, obligatorio: false },
+  { tipo: 'EMO', titulo: 'Examen médico (EMO)', corto: 'EMO', vence: true, obligatorio: true },
+  { tipo: 'SCTR', titulo: 'SCTR', corto: 'SCTR', vence: true, obligatorio: true },
+  { tipo: 'CONTRATO', titulo: 'Contrato firmado', corto: 'Contrato', vence: false, obligatorio: false },
+  { tipo: 'OTRO', titulo: 'Otros documentos', corto: 'Otros', vence: false, obligatorio: false },
+];
+export const configDoc = (tipo: string) => TIPOS_DOC.find(t => t.tipo === tipo) ?? TIPOS_DOC[TIPOS_DOC.length - 1];
+
+export interface DocumentoPersona {
+  id: number;
+  personal_id: number;
+  tipo: string;
+  descripcion: string | null;
+  nombre_archivo: string | null;
+  mime: string | null;
+  fecha_emision: string | null;
+  fecha_vencimiento: string | null;
+  /** Enlace firmado para ver el archivo (solo en el detalle de una persona) */
+  url?: string;
+  subido_por?: string | null;
+  actualizado_en?: string;
+}
+
+export type EstadoDoc = 'falta' | 'vigente' | 'por_vencer' | 'vencido';
+
+/** Estado de un documento: «falta» si no está cargado; los que vencen pasan a «por vencer» 30 días antes */
+export function estadoDoc(d: Pick<DocumentoPersona, 'fecha_vencimiento'> | undefined | null): { estado: EstadoDoc; dias: number | null } {
+  if (!d) return { estado: 'falta', dias: null };
+  const dias = d.fecha_vencimiento ? diasHasta(d.fecha_vencimiento) : null;
+  if (dias == null) return { estado: 'vigente', dias: null };
+  if (dias < 0) return { estado: 'vencido', dias };
+  if (dias <= 30) return { estado: 'por_vencer', dias };
+  return { estado: 'vigente', dias };
+}
+
+const filas = (r: { data?: DocumentoPersona[] }) => r.data ?? [];
+
+export function useDocumentosPersona(id: number) {
+  return useQuery({
+    queryKey: ['personal', 'docs', id],
+    enabled: id > 0,
+    queryFn: async () => filas(await api<{ data?: DocumentoPersona[] }>(`/rrhh/personal/${id}/documentos`)),
+  });
+}
+
+/** Todos los documentos (sin archivo): alimenta el tablero de vencimientos */
+export function useDocumentosTodos() {
+  return useQuery({
+    queryKey: ['personal', 'docs-todos'],
+    queryFn: async () => filas(await api<{ data?: DocumentoPersona[] }>('/rrhh/documentos')),
+  });
+}
+
+export async function subirDocumento(personaId: number, datos: { tipo: TipoDoc; archivo: File; fecha_emision?: string; fecha_vencimiento?: string; descripcion?: string }) {
+  const f = new FormData();
+  f.append('tipo', datos.tipo);
+  f.append('archivo', datos.archivo);
+  if (datos.fecha_emision) f.append('fecha_emision', datos.fecha_emision);
+  if (datos.fecha_vencimiento) f.append('fecha_vencimiento', datos.fecha_vencimiento);
+  if (datos.descripcion) f.append('descripcion', datos.descripcion);
+  const r = await api<{ ok?: boolean; error?: string }>(`/rrhh/personal/${personaId}/documentos`, { method: 'POST', body: f });
+  if (r.ok === false) throw new Error(r.error || 'No se pudo guardar el documento');
+}
+
+export async function corregirDocumento(docId: number, datos: { fecha_emision?: string; fecha_vencimiento?: string; descripcion?: string }) {
+  const r = await api<{ ok?: boolean; error?: string }>(`/rrhh/personal/documentos/${docId}`, { method: 'PUT', body: datos });
+  if (r.ok === false) throw new Error(r.error || 'No se pudo guardar el documento');
+}
+
+export async function eliminarDocumento(docId: number) {
+  const r = await api<{ ok?: boolean; error?: string }>(`/rrhh/personal/documentos/${docId}`, { method: 'DELETE' });
+  if (r.ok === false) throw new Error(r.error || 'No se pudo eliminar el documento');
+}
