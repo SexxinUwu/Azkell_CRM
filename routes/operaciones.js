@@ -2127,7 +2127,8 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             let qDni = (req.query.dni || '').trim();
             let qNombre = (req.query.nombre || '').trim();
             // Modo «yo»: el conductor entra con su propio usuario, así que el DNI y el nombre salen de su cuenta (no se escriben)
-            const modoYo = req.query.yo === '1';
+            // El portal responde solo por el usuario que entró (no se puede consultar a otro conductor desde aquí)
+            const modoYo = true;
             let sinDatos = false;
             if (modoYo) {
                 const [uRows] = await tdb.query('SELECT nombre, dni FROM usuarios WHERE idUsuario = ? LIMIT 1', [req.user && req.user.id]);

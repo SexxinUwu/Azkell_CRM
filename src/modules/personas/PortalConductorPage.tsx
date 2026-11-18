@@ -1,7 +1,7 @@
 import '../mantenimiento/mant.css';
 import './portalConductor.css';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { ChevronLeft, CircleAlert, CloudOff, Fuel, MapPin, Navigation, Paperclip, Pencil, Plus, Receipt, Trash2, Truck, Wrench } from 'lucide-react';
@@ -71,9 +71,6 @@ export function PortalConductorPage() {
   const toast = useToast();
   const reducir = useReducedMotion();
   const pendientes = usePendientes();
-  const [entrada, setEntrada] = useState('');
-  const [consulta, setConsulta] = useState('');
-  const [otro, setOtro] = useState(false);
   const [nuevo, setNuevo] = useState(false);
   const [editando, setEditando] = useState<Gasto | null>(null);
   const [porEliminar, setPorEliminar] = useState<Eliminar | null>(null);
@@ -81,17 +78,15 @@ export function PortalConductorPage() {
   const [vista, setVista] = useState<Seccion | null>(null);
   const [reportando, setReportando] = useState(false);
   const [enviando, setEnviando] = useState(false);
-  const puedeConsultarOtro = can('usuarios.editar');
 
   const q = useQuery<Portal>({
-    queryKey: ['personas', 'portal-conductor', user?.name ?? '', consulta],
+    queryKey: ['personas', 'portal-conductor', user?.name ?? ''],
     retry: false, // sin señal se usa la copia del teléfono sin esperar reintentos
     queryFn: async () => {
-      const esDni = /^\d{8}$/.test(consulta);
-      const clave = consulta ? consulta.trim().toUpperCase() : `YO:${(user?.name ?? '').toUpperCase()}`;
-      const parametro = !consulta ? 'yo=1' : `${esDni ? 'dni' : 'nombre'}=${encodeURIComponent(consulta)}`;
+      // El portal es de cada conductor: siempre se consulta con su propio usuario
+      const clave = `YO:${(user?.name ?? '').toUpperCase()}`;
       try {
-        const datos = await api<Portal>(`/operaciones/conductor-portal/viaje-activo?${parametro}`);
+        const datos = await api<Portal>(`/operaciones/conductor-portal/viaje-activo?yo=1`);
         guardarViaje(clave, datos).catch(() => {}); // copia para usarla sin señal
         return datos;
       } catch (err) {
@@ -112,8 +107,6 @@ export function PortalConductorPage() {
   }, [refrescar]);
   // Al abrir la pantalla se intenta enviar lo que quedó guardado sin señal
   useEffect(() => { void enviarPendientes(); }, []);
-
-  function buscar(e: FormEvent) { e.preventDefault(); setConsulta(entrada.trim()); setVista(null); }
 
   const r = q.data;
   const viaje = r?.viaje;
@@ -163,9 +156,7 @@ export function PortalConductorPage() {
     } finally { setEnviando(false); }
   }
 
-  // El saludo usa el nombre del usuario que entró; solo al consultar a otro conductor usa el de ese conductor
-  const nombreSaludo = (consulta ? r?.conductor?.nombre : user?.name) || user?.name || '';
-  const primerNombre = nombreSaludo.trim().split(/\s+/)[0] ?? '';
+  const primerNombre = (user?.name ?? '').trim().split(/\s+/)[0] ?? '';
   const entra = reducir ? { opacity: 0 } : { opacity: 0, x: 24 };
   const resorte = { type: 'spring' as const, bounce: 0, duration: 0.4 };
 
@@ -251,19 +242,6 @@ export function PortalConductorPage() {
                 </>
               )}
 
-              {puedeConsultarOtro && (
-                <div className="pc-otro">
-                  {!otro ? (
-                    <button type="button" className="pc-otro__abrir" onClick={() => setOtro(true)}>Consultar a otro conductor</button>
-                  ) : (
-                    <form onSubmit={buscar} style={{ display: 'flex', gap: 'var(--s-2)' }}>
-                      <div style={{ flex: 1 }}><TextInput value={entrada} onChange={e => setEntrada(e.target.value)} placeholder="DNI (8 dígitos) o nombre" aria-label="Conductor" autoFocus /></div>
-                      <Button type="submit" variant="primary" disabled={!entrada.trim()} loading={q.isFetching}>Ver</Button>
-                      {consulta && <Button variant="secondary" onClick={() => { setConsulta(''); setEntrada(''); }}>Mi viaje</Button>}
-                    </form>
-                  )}
-                </div>
-              )}
             </motion.div>
           ) : (
             <motion.div key={vista} className="pc" initial={entra} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={resorte}>
