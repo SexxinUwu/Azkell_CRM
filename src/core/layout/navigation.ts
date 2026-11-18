@@ -72,29 +72,29 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Operaciones',
     items: [
-      { key: 'programacion', label: 'Programación', to: '/operaciones/programacion', icon: CalendarDays, permissions: ver('op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa,trahesa,yoguitransport,rosymarperu' },
-      { key: 'ordenes-viaje', label: 'Órdenes de viaje', to: '/operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa,trahesa,yoguitransport,rosymarperu' },
-      { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: ScrollText, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa,trahesa,yoguitransport,rosymarperu' },
-      { key: 'ubigeos', label: 'Ubigeos', to: '/operaciones/ubigeos', icon: MapPin, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'marsisa,trahesa,yoguitransport,rosymarperu' },
+      { key: 'programacion', label: 'Programación', to: '/operaciones/programacion', icon: CalendarDays, permissions: ver('op_programacion', 'op_guias_remision'), soloEmpresa: 'trahesa,yoguitransport,rosymarperu' },
+      { key: 'ordenes-viaje', label: 'Órdenes de viaje', to: '/operaciones/ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'trahesa,yoguitransport,rosymarperu' },
+      { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: ScrollText, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'trahesa,yoguitransport,rosymarperu' },
+      { key: 'ubigeos', label: 'Ubigeos', to: '/operaciones/ubigeos', icon: MapPin, permissions: ver('op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision'), soloEmpresa: 'trahesa,yoguitransport,rosymarperu' },
       {
-        key: 'facturacion-grupo', label: 'Facturación', icon: ReceiptText, permissions: [],
+        key: 'facturacion-grupo', label: 'Facturación', icon: ReceiptText, permissions: [], noEmpresa: 'marsisa',
         children: [
           { key: 'facturacion', label: 'Comprobantes', to: '/operaciones/facturacion', icon: ReceiptText, permissions: ver('op_facturacion') },
           { key: 'plantilla-facturacion', label: 'Plantilla de facturación', to: '/operaciones/plantilla-facturacion', icon: Palette, permissions: ver('op_facturacion') },
           { key: 'plantilla-nota-credito', label: 'Plantilla de nota de crédito', to: '/operaciones/plantilla-nota-credito', icon: Palette, permissions: ver('op_facturacion') },
         ],
       },
-      { key: 'rentabilidad', label: 'Rentabilidad', to: '/operaciones/rentabilidad', icon: TrendingUp, permissions: ver('op_rentabilidad') },
-      { key: 'reporte-viajes', label: 'Reporte de viajes', to: '/operaciones/reporte-viajes', icon: BarChart3, permissions: ver('op_reporte_viajes'), soloEmpresa: 'marsisa,trahesa' },
+      { key: 'rentabilidad', label: 'Rentabilidad', to: '/operaciones/rentabilidad', icon: TrendingUp, permissions: ver('op_rentabilidad'), noEmpresa: 'marsisa' },
+      { key: 'reporte-viajes', label: 'Reporte de viajes', to: '/operaciones/reporte-viajes', icon: BarChart3, permissions: ver('op_reporte_viajes'), soloEmpresa: 'trahesa' },
       {
-        key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [], soloEmpresa: 'marsisa,trahesa',
+        key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [], soloEmpresa: 'trahesa',
         children: [
           { key: 'guias', label: 'Guías', to: '/operaciones/guias', icon: FileText, permissions: ver('op_guias_remision') },
           { key: 'plantilla-guias', label: 'Plantilla de guías', to: '/operaciones/plantilla-guias', icon: Palette, permissions: ver('op_guias_remision') },
         ],
       },
       {
-        key: 'combustible-grupo', label: 'Combustible', icon: Fuel, permissions: [],
+        key: 'combustible-grupo', label: 'Combustible', icon: Fuel, permissions: [], noEmpresa: 'marsisa',
         children: [
           // Trahesa, Yoguitransport y Rosymar registran el vale dentro del viaje (con caja y servicio); Marsisa trae los suyos de su API
           { key: 'vales-viaje', soloEmpresa: 'trahesa,yoguitransport,rosymarperu', label: 'Vales de combustible', to: '/operaciones/vales-viaje', icon: Fuel, permissions: ver('combustible_vales', 'op_ordenes_viaje') },
