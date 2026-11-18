@@ -430,7 +430,8 @@ export async function corregirDocumento(docId: number, datos: { fecha_emision?: 
   if (r.ok === false) throw new Error(r.error || 'No se pudo guardar el documento');
 }
 
-export async function eliminarDocumento(docId: number) {
-  const r = await api<{ ok?: boolean; error?: string }>(`/rrhh/personal/documentos/${docId}`, { method: 'DELETE' });
+/** `conHistorial`: elimina también los anteriores del mismo tipo */
+export async function eliminarDocumento(docId: number, conHistorial = false) {
+  const r = await api<{ ok?: boolean; error?: string }>(`/rrhh/personal/documentos/${docId}${conHistorial ? '?todos=1' : ''}`, { method: 'DELETE' });
   if (r.ok === false) throw new Error(r.error || 'No se pudo eliminar el documento');
 }

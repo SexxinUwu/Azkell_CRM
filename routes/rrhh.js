@@ -400,7 +400,8 @@ router.get('/documentos', async (req, res) => {
         const tdb = getDb(req);
         const [rows] = await tdb.query(`SELECT id, personal_id, tipo, descripcion, nombre_archivo, mime,
             DATE_FORMAT(fecha_emision, '%Y-%m-%d') AS fecha_emision, DATE_FORMAT(fecha_vencimiento, '%Y-%m-%d') AS fecha_vencimiento
-            FROM rrhh_personal_documentos`);
+            FROM rrhh_personal_documentos d
+            WHERE d.tipo = 'OTRO' OR d.id = (SELECT MAX(x.id) FROM rrhh_personal_documentos x WHERE x.personal_id = d.personal_id AND x.tipo = d.tipo)`);
         res.json({ ok: true, data: rows });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -421,7 +422,7 @@ router.get('/personal/:id/documentos', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Subir un documento. Cada tipo (salvo «Otro») tiene un solo documento: al subir de nuevo se reemplaza el anterior
+// Subir un documento. Al subir otro del mismo tipo, el anterior queda en el historial
 router.post('/personal/:id/documentos', subirDocumento.single('archivo'), async (req, res) => {
     try {
         const tdb = getDb(req);
@@ -443,18 +444,10 @@ router.post('/personal/:id/documentos', subirDocumento.single('archivo'), async 
         const vence = fechaODoc(b.fecha_vencimiento);
         const emision = fechaODoc(b.fecha_emision);
         const quien = (req.user && req.user.nombre) ? req.user.nombre : 'SISTEMA';
-        let id;
-        const [previo] = tipo === 'OTRO' ? [[]] : await tdb.query('SELECT id, archivo_url FROM rrhh_personal_documentos WHERE personal_id = ? AND tipo = ? ORDER BY id DESC LIMIT 1', [personaId, tipo]);
-        if (previo.length) {
-            id = previo[0].id;
-            await tdb.query(`UPDATE rrhh_personal_documentos SET archivo_url = ?, nombre_archivo = ?, mime = ?, descripcion = ?, fecha_emision = ?, fecha_vencimiento = ?,
-                subido_por = ?, actualizado_en = NOW() WHERE id = ?`, [url, req.file.originalname.slice(0, 255), mime, (b.descripcion || '').slice(0, 150) || null, emision, vence, quien, id]);
-            const vieja = s3KeyFromUrl(previo[0].archivo_url); if (vieja) deleteFromS3(vieja).catch(() => {});
-        } else {
-            const [ins] = await tdb.query(`INSERT INTO rrhh_personal_documentos (personal_id, tipo, descripcion, archivo_url, nombre_archivo, mime, fecha_emision, fecha_vencimiento, subido_por)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, [personaId, tipo, (b.descripcion || '').slice(0, 150) || null, url, req.file.originalname.slice(0, 255), mime, emision, vence, quien]);
-            id = ins.insertId;
-        }
+        // Cada archivo nuevo se suma al historial: el vigente es el último que se cargó
+        const [ins] = await tdb.query(`INSERT INTO rrhh_personal_documentos (personal_id, tipo, descripcion, archivo_url, nombre_archivo, mime, fecha_emision, fecha_vencimiento, subido_por)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, [personaId, tipo, (b.descripcion || '').slice(0, 150) || null, url, req.file.originalname.slice(0, 255), mime, emision, vence, quien]);
+        const id = ins.insertId;
         // La licencia y el examen médico alimentan los avisos de «por vencer» de la ficha
         if (vence && tipo === 'LICENCIA') await tdb.query('UPDATE rrhh_personal SET licencia_vencimiento = ? WHERE id = ?', [vence, personaId]);
         if (vence && tipo === 'EMO') await tdb.query('UPDATE rrhh_personal SET emo_fecha_vencimiento = ? WHERE id = ?', [vence, personaId]);
@@ -487,8 +480,13 @@ router.delete('/personal/documentos/:docId', async (req, res) => {
         const tdb = getDb(req);
         const [doc] = await tdb.query('SELECT id, personal_id, tipo, archivo_url FROM rrhh_personal_documentos WHERE id = ?', [req.params.docId]);
         if (!doc.length) return res.status(404).json({ error: 'El documento no existe.' });
-        await tdb.query('DELETE FROM rrhh_personal_documentos WHERE id = ?', [doc[0].id]);
-        const key = s3KeyFromUrl(doc[0].archivo_url); if (key) deleteFromS3(key).catch(() => {});
+        const filas = req.query.todos === '1' && doc[0].tipo !== 'OTRO'
+            ? (await tdb.query('SELECT id, archivo_url FROM rrhh_personal_documentos WHERE personal_id = ? AND tipo = ?', [doc[0].personal_id, doc[0].tipo]))[0]
+            : doc;
+        for (const f of filas) {
+            await tdb.query('DELETE FROM rrhh_personal_documentos WHERE id = ?', [f.id]);
+            const key = s3KeyFromUrl(f.archivo_url); if (key) deleteFromS3(key).catch(() => {});
+        }
         if (logAudit) logAudit({ req, accion: 'ELIMINAR_DOCUMENTO_PERSONAL', modulo: 'RRHH', detalle: `Documento ${doc[0].tipo} de la persona #${doc[0].personal_id}` });
         res.json({ ok: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
