@@ -42,6 +42,8 @@ export interface NavSection {
 }
 
 const ver = (...claves: string[]) => claves.map(c => `${c}.ver`);
+// Terceros es para quien da de alta y edita clientes, proveedores y estaciones; los demás los consultan en el Directorio
+const EDITAN_TERCEROS = ['clientes', 'prov_inv', 'combustible_vales'].flatMap(c => [`${c}.crear`, `${c}.editar`]);
 
 // Opciones de "Otros" de Mantenimiento: la página /mantenimiento/otros las muestra en casillas
 export const OTROS_MANTENIMIENTO: NavItem[] = [
@@ -100,7 +102,6 @@ const SECCIONES_BASE: NavSection[] = [
           { key: 'matriz-combustible', noEmpresa: 'marsisa', label: 'Matriz de combustible (D2)', to: '/operaciones/matriz-combustible', icon: Target, permissions: ver('combustible_analisis') },
           { key: 'analisis-combustible', noEmpresa: 'marsisa', label: 'Análisis de combustible (D2)', to: '/operaciones/analisis-combustible', icon: Gauge, permissions: ver('combustible_analisis') },
           { key: 'urea', noEmpresa: 'marsisa', label: 'Análisis de urea', to: '/operaciones/urea', icon: Droplet, permissions: ver('urea_analisis', 'combustible_analisis') },
-          { key: 'estaciones', label: 'Estaciones de proveedores', to: '/operaciones/combustible-estaciones', icon: MapPin, permissions: ver('combustible_vales') },
         ],
       },
     ],
@@ -185,7 +186,7 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Directorio',
     items: [
-      { key: 'directorio', label: 'Directorio', to: '/directorio/personal', icon: IdCard, permissions: ver('rrhh_personal', 'cond') },
+      { key: 'directorio', label: 'Directorio', to: '/directorio', icon: IdCard, permissions: ver('rrhh_personal', 'cond', 'clientes', 'prov_inv', 'combustible_vales') },
     ],
   },
   {
@@ -217,7 +218,7 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Terceros',
     items: [
-      { key: 'terceros', label: 'Clientes y proveedores', to: '/terceros/clientes', icon: Users, permissions: ver('clientes', 'prov_inv') },
+      { key: 'terceros', label: 'Clientes, proveedores y estaciones', to: '/terceros/clientes', icon: Users, permissions: EDITAN_TERCEROS },
     ],
   },
   {

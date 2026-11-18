@@ -9,6 +9,7 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { ConductorFallaSheet } from './ConductorFallaSheet';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
@@ -20,7 +21,8 @@ import {
   listarPendientes, quitarPendiente, sinSenal, type GastoPendiente,
 } from './portalConductorCola';
 
-interface Gasto { id: number; fecha_formateada: string; tipo_gasto: string; sub_motivo: string; detalle: string; importe: number | string; sustento_url: string | null; estado: string; uuid_cliente?: string | null }
+type Comprobante = 'BOLETA' | 'FACTURA' | 'DECLARACION JURADA';
+interface Gasto { id: number; fecha_formateada: string; tipo_gasto: string; sub_motivo: string; detalle: string; tipo_comprobante?: string | null; serie?: string | null; numero?: string | null; proveedor_ruc?: string | null; proveedor_nombre?: string | null; importe: number | string; sustento_url: string | null; estado: string; uuid_cliente?: string | null }
 interface Deposito { id: number; serie: string; numero: string; motivo: string; sub_motivo: string; importe_total: number | string; tipo_movimiento: string; fecha: string; estado: string }
 interface Portal {
   ok: boolean; message?: string;
@@ -212,6 +214,14 @@ export function PortalConductorPage() {
                       <div className="pc-unidad"><span className="pc-unidad__label">Tracto</span><span className="pc-unidad__placa">{viaje.placa_tracto || '—'}</span></div>
                       <div className="pc-unidad"><span className="pc-unidad__label">Remolque / carreta</span><span className="pc-unidad__placa">{viaje.placa_remolque && viaje.placa_remolque !== '---' ? viaje.placa_remolque : '—'}</span></div>
                     </div>
+
+                    {balance && (
+                      <button type="button" className="pc-saldo" onClick={() => { haptic('selection'); setVista('gastos'); }} aria-label="Ver gastos en ruta">
+                        <span className="pc-saldo__dato"><span className="pc-saldo__label">Asignado</span><span className="pc-saldo__valor">{s(balance.asignado)}</span></span>
+                        <span className="pc-saldo__dato"><span className="pc-saldo__label">Rendido</span><span className="pc-saldo__valor">{s(balance.rendido)}</span></span>
+                        <span className="pc-saldo__dato"><span className="pc-saldo__label">Saldo</span><span className={`pc-saldo__valor ${balance.saldo < 0 ? 'pc-saldo__valor--neg' : 'pc-saldo__valor--pos'}`}>{s(balance.saldo)}</span></span>
+                      </button>
+                    )}
 
                     <div className="pc-ruta">
                       <PuntoRuta tipo="carga" titulo="Ubicación de la carga" lugar={viaje.origen} direccion={viaje.direccion_partida} />
@@ -510,15 +520,34 @@ function ListaVales({ datos, cargando }: { datos: Vale[] | undefined; cargando: 
 
 // Registro local primero: el gasto se guarda en el teléfono con su UUID y luego se intenta enviar.
 // Si no hay señal, queda pendiente; el servidor no lo duplica aunque se reenvíe.
-// Con `editar` se corrige un gasto ya enviado (PUT directo, como el clásico: requiere señal).
+// Con `editar` se corrige un gasto ya enviado (PUT directo: requiere señal).
+const COMPROBANTES: Array<{ value: Comprobante; label: string }> = [
+  { value: 'BOLETA', label: 'Boleta' }, { value: 'FACTURA', label: 'Factura' }, { value: 'DECLARACION JURADA', label: 'Decl. jurada' },
+];
+
 function GastoSheet({ open, editar, viaje, conductor, onClose, onHecho }: { open: boolean; editar?: Gasto | null; viaje: string; conductor: string; onClose: () => void; onHecho: () => Promise<unknown> }) {
   const toast = useToast();
   const [motivo, setMotivo] = useState(MOTIVOS[6]);
   const [importe, setImporte] = useState('');
+  const [comprobante, setComprobante] = useState<Comprobante>('BOLETA');
+  const [ruc, setRuc] = useState('');
+  const [proveedor, setProveedor] = useState('');
+  const [serie, setSerie] = useState('');
+  const [numero, setNumero] = useState('');
   const [nota, setNota] = useState('');
   const [foto, setFoto] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Motivos de Tesorería (Gastos de Viaje y Ruta); si no hay señal se usa la lista de respaldo
+  const motivosQ = useQuery({
+    queryKey: ['personas', 'motivos-gasto-viaje'], enabled: open, staleTime: 10 * 60_000, retry: false,
+    queryFn: async () => {
+      const r = await api<{ data?: Array<{ motivo: string; sub_motivo: string }> }>('/tesoreria/motivos-gastos?solo_activos=1');
+      return (r.data ?? []).filter(m => m.motivo === 'Gastos de Viaje y Ruta' && m.sub_motivo).map(m => m.sub_motivo);
+    },
+  });
+  const motivos = motivosQ.data?.length ? motivosQ.data : MOTIVOS;
 
   useEffect(() => {
     if (!open) return;
@@ -526,11 +555,16 @@ function GastoSheet({ open, editar, viaje, conductor, onClose, onHecho }: { open
       setMotivo(editar.sub_motivo || editar.tipo_gasto || MOTIVOS[6]);
       setImporte(String(Number(editar.importe) || 0));
       setNota(editar.detalle || '');
+      setComprobante((COMPROBANTES.find(c => c.value === String(editar.tipo_comprobante ?? '').toUpperCase())?.value) ?? 'BOLETA');
+      setRuc(editar.proveedor_ruc ?? ''); setProveedor(editar.proveedor_nombre ?? '');
+      setSerie(editar.serie ?? ''); setNumero(editar.numero ?? '');
     } else {
-      setMotivo(MOTIVOS[6]); setImporte(''); setNota('');
+      setMotivo(MOTIVOS[6]); setImporte(''); setNota(''); setComprobante('BOLETA'); setRuc(''); setProveedor(''); setSerie(''); setNumero('');
     }
     setFoto(null); setError(null);
   }, [open, editar]);
+
+  const conDatos = comprobante !== 'DECLARACION JURADA';
 
   async function guardarEdicion(v: number) {
     if (!editar) return;
@@ -542,6 +576,11 @@ function GastoSheet({ open, editar, viaje, conductor, onClose, onHecho }: { open
     f.append('importe', String(v));
     f.append('detalle', nota.trim() || motivo);
     f.append('usuario_creacion', conductor || 'CONDUCTOR MÓVIL');
+    f.append('tipo_comprobante', comprobante);
+    f.append('serie', conDatos ? serie.trim() : '');
+    f.append('numero', conDatos ? numero.trim() : '');
+    f.append('proveedor_ruc', conDatos ? ruc.trim() : '');
+    f.append('proveedor_nombre', conDatos ? proveedor.trim() : '');
     if (foto) f.append('sustento', foto);
     const r = await api<{ ok?: boolean; error?: string }>(`/tesoreria/liquidaciones-gastos/${editar.id}`, { method: 'PUT', body: f });
     if (r.ok === false) throw new Error(r.error || 'No se pudo guardar el gasto');
@@ -552,7 +591,9 @@ function GastoSheet({ open, editar, viaje, conductor, onClose, onHecho }: { open
   async function guardar() {
     const v = parseFloat(importe.replace(',', '.'));
     if (!Number.isFinite(v) || v <= 0) { setError('Indica el importe del gasto.'); return; }
-    if (!viaje) { setError('Este conductor no tiene un viaje asignado.'); return; }
+    if (!viaje) { setError('No tienes un viaje activo.'); return; }
+    if (conDatos && ruc.trim() && !/^\d{11}$/.test(ruc.trim())) { setError('El RUC debe tener 11 dígitos.'); return; }
+    if (comprobante === 'FACTURA' && !ruc.trim()) { setError('Para una factura indica el RUC del proveedor.'); return; }
     setEnviando(true); setError(null);
     if (editar) {
       try { await guardarEdicion(v); } catch (err) { setError(errorMessage(err)); haptic('warning'); } finally { setEnviando(false); }
@@ -568,6 +609,11 @@ function GastoSheet({ open, editar, viaje, conductor, onClose, onHecho }: { open
       usuario_creacion: conductor || 'CONDUCTOR MÓVIL',
       fecha: hoyLocal(),
       registrado_en: new Date().toISOString(),
+      tipo_comprobante: comprobante,
+      serie: conDatos ? serie.trim() : '',
+      numero: conDatos ? numero.trim() : '',
+      proveedor_ruc: conDatos ? ruc.trim() : '',
+      proveedor_nombre: conDatos ? proveedor.trim() : '',
       foto,
       foto_nombre: foto?.name ?? null,
       intentos: 0,
@@ -593,7 +639,7 @@ function GastoSheet({ open, editar, viaje, conductor, onClose, onHecho }: { open
   }
 
   return (
-    <Sheet open={open} onClose={() => !enviando && onClose()} title={editar ? 'Editar gasto del viaje' : 'Registrar gasto del viaje'}
+    <Sheet open={open} onClose={() => !enviando && onClose()} title={editar ? 'Editar gasto' : 'Nuevo gasto en ruta'}
       footer={<><Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
         <Button variant="primary" onClick={guardar} loading={enviando}>{editar ? 'Guardar cambios' : 'Guardar gasto'}</Button></>}>
       <div className="form-grid">
@@ -601,15 +647,26 @@ function GastoSheet({ open, editar, viaje, conductor, onClose, onHecho }: { open
         {!editar && !navigator.onLine && (
           <div className="field field--wide"><Notice tone="neutral" icon={<CloudOff size={16} />}>Sin señal: el gasto se guardará en el teléfono y se enviará al volver la señal.</Notice></div>
         )}
+        <Field label="Importe (S/)" wide>{p => <TextInput {...p} className="pc-importe" inputMode="decimal" placeholder="0.00" value={importe} onChange={e => setImporte(e.target.value)} autoFocus />}</Field>
         <Field label="¿En qué se gastó?" wide>
           {p => (
             <SelectInput {...p} value={motivo} onChange={e => setMotivo(e.target.value)}>
-              {(MOTIVOS.includes(motivo) ? MOTIVOS : [motivo, ...MOTIVOS]).map(m => <option key={m} value={m}>{m}</option>)}
+              {(motivos.includes(motivo) ? motivos : [motivo, ...motivos]).map(m => <option key={m} value={m}>{m}</option>)}
             </SelectInput>
           )}
         </Field>
-        <Field label="Importe (S/)">{p => <TextInput {...p} inputMode="decimal" value={importe} onChange={e => setImporte(e.target.value)} autoFocus />}</Field>
-        <Field label="Foto del comprobante" hint={foto?.name ?? (editar?.sustento_url ? 'Ya tiene sustento; elige otra foto solo para reemplazarlo' : undefined)}>
+        <div className="field field--wide">
+          <SegmentedControl<Comprobante> block label="Comprobante" value={comprobante} onChange={setComprobante} options={COMPROBANTES} />
+        </div>
+        {conDatos && (
+          <>
+            <Field label="RUC del proveedor">{p => <TextInput {...p} inputMode="numeric" maxLength={11} value={ruc} onChange={e => setRuc(e.target.value.replace(/\D/g, ''))} placeholder={comprobante === 'FACTURA' ? 'Obligatorio' : 'Opcional'} />}</Field>
+            <Field label="Proveedor">{p => <TextInput {...p} value={proveedor} onChange={e => setProveedor(e.target.value)} placeholder="Opcional" />}</Field>
+            <Field label="Serie">{p => <TextInput {...p} autoCapitalize="characters" value={serie} onChange={e => setSerie(e.target.value.toUpperCase())} placeholder="F001" />}</Field>
+            <Field label="Número">{p => <TextInput {...p} inputMode="numeric" value={numero} onChange={e => setNumero(e.target.value.replace(/\D/g, ''))} placeholder="000123" />}</Field>
+          </>
+        )}
+        <Field label="Foto del comprobante" wide hint={foto?.name ?? (editar?.sustento_url ? 'Ya tiene sustento; elige otra foto solo para reemplazarlo' : undefined)}>
           {p => <ArchivoInput {...p} accept="image/*" capture="environment" onChange={setFoto} />}
         </Field>
         <Field label="Nota" wide>{p => <TextInput {...p} value={nota} onChange={e => setNota(e.target.value)} placeholder="Opcional" />}</Field>

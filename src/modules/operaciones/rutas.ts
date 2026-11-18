@@ -87,8 +87,8 @@ export const RUTAS: RutaModulo[] = [
   {
     path: 'operaciones/combustible-estaciones/*',
     permisos: ['combustible_vales.ver', 'op_ordenes_viaje.ver', 'admin'],
-    Page: lazy(() => import('./EstacionesProveedoresPage').then(m => ({ default: m.EstacionesProveedoresPage }))),
-    nav: { key: 'estaciones', label: 'Estaciones de proveedores', to: '/operaciones/combustible-estaciones', icon: 'MapPin', permisos: ['operaciones.ver', 'admin'] },
+    // Las estaciones pasaron a Terceros: el enlace anterior sigue funcionando
+    Page: lazy(() => import('../terceros/TercerosPaginas').then(m => ({ default: m.RedirigirEstaciones }))),
   },
   {
     path: 'operaciones/urea/*',

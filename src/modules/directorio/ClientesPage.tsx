@@ -41,7 +41,7 @@ const esActivo = (c: Cliente) => String(c.estado ?? 'Activo').toLowerCase() === 
 const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 // Operaciones › Clientes. Al guardar, el servidor actualiza el nombre del cliente en todas sus placas.
-export function ClientesPage({ eyebrow = 'Terceros', selector }: { eyebrow?: string; selector?: ReactNode } = {}) {
+export function ClientesPage({ eyebrow = 'Terceros', selector, soloLectura = false }: { eyebrow?: string; selector?: ReactNode; soloLectura?: boolean } = {}) {
   const { data, isLoading, isError, error } = useClientes();
   const { can } = useAuth();
   const qc = useQueryClient();
@@ -57,8 +57,8 @@ export function ClientesPage({ eyebrow = 'Terceros', selector }: { eyebrow?: str
   const [porEliminar, setPorEliminar] = useState<Cliente | null>(null);
   const [eliminando, setEliminando] = useState(false);
   const lista: Cliente[] = data ?? [];
-  const puedeCrear = can('clientes.crear');
-  const puedeEditar = can('clientes.editar', 'clientes.crear');
+  const puedeCrear = !soloLectura && can('clientes.crear');
+  const puedeEditar = !soloLectura && can('clientes.editar', 'clientes.crear');
 
   const visibles = useMemo(() => {
     const t = sinTildes(busqueda.trim());
@@ -157,7 +157,7 @@ export function ClientesPage({ eyebrow = 'Terceros', selector }: { eyebrow?: str
 
       <ClienteFicha cliente={ficha} onClose={() => setFicha(null)}
         onEditar={puedeEditar ? c => { setFicha(null); setFormulario({ cliente: c }); } : undefined}
-        onEliminar={can('clientes.eliminar') ? c => setPorEliminar(c) : undefined} />
+        onEliminar={!soloLectura && can('clientes.eliminar') ? c => setPorEliminar(c) : undefined} />
       <ClienteFormulario open={!!formulario} cliente={formulario?.cliente ?? null} existentes={lista} onClose={() => setFormulario(null)} />
       <ImportarClientesSheet open={importando} onClose={() => setImportando(false)} existentes={lista} />
       <ConfirmSheet open={!!porEliminar} onClose={() => !eliminando && setPorEliminar(null)} onConfirm={eliminar} loading={eliminando}

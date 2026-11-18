@@ -65,7 +65,7 @@ const leerVista = (): Vista => { try { return localStorage.getItem('fleet_prov_v
 /** Una fila del directorio: un asesor (con su empresa) o, si la empresa no tiene contactos, la empresa misma */
 interface Entrada { clave: string; nombre: string; sub: string; cargo: string | null; telefono: string | null; correo: string | null; empresa: boolean; proveedor: ProveedorInv }
 
-export function ProveedoresPage({ eyebrow = 'Terceros', selector }: { eyebrow?: string; selector?: ReactNode } = {}) {
+export function ProveedoresPage({ eyebrow = 'Terceros', selector, soloLectura = false }: { eyebrow?: string; selector?: ReactNode; soloLectura?: boolean } = {}) {
   const { data, isLoading, isError, error } = useProveedores();
   const { can } = useAuth();
   const qc = useQueryClient();
@@ -81,9 +81,9 @@ export function ProveedoresPage({ eyebrow = 'Terceros', selector }: { eyebrow?: 
   const [eliminando, setEliminando] = useState(false);
   const [importando, setImportando] = useState(false);
 
-  const puedeCrear = can('prov_inv.crear');
-  const puedeEditar = can('prov_inv.editar');
-  const puedeEliminar = can('prov_inv.eliminar');
+  const puedeCrear = !soloLectura && can('prov_inv.crear');
+  const puedeEditar = !soloLectura && can('prov_inv.editar');
+  const puedeEliminar = !soloLectura && can('prov_inv.eliminar');
 
   const proveedores = data ?? [];
   const pendientes = useMemo(() => proveedores.filter(p => motivoPendiente(p)), [proveedores]);

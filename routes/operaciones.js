@@ -2238,7 +2238,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                     SELECT id, 
                            DATE_FORMAT(IFNULL(creado_en, fecha), '%d/%m/%Y %H:%i') AS fecha_formateada,
                            fecha, tipo_gasto, sub_motivo, tipo_comprobante, serie, numero,
-                           proveedor_nombre, detalle, importe, sustento_url, estado, uuid_cliente
+                           proveedor_nombre, proveedor_ruc, detalle, importe, sustento_url, estado, uuid_cliente
                     FROM tesoreria_liquidaciones_gastos
                     WHERE UPPER(TRIM(orden_viaje)) = UPPER(?)
                     ORDER BY IFNULL(creado_en, fecha) DESC, id DESC

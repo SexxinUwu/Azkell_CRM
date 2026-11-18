@@ -9,10 +9,25 @@ export const RUTAS: RutaModulo[] = [
     Page: lazy(() => import('./RedirigirClientes').then(m => ({ default: m.RedirigirClientes }))),
   },
   {
-    // Rutas anteriores (Directorio › Clientes y Flota › Clientes): redirigen a Operaciones › Clientes
+    // Directorio › Clientes, Proveedores y Estaciones: solo consulta (el alta y la edición son de Terceros)
     path: 'directorio/clientes/*',
     permisos: ['clientes.ver', 'admin'],
-    Page: lazy(() => import('./RedirigirClientes').then(m => ({ default: m.RedirigirClientes }))),
+    Page: lazy(() => import('./DirectorioPaginas').then(m => ({ default: m.DirectorioClientes }))),
+  },
+  {
+    path: 'directorio/proveedores/*',
+    permisos: ['prov_inv.ver', 'admin'],
+    Page: lazy(() => import('./DirectorioPaginas').then(m => ({ default: m.DirectorioProveedores }))),
+  },
+  {
+    path: 'directorio/estaciones/*',
+    permisos: ['combustible_vales.ver', 'admin'],
+    Page: lazy(() => import('./DirectorioPaginas').then(m => ({ default: m.DirectorioEstaciones }))),
+  },
+  {
+    path: 'directorio',
+    permisos: ['rrhh_personal.ver', 'cond.ver', 'clientes.ver', 'prov_inv.ver', 'combustible_vales.ver', 'admin'],
+    Page: lazy(() => import('./DirectorioPaginas').then(m => ({ default: m.RedirigirDirectorio }))),
   },
   {
     path: 'flota/clientes/*',
