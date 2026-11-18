@@ -150,6 +150,44 @@ router.get('/personal/:id', async (req, res) => {
 });
 
 // Guardar nuevo colaborador
+// El personal que es conductor también debe existir en la tabla de conductores (Operaciones: viajes, vales, papeletas y el portal
+// se apoyan en ella). Se enlaza por DNI y se mantiene al día cada vez que se guarda la persona en RRHH.
+async function sincronizarConductor(tdb, id) {
+    try {
+        const [filas] = await tdb.query('SELECT * FROM rrhh_personal WHERE id = ?', [id]);
+        const p = filas && filas[0];
+        if (!p || p.categoria_rol !== 'CONDUCTOR') return;
+        const dni = String(p.numero_documento || '').trim();
+        if (!dni) return;
+        const nombre = `${p.nombres} ${p.apellidos}`.replace(/\s+/g, ' ').trim().slice(0, 100);
+        const estado = p.estado === 'CESADO' ? 'Cesado' : p.estado === 'SUSPENDIDO' ? 'Bloqueado' : 'Activo';
+        const tel = String(p.telefono || '').trim().slice(0, 20);
+        const lic = String(p.licencia_conducir || '').trim().slice(0, 50);
+        const banco = p.banco_haberes ? String(p.banco_haberes).slice(0, 50) : null;
+        const cuenta = p.cuenta_haberes ? String(p.cuenta_haberes).slice(0, 50) : null;
+        const [ex] = await tdb.query('SELECT idConductor FROM conductores WHERE TRIM(dni) = ? LIMIT 1', [dni]);
+        if (ex && ex.length) {
+            await tdb.query('UPDATE conductores SET nombre = ?, telefono = ?, licencia = ?, estado = ?, banco = COALESCE(?, banco), numero_cuenta = COALESCE(?, numero_cuenta) WHERE idConductor = ?',
+                [nombre, tel, lic, estado, banco, cuenta, ex[0].idConductor]);
+        } else {
+            await tdb.query('INSERT INTO conductores (nombre, empresa, telefono, dni, licencia, estado, banco, numero_cuenta) VALUES (?, \'\', ?, ?, ?, ?, ?, ?)',
+                [nombre, tel, dni, lic, estado, banco, cuenta]);
+        }
+    } catch (e) { console.warn('rrhh: no se pudo sincronizar el conductor:', e.message); }
+}
+
+// Directorio: solo datos de contacto (sin sueldos, cuentas ni datos de salud). Lo ve quien consulta el directorio aunque no tenga RRHH.
+router.get('/directorio', async (req, res) => {
+    try {
+        const tdb = getDb(req);
+        const [rows] = await tdb.query(`SELECT id, tipo_documento, numero_documento, nombres, apellidos, categoria_rol, cargo, area, sede, telefono, email, estado, foto_url
+            FROM rrhh_personal ORDER BY apellidos, nombres`);
+        res.json({ ok: true, data: rows });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.post('/personal', upload.single('foto'), async (req, res) => {
     try {
         const tdb = getDb(req);
@@ -239,6 +277,7 @@ router.post('/personal', upload.single('foto'), async (req, res) => {
         ];
 
         const [resIns] = await tdb.query(query, params);
+        await sincronizarConductor(tdb, resIns.insertId);
         res.json({ ok: true, id: resIns.insertId, message: 'Colaborador registrado con éxito' });
     } catch (err) {
         console.error('Error al registrar personal:', err);
@@ -337,6 +376,7 @@ router.put('/personal/:id', upload.single('foto'), async (req, res) => {
             WHERE id = ?
         `, params);
 
+        await sincronizarConductor(tdb, id);
         res.json({ ok: true, message: 'Colaborador actualizado con éxito' });
     } catch (err) {
         console.error('Error al actualizar personal:', err);
