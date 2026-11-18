@@ -50,5 +50,21 @@ module.exports = (db, logAudit) => {
         } catch (err) { responder(res, err, 'probar'); }
     });
 
+    // Comprobar qué servicios de la API de SUNAT tiene habilitados la credencial (SIRE, buzón de mensajes, guías): solo pide el token de cada uno, no consulta nada
+    router.post('/servicios', async (req, res) => {
+        try {
+            const cfg = await S.credencialesDe(P(req));
+            const faltan = S.faltantes(cfg);
+            if (faltan.length) throw aviso(`Falta ${faltan.join(', ')}. Guárdalos y vuelve a probar.`, 422);
+            const servicios = [];
+            for (const clave of Object.keys(S.SERVICIOS)) {
+                const r = await S.probarServicio(cfg, clave);
+                servicios.push({ clave, nombre: S.SERVICIOS[clave].nombre, ok: r.ok, detalle: r.ok ? 'Habilitado' : String(r.error || 'No habilitado').slice(0, 160) });
+                await new Promise(x => setTimeout(x, 1500));
+            }
+            res.json({ ok: true, servicios });
+        } catch (err) { responder(res, err, 'servicios'); }
+    });
+
     return router;
 };

@@ -4,6 +4,12 @@
 const crypto = require('crypto');
 
 const SCOPE_SIRE = 'https://api-sire.sunat.gob.pe';
+// Servicios de la API de SUNAT que la credencial puede tener habilitados (el scope identifica al servicio). El de SIRE está confirmado; los demás se comprueban con probarScope().
+const SERVICIOS = {
+    sire: { nombre: 'SIRE (registros de ventas y compras)', scope: SCOPE_SIRE },
+    buzon: { nombre: 'Control de mensajes y alertas (buzón)', scopes: ['https://api.sunat.gob.pe/v1/contribuyente/controlmsg', 'https://api.sunat.gob.pe'] },
+    gre: { nombre: 'GRE (guías de remisión)', scope: 'https://api-cpe.sunat.gob.pe' },
+};
 
 // SUNAT limita las peticiones por minuto (HTTP 429): se espera y se reintenta unas veces antes de rendirse
 const esperar = ms => new Promise(r => setTimeout(r, ms));
@@ -49,10 +55,10 @@ function descifrar(valor) {
  * Pide un token de acceso al SIRE. cfg: { ruc, usuario, clave, clientId, clientSecret }.
  * El token no se guarda: esta función sirve para comprobar que las credenciales funcionan.
  */
-async function obtenerToken(cfg) {
+async function obtenerToken(cfg, scope = SCOPE_SIRE) {
     const url = `https://api-seguridad.sunat.gob.pe/v1/clientessol/${encodeURIComponent(cfg.clientId)}/oauth2/token/`;
     const cuerpo = new URLSearchParams({
-        grant_type: 'password', scope: SCOPE_SIRE, client_id: cfg.clientId, client_secret: cfg.clientSecret,
+        grant_type: 'password', scope, client_id: cfg.clientId, client_secret: cfg.clientSecret,
         username: `${cfg.ruc}${cfg.usuario}`, password: cfg.clave,
     });
     try {
@@ -176,4 +182,24 @@ function parsearPropuesta(libro, periodo, texto) {
     });
 }
 
-module.exports = { SCOPE_SIRE, LIBROS, cifrar, descifrar, obtenerToken, descargarPropuesta, credencialesDe, faltantes, parsearPropuesta };
+/**
+ * Comprueba si SUNAT entrega un token para un servicio: solo pide el token (no consulta nada). Con varios scopes posibles, prueba uno por uno.
+ * Devuelve { ok, scope } con el que funcionó, o { ok: false, error, probados }.
+ */
+async function probarServicio(cfg, clave) {
+    const sv = SERVICIOS[clave];
+    if (!sv) return { ok: false, error: 'Servicio desconocido.' };
+    const lista = sv.scopes || [sv.scope];
+    let ultimo = null;
+    for (const scope of lista) {
+        const r = await obtenerToken(cfg, scope);
+        if (r.ok) return { ok: true, scope, expires_in: r.expires_in };
+        ultimo = r;
+        // Si las credenciales mismas fallan, probar otro scope no sirve de nada
+        if (!/scope/i.test(String(r.error || ''))) break;
+        await new Promise(x => setTimeout(x, 1500));
+    }
+    return { ok: false, error: ultimo ? ultimo.error : 'Sin respuesta', probados: lista };
+}
+
+module.exports = { SCOPE_SIRE, SERVICIOS, probarServicio, LIBROS, cifrar, descifrar, obtenerToken, descargarPropuesta, credencialesDe, faltantes, parsearPropuesta };

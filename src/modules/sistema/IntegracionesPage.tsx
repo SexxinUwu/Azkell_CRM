@@ -344,6 +344,9 @@ function Sire({ filas }: { filas: Fila[] }) {
   const [v, setV] = useState({ ruc: '', usuario: '', clave: '', clientId: '', secreto: '' });
   const [ocupado, setOcupado] = useState(false);
   const [res, setRes] = useState<Resultado>(null);
+  // Servicios de la API de SUNAT que la credencial tiene habilitados (SIRE, buzón de mensajes, guías)
+  const [servicios, setServicios] = useState<Array<{ clave: string; nombre: string; ok: boolean; detalle: string }> | null>(null);
+  const [comprobando, setComprobando] = useState(false);
 
   useEffect(() => {
     setV({
@@ -372,8 +375,16 @@ function Sire({ filas }: { filas: Fila[] }) {
   const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setV(a => ({ ...a, [k]: e.target.value }));
   const completo = !!(v.ruc && v.usuario && v.clave && v.clientId && v.secreto);
 
+  async function comprobarServicios() {
+    setComprobando(true); setServicios(null);
+    try {
+      const r = await api<{ servicios: Array<{ clave: string; nombre: string; ok: boolean; detalle: string }> }>('/sire/servicios', { method: 'POST', body: {} });
+      setServicios(r.servicios); haptic('success');
+    } catch (err) { setRes({ ok: false, texto: errorMessage(err) }); haptic('warning'); } finally { setComprobando(false); }
+  }
+
   return (
-    <Tarjeta icono={<Landmark size={20} />} tono="sire" titulo="SUNAT · SIRE (registros de ventas y compras)" estado={res && !res.ok ? 'error' : completo ? 'ok' : 'pendiente'}
+    <Tarjeta icono={<Landmark size={20} />} tono="sire" titulo="SUNAT · API (SIRE y buzón de mensajes)" estado={res && !res.ok ? 'error' : completo ? 'ok' : 'pendiente'}
       resumen={completo ? `RUC ${v.ruc} · usuario SOL ${v.usuario}` : 'Aún sin credenciales de SUNAT'} onGuardar={() => guardarYProbar(false)}>
       <Notice tone="accent">Esta conexión va directo con SUNAT (no con APISUNAT, que solo emite comprobantes). La clave SOL y el secreto se guardan cifrados y no se vuelven a mostrar. Usa un usuario SOL secundario con permiso de consulta del SIRE.</Notice>
       <div className="int-grupo">
@@ -392,8 +403,20 @@ function Sire({ filas }: { filas: Fila[] }) {
         </div>
       </div>
       {res && <Notice tone={res.ok ? 'success' : 'error'} icon={res.ok ? <CheckCircle2 size={16} /> : <CircleAlert size={16} />}>{res.texto}</Notice>}
+      {servicios && (
+        <div className="int-grupo">
+          <div className="int-grupo__titulo"><span>Servicios de SUNAT habilitados en esta credencial</span></div>
+          {servicios.map(sv => (
+            <div key={sv.clave} style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center' }}>
+              {sv.ok ? <CheckCircle2 size={16} style={{ color: 'var(--green-ink)' }} aria-hidden /> : <CircleAlert size={16} style={{ color: 'var(--red-ink)' }} aria-hidden />}
+              <span><strong>{sv.nombre}</strong> <span className="t-footnote c-secondary">· {sv.detalle}</span></span>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="int-acciones">
         <span className="int-acciones__meta">{metaDe(filas, 'sire_client_id') || 'Es de esta empresa: cada empresa guarda la suya.'}</span>
+        <Button variant="plain" onClick={() => { void comprobarServicios(); }} loading={comprobando} disabled={!completo || ocupado}>Comprobar servicios habilitados</Button>
         <Button variant="secondary" onClick={() => guardarYProbar(false)} disabled={ocupado}>Guardar</Button>
         <Button variant="primary" icon={<Zap size={16} />} onClick={() => guardarYProbar(true)} loading={ocupado}>Guardar y probar conexión</Button>
       </div>
