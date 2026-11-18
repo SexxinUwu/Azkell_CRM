@@ -78,15 +78,14 @@ export async function imprimirFotocheck(p: Persona) {
 }
 
 /** Ficha de registro de personal (A4) */
-export function imprimirFicha(p: Persona) {
-  const w = abrirVentana('Ficha de personal');
+function construirFicha(p: Persona, conPagos: boolean) {
   const logo = new URL(LOGO_URL, window.location.origin).href;
   const fila = (l: string, v: string) => `<tr><th>${esc(l)}</th><td>${v ? esc(v) : '<span class="vacio">—</span>'}</td></tr>`;
   const bloque = (titulo: string, filas: Array<[string, string]>) =>
     `<section><h2>${esc(titulo)}</h2><table>${filas.map(([l, v]) => fila(l, v)).join('')}</table></section>`;
   const e = edad(p.fecha_nacimiento);
   const foto = p.foto_url ? `<img class="foto" src="${esc(p.foto_url)}" alt="">` : '<div class="foto foto--vacia"></div>';
-  escribir(w, `Ficha ${p.apellidos}`, `
+  const estilo = `
     .a4{width:210mm;min-height:297mm;margin:0 auto 24px;background:#fff;padding:14mm 14mm 12mm;box-shadow:0 10px 30px rgba(0,0,0,.1)}
     header{display:flex;align-items:center;gap:5mm;border-bottom:.6mm solid #1d1d1f;padding-bottom:4mm}
     header img.logo{width:16mm;height:16mm;object-fit:contain;border-radius:3mm}
@@ -105,7 +104,8 @@ export function imprimirFicha(p: Persona) {
     .firmas{display:grid;grid-template-columns:1fr 1fr;gap:20mm;margin-top:22mm;font-size:3mm;text-align:center;color:#3a3a3c}
     .firmas div{border-top:.3mm solid #1d1d1f;padding-top:2mm}
     @media print{.a4{box-shadow:none;margin:0;width:auto;min-height:0;padding:0}@page{size:A4;margin:12mm}}
-  `, `<div class="a4">
+  `;
+  const cuerpo = `<div class="a4">
       <header><img class="logo" src="${esc(logo)}" alt=""><div class="t"><h1>Ficha de registro de personal</h1><p>${esc(empresa())}</p></div>
         <div class="cod">F-RH-${String(p.id).padStart(4, '0')}<br>${fechaPe(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date()))}</div></header>
       <div class="persona">${foto}<div><h2>${esc(p.apellidos)}, ${esc(p.nombres)}</h2><div class="cargo">${esc(p.cargo)}</div>
@@ -125,13 +125,13 @@ export function imprimirFicha(p: Persona) {
         ])}
         ${bloque('Contrato', [
           ['Tipo', etiqueta(OPCIONES.tipoContrato, p.tipo_contrato)], ['Inicio', fechaPe(p.fecha_inicio_contrato)], ['Fin', p.fecha_fin_contrato ? fechaPe(p.fecha_fin_contrato) : ''],
-          ['Sueldo básico', soles(p.sueldo_basico)], ['Bono fijo', soles(p.bono_fijo)],
-          ['Asignación familiar', p.tiene_asignacion_familiar ? soles(ASIGNACION_FAMILIAR) : 'No aplica'],
+          ...(conPagos ? ([['Sueldo básico', soles(p.sueldo_basico)], ['Bono fijo', soles(p.bono_fijo)],
+            ['Asignación familiar', p.tiene_asignacion_familiar ? soles(ASIGNACION_FAMILIAR) : 'No aplica']] as Array<[string, string]>) : []),
         ])}
         ${bloque('Pensión y bancos', [
           ['Régimen', etiqueta(OPCIONES.regimen, p.regimen_pensionario)], ['CUSPP', p.cuspp],
-          ['Cuenta sueldo', [p.banco_haberes, p.cuenta_haberes].filter(Boolean).join(' · ')], ['CCI', p.cci_haberes],
-          ['Cuenta CTS', [p.banco_cts, p.cuenta_cts].filter(Boolean).join(' · ')],
+          ...(conPagos ? ([['Cuenta sueldo', [p.banco_haberes, p.cuenta_haberes].filter(Boolean).join(' · ')], ['CCI', p.cci_haberes],
+            ['Cuenta CTS', [p.banco_cts, p.cuenta_cts].filter(Boolean).join(' · ')]] as Array<[string, string]>) : []),
         ])}
         ${bloque('Salud, seguridad y EPP', [
           ['Grupo sanguíneo', p.grupo_sanguineo], ['Examen médico', `${etiqueta(OPCIONES.emo, p.emo_condicion)}${p.emo_fecha_vencimiento ? ` · vence ${fechaPe(p.emo_fecha_vencimiento)}` : ''}`],
@@ -141,7 +141,27 @@ export function imprimirFicha(p: Persona) {
         ])}
       </div>
       <div class="firmas"><div>Firma del colaborador</div><div>Recursos Humanos</div></div>
-    </div>`);
+    </div>`;
+  return { titulo: `Ficha ${p.apellidos}`, estilo, cuerpo };
+}
+
+/** Imprime la ficha en una ventana aparte. Sin `conPagos` no muestra sueldo ni cuentas (solo para quien puede verlos) */
+export function imprimirFicha(p: Persona, conPagos = true) {
+  const w = abrirVentana('Ficha de personal');
+  const f = construirFicha(p, conPagos);
+  escribir(w, f.titulo, f.estilo, f.cuerpo);
+}
+
+/** La misma ficha como documento completo, para verla dentro de la pantalla (iframe) y poder imprimirla desde ahí */
+export function fichaEnPantalla(p: Persona, conPagos = true): string {
+  const f = construirFicha(p, conPagos);
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(f.titulo)}</title>
+    <style>${ESTILO_BASE}${f.estilo}
+      body{background:transparent}
+      .a4{margin:0 auto 16px}
+      @media screen and (max-width:820px){.a4{width:auto;min-height:0;padding:6mm}.grid{grid-template-columns:1fr}}
+      @media print{body{background:#fff}.a4{margin:0}}
+    </style></head><body>${f.cuerpo}</body></html>`;
 }
 
 /** Tarjeta de contacto (.vcf): se agrega a Contactos del celular con un toque */

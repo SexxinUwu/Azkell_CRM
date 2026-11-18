@@ -20,7 +20,7 @@ import { haptic } from '../../core/lib/haptics';
 import { alertasDe, ALFABETO, coincide, eliminarPersona, etiqueta, letraDe, nombreCompleto, OPCIONES, usePersonal, type Persona } from './api';
 import { exportarExcel } from './documentos';
 import { FotoPersona } from './FotoPersona';
-import { PersonaTarjeta } from './PersonaTarjeta';
+import { PersonaFicha } from './PersonaFicha';
 import { PersonaFormulario } from './PersonaFormulario';
 import './personal.css';
 
@@ -149,7 +149,7 @@ export function PersonalPage({ base = '/directorio/personal', soloLectura = fals
   );
 
   const tarjeta = seleccionada && (
-    <PersonaTarjeta
+    <PersonaFicha
       persona={seleccionada}
       verPagos={puedeEditar}
       onVolver={dividido ? undefined : () => navigate(BASE)}
