@@ -10,6 +10,8 @@ const fecha = f => (/^\d{4}-\d{2}-\d{2}/.test(String(f || '')) ? `${f.slice(8, 1
 const nf = (n, dec = 2) => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
 const nfLibre = (n, min = 2, max = 4) => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: min, maximumFractionDigits: max });
 const UNIDADES = { ZZ: 'Servicio', NIU: 'Unidad', KGM: 'Kilogramos', TNE: 'Toneladas', BX: 'Cajas', LTR: 'Litros', GLL: 'Galones', MTR: 'Metros' };
+/** F001-00000001 → F001-1 (solo para mostrar; SUNAT acepta de 1 a 8 dígitos y a APISUNAT se envía el número completo) */
+const numeroCorto = n => String(n ?? '').replace(/^([A-Z0-9]{4})-0*(\d+)$/, '$1-$2');
 const TITULOS = { '01': 'FACTURA ELECTRÓNICA', '03': 'BOLETA DE VENTA ELECTRÓNICA', '07': 'NOTA DE CRÉDITO ELECTRÓNICA' };
 
 // ───────────────────────── Plantilla (propia de los comprobantes; la de las guías es otra) ─────────────────────────
@@ -72,7 +74,7 @@ function modeloDesdeComprobante(c, items, emisor) {
         enLetras: montoEnLetras(Number(c.total) || 0, moneda),
         detraccion: detMonto > 0 ? { pct: Number(c.detraccion_pct) || 0, monto: detMonto, cuenta } : null,
         neto: Number(c.neto_pendiente) || 0,
-        ordenCompra: c.orden_compra || '', referencia: c.referencia || '', observacion: c.observacion || '',
+        ordenCompra: c.orden_compra || '', liquidacion: c.liquidacion || '', referencia: c.referencia || '', observacion: c.observacion || '',
         ref: c.tipo_doc === '07' ? { numero: c.doc_ref_numero || '', motivo: c.motivo_texto || '' } : null,
         estado: c.apisunat_status || '', prueba: c.modo_emision === 'prueba',
     };
@@ -180,7 +182,7 @@ ${textoMarca ? `<div class="marca-fondo ${p.marca_agua_nivel}${marcaAgua ? ' baj
     <div class="folio">
       <div class="ruc">RUC ${esc(m.emisor.ruc)}</div>
       <div class="tit">${titulo}</div>
-      <div class="num">${esc(m.numero)}</div>
+      <div class="num">${esc(numeroCorto(m.numero))}</div>
     </div>
   </div>
 
@@ -195,11 +197,12 @@ ${textoMarca ? `<div class="marca-fondo ${p.marca_agua_nivel}${marcaAgua ? ' baj
       <div class="par"><div class="k">Moneda</div><div class="v">${m.moneda === 'USD' ? 'Dólares (US$)' : 'Soles (S/)'}</div></div>
       ${esNc ? '' : `<div class="par"><div class="k">Forma de pago</div><div class="v">${m.formaPago === 'CREDITO' ? `Crédito (${m.dias} días)` : 'Contado'}</div></div>`}
       ${m.ordenCompra && c.orden_compra ? `<div class="par"><div class="k">Orden de compra</div><div class="v m">${esc(m.ordenCompra)}</div></div>` : ''}
+      ${m.liquidacion ? `<div class="par"><div class="k">Liquidación</div><div class="v m">${esc(m.liquidacion)}</div></div>` : ''}
     </div></div>
   </div>
 
   ${esNc && m.ref && b.documento !== false ? `<div class="sec"><div class="et">Documento que modifica</div><div class="tarj">
-    <div class="par"><div class="k">Comprobante</div><div class="v m">${esc(m.ref.numero)}</div></div>
+    <div class="par"><div class="k">Comprobante</div><div class="v m">${esc(numeroCorto(m.ref.numero))}</div></div>
     <div class="par"><div class="k">Motivo</div><div class="v">${esc(m.ref.motivo)}</div></div></div></div>` : ''}
 
   <div class="sec"><div class="et">Detalle</div>

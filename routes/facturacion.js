@@ -19,6 +19,7 @@ const COL = 'COLLATE utf8mb4_unicode_ci';
 const hoyLima = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 const horaLima = () => new Date().toLocaleTimeString('en-GB', { timeZone: 'America/Lima', hour12: false });
 const sumarDias = (iso, d) => { const f = new Date(`${iso}T12:00:00Z`); f.setUTCDate(f.getUTCDate() + d); return f.toISOString().slice(0, 10); };
+const numeroCorto = n => String(n ?? '').replace(/^([A-Z0-9]{4})-0*(\d+)$/, '$1-$2');
 const TIPOS = { '01': 'FACTURA', '03': 'BOLETA', '07': 'NOTA DE CRÉDITO' };
 // Motivos de nota de crédito (catálogo 09 de SUNAT) que soportamos: los totales devuelven todas las líneas; los parciales bajan el valor
 const MOTIVOS_NC = { '01': { texto: 'Anulación de la operación', total: true }, '02': { texto: 'Anulación por error en el RUC', total: true }, '06': { texto: 'Devolución total', total: true }, '09': { texto: 'Disminución en el valor', total: false }, '13': { texto: 'Ajustes de operaciones de exportación o posteriores', total: false } };
@@ -201,7 +202,7 @@ module.exports = (db, logAudit) => {
                         (SELECT r.viaje FROM operaciones_ordenes_viaje_rutas r WHERE r.orden ${COL} = os.codigo_orden ${COL} LIMIT 1) AS viaje
                  FROM operaciones_ordenes_servicio os
                  WHERE os.estado_servicio IN ('ENTREGADO', 'EN_EJECUCION') AND COALESCE(os.costo_flete, 0) > 0
-                   AND NOT EXISTS (SELECT 1 FROM facturacion_items fi JOIN facturacion_comprobantes fc ON fc.id = fi.comprobante_id
+                   AND NOT EXISTS (SELECT 1 FROM facturacion_servicios fi JOIN facturacion_comprobantes fc ON fc.id = fi.comprobante_id
                                    WHERE fi.orden_servicio ${COL} = os.codigo_orden ${COL} AND fc.tipo_doc IN ('01', '03') AND fc.estado NOT IN ('ANULADO', 'RECHAZADO') AND fc.modo_emision = ?)
                  ORDER BY os.cliente_nombre, os.fecha DESC, os.id DESC LIMIT 800`, [modoActual]);
             const p = P(req);
@@ -259,7 +260,7 @@ module.exports = (db, logAudit) => {
             const [rows] = await P(req).query(
                 `SELECT id, tipo_doc, numero_completo, DATE_FORMAT(fecha_emision, '%Y-%m-%d') AS fecha_emision, DATE_FORMAT(fecha_vencimiento, '%Y-%m-%d') AS fecha_vencimiento, cliente_doc, cliente_nombre, moneda,
                         base, igv, total, detraccion_monto, neto_pendiente, forma_pago, estado, apisunat_status, apisunat_faults, pdf_url, xml_url, cdr_url, doc_ref_numero, motivo_texto, modo_emision, usuario, referencia,
-                        (SELECT GROUP_CONCAT(DISTINCT fi.orden_servicio ORDER BY fi.linea SEPARATOR ', ') FROM facturacion_items fi WHERE fi.comprobante_id = facturacion_comprobantes.id AND fi.orden_servicio IS NOT NULL) AS servicios
+                        (SELECT GROUP_CONCAT(DISTINCT fi.orden_servicio ORDER BY fi.orden_servicio SEPARATOR ', ') FROM facturacion_servicios fi WHERE fi.comprobante_id = facturacion_comprobantes.id) AS servicios
                  FROM facturacion_comprobantes WHERE ${cond.join(' AND ')} ORDER BY fecha_emision DESC, id DESC LIMIT 500`, par);
             res.json({ ok: true, data: rows });
         } catch (err) { responder(res, err, 'lista'); }
@@ -312,7 +313,7 @@ module.exports = (db, logAudit) => {
                 if (!(v > 0) || !(c > 0)) throw aviso(`La línea ${i + 1} necesita cantidad y valor mayores a cero.`, 422);
                 return { orden_servicio: texto(it.orden_servicio, 40), descripcion: d, unidad: texto(it.unidad, 5) || 'ZZ', cantidad: c, valor_unitario: Math.round(v * 10000) / 10000 };
             });
-            const codigos = [...new Set(items.map(i => i.orden_servicio).filter(Boolean))];
+            const codigos = [...new Set([...items.map(i => i.orden_servicio), ...(Array.isArray(b.servicios) ? b.servicios.map(x => texto(x, 40)) : [])].filter(Boolean))];
             if (codigos.length) {
                 const [os] = await p.query(`SELECT codigo_orden, cliente_nombre, moneda, estado_servicio FROM operaciones_ordenes_servicio WHERE codigo_orden IN (?)`, [codigos]);
                 if (os.length !== codigos.length) throw aviso('Alguno de los servicios elegidos no existe.', 404);
@@ -321,7 +322,7 @@ module.exports = (db, logAudit) => {
                 const monedas = new Set(os.map(s => (/D[OÓ]L|USD/i.test(String(s.moneda || '')) ? 'USD' : 'PEN')));
                 if (monedas.size > 1 || (monedas.size === 1 && !monedas.has(moneda))) throw aviso(`Los servicios están en ${[...monedas].join('/')} y el comprobante en ${moneda}. Deben coincidir.`, 422);
                 const [ya] = await p.query(
-                    `SELECT fi.orden_servicio, fc.numero_completo FROM facturacion_items fi JOIN facturacion_comprobantes fc ON fc.id = fi.comprobante_id
+                    `SELECT fi.orden_servicio, fc.numero_completo FROM facturacion_servicios fi JOIN facturacion_comprobantes fc ON fc.id = fi.comprobante_id
                      WHERE fi.orden_servicio IN (?) AND fc.tipo_doc IN ('01', '03') AND fc.estado NOT IN ('ANULADO', 'RECHAZADO') AND fc.modo_emision = ?`, [codigos, cfg.modo]);
                 if (ya.length) throw aviso(`El servicio ${ya[0].orden_servicio} ya está facturado en ${ya[0].numero_completo}.`, 409);
             }
@@ -354,11 +355,14 @@ module.exports = (db, logAudit) => {
                 [tipo, serie, numero, numeroCompleto, fecha, hora, vence, Number.isInteger(Number(cl.id)) ? Number(cl.id) : null, docTipo, docFinal, nombre, texto(cl.direccion, 255), moneda, tipoCambio, credito ? 'CREDITO' : 'CONTADO', dias,
                     calc.base, calc.igv, calc.total, detPct, calc.detraccion, calc.neto_pendiente, texto(b.orden_compra, 60), texto(b.referencia, 120), texto(b.observacion, 1000), cfg.modo, usuarioDe(req)]);
             id = ins.insertId;
+            if (texto(b.liquidacion, 60)) await p.query('UPDATE facturacion_comprobantes SET liquidacion = ? WHERE id = ?', [texto(b.liquidacion, 60), id]);
             for (let i = 0; i < calc.lineas.length; i++) {
                 const l = calc.lineas[i];
                 await p.query(`INSERT INTO facturacion_items (comprobante_id, linea, orden_servicio, descripcion, unidad, cantidad, valor_unitario, base, igv) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [id, i + 1, l.orden_servicio, l.descripcion, l.unidad, l.cantidad, l.valor_unitario, l.base, l.igv]);
             }
+
+            for (const cod of codigos) await p.query('INSERT INTO facturacion_servicios (comprobante_id, orden_servicio) VALUES (?, ?)', [id, cod]);
 
             const body = buildComprobanteUbl({
                 tipo_doc: tipo, serie, numero, fecha_emision: fecha, hora_emision: hora, fecha_vencimiento: vence, moneda, forma_pago: credito ? 'CREDITO' : 'CONTADO',
@@ -370,6 +374,7 @@ module.exports = (db, logAudit) => {
             if (!r.ok) {
                 // No se guarda: así el número queda libre y los servicios siguen por facturar
                 await p.query(`DELETE FROM facturacion_items WHERE comprobante_id = ?`, [id]);
+                await p.query(`DELETE FROM facturacion_servicios WHERE comprobante_id = ?`, [id]);
                 await p.query(`DELETE FROM facturacion_comprobantes WHERE id = ?`, [id]);
                 id = null;
                 throw aviso(`APISUNAT no aceptó el comprobante: ${mensajeError(r).slice(0, 400)}`, 422);
@@ -387,9 +392,9 @@ module.exports = (db, logAudit) => {
                 }
             } catch (e) { /* el comprobante ya salió: registrar al cliente es un extra */ }
             if (logAudit) logAudit({ req, accion: 'EMITIR_COMPROBANTE', modulo: 'OPERACIONES', detalle: `${TIPOS[tipo]} ${numeroCompleto} (${cfg.modo}) a ${nombre} por ${moneda} ${calc.total}` });
-            res.json({ ok: true, id, numero: numeroCompleto, total: calc.total, message: `${TIPOS[tipo]} ${numeroCompleto} enviada a APISUNAT (${cfg.modo === 'produccion' ? 'producción' : 'prueba'}).` });
+            res.json({ ok: true, id, numero: numeroCompleto, total: calc.total, message: `${TIPOS[tipo]} ${numeroCorto(numeroCompleto)} enviada a APISUNAT (${cfg.modo === 'produccion' ? 'producción' : 'prueba'}).` });
         } catch (err) {
-            if (id) { await p.query(`DELETE FROM facturacion_items WHERE comprobante_id = ?`, [id]).catch(() => {}); await p.query(`DELETE FROM facturacion_comprobantes WHERE id = ? AND apisunat_document_id IS NULL`, [id]).catch(() => {}); }
+            if (id) { await p.query(`DELETE FROM facturacion_items WHERE comprobante_id = ?`, [id]).catch(() => {}); await p.query(`DELETE FROM facturacion_servicios WHERE comprobante_id = ?`, [id]).catch(() => {}); await p.query(`DELETE FROM facturacion_comprobantes WHERE id = ? AND apisunat_document_id IS NULL`, [id]).catch(() => {}); }
             responder(res, err, 'emitir');
         }
     });
@@ -458,7 +463,7 @@ module.exports = (db, logAudit) => {
             await p.query(`UPDATE facturacion_comprobantes SET estado = 'EMITIDO', apisunat_document_id = ?, apisunat_status = 'PENDIENTE', datos_json = ?, pdf_url = ? WHERE id = ?`,
                 [r.documentId, JSON.stringify(body), Apisunat.getPdfUrl(r.documentId, fileName, 'A4', cfg.base_url), nid]);
             if (logAudit) logAudit({ req, accion: 'EMITIR_NOTA_CREDITO', modulo: 'OPERACIONES', detalle: `Nota de crédito ${numeroCompleto} (${cfg.modo}) sobre ${o.numero_completo}: ${textoMotivo}` });
-            res.json({ ok: true, id: nid, numero: numeroCompleto, message: `Nota de crédito ${numeroCompleto} enviada a APISUNAT. Cuando SUNAT la acepte, ${motivo.total ? 'el comprobante queda anulado y sus servicios vuelven a «por facturar».' : 'el valor del comprobante queda descontado.'}` });
+            res.json({ ok: true, id: nid, numero: numeroCompleto, message: `Nota de crédito ${numeroCorto(numeroCompleto)} enviada a APISUNAT. Cuando SUNAT la acepte, ${motivo.total ? 'el comprobante queda anulado y sus servicios vuelven a «por facturar».' : 'el valor del comprobante queda descontado.'}` });
         } catch (err) {
             if (nid) { await p.query(`DELETE FROM facturacion_items WHERE comprobante_id = ?`, [nid]).catch(() => {}); await p.query(`DELETE FROM facturacion_comprobantes WHERE id = ? AND apisunat_document_id IS NULL`, [nid]).catch(() => {}); }
             responder(res, err, 'nota-credito');
@@ -475,12 +480,12 @@ module.exports = (db, logAudit) => {
             [x.status || null, x.xml || null, x.cdr || null, x.faults && x.faults.length ? JSON.stringify(x.faults).slice(0, 2000) : null, Apisunat.getPdfUrl(fila.apisunat_document_id, fileName, 'A4', cfg.base_url),
                 rechazado ? 'RECHAZADO' : fila.estado, fila.id]);
         if (rechazado && ['01', '03'].includes(fila.tipo_doc)) {
-            await p.query(`UPDATE operaciones_ordenes_servicio os JOIN facturacion_items fi ON fi.orden_servicio ${COL} = os.codigo_orden ${COL} SET os.factura = NULL WHERE fi.comprobante_id = ? AND os.factura = ?`, [fila.id, fila.numero_completo]).catch(() => {});
+            await p.query(`UPDATE operaciones_ordenes_servicio os JOIN facturacion_servicios fi ON fi.orden_servicio ${COL} = os.codigo_orden ${COL} SET os.factura = NULL WHERE fi.comprobante_id = ? AND os.factura = ?`, [fila.id, fila.numero_completo]).catch(() => {});
         }
         // Nota de crédito total aceptada: el comprobante original queda anulado y sus servicios vuelven a «por facturar»
         if (fila.tipo_doc === '07' && x.status === 'ACEPTADO' && ['01', '02', '06'].includes(fila.motivo_codigo) && fila.doc_ref_id) {
             await p.query(`UPDATE facturacion_comprobantes SET estado = 'ANULADO' WHERE id = ?`, [fila.doc_ref_id]);
-            await p.query(`UPDATE operaciones_ordenes_servicio os JOIN facturacion_items fi ON fi.orden_servicio ${COL} = os.codigo_orden ${COL} SET os.factura = NULL WHERE fi.comprobante_id = ?`, [fila.doc_ref_id]).catch(() => {});
+            await p.query(`UPDATE operaciones_ordenes_servicio os JOIN facturacion_servicios fi ON fi.orden_servicio ${COL} = os.codigo_orden ${COL} SET os.factura = NULL WHERE fi.comprobante_id = ?`, [fila.doc_ref_id]).catch(() => {});
         }
         return x.status;
     }

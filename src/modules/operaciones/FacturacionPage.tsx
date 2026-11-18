@@ -14,6 +14,7 @@ import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Displ
 import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../core/ui/FiltrosListado';
 import { IconoFila } from '../../core/ui/IconoFila';
 import { Combobox } from '../../core/ui/Combobox';
+import { Switch } from '../../core/ui/Switch';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Sheet } from '../../core/ui/Sheet';
@@ -44,7 +45,7 @@ interface Comprobante {
   modo_emision: string | null; usuario: string | null; referencia: string | null; servicios: string | null;
 }
 interface ClienteReg { id: number; razon_social: string; doc: string; direccion: string }
-interface Linea { orden_servicio: string | null; descripcion: string; cantidad: string; valor_unitario: string }
+interface Linea { orden_servicio: string | null; descripcion: string; cantidad: string; valor_unitario: string; grupo?: boolean }
 
 const n = (v: unknown) => Number(v) || 0;
 const r2 = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
@@ -94,6 +95,8 @@ const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLo
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const inicioMesIso = () => { const d = new Date(); d.setDate(1); return iso(d); };
 const fechaCorta = (f?: string | null) => (f ? `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}` : '—');
+// El número se muestra sin ceros a la izquierda, como lo imprime SUNAT (E001-4859): SUNAT acepta de 1 a 8 dígitos. Lo que se envía y se guarda es el número completo.
+const numeroCorto = (n?: string | null) => String(n ?? '').replace(/^([A-Z0-9]{4})-0*(\d+)$/, '$1-$2');
 const abrir = (url?: string | null) => { if (url) window.open(url, '_blank', 'noopener'); };
 // El PDF con el diseño de la empresa (la misma plantilla de las guías); la sesión viaja por cookie
 const verPdfPropio = (c: Comprobante) => {
@@ -147,7 +150,7 @@ export function FacturacionPage() {
   const comprobantesVis = useMemo(() => {
     const t = sinTildes(busqueda.trim());
     return compRango.filter(c => (!sunat || estadoDe(c).texto === sunat) && (!tipoF || c.tipo_doc === tipoF) && (!ambiente || (c.modo_emision ?? '') === ambiente)
-      && (!t || sinTildes(`${c.numero_completo} ${c.cliente_nombre} ${c.cliente_doc} ${c.servicios ?? ''} ${c.referencia ?? ''}`).includes(t)));
+      && (!t || sinTildes(`${c.numero_completo} ${numeroCorto(c.numero_completo)} ${c.cliente_nombre} ${c.cliente_doc} ${c.servicios ?? ''} ${c.referencia ?? ''}`).includes(t)));
   }, [compRango, busqueda, sunat, tipoF, ambiente]);
 
   const activos = (esPend ? [estadoSrv, igvF] : [sunat, tipoF, ambiente]).filter(Boolean).length;
@@ -316,8 +319,8 @@ export function FacturacionPage() {
                       </span>
                     </Celda>
                     <Celda><PastillaSunat c={c} /></Celda>
-                    <Celda mono>{c.numero_completo}</Celda>
-                    <Celda>{NOMBRE_TIPO[c.tipo_doc]}{c.tipo_doc === '07' && c.doc_ref_numero ? <span className="t-footnote c-secondary"> · {c.doc_ref_numero}</span> : null}</Celda>
+                    <Celda mono>{numeroCorto(c.numero_completo)}</Celda>
+                    <Celda>{NOMBRE_TIPO[c.tipo_doc]}{c.tipo_doc === '07' && c.doc_ref_numero ? <span className="t-footnote c-secondary"> · {numeroCorto(c.doc_ref_numero)}</span> : null}</Celda>
                     <Celda>{c.modo_emision === 'produccion' ? 'Producción' : c.modo_emision === 'prueba' ? 'Prueba' : '—'}</Celda>
                     <Celda mono>{fechaCorta(c.fecha_emision)}</Celda>
                     <Celda>{c.cliente_nombre}</Celda>
@@ -415,11 +418,15 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
   const [confirmado, setConfirmado] = useState(false);
   // Solo en factura libre: venta sin IGV (inafecta o exonerada). Con servicios, el IGV sale de cada servicio
   const [sinIgv, setSinIgv] = useState(false);
+  // Varios servicios en UNA línea con descripción propia (facturación por liquidación); la descripción se arma sola mientras la persona no la escriba
+  const [agrupar, setAgrupar] = useState(false);
+  const [descEditada, setDescEditada] = useState(false);
+  const [liquidacion, setLiquidacion] = useState('');
   const clientes = useQuery({ queryKey: ['facturacion', 'clientes'], enabled: open, staleTime: 120_000, queryFn: () => api<{ data: ClienteReg[] }>('/facturacion/clientes').then(r => r.data ?? []) });
 
   useEffect(() => {
     if (!open) return;
-    setError(null); setTipo('01'); setClienteSel(null); setTocoDoc(false); setConsulta(null); setFecha(hoyIso()); setForma('CONTADO'); setDias('30'); setOc(''); setReferencia(''); setObs(''); setConfirmado(false); setSinIgv(false);
+    setError(null); setTipo('01'); setClienteSel(null); setTocoDoc(false); setConsulta(null); setFecha(hoyIso()); setForma('CONTADO'); setDias('30'); setOc(''); setReferencia(''); setObs(''); setConfirmado(false); setSinIgv(false); setAgrupar(false); setDescEditada(false); setLiquidacion('');
     if (libre) {
       setDoc(''); setNombre(''); setDireccion(''); setMoneda('PEN'); setTc(''); setDetPct('0'); setEditCliente(true); setEditCond(true);
       setLineas([{ orden_servicio: null, descripcion: '', cantidad: '1', valor_unitario: '' }]);
@@ -431,11 +438,7 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
     setEditCliente(!d0 || !s0.cliente_nombre); setEditCond(false);
     setMoneda(esUsd(s0.moneda) ? 'USD' : 'PEN'); setTc(esUsd(s0.moneda) && n(s0.tipo_cambio) > 0 ? String(n(s0.tipo_cambio)) : '');
     setDetPct(String(config.detraccion.pct));
-    setLineas(servicios.map(s => ({
-      orden_servicio: s.codigo_orden,
-      descripcion: `SERVICIO DE TRANSPORTE DE CARGA${s.ruta ? ` ${s.ruta}` : ''}${s.es_retorno ? ' (REGRESO)' : ''} - ${s.codigo_orden}`,
-      cantidad: '1', valor_unitario: String(s.valor_sin_igv),
-    })));
+    setLineas(servicios.map(porServicio));
     setReferencia(servicios.map(s => s.codigo_orden).join(', ').slice(0, 120));
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -487,6 +490,32 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
   const venceEl = forma === 'CREDITO' && n(dias) > 0 ? (() => { const d = new Date(`${fecha}T12:00:00`); d.setDate(d.getDate() + n(dias)); return d.toLocaleDateString('en-CA'); })() : null;
   const nombreTipo = tipo === '01' ? 'factura' : 'boleta';
 
+  function porServicio(s: ServicioPF): Linea {
+    return {
+      orden_servicio: s.codigo_orden,
+      descripcion: `SERVICIO DE TRANSPORTE DE CARGA${s.ruta ? ` ${s.ruta}` : ''}${s.es_retorno ? ' (REGRESO)' : ''} - ${s.codigo_orden}`,
+      cantidad: '1', valor_unitario: String(s.valor_sin_igv),
+    };
+  }
+  function descripcionAuto(liq: string) {
+    const fechas = servicios.map(x => x.fecha).filter(Boolean).sort();
+    const periodo = fechas.length ? ` DEL ${fechaCorta(fechas[0])} AL ${fechaCorta(fechas[fechas.length - 1])}` : '';
+    return `POR EL SERVICIO DE TRANSPORTE DE CARGA${periodo} SEGÚN GUÍAS DE REMISIÓN REMITENTE Y TRANSPORTISTA${liq.trim() ? ` QUE SE DETALLA EN LA LIQUIDACIÓN ${liq.trim()} ADJUNTA` : ''}`;
+  }
+  function cambiarAgrupar(v: boolean) {
+    setAgrupar(v); setDescEditada(false);
+    setLineas(prev => {
+      const extras = prev.filter(l => !l.grupo && !l.orden_servicio);
+      if (!v) return [...servicios.map(porServicio), ...extras];
+      const total = Math.round(servicios.reduce((t, x) => t + n(x.valor_sin_igv), 0) * 10000) / 10000;
+      return [{ orden_servicio: null, grupo: true, descripcion: descripcionAuto(liquidacion), cantidad: '1', valor_unitario: String(total) }, ...extras];
+    });
+  }
+  function cambiarLiquidacion(v: string) {
+    setLiquidacion(v);
+    if (agrupar && !descEditada) setLineas(prev => prev.map(l => (l.grupo ? { ...l, descripcion: descripcionAuto(v) } : l)));
+  }
+
   function setLinea(i: number, parche: Partial<Linea>) { setLineas(l => l.map((x, j) => (j === i ? { ...x, ...parche } : x))); }
 
   async function enviar() {
@@ -504,7 +533,8 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
         method: 'POST',
         body: {
           tipo_doc: tipo, moneda, tipo_cambio: moneda === 'USD' ? n(tc) : undefined, fecha_emision: fecha, forma_pago: forma, dias_credito: forma === 'CREDITO' ? n(dias) : 0,
-          detraccion_pct: pctDet, orden_compra: oc, referencia, observacion: obs, afecto_igv: afecto,
+          detraccion_pct: pctDet, orden_compra: oc, referencia, observacion: obs, afecto_igv: afecto, liquidacion: liquidacion.trim() || undefined,
+          servicios: agrupar ? servicios.map(x => x.codigo_orden) : undefined,
           cliente: { id: servicios[0]?.cliente_id ?? null, doc, nombre, direccion },
           items: lineas.map(l => ({ orden_servicio: l.orden_servicio, descripcion: l.descripcion, cantidad: n(l.cantidad), valor_unitario: n(l.valor_unitario) })),
         },
@@ -564,6 +594,12 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
 
           <section className="ga-sec" aria-label="Detalle del comprobante">
             {tituloSeccion(<Package size={16} aria-hidden />, 'Detalle del comprobante', <span className="ga-sec__cuenta">{lineas.length} {lineas.length === 1 ? 'línea' : 'líneas'} · valores sin IGV</span>)}
+            {servicios.length > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--s-3)' }}>
+                <div><div style={{ fontWeight: 600, fontSize: '0.875rem' }}>Agrupar en una sola línea</div><div className="t-footnote c-secondary">Una línea con el total de los {servicios.length} servicios y una descripción tuya, como en las facturas por liquidación</div></div>
+                <Switch label="Agrupar en una sola línea" checked={agrupar} onChange={cambiarAgrupar} />
+              </div>
+            )}
             <div className="ga-tabla-wrap">
               <table className="ga-tabla">
                 <thead><tr><th>Descripción</th><th className="num" style={{ width: 64 }}>Cant.</th><th className="num" style={{ width: 120 }}>Valor unit.</th><th className="num" style={{ width: 120 }}>Importe</th><th style={{ width: 36 }} aria-label="Quitar" /></tr></thead>
@@ -573,13 +609,14 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
                     return (
                       <tr key={i}>
                         <td>
-                          <TextInput aria-label="Descripción" value={l.descripcion} onChange={e => setLinea(i, { descripcion: e.target.value })} />
+                          <TextInput aria-label="Descripción" value={l.descripcion} onChange={e => { setLinea(i, { descripcion: e.target.value }); if (l.grupo) setDescEditada(true); }} />
+                          {l.grupo && <span className="t-footnote c-secondary" style={{ display: 'block', marginTop: 4 }}>Agrupa {servicios.length} servicios: {servicios.map(x => x.codigo_orden).join(', ')}</span>}
                           {s && <span className="t-footnote c-secondary" style={{ display: 'block', marginTop: 4 }}>Flete acordado {formatMoneda(n(s.costo_flete), moneda)} · {etiquetaIgv(s.modo_igv)}</span>}
                         </td>
-                        <td className="num">{s ? l.cantidad : <TextInput aria-label="Cantidad" inputMode="decimal" value={l.cantidad} onChange={e => setLinea(i, { cantidad: e.target.value })} />}</td>
-                        <td className="num">{s ? formatMoneda(n(l.valor_unitario), moneda) : <TextInput aria-label="Valor unitario" inputMode="decimal" value={l.valor_unitario} onChange={e => setLinea(i, { valor_unitario: e.target.value })} />}</td>
+                        <td className="num">{s || l.grupo ? l.cantidad : <TextInput aria-label="Cantidad" inputMode="decimal" value={l.cantidad} onChange={e => setLinea(i, { cantidad: e.target.value })} />}</td>
+                        <td className="num">{s || l.grupo ? formatMoneda(n(l.valor_unitario), moneda) : <TextInput aria-label="Valor unitario" inputMode="decimal" value={l.valor_unitario} onChange={e => setLinea(i, { valor_unitario: e.target.value })} />}</td>
                         <td className="num">{formatMoneda(r2(n(l.cantidad) * n(l.valor_unitario)), moneda)}</td>
-                        <td>{!s && lineas.length > 1 && <Button variant="plain" size="sm" iconOnly icon={<Trash2 size={14} />} aria-label="Quitar línea" onClick={() => setLineas(x => x.filter((_, j) => j !== i))} />}</td>
+                        <td>{!s && !l.grupo && lineas.length > 1 && <Button variant="plain" size="sm" iconOnly icon={<Trash2 size={14} />} aria-label="Quitar línea" onClick={() => setLineas(x => x.filter((_, j) => j !== i))} />}</td>
                       </tr>
                     );
                   })}
@@ -605,6 +642,7 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
                 <dt>Moneda</dt>
                 <dd><b>{moneda === 'USD' ? `Dólares · T.C. ${tc || '—'}` : 'Soles'}</b></dd>
                 {libre && <><dt>IGV</dt><dd><b>{sinIgv ? 'Sin IGV (inafecta o exonerada)' : 'Gravado 18 %'}</b></dd></>}
+                {liquidacion && <><dt>Liquidación</dt><dd><b>{liquidacion}</b></dd></>}
                 {tipo === '01' && <><dt>Detracción</dt><dd><b>{pctDet > 0 ? `${pctDet} % · ${formatMoneda(detraccion, 'PEN')}` : 'Sin detracción'}</b>{pctDet > 0 && <span>Se deposita en la cuenta del Banco de la Nación</span>}</dd></>}
                 {(oc || obs) && <><dt>Referencias</dt><dd>{oc && <b>OC del cliente: {oc}</b>}{obs && <span>{obs}</span>}</dd></>}
               </dl>
@@ -619,6 +657,7 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
                   {forma === 'CREDITO' && <Field label="Días de crédito" hint="Vence la fecha de emisión más estos días">{p => <TextInput {...p} inputMode="numeric" value={dias} onChange={e => setDias(e.target.value.replace(/\D/g, ''))} />}</Field>}
                   {tipo === '01' && <Field label="Detracción (%)" hint={`Transporte de carga: ${config.detraccion.pct} % desde S/ ${config.detraccion.minimo}`}>{p => <TextInput {...p} inputMode="decimal" value={detPct} onChange={e => setDetPct(e.target.value)} />}</Field>}
                   <Field label="Orden de compra del cliente (opcional)">{p => <TextInput {...p} value={oc} onChange={e => setOc(e.target.value)} />}</Field>
+                  <Field label="N.º de liquidación (opcional)" hint="Se imprime en el comprobante y, si agrupas, entra en la descripción">{p => <TextInput {...p} value={liquidacion} onChange={e => cambiarLiquidacion(e.target.value)} />}</Field>
                 </div>
                 <Field label="Observación (opcional)">{p => <TextInput {...p} value={obs} onChange={e => setObs(e.target.value)} />}</Field>
               </>
@@ -677,7 +716,7 @@ function NotaCreditoSheet({ comprobante: c, config, onClose, onEmitida }: { comp
   }
 
   return (
-    <Sheet open={!!c} onClose={() => !enviando && onClose()} title={c ? `Nota de crédito · ${c.numero_completo}` : 'Nota de crédito'}
+    <Sheet open={!!c} onClose={() => !enviando && onClose()} title={c ? `Nota de crédito · ${numeroCorto(c.numero_completo)}` : 'Nota de crédito'}
       footer={<>
         <Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
         <Button variant="primary" icon={<Send size={16} />} loading={enviando} onClick={() => { void emitir(); }}>Emitir nota de crédito</Button>
@@ -686,7 +725,7 @@ function NotaCreditoSheet({ comprobante: c, config, onClose, onEmitida }: { comp
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
           {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
           {config.modo === 'produccion' && <Notice tone="error">Producción: la nota de crédito tiene validez tributaria ante SUNAT.</Notice>}
-          <Notice>{NOMBRE_TIPO[c.tipo_doc]} {c.numero_completo} · {c.cliente_nombre} · {formatMoneda(n(c.total), mon)}</Notice>
+          <Notice>{NOMBRE_TIPO[c.tipo_doc]} {numeroCorto(c.numero_completo)} · {c.cliente_nombre} · {formatMoneda(n(c.total), mon)}</Notice>
           <Field label="Motivo">{p => <SelectInput {...p} value={motivo} onChange={e => setMotivo(e.target.value)}>{config.motivos_nc.map(x => <option key={x.codigo} value={x.codigo}>{x.texto}{x.total ? '' : ' (parcial)'}</option>)}</SelectInput>}</Field>
           {m && !m.total && <Field label="Monto a descontar (sin IGV)" hint={`Hasta ${formatMoneda(n(c.base), mon)}`}>{p => <TextInput {...p} inputMode="decimal" value={monto} onChange={e => setMonto(e.target.value)} />}</Field>}
           <Field label="Detalle del motivo (opcional)">{p => <TextInput {...p} value={texto} onChange={e => setTexto(e.target.value)} />}</Field>

@@ -26,6 +26,7 @@ model FacturacionComprobante {
   neto_pendiente       Decimal   @default(0.00) @db.Decimal(14, 2)
   orden_compra         String?   @db.VarChar(60)
   referencia           String?   @db.VarChar(120)
+  liquidacion          String?   @db.VarChar(60)
   observacion          String?   @db.Text
   doc_ref_id           Int?
   doc_ref_numero       String?   @db.VarChar(14)
@@ -65,4 +66,15 @@ model FacturacionItem {
   @@index([comprobante_id], map: "idx_fitem_comp")
   @@index([orden_servicio], map: "idx_fitem_servicio")
   @@map("facturacion_items")
+}
+
+// Servicios que cubre cada comprobante (una línea agrupada puede cubrir varios)
+model FacturacionServicio {
+  id             Int    @id @default(autoincrement())
+  comprobante_id Int
+  orden_servicio String @db.VarChar(40)
+
+  @@index([comprobante_id], map: "idx_fserv_comp")
+  @@index([orden_servicio], map: "idx_fserv_os")
+  @@map("facturacion_servicios")
 }
