@@ -121,12 +121,6 @@ const SECCIONES_BASE: NavSection[] = [
     ],
   },
   {
-    title: 'Contabilidad',
-    items: [
-      { key: 'sire', label: 'SIRE · Ventas y compras', to: '/contabilidad/sire', icon: Landmark, permissions: ver('contabilidad_sire') },
-    ],
-  },
-  {
     title: 'Flota',
     items: [
       { key: 'placas', label: 'Placas', to: '/placas', icon: Truck, permissions: ver('placas') },
@@ -189,9 +183,9 @@ const SECCIONES_BASE: NavSection[] = [
     ],
   },
   {
-    title: 'Terceros',
+    title: 'Directorio',
     items: [
-      { key: 'terceros', label: 'Clientes y proveedores', to: '/terceros/clientes', icon: Users, permissions: ver('clientes', 'prov_inv') },
+      { key: 'directorio', label: 'Directorio', to: '/directorio/personal', icon: IdCard, permissions: ver('rrhh_personal', 'cond') },
     ],
   },
   {
@@ -221,6 +215,18 @@ const SECCIONES_BASE: NavSection[] = [
     ],
   },
   {
+    title: 'Terceros',
+    items: [
+      { key: 'terceros', label: 'Clientes y proveedores', to: '/terceros/clientes', icon: Users, permissions: ver('clientes', 'prov_inv') },
+    ],
+  },
+  {
+    title: 'Contabilidad',
+    items: [
+      { key: 'sire', label: 'SIRE · Ventas y compras', to: '/contabilidad/sire', icon: Landmark, permissions: ver('contabilidad_sire') },
+    ],
+  },
+  {
     title: 'Conductor',
     items: [
       { key: 'conductor-portal', label: 'Mi viaje y rendición', to: '/personas/portal-conductor', icon: IdCard, permissions: ver('conductor_portal') },
@@ -231,12 +237,6 @@ const SECCIONES_BASE: NavSection[] = [
     items: [
       { key: 'seg-unidades', label: 'Checklist "Unidades"', to: '/personas/seg-unidades', icon: ShieldCheck, permissions: ver('seguridad_unidades') },
       { key: 'seg-status', label: 'Status "Unidades en Base"', to: '/seguridad/unidades-base', icon: MapPin, permissions: ver('seguridad_unidades') },
-    ],
-  },
-  {
-    title: 'Directorio',
-    items: [
-      { key: 'directorio', label: 'Directorio', to: '/directorio/personal', icon: IdCard, permissions: ver('rrhh_personal', 'cond') },
     ],
   },
   {
