@@ -25,7 +25,7 @@ import { ImportarProveedoresSheet, descargarPlantillaProveedores } from './Impor
 
 // Tonos para las iniciales: la misma persona siempre tiene el mismo color
 const TONOS = ['#f56300', '#0a84ff', '#30a46c', '#bf5af2', '#ff375f', '#5e5ce6', '#ac8e68', '#0fa3b1'];
-const tono = (s: string) => TONOS[[...s].reduce((a, ch) => a + ch.charCodeAt(0), 0) % TONOS.length];
+export const tono = (s: string) => TONOS[[...s].reduce((a, ch) => a + ch.charCodeAt(0), 0) % TONOS.length];
 const nombreMostrado = (p: ProveedorInv) => p.razon_social?.trim() || p.nombre;
 
 /** Motivo por el que un proveedor está por regularizar (null si está en regla): sin documento o con un RUC/DNI que no tiene 11 u 8 dígitos */
@@ -292,7 +292,7 @@ export function ProveedoresPage({ eyebrow = 'Terceros', selector, soloLectura = 
 
 // ─── Tabla web ───────────────────────────────────────────────────────────────
 
-function Avatar({ nombre, empresa }: { nombre: string; empresa: boolean }) {
+export function Avatar({ nombre, empresa }: { nombre: string; empresa: boolean }) {
   return (
     <span className={`pv-avatar pv-avatar--chico${empresa ? ' pv-avatar--empresa' : ''}`} aria-hidden style={{ background: `linear-gradient(145deg, ${tono(nombre)}, color-mix(in srgb, ${tono(nombre)} 70%, #000))` }}>
       {empresa ? <Building2 size={14} /> : initials(nombre)}
@@ -301,7 +301,7 @@ function Avatar({ nombre, empresa }: { nombre: string; empresa: boolean }) {
 }
 
 /** Llamar, WhatsApp y correo sin abrir la ficha */
-function Contactar({ nombre, telefono, correo }: { nombre: string; telefono?: string | null; correo?: string | null }) {
+export function Contactar({ nombre, telefono, correo }: { nombre: string; telefono?: string | null; correo?: string | null }) {
   const tel = (telefono ?? '').trim(); const wa = whatsapp(tel);
   if (!tel && !correo) return <span style={{ color: 'var(--label-3)' }}>—</span>;
   return (
@@ -315,7 +315,7 @@ function Contactar({ nombre, telefono, correo }: { nombre: string; telefono?: st
 
 // ─── Lista por letras ────────────────────────────────────────────────────────
 
-function FilaDirectorio({ nombre, sub, semilla, empresa, telefono, correo, onAbrir }: {
+export function FilaDirectorio({ nombre, sub, semilla, empresa, telefono, correo, onAbrir }: {
   nombre: string; sub: string; semilla: string; empresa: boolean; telefono?: string | null; correo?: string | null; onAbrir: () => void;
 }) {
   const tel = (telefono ?? '').trim();
