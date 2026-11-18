@@ -1,12 +1,13 @@
 import '../mantenimiento/mant.css';
+import './portalConductor.css';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, CloudOff, Paperclip, Pencil, Plus, Search, Smartphone, Trash2, Truck } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { ChevronLeft, CircleAlert, CloudOff, Fuel, MapPin, Navigation, Paperclip, Pencil, Plus, Receipt, Trash2, Truck, Wrench } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
-import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ConductorFallaSheet } from './ConductorFallaSheet';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
@@ -24,7 +25,8 @@ interface Deposito { id: number; serie: string; numero: string; motivo: string; 
 interface Portal {
   ok: boolean; message?: string;
   conductor?: { nombre: string; dni: string };
-  viaje?: { id: number; codigo: string; placa_tracto: string; placa_remolque: string; origen: string; destino: string; ruta: string; estado: string; fecha: string } | null;
+  sin_datos?: boolean;
+  viaje?: { id: number; codigo: string; placa_tracto: string; placa_remolque: string; origen: string; destino: string; direccion_partida: string; direccion_llegada: string; ruta: string; estado: string; fecha: string } | null;
   balance?: { total_asignado: number; total_rendido: number; saldo_restante: number };
   depositos?: Deposito[];
   gastos?: Gasto[];
@@ -38,7 +40,6 @@ type Seccion = 'gastos' | 'fallas' | 'vales';
 const MOTIVOS = ['Balanza y pesaje', 'Cochera / Parqueo de ruta', 'Estibadores / Carga y descarga menor', 'Lavado y engrase de unidad en viaje',
   'Peajes (físico / telepeaje)', 'Pernocte / Hospedaje en ruta', 'Viáticos / Alimentación choferes'];
 const s = (v: unknown) => 'S/ ' + (Number(v) || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const colorEstado = (e: string) => ({ ACTIVO: 'amber', INICIADO: 'accent', FINALIZADO: 'green', LIQUIDADO: 'green' }[String(e).toUpperCase()] ?? 'gray');
 const fechaHora = (iso: string) => new Date(iso).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
 
 /** Fecha local AAAA-MM-DD (la del teléfono, al registrar el gasto) */
@@ -59,38 +60,42 @@ function usePendientes() {
   return lista;
 }
 
-// Personas y seguridad › Portal del conductor: viaje asignado, saldo de viáticos y rendición de gastos.
-// Sin señal: se ve la última copia guardada del conductor y los gastos quedan en el teléfono hasta enviarse.
+// Portal del conductor: entra con su propio usuario (su DNI y nombre salen de la cuenta), el sistema busca su viaje activo
+// y le muestra la unidad, la ruta y tres accesos: vales de combustible, fallas en ruta y gastos en ruta.
+// Sin señal: se ve la última copia guardada y los gastos quedan en el teléfono hasta enviarse.
 export function PortalConductorPage() {
-  const { can } = useAuth();
+  const { user, can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
+  const reducir = useReducedMotion();
   const pendientes = usePendientes();
   const [entrada, setEntrada] = useState('');
   const [consulta, setConsulta] = useState('');
+  const [otro, setOtro] = useState(false);
   const [nuevo, setNuevo] = useState(false);
   const [editando, setEditando] = useState<Gasto | null>(null);
   const [porEliminar, setPorEliminar] = useState<Eliminar | null>(null);
   const [ocupado, setOcupado] = useState(false);
-  const [seccion, setSeccion] = useState<Seccion>('gastos');
+  const [vista, setVista] = useState<Seccion | null>(null);
   const [reportando, setReportando] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const puedeConsultarOtro = can('usuarios.editar');
 
   const q = useQuery<Portal>({
-    queryKey: ['personas', 'portal-conductor', consulta],
-    enabled: !!consulta,
+    queryKey: ['personas', 'portal-conductor', user?.name ?? '', consulta],
     retry: false, // sin señal se usa la copia del teléfono sin esperar reintentos
     queryFn: async () => {
       const esDni = /^\d{8}$/.test(consulta);
-      const clave = consulta.trim().toUpperCase();
+      const clave = consulta ? consulta.trim().toUpperCase() : `YO:${(user?.name ?? '').toUpperCase()}`;
+      const parametro = !consulta ? 'yo=1' : `${esDni ? 'dni' : 'nombre'}=${encodeURIComponent(consulta)}`;
       try {
-        const datos = await api<Portal>(`/operaciones/conductor-portal/viaje-activo?${esDni ? 'dni' : 'nombre'}=${encodeURIComponent(consulta)}`);
+        const datos = await api<Portal>(`/operaciones/conductor-portal/viaje-activo?${parametro}`);
         guardarViaje(clave, datos).catch(() => {}); // copia para usarla sin señal
         return datos;
       } catch (err) {
         if (!sinSenal(err)) throw err;
         const copia = await leerViaje(clave).catch(() => null);
-        if (!copia) throw new Error('No hay señal y este conductor no tiene datos guardados en el teléfono. Consulta su viaje con señal una vez.');
+        if (!copia) throw new Error('No hay señal y no hay datos guardados en el teléfono. Abre tu viaje una vez con señal.');
         return { ...(copia.datos as Portal), _sinSenal: true, _guardadoEn: copia.guardado_en };
       }
     },
@@ -106,7 +111,7 @@ export function PortalConductorPage() {
   // Al abrir la pantalla se intenta enviar lo que quedó guardado sin señal
   useEffect(() => { void enviarPendientes(); }, []);
 
-  function buscar(e: FormEvent) { e.preventDefault(); setConsulta(entrada.trim()); }
+  function buscar(e: FormEvent) { e.preventDefault(); setConsulta(entrada.trim()); setVista(null); }
 
   const r = q.data;
   const viaje = r?.viaje;
@@ -122,8 +127,9 @@ export function PortalConductorPage() {
     saldo: r.balance.saldo_restante - sumaPendientes,
   };
   const totalPendientes = pendientes.length;
+  const totalGastos = (r?.gastos?.length ?? 0) + pendientesViaje.length;
 
-  // Fallas y vales del viaje, como en el clásico (se cargan al abrir el viaje para mostrar los contadores)
+  // Fallas y vales del viaje (se cargan al abrir el viaje para mostrar los contadores)
   const codigo = viaje?.codigo ?? '';
   const fallasQ = useQuery({ queryKey: ['personas', 'portal-fallas', codigo], enabled: !!codigo && !r?._sinSenal, queryFn: () => cargarFallasViaje(codigo) });
   const valesQ = useQuery({ queryKey: ['personas', 'portal-vales', codigo], enabled: !!codigo && !r?._sinSenal, queryFn: () => cargarValesViaje(codigo) });
@@ -155,13 +161,14 @@ export function PortalConductorPage() {
     } finally { setEnviando(false); }
   }
 
+  const primerNombre = (r?.conductor?.nombre || user?.name || '').trim().split(/\s+/)[0] ?? '';
+  const entra = reducir ? { opacity: 0 } : { opacity: 0, x: 24 };
+  const resorte = { type: 'spring' as const, bounce: 0, duration: 0.4 };
+
   return (
-    <Page>
-      <PageHeader
-        eyebrow="Personas y seguridad"
-        title="Portal del conductor"
-        subtitle="Viaje asignado, saldo de viáticos y rendición de gastos"
-      />
+    <Page narrow>
+      <PageHeader eyebrow="Conductor" title={primerNombre ? `Hola, ${primerNombre[0].toUpperCase()}${primerNombre.slice(1).toLowerCase()}` : 'Mi viaje'}
+        subtitle={viaje ? 'Tu viaje de hoy, tus vales, fallas y gastos en ruta' : 'Aquí verás tu viaje cuando te asignen uno'} />
 
       {totalPendientes > 0 && (
         <div style={{ marginBottom: 'var(--s-3)' }}>
@@ -174,13 +181,6 @@ export function PortalConductorPage() {
         </div>
       )}
 
-      <form onSubmit={buscar} style={{ display: 'flex', gap: 'var(--s-2)', marginBottom: 'var(--s-3)' }}>
-        <div style={{ flex: 1 }}>
-          <TextInput value={entrada} onChange={e => setEntrada(e.target.value)} placeholder="DNI (8 dígitos) o nombre del conductor…" aria-label="Conductor" />
-        </div>
-        <Button type="submit" variant="primary" icon={<Search size={16} />} disabled={!entrada.trim()} loading={q.isFetching}>Buscar</Button>
-      </form>
-
       {q.isError && <Notice tone="error">{errorMessage(q.error)}</Notice>}
       {r?._sinSenal && (
         <div style={{ marginBottom: 'var(--s-3)' }}>
@@ -189,56 +189,95 @@ export function PortalConductorPage() {
           </Notice>
         </div>
       )}
-      {q.isFetching && !r ? <PageLoader /> : !consulta ? (
-        <EmptyState icon={<Smartphone size={28} />} title="Consulta un conductor">Escribe su DNI o nombre para ver su viaje, el saldo de viáticos y los gastos que rindió.</EmptyState>
-      ) : r && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
-          <div className="tarjeta__lista">
-            <div className="dato"><span className="dato__label">Conductor</span><span className="dato__valor" style={{ fontWeight: 700 }}>{r.conductor?.nombre ?? '—'}</span></div>
-            {r.conductor?.dni && <div className="dato"><span className="dato__label">DNI</span><span className="dato__valor dato__valor--mono">{r.conductor.dni}</span></div>}
-          </div>
 
-          {!viaje ? (
-            <Notice tone="neutral">{r.message ?? 'No se encontró un viaje asignado para este conductor.'}</Notice>
-          ) : (
-            <>
-              <div className="tarjeta__lista">
-                <div className="dato" style={{ flexDirection: 'row', alignItems: 'center', gap: 'var(--s-3)' }}>
-                  <Truck size={20} style={{ color: 'var(--accent)' }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{viaje.placa_tracto}{viaje.placa_remolque && viaje.placa_remolque !== '---' ? ` + ${viaje.placa_remolque}` : ''}</div>
-                    <div style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>Viaje {viaje.codigo} · {viaje.ruta} · {viaje.fecha}</div>
+      {q.isFetching && !r ? <PageLoader /> : r && (
+        <AnimatePresence mode="wait" initial={false}>
+          {!vista || !viaje ? (
+            <motion.div key="inicio" className="pc" initial={entra} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={resorte}>
+              {!viaje ? (
+                <EmptyState icon={<Truck size={28} />} title={r.sin_datos ? 'Falta tu DNI en el sistema' : 'No tienes un viaje activo'}>
+                  {r.sin_datos ? 'Pide a administración que registre tu DNI en tu usuario para encontrar tu viaje.' : (r.message ?? 'Cuando te asignen un viaje aparecerá aquí con la unidad, la ruta y los accesos.')}
+                </EmptyState>
+              ) : (
+                <>
+                  <section className="pc-hero" aria-label="Viaje activo">
+                    <div className="pc-hero__cab">
+                      <span className="pc-estado"><span className="pc-estado__punto" aria-hidden />{String(viaje.estado).toUpperCase() === 'INICIADO' ? 'En ruta' : 'Viaje activo'}</span>
+                      <span className="pc-hero__fecha">{viaje.fecha}</span>
+                    </div>
+                    <p className="pc-hero__aviso">Tienes un viaje activo</p>
+                    <h2 className="pc-hero__codigo">{viaje.codigo}</h2>
+
+                    <div className="pc-unidades">
+                      <div className="pc-unidad"><span className="pc-unidad__label">Tracto</span><span className="pc-unidad__placa">{viaje.placa_tracto || '—'}</span></div>
+                      <div className="pc-unidad"><span className="pc-unidad__label">Remolque / carreta</span><span className="pc-unidad__placa">{viaje.placa_remolque && viaje.placa_remolque !== '---' ? viaje.placa_remolque : '—'}</span></div>
+                    </div>
+
+                    <div className="pc-ruta">
+                      <PuntoRuta tipo="carga" titulo="Ubicación de la carga" lugar={viaje.origen} direccion={viaje.direccion_partida} />
+                      <PuntoRuta tipo="entrega" titulo="Ubicación de la entrega" lugar={viaje.destino} direccion={viaje.direccion_llegada} />
+                    </div>
+                  </section>
+
+                  <div className="pc-accesos">
+                    <button type="button" className="pc-acceso" onClick={() => { haptic('selection'); setVista('vales'); }}>
+                      <span className="pc-acceso__icono pc-acceso__icono--vale"><Fuel size={22} strokeWidth={2} /></span>
+                      <span className="pc-acceso__titulo">Vales de combustible</span>
+                      <span className="pc-acceso__sub">{valesQ.data ? `${valesQ.data.length} en este viaje` : 'Diésel y urea'}</span>
+                    </button>
+                    <button type="button" className="pc-acceso" onClick={() => { haptic('selection'); setVista('fallas'); }}>
+                      <span className="pc-acceso__icono pc-acceso__icono--falla"><Wrench size={22} strokeWidth={2} /></span>
+                      <span className="pc-acceso__titulo">Reporte de fallas en ruta</span>
+                      <span className="pc-acceso__sub">{fallasQ.data ? `${fallasQ.data.length} reportada${fallasQ.data.length === 1 ? '' : 's'}` : 'Avisa una avería'}</span>
+                    </button>
+                    <button type="button" className="pc-acceso" onClick={() => { haptic('selection'); setVista('gastos'); }}>
+                      <span className="pc-acceso__icono pc-acceso__icono--gasto"><Receipt size={22} strokeWidth={2} /></span>
+                      <span className="pc-acceso__titulo">Gastos en ruta</span>
+                      <span className="pc-acceso__sub">{balance ? `Saldo ${s(balance.saldo)}` : `${totalGastos} registrados`}</span>
+                    </button>
                   </div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: `var(--${colorEstado(viaje.estado)}-ink)` }}>{viaje.estado}</span>
+                </>
+              )}
+
+              {puedeConsultarOtro && (
+                <div className="pc-otro">
+                  {!otro ? (
+                    <button type="button" className="pc-otro__abrir" onClick={() => setOtro(true)}>Consultar a otro conductor</button>
+                  ) : (
+                    <form onSubmit={buscar} style={{ display: 'flex', gap: 'var(--s-2)' }}>
+                      <div style={{ flex: 1 }}><TextInput value={entrada} onChange={e => setEntrada(e.target.value)} placeholder="DNI (8 dígitos) o nombre" aria-label="Conductor" autoFocus /></div>
+                      <Button type="submit" variant="primary" disabled={!entrada.trim()} loading={q.isFetching}>Ver</Button>
+                      {consulta && <Button variant="secondary" onClick={() => { setConsulta(''); setEntrada(''); }}>Mi viaje</Button>}
+                    </form>
+                  )}
                 </div>
-              </div>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div key={vista} className="pc" initial={entra} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={resorte}>
+              <button type="button" className="pc-atras" onClick={() => setVista(null)}><ChevronLeft size={20} strokeWidth={2.2} />Mi viaje</button>
+              <h2 className="pc-titulo">{vista === 'vales' ? 'Vales de combustible' : vista === 'fallas' ? 'Fallas en ruta' : 'Gastos en ruta'}</h2>
+              <p className="pc-subtitulo">Viaje {viaje.codigo} · {viaje.placa_tracto}</p>
 
-              <SegmentedControl<Seccion> block label="Sección del viaje" value={seccion} onChange={setSeccion}
-                options={[
-                  { value: 'gastos', label: `Gastos (${(r.gastos?.length ?? 0) + pendientesViaje.length})` },
-                  { value: 'fallas', label: `Fallas (${fallasQ.data?.length ?? 0})` },
-                  { value: 'vales', label: `Vales (${valesQ.data?.length ?? 0})` },
-                ]} />
-
-              {seccion === 'fallas' && (
+              {vista === 'fallas' && (
                 <div className="tarjeta__lista">
                   <div className="dato" style={{ flexDirection: 'row', alignItems: 'center', gap: 'var(--s-3)' }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700 }}>Reporte de Fallas</div>
+                      <div style={{ fontWeight: 700 }}>Reporte de fallas</div>
                       <div style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>Reporta averías de tu tracto y carreta en ruta.</div>
                     </div>
-                    <Button variant="primary" disabled={!puedeEditar || !!r._sinSenal} onClick={() => setReportando(true)}>Reportar Falla</Button>
+                    <Button variant="primary" disabled={!puedeEditar || !!r._sinSenal} onClick={() => setReportando(true)}>Reportar falla</Button>
                   </div>
                   <ListaFallas datos={fallasQ.data} cargando={fallasQ.isFetching && !fallasQ.data} />
                 </div>
               )}
 
-              {seccion === 'vales' && (
+              {vista === 'vales' && (
                 <div className="tarjeta__lista">
                   <button type="button" className="dato" aria-disabled="true" onClick={() => toast(`Módulo de Vales de Combustible para Conductor. ${MENSAJE_VALES}`)}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 'var(--s-3)', width: '100%', textAlign: 'left', background: 'transparent', border: 0, cursor: 'pointer' }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700 }}>Vale de Combustible <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--amber-ink)' }}>PRÓXIMAMENTE</span></div>
+                      <div style={{ fontWeight: 700 }}>Registrar vale <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--amber-ink)' }}>PRÓXIMAMENTE</span></div>
                       <div style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>Registro y abastecimiento de Diésel / Urea en ruta.</div>
                     </div>
                   </button>
@@ -246,68 +285,72 @@ export function PortalConductorPage() {
                 </div>
               )}
 
-              {seccion === 'gastos' && balance && (
-                <div className="inv-metricas">
-                  <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.0625rem' }}>{s(balance.asignado)}</span><span className="inv-metrica__label">Asignado</span></div>
-                  <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.0625rem' }}>{s(balance.rendido)}</span><span className="inv-metrica__label">Rendido</span></div>
-                  <div className="inv-metrica">
-                    <span className="inv-metrica__num" style={{ fontSize: '1.0625rem', color: balance.saldo < 0 ? 'var(--red-ink)' : 'var(--green-ink)' }}>{s(balance.saldo)}</span>
-                    <span className="inv-metrica__label">Saldo</span>
-                  </div>
-                </div>
-              )}
-
-              {seccion === 'gastos' && (r.depositos ?? []).length > 0 && (
-                <div>
-                  <p className="tarjeta__grupo-titulo">Depósitos y cajas ({r.depositos!.length})</p>
-                  <div className="tarjeta__lista">
-                    {r.depositos!.map(d => (
-                      <div key={d.id} className="dato">
-                        <span className="dato__label">{d.serie}-{d.numero} · {d.fecha} · {d.estado}</span>
-                        <span className="dato__valor">{[d.motivo, d.sub_motivo].filter(Boolean).join(' › ')} — <strong>{d.tipo_movimiento === 'INGRESO' ? '- ' : ''}{s(d.importe_total)}</strong></span>
+              {vista === 'gastos' && (
+                <>
+                  {balance && (
+                    <div className="inv-metricas">
+                      <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.0625rem' }}>{s(balance.asignado)}</span><span className="inv-metrica__label">Asignado</span></div>
+                      <div className="inv-metrica"><span className="inv-metrica__num" style={{ fontSize: '1.0625rem' }}>{s(balance.rendido)}</span><span className="inv-metrica__label">Rendido</span></div>
+                      <div className="inv-metrica">
+                        <span className="inv-metrica__num" style={{ fontSize: '1.0625rem', color: balance.saldo < 0 ? 'var(--red-ink)' : 'var(--green-ink)' }}>{s(balance.saldo)}</span>
+                        <span className="inv-metrica__label">Saldo</span>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div hidden={seccion !== 'gastos'}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--s-2)' }}>
-                  <p className="tarjeta__grupo-titulo" style={{ margin: 0 }}>Gastos rendidos ({(r.gastos?.length ?? 0) + pendientesViaje.length})</p>
-                  {puedeEditar && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setNuevo(true)}>Registrar gasto</Button>}
-                </div>
-                <div className="tarjeta__lista">
-                  {pendientesViaje.length === 0 && (r.gastos ?? []).length === 0 && <div className="dato"><span className="dato__valor" style={{ color: 'var(--label-2)' }}>Aún no hay gastos rendidos.</span></div>}
-                  {pendientesViaje.map(g => (
-                    <div key={g.uuid} className="dato" style={{ flexDirection: 'row', alignItems: 'center', gap: 'var(--s-3)' }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: '0.9375rem' }}>{g.sub_motivo}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{fechaHora(g.registrado_en)}{g.detalle ? ` · ${g.detalle}` : ''}</div>
-                        <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--amber-ink)' }}>PENDIENTE DE ENVIAR</span>
-                        {g.ultimo_error && <div style={{ fontSize: '0.6875rem', color: 'var(--red-ink)' }}>{g.ultimo_error}</div>}
-                      </div>
-                      <strong>{s(g.importe)}</strong>
-                      {puedeEditar && <button type="button" className="placas-limpiar" style={{ color: 'var(--red-ink)' }} onClick={() => setPorEliminar({ tipo: 'pendiente', gasto: g })} aria-label="Quitar gasto del teléfono"><Trash2 size={16} /></button>}
                     </div>
-                  ))}
-                  {(r.gastos ?? []).map(g => (
-                    <div key={g.id} className="dato" style={{ flexDirection: 'row', alignItems: 'center', gap: 'var(--s-3)' }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: '0.9375rem' }}>{g.sub_motivo || g.tipo_gasto}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{g.fecha_formateada}{g.detalle ? ` · ${g.detalle}` : ''}</div>
-                        {g.estado === 'RECHAZADO' && <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--red-ink)' }}>RECHAZADO</span>}
+                  )}
+
+                  {(r.depositos ?? []).length > 0 && (
+                    <div>
+                      <p className="tarjeta__grupo-titulo">Depósitos y cajas ({r.depositos!.length})</p>
+                      <div className="tarjeta__lista">
+                        {r.depositos!.map(d => (
+                          <div key={d.id} className="dato">
+                            <span className="dato__label">{d.serie}-{d.numero} · {d.fecha} · {d.estado}</span>
+                            <span className="dato__valor">{[d.motivo, d.sub_motivo].filter(Boolean).join(' › ')} — <strong>{d.tipo_movimiento === 'INGRESO' ? '- ' : ''}{s(d.importe_total)}</strong></span>
+                          </div>
+                        ))}
                       </div>
-                      <strong>{s(g.importe)}</strong>
-                      {g.sustento_url && <a href={g.sustento_url} target="_blank" rel="noreferrer" className="placas-limpiar" aria-label="Ver sustento"><Paperclip size={16} /></a>}
-                      {puedeEditar && <button type="button" className="placas-limpiar" onClick={() => setEditando(g)} aria-label="Editar gasto"><Pencil size={16} /></button>}
-                      {puedeEditar && <button type="button" className="placas-limpiar" style={{ color: 'var(--red-ink)' }} onClick={() => setPorEliminar({ tipo: 'servidor', gasto: g })} aria-label="Eliminar gasto"><Trash2 size={16} /></button>}
                     </div>
-                  ))}
-                </div>
-              </div>
-            </>
+                  )}
+
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--s-2)' }}>
+                      <p className="tarjeta__grupo-titulo" style={{ margin: 0 }}>Gastos rendidos ({totalGastos})</p>
+                      {puedeEditar && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setNuevo(true)}>Registrar gasto</Button>}
+                    </div>
+                    <div className="tarjeta__lista">
+                      {pendientesViaje.length === 0 && (r.gastos ?? []).length === 0 && <div className="dato"><span className="dato__valor" style={{ color: 'var(--label-2)' }}>Aún no hay gastos rendidos.</span></div>}
+                      {pendientesViaje.map(g => (
+                        <div key={g.uuid} className="dato" style={{ flexDirection: 'row', alignItems: 'center', gap: 'var(--s-3)' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, fontSize: '0.9375rem' }}>{g.sub_motivo}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{fechaHora(g.registrado_en)}{g.detalle ? ` · ${g.detalle}` : ''}</div>
+                            <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--amber-ink)' }}>PENDIENTE DE ENVIAR</span>
+                            {g.ultimo_error && <div style={{ fontSize: '0.6875rem', color: 'var(--red-ink)' }}>{g.ultimo_error}</div>}
+                          </div>
+                          <strong>{s(g.importe)}</strong>
+                          {puedeEditar && <button type="button" className="placas-limpiar" style={{ color: 'var(--red-ink)' }} onClick={() => setPorEliminar({ tipo: 'pendiente', gasto: g })} aria-label="Quitar gasto del teléfono"><Trash2 size={16} /></button>}
+                        </div>
+                      ))}
+                      {(r.gastos ?? []).map(g => (
+                        <div key={g.id} className="dato" style={{ flexDirection: 'row', alignItems: 'center', gap: 'var(--s-3)' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, fontSize: '0.9375rem' }}>{g.sub_motivo || g.tipo_gasto}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>{g.fecha_formateada}{g.detalle ? ` · ${g.detalle}` : ''}</div>
+                            {g.estado === 'RECHAZADO' && <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--red-ink)' }}>RECHAZADO</span>}
+                          </div>
+                          <strong>{s(g.importe)}</strong>
+                          {g.sustento_url && <a href={g.sustento_url} target="_blank" rel="noreferrer" className="placas-limpiar" aria-label="Ver sustento"><Paperclip size={16} /></a>}
+                          {puedeEditar && <button type="button" className="placas-limpiar" onClick={() => setEditando(g)} aria-label="Editar gasto"><Pencil size={16} /></button>}
+                          {puedeEditar && <button type="button" className="placas-limpiar" style={{ color: 'var(--red-ink)' }} onClick={() => setPorEliminar({ tipo: 'servidor', gasto: g })} aria-label="Eliminar gasto"><Trash2 size={16} /></button>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
       )}
 
       {viaje && (
@@ -321,6 +364,28 @@ export function PortalConductorPage() {
         message={porEliminar ? `${porEliminar.tipo === 'pendiente' ? porEliminar.gasto.sub_motivo : (porEliminar.gasto.sub_motivo || porEliminar.gasto.tipo_gasto)} · ${s(porEliminar.gasto.importe)}` : ''}
         confirmLabel={porEliminar?.tipo === 'pendiente' ? 'Quitar' : 'Eliminar'} />
     </Page>
+  );
+}
+
+/** Un punto de la ruta (carga o entrega) con botones para abrir Maps o Waze */
+function PuntoRuta({ tipo, titulo, lugar, direccion }: { tipo: 'carga' | 'entrega'; titulo: string; lugar: string; direccion: string }) {
+  const destino = [direccion, lugar].map(x => (x ?? '').trim()).filter(x => x && x !== 'BASE' && x !== 'DESTINO').join(', ');
+  const q = encodeURIComponent(destino);
+  return (
+    <div className={`pc-punto pc-punto--${tipo}`}>
+      <span className="pc-punto__marca" aria-hidden><MapPin size={14} strokeWidth={2.4} /></span>
+      <div className="pc-punto__texto">
+        <span className="pc-punto__titulo">{titulo}</span>
+        <span className="pc-punto__lugar">{lugar || '—'}</span>
+        {direccion && <span className="pc-punto__dir">{direccion}</span>}
+        {destino ? (
+          <span className="pc-punto__botones">
+            <a className="pc-mapa" href={`https://www.google.com/maps/search/?api=1&query=${q}`} target="_blank" rel="noopener noreferrer"><Navigation size={14} aria-hidden />Google Maps</a>
+            <a className="pc-mapa" href={`https://waze.com/ul?q=${q}&navigate=yes`} target="_blank" rel="noopener noreferrer"><Navigation size={14} aria-hidden />Waze</a>
+          </span>
+        ) : <span className="pc-punto__dir">Sin ubicación registrada</span>}
+      </div>
+    </div>
   );
 }
 

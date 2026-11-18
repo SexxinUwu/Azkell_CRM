@@ -208,6 +208,14 @@ export function AppShell() {
             const color = COLOR_SECCION[section.title] ?? 'var(--accent)';
             const Icono = iconoModulo(section.title);
             const pendientes = section.items.reduce((s, i) => s + contadorDe(i, contador), 0);
+            // Dashboard y Novedades: dos accesos independientes, sin cabecera ni desplegable
+            if (section.title === SECCION_INICIO) {
+              return (
+                <div key={section.title} className="nav-seccion nav-seccion--plana">
+                  {section.items.map(item => <NavEscritorio key={item.key} item={item} pathname={location.pathname} contador={contador} />)}
+                </div>
+              );
+            }
             return (
               <div key={section.title} className={`nav-seccion${abierta ? ' nav-seccion--abierta' : ''}`} style={{ ['--seccion' as string]: color }}>
                 <button type="button" className="nav-seccion__cab" aria-expanded={abierta} title={section.title}
