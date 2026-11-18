@@ -1,4 +1,4 @@
-﻿import '../mantenimiento/mant.css';
+import '../mantenimiento/mant.css';
 import '../../core/ui/acciones-iconos.css';
 import './servicios.css';
 import './seguimiento.css';
