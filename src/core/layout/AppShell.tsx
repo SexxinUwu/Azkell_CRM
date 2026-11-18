@@ -153,6 +153,8 @@ export function AppShell() {
   }, [location.pathname]);
 
   if (!user) return null;
+  // Elegir a una persona en RRHH o en el Directorio solo cambia la ficha: la pantalla no se vuelve a montar ni repite la transición
+  const claveVista = location.pathname.replace(/^(\/(?:rrhh|directorio)\/personal)\/[^/]+$/, '$1');
   // Barra del celular: Inicio, un botón por módulo (con su nombre) y Ajustes al final.
   // Configuración y Sistema viven en Ajustes.
   const modulos = sections.filter(sec => !SECCIONES_AJUSTES.includes(sec.title) && sec.title !== SECCION_INICIO)
@@ -298,8 +300,8 @@ export function AppShell() {
             <VigilanteVersion />
             <Novedades />
             {/* Cada módulo entra con su propia transición; la clave cambia con la ruta. Si una pantalla falla, el menú sigue arriba */}
-            <LimiteDeError key={location.pathname}>
-              <div key={location.pathname} className="vista-transicion">
+            <LimiteDeError key={claveVista}>
+              <div key={claveVista} className="vista-transicion">
                 <Outlet />
               </div>
             </LimiteDeError>
