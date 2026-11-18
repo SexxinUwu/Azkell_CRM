@@ -25,6 +25,12 @@ export interface GastoPendiente {
   importe: number;
   detalle: string;
   usuario_creacion: string;
+  /** Datos del comprobante (opcionales; los gastos guardados antes de este cambio no los tienen) */
+  tipo_comprobante?: string;
+  serie?: string;
+  numero?: string;
+  proveedor_ruc?: string;
+  proveedor_nombre?: string;
   /** AAAA-MM-DD, fecha local en que se registró */
   fecha: string;
   /** ISO, momento real del registro */
@@ -132,6 +138,11 @@ export async function enviarGasto(g: GastoPendiente): Promise<void> {
   f.append('detalle', g.detalle);
   f.append('usuario_creacion', g.usuario_creacion);
   f.append('fecha', g.fecha);
+  if (g.tipo_comprobante) f.append('tipo_comprobante', g.tipo_comprobante);
+  f.append('serie', g.serie ?? '');
+  f.append('numero', g.numero ?? '');
+  f.append('proveedor_ruc', g.proveedor_ruc ?? '');
+  f.append('proveedor_nombre', g.proveedor_nombre ?? '');
   f.append('registrado_en', g.registrado_en);
   if (g.foto) f.append('sustento', g.foto, g.foto_nombre ?? 'comprobante.jpg');
   const r = await api<{ ok?: boolean; error?: string }>('/tesoreria/liquidaciones-gastos', { method: 'POST', body: f });

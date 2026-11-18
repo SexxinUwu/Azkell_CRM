@@ -77,3 +77,13 @@
   .pc-estado__punto { animation: none; }
   .pc-acceso, .pc-mapa { transition: none; }
 }
+
+.pc-saldo { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-2); width: 100%; background: var(--fill-1); border: 0; border-radius: 16px; padding: var(--s-3); font: inherit; color: inherit; text-align: left; cursor: pointer; transition: transform 120ms ease-out; }
+.pc-saldo:active { transform: scale(0.98); }
+.pc-saldo__dato { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pc-saldo__label { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--label-2); }
+.pc-saldo__valor { font-size: 1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pc-saldo__valor--pos { color: var(--green-ink); }
+.pc-saldo__valor--neg { color: var(--red-ink); }
+.pc-importe { font-size: 1.75rem !important; font-weight: 700; letter-spacing: -0.02em; }
+@media (prefers-reduced-motion: reduce) { .pc-saldo { transition: none; } }

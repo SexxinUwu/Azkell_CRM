@@ -1,5 +1,5 @@
 import '../mantenimiento/mant.css';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, FileSpreadsheet, MapPin, Pencil, Plus, SearchX, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
@@ -29,8 +29,8 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'acciones', titulo: 'Acciones', ancho: 130, minimo: 110 },
 ];
 
-// Operaciones › Estaciones de proveedores (las estaciones donde se cargan los vales de combustible)
-export function EstacionesProveedoresPage() {
+// Terceros › Estaciones de servicio (las estaciones donde se cargan los vales de combustible)
+export function EstacionesProveedoresPage({ eyebrow = 'Terceros', selector, soloLectura = false }: { eyebrow?: string; selector?: ReactNode; soloLectura?: boolean } = {}) {
   const { can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
@@ -51,8 +51,8 @@ export function EstacionesProveedoresPage() {
     placeholderData: prev => prev,
     staleTime: 20_000,
   });
-  const puedeEditar = can('combustible_vales.editar', 'combustible_vales.crear', 'combustible.editar', 'combustible.crear');
-  const puedeEliminar = can('combustible_vales.eliminar', 'combustible.eliminar');
+  const puedeEditar = !soloLectura && can('combustible_vales.editar', 'combustible_vales.crear', 'combustible.editar', 'combustible.crear');
+  const puedeEliminar = !soloLectura && can('combustible_vales.eliminar', 'combustible.eliminar');
   const datos = lista.data?.data ?? [];
   const refrescar = () => qc.invalidateQueries({ queryKey: ['operaciones', 'estaciones'] });
 
@@ -108,11 +108,12 @@ export function EstacionesProveedoresPage() {
   return (
     <Page>
       <PageHeader
-        eyebrow="Operaciones"
-        title="Estaciones de proveedores"
+        eyebrow={eyebrow}
+        title="Estaciones de servicio"
         subtitle={lista.isLoading ? 'Cargando…' : `${lista.data?.total ?? 0} proveedores de combustible`}
         actions={
           <>
+            {selector}
             <AccionesCabecera etiqueta="Acciones de estaciones" acciones={[{ label: 'Exportar Excel', icon: <FileSpreadsheet size={17} />, tono: 'verde', onClick: exportar }]} />
             {puedeEditar && <Button variant="primary" icon={<Plus size={16} />} onClick={abrirNuevo}>Nuevo proveedor</Button>}
           </>

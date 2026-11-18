@@ -1938,6 +1938,9 @@ module.exports = function (db, broadcast, logAudit) {
                 sets.push('importe = ?');
                 params.push(safeNum(b.importe));
             }
+            for (const col of ['tipo_comprobante', 'serie', 'numero', 'proveedor_ruc', 'proveedor_nombre']) {
+                if (b[col] !== undefined) { sets.push(`${col} = ?`); params.push(String(b[col] || '').trim()); }
+            }
             if (sustentoUrl !== undefined) {
                 sets.push('sustento_url = ?');
                 params.push(sustentoUrl);
