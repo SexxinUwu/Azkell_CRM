@@ -7,6 +7,6 @@ export const RUTAS: RutaModulo[] = [
     path: 'contabilidad/sire/*',
     permisos: ['contabilidad_sire.ver', 'admin'],
     Page: lazy(() => import('./SirePage').then(m => ({ default: m.SirePage }))),
-    nav: { key: 'sire', label: 'SIRE · Ventas y compras', to: '/contabilidad/sire', icon: 'Landmark', permisos: ['contabilidad_sire.ver'], soloEmpresa: 'trahesa' },
+    nav: { key: 'sire', label: 'SIRE · Ventas y compras', to: '/contabilidad/sire', icon: 'Landmark', permisos: ['contabilidad_sire.ver'] },
   },
 ];

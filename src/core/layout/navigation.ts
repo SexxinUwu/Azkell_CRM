@@ -123,7 +123,7 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Contabilidad',
     items: [
-      { key: 'sire', label: 'SIRE · Ventas y compras', to: '/contabilidad/sire', icon: Landmark, permissions: ver('contabilidad_sire'), soloEmpresa: 'trahesa' },
+      { key: 'sire', label: 'SIRE · Ventas y compras', to: '/contabilidad/sire', icon: Landmark, permissions: ver('contabilidad_sire') },
     ],
   },
   {

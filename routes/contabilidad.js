@@ -3,6 +3,7 @@
 // Cada descarga reemplaza el período completo: la propuesta es una foto de lo que SUNAT tiene. Todo de solo lectura hacia SUNAT.
 const express = require('express');
 const S = require('../services/sire');
+const { getPresignedUrlEstable, s3KeyFromUrl } = require('../utils/s3');
 
 // SUNAT limita las peticiones por minuto: las descargas se hacen de una en una
 let cola = Promise.resolve();
@@ -96,22 +97,80 @@ module.exports = (db, logAudit) => {
         } catch (err) { responder(res, err, 'sincronizar'); }
     });
 
-    // Comprobantes de un libro y período (o de todos los períodos descargados si no se indica). Ventas: marca si la factura también está en nuestro sistema.
+    // ───────────── Cruce de compras: ¿esta factura de proveedor ya está en el sistema? ─────────────
+    // Se compara con las órdenes de compra (RUC del proveedor + número de su documento), los vales de combustible (RUC de la estación + voucher),
+    // las notas de crédito de proveedores y la caja (sin RUC: por número y monto, así que es «probable»).
+    const sinCeros = v => String(v || '').replace(/\D/g, '').replace(/^0+/, '');
+    const partes = t => {
+        const s = String(t || '').toUpperCase();
+        const m = /([A-Z0-9]{4})\s*[-–]\s*0*(\d+)/.exec(s);
+        return m ? { serie: m[1], n: m[2] } : { serie: '', n: sinCeros(s) };
+    };
+    const enlaceDe = async url => {
+        if (!url) return null;
+        try { return /amazonaws\.com/.test(String(url)) ? await getPresignedUrlEstable(s3KeyFromUrl(url)) : String(url); } catch (e) { return null; }
+    };
+    async function cruceCompras(p, filas) {
+        const leer = async (sql) => { try { const [r] = await p.query(sql); return r; } catch (e) { return []; } };
+        const porRuc = new Map(); const caja = new Map();
+        const agregar = (mapa, clave, d) => { if (!clave.endsWith('|') && !mapa.has(clave)) mapa.set(clave, []); if (mapa.has(clave)) mapa.get(clave).push(d); };
+        for (const o of await leer(`SELECT e.id, e.serie, e.numero_correlativo, e.documento_referencia AS ref, e.total_pen, e.url_factura, pv.numero_documento AS ruc
+                                    FROM entradas_inv e LEFT JOIN proveedores_inv pv ON CAST(pv.id AS CHAR) = CAST(e.proveedor_id AS CHAR)
+                                    WHERE COALESCE(e.documento_referencia, '') <> '' AND UPPER(COALESCE(e.estado, '')) NOT LIKE 'ANUL%'`)) {
+            const r = partes(o.ref);
+            agregar(porRuc, `${String(o.ruc || '').trim()}|${r.n}`, { origen: 'OC', codigo: `OC ${o.serie || ''}-${String(o.numero_correlativo || o.id).padStart(5, '0')}`, serie: r.serie, url: o.url_factura });
+        }
+        for (const v of await leer(`SELECT codigo, numero_voucher AS ref, estacion_ruc AS ruc, total, voucher_url FROM viaje_vales_combustible WHERE anulado = 0 AND COALESCE(numero_voucher, '') <> ''`)) {
+            const r = partes(v.ref);
+            agregar(porRuc, `${String(v.ruc || '').trim()}|${r.n}`, { origen: 'VALE', codigo: `Vale ${v.codigo}`, serie: r.serie, url: v.voucher_url });
+        }
+        for (const nc of await leer(`SELECT codigo, serie, numero, proveedor_ruc AS ruc, archivo_url FROM compras_notas_credito WHERE UPPER(COALESCE(estado, '')) NOT LIKE 'ANUL%'`)) {
+            agregar(porRuc, `${String(nc.ruc || '').trim()}|${sinCeros(nc.numero)}`, { origen: 'NC', codigo: `Nota de crédito ${nc.codigo}`, serie: String(nc.serie || '').toUpperCase(), url: nc.archivo_url });
+        }
+        for (const c of await leer(`SELECT serie, numero, numero_factura AS ref, importe_total, sustento_url FROM tesoreria_caja
+                                    WHERE COALESCE(numero_factura, '') <> '' AND UPPER(COALESCE(estado, '')) NOT LIKE 'ANUL%' AND UPPER(COALESCE(estado, '')) NOT LIKE 'RECHAZ%'`)) {
+            const r = partes(c.ref);
+            agregar(caja, r.n, { origen: 'CAJA', codigo: `Caja ${c.serie}-${String(c.numero).padStart(5, '0')}`, serie: r.serie, total: Number(c.importe_total) || 0, url: c.sustento_url });
+        }
+        for (const f of filas) {
+            const n = sinCeros(f.numero);
+            let hit = null; let estado = 'NO';
+            const candidatos = n ? (porRuc.get(`${String(f.doc_numero || '').trim()}|${n}`) || []) : [];
+            if (candidatos.length) {
+                const exacto = candidatos.find(c => !c.serie || c.serie === String(f.serie || '').toUpperCase());
+                hit = exacto || candidatos[0]; estado = exacto ? 'EXACTO' : 'PROBABLE';
+            } else if (n) {
+                const c = (caja.get(n) || []).find(x => Math.abs(x.total - Math.abs(Number(f.total))) < 0.01 && (!x.serie || x.serie === String(f.serie || '').toUpperCase()));
+                if (c) { hit = c; estado = 'PROBABLE'; }
+            }
+            f.cruce = hit ? { estado, origen: hit.origen, codigo: hit.codigo, archivo: await enlaceDe(hit.url) } : { estado: 'NO', origen: null, codigo: null, archivo: null };
+        }
+    }
+
+    // Comprobantes de un libro, por período (AAAAMM) o por rango de fechas de emisión (sobre lo ya descargado). Ventas: marca si la factura está en nuestro sistema;
+    // compras: cruza cada factura de proveedor con lo registrado.
     router.get('/sire/comprobantes', async (req, res) => {
         try {
             const libro = String(req.query.libro || 'VENTAS').toUpperCase();
             if (!LIBROS.includes(libro)) throw aviso('Libro no válido.');
             const periodo = String(req.query.periodo || '').trim();
             if (periodo && !periodoValido(periodo)) throw aviso('El período debe ser AAAAMM.');
+            const fecha = v => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : null);
+            const desde = fecha(req.query.desde); const hasta = fecha(req.query.hasta);
+            const cond = ['s.libro = ?']; const par = [libro];
+            if (desde || hasta) { if (desde) { cond.push('s.fecha_emision >= ?'); par.push(desde); } if (hasta) { cond.push('s.fecha_emision <= ?'); par.push(hasta); } }
+            else if (periodo) { cond.push('s.periodo = ?'); par.push(periodo); }
             const enSistema = libro === 'VENTAS'
-                ? `, (SELECT COUNT(*) FROM facturacion_comprobantes fc WHERE fc.modo_emision = 'produccion' AND fc.estado <> 'RECHAZADO' AND fc.tipo_doc = s.tipo_cp AND fc.serie = s.serie AND CAST(fc.numero AS UNSIGNED) = CAST(s.numero AS UNSIGNED)) AS en_sistema`
+                ? `, (SELECT COUNT(*) FROM facturacion_comprobantes fc WHERE fc.modo_emision = 'produccion' AND fc.estado <> 'RECHAZADO' AND fc.tipo_doc = s.tipo_cp AND fc.serie = s.serie AND CAST(fc.numero AS UNSIGNED) = CAST(s.numero AS UNSIGNED)) AS en_sistema,
+                    (SELECT fc.id FROM facturacion_comprobantes fc WHERE fc.modo_emision = 'produccion' AND fc.estado <> 'RECHAZADO' AND fc.tipo_doc = s.tipo_cp AND fc.serie = s.serie AND CAST(fc.numero AS UNSIGNED) = CAST(s.numero AS UNSIGNED) ORDER BY fc.id DESC LIMIT 1) AS sistema_id`
                 : '';
-            const [rows] = await P(req).query(
+            const p = P(req);
+            const [rows] = await p.query(
                 `SELECT s.id, s.libro, s.periodo, s.car_sunat, DATE_FORMAT(s.fecha_emision, '%Y-%m-%d') AS fecha_emision, DATE_FORMAT(s.fecha_vencimiento, '%Y-%m-%d') AS fecha_vencimiento,
                         s.tipo_cp, s.serie, s.numero, s.doc_tipo, s.doc_numero, s.razon_social, s.base_gravada, s.igv, s.exo_ina, s.otros, s.total, s.moneda, s.tipo_cambio,
                         s.mod_tipo, s.mod_serie, s.mod_numero, s.detraccion, s.tipo_nota, s.estado_comp${enSistema}
-                 FROM sire_comprobantes s WHERE s.libro = ? ${periodo ? 'AND s.periodo = ?' : ''} ORDER BY s.fecha_emision DESC, s.serie, CAST(s.numero AS UNSIGNED) DESC LIMIT 6000`,
-                periodo ? [libro, periodo] : [libro]);
+                 FROM sire_comprobantes s WHERE ${cond.join(' AND ')} ORDER BY s.fecha_emision DESC, s.serie, CAST(s.numero AS UNSIGNED) DESC LIMIT 6000`, par);
+            if (libro === 'COMPRAS') await cruceCompras(p, rows);
             res.json({ ok: true, data: rows });
         } catch (err) { responder(res, err, 'comprobantes'); }
     });
