@@ -1014,7 +1014,10 @@ label.row__main { cursor: pointer; }
    Antes vivía en personal.css y las demás pantallas solo se veían bien si Personal se había abierto antes. */
 /* ─── Tarjeta de contacto ─── */
 .tarjeta { display: flex; flex-direction: column; padding-bottom: var(--s-8); }
-.contactos--dividido .tarjeta { padding: 0 var(--s-6) var(--s-8); max-width: 44rem; margin: 0 auto; width: 100%; }
+/* La barra de acciones va pegada a la esquina superior derecha del panel; el contenido se centra en 44rem */
+.contactos--dividido .tarjeta { padding: 0 0 var(--s-8); width: 100%; }
+.contactos--dividido .tarjeta > :not(.tarjeta__barra) { width: 100%; max-width: 44rem; margin-inline: auto; padding-inline: var(--s-6); box-sizing: border-box; }
+.contactos--dividido .tarjeta__barra { padding-inline: var(--s-4); }
 
 .tarjeta__barra {
   position: sticky;

@@ -2,7 +2,6 @@ import { Children, isValidElement, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { ChevronDown, ChevronLeft, Contact, IdCard, Mail, MessageCircle, Pencil, Phone, Printer, Trash2, TriangleAlert } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
-import { MenuOtros } from '../../core/ui/MenuOtros';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { spring } from '../../core/lib/motion';
@@ -86,14 +85,12 @@ export function PersonaTarjeta({ persona: p, onEditar, onEliminar, onVolver, ver
         {onVolver ? (
           <button type="button" className="tarjeta__volver pressable" onClick={onVolver}><ChevronLeft size={22} /> Personal</button>
         ) : <span />}
-        <div className="tarjeta__barra-acciones">
-          <MenuOtros soloIcono opciones={[
-            { label: 'Imprimir fotocheck', icon: <IdCard size={17} />, onSelect: seguro(() => imprimirFotocheck(p)) },
-            { label: 'Imprimir ficha', icon: <Printer size={17} />, onSelect: seguro(() => imprimirFicha(p)) },
-            { label: 'Compartir contacto', detalle: 'Tarjeta .vcf para el celular', icon: <Contact size={17} />, onSelect: () => descargarVCard(p) },
-            onEliminar && { label: 'Eliminar', icon: <Trash2 size={17} />, destructiva: true, separado: true, onSelect: onEliminar },
-          ]} />
-          {onEditar && <Button variant="plain" onClick={onEditar} icon={<Pencil size={15} />}>Editar</Button>}
+        <div className="acciones-iconos acciones-iconos--sinfondo tarjeta__barra-acciones" role="group" aria-label="Acciones de la ficha">
+          <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Imprimir fotocheck" aria-label="Imprimir fotocheck" icon={<IdCard size={17} />} onClick={seguro(() => imprimirFotocheck(p))} />
+          <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--violeta" data-tip="Imprimir ficha" aria-label="Imprimir ficha" icon={<Printer size={17} />} onClick={seguro(() => imprimirFicha(p))} />
+          <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Compartir contacto (.vcf)" aria-label="Compartir contacto (.vcf)" icon={<Contact size={17} />} onClick={() => descargarVCard(p)} />
+          {onEditar && <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--ambar" data-tip="Editar" aria-label="Editar" icon={<Pencil size={17} />} onClick={onEditar} />}
+          {onEliminar && <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--rojo" data-tip="Eliminar" aria-label="Eliminar" icon={<Trash2 size={17} />} onClick={onEliminar} />}
         </div>
       </div>
 
