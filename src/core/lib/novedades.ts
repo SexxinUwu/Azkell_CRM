@@ -19,6 +19,30 @@ export interface Novedad {
 
 export const NOVEDADES: Novedad[] = [
   {
+    id: '2026-11-18-3',
+    fecha: '18 de noviembre de 2026',
+    titulo: 'Documentos del personal',
+    paginas: [
+      {
+        titulo: 'Los documentos de cada persona, en su ficha',
+        puntos: [
+          'En RRHH › Personal, la ficha de cada persona ahora tiene dos pestañas: Ficha y Documentos.',
+          'Ahí guardas la copia del DNI por ambas caras, la licencia de conducir (para los conductores), el certificado de antecedentes, el examen médico (EMO), el SCTR y el contrato firmado. También puedes agregar otros documentos, como certificados o cursos.',
+          'Cada documento es una tarjeta con su estado: vigente, por vencer o vencido. Sube la foto o el PDF; desde el celular puedes tomar la foto en el momento.',
+          'Si subes un archivo nuevo, el anterior queda en el historial. Estos documentos son sensibles: solo los ve quien tenga el permiso de RRHH.',
+        ],
+      },
+      {
+        titulo: 'Tablero de vencimientos',
+        puntos: [
+          'Nuevo en el menú RRHH: «Documentos del personal». Muestra a todo el personal y el estado de cada documento, con colores: verde si está vigente, ámbar si vence en 30 días o menos, rojo si está vencido o falta.',
+          'Filtra por «Por cargar», «Por vencer» o «Vencidos», y por conductores. Al tocar a una persona se abre su ficha directo en Documentos.',
+          'Al cargar la licencia o el examen médico con su fecha de vencimiento, el aviso de «Por vencer» de la lista de personal se actualiza solo.',
+        ],
+      },
+    ],
+  },
+  {
     id: '2026-11-18-2',
     fecha: '18 de noviembre de 2026',
     titulo: 'Portal del conductor, un solo Personal y Contabilidad',
