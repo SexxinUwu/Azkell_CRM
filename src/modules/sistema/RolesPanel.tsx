@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  Banknote, Boxes, ChevronLeft, ChevronRight, Contact, IdCard, LayoutDashboard, Plus, Route, Settings, ShieldCheck,
+  Banknote, Boxes, ChevronLeft, ChevronRight, Contact, IdCard, Landmark, LayoutDashboard, Plus, Route, Settings, ShieldCheck,
   Trash2, Truck, Users, Wrench, type LucideIcon,
 } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
@@ -37,7 +37,7 @@ type Marcas = Partial<Record<Accion, boolean>>;
 const ICONO_GRUPO: Record<string, LucideIcon> = {
   DASHBOARD: LayoutDashboard, FLOTA: Truck, MANTENIMIENTO: Wrench, ALMACÉN: Boxes, GERENCIA: ShieldCheck,
   DIRECTORIO: Contact, OPERACIONES: Route, CONDUCTOR: IdCard, RRHH: Users, TESORERÍA: Banknote,
-  SEGURIDAD: ShieldCheck, CONFIGURACIÓN: Settings,
+  SEGURIDAD: ShieldCheck, CONFIGURACIÓN: Settings, TERCEROS: Users, CONTABILIDAD: Landmark,
 };
 
 const accionesDe = (mod: ModuloPermiso): Accion[] => (mod.lcad ? (mod.aprobar ? ['l', 'c', 'e', 'd', 'a'] : ['l', 'c', 'e', 'd']) : ['l']);
