@@ -5,7 +5,7 @@ const CONFIG: ConfigPlantilla = {
   clave: 'plantilla-facturacion',
   eyebrow: 'Operaciones',
   titulo: 'Plantilla de facturación',
-  subtitulo: 'Cómo se ve el PDF de las facturas, boletas y notas de crédito de esta empresa. Es independiente de la plantilla de guías',
+  subtitulo: 'Cómo se ve el PDF de las facturas y boletas de esta empresa. Es independiente de la plantilla de guías y de la de nota de crédito',
   bloques: [
     ['estado', 'Estado de SUNAT', 'Sello «Aceptada por SUNAT» o «Pendiente de validación»'],
     ['detraccion', 'Información de la detracción', 'Leyenda, cuenta del Banco de la Nación, porcentaje y monto'],

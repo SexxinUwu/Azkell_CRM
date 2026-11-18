@@ -39,6 +39,12 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'plantilla-facturacion', label: 'Plantilla de facturación', to: '/operaciones/plantilla-facturacion', icon: 'Palette', permisos: ['op_facturacion.ver'] },
   },
   {
+    path: 'operaciones/plantilla-nota-credito/*',
+    permisos: ['op_facturacion.ver', 'admin'],
+    Page: lazy(() => import('./PlantillaNotaCreditoPage').then(m => ({ default: m.PlantillaNotaCreditoPage }))),
+    nav: { key: 'plantilla-nota-credito', label: 'Plantilla de nota de crédito', to: '/operaciones/plantilla-nota-credito', icon: 'Palette', permisos: ['op_facturacion.ver'] },
+  },
+  {
     path: 'operaciones/rentabilidad/*',
     permisos: ['op_rentabilidad.ver', 'admin'],
     Page: lazy(() => import('./RentabilidadPage').then(m => ({ default: m.RentabilidadPage }))),

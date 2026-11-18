@@ -23,6 +23,8 @@ export interface Plantilla {
 export interface ConfigPlantilla {
   /** Prefijo de los endpoints: …/pdf-plantilla, …/pdf-plantilla/preview y …/pdf-plantilla/logo */
   base: string;
+  /** Texto que se agrega al final de esos endpoints (p. ej. «?tipo=nc» para la plantilla de nota de crédito) */
+  query?: string;
   clave: string;
   eyebrow: string;
   titulo: string;
@@ -50,7 +52,7 @@ export function PlantillaPdfPage({ config }: { config: ConfigPlantilla }) {
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ['operaciones', config.clave],
-    queryFn: () => api<{ plantilla: Plantilla; defecto: Plantilla }>(`${config.base}/pdf-plantilla`),
+    queryFn: () => api<{ plantilla: Plantilla; defecto: Plantilla }>(`${config.base}/pdf-plantilla${config.query ?? ''}`),
   });
   const [p, setP] = useState<Plantilla | null>(null);
   const [guardada, setGuardada] = useState('');
@@ -78,7 +80,7 @@ export function PlantillaPdfPage({ config }: { config: ConfigPlantilla }) {
     const t = setTimeout(async () => {
       setCargandoVista(true); setErrorVista(null);
       try {
-        const res = await apiFetch(`${config.base}/pdf-plantilla/preview`, {
+        const res = await apiFetch(`${config.base}/pdf-plantilla/preview${config.query ?? ''}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plantilla: JSON.parse(clave) }), signal: ctl.signal,
         });
         if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || 'No se pudo generar la vista previa');
@@ -89,14 +91,14 @@ export function PlantillaPdfPage({ config }: { config: ConfigPlantilla }) {
       } finally { if (!ctl.signal.aborted) setCargandoVista(false); }
     }, 700);
     return () => { clearTimeout(t); ctl.abort(); };
-  }, [clave, config.base]);
+  }, [clave, config.base, config.query]);
   useEffect(() => () => { setVista(prev => { if (prev) URL.revokeObjectURL(prev); return null; }); }, []);
 
   async function guardar() {
     if (!p) return;
     setGuardando(true);
     try {
-      await api(`${config.base}/pdf-plantilla`, { method: 'PUT', body: { plantilla: p } });
+      await api(`${config.base}/pdf-plantilla${config.query ?? ''}`, { method: 'PUT', body: { plantilla: p } });
       setGuardada(JSON.stringify(p));
       await qc.invalidateQueries({ queryKey: ['operaciones', config.clave] });
       haptic('success'); toast('Plantilla guardada');
@@ -109,7 +111,7 @@ export function PlantillaPdfPage({ config }: { config: ConfigPlantilla }) {
     try {
       const form = new FormData();
       form.append('logo', archivo);
-      const r = await api<{ ok?: boolean; error?: string; url?: string }>(`${config.base}/pdf-plantilla/logo`, { method: 'POST', body: form });
+      const r = await api<{ ok?: boolean; error?: string; url?: string }>(`${config.base}/pdf-plantilla/logo${config.query ?? ''}`, { method: 'POST', body: form });
       if (r.ok === false || !r.url) throw new Error(r.error || 'No se pudo subir el logo');
       set({ logo_url: r.url });
       haptic('success');

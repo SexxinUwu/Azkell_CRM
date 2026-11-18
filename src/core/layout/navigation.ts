@@ -79,6 +79,7 @@ const SECCIONES_BASE: NavSection[] = [
         children: [
           { key: 'facturacion', label: 'Comprobantes', to: '/operaciones/facturacion', icon: ReceiptText, permissions: ver('op_facturacion') },
           { key: 'plantilla-facturacion', label: 'Plantilla de facturación', to: '/operaciones/plantilla-facturacion', icon: Palette, permissions: ver('op_facturacion') },
+          { key: 'plantilla-nota-credito', label: 'Plantilla de nota de crédito', to: '/operaciones/plantilla-nota-credito', icon: Palette, permissions: ver('op_facturacion') },
         ],
       },
       { key: 'rentabilidad', label: 'Rentabilidad', to: '/operaciones/rentabilidad', icon: TrendingUp, permissions: ver('op_rentabilidad') },
@@ -163,7 +164,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'recepcion', label: 'Recepción de compras', to: '/almacen/recepcion-compras', icon: PackagePlus, permissions: ver('rec_compras', 'ent_inv', 'inv') },
       { key: 'salidas', label: 'Órdenes de salida', to: '/almacen/salidas', icon: PackageMinus, permissions: ver('sal_inv') },
       { key: 'kardex', label: 'Kardex', to: '/almacen/kardex', icon: History, permissions: ver('kardex') },
-      { key: 'almacen-notas-credito', label: 'Notas de crédito', to: '/almacen/notas-credito', icon: ReceiptText, permissions: ver('alm_nc') },
+      { key: 'almacen-notas-credito', label: 'Notas de crédito de proveedores', to: '/almacen/notas-credito', icon: ReceiptText, permissions: ver('alm_nc') },
       { key: 'almacen-otros', label: 'Otros', to: '/almacen/otros', icon: Layers, permissions: ver('almacen_otros', 'inv', 'ent_inv', 'prov_inv', 'rec_compras', 'gerencia_aprobaciones_oc', 'cfg_mant') },
     ],
   },
@@ -200,7 +201,7 @@ const SECCIONES_BASE: NavSection[] = [
     items: [
       { key: 'caja', label: 'Caja', to: '/tesoreria/caja', icon: Banknote, permissions: ver('tesoreria_caja') },
       { key: 'pago-requerimientos', label: 'Pago de requerimientos', to: '/tesoreria/pago-requerimientos', icon: Wallet, permissions: ver('tesoreria_caja', 'tesoreria_pago_req') },
-      { key: 'notas-credito', label: 'Notas de crédito', to: '/tesoreria/notas-credito', icon: ReceiptText, permissions: ver('tesoreria_nc', 'tesoreria_pago_req') },
+      { key: 'notas-credito', label: 'Notas de crédito de proveedores', to: '/tesoreria/notas-credito', icon: ReceiptText, permissions: ver('tesoreria_nc', 'tesoreria_pago_req') },
       { key: 'movimientos', label: 'Movimientos', to: '/tesoreria/movimientos', icon: ArrowLeftRight, permissions: ver('tesoreria_caja', 'tesoreria_movimientos') },
       { key: 'papeletas-tesoreria', label: 'Papeletas', to: '/tesoreria/papeletas', icon: Gavel, permissions: ver('tesoreria_papeletas', 'tesoreria_caja') },
       { key: 'caja-chica', label: 'Caja chica', to: '/tesoreria/caja-chica', icon: Wallet, permissions: ver('tesoreria_caja') },

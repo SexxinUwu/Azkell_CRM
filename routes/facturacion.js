@@ -97,33 +97,37 @@ module.exports = (db, logAudit) => {
 
     // ───────────── Plantilla del PDF (propia de los comprobantes; vive en integraciones_api, sin DDL) ─────────────
     const leerS3 = async url => (/amazonaws\.com/.test(String(url)) ? getPresignedUrlEstable(s3KeyFromUrl(url)) : url);
-    async function plantillaGuardada(req) {
+    const tipoPlantilla = req => (req.query && req.query.tipo === 'nc' ? 'nc' : 'comprobante');
+    async function plantillaGuardada(req, tipo = 'comprobante') {
         const leer = clave => P(req).query('SELECT valor FROM integraciones_api WHERE clave = ? LIMIT 1', [clave]).then(([r]) => (r && r[0] ? r[0].valor : null)).catch(() => null);
-        const propia = await leer(CPDF.CLAVE_PLANTILLA);
-        if (propia) return CPDF.normalizarPlantilla(propia);
-        // Mientras la empresa no guarde su plantilla de facturación, parte de la marca de las guías (logo, color y datos); al guardar queda independiente
-        let guias = {}; try { guias = JSON.parse((await leer(G.CLAVE_PLANTILLA)) || '{}'); } catch (e) { guias = {}; }
-        delete guias.bloques; delete guias.columnas;
-        return CPDF.normalizarPlantilla(guias);
+        const propia = await leer(tipo === 'nc' ? CPDF.CLAVE_PLANTILLA_NC : CPDF.CLAVE_PLANTILLA);
+        if (propia) return CPDF.normalizarPlantilla(propia, tipo);
+        // Mientras la empresa no guarde esta plantilla, parte de la marca de la de facturación y, si tampoco hay, de la de guías (logo, color y datos); al guardar queda independiente
+        let marca = {};
+        for (const clave of [CPDF.CLAVE_PLANTILLA, G.CLAVE_PLANTILLA]) { try { const v = await leer(clave); if (v) { marca = JSON.parse(v); break; } } catch (e) { marca = {}; } }
+        delete marca.bloques; delete marca.columnas;
+        return CPDF.normalizarPlantilla(marca, tipo);
     }
     router.get('/pdf-plantilla', async (req, res) => {
-        try { res.json({ ok: true, plantilla: await plantillaGuardada(req), defecto: CPDF.normalizarPlantilla({}) }); } catch (err) { responder(res, err, 'plantilla'); }
+        try { const t = tipoPlantilla(req); res.json({ ok: true, plantilla: await plantillaGuardada(req, t), defecto: CPDF.normalizarPlantilla({}, t) }); } catch (err) { responder(res, err, 'plantilla'); }
     });
     router.put('/pdf-plantilla', async (req, res) => {
         try {
-            const plantilla = CPDF.normalizarPlantilla((req.body || {}).plantilla);
+            const t = tipoPlantilla(req);
+            const plantilla = CPDF.normalizarPlantilla((req.body || {}).plantilla, t);
             const valor = JSON.stringify(plantilla);
             if (valor.length > 30000) throw aviso('La plantilla es demasiado grande.');
             await P(req).query(`INSERT INTO integraciones_api (clave, valor, actualizado_por) VALUES (?, ?, ?)
-                                ON DUPLICATE KEY UPDATE valor = VALUES(valor), actualizado_por = VALUES(actualizado_por), actualizado_en = NOW()`, [CPDF.CLAVE_PLANTILLA, valor, usuarioDe(req)]);
+                                ON DUPLICATE KEY UPDATE valor = VALUES(valor), actualizado_por = VALUES(actualizado_por), actualizado_en = NOW()`, [t === 'nc' ? CPDF.CLAVE_PLANTILLA_NC : CPDF.CLAVE_PLANTILLA, valor, usuarioDe(req)]);
             res.json({ ok: true, plantilla });
         } catch (err) { responder(res, err, 'plantilla-guardar'); }
     });
     // Vista previa: PDF de ejemplo con la plantilla que viene del formulario (no guarda nada)
     router.post('/pdf-plantilla/preview', async (req, res) => {
         try {
-            const plantilla = CPDF.normalizarPlantilla((req.body || {}).plantilla);
-            const pdf = await CPDF.generarPdf(CPDF.modeloEjemplo(), plantilla, { hash: 'AbCdEfGhIjKlMnOpQrStUvWxYz0=', leerS3 });
+            const t = tipoPlantilla(req);
+            const plantilla = CPDF.normalizarPlantilla((req.body || {}).plantilla, t);
+            const pdf = await CPDF.generarPdf(CPDF.modeloEjemplo(t), plantilla, { hash: 'AbCdEfGhIjKlMnOpQrStUvWxYz0=', leerS3 });
             res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline; filename="vista-previa.pdf"', 'Cache-Control': 'no-store' });
             res.send(pdf);
         } catch (err) { responder(res, err, 'preview'); }
@@ -456,7 +460,7 @@ module.exports = (db, logAudit) => {
             if (r[0].apisunat_document_id && (!r[0].xml_url || r[0].apisunat_status !== 'ACEPTADO')) { try { await sincronizar(p, cfg, r[0]); [r] = await consulta(); } catch (e) { /* se imprime con lo que hay */ } }
             const c = r[0];
             const [items] = await p.query(`SELECT descripcion, unidad, cantidad, valor_unitario, base FROM facturacion_items WHERE comprobante_id = ? ORDER BY linea`, [c.id]);
-            const plantilla = await plantillaGuardada(req);
+            const plantilla = await plantillaGuardada(req, c.tipo_doc === '07' ? 'nc' : 'comprobante');
             const modelo = CPDF.modeloDesdeComprobante(c, items, { ruc: cfg.ruc_emisor, razon: cfg.razon_social });
             const pdf = await CPDF.generarPdf(modelo, plantilla, { hash: await CPDF.hashDeXml(c.xml_url), leerS3 });
             res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="${String(c.numero_completo).replace(/[^\w.-]/g, '_')}.pdf"`, 'Cache-Control': 'no-store' });

@@ -13,19 +13,24 @@ const UNIDADES = { ZZ: 'Servicio', NIU: 'Unidad', KGM: 'Kilogramos', TNE: 'Tonel
 const TITULOS = { '01': 'FACTURA ELECTRÓNICA', '03': 'BOLETA DE VENTA ELECTRÓNICA', '07': 'NOTA DE CRÉDITO ELECTRÓNICA' };
 
 // ───────────────────────── Plantilla (propia de los comprobantes; la de las guías es otra) ─────────────────────────
+// Facturas y boletas tienen una plantilla; las notas de crédito, otra (llevan el documento que modifican y no llevan detracción ni crédito)
 const CLAVE_PLANTILLA = 'comprobante_pdf_plantilla';
+const CLAVE_PLANTILLA_NC = 'nota_credito_pdf_plantilla';
 const BLOQUES_BASE = { estado: true, detraccion: true, credito: true, observaciones: true, qr: true, hash: true };
 const COLUMNAS_BASE = { unidad: true, valor_unit: true, orden_compra: true };
+const BLOQUES_NC = { estado: true, documento: true, observaciones: true, qr: true, hash: true };
+const COLUMNAS_NC = { unidad: true, valor_unit: true };
 const bool = (v, defecto) => (typeof v === 'boolean' ? v : defecto);
 
 /** Marca y textos comunes (logo, color, datos de la empresa, marca de agua, pie) como en las guías; los bloques y columnas son los de los comprobantes */
-function normalizarPlantilla(crudo) {
+function normalizarPlantilla(crudo, tipo = 'comprobante') {
     let p = crudo;
     if (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { p = {}; } }
     if (!p || typeof p !== 'object') p = {};
     const comun = G.normalizarPlantilla(p);
-    const bloques = {}; for (const k of Object.keys(BLOQUES_BASE)) bloques[k] = bool(p.bloques && p.bloques[k], BLOQUES_BASE[k]);
-    const columnas = {}; for (const k of Object.keys(COLUMNAS_BASE)) columnas[k] = bool(p.columnas && p.columnas[k], COLUMNAS_BASE[k]);
+    const bb = tipo === 'nc' ? BLOQUES_NC : BLOQUES_BASE; const cb = tipo === 'nc' ? COLUMNAS_NC : COLUMNAS_BASE;
+    const bloques = {}; for (const k of Object.keys(bb)) bloques[k] = bool(p.bloques && p.bloques[k], bb[k]);
+    const columnas = {}; for (const k of Object.keys(cb)) columnas[k] = bool(p.columnas && p.columnas[k], cb[k]);
     return { ...comun, bloques, columnas };
 }
 
@@ -73,7 +78,18 @@ function modeloDesdeComprobante(c, items, emisor) {
     };
 }
 
-function modeloEjemplo() {
+function modeloEjemplo(tipo = 'comprobante') {
+    if (tipo === 'nc') {
+        return {
+            tipo: '07', numero: 'FC01-00000001', serie: 'FC01', correlativo: '00000001', emision: new Date().toISOString().slice(0, 10), hora: '10:25:00', vence: '',
+            emisor: { ruc: '20600066651', razon: 'TRAHESA S.A.C.' },
+            cliente: { docTipo: '6', doc: '20100014395', nombre: 'PRODUCTOS PARAISO DEL PERU S.A.C.', direccion: 'AV. ARGENTINA 5495, CALLAO' },
+            moneda: 'PEN', simbolo: 'S/', formaPago: 'CONTADO', dias: 0,
+            lineas: [{ n: 1, descripcion: 'SERVICIO DE TRANSPORTE DE CARGA JULIACA - LIMA', unidad: 'ZZ', cantidad: 1, vu: 4237.2881, base: 4237.29 }],
+            base: 4237.29, igv: 762.71, total: 5000, enLetras: montoEnLetras(5000, 'PEN'),
+            detraccion: null, neto: 5000, ordenCompra: '', referencia: '', observacion: '', ref: { numero: 'F001-00000001', motivo: 'Anulación de la operación' }, estado: 'ACEPTADO', prueba: false, ejemplo: true,
+        };
+    }
     return {
         tipo: '01', numero: 'F001-00000001', serie: 'F001', correlativo: '00000001', emision: new Date().toISOString().slice(0, 10), hora: '10:25:00', vence: '',
         emisor: { ruc: '20600066651', razon: 'TRAHESA S.A.C.' },
@@ -182,7 +198,7 @@ ${textoMarca ? `<div class="marca-fondo ${p.marca_agua_nivel}${marcaAgua ? ' baj
     </div></div>
   </div>
 
-  ${esNc && m.ref ? `<div class="sec"><div class="et">Documento que modifica</div><div class="tarj">
+  ${esNc && m.ref && b.documento !== false ? `<div class="sec"><div class="et">Documento que modifica</div><div class="tarj">
     <div class="par"><div class="k">Comprobante</div><div class="v m">${esc(m.ref.numero)}</div></div>
     <div class="par"><div class="k">Motivo</div><div class="v">${esc(m.ref.motivo)}</div></div></div></div>` : ''}
 
@@ -217,10 +233,10 @@ const contenidoQr = m => [m.emisor.ruc, m.tipo, m.serie, m.correlativo, nf(m.igv
 
 /** opciones: { hash, leerS3 } — hash: DigestValue del XML; leerS3: firma la URL del logo en S3 */
 async function generarPdf(modelo, plantillaCruda, opciones = {}) {
-    const plantilla = normalizarPlantilla(plantillaCruda);
+    const plantilla = normalizarPlantilla(plantillaCruda, modelo.tipo === '07' ? 'nc' : 'comprobante');
     const rec = { logo: await G.logoDataUrl(plantilla.logo_url, opciones.leerS3), qr: null, hash: opciones.hash || '' };
     if (plantilla.bloques.qr) rec.qr = { dataUrl: await G.qrDataUrl(contenidoQr(modelo)) };
     return htmlAPdf(construirHtml(modelo, plantilla, rec), modelo.numero || 'Comprobante', false, false, { margenV: 9, compactar: true });
 }
 
-module.exports = { CLAVE_PLANTILLA, normalizarPlantilla, modeloDesdeComprobante, modeloEjemplo, construirHtml, generarPdf, hashDeXml, contenidoQr };
+module.exports = { CLAVE_PLANTILLA, CLAVE_PLANTILLA_NC, normalizarPlantilla, modeloDesdeComprobante, modeloEjemplo, construirHtml, generarPdf, hashDeXml, contenidoQr };
