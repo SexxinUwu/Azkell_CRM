@@ -40,7 +40,7 @@ module.exports = (db, logAudit) => {
         v.estacion_nombre, v.estacion_ruc, v.combustible, v.galones, v.precio_galon, v.total, v.moneda, v.km_odometro, v.numero_voucher,
         v.voucher_url, v.pagar_a, v.beneficiario_nombre, v.beneficiario_doc, v.caja_id, v.alertas_json, v.observacion, v.usuario,
         DATE_FORMAT(v.creado_en, '%Y-%m-%d %H:%i') AS creado_en, ${ESTADO_SQL} AS estado,
-        CONCAT(COALESCE(c.serie, ''), '-', COALESCE(c.numero, '')) AS caja_codigo, c.voucher_url AS pago_voucher_url, v.orden_servicio, v.estacion_sede`;
+        CONCAT(COALESCE(c.serie, ''), '-', COALESCE(c.numero, '')) AS caja_codigo, c.voucher_url AS pago_voucher_url, v.orden_servicio, v.estacion_sede, v.tipo_recarga`;
     const FROM = 'FROM viaje_vales_combustible v LEFT JOIN tesoreria_caja c ON c.id = v.caja_id';
 
     async function conUrl(fila) {
@@ -245,16 +245,23 @@ module.exports = (db, logAudit) => {
                 if (!ordenServicio) throw aviso('Elige a qué servicio pertenece el vale (ida o regreso).');
                 if (!svs.some(x => x.orden === ordenServicio)) throw aviso('Ese servicio no pertenece al viaje elegido.');
             } else ordenServicio = null;
+            // Tipo de recarga (igual que Marsisa): ida, vuelta o fin de servicio. Si no llega, sale del servicio: regreso = vuelta, lo demás = ida
+            let tipoRecarga = String(b.tipo_recarga || '').toUpperCase().trim();
+            if (!['RECARGA_IDA', 'RECARGA_VUELTA', 'FIN_DE_SERVICIO'].includes(tipoRecarga)) {
+                let esRet = false;
+                if (ordenServicio) { const [sr] = await conn.query('SELECT es_retorno FROM operaciones_ordenes_servicio WHERE codigo_orden = ?', [ordenServicio]); esRet = !!(sr[0] && sr[0].es_retorno); }
+                tipoRecarga = esRet ? 'RECARGA_VUELTA' : 'RECARGA_IDA';
+            }
             const [maxV] = await conn.query("SELECT codigo FROM viaje_vales_combustible WHERE codigo LIKE ? ORDER BY id DESC LIMIT 1 FOR UPDATE", [`VC-${anio}-%`]);
             const sec = maxV.length ? parseInt(String(maxV[0].codigo).split('-').pop(), 10) + 1 : 1;
             const codigo = `VC-${anio}-${String(sec).padStart(5, '0')}`;
 
             const [ins] = await conn.query(
                 `INSERT INTO viaje_vales_combustible (codigo, viaje, placa, conductor, conductor_doc, fecha, hora, estacion_nombre, estacion_ruc, combustible, galones, precio_galon, total, moneda,
-                    km_odometro, numero_voucher, voucher_url, pagar_a, beneficiario_nombre, beneficiario_doc, ia_json, alertas_json, observacion, usuario, orden_servicio, estacion_sede)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    km_odometro, numero_voucher, voucher_url, pagar_a, beneficiario_nombre, beneficiario_doc, ia_json, alertas_json, observacion, usuario, orden_servicio, estacion_sede, tipo_recarga)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [codigo, viaje, placa, conductor, texto(b.conductor_doc, 20), fecha, texto(b.hora, 10), estacion, texto(b.estacion_ruc, 20), combustibleDe(b.combustible) || texto(b.combustible, 40), galones, precio, total, moneda,
-                    b.km_odometro ? Math.round(num(b.km_odometro)) : null, texto(b.numero_voucher, 60), voucherUrl, pagarA, benNombre, benDoc, texto(b.ia_json, 20000), JSON.stringify(alertas), texto(b.observacion, 500), usuario, ordenServicio, estacionSede]);
+                    b.km_odometro ? Math.round(num(b.km_odometro)) : null, texto(b.numero_voucher, 60), voucherUrl, pagarA, benNombre, benDoc, texto(b.ia_json, 20000), JSON.stringify(alertas), texto(b.observacion, 500), usuario, ordenServicio, estacionSede, tipoRecarga]);
             if (ins.affectedRows !== 1) throw new Error('No se pudo crear el vale.');
 
             // Caja automática (egreso PENDIENTE, ligado al viaje). Se aprueba en Tesorería y luego aparece en Pago de requerimientos.

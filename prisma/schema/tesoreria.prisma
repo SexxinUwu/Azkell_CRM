@@ -239,6 +239,7 @@ model ViajeValeCombustible {
   creado_en           DateTime? @default(now()) @db.Timestamp(0)
   orden_servicio      String?   @db.VarChar(40)
   estacion_sede       String?   @db.VarChar(150)
+  tipo_recarga        String?   @db.VarChar(20)
 
   @@index([orden_servicio], map: "idx_vale_servicio")
   @@index([viaje], map: "idx_vale_viaje")

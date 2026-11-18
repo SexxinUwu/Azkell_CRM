@@ -47,6 +47,24 @@ module.exports = function (db, broadcast, logAudit) {
         return 'operaciones_combustible_vales';
     }
 
+    // De dónde LEE el análisis los vales. Marsisa: su tabla (vienen de MarsisaSoft). Las demás empresas: los vales de la pantalla general
+    // (operaciones_combustible_vales) MÁS los que se registran dentro del viaje con caja y servicio (viaje_vales_combustible), con las mismas columnas.
+    // Solo lectura: registrar, editar y anular siguen usando cada tabla por su lado.
+    function valesAnalisis(req) {
+        const tabla = getValesTable(req);
+        if (tabla === 'marsisa_combustible_vales') return tabla;
+        const C = 'COLLATE utf8mb4_unicode_ci';
+        return `(SELECT id, fecha, estado, correlativo, viaje, vehiculo, conductor, ruta, estacion, proveedor, tipo_combustible, kilometraje, peso_tn, galones, importe, numero_comprobante, tipo
+                   FROM operaciones_combustible_vales
+                  UNION ALL
+                 SELECT 900000000 + v.id, CAST(CONCAT(DATE_FORMAT(v.fecha, '%Y-%m-%d'), ' ', COALESCE(NULLIF(v.hora, ''), '00:00'), ':00') AS DATETIME),
+                        IF(v.anulado = 1, 'ANULADO', 'VÁLIDO') ${C}, v.codigo ${C}, v.viaje ${C}, v.placa ${C}, v.conductor ${C}, '' ${C},
+                        COALESCE(NULLIF(v.estacion_sede, ''), v.estacion_nombre) ${C}, v.estacion_nombre ${C},
+                        (CASE WHEN v.combustible LIKE '%rea%' OR v.combustible LIKE '%adblue%' THEN 'Urea / AdBlue (DEF)' ELSE v.combustible END) ${C},
+                        v.km_odometro, 0, v.galones, v.total, v.numero_voucher ${C}, COALESCE(v.tipo_recarga, 'RECARGA_IDA') ${C}
+                   FROM viaje_vales_combustible v) vales_union`;
+    }
+
     // Configuración de conexión al host remoto de combustible
     const REMOTE_CONFIG = {
         host: process.env.REMOTE_FUEL_HOST,
@@ -655,8 +673,8 @@ module.exports = function (db, broadcast, logAudit) {
 
             // Registros paginados con orden dinámico
             const [rows] = await tdb.query(
-                `SELECT *, DATE_FORMAT(fecha, '%Y-%m-%d %H:%i:%s') AS fecha FROM ${valesTable} 
-                 ${whereSQL} 
+                `SELECT *, DATE_FORMAT(fecha, '%Y-%m-%d %H:%i:%s') AS fecha FROM ${valesTable}
+                ${whereSQL} 
                  ORDER BY ${sortCol} ${sortDir}, id_remoto DESC 
                  LIMIT ? OFFSET ?`,
                 [...params, limit, offset]
@@ -1132,7 +1150,7 @@ module.exports = function (db, broadcast, logAudit) {
             const esUrea = "(UPPER(tipo_combustible) LIKE '%UREA%' OR UPPER(tipo_combustible) LIKE '%ADBLUE%' OR UPPER(tipo_combustible) LIKE '%DEF%')";
             const [rows] = await tdb.query(
                 `SELECT ${esUrea} AS es_urea, COUNT(*) AS vales, COALESCE(SUM(galones), 0) AS galones, COALESCE(SUM(importe), 0) AS importe
-                 FROM ${valesTable} WHERE ${where.join(' AND ')} GROUP BY es_urea`, params);
+                 FROM ${valesAnalisis(req)} WHERE ${where.join(' AND ')} GROUP BY es_urea`, params);
             const bloque = (u) => {
                 const r = rows.find(x => Number(x.es_urea) === u) || {};
                 return { vales: Number(r.vales || 0), galones: Number(r.galones || 0), importe: Number(r.importe || 0) };
@@ -1151,7 +1169,7 @@ module.exports = function (db, broadcast, logAudit) {
             const tdb = getDb(req);
             const [rows] = await tdb.query(
                 `SELECT UPPER(REPLACE(REPLACE(vehiculo,'-',''),' ','')) AS placa, fecha, kilometraje, galones
-                   FROM ${getValesTable(req)}
+                   FROM ${valesAnalisis(req)}
                   WHERE estado != 'ANULADO' AND fecha >= DATE_SUB(NOW(), INTERVAL 120 DAY) AND kilometraje > 0 AND galones > 0 AND vehiculo IS NOT NULL AND vehiculo <> ''
                   ORDER BY placa, fecha ASC, id ASC`);
             const porPlaca = new Map();
@@ -1215,7 +1233,7 @@ module.exports = function (db, broadcast, logAudit) {
                     id, DATE_FORMAT(fecha, '%Y-%m-%d %H:%i:%s') AS fecha, estado, correlativo, viaje, vehiculo, conductor, ruta,
                     estacion, proveedor, tipo_combustible, kilometraje, peso_tn, galones,
                     importe, numero_comprobante, tipo
-                FROM ${valesTable} 
+                FROM ${valesAnalisis(req)} 
                 ${whereSQL} 
                 ORDER BY fecha ASC, id ASC`,
                 params

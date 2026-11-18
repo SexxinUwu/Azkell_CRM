@@ -86,9 +86,9 @@ const SECCIONES_BASE: NavSection[] = [
       {
         key: 'combustible-grupo', label: 'Combustible', icon: Fuel, permissions: [],
         children: [
-          // Trahesa registra el vale dentro del viaje; las demás empresas usan los vales generales
-          { key: 'vales-viaje', soloEmpresa: 'trahesa', label: 'Vales de combustible', to: '/operaciones/vales-viaje', icon: Fuel, permissions: ver('combustible_vales', 'op_ordenes_viaje') },
-          { key: 'vales', noEmpresa: 'marsisa,trahesa', label: 'Vales de combustible', to: '/operaciones/vales', icon: Fuel, permissions: ver('combustible_vales') },
+          // Trahesa, Yoguitransport y Rosymar registran el vale dentro del viaje (con caja y servicio); Marsisa trae los suyos de su API
+          { key: 'vales-viaje', soloEmpresa: 'trahesa,yoguitransport,rosymarperu', label: 'Vales de combustible', to: '/operaciones/vales-viaje', icon: Fuel, permissions: ver('combustible_vales', 'op_ordenes_viaje') },
+          { key: 'vales', noEmpresa: 'marsisa,trahesa,yoguitransport,rosymarperu', label: 'Vales de combustible', to: '/operaciones/vales', icon: Fuel, permissions: ver('combustible_vales') },
           { key: 'matriz-combustible', noEmpresa: 'marsisa', label: 'Matriz de combustible (D2)', to: '/operaciones/matriz-combustible', icon: Target, permissions: ver('combustible_analisis') },
           { key: 'analisis-combustible', noEmpresa: 'marsisa', label: 'Análisis de combustible (D2)', to: '/operaciones/analisis-combustible', icon: Gauge, permissions: ver('combustible_analisis') },
           { key: 'urea', noEmpresa: 'marsisa', label: 'Análisis de urea', to: '/operaciones/urea', icon: Droplet, permissions: ver('urea_analisis', 'combustible_analisis') },

@@ -33,7 +33,7 @@ interface Vale {
   id: number; codigo: string; viaje: string; placa: string; conductor: string; fecha: string; hora: string | null;
   estacion_nombre: string; estacion_ruc: string | null; combustible: string | null; galones: number | string; precio_galon: number | string; total: number | string; moneda: string;
   km_odometro: number | null; numero_voucher: string | null; pagar_a: 'CONDUCTOR' | 'ESTACION'; beneficiario_nombre: string;
-  estado: 'PENDIENTE' | 'APROBADO' | 'PAGADO' | 'ANULADO'; caja_codigo: string; alertas: Alerta[]; voucher_url_firmada: string | null; pago_voucher_firmada: string | null; orden_servicio?: string | null; estacion_sede?: string | null;
+  estado: 'PENDIENTE' | 'APROBADO' | 'PAGADO' | 'ANULADO'; caja_codigo: string; alertas: Alerta[]; voucher_url_firmada: string | null; pago_voucher_firmada: string | null; orden_servicio?: string | null; estacion_sede?: string | null; tipo_recarga?: string | null;
 }
 interface ServicioViaje { orden: string; es_retorno: boolean; cliente: string | null; ruta: string | null }
 interface ViajeOpc { servicios?: ServicioViaje[]; viaje: string; placa_tracto: string; conductor: string; ruta: string | null; fecha_viaje: string | null; conductor_doc: string | null; ultimo_km: number | null }
@@ -52,6 +52,7 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'conductor', titulo: 'Conductor', ancho: 190, minimo: 120 },
   { id: 'estacion', titulo: 'Estación', ancho: 200, minimo: 120 },
   { id: 'combustible', titulo: 'Combustible', ancho: 130, minimo: 90 },
+  { id: 'recarga', titulo: 'Recarga', ancho: 140, minimo: 100 },
   { id: 'galones', titulo: 'Galones', ancho: 95, alinear: 'right' },
   { id: 'precio', titulo: 'Precio', ancho: 90, alinear: 'right' },
   { id: 'total', titulo: 'Total', ancho: 110, alinear: 'right' },
@@ -61,6 +62,7 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'voucher', titulo: 'Voucher', ancho: 110, alinear: 'center' },
 ];
 const TONO: Record<Vale['estado'], 'amber' | 'accent' | 'green' | 'gray'> = { PENDIENTE: 'amber', APROBADO: 'accent', PAGADO: 'green', ANULADO: 'gray' };
+const RECARGA: Record<string, string> = { RECARGA_IDA: 'Recarga de ida', RECARGA_VUELTA: 'Recarga de vuelta', FIN_DE_SERVICIO: 'Fin de servicio' };
 const ETIQUETA: Record<Vale['estado'], string> = { PENDIENTE: 'Pendiente', APROBADO: 'Aprobado', PAGADO: 'Pagado', ANULADO: 'Anulado' };
 // Combustibles que se usan en el Perú. La cantidad va en galones, salvo GNV (m³) y GNL (kg).
 const COMBUSTIBLES = ['Diésel B5', 'Diésel B5 S-50', 'Gasolina regular', 'Gasolina premium', 'GNV', 'GLP', 'GNL', 'Úrea / AdBlue'];
@@ -144,7 +146,7 @@ export function ValesViajePage() {
             {busqueda || estado ? 'Prueba con otra búsqueda.' : puedeCrear ? 'Pulsa «Nuevo vale», elige el viaje y sube la foto del voucher: la IA lee los datos y solo confirmas.' : 'Todavía no se registró ningún vale.'}
           </EmptyState>
         ) : (
-          <TablaRedimensionable id="vales-viaje-v2" columnas={COLUMNAS} ariaLabel="Vales de combustible" className="tabla-redim--compacta">
+          <TablaRedimensionable id="vales-viaje-v3" columnas={COLUMNAS} ariaLabel="Vales de combustible" className="tabla-redim--compacta">
             {visibles.map(v => (
               <tr key={v.id}>
                 <Celda><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', whiteSpace: 'nowrap' }}><Badge tone={TONO[v.estado]}>{ETIQUETA[v.estado]}</Badge>{v.alertas.some(a => a.nivel === 'rojo') && <span title={v.alertas.map(a => a.texto).join(' · ')} style={{ display: 'inline-flex', color: 'var(--red-ink)' }}><CircleAlert size={14} aria-label="Con avisos" /></span>}</span></Celda>
@@ -156,6 +158,7 @@ export function ValesViajePage() {
                 <Celda>{v.conductor || '—'}</Celda>
                 <Celda>{v.estacion_nombre || '—'}{v.estacion_sede ? ` · ${v.estacion_sede}` : ''}</Celda>
                 <Celda>{v.combustible || '—'}</Celda>
+                <Celda>{RECARGA[v.tipo_recarga ?? ''] || '—'}</Celda>
                 <Celda alinear="right" mono>{fmt(v.galones, 2)}</Celda>
                 <Celda alinear="right" mono>{fmt(v.precio_galon)}</Celda>
                 <Celda alinear="right" mono>{monto(v)}</Celda>
@@ -215,6 +218,8 @@ function ValeDetalleSheet({ vale, onClose, puedeAnular, anulando, onAnular }: { 
                 <dd><b>{v.estacion_nombre || '—'}</b>{(v.estacion_sede || v.estacion_ruc) && <span>{[v.estacion_sede, v.estacion_ruc ? `RUC ${v.estacion_ruc}` : ''].filter(Boolean).join(' · ')}</span>}</dd>
                 <dt>Combustible</dt>
                 <dd><b>{v.combustible || '—'}</b><span>{fmt(v.galones, 2)} gal × {fmt(v.precio_galon)}{v.km_odometro != null ? ` · Odómetro ${v.km_odometro.toLocaleString('es-PE')} km` : ''}</span></dd>
+                <dt>Recarga</dt>
+                <dd><b>{RECARGA[v.tipo_recarga ?? ''] || '—'}</b></dd>
                 <dt>N° de voucher</dt>
                 <dd><b>{v.numero_voucher || '—'}</b></dd>
               </dl>
@@ -266,13 +271,15 @@ interface Form {
   autoriza: string; modalidad_pago: string; cuenta_destino: string; cuenta_empresa: string; tipo_comprobante: string;
   // Servicio (ida o regreso) al que pertenece el vale
   orden_servicio: string;
+  // Ida, vuelta o fin de servicio (como en Marsisa): el análisis de combustible lo usa para separar los tramos
+  tipo_recarga: string;
   // Estación de servicio (sede) del proveedor donde se cargó
   estacion_sede: string;
 }
 const VACIO: Form = {
   viaje: '', placa: '', conductor: '', conductor_doc: '', fecha: '', hora: '', estacion_nombre: '', estacion_ruc: '', combustible: '', galones: '', precio_galon: '', total: '', moneda: 'SOLES',
   km_odometro: '', numero_voucher: '', placa_voucher: '', observacion: '', pagar_a: 'ESTACION', beneficiario_nombre: '', beneficiario_doc: '',
-  autoriza: '', modalidad_pago: 'TRANSFERENCIA BANCARIA', cuenta_destino: '', cuenta_empresa: '', tipo_comprobante: '', orden_servicio: '', estacion_sede: '',
+  autoriza: '', modalidad_pago: 'TRANSFERENCIA BANCARIA', cuenta_destino: '', cuenta_empresa: '', tipo_comprobante: '', orden_servicio: '', estacion_sede: '', tipo_recarga: 'RECARGA_IDA',
 };
 const t = (v: unknown) => (v == null ? '' : String(v));
 const PASOS = ['Viaje y voucher', 'Consumo', 'Proveedor y pago', 'Confirmar'];
@@ -323,7 +330,7 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
   function elegirViaje(codigo: string | null) {
     const v = viajes.data?.find(x => x.viaje === codigo);
     if (!v) { set({ viaje: '' }); return; }
-    set({ viaje: v.viaje, placa: v.placa_tracto, conductor: v.conductor, conductor_doc: t(v.conductor_doc), orden_servicio: v.servicios?.length === 1 ? v.servicios[0].orden : '' });
+    set({ viaje: v.viaje, placa: v.placa_tracto, conductor: v.conductor, conductor_doc: t(v.conductor_doc), orden_servicio: v.servicios?.length === 1 ? v.servicios[0].orden : '', tipo_recarga: v.servicios?.length === 1 && v.servicios[0].es_retorno ? 'RECARGA_VUELTA' : 'RECARGA_IDA' });
     setKm(v.ultimo_km);
     void traerKmGps(v.placa_tracto);
   }
@@ -468,9 +475,12 @@ function NuevoValeSheet({ open, onClose }: { open: boolean; onClose: () => void 
                 {(viajeActual?.servicios?.length ?? 0) > 0 && (
                   <Field label="¿A qué servicio pertenece? *" hint={viajeActual!.servicios!.length === 1 ? 'El viaje lleva un solo servicio' : 'Elige si el vale es de la ida o del regreso: así se sabe cuánto costó cada uno'}>
                     {p => <Combobox {...p} options={viajeActual!.servicios!.map(x => ({ value: x.orden, label: `${x.orden} · ${x.es_retorno ? 'Regreso' : 'Ida'}`, description: [x.cliente, x.ruta].filter(Boolean).join(' · ') || undefined }))}
-                      value={f.orden_servicio || null} onChange={v => set({ orden_servicio: v ?? '' })} placeholder="Elige el servicio (ida o regreso)" enHoja compacta tituloHoja="Servicio del vale" />}
+                      value={f.orden_servicio || null} onChange={v => set({ orden_servicio: v ?? '', tipo_recarga: viajeActual?.servicios?.find(x => x.orden === v)?.es_retorno ? 'RECARGA_VUELTA' : 'RECARGA_IDA' })} placeholder="Elige el servicio (ida o regreso)" enHoja compacta tituloHoja="Servicio del vale" />}
                   </Field>
                 )}
+                <Field label="Tipo de recarga *" hint="Fin de servicio es la última carga al terminar el viaje: con ella se cierra el consumo">
+                  {p => <SelectInput {...p} value={f.tipo_recarga} onChange={e => set({ tipo_recarga: e.target.value })}>{Object.entries(RECARGA).map(([k, t]) => <option key={k} value={k}>{t}</option>)}</SelectInput>}
+                </Field>
               </div>
             </section>
             <div className="gr__zona" role="button" tabIndex={0} aria-disabled={!f.viaje}
