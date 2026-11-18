@@ -120,8 +120,7 @@ function construirFicha(p: Persona, conPagos: boolean) {
           ['Emergencia', [p.contacto_emergencia_nombre, p.contacto_emergencia_parentesco, p.contacto_emergencia_telefono].filter(Boolean).join(' · ')],
         ])}
         ${bloque('Puesto', [
-          ['Rol', etiqueta(OPCIONES.rol, p.categoria_rol)], ['Centro de costos', etiqueta(OPCIONES.centroCosto, p.centro_costo_codigo)],
-          ['Sede', p.sede], ['Jefe inmediato', p.jefe_inmediato],
+          ['Rol', etiqueta(OPCIONES.rol, p.categoria_rol)], ['Sede', p.sede], ['Jefe inmediato', p.jefe_inmediato],
         ])}
         ${bloque('Contrato', [
           ['Tipo', etiqueta(OPCIONES.tipoContrato, p.tipo_contrato)], ['Inicio', fechaPe(p.fecha_inicio_contrato)], ['Fin', p.fecha_fin_contrato ? fechaPe(p.fecha_fin_contrato) : ''],
