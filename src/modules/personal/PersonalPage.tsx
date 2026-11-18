@@ -161,7 +161,8 @@ export function PersonalPage({ base = '/directorio/personal', soloLectura = fals
   const soloTarjeta = !dividido && !!seleccionada;
 
   return (
-    <Page>
+    // Pantalla ancha: la página ocupa toda la altura, así el panel termina a la altura de la barra lateral
+    <Page fill={dividido && !soloTarjeta}>
       {!soloTarjeta && (
         <PageHeader
           eyebrow={eyebrow}

@@ -18,7 +18,9 @@
 
 /* ─── Distribución: lista + tarjeta ─── */
 .personal-kpis { margin-bottom: var(--s-4); }
-.personal-kpis + .contactos--dividido { height: calc(100dvh - var(--topbar-h, 3.5rem) - 18rem); }
+/* Dentro de una página que llena la ventana, el panel toma el alto que queda y se pega más al título */
+.page--fill:has(> .contactos--dividido) > .page-header { margin-bottom: var(--s-3); }
+.page--fill > .contactos--dividido { flex: 1 1 auto; height: auto; min-height: 0; grid-template-rows: minmax(0, 1fr); }
 .contactos { display: flex; flex-direction: column; }
 .contactos--dividido {
   display: grid;
