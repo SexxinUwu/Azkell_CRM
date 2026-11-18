@@ -4,15 +4,16 @@ import '../almacen/almacen.css';
 import '../almacen/entradas.css';
 import '../gerencia/gerencia-oc.css';
 import '../tesoreria/pago.css';
+import './seguimiento.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, CircleAlert, Coins, FilePlus2, FileText, Package, Pencil, ReceiptText, RefreshCw, SearchX, Send, Trash2, Undo2, Users, Wallet } from 'lucide-react';
+import { Check, CheckCircle2, CircleAlert, Coins, FilePlus2, FileCode2, FileText, Package, Pencil, ReceiptText, RefreshCw, Search, SearchX, Send, Trash2, Undo2, Users, Wallet } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { BarraFiltros } from '../../core/ui/FiltrosListado';
+import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../core/ui/FiltrosListado';
+import { IconoFila } from '../../core/ui/IconoFila';
 import { Combobox } from '../../core/ui/Combobox';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
-import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Sheet } from '../../core/ui/Sheet';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
@@ -52,110 +53,206 @@ const NOMBRE_TIPO: Record<string, string> = { '01': 'Factura', '03': 'Boleta', '
 
 const COL_PENDIENTES: ColumnaTabla[] = [
   { id: 'sel', titulo: '', ancho: 44, minimo: 40 },
+  { id: 'acciones', titulo: 'Acciones', ancho: 90, minimo: 80 },
   { id: 'codigo', titulo: 'Servicio', ancho: 130 },
   { id: 'fecha', titulo: 'Fecha', ancho: 105 },
-  { id: 'cliente', titulo: 'Cliente', ancho: 240 },
-  { id: 'ruta', titulo: 'Ruta', ancho: 220 },
+  { id: 'cliente', titulo: 'Cliente', ancho: 240, minimo: 140 },
+  { id: 'ruta', titulo: 'Ruta', ancho: 220, minimo: 140 },
   { id: 'tramo', titulo: 'Ida / regreso', ancho: 110 },
   { id: 'estado', titulo: 'Estado', ancho: 120 },
-  { id: 'importe', titulo: 'Total a facturar', ancho: 190, alinear: 'right' },
+  { id: 'importe', titulo: 'Total a facturar', ancho: 210, alinear: 'right' },
 ];
 const COL_COMPROBANTES: ColumnaTabla[] = [
-  { id: 'numero', titulo: 'Comprobante', ancho: 150 },
+  { id: 'acciones', titulo: 'Documentos', ancho: 150, minimo: 130 },
+  { id: 'sunat', titulo: 'SUNAT', ancho: 110 },
+  { id: 'numero', titulo: 'Comprobante', ancho: 150, minimo: 120 },
   { id: 'tipo', titulo: 'Tipo', ancho: 130 },
-  { id: 'fecha', titulo: 'Emisión', ancho: 105 },
-  { id: 'cliente', titulo: 'Cliente', ancho: 240 },
-  { id: 'servicios', titulo: 'Servicios', ancho: 170 },
+  { id: 'ambiente', titulo: 'Ambiente', ancho: 100 },
+  { id: 'emision', titulo: 'Emisión', ancho: 105 },
+  { id: 'cliente', titulo: 'Cliente', ancho: 240, minimo: 140 },
+  { id: 'servicios', titulo: 'Servicios', ancho: 180, minimo: 120 },
   { id: 'total', titulo: 'Total', ancho: 130, alinear: 'right' },
-  { id: 'estado', titulo: 'SUNAT', ancho: 130 },
-  { id: 'docs', titulo: 'Documentos', ancho: 200, alinear: 'center' },
+  { id: 'neto', titulo: 'Neto a cobrar', ancho: 130, alinear: 'right' },
+  { id: 'vence', titulo: 'Vence', ancho: 105 },
 ];
 
-function estadoDe(c: Comprobante): { texto: string; tono: 'green' | 'amber' | 'red' | 'gray' } {
-  if (c.estado === 'ANULADO') return { texto: 'Anulado', tono: 'gray' };
-  if (c.estado === 'RECHAZADO' || c.apisunat_status === 'RECHAZADO') return { texto: 'Rechazado', tono: 'red' };
-  if (c.apisunat_status === 'ACEPTADO') return { texto: 'Aceptado', tono: 'green' };
-  return { texto: 'En SUNAT', tono: 'amber' };
+type TonoEstado = 'green' | 'amber' | 'red' | 'gray';
+function estadoDe(c: Comprobante): { texto: string; tono: TonoEstado } {
+  if (c.estado === 'ANULADO') return { texto: 'Anulada', tono: 'gray' };
+  if (c.estado === 'RECHAZADO' || c.apisunat_status === 'RECHAZADO') return { texto: 'Rechazada', tono: 'red' };
+  if (c.apisunat_status === 'ACEPTADO') return { texto: 'Aceptada', tono: 'green' };
+  return { texto: 'Enviada', tono: 'amber' };
+}
+/** Estado en SUNAT como una pastilla de color, igual que en Guías de remisión */
+function PastillaSunat({ c }: { c: Comprobante }) {
+  const e = estadoDe(c);
+  return <span title={c.apisunat_faults || undefined} style={{ display: 'inline-block', padding: '1px 8px', borderRadius: 999, background: `var(--${e.tono}-tint)`, color: `var(--${e.tono}-ink)`, fontSize: '0.6875rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{e.texto}</span>;
 }
 
-/** Operaciones › Facturación: factura, boleta y nota de crédito electrónicas por APISUNAT. */
+const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const inicioMesIso = () => { const d = new Date(); d.setDate(1); return iso(d); };
+const fechaCorta = (f?: string | null) => (f ? `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}` : '—');
+const abrir = (url?: string | null) => { if (url) window.open(url, '_blank', 'noopener'); };
+const SECCION_KEY = 'fleet_facturacion_vista';
+const vistaGuardada = (): 'pendientes' | 'comprobantes' => { try { return localStorage.getItem(SECCION_KEY) === 'comprobantes' ? 'comprobantes' : 'pendientes'; } catch { return 'pendientes'; } };
+
+/** Operaciones › Facturación: con el mismo diseño de Guías de remisión. Dos secciones: los servicios por facturar y los comprobantes emitidos con su estado en SUNAT. */
 export function FacturacionPage() {
   const { can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
   const puedeEmitir = can('op_facturacion.crear');
-  const [vista, setVista] = useState<'pendientes' | 'comprobantes'>('pendientes');
+  const [vista, setVista] = useState<'pendientes' | 'comprobantes'>(vistaGuardada);
   const [busqueda, setBusqueda] = useState('');
+  // Rango de fechas de emisión de los comprobantes: por defecto, del primer día del mes a hoy
+  const [desde, setDesde] = useState(inicioMesIso);
+  const [hasta, setHasta] = useState(hoyIso);
+  const [filtrando, setFiltrando] = useState(false);
+  const [estadoSrv, setEstadoSrv] = useState('');
+  const [igvF, setIgvF] = useState('');
+  const [sunat, setSunat] = useState('');
+  const [tipoF, setTipoF] = useState('');
+  const [ambiente, setAmbiente] = useState('');
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [emitir, setEmitir] = useState<{ servicios: ServicioPF[] } | null>(null);
   const [nc, setNc] = useState<Comprobante | null>(null);
-  const [actualizando, setActualizando] = useState(false);
+  const [sincronizando, setSincronizando] = useState<number | 'todas' | null>(null);
 
   const config = useQuery({ queryKey: ['facturacion', 'config'], queryFn: () => api<Config>('/facturacion/config'), staleTime: 60_000 });
   const pend = useQuery({ queryKey: ['facturacion', 'por-facturar'], queryFn: () => api<{ data: ServicioPF[] }>('/facturacion/por-facturar').then(r => r.data ?? []), staleTime: 15_000, refetchOnMount: 'always' });
   const comps = useQuery({ queryKey: ['facturacion', 'lista'], queryFn: () => api<{ data: Comprobante[] }>('/facturacion').then(r => r.data ?? []), staleTime: 15_000, refetchOnMount: 'always' });
+  const cfg = config.data;
+  const esPend = vista === 'pendientes';
 
-  const q = busqueda.trim().toLowerCase();
-  const pendientes = useMemo(() => (pend.data ?? []).filter(s => !q || `${s.codigo_orden} ${s.cliente_nombre} ${s.ruta ?? ''}`.toLowerCase().includes(q)), [pend.data, q]);
-  const comprobantes = useMemo(() => (comps.data ?? []).filter(c => !q || `${c.numero_completo} ${c.cliente_nombre} ${c.cliente_doc} ${c.servicios ?? ''}`.toLowerCase().includes(q)), [comps.data, q]);
-  const elegidos = (pend.data ?? []).filter(s => seleccion.has(s.codigo_orden));
+  const todosPend = pend.data ?? [];
+  const todosComp = comps.data ?? [];
+  const enRango = (c: Comprobante) => (!desde || c.fecha_emision >= desde) && (!hasta || c.fecha_emision <= hasta);
+  const compRango = useMemo(() => todosComp.filter(enRango), [todosComp, desde, hasta]); // eslint-disable-line react-hooks/exhaustive-deps
+  const fueraDeRango = todosComp.length - compRango.length;
+  const esMes = desde === inicioMesIso() && hasta === hoyIso();
+
+  const pendientesVis = useMemo(() => {
+    const t = sinTildes(busqueda.trim());
+    return todosPend.filter(s => (!estadoSrv || s.estado_servicio === estadoSrv) && (!igvF || s.modo_igv === igvF)
+      && (!t || sinTildes(`${s.codigo_orden} ${s.cliente_nombre} ${s.ruta ?? ''} ${s.cliente_doc ?? ''}`).includes(t)));
+  }, [todosPend, busqueda, estadoSrv, igvF]);
+  const comprobantesVis = useMemo(() => {
+    const t = sinTildes(busqueda.trim());
+    return compRango.filter(c => (!sunat || estadoDe(c).texto === sunat) && (!tipoF || c.tipo_doc === tipoF) && (!ambiente || (c.modo_emision ?? '') === ambiente)
+      && (!t || sinTildes(`${c.numero_completo} ${c.cliente_nombre} ${c.cliente_doc} ${c.servicios ?? ''} ${c.referencia ?? ''}`).includes(t)));
+  }, [compRango, busqueda, sunat, tipoF, ambiente]);
+
+  const activos = (esPend ? [estadoSrv, igvF] : [sunat, tipoF, ambiente]).filter(Boolean).length;
+  const limpiar = () => { setEstadoSrv(''); setIgvF(''); setSunat(''); setTipoF(''); setAmbiente(''); };
+  const cuentaP = (f: (s: ServicioPF) => boolean) => todosPend.filter(f).length;
+  const cuentaC = (f: (c: Comprobante) => boolean) => compRango.filter(f).length;
+  const enviadas = compRango.filter(c => estadoDe(c).texto === 'Enviada');
+  const elegidos = todosPend.filter(s => seleccion.has(s.codigo_orden));
   const clienteElegido = elegidos[0]?.cliente_nombre ?? null;
-  const porSunat = (comps.data ?? []).filter(c => estadoDe(c).texto === 'En SUNAT').length;
-  const totalMes = (comps.data ?? []).filter(c => c.tipo_doc !== '07' && c.estado !== 'ANULADO' && c.estado !== 'RECHAZADO' && c.fecha_emision.slice(0, 7) === hoyIso().slice(0, 7) && !esUsd(c.moneda)).reduce((s, c) => s + n(c.total), 0);
 
-  function alternar(s: ServicioPF) {
-    setSeleccion(prev => {
-      const x = new Set(prev);
-      if (x.has(s.codigo_orden)) x.delete(s.codigo_orden); else x.add(s.codigo_orden);
-      return x;
-    });
-  }
+  const cambiarVista = (v: 'pendientes' | 'comprobantes') => {
+    setVista(v); setBusqueda('');
+    try { localStorage.setItem(SECCION_KEY, v); } catch { /* sin almacenamiento */ }
+  };
+  const alternar = (s: ServicioPF) => setSeleccion(prev => { const x = new Set(prev); if (x.has(s.codigo_orden)) x.delete(s.codigo_orden); else x.add(s.codigo_orden); return x; });
   const refrescar = () => { void qc.invalidateQueries({ queryKey: ['facturacion'] }); };
 
-  async function actualizarEstados() {
-    setActualizando(true);
+  async function sincronizar(c: Comprobante) {
+    setSincronizando(c.id);
+    try {
+      const r = await api<{ ok?: boolean; error?: string; message?: string }>(`/facturacion/${c.id}/sincronizar`, { method: 'POST', body: {} });
+      if (r.ok === false) throw new Error(r.error || 'No se pudo consultar a APISUNAT');
+      haptic('success'); toast(r.message || 'Estado actualizado'); refrescar();
+    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); } finally { setSincronizando(null); }
+  }
+  async function sincronizarPendientes() {
+    setSincronizando('todas');
     try {
       const r = await api<{ actualizados: number; total: number }>('/facturacion/sincronizar-pendientes', { method: 'POST', body: {} });
-      toast(r.total ? `Se consultaron ${r.actualizados} de ${r.total} comprobantes` : 'No hay comprobantes pendientes de SUNAT');
-      refrescar();
-    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); } finally { setActualizando(false); }
+      haptic('success'); toast(r.total ? `Se actualizaron ${r.actualizados} de ${r.total} comprobantes` : 'No hay comprobantes pendientes en SUNAT'); refrescar();
+    } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); } finally { setSincronizando(null); }
   }
 
-  const cfg = config.data;
+  const modoTxt = cfg ? (cfg.modo === 'produccion' ? 'Producción' : 'Modo prueba, sin validez tributaria') : '';
+  const subtitulo = (esPend ? pend.isLoading : comps.isLoading) ? 'Cargando…'
+    : esPend ? `${todosPend.length} ${todosPend.length === 1 ? 'servicio por facturar' : 'servicios por facturar'}${cfg ? ` · ${cfg.razon_social} · ${modoTxt}` : ''}`
+      : `${compRango.length} ${compRango.length === 1 ? 'comprobante' : 'comprobantes'}${enviadas.length ? ` · ${enviadas.length} pendientes en SUNAT` : ''}${cfg ? ` · ${modoTxt}` : ''}`;
+
   return (
     <Page>
-      <PageHeader eyebrow="Operaciones" title="Facturación"
-        subtitle={cfg ? `${cfg.razon_social || 'Empresa'} · ${cfg.modo === 'produccion' ? 'Producción' : 'Modo prueba (sin validez tributaria)'}` : 'Cargando…'}
+      <PageHeader eyebrow="Operaciones" title="Facturación" subtitle={subtitulo}
         actions={
           <div style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'center' }}>
-            <div className="oc-acciones oc-acciones--sinfondo">
-              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--celeste" data-tip="Actualizar estados en SUNAT" aria-label="Actualizar estados en SUNAT" disabled={actualizando} onClick={() => { void actualizarEstados(); }}>
-                <RefreshCw size={17} />
-              </button>
-            </div>
+            <Button variant="secondary" icon={<RefreshCw size={16} />} onClick={() => { void sincronizarPendientes(); }} loading={sincronizando === 'todas'} disabled={!enviadas.length}>Actualizar estados</Button>
             {puedeEmitir && <Button variant="primary" icon={<FilePlus2 size={16} />} disabled={!cfg?.lista} onClick={() => setEmitir({ servicios: [] })}>Factura libre</Button>}
           </div>
         } />
 
       {cfg && !cfg.lista && <Notice tone="error" icon={<CircleAlert size={16} />}>{cfg.motivo}</Notice>}
-      {cfg?.lista && cfg.modo === 'prueba' && <Notice tone="accent">Estás en modo prueba: lo que emitas no va a SUNAT ni tiene validez tributaria. Cámbialo en Sistema › Integraciones cuando todo esté probado.</Notice>}
-
-      <div className="inv-kpis" style={{ margin: 'var(--s-4) 0' }}>
-        <KpiTarjeta etiqueta="Por facturar" valor={String((pend.data ?? []).length)} sub="Servicios entregados sin comprobante" icono={<ReceiptText size={18} />} />
-        <KpiTarjeta etiqueta="Facturado este mes" valor={formatMoneda(totalMes, 'PEN')} sub="Facturas y boletas en soles" icono={<FileText size={18} />} />
-        <KpiTarjeta etiqueta="En SUNAT" valor={String(porSunat)} sub="Esperando respuesta" icono={<Send size={18} />} tono={porSunat ? 'warning' : undefined} />
-      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-        <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder={vista === 'pendientes' ? 'Servicio, cliente o ruta' : 'Número, cliente, RUC o servicio'} activos={0} onAbrirFiltros={() => undefined}>
-          <SegmentedControl label="Vista" value={vista} onChange={v => setVista(v as 'pendientes' | 'comprobantes')}
-            options={[{ value: 'pendientes', label: 'Por facturar' }, { value: 'comprobantes', label: 'Comprobantes' }]} />
+        <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder={esPend ? 'Servicio, cliente, RUC o ruta' : 'Número, cliente, RUC o servicio'} activos={activos} onAbrirFiltros={() => setFiltrando(true)}>
+          <SegmentedControl label="Sección de facturación" value={vista} onChange={cambiarVista}
+            options={[{ value: 'pendientes', label: `Por facturar · ${todosPend.length}` }, { value: 'comprobantes', label: `Comprobantes · ${compRango.length}` }]} />
+          {!esPend && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <TextInput type="date" aria-label="Emitidos desde" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} style={{ width: 150 }} />
+              <span className="t-footnote c-secondary" aria-hidden>→</span>
+              <TextInput type="date" aria-label="Emitidos hasta" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} style={{ width: 150 }} />
+            </span>
+          )}
         </BarraFiltros>
+        {!esPend && (fueraDeRango > 0 || !esMes) && (
+          <p className="t-footnote c-secondary" style={{ margin: 0 }}>
+            {fueraDeRango > 0 ? `Hay ${fueraDeRango} ${fueraDeRango === 1 ? 'comprobante' : 'comprobantes'} fuera de estas fechas. ` : ''}
+            {desde || hasta ? <button type="button" onClick={() => { setDesde(''); setHasta(''); }} style={{ all: 'unset', cursor: 'pointer', color: 'var(--blue-ink, #0a63c9)', fontWeight: 600 }}>Ver todos</button> : null}
+            {!esMes ? <>{desde || hasta ? ' · ' : ''}<button type="button" onClick={() => { setDesde(inicioMesIso()); setHasta(hoyIso()); }} style={{ all: 'unset', cursor: 'pointer', color: 'var(--blue-ink, #0a63c9)', fontWeight: 600 }}>Volver a este mes</button></> : null}
+          </p>
+        )}
 
-        {vista === 'pendientes' ? (
-          pend.isError ? <Notice tone="error">{errorMessage(pend.error)}</Notice> : pend.isLoading ? <PageLoader /> : pendientes.length === 0 ? (
-            <EmptyState icon={busqueda ? <SearchX size={22} /> : <ReceiptText size={22} />} title={busqueda ? 'Ningún servicio coincide' : 'No hay servicios por facturar'}>
-              {busqueda ? null : 'Cuando un servicio quede entregado y tenga su flete, aparecerá aquí. También puedes emitir una factura libre.'}
+        <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={activos} onLimpiar={limpiar} resultado={esPend ? pendientesVis.length : comprobantesVis.length} unidad={esPend ? 'servicio' : 'comprobante'}>
+          {esPend ? (
+            <>
+              <GrupoFiltro titulo="Estado del servicio">
+                <ListaEleccion value={estadoSrv} onChange={setEstadoSrv} opciones={[
+                  { value: '', label: 'Todos', count: todosPend.length },
+                  { value: 'ENTREGADO', label: 'Entregado', count: cuentaP(s => s.estado_servicio === 'ENTREGADO') },
+                  { value: 'EN_EJECUCION', label: 'En ejecución', count: cuentaP(s => s.estado_servicio === 'EN_EJECUCION') },
+                ]} />
+              </GrupoFiltro>
+              <GrupoFiltro titulo="IGV del servicio">
+                <ListaEleccion value={igvF} onChange={setIgvF} opciones={[
+                  { value: '', label: 'Todos', count: todosPend.length },
+                  { value: 'INCLUYE', label: 'Incluye IGV', count: cuentaP(s => s.modo_igv === 'INCLUYE') },
+                  { value: 'MAS', label: 'Más IGV', count: cuentaP(s => s.modo_igv === 'MAS') },
+                  { value: 'NO', label: 'No aplica', count: cuentaP(s => s.modo_igv === 'NO') },
+                ]} />
+              </GrupoFiltro>
+            </>
+          ) : (
+            <>
+              <GrupoFiltro titulo="Estado en SUNAT">
+                <ListaEleccion value={sunat} onChange={setSunat} opciones={[{ value: '', label: 'Todos', count: compRango.length }, ...['Aceptada', 'Enviada', 'Rechazada', 'Anulada'].map(e => ({ value: e, label: e, count: cuentaC(c => estadoDe(c).texto === e) }))]} />
+              </GrupoFiltro>
+              <GrupoFiltro titulo="Tipo de comprobante">
+                <ListaEleccion value={tipoF} onChange={setTipoF} opciones={[{ value: '', label: 'Todos', count: compRango.length }, ...(['01', '03', '07'] as const).map(t => ({ value: t as string, label: NOMBRE_TIPO[t], count: cuentaC(c => c.tipo_doc === t) }))]} />
+              </GrupoFiltro>
+              <GrupoFiltro titulo="Ambiente">
+                <ListaEleccion value={ambiente} onChange={setAmbiente} opciones={[
+                  { value: '', label: 'Todos', count: compRango.length },
+                  { value: 'produccion', label: 'Producción', count: cuentaC(c => c.modo_emision === 'produccion') },
+                  { value: 'prueba', label: 'Prueba', count: cuentaC(c => c.modo_emision === 'prueba') },
+                ]} />
+              </GrupoFiltro>
+            </>
+          )}
+        </HojaFiltros>
+
+        {esPend ? (
+          pend.isError ? <Notice tone="error">{errorMessage(pend.error)}</Notice> : pend.isLoading ? <PageLoader /> : pendientesVis.length === 0 ? (
+            <EmptyState icon={busqueda || activos ? <SearchX size={22} /> : <ReceiptText size={22} />} title={busqueda || activos ? 'Sin coincidencias' : 'No hay servicios por facturar'}>
+              {busqueda || activos ? 'Prueba con otra búsqueda o quita los filtros.' : 'Cuando un servicio quede entregado y tenga su flete, aparecerá aquí. También puedes emitir una factura libre.'}
             </EmptyState>
           ) : (
             <>
@@ -168,19 +265,20 @@ export function FacturacionPage() {
                   {elegidos.length > 0 && <Button variant="plain" size="sm" onClick={() => setSeleccion(new Set())}>Quitar selección</Button>}
                 </div>
               )}
-              <TablaRedimensionable id="facturacion-pendientes-v1" columnas={COL_PENDIENTES} ariaLabel="Servicios por facturar" altoMax="62vh" className="tabla-redim--compacta">
-                {pendientes.map(s => {
+              <TablaRedimensionable id="facturacion-pendientes-v2" columnas={COL_PENDIENTES} ariaLabel="Servicios por facturar" className="tabla-redim--compacta">
+                {pendientesVis.map(s => {
                   const otro = !!clienteElegido && clienteElegido !== s.cliente_nombre;
                   return (
                     <tr key={s.codigo_orden} className="tabla-redim__fila--click" style={otro ? { opacity: 0.45 } : undefined} onClick={() => { if (puedeEmitir && !otro) alternar(s); }}>
                       <Celda><input type="checkbox" aria-label={`Elegir ${s.codigo_orden}`} checked={seleccion.has(s.codigo_orden)} disabled={!puedeEmitir || otro} onChange={() => alternar(s)} onClick={e => e.stopPropagation()} /></Celda>
+                      <Celda>{puedeEmitir && <IconoFila texto="Facturar este servicio" tono="verde" icono={<FilePlus2 size={15} />} onClick={() => { if (cfg?.lista) setEmitir({ servicios: [s] }); }} />}</Celda>
                       <Celda mono>{s.codigo_orden}</Celda>
-                      <Celda>{formatFechaPe(s.fecha)}</Celda>
+                      <Celda mono>{fechaCorta(s.fecha)}</Celda>
                       <Celda>{s.cliente_nombre || '—'}{!s.cliente_doc && <span title="El cliente no tiene RUC registrado" style={{ marginLeft: 6, color: 'var(--red-ink)' }}><CircleAlert size={13} aria-label="Sin RUC" /></span>}</Celda>
                       <Celda>{s.ruta || '—'}</Celda>
-                      <Celda><span className="oc-chip">{s.es_retorno ? 'Regreso' : 'Ida'}</span></Celda>
-                      <Celda><Badge tone={s.estado_servicio === 'ENTREGADO' ? 'green' : 'amber'}>{s.estado_servicio === 'ENTREGADO' ? 'Entregado' : 'En ejecución'}</Badge></Celda>
-                      <Celda alinear="right" mono>{formatMoneda(n(s.total_con_igv), esUsd(s.moneda) ? 'USD' : 'PEN')} <span className="oc-chip" style={{ marginLeft: 6 }}>{s.modo_igv === 'INCLUYE' ? 'Incluye IGV' : s.modo_igv === 'MAS' ? 'Más IGV' : 'Sin IGV'}</span></Celda>
+                      <Celda>{s.es_retorno ? 'Regreso' : 'Ida'}</Celda>
+                      <Celda><PastillaTono tono={s.estado_servicio === 'ENTREGADO' ? 'green' : 'amber'} texto={s.estado_servicio === 'ENTREGADO' ? 'Entregado' : 'En ejecución'} /></Celda>
+                      <Celda alinear="right" mono>{formatMoneda(n(s.total_con_igv), esUsd(s.moneda) ? 'USD' : 'PEN')} <span className="t-footnote c-secondary" style={{ marginLeft: 6 }}>{s.modo_igv === 'INCLUYE' ? 'incluye IGV' : s.modo_igv === 'MAS' ? 'más IGV' : 'sin IGV'}</span></Celda>
                     </tr>
                   );
                 })}
@@ -188,34 +286,36 @@ export function FacturacionPage() {
             </>
           )
         ) : (
-          comps.isError ? <Notice tone="error">{errorMessage(comps.error)}</Notice> : comps.isLoading ? <PageLoader /> : comprobantes.length === 0 ? (
-            <EmptyState icon={busqueda ? <SearchX size={22} /> : <ReceiptText size={22} />} title={busqueda ? 'Ningún comprobante coincide' : 'Aún no hay comprobantes'}>
-              {busqueda ? null : 'Las facturas y notas de crédito que emitas quedarán aquí con su estado en SUNAT.'}
+          comps.isError ? <Notice tone="error">{errorMessage(comps.error)}</Notice> : comps.isLoading ? <PageLoader /> : comprobantesVis.length === 0 ? (
+            <EmptyState icon={busqueda || activos ? <SearchX size={22} /> : <FileText size={22} />} title={busqueda || activos ? 'Sin coincidencias' : 'Aún no hay comprobantes'}>
+              {busqueda || activos ? 'Prueba con otra búsqueda o quita los filtros.' : 'Las facturas y notas de crédito que emitas quedarán aquí con su estado en SUNAT.'}
             </EmptyState>
           ) : (
-            <TablaRedimensionable id="facturacion-comprobantes-v1" columnas={COL_COMPROBANTES} ariaLabel="Comprobantes emitidos" altoMax="68vh" className="tabla-redim--compacta">
-              {comprobantes.map(c => {
-                const e = estadoDe(c);
+            <TablaRedimensionable id="facturacion-comprobantes-v2" columnas={COL_COMPROBANTES} ariaLabel="Comprobantes emitidos" className="tabla-redim--compacta">
+              {comprobantesVis.map(c => {
                 const mon = esUsd(c.moneda) ? 'USD' : 'PEN';
+                const e = estadoDe(c);
                 return (
                   <tr key={c.id}>
-                    <Celda mono><strong>{c.numero_completo}</strong>{c.modo_emision === 'prueba' && <span className="oc-chip" style={{ marginLeft: 6 }}>Prueba</span>}</Celda>
-                    <Celda>{NOMBRE_TIPO[c.tipo_doc]}{c.tipo_doc === '07' && c.doc_ref_numero ? <span className="t-footnote c-secondary"> · {c.doc_ref_numero}</span> : null}</Celda>
-                    <Celda>{formatFechaPe(c.fecha_emision)}</Celda>
-                    <Celda>{c.cliente_nombre}</Celda>
-                    <Celda>{c.servicios || (c.tipo_doc === '07' ? c.motivo_texto : null) || '—'}</Celda>
-                    <Celda alinear="right" mono>{c.tipo_doc === '07' ? '− ' : ''}{formatMoneda(n(c.total), mon)}</Celda>
-                    <Celda><span title={c.apisunat_faults || undefined}><Badge tone={e.tono}>{e.texto}</Badge></span></Celda>
-                    <Celda alinear="center">
-                      <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
-                        {c.pdf_url && <a href={c.pdf_url} target="_blank" rel="noreferrer" className="oc-adj oc-adj--rojo">PDF</a>}
-                        {c.xml_url && <a href={c.xml_url} target="_blank" rel="noreferrer" className="oc-adj oc-adj--verde">XML</a>}
-                        {c.cdr_url && <a href={c.cdr_url} target="_blank" rel="noreferrer" className="oc-adj oc-adj--verde">CDR</a>}
-                        {puedeEmitir && c.tipo_doc !== '07' && c.estado === 'EMITIDO' && c.apisunat_status !== 'RECHAZADO' && (
-                          <button type="button" className="oc-adj" style={{ cursor: 'pointer', font: 'inherit' }} title="Emitir nota de crédito" onClick={() => setNc(c)}><Undo2 size={12} aria-hidden /> Nota de crédito</button>
-                        )}
+                    <Celda>
+                      <span style={{ display: 'inline-flex', gap: 2 }}>
+                        {c.pdf_url && <IconoFila texto="PDF de APISUNAT" tono="rojo" icono={<FileText size={15} />} onClick={() => abrir(c.pdf_url)} />}
+                        {c.xml_url && <IconoFila texto="Descargar el XML firmado" tono="violeta" icono={<FileCode2 size={15} />} onClick={() => abrir(c.xml_url)} />}
+                        {c.cdr_url && <IconoFila texto="Constancia de recepción de SUNAT" tono="verde" icono={<CheckCircle2 size={15} />} onClick={() => abrir(c.cdr_url)} />}
+                        {puedeEmitir && c.apisunat_status !== 'ACEPTADO' && e.texto === 'Enviada' && <IconoFila texto="Actualizar estado en SUNAT" tono="azul" icono={<Search size={15} />} cargando={sincronizando === c.id} onClick={() => { void sincronizar(c); }} />}
+                        {puedeEmitir && c.tipo_doc !== '07' && c.estado === 'EMITIDO' && c.apisunat_status !== 'RECHAZADO' && <IconoFila texto="Emitir nota de crédito" tono="ambar" icono={<Undo2 size={15} />} onClick={() => setNc(c)} />}
                       </span>
                     </Celda>
+                    <Celda><PastillaSunat c={c} /></Celda>
+                    <Celda mono>{c.numero_completo}</Celda>
+                    <Celda>{NOMBRE_TIPO[c.tipo_doc]}{c.tipo_doc === '07' && c.doc_ref_numero ? <span className="t-footnote c-secondary"> · {c.doc_ref_numero}</span> : null}</Celda>
+                    <Celda>{c.modo_emision === 'produccion' ? 'Producción' : c.modo_emision === 'prueba' ? 'Prueba' : '—'}</Celda>
+                    <Celda mono>{fechaCorta(c.fecha_emision)}</Celda>
+                    <Celda>{c.cliente_nombre}</Celda>
+                    <Celda mono>{c.servicios || (c.tipo_doc === '07' ? c.motivo_texto : null) || '—'}</Celda>
+                    <Celda alinear="right" mono>{c.tipo_doc === '07' ? '− ' : ''}{formatMoneda(n(c.total), mon)}</Celda>
+                    <Celda alinear="right" mono>{c.tipo_doc === '07' ? '—' : formatMoneda(n(c.neto_pendiente), mon)}</Celda>
+                    <Celda mono>{fechaCorta(c.fecha_vencimiento)}</Celda>
                   </tr>
                 );
               })}
@@ -225,10 +325,15 @@ export function FacturacionPage() {
       </div>
 
       {cfg && <EmitirSheet open={!!emitir} servicios={emitir?.servicios ?? []} config={cfg} onClose={() => setEmitir(null)}
-        onEmitido={() => { setEmitir(null); setSeleccion(new Set()); setVista('comprobantes'); refrescar(); }} />}
+        onEmitido={() => { setEmitir(null); setSeleccion(new Set()); cambiarVista('comprobantes'); setDesde(inicioMesIso()); setHasta(hoyIso()); refrescar(); }} />}
       {cfg && <NotaCreditoSheet comprobante={nc} config={cfg} onClose={() => setNc(null)} onEmitida={() => { setNc(null); refrescar(); }} />}
     </Page>
   );
+}
+
+/** Pastilla de color (mismo estilo que el estado de las guías) */
+function PastillaTono({ tono, texto }: { tono: TonoEstado; texto: string }) {
+  return <span style={{ display: 'inline-block', padding: '1px 8px', borderRadius: 999, background: `var(--${tono}-tint)`, color: `var(--${tono}-ink)`, fontSize: '0.6875rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{texto}</span>;
 }
 
 /** Factura o boleta, con el mismo estilo de «Procesar pago»: datos en lectura con «Editar», detalle de líneas, resumen y confirmación */
