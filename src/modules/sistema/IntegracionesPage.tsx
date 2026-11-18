@@ -1,7 +1,9 @@
 import '../mantenimiento/mant.css';
+import './integraciones.css';
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, ChevronDown, CircleAlert, MapPin, ShieldCheck, Zap } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { Building2, CheckCircle2, ChevronDown, CircleAlert, KeyRound, ListOrdered, MapPin, ShieldCheck, Zap } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, PasswordInput, TextInput } from '../../core/ui/Field';
@@ -46,14 +48,14 @@ export function IntegracionesPage() {
   });
 
   return (
-    <Page narrow>
+    <Page>
       <PageHeader
         eyebrow="Configuración"
         title="Integraciones"
         subtitle="Servicios externos que usa el sistema"
       />
       {q.isLoading ? <PageLoader /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-5)' }}>
+        <div className="int-lista">
           <Wialon filas={q.data ?? []} />
           <Apisunat filas={q.data ?? []} />
         </div>
@@ -78,26 +80,34 @@ function useGuardar() {
   };
 }
 
-// El formulario va con display: contents para que el diseño de la tarjeta no cambie.
-function Tarjeta({ icono, titulo, estado, meta, onGuardar, children }: {
-  icono: React.ReactNode; titulo: string; estado: 'ok' | 'pendiente' | 'error'; meta?: string; onGuardar: () => void; children: React.ReactNode;
+// Tarjeta plegable: contraída muestra un resumen; al tocarla se abre con un resorte sin rebote (se puede volver a tocar a mitad del movimiento)
+function Tarjeta({ icono, tono, titulo, resumen, estado, onGuardar, children }: {
+  icono: React.ReactNode; tono: 'gps' | 'sunat'; titulo: string; resumen: string; estado: 'ok' | 'pendiente' | 'error'; onGuardar: () => void; children: React.ReactNode;
 }) {
   const [abierta, setAbierta] = useState(false);
+  const reducir = useReducedMotion();
   return (
-    <section className="tarjeta__lista" style={{ padding: 'var(--s-4)', display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-      <button type="button" aria-expanded={abierta} onClick={() => setAbierta(a => !a)}
-        style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', width: '100%', background: 'none', border: 0, padding: 0, font: 'inherit', color: 'inherit', textAlign: 'left', cursor: 'pointer' }}>
-        <span style={{ color: 'var(--label-1)' }}>{icono}</span>
-        <div style={{ flex: 1 }}>
-          <h2 style={{ fontSize: '1.0625rem', fontWeight: 700 }}>{titulo}</h2>
-          {meta && <div className="t-footnote c-secondary">{meta}</div>}
-        </div>
+    <section className={`int-card${abierta ? ' int-card--abierta' : ''}`}>
+      <button type="button" className="int-cab" aria-expanded={abierta} onClick={() => { haptic('selection'); setAbierta(a => !a); }}>
+        <span className={`int-icono int-icono--${tono}`}>{icono}</span>
+        <span className="int-cab__texto">
+          <h2 className="int-titulo">{titulo}</h2>
+          <div className="int-resumen">{resumen}</div>
+        </span>
         <span className={`ot-estado ot-estado--${estado === 'ok' ? 'green' : estado === 'error' ? 'red' : 'neutral'}`}>
           {estado === 'ok' ? 'Configurado' : estado === 'error' ? 'Con error' : 'Sin configurar'}
         </span>
-        <ChevronDown size={18} aria-hidden style={{ color: 'var(--label-2)', transition: 'transform 0.2s ease', transform: abierta ? 'rotate(180deg)' : 'none' }} />
+        <ChevronDown size={18} aria-hidden className={`int-chev${abierta ? ' int-chev--abierta' : ''}`} />
       </button>
-      {abierta && <form style={{ display: 'contents' }} onSubmit={e => { e.preventDefault(); onGuardar(); }}>{children}</form>}
+      <AnimatePresence initial={false}>
+        {abierta && (
+          <motion.div key="cuerpo" className="int-cuerpo-ext"
+            initial={reducir ? { opacity: 0 } : { height: 0, opacity: 0 }} animate={reducir ? { opacity: 1 } : { height: 'auto', opacity: 1 }} exit={reducir ? { opacity: 0 } : { height: 0, opacity: 0 }}
+            transition={{ type: 'spring', bounce: 0, duration: 0.42 }}>
+            <form className="int-cuerpo" onSubmit={e => { e.preventDefault(); onGuardar(); }}>{children}</form>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
@@ -165,12 +175,16 @@ function Wialon({ filas }: { filas: Fila[] }) {
   }
 
   return (
-    <Tarjeta icono={<MapPin size={22} />} titulo="Wialon · GPS" estado={res && !res.ok ? 'error' : token ? 'ok' : 'pendiente'} meta={metaDe(filas, 'wialon_token')} onGuardar={() => guardarYProbar(false)}>
-      <Field label="Token de acceso" hint="Se obtiene en Wialon › Mi cuenta › Tokens">{p => <PasswordInput {...p} value={token} onChange={e => setToken(e.target.value)} autoComplete="off" />}</Field>
-      <Field label="URL del servidor" hint="Déjalo vacío para usar el predeterminado">{p => <TextInput {...p} value={url} onChange={e => setUrl(e.target.value)} placeholder="https://hst-api.wialon.com" />}</Field>
+    <Tarjeta icono={<MapPin size={20} />} tono="gps" titulo="Wialon · GPS" estado={res && !res.ok ? 'error' : token ? 'ok' : 'pendiente'}
+      resumen={token ? `Token guardado · ${url || 'servidor predeterminado'}` : 'Aún sin token de acceso'} onGuardar={() => guardarYProbar(false)}>
+      <div className="int-grid">
+        <Field label="Token de acceso" hint="Se obtiene en Wialon › Mi cuenta › Tokens">{p => <PasswordInput {...p} value={token} onChange={e => setToken(e.target.value)} autoComplete="off" />}</Field>
+        <Field label="URL del servidor" hint="Déjalo vacío para usar el predeterminado">{p => <TextInput {...p} value={url} onChange={e => setUrl(e.target.value)} placeholder="https://hst-api.wialon.com" />}</Field>
+      </div>
       {conectando && <Notice>Esperando la autorización en la ventana de Wialon…</Notice>}
       {res && <Notice tone={res.ok ? 'success' : 'error'} icon={res.ok ? <CheckCircle2 size={16} /> : <CircleAlert size={16} />}>{res.texto}</Notice>}
-      <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+      <div className="int-acciones">
+        <span className="int-acciones__meta">{metaDe(filas, 'wialon_token')}</span>
         <Button variant="primary" icon={<MapPin size={16} />} onClick={conectar} loading={conectando} disabled={ocupado}>Conectar con Wialon</Button>
         <Button variant="secondary" onClick={() => guardarYProbar(false)} disabled={ocupado || conectando}>Guardar</Button>
         <Button variant="primary" icon={<Zap size={16} />} onClick={() => guardarYProbar(true)} loading={ocupado} disabled={conectando}>Guardar y probar conexión</Button>
@@ -186,6 +200,8 @@ function Apisunat({ filas }: { filas: Fila[] }) {
   const [v, setV] = useState(vacio);
   const [ocupado, setOcupado] = useState(false);
   const [res, setRes] = useState<Resultado>(null);
+  const [pestana, setPestana] = useState<'empresa' | 'series' | 'conexion'>('empresa');
+  const reducir = useReducedMotion();
 
   useEffect(() => {
     setV({
@@ -223,33 +239,71 @@ function Apisunat({ filas }: { filas: Fila[] }) {
   const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setV(a => ({ ...a, [k]: e.target.value }));
   const produccion = v.modo === 'produccion';
 
+  const Aviso = res && <Notice tone={res.ok ? 'success' : 'error'} icon={res.ok ? <CheckCircle2 size={16} /> : <CircleAlert size={16} />}>{res.texto}</Notice>;
+  const serie = (k: keyof typeof v, etiqueta: string) => (
+    <div className="int-mono" key={k}><Field label={etiqueta}>{p => <TextInput {...p} maxLength={4} value={v[k]} onChange={set(k)} />}</Field></div>
+  );
+  const resumen = v.ruc ? `${produccion ? 'Producción' : 'Modo prueba'} · RUC ${v.ruc}${v.razon ? ` · ${v.razon}` : ''}` : 'Aún sin RUC de la empresa';
+
   return (
-    <Tarjeta icono={<ShieldCheck size={22} />} titulo="APISUNAT · Guías y facturación electrónica" estado={res && !res.ok ? 'error' : v.id || v.pid ? 'ok' : 'pendiente'} meta={metaDe(filas, 'apisunat_modo') || 'Es de esta empresa: cada empresa guarda la suya.'} onGuardar={() => guardarYProbar(false)}>
-      <SegmentedControl block label="Ambiente de emisión" value={v.modo as 'prueba' | 'produccion'} onChange={m => setV(a => ({ ...a, modo: m }))}
-        options={[{ value: 'prueba', label: 'Prueba' }, { value: 'produccion', label: 'Producción' }]} />
+    <Tarjeta icono={<ShieldCheck size={20} />} tono="sunat" titulo="APISUNAT · Guías y facturación electrónica" estado={res && !res.ok ? 'error' : v.id || v.pid ? 'ok' : 'pendiente'}
+      resumen={resumen} onGuardar={() => guardarYProbar(false)}>
+      <div className="int-barra">
+        <SegmentedControl label="Ambiente de emisión" value={v.modo as 'prueba' | 'produccion'} onChange={m => setV(a => ({ ...a, modo: m }))}
+          options={[{ value: 'prueba', label: 'Prueba' }, { value: 'produccion', label: 'Producción' }]} />
+        <SegmentedControl label="Sección" value={pestana} onChange={setPestana}
+          options={[{ value: 'empresa', label: 'Empresa' }, { value: 'series', label: 'Series' }, { value: 'conexion', label: 'Conexión' }]} />
+      </div>
       <Notice tone={produccion ? 'error' : 'accent'}>{produccion
-        ? 'Producción: las guías que emitas tienen validez tributaria ante SUNAT.'
+        ? 'Producción: lo que emitas tiene validez tributaria ante SUNAT.'
         : 'Prueba (modo DESARROLLO de APISUNAT): no se envía a SUNAT ni tiene validez tributaria. Solo se envía si APISUNAT confirma que el token es de desarrollo.'}</Notice>
-      <Field label="RUC de la empresa">{p => <TextInput {...p} inputMode="numeric" maxLength={11} value={v.ruc} onChange={set('ruc')} />}</Field>
-      <Field label="Razón social">{p => <TextInput {...p} value={v.razon} onChange={set('razon')} />}</Field>
-      <Field label="Registro MTC (transporte de carga)">{p => <TextInput {...p} value={v.mtc} onChange={set('mtc')} />}</Field>
-      <Field label="Autorización especial del MTC (opcional)">{p => <TextInput {...p} value={v.autorizacion} onChange={set('autorizacion')} />}</Field>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
-        <Field label="Serie GRE Transportista">{p => <TextInput {...p} maxLength={4} value={v.serieGrt} onChange={set('serieGrt')} />}</Field>
-        <Field label="Serie GRE Remitente">{p => <TextInput {...p} maxLength={4} value={v.serieGre} onChange={set('serieGre')} />}</Field>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
-        <Field label="Serie de facturas">{p => <TextInput {...p} maxLength={4} value={v.serieFactura} onChange={set('serieFactura')} />}</Field>
-        <Field label="Serie de boletas">{p => <TextInput {...p} maxLength={4} value={v.serieBoleta} onChange={set('serieBoleta')} />}</Field>
-        <Field label="Serie nota de crédito (factura)">{p => <TextInput {...p} maxLength={4} value={v.serieNcF} onChange={set('serieNcF')} />}</Field>
-        <Field label="Serie nota de crédito (boleta)">{p => <TextInput {...p} maxLength={4} value={v.serieNcB} onChange={set('serieNcB')} />}</Field>
-      </div>
-      <Field label="Persona ID · token de PRODUCCIÓN">{p => <TextInput {...p} value={v.id} onChange={set('id')} autoComplete="off" />}</Field>
-      <Field label="Token de PRODUCCIÓN">{p => <PasswordInput {...p} value={v.token} onChange={set('token')} autoComplete="off" />}</Field>
-      <Field label="Persona ID · token de DESARROLLO (pruebas)">{p => <TextInput {...p} value={v.pid} onChange={set('pid')} autoComplete="off" />}</Field>
-      <Field label="Token de DESARROLLO">{p => <PasswordInput {...p} value={v.ptoken} onChange={set('ptoken')} autoComplete="off" />}</Field>
-      {res && <Notice tone={res.ok ? 'success' : 'error'} icon={res.ok ? <CheckCircle2 size={16} /> : <CircleAlert size={16} />}>{res.texto}</Notice>}
-      <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div key={pestana} initial={reducir ? { opacity: 0 } : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+          transition={{ type: 'spring', bounce: 0, duration: 0.3 }} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
+          {pestana === 'empresa' && (
+            <div className="int-grid">
+              <Field label="RUC de la empresa">{p => <TextInput {...p} inputMode="numeric" maxLength={11} value={v.ruc} onChange={set('ruc')} />}</Field>
+              <Field label="Razón social">{p => <TextInput {...p} value={v.razon} onChange={set('razon')} />}</Field>
+              <Field label="Registro MTC (transporte de carga)">{p => <TextInput {...p} value={v.mtc} onChange={set('mtc')} />}</Field>
+              <Field label="Autorización especial del MTC" hint="Opcional">{p => <TextInput {...p} value={v.autorizacion} onChange={set('autorizacion')} />}</Field>
+            </div>
+          )}
+          {pestana === 'series' && (
+            <>
+              <div className="int-grupo">
+                <div className="int-grupo__titulo"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ListOrdered size={13} aria-hidden /> Guías de remisión</span></div>
+                <div className="int-grid int-grid--series">{serie('serieGrt', 'Transportista')}{serie('serieGre', 'Remitente')}</div>
+              </div>
+              <div className="int-grupo">
+                <div className="int-grupo__titulo"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Building2 size={13} aria-hidden /> Comprobantes</span></div>
+                <div className="int-grid int-grid--series">
+                  {serie('serieFactura', 'Facturas')}{serie('serieBoleta', 'Boletas')}
+                  {serie('serieNcF', 'N. crédito (factura)')}{serie('serieNcB', 'N. crédito (boleta)')}
+                </div>
+              </div>
+            </>
+          )}
+          {pestana === 'conexion' && (
+            <div className="int-dos">
+              <div className={`int-grupo${produccion ? ' int-grupo--activo' : ''}`}>
+                <div className="int-grupo__titulo"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><KeyRound size={13} aria-hidden /> Producción</span>{produccion && <span className="int-uso">En uso</span>}</div>
+                <Field label="Persona ID">{p => <TextInput {...p} value={v.id} onChange={set('id')} autoComplete="off" />}</Field>
+                <Field label="Token">{p => <PasswordInput {...p} value={v.token} onChange={set('token')} autoComplete="off" />}</Field>
+              </div>
+              <div className={`int-grupo${!produccion ? ' int-grupo--activo' : ''}`}>
+                <div className="int-grupo__titulo"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><KeyRound size={13} aria-hidden /> Desarrollo (pruebas)</span>{!produccion && <span className="int-uso">En uso</span>}</div>
+                <Field label="Persona ID">{p => <TextInput {...p} value={v.pid} onChange={set('pid')} autoComplete="off" />}</Field>
+                <Field label="Token">{p => <PasswordInput {...p} value={v.ptoken} onChange={set('ptoken')} autoComplete="off" />}</Field>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
+
+      {Aviso}
+      <div className="int-acciones">
+        <span className="int-acciones__meta">{metaDe(filas, 'apisunat_modo') || 'Es de esta empresa: cada empresa guarda la suya.'}</span>
         <Button variant="secondary" onClick={() => guardarYProbar(false)} disabled={ocupado}>Guardar</Button>
         <Button variant="primary" icon={<Zap size={16} />} onClick={() => guardarYProbar(true)} loading={ocupado}>Guardar y probar conexión</Button>
       </div>
