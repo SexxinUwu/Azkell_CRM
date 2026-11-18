@@ -1,0 +1,79 @@
+/* Portal del conductor: tarjetas grandes, pensadas para el celular */
+.pc { display: flex; flex-direction: column; gap: var(--s-4); }
+
+.pc-hero {
+  background: var(--surface);
+  border-radius: 28px;
+  padding: var(--s-5) var(--s-4);
+  box-shadow: var(--shadow-raised);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.pc-hero__cab { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.pc-estado {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--green-ink); background: color-mix(in srgb, var(--green-ink) 12%, transparent);
+  padding: 4px 10px; border-radius: 999px;
+}
+.pc-estado__punto { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: pc-pulso 1.8s ease-in-out infinite; }
+@keyframes pc-pulso { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.pc-hero__fecha { font-size: 0.8125rem; color: var(--label-2); }
+.pc-hero__aviso { margin: 0; font-size: 0.9375rem; color: var(--label-2); }
+.pc-hero__codigo { margin: -6px 0 0; font-size: 1.75rem; line-height: 1.1; letter-spacing: -0.02em; font-weight: 800; word-break: break-word; }
+
+.pc-unidades { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
+.pc-unidad { background: var(--fill-1); border-radius: 16px; padding: var(--s-3); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pc-unidad__label { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--label-2); }
+.pc-unidad__placa { font-family: var(--font-mono); font-size: 1.125rem; font-weight: 700; overflow-wrap: anywhere; }
+
+.pc-ruta { display: flex; flex-direction: column; position: relative; }
+.pc-punto { display: flex; gap: var(--s-3); padding: var(--s-3) 0; position: relative; }
+.pc-punto + .pc-punto { border-top: 1px solid var(--separator); }
+.pc-punto__marca {
+  flex: none; width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center; color: #fff; margin-top: 2px;
+}
+.pc-punto--carga .pc-punto__marca { background: var(--accent); }
+.pc-punto--entrega .pc-punto__marca { background: var(--green-ink); }
+.pc-punto__texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pc-punto__titulo { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--label-2); }
+.pc-punto__lugar { font-size: 1.0625rem; font-weight: 700; }
+.pc-punto__dir { font-size: 0.8125rem; color: var(--label-2); }
+.pc-punto__botones { display: flex; gap: var(--s-2); flex-wrap: wrap; margin-top: var(--s-2); }
+.pc-mapa {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px;
+  padding: 0 14px; border-radius: 999px; font-size: 0.8125rem; font-weight: 600;
+  background: var(--fill-2); color: var(--accent-ink, var(--accent)); text-decoration: none;
+  transition: transform 120ms ease-out, background 120ms;
+}
+.pc-mapa:active { transform: scale(0.96); background: var(--fill-3); }
+
+.pc-accesos { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--s-3); }
+.pc-acceso {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;
+  background: var(--surface); border: 0; border-radius: 24px; padding: var(--s-4);
+  box-shadow: var(--shadow-card); cursor: pointer; color: inherit; font: inherit;
+  transition: transform 140ms ease-out, box-shadow 140ms;
+}
+.pc-acceso:active { transform: scale(0.97); }
+.pc-acceso__icono { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; color: #fff; margin-bottom: var(--s-2); }
+.pc-acceso__icono--vale { background: #f59e0b; }
+.pc-acceso__icono--falla { background: #ef4444; }
+.pc-acceso__icono--gasto { background: #10b981; }
+.pc-acceso__titulo { font-size: 1rem; font-weight: 700; line-height: 1.2; }
+.pc-acceso__sub { font-size: 0.8125rem; color: var(--label-2); }
+
+.pc-atras { display: inline-flex; align-items: center; gap: 2px; align-self: flex-start; background: none; border: 0; padding: 4px 8px 4px 0; font: inherit; font-size: 1.0625rem; color: var(--accent-ink, var(--accent)); cursor: pointer; min-height: 44px; }
+.pc-titulo { margin: 0; font-size: 1.625rem; letter-spacing: -0.02em; font-weight: 800; }
+.pc-subtitulo { margin: -10px 0 0; font-size: 0.875rem; color: var(--label-2); }
+
+.pc-otro { display: flex; justify-content: center; }
+.pc-otro > form { width: 100%; }
+.pc-otro__abrir { background: none; border: 0; font: inherit; font-size: 0.8125rem; color: var(--label-2); cursor: pointer; padding: var(--s-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-estado__punto { animation: none; }
+  .pc-acceso, .pc-mapa { transition: none; }
+}

@@ -280,3 +280,11 @@
   transform: none;
   opacity: 0.85;
 }
+
+/* Accesos sueltos (Dashboard, Novedades): sin cabecera ni desplegable */
+.nav-seccion--plana {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: var(--s-2);
+}

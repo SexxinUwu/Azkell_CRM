@@ -2124,8 +2124,18 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
     router.get('/conductor-portal/viaje-activo', async (req, res) => {
         try {
             const tdb = getDb(req);
-            const qDni = (req.query.dni || '').trim();
-            const qNombre = (req.query.nombre || '').trim();
+            let qDni = (req.query.dni || '').trim();
+            let qNombre = (req.query.nombre || '').trim();
+            // Modo «yo»: el conductor entra con su propio usuario, así que el DNI y el nombre salen de su cuenta (no se escriben)
+            const modoYo = req.query.yo === '1';
+            let sinDatos = false;
+            if (modoYo) {
+                const [uRows] = await tdb.query('SELECT nombre, dni FROM usuarios WHERE idUsuario = ? LIMIT 1', [req.user && req.user.id]);
+                const u = (uRows && uRows[0]) || {};
+                qDni = String(u.dni || '').trim();
+                qNombre = qDni ? '' : String(u.nombre || '').trim();
+                sinDatos = !qDni && !qNombre;
+            }
 
             let conductorNombre = qNombre;
             let conductorDni = qDni;
@@ -2159,7 +2169,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                            DATE_FORMAT(ov.fecha_viaje, '%Y-%m-%d') AS fecha_formateada,
                            DATE_FORMAT(ov.fecha_inicio, '%Y-%m-%d %H:%i') AS inicio_formateado
                     FROM operaciones_ordenes_viaje ov
-                    WHERE UPPER(TRIM(ov.conductor)) LIKE UPPER(?)
+                    WHERE UPPER(TRIM(ov.conductor)) LIKE UPPER(?)${modoYo ? " AND UPPER(ov.estado) IN ('ACTIVO','INICIADO')" : ''}
                     ORDER BY 
                         CASE WHEN UPPER(ov.estado) = 'ACTIVO' THEN 1 
                              WHEN UPPER(ov.estado) = 'INICIADO' THEN 2 
@@ -2180,7 +2190,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                            DATE_FORMAT(ov.fecha_viaje, '%Y-%m-%d') AS fecha_formateada,
                            DATE_FORMAT(ov.fecha_inicio, '%Y-%m-%d %H:%i') AS inicio_formateado
                     FROM operaciones_ordenes_viaje ov
-                    WHERE ov.conductor LIKE ? OR ov.observaciones LIKE ?
+                    WHERE (ov.conductor LIKE ? OR ov.observaciones LIKE ?)${modoYo ? " AND UPPER(ov.estado) IN ('ACTIVO','INICIADO')" : ''}
                     ORDER BY ov.fecha_viaje DESC, ov.id DESC
                     LIMIT 1
                 `, [`%${conductorDni}%`, `%${conductorDni}%`]);
@@ -2193,7 +2203,8 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                     ok: true,
                     conductor: { nombre: conductorNombre || 'Conductor', dni: conductorDni || '' },
                     viaje: null,
-                    message: 'No se encontró un viaje asignado para este conductor.'
+                    sin_datos: sinDatos,
+                    message: modoYo ? 'No tienes un viaje activo por ahora.' : 'No se encontró un viaje asignado para este conductor.'
                 });
             }
 
@@ -2269,6 +2280,8 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                     origen: viaje.origen || 'BASE',
                     destino: viaje.destino || 'DESTINO',
                     ruta: viaje.ruta || `${viaje.origen || 'BASE'} - ${viaje.destino || 'DESTINO'}`,
+                    direccion_partida: viaje.direccion_partida || '',
+                    direccion_llegada: viaje.direccion_llegada || '',
                     estado: viaje.estado,
                     fecha: viaje.fecha_formateada
                 },
