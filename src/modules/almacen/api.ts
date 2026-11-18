@@ -719,10 +719,11 @@ function proveedorAServidor(d: Partial<ProveedorInv>): Record<string, unknown> {
   };
 }
 
-export function useProveedores() {
+/** conPersonal: la orden de compra también ofrece al personal de la empresa (con sus cuentas); la pantalla de Proveedores, no */
+export function useProveedores(conPersonal = false) {
   return useQuery<ProveedorInv[]>({
-    queryKey: ['almacen', 'proveedores'],
-    queryFn: async () => ((await api<ProveedorServidor[]>('/almacen/proveedores')) ?? []).map(proveedorDesdeServidor),
+    queryKey: conPersonal ? ['almacen', 'proveedores', 'con-personal'] : ['almacen', 'proveedores'],
+    queryFn: async () => ((await api<ProveedorServidor[]>(`/almacen/proveedores${conPersonal ? '?con_personal=1' : ''}`)) ?? []).map(proveedorDesdeServidor),
     staleTime: 120_000,
   });
 }
