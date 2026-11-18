@@ -165,7 +165,7 @@ export function PortalConductorPage() {
 
   // El saludo usa el nombre del usuario que entró; solo al consultar a otro conductor usa el de ese conductor
   const nombreSaludo = (consulta ? r?.conductor?.nombre : user?.name) || user?.name || '';
-  const primerNombre = nombreSaludo.trim().split(/s+/)[0] ?? '';
+  const primerNombre = nombreSaludo.trim().split(/\s+/)[0] ?? '';
   const entra = reducir ? { opacity: 0 } : { opacity: 0, x: 24 };
   const resorte = { type: 'spring' as const, bounce: 0, duration: 0.4 };
 
