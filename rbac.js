@@ -112,6 +112,8 @@ module.exports = function globalRBAC(req, res, next) {
     if (path.startsWith('/asistente')) return next();
     // Rentabilidad de los servicios: solo quien tenga el permiso op_rentabilidad (información sensible)
     if (path.startsWith('/rentabilidad')) { mod = ['op_rentabilidad']; accion = 'l'; }
+    // Facturación electrónica: ver comprobantes = leer; emitir factura o nota de crédito = crear (permiso op_facturacion)
+    if (path.startsWith('/facturacion')) { mod = ['op_facturacion']; }
     // Solicitudes: cualquier usuario autenticado pide; aprobar lo valida cada ruta con el permiso «Aprobar» de Gerencia › Aprobación de solicitudes
     if (path.startsWith('/solicitudes')) return next();
 

@@ -179,7 +179,7 @@ function Wialon({ filas }: { filas: Fila[] }) {
 function Apisunat({ filas }: { filas: Fila[] }) {
   const toast = useToast();
   const guardar = useGuardar();
-  const vacio = { modo: 'prueba', ruc: '', razon: '', mtc: '', autorizacion: '', serieGrt: 'V001', serieGre: 'T001', id: '', token: '', pid: '', ptoken: '' };
+  const vacio = { modo: 'prueba', ruc: '', razon: '', mtc: '', autorizacion: '', serieGrt: 'V001', serieGre: 'T001', serieFactura: 'F001', serieBoleta: 'B001', serieNcF: 'FC01', serieNcB: 'BC01', cuentaDet: '', id: '', token: '', pid: '', ptoken: '' };
   const [v, setV] = useState(vacio);
   const [ocupado, setOcupado] = useState(false);
   const [res, setRes] = useState<Resultado>(null);
@@ -189,6 +189,8 @@ function Apisunat({ filas }: { filas: Fila[] }) {
       modo: valorDe(filas, 'apisunat_modo') === 'produccion' ? 'produccion' : 'prueba',
       ruc: valorDe(filas, 'apisunat_ruc_emisor') || valorDe(filas, 'sunat_ruc_emisor'), razon: valorDe(filas, 'apisunat_razon_social'), mtc: valorDe(filas, 'apisunat_registro_mtc'), autorizacion: valorDe(filas, 'apisunat_autorizacion_mtc'),
       serieGrt: valorDe(filas, 'apisunat_serie_grt') || 'V001', serieGre: valorDe(filas, 'apisunat_serie_gre') || 'T001',
+      serieFactura: valorDe(filas, 'apisunat_serie_factura') || 'F001', serieBoleta: valorDe(filas, 'apisunat_serie_boleta') || 'B001',
+      serieNcF: valorDe(filas, 'apisunat_serie_nc_factura') || 'FC01', serieNcB: valorDe(filas, 'apisunat_serie_nc_boleta') || 'BC01', cuentaDet: valorDe(filas, 'apisunat_cuenta_detraccion'),
       id: valorDe(filas, 'apisunat_persona_id'), token: valorDe(filas, 'apisunat_persona_token'),
       pid: valorDe(filas, 'apisunat_prueba_persona_id'), ptoken: valorDe(filas, 'apisunat_prueba_persona_token'),
     });
@@ -200,6 +202,8 @@ function Apisunat({ filas }: { filas: Fila[] }) {
       await guardar([
         ['apisunat_modo', v.modo], ['apisunat_ruc_emisor', v.ruc], ['apisunat_razon_social', v.razon], ['apisunat_registro_mtc', v.mtc.toUpperCase()], ['apisunat_autorizacion_mtc', v.autorizacion],
         ['apisunat_serie_grt', v.serieGrt.toUpperCase()], ['apisunat_serie_gre', v.serieGre.toUpperCase()],
+        ['apisunat_serie_factura', v.serieFactura.toUpperCase()], ['apisunat_serie_boleta', v.serieBoleta.toUpperCase()],
+        ['apisunat_serie_nc_factura', v.serieNcF.toUpperCase()], ['apisunat_serie_nc_boleta', v.serieNcB.toUpperCase()], ['apisunat_cuenta_detraccion', v.cuentaDet.replace(/\s/g, '')],
         ['apisunat_persona_id', v.id], ['apisunat_persona_token', v.token],
         ['apisunat_prueba_persona_id', v.pid], ['apisunat_prueba_persona_token', v.ptoken],
       ]);
@@ -217,7 +221,7 @@ function Apisunat({ filas }: { filas: Fila[] }) {
   const produccion = v.modo === 'produccion';
 
   return (
-    <Tarjeta icono={<ShieldCheck size={22} />} titulo="APISUNAT · Guías de remisión electrónicas" estado={res && !res.ok ? 'error' : v.id || v.pid ? 'ok' : 'pendiente'} meta={metaDe(filas, 'apisunat_modo') || 'Es de esta empresa: cada empresa guarda la suya.'} onGuardar={() => guardarYProbar(false)}>
+    <Tarjeta icono={<ShieldCheck size={22} />} titulo="APISUNAT · Guías y facturación electrónica" estado={res && !res.ok ? 'error' : v.id || v.pid ? 'ok' : 'pendiente'} meta={metaDe(filas, 'apisunat_modo') || 'Es de esta empresa: cada empresa guarda la suya.'} onGuardar={() => guardarYProbar(false)}>
       <SegmentedControl block label="Ambiente de emisión" value={v.modo as 'prueba' | 'produccion'} onChange={m => setV(a => ({ ...a, modo: m }))}
         options={[{ value: 'prueba', label: 'Prueba' }, { value: 'produccion', label: 'Producción' }]} />
       <Notice tone={produccion ? 'error' : 'accent'}>{produccion
@@ -231,6 +235,13 @@ function Apisunat({ filas }: { filas: Fila[] }) {
         <Field label="Serie GRE Transportista">{p => <TextInput {...p} maxLength={4} value={v.serieGrt} onChange={set('serieGrt')} />}</Field>
         <Field label="Serie GRE Remitente">{p => <TextInput {...p} maxLength={4} value={v.serieGre} onChange={set('serieGre')} />}</Field>
       </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)' }}>
+        <Field label="Serie de facturas">{p => <TextInput {...p} maxLength={4} value={v.serieFactura} onChange={set('serieFactura')} />}</Field>
+        <Field label="Serie de boletas">{p => <TextInput {...p} maxLength={4} value={v.serieBoleta} onChange={set('serieBoleta')} />}</Field>
+        <Field label="Serie nota de crédito (factura)">{p => <TextInput {...p} maxLength={4} value={v.serieNcF} onChange={set('serieNcF')} />}</Field>
+        <Field label="Serie nota de crédito (boleta)">{p => <TextInput {...p} maxLength={4} value={v.serieNcB} onChange={set('serieNcB')} />}</Field>
+      </div>
+      <Field label="Cuenta de detracciones (Banco de la Nación)" hint="Es donde el cliente deposita la detracción. Sin ella no se pueden emitir facturas con detracción.">{p => <TextInput {...p} inputMode="numeric" value={v.cuentaDet} onChange={set('cuentaDet')} />}</Field>
       <Field label="Persona ID · token de PRODUCCIÓN">{p => <TextInput {...p} value={v.id} onChange={set('id')} autoComplete="off" />}</Field>
       <Field label="Token de PRODUCCIÓN">{p => <PasswordInput {...p} value={v.token} onChange={set('token')} autoComplete="off" />}</Field>
       <Field label="Persona ID · token de DESARROLLO (pruebas)">{p => <TextInput {...p} value={v.pid} onChange={set('pid')} autoComplete="off" />}</Field>

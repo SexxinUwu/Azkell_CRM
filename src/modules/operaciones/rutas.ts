@@ -27,6 +27,12 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: 'ClipboardList', permisos: ['operaciones.ver', 'admin'] },
   },
   {
+    path: 'operaciones/facturacion/*',
+    permisos: ['op_facturacion.ver', 'admin'],
+    Page: lazy(() => import('./FacturacionPage').then(m => ({ default: m.FacturacionPage }))),
+    nav: { key: 'facturacion', label: 'Facturación', to: '/operaciones/facturacion', icon: 'ReceiptText', permisos: ['op_facturacion.ver'] },
+  },
+  {
     path: 'operaciones/rentabilidad/*',
     permisos: ['op_rentabilidad.ver', 'admin'],
     Page: lazy(() => import('./RentabilidadPage').then(m => ({ default: m.RentabilidadPage }))),

@@ -1,0 +1,68 @@
+// Facturación electrónica (APISUNAT): comprobantes emitidos y sus líneas
+
+model FacturacionComprobante {
+  id                   Int       @id @default(autoincrement())
+  tipo_doc             String    @db.VarChar(2)
+  serie                String    @db.VarChar(4)
+  numero               String    @db.VarChar(8)
+  numero_completo      String    @db.VarChar(14)
+  fecha_emision        DateTime  @db.Date
+  hora_emision         String?   @db.VarChar(8)
+  fecha_vencimiento    DateTime? @db.Date
+  cliente_id           Int?
+  cliente_doc_tipo     String    @default("6") @db.VarChar(1)
+  cliente_doc          String    @db.VarChar(15)
+  cliente_nombre       String    @db.VarChar(255)
+  cliente_direccion    String?   @db.VarChar(255)
+  moneda               String    @default("PEN") @db.VarChar(3)
+  tipo_cambio          Decimal?  @db.Decimal(8, 4)
+  forma_pago           String    @default("CONTADO") @db.VarChar(10)
+  dias_credito         Int       @default(0)
+  base                 Decimal   @default(0.00) @db.Decimal(14, 2)
+  igv                  Decimal   @default(0.00) @db.Decimal(14, 2)
+  total                Decimal   @default(0.00) @db.Decimal(14, 2)
+  detraccion_pct       Decimal   @default(0.00) @db.Decimal(5, 2)
+  detraccion_monto     Decimal   @default(0.00) @db.Decimal(14, 2)
+  neto_pendiente       Decimal   @default(0.00) @db.Decimal(14, 2)
+  orden_compra         String?   @db.VarChar(60)
+  referencia           String?   @db.VarChar(120)
+  observacion          String?   @db.Text
+  doc_ref_id           Int?
+  doc_ref_numero       String?   @db.VarChar(14)
+  motivo_codigo        String?   @db.VarChar(2)
+  motivo_texto         String?   @db.VarChar(250)
+  estado               String    @default("EMITIDO") @db.VarChar(20)
+  apisunat_document_id String?   @db.VarChar(80)
+  apisunat_status      String?   @db.VarChar(30)
+  apisunat_faults      String?   @db.Text
+  pdf_url              String?   @db.Text
+  xml_url              String?   @db.Text
+  cdr_url              String?   @db.Text
+  datos_json           String?   @db.LongText
+  modo_emision         String?   @db.VarChar(10)
+  usuario              String?   @db.VarChar(150)
+  creado_en            DateTime? @default(now()) @db.Timestamp(0)
+
+  @@unique([tipo_doc, serie, numero], map: "uq_comprobante_numero")
+  @@index([cliente_doc], map: "idx_comp_cliente")
+  @@index([fecha_emision], map: "idx_comp_fecha")
+  @@index([doc_ref_id], map: "idx_comp_ref")
+  @@map("facturacion_comprobantes")
+}
+
+model FacturacionItem {
+  id             Int     @id @default(autoincrement())
+  comprobante_id Int
+  linea          Int     @default(1)
+  orden_servicio String? @db.VarChar(40)
+  descripcion    String  @db.VarChar(500)
+  unidad         String  @default("ZZ") @db.VarChar(5)
+  cantidad       Decimal @default(1.000) @db.Decimal(12, 3)
+  valor_unitario Decimal @default(0.0000) @db.Decimal(14, 4)
+  base           Decimal @default(0.00) @db.Decimal(14, 2)
+  igv            Decimal @default(0.00) @db.Decimal(14, 2)
+
+  @@index([comprobante_id], map: "idx_fitem_comp")
+  @@index([orden_servicio], map: "idx_fitem_servicio")
+  @@map("facturacion_items")
+}
