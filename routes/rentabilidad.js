@@ -1,5 +1,5 @@
 // Rentabilidad por servicio: ingreso (flete sin IGV) menos los gastos directos del servicio.
-//   Ingreso  = costo_flete de la orden de servicio, en soles (si es en dólares, × tipo de cambio)
+//   Ingreso  = flete de la orden de servicio SIN IGV (si «incluye IGV» se divide entre 1.18; «más IGV» y «no aplica» ya vienen sin IGV), en soles (si es en dólares, × tipo de cambio)
 //   Gastos   = combustible (vales) + gastos rendidos del viaje + costo del tercero (si lo hizo un tercero; se reparte entre los servicios del viaje)
 //   Utilidad = ingreso − gastos        Margen = utilidad ÷ ingreso
 // Cada vale y cada gasto rendido lleva el servicio al que pertenece (columna orden_servicio, migración 37_servicio_en_gastos).
@@ -21,7 +21,9 @@ module.exports = (db) => {
 
     /** Ingreso en soles de una orden de servicio (el flete va sin IGV) */
     const ingresoSoles = os => {
-        const flete = num(os.costo_flete);
+        const t = String(os.impuesto || '').toUpperCase();
+        const incluyeIgv = !(/NO APLICA|INAFECT|EXONER/.test(t) || /M.S IGV/.test(t)); // por defecto el flete incluye IGV
+        const flete = incluyeIgv ? num(os.costo_flete) / 1.18 : num(os.costo_flete);
         const usd = /D[OÓ]L|USD/i.test(String(os.moneda || ''));
         return r2(usd ? flete * (num(os.tipo_cambio) || 1) : flete);
     };
@@ -67,7 +69,7 @@ module.exports = (db) => {
             const q = String(req.query.q || '').trim();
             if (q) { cond.push('(os.cliente_nombre LIKE ? OR os.ruta LIKE ? OR os.codigo_orden LIKE ?)'); par.push(`%${q}%`, `%${q}%`, `%${q}%`); }
             const [rows] = await p.query(
-                `SELECT os.codigo_orden, DATE_FORMAT(os.fecha, '%Y-%m-%d') AS fecha, os.cliente_nombre, os.ruta, os.es_retorno, os.estado_servicio, os.ejecucion, os.moneda, os.tipo_cambio, os.costo_flete,
+                `SELECT os.codigo_orden, DATE_FORMAT(os.fecha, '%Y-%m-%d') AS fecha, os.cliente_nombre, os.ruta, os.es_retorno, os.estado_servicio, os.ejecucion, os.moneda, os.tipo_cambio, os.costo_flete, os.impuesto,
                     (SELECT COALESCE(SUM(r.distancia_km), 0) FROM operaciones_ordenes_viaje_rutas r WHERE r.orden ${COL} = os.codigo_orden ${COL}) AS km
                  FROM operaciones_ordenes_servicio os WHERE ${cond.join(' AND ')} ORDER BY os.fecha DESC, os.id DESC LIMIT 600`, par);
             const gastos = await gastosDe(p, rows.map(r => r.codigo_orden));
@@ -80,7 +82,7 @@ module.exports = (db) => {
         try {
             const p = P(req);
             const [os] = await p.query(
-                `SELECT os.codigo_orden, DATE_FORMAT(os.fecha, '%Y-%m-%d') AS fecha, os.cliente_nombre, os.ruta, os.origen, os.destino, os.es_retorno, os.estado_servicio, os.ejecucion, os.moneda, os.tipo_cambio, os.costo_flete,
+                `SELECT os.codigo_orden, DATE_FORMAT(os.fecha, '%Y-%m-%d') AS fecha, os.cliente_nombre, os.ruta, os.origen, os.destino, os.es_retorno, os.estado_servicio, os.ejecucion, os.moneda, os.tipo_cambio, os.costo_flete, os.impuesto,
                     (SELECT COALESCE(SUM(r.distancia_km), 0) FROM operaciones_ordenes_viaje_rutas r WHERE r.orden ${COL} = os.codigo_orden ${COL}) AS km
                  FROM operaciones_ordenes_servicio os WHERE os.codigo_orden = ?`, [req.params.codigo]);
             if (!os.length) throw Object.assign(new Error('Servicio no encontrado.'), { status: 404 });

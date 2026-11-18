@@ -124,6 +124,14 @@ module.exports = (db, logAudit) => {
                     }
                 }
             }
+            rows.forEach(r => {
+                const flete = Number(r.costo_flete) || 0;
+                const t = String(r.impuesto || '').toUpperCase();
+                const modo = /NO APLICA|INAFECT|EXONER/.test(t) ? 'NO' : /M.S IGV/.test(t) ? 'MAS' : 'INCLUYE';
+                r.modo_igv = modo;
+                r.valor_sin_igv = modo === 'INCLUYE' ? Math.round(flete / 1.18 * 10000) / 10000 : flete;
+                r.total_con_igv = modo === 'MAS' ? r2(flete * 1.18) : r2(flete);
+            });
             res.json({ ok: true, data: rows });
         } catch (err) { responder(res, err, 'por-facturar'); }
     });

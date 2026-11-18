@@ -3,9 +3,10 @@ import '../../core/ui/acciones-iconos.css';
 import '../almacen/almacen.css';
 import '../almacen/entradas.css';
 import '../gerencia/gerencia-oc.css';
+import '../tesoreria/pago.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, FilePlus2, FileText, ReceiptText, RefreshCw, SearchX, Send, Undo2 } from 'lucide-react';
+import { Check, CircleAlert, Coins, FilePlus2, FileText, Package, Pencil, ReceiptText, RefreshCw, SearchX, Send, Undo2, Users, Wallet } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { BarraFiltros } from '../../core/ui/FiltrosListado';
@@ -31,6 +32,8 @@ interface ServicioPF {
   id: number; codigo_orden: string; fecha: string; cliente_id: number | null; cliente_nombre: string; ruta: string | null; es_retorno: number | boolean | null;
   estado_servicio: string; moneda: string | null; tipo_cambio: number | string | null; costo_flete: number | string; impuesto: string | null; descripcion_carga: string | null;
   cliente_doc: string | null; cliente_direccion: string | null; viaje: string | null;
+  // IGV del servicio: Incluye IGV (valor de venta = flete ÷ 1.18), Más IGV (flete = valor de venta) o No aplica
+  modo_igv: 'INCLUYE' | 'MAS' | 'NO'; valor_sin_igv: number; total_con_igv: number;
 }
 interface Comprobante {
   id: number; tipo_doc: '01' | '03' | '07'; numero_completo: string; fecha_emision: string; fecha_vencimiento: string | null; cliente_doc: string; cliente_nombre: string; moneda: string;
@@ -55,7 +58,7 @@ const COL_PENDIENTES: ColumnaTabla[] = [
   { id: 'ruta', titulo: 'Ruta', ancho: 220 },
   { id: 'tramo', titulo: 'Ida / regreso', ancho: 110 },
   { id: 'estado', titulo: 'Estado', ancho: 120 },
-  { id: 'importe', titulo: 'Flete (sin IGV)', ancho: 140, alinear: 'right' },
+  { id: 'importe', titulo: 'Total a facturar', ancho: 190, alinear: 'right' },
 ];
 const COL_COMPROBANTES: ColumnaTabla[] = [
   { id: 'numero', titulo: 'Comprobante', ancho: 150 },
@@ -177,7 +180,7 @@ export function FacturacionPage() {
                       <Celda>{s.ruta || '—'}</Celda>
                       <Celda><span className="oc-chip">{s.es_retorno ? 'Regreso' : 'Ida'}</span></Celda>
                       <Celda><Badge tone={s.estado_servicio === 'ENTREGADO' ? 'green' : 'amber'}>{s.estado_servicio === 'ENTREGADO' ? 'Entregado' : 'En ejecución'}</Badge></Celda>
-                      <Celda alinear="right" mono>{formatMoneda(n(s.costo_flete), esUsd(s.moneda) ? 'USD' : 'PEN')}</Celda>
+                      <Celda alinear="right" mono>{formatMoneda(n(s.total_con_igv), esUsd(s.moneda) ? 'USD' : 'PEN')} <span className="oc-chip" style={{ marginLeft: 6 }}>{s.modo_igv === 'INCLUYE' ? 'Incluye IGV' : s.modo_igv === 'MAS' ? 'Más IGV' : 'Sin IGV'}</span></Celda>
                     </tr>
                   );
                 })}
@@ -228,7 +231,7 @@ export function FacturacionPage() {
   );
 }
 
-/** Factura o boleta: parte de los servicios elegidos y deja revisar cada línea, el crédito y la detracción antes de enviar */
+/** Factura o boleta, con el mismo estilo de «Procesar pago»: datos en lectura con «Editar», detalle de líneas, resumen y confirmación */
 function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: boolean; servicios: ServicioPF[]; config: Config; onClose: () => void; onEmitido: () => void }) {
   const toast = useToast();
   const libre = servicios.length === 0;
@@ -252,24 +255,30 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
   // El RUC lo escribió la persona (si no, viene del servicio): al cambiarlo se reemplazan el nombre y la dirección con los del nuevo documento
   const [tocoDoc, setTocoDoc] = useState(false);
   const [consulta, setConsulta] = useState<{ ok: boolean; texto: string } | null>(null);
+  // Cada bloque se ve en lectura y se abre con «Editar», como en Procesar pago
+  const [editCliente, setEditCliente] = useState(false);
+  const [editCond, setEditCond] = useState(false);
+  const [confirmado, setConfirmado] = useState(false);
   const clientes = useQuery({ queryKey: ['facturacion', 'clientes'], enabled: open, staleTime: 120_000, queryFn: () => api<{ data: ClienteReg[] }>('/facturacion/clientes').then(r => r.data ?? []) });
 
   useEffect(() => {
     if (!open) return;
-    setError(null); setTipo('01'); setClienteSel(null); setTocoDoc(false); setConsulta(null); setFecha(hoyIso()); setForma('CONTADO'); setDias('30'); setOc(''); setReferencia(''); setObs('');
+    setError(null); setTipo('01'); setClienteSel(null); setTocoDoc(false); setConsulta(null); setFecha(hoyIso()); setForma('CONTADO'); setDias('30'); setOc(''); setReferencia(''); setObs(''); setConfirmado(false);
     if (libre) {
-      setDoc(''); setNombre(''); setDireccion(''); setMoneda('PEN'); setTc(''); setDetPct('0');
+      setDoc(''); setNombre(''); setDireccion(''); setMoneda('PEN'); setTc(''); setDetPct('0'); setEditCliente(true); setEditCond(true);
       setLineas([{ orden_servicio: null, descripcion: '', cantidad: '1', valor_unitario: '' }]);
       return;
     }
     const s0 = servicios[0];
-    setDoc(String(s0.cliente_doc || '').replace(/\D/g, '')); setNombre(s0.cliente_nombre); setDireccion(String(s0.cliente_direccion || ''));
+    const d0 = String(s0.cliente_doc || '').replace(/\D/g, '');
+    setDoc(d0); setNombre(s0.cliente_nombre); setDireccion(String(s0.cliente_direccion || ''));
+    setEditCliente(!d0 || !s0.cliente_nombre); setEditCond(false);
     setMoneda(esUsd(s0.moneda) ? 'USD' : 'PEN'); setTc(esUsd(s0.moneda) && n(s0.tipo_cambio) > 0 ? String(n(s0.tipo_cambio)) : '');
     setDetPct(String(config.detraccion.pct));
     setLineas(servicios.map(s => ({
       orden_servicio: s.codigo_orden,
       descripcion: `SERVICIO DE TRANSPORTE DE CARGA${s.ruta ? ` ${s.ruta}` : ''}${s.es_retorno ? ' (REGRESO)' : ''} - ${s.codigo_orden}`,
-      cantidad: '1', valor_unitario: String(n(s.costo_flete)),
+      cantidad: '1', valor_unitario: String(s.valor_sin_igv),
     })));
     setReferencia(servicios.map(s => s.codigo_orden).join(', ').slice(0, 120));
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -307,25 +316,32 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
     if (c.doc.replace(/\D/g, '').length === 8) setTipo('03');
   }
 
-  const afecto = !servicios.some(s => /inafect|exoner/i.test(String(s.impuesto || '')));
+  // IGV del servicio: «Incluye IGV» (el valor de venta es el flete ÷ 1.18), «Más IGV» (el flete ya es el valor de venta) o «No aplica»
+  const modos = new Set(servicios.map(s => s.modo_igv));
+  const mixto = modos.size > 1;
+  const afecto = !(servicios.length > 0 && modos.size === 1 && modos.has('NO'));
   const base = r2(lineas.reduce((s, l) => s + r2(n(l.cantidad) * n(l.valor_unitario)), 0));
-  const igv = afecto ? r2(lineas.reduce((s, l) => s + r2(r2(n(l.cantidad) * n(l.valor_unitario)) * 0.18), 0)) : 0;
+  const igv = afecto ? r2(lineas.reduce((s, l) => s + r2(n(l.cantidad) * n(l.valor_unitario) * 0.18), 0)) : 0;
   const total = r2(base + igv);
   const totalSoles = moneda === 'USD' ? r2(total * n(tc)) : total;
   const pctDet = tipo === '01' ? n(detPct) : 0;
   const detraccion = pctDet > 0 ? Math.round(totalSoles * pctDet / 100) : 0;
   const neto = moneda === 'USD' ? total : r2(total - detraccion);
   const sugiereDetraccion = tipo === '01' && totalSoles >= config.detraccion.minimo && pctDet === 0;
+  const venceEl = forma === 'CREDITO' && n(dias) > 0 ? (() => { const d = new Date(`${fecha}T12:00:00`); d.setDate(d.getDate() + n(dias)); return d.toLocaleDateString('en-CA'); })() : null;
+  const nombreTipo = tipo === '01' ? 'factura' : 'boleta';
 
   function setLinea(i: number, parche: Partial<Linea>) { setLineas(l => l.map((x, j) => (j === i ? { ...x, ...parche } : x))); }
 
   async function enviar() {
     setError(null);
-    if (tipo === '01' && !/^\d{11}$/.test(doc)) { setError('El RUC del cliente debe tener 11 dígitos.'); return; }
-    if (!nombre.trim()) { setError('Falta la razón social del cliente.'); return; }
+    if (mixto) { setError('Los servicios elegidos tratan el IGV de forma distinta (incluye IGV, más IGV o no aplica): factúralos por separado.'); return; }
+    if (tipo === '01' && !/^\d{11}$/.test(doc)) { setError('El RUC del cliente debe tener 11 dígitos.'); setEditCliente(true); return; }
+    if (!nombre.trim()) { setError('Falta la razón social del cliente.'); setEditCliente(true); return; }
     if (lineas.some(l => !l.descripcion.trim() || !(n(l.valor_unitario) > 0) || !(n(l.cantidad) > 0))) { setError('Cada línea necesita descripción, cantidad y valor mayores a cero.'); return; }
-    if (moneda === 'USD' && !(n(tc) > 0)) { setError('Indica el tipo de cambio.'); return; }
+    if (moneda === 'USD' && !(n(tc) > 0)) { setError('Indica el tipo de cambio.'); setEditCond(true); return; }
     if (pctDet > 0 && !config.detraccion.cuenta) { setError('Falta la cuenta de detracciones: regístrala en Tesorería › Bancos (tipo «Detracciones»).'); return; }
+    if (!confirmado) { setError(`Marca la casilla para confirmar la emisión de la ${nombreTipo}.`); haptic('warning'); return; }
     setEnviando(true);
     try {
       const r = await api<{ message?: string }>('/facturacion/emitir', {
@@ -341,77 +357,133 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
     } catch (err) { setError(errorMessage(err)); haptic('warning'); } finally { setEnviando(false); }
   }
 
+  const etiquetaIgv = (m: ServicioPF['modo_igv']) => (m === 'INCLUYE' ? 'El flete incluye IGV' : m === 'MAS' ? 'El flete es sin IGV (se suma 18 %)' : 'Sin IGV');
+  const tituloSeccion = (icono: React.ReactNode, texto: string, accion?: React.ReactNode) => (
+    <h3 className="ga-sec__titulo"><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{icono} {texto}</span>{accion}</h3>
+  );
+
   return (
     <Sheet ancho open={open} onClose={() => !enviando && onClose()} title={libre ? 'Factura libre' : `Facturar ${servicios.length} ${servicios.length === 1 ? 'servicio' : 'servicios'}`}
       footer={<>
         <Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
-        <Button variant="primary" icon={<Send size={16} />} loading={enviando} onClick={() => { void enviar(); }}>Emitir {tipo === '01' ? 'factura' : 'boleta'}</Button>
+        <Button variant="primary" icon={<Send size={16} />} loading={enviando} onClick={() => { void enviar(); }}>Emitir {nombreTipo}</Button>
       </>}>
-      <div className="ga-det">
+      <div className="ga-det pp-hoja">
         <div className="ga-det__col">
+          <div className="ga-det__cab">
+            <Badge tone="accent">{tipo === '01' ? 'Factura' : 'Boleta'} {config.series[tipo]}</Badge>
+            {config.modo === 'prueba' && <Badge tone="amber">Modo prueba</Badge>}
+            <span className="ga-det__emitido">Emisión {formatFechaPe(fecha)}</span>
+          </div>
           {error && <Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice>}
+          {mixto && <Notice tone="error">Estos servicios tratan el IGV de forma distinta. Una factura necesita el mismo tratamiento: factúralos por separado.</Notice>}
+
           <section className="ga-sec" aria-label="Cliente">
-            <h3 className="ga-sec__titulo"><span>Cliente</span></h3>
-            <SegmentedControl block label="Comprobante" value={tipo} onChange={v => setTipo(v as '01' | '03')} options={[{ value: '01', label: 'Factura' }, { value: '03', label: 'Boleta' }]} />
-            <Field label="Cliente registrado" hint="Elígelo para completar su RUC y su dirección, o escribe el RUC abajo">
-              {p => <Combobox {...p} options={(clientes.data ?? []).map(c => ({ value: String(c.id), label: c.razon_social, description: c.doc }))} value={clienteSel} onChange={elegirCliente}
-                placeholder="Busca por nombre o RUC" loading={clientes.isLoading} enHoja compacta tituloHoja="Elegir cliente" />}
-            </Field>
-            <div className="ga-dos">
-              <Field label={tipo === '01' ? 'RUC *' : 'DNI (opcional hasta S/ 700)'} hint={consulta?.ok ? consulta.texto : undefined} error={consulta && !consulta.ok ? consulta.texto : undefined}>{p => <TextInput {...p} inputMode="numeric" maxLength={tipo === '01' ? 11 : 8} value={doc} onChange={e => { setDoc(e.target.value.replace(/\D/g, '')); setTocoDoc(true); setClienteSel(null); }} />}</Field>
-              <Field label="Razón social / nombre *">{p => <TextInput {...p} value={nombre} onChange={e => setNombre(e.target.value)} />}</Field>
-            </div>
-            <Field label="Dirección">{p => <TextInput {...p} value={direccion} onChange={e => setDireccion(e.target.value)} />}</Field>
+            {tituloSeccion(<Users size={16} aria-hidden />, 'Cliente',
+              <Button variant="plain" size="sm" icon={editCliente ? <Check size={14} /> : <Pencil size={14} />} onClick={() => setEditCliente(e => !e)}>{editCliente ? 'Listo' : 'Editar'}</Button>)}
+            {!editCliente ? (
+              <dl className="pp-dl">
+                <dt>Cliente</dt>
+                <dd><b>{nombre || '—'}</b>{consulta?.ok && consulta.texto && <span>{consulta.texto}</span>}</dd>
+                <dt>{tipo === '01' ? 'RUC' : 'DNI'}</dt>
+                <dd><b>{doc || '—'}</b></dd>
+                <dt>Dirección</dt>
+                <dd><b>{direccion || 'Sin dirección'}</b></dd>
+              </dl>
+            ) : (
+              <>
+                <SegmentedControl block label="Comprobante" value={tipo} onChange={v => setTipo(v as '01' | '03')} options={[{ value: '01', label: 'Factura' }, { value: '03', label: 'Boleta' }]} />
+                <Field label="Cliente registrado" hint="Elígelo para completar su RUC y su dirección, o escribe el RUC abajo">
+                  {p => <Combobox {...p} options={(clientes.data ?? []).map(c => ({ value: String(c.id), label: c.razon_social, description: c.doc }))} value={clienteSel} onChange={elegirCliente}
+                    placeholder="Busca por nombre o RUC" loading={clientes.isLoading} enHoja compacta tituloHoja="Elegir cliente" />}
+                </Field>
+                <div className="ga-dos">
+                  <Field label={tipo === '01' ? 'RUC *' : 'DNI (opcional hasta S/ 700)'} hint={consulta?.ok ? consulta.texto : undefined} error={consulta && !consulta.ok ? consulta.texto : undefined}>{p => <TextInput {...p} inputMode="numeric" maxLength={tipo === '01' ? 11 : 8} value={doc} onChange={e => { setDoc(e.target.value.replace(/\D/g, '')); setTocoDoc(true); setClienteSel(null); }} />}</Field>
+                  <Field label="Razón social / nombre *">{p => <TextInput {...p} value={nombre} onChange={e => setNombre(e.target.value)} />}</Field>
+                </div>
+                <Field label="Dirección">{p => <TextInput {...p} value={direccion} onChange={e => setDireccion(e.target.value)} />}</Field>
+              </>
+            )}
           </section>
 
-          <section className="ga-sec" aria-label="Detalle">
-            <h3 className="ga-sec__titulo"><span>Detalle del comprobante</span><span className="ga-sec__cuenta">Valores sin IGV</span></h3>
+          <section className="ga-sec" aria-label="Detalle del comprobante">
+            {tituloSeccion(<Package size={16} aria-hidden />, 'Detalle del comprobante', <span className="ga-sec__cuenta">{lineas.length} {lineas.length === 1 ? 'línea' : 'líneas'} · valores sin IGV</span>)}
             <div className="ga-tabla-wrap">
               <table className="ga-tabla">
-                <thead><tr><th>Descripción</th><th className="num" style={{ width: 80 }}>Cant.</th><th className="num" style={{ width: 130 }}>Valor unit.</th><th className="num" style={{ width: 120 }}>Importe</th></tr></thead>
+                <thead><tr><th>Descripción</th><th className="num" style={{ width: 64 }}>Cant.</th><th className="num" style={{ width: 120 }}>Valor unit.</th><th className="num" style={{ width: 120 }}>Importe</th></tr></thead>
                 <tbody>
-                  {lineas.map((l, i) => (
-                    <tr key={i}>
-                      <td><TextInput aria-label="Descripción" value={l.descripcion} onChange={e => setLinea(i, { descripcion: e.target.value })} /></td>
-                      <td><TextInput aria-label="Cantidad" inputMode="decimal" value={l.cantidad} onChange={e => setLinea(i, { cantidad: e.target.value })} /></td>
-                      <td><TextInput aria-label="Valor unitario" inputMode="decimal" value={l.valor_unitario} onChange={e => setLinea(i, { valor_unitario: e.target.value })} /></td>
-                      <td className="num">{formatMoneda(r2(n(l.cantidad) * n(l.valor_unitario)), moneda)}</td>
-                    </tr>
-                  ))}
+                  {lineas.map((l, i) => {
+                    const s = servicios.find(x => x.codigo_orden === l.orden_servicio);
+                    return (
+                      <tr key={i}>
+                        <td>
+                          <TextInput aria-label="Descripción" value={l.descripcion} onChange={e => setLinea(i, { descripcion: e.target.value })} />
+                          {s && <span className="t-footnote c-secondary" style={{ display: 'block', marginTop: 4 }}>Flete acordado {formatMoneda(n(s.costo_flete), moneda)} · {etiquetaIgv(s.modo_igv)}</span>}
+                        </td>
+                        <td className="num">{s ? l.cantidad : <TextInput aria-label="Cantidad" inputMode="decimal" value={l.cantidad} onChange={e => setLinea(i, { cantidad: e.target.value })} />}</td>
+                        <td className="num">{s ? formatMoneda(n(l.valor_unitario), moneda) : <TextInput aria-label="Valor unitario" inputMode="decimal" value={l.valor_unitario} onChange={e => setLinea(i, { valor_unitario: e.target.value })} />}</td>
+                        <td className="num">{formatMoneda(r2(n(l.cantidad) * n(l.valor_unitario)), moneda)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
             {libre && <Button variant="plain" size="sm" onClick={() => setLineas(l => [...l, { orden_servicio: null, descripcion: '', cantidad: '1', valor_unitario: '' }])}>+ Agregar línea</Button>}
+            {!libre && modos.size === 1 && modos.has('INCLUYE') && <p className="t-footnote c-secondary" style={{ margin: 0 }}>El flete acordado ya incluye IGV: el valor de venta es el flete ÷ 1.18 y el IGV el resto, así el total facturado es el mismo flete.</p>}
           </section>
 
           <section className="ga-sec" aria-label="Condiciones">
-            <h3 className="ga-sec__titulo"><span>Condiciones</span></h3>
-            <div className="ga-dos">
-              <Field label="Fecha de emisión" hint="SUNAT acepta hasta 3 días atrás">{p => <TextInput {...p} type="date" max={hoyIso()} value={fecha} onChange={e => setFecha(e.target.value)} />}</Field>
-              <Field label="Moneda">{p => <SelectInput {...p} value={moneda} onChange={e => setMoneda(e.target.value as 'PEN' | 'USD')}><option value="PEN">Soles (S/)</option><option value="USD">Dólares (US$)</option></SelectInput>}</Field>
-              {moneda === 'USD' && <Field label="Tipo de cambio (S/ por US$)">{p => <TextInput {...p} inputMode="decimal" value={tc} onChange={e => setTc(e.target.value)} />}</Field>}
-              <Field label="Forma de pago">{p => <SelectInput {...p} value={forma} onChange={e => setForma(e.target.value as 'CONTADO' | 'CREDITO')}><option value="CONTADO">Contado</option><option value="CREDITO">Crédito</option></SelectInput>}</Field>
-              {forma === 'CREDITO' && <Field label="Días de crédito" hint="Vence el día de la fecha de emisión más estos días">{p => <TextInput {...p} inputMode="numeric" value={dias} onChange={e => setDias(e.target.value.replace(/\D/g, ''))} />}</Field>}
-              {tipo === '01' && <Field label="Detracción (%)" hint={`Transporte de carga: ${config.detraccion.pct} % desde S/ ${config.detraccion.minimo}`}>{p => <TextInput {...p} inputMode="decimal" value={detPct} onChange={e => setDetPct(e.target.value)} />}</Field>}
-              <Field label="Orden de compra del cliente (opcional)">{p => <TextInput {...p} value={oc} onChange={e => setOc(e.target.value)} />}</Field>
-            </div>
-            <Field label="Observación (opcional)">{p => <TextInput {...p} value={obs} onChange={e => setObs(e.target.value)} />}</Field>
-            {sugiereDetraccion && <Notice tone="accent">Este monto supera S/ {config.detraccion.minimo}: normalmente el transporte de carga lleva detracción del {config.detraccion.pct} %. Si corresponde, escríbela arriba.</Notice>}
+            {tituloSeccion(<Wallet size={16} aria-hidden />, 'Condiciones',
+              <Button variant="plain" size="sm" icon={editCond ? <Check size={14} /> : <Pencil size={14} />} onClick={() => setEditCond(e => !e)}>{editCond ? 'Listo' : 'Editar'}</Button>)}
+            {!editCond ? (
+              <dl className="pp-dl">
+                <dt>Emisión</dt>
+                <dd><b>{formatFechaPe(fecha)}</b></dd>
+                <dt>Forma de pago</dt>
+                <dd><b>{forma === 'CREDITO' ? `Crédito a ${n(dias)} días` : 'Contado'}</b>{venceEl && <span>Vence el {formatFechaPe(venceEl)}</span>}</dd>
+                <dt>Moneda</dt>
+                <dd><b>{moneda === 'USD' ? `Dólares · T.C. ${tc || '—'}` : 'Soles'}</b></dd>
+                {tipo === '01' && <><dt>Detracción</dt><dd><b>{pctDet > 0 ? `${pctDet} % · ${formatMoneda(detraccion, 'PEN')}` : 'Sin detracción'}</b>{pctDet > 0 && <span>Se deposita en la cuenta del Banco de la Nación</span>}</dd></>}
+                {(oc || obs) && <><dt>Referencias</dt><dd>{oc && <b>OC del cliente: {oc}</b>}{obs && <span>{obs}</span>}</dd></>}
+              </dl>
+            ) : (
+              <>
+                <div className="ga-dos">
+                  <Field label="Fecha de emisión" hint="SUNAT acepta hasta 3 días atrás">{p => <TextInput {...p} type="date" max={hoyIso()} value={fecha} onChange={e => setFecha(e.target.value)} />}</Field>
+                  <Field label="Moneda">{p => <SelectInput {...p} value={moneda} onChange={e => setMoneda(e.target.value as 'PEN' | 'USD')}><option value="PEN">Soles (S/)</option><option value="USD">Dólares (US$)</option></SelectInput>}</Field>
+                  {moneda === 'USD' && <Field label="Tipo de cambio (S/ por US$)">{p => <TextInput {...p} inputMode="decimal" value={tc} onChange={e => setTc(e.target.value)} />}</Field>}
+                  <Field label="Forma de pago">{p => <SelectInput {...p} value={forma} onChange={e => setForma(e.target.value as 'CONTADO' | 'CREDITO')}><option value="CONTADO">Contado</option><option value="CREDITO">Crédito</option></SelectInput>}</Field>
+                  {forma === 'CREDITO' && <Field label="Días de crédito" hint="Vence la fecha de emisión más estos días">{p => <TextInput {...p} inputMode="numeric" value={dias} onChange={e => setDias(e.target.value.replace(/\D/g, ''))} />}</Field>}
+                  {tipo === '01' && <Field label="Detracción (%)" hint={`Transporte de carga: ${config.detraccion.pct} % desde S/ ${config.detraccion.minimo}`}>{p => <TextInput {...p} inputMode="decimal" value={detPct} onChange={e => setDetPct(e.target.value)} />}</Field>}
+                  <Field label="Orden de compra del cliente (opcional)">{p => <TextInput {...p} value={oc} onChange={e => setOc(e.target.value)} />}</Field>
+                </div>
+                <Field label="Observación (opcional)">{p => <TextInput {...p} value={obs} onChange={e => setObs(e.target.value)} />}</Field>
+              </>
+            )}
+            {sugiereDetraccion && <Notice tone="accent">Este monto supera S/ {config.detraccion.minimo}: normalmente el transporte de carga lleva detracción del {config.detraccion.pct} %. Si corresponde, actívala en «Editar».</Notice>}
             {pctDet > 0 && !config.detraccion.cuenta && <Notice tone="error">Falta la cuenta de detracciones de la empresa: regístrala en Tesorería › Bancos (tipo «Detracciones»).</Notice>}
           </section>
         </div>
 
         <div className="ga-det__col">
-          <section className="ga-sec" aria-label="Totales">
-            <h3 className="ga-sec__titulo"><span>Resumen</span></h3>
+          <section className="ga-sec" aria-label="Resumen del comprobante">
+            {tituloSeccion(<Coins size={16} aria-hidden />, 'Resumen del comprobante')}
             <div className="ga-resumen">
               <div className="ga-resumen__fila"><span>Valor de venta</span><b>{formatMoneda(base, moneda)}</b></div>
-              <div className="ga-resumen__fila"><span>IGV 18 %{afecto ? '' : ' (inafecto)'}</span><b>{formatMoneda(igv, moneda)}</b></div>
-              <div className="ga-resumen__total"><span>Importe total</span><b>{formatMoneda(total, moneda)}</b></div>
-              {detraccion > 0 && <div className="ga-resumen__fila"><span>Detracción {pctDet} % (en soles)</span><b>{formatMoneda(detraccion, 'PEN')}</b></div>}
-              {(detraccion > 0 || forma === 'CREDITO') && <div className="ga-resumen__fila"><span>Neto pendiente de pago</span><b>{formatMoneda(neto, moneda)}</b></div>}
+              <div className="ga-resumen__fila"><span>IGV 18 %{afecto ? '' : ' (sin IGV)'}</span><b>{formatMoneda(igv, moneda)}</b></div>
+              <div className="ga-resumen__total"><span>Total a facturar</span><b>{formatMoneda(total, moneda)}</b></div>
+              {detraccion > 0 && <div className="ga-resumen__fila"><span>Detracción {pctDet} % (en soles)</span><b>− {formatMoneda(detraccion, 'PEN')}</b></div>}
+              {(detraccion > 0 || forma === 'CREDITO') && <div className="ga-resumen__fila"><span>Neto a cobrar</span><b>{formatMoneda(neto, moneda)}</b></div>}
             </div>
-            <p className="t-footnote c-secondary" style={{ margin: 0 }}>Serie {config.series[tipo]}. El número lo asigna APISUNAT al emitir. Si SUNAT no lo acepta, no se guarda y los servicios siguen por facturar.</p>
+          </section>
+
+          <section className="ga-sec" aria-label="Confirmación">
+            <label className="pago-proc__confirmar">
+              <input type="checkbox" checked={confirmado} onChange={e => { setConfirmado(e.target.checked); setError(null); }} />
+              <span>Confirmo emitir esta {nombreTipo} a SUNAT. Un comprobante emitido no se borra: se corrige con una nota de crédito.</span>
+            </label>
+            <p className="t-footnote c-secondary" style={{ margin: 0 }}>El número lo asigna APISUNAT al emitir (serie {config.series[tipo]}). Si SUNAT no lo acepta, no se guarda y los servicios siguen por facturar.</p>
           </section>
         </div>
       </div>

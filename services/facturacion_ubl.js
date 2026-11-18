@@ -9,7 +9,8 @@ const r2 = v => Math.round((num(v) + Number.EPSILON) * 100) / 100;
 function calcular(items, { afectoIgv = true, detraccionPct = 0, tipoCambio = 1, moneda = 'PEN' } = {}) {
     const lineas = items.map(it => {
         const base = r2(num(it.cantidad || 1) * num(it.valor_unitario));
-        const igv = afectoIgv ? r2(base * IGV_PCT / 100) : 0;
+        // El IGV sale del valor sin redondear: así un flete que incluye IGV (p. ej. S/ 5,000) vuelve a sumar exactamente S/ 5,000.00
+        const igv = afectoIgv ? r2(num(it.cantidad || 1) * num(it.valor_unitario) * IGV_PCT / 100) : 0;
         return { ...it, base, igv };
     });
     const base = r2(lineas.reduce((s, l) => s + l.base, 0));
