@@ -102,7 +102,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
   const { user } = useAuth();
   const inventarioQ = useInventario();
   const inventario = inventarioQ.data ?? [];
-  const proveedoresQ = useProveedores();
+  const proveedoresQ = useProveedores(true);
   const proveedores = proveedoresQ.data ?? [];
   const placasQ = usePlacasLista();
   const otsQ = useOrdenesTrabajoLista();

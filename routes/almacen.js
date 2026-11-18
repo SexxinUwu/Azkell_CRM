@@ -360,8 +360,18 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 delete r.contactos_json;
                 return r;
             });
-            // Si el proveedor es una persona (DNI) con cuentas en Personal/Terceros, esas cuentas también se ofrecen en la orden
-            sumarCuentasPersonales(getDb(req), procesados, (ee, lista) => res.json(ee ? procesados : lista));
+            // Solo la orden de compra lo pide (con_personal=1): ahí el personal de la empresa también es a quien se le puede pagar.
+            // Pantalla de Proveedores: solo proveedores.
+            if (req.query.con_personal !== '1') return res.json(procesados);
+            const db = getDb(req);
+            db.query("SELECT numero_documento, tipo_documento, CONCAT(apellidos, ' ', nombres) AS nombre, telefono, email FROM rrhh_personal WHERE estado = 'ACTIVO' ORDER BY apellidos, nombres", (eP, personal) => {
+                const docs = new Set(procesados.map(p => String(p.numero_documento || '').trim()));
+                (eP ? [] : personal).filter(x => !docs.has(String(x.numero_documento).trim())).forEach(x => procesados.push({
+                    id: 'PER-' + x.numero_documento, nombre: String(x.nombre).trim(), razon_social: null, tipo_documento: x.tipo_documento || 'DNI', numero_documento: x.numero_documento,
+                    telefono: x.telefono, email: x.email, direccion: null, estado: 'Activo', observaciones: 'Personal de la empresa', marcas: null, cuentas: [], contactos: [], es_personal: true,
+                }));
+                sumarCuentasPersonales(db, procesados, (ee, lista) => res.json(ee ? procesados : lista));
+            });
         }));
     });
 
@@ -384,6 +394,10 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
     router.get('/proveedores/:id/cuentas', (req, res) => {
         const db = getDb(req);
+        if (String(req.params.id).startsWith('PER-')) {
+            const p = { numero_documento: String(req.params.id).slice(4), cuentas: [] };
+            return sumarCuentasPersonales(db, [p], (e) => res.json(e ? [] : p.cuentas));
+        }
         db.query('SELECT * FROM proveedor_cuentas_bancarias WHERE proveedor_id = ? ORDER BY id ASC', [req.params.id], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
             db.query('SELECT numero_documento FROM proveedores_inv WHERE id = ?', [req.params.id], (e2, pr) => {
