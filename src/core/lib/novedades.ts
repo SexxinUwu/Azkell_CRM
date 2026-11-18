@@ -19,6 +19,48 @@ export interface Novedad {
 
 export const NOVEDADES: Novedad[] = [
   {
+    id: '2026-11-18-2',
+    fecha: '18 de noviembre de 2026',
+    titulo: 'Portal del conductor, un solo Personal y Contabilidad',
+    paginas: [
+      {
+        titulo: 'Portal del conductor',
+        puntos: [
+          'Ahora el portal te reconoce por tu usuario: ya no escribes tu DNI. Al entrar te saluda por tu nombre y, si tienes un viaje activo, te lo muestra con el número de viaje, la placa del tracto y la del remolque o carreta.',
+          'Ves la ubicación de la carga y la de la entrega, y con un toque las abres en Google Maps o en Waze.',
+          'Debajo hay tres accesos: Vales de combustible, Reporte de fallas en ruta y Gastos en ruta.',
+          'En Gastos ves tu saldo (asignado, rendido y lo que te queda) y registras cada gasto con su comprobante: boleta, factura o declaración jurada, con el RUC, la serie y el número, y la foto. Si no tienes señal, el gasto se guarda en el teléfono y se envía solo cuando vuelve.',
+        ],
+      },
+      {
+        titulo: 'Personal, Directorio y Terceros',
+        puntos: [
+          'Los conductores ahora son parte del Personal: hay un solo lugar en RRHH, y quien se registra como conductor queda listo también para Operaciones.',
+          'El Directorio es la libreta para llamar o escribir: Personal, Clientes, Proveedores y Estaciones de servicio, en una sola pantalla. En el celular se ve como la agenda, con botones de llamar y WhatsApp en cada fila.',
+          'Terceros es para quien da de alta y edita: Clientes, Proveedores y Estaciones de servicio (donde se carga el combustible), todo en un solo módulo.',
+          'En RRHH, al elegir a otra persona solo cambia la ficha, sin recargar la pantalla. Los botones de la ficha ahora son iconos en la esquina superior derecha; pasa el mouse para ver su nombre.',
+        ],
+      },
+      {
+        titulo: 'Facturación y Contabilidad',
+        puntos: [
+          'La factura, la boleta y la nota de crédito tienen su propia plantilla de PDF, que puedes ajustar igual que la de las guías.',
+          'Puedes agrupar varios servicios en una sola línea con su propia descripción, y anotar el número de liquidación. Los números se muestran cortos (por ejemplo, F001-1).',
+          'Nuevo módulo Contabilidad › SIRE: trae de SUNAT tus facturas de ventas y de compras de un mes o varios, las guarda en el sistema y las puedes buscar y filtrar. En las compras te dice si ya están registradas en tus órdenes de compra, vales o caja.',
+          'Exporta a Excel lo que filtraste o un comprobante, y abre el PDF de cada factura. Cada empresa carga sus credenciales de SUNAT en Sistema › Integraciones.',
+        ],
+      },
+      {
+        titulo: 'Menú y accesos',
+        puntos: [
+          'El menú tiene un nuevo orden: Operaciones, Flota, Mantenimiento, Almacén, Solicitudes, Directorio, RRHH, Tesorería, Terceros, Contabilidad, Conductor, Seguridad y Configuración.',
+          'Dashboard y Novedades ahora son dos accesos sueltos, sin desplegable.',
+          'Si no ves algo que necesitas, pídele a un administrador que te dé el permiso en Sistema › Usuarios y roles: los módulos nuevos ya aparecen ahí.',
+        ],
+      },
+    ],
+  },
+  {
     id: '2026-11-18',
     fecha: '18 de noviembre de 2026',
     titulo: 'Solicitudes, caja, combustible, rentabilidad y facturación',
