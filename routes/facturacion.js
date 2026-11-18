@@ -72,6 +72,9 @@ module.exports = (db, logAudit) => {
 
     const mensajeError = r => (typeof r.error === 'object' ? JSON.stringify(r.error) : String(r.error || 'Error desconocido'));
 
+    // El id siempre es numérico (Express 5 ya no admite expresiones dentro de la ruta)
+    router.param('id', (req, res, next, v) => (/^\d+$/.test(v) ? next() : res.status(404).json({ ok: false, error: 'Comprobante no encontrado.' })));
+
     // ───────────── Configuración y estado ─────────────
     router.get('/config', async (req, res) => {
         try {
@@ -119,7 +122,7 @@ module.exports = (db, logAudit) => {
         } catch (err) { responder(res, err, 'lista'); }
     });
 
-    router.get('/:id(\\d+)', async (req, res) => {
+    router.get('/:id', async (req, res) => {
         try {
             const p = P(req);
             const [c] = await p.query(`SELECT * FROM facturacion_comprobantes WHERE id = ?`, [req.params.id]);
@@ -240,7 +243,7 @@ module.exports = (db, logAudit) => {
     });
 
     // ───────────── Nota de crédito ─────────────
-    router.post('/:id(\\d+)/nota-credito', async (req, res) => {
+    router.post('/:id/nota-credito', async (req, res) => {
         const p = P(req);
         let nid = null;
         try {
@@ -330,7 +333,7 @@ module.exports = (db, logAudit) => {
         return x.status;
     }
 
-    router.post('/:id(\\d+)/sincronizar', async (req, res) => {
+    router.post('/:id/sincronizar', async (req, res) => {
         try {
             const p = P(req); const cfg = await config(req);
             const [r] = await p.query(`SELECT id, tipo_doc, serie, numero, numero_completo, estado, motivo_codigo, doc_ref_id, apisunat_document_id FROM facturacion_comprobantes WHERE id = ?`, [req.params.id]);
