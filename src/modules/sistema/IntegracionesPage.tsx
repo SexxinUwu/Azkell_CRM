@@ -1,7 +1,7 @@
 import '../mantenimiento/mant.css';
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, CircleAlert, MapPin, ShieldCheck, Zap } from 'lucide-react';
+import { CheckCircle2, ChevronDown, CircleAlert, MapPin, ShieldCheck, Zap } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, PasswordInput, TextInput } from '../../core/ui/Field';
@@ -82,9 +82,11 @@ function useGuardar() {
 function Tarjeta({ icono, titulo, estado, meta, onGuardar, children }: {
   icono: React.ReactNode; titulo: string; estado: 'ok' | 'pendiente' | 'error'; meta?: string; onGuardar: () => void; children: React.ReactNode;
 }) {
+  const [abierta, setAbierta] = useState(false);
   return (
     <section className="tarjeta__lista" style={{ padding: 'var(--s-4)', display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)' }}>
+      <button type="button" aria-expanded={abierta} onClick={() => setAbierta(a => !a)}
+        style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', width: '100%', background: 'none', border: 0, padding: 0, font: 'inherit', color: 'inherit', textAlign: 'left', cursor: 'pointer' }}>
         <span style={{ color: 'var(--label-1)' }}>{icono}</span>
         <div style={{ flex: 1 }}>
           <h2 style={{ fontSize: '1.0625rem', fontWeight: 700 }}>{titulo}</h2>
@@ -93,8 +95,9 @@ function Tarjeta({ icono, titulo, estado, meta, onGuardar, children }: {
         <span className={`ot-estado ot-estado--${estado === 'ok' ? 'green' : estado === 'error' ? 'red' : 'neutral'}`}>
           {estado === 'ok' ? 'Configurado' : estado === 'error' ? 'Con error' : 'Sin configurar'}
         </span>
-      </div>
-      <form style={{ display: 'contents' }} onSubmit={e => { e.preventDefault(); onGuardar(); }}>{children}</form>
+        <ChevronDown size={18} aria-hidden style={{ color: 'var(--label-2)', transition: 'transform 0.2s ease', transform: abierta ? 'rotate(180deg)' : 'none' }} />
+      </button>
+      {abierta && <form style={{ display: 'contents' }} onSubmit={e => { e.preventDefault(); onGuardar(); }}>{children}</form>}
     </section>
   );
 }
