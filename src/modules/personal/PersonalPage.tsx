@@ -64,7 +64,7 @@ export function PersonalPage({ base = '/directorio/personal', soloLectura = fals
     return OPCIONES.rol.filter(o => s.has(o.value));
   }, [personas]);
   const conAlertas = useMemo(() => personas.filter(p => alertasDe(p).length).length, [personas]);
-  const { data: kpis } = useKpisPersonal();
+  const { data: kpis } = useKpisPersonal(!soloLectura);
 
   const visibles = useMemo(() => personas.filter(p =>
     (estado === 'todos' || (estado === 'cesados' ? p.estado === 'CESADO' : p.estado !== 'CESADO'))
@@ -178,7 +178,7 @@ export function PersonalPage({ base = '/directorio/personal', soloLectura = fals
         </EmptyState>
       ) : soloTarjeta ? tarjeta : (
         <>
-        {kpis && (
+        {!soloLectura && kpis && (
           <div className="inv-kpis personal-kpis">
             <KpiTarjeta etiqueta="Total colaboradores" valor={String(kpis.total)} sub={`${kpis.activos} activos`} icono={<Contact size={18} />} />
             <KpiTarjeta etiqueta="Conductores flota" valor={String(kpis.conductores)} sub={`${kpis.conductores_en_ruta} en ruta`} icono={<Truck size={18} />} tono="valor" />

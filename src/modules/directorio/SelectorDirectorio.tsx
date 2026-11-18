@@ -2,9 +2,9 @@ import { useNavigate } from 'react-router-dom';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { useAuth } from '../../core/auth/AuthProvider';
 
-export type Libreta = 'personal' | 'conductores' | 'clientes' | 'proveedores' | 'estaciones';
+export type Libreta = 'personal' | 'clientes' | 'proveedores' | 'estaciones';
 export const RUTA_LIBRETA: Record<Libreta, string> = {
-  personal: '/directorio/personal', conductores: '/conductores', clientes: '/directorio/clientes',
+  personal: '/directorio/personal', clientes: '/directorio/clientes',
   proveedores: '/directorio/proveedores', estaciones: '/directorio/estaciones',
 };
 
@@ -12,8 +12,7 @@ export const RUTA_LIBRETA: Record<Libreta, string> = {
 export function useLibretas(): Array<{ value: Libreta; label: string }> {
   const { can } = useAuth();
   return [
-    can('rrhh_personal.ver') && { value: 'personal' as const, label: 'Personal' },
-    can('cond.ver') && { value: 'conductores' as const, label: 'Conductores' },
+    can('rrhh_personal.ver', 'cond.ver') && { value: 'personal' as const, label: 'Personal' },
     can('clientes.ver') && { value: 'clientes' as const, label: 'Clientes' },
     can('prov_inv.ver') && { value: 'proveedores' as const, label: 'Proveedores' },
     can('combustible_vales.ver') && { value: 'estaciones' as const, label: 'Estaciones' },

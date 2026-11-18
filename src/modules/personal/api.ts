@@ -8,6 +8,7 @@
 // Permiso: rrhh_personal (ver, crear, editar, eliminar).
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
+import { useAuth } from '../../core/auth/AuthProvider';
 
 export interface Persona {
   id: number;
@@ -153,11 +154,14 @@ const comparar = new Intl.Collator('es', { sensitivity: 'base' }).compare;
 export const ordenarPersonas = (a: Persona, b: Persona) =>
   ordenLetra(letraDe(a)) - ordenLetra(letraDe(b)) || comparar(a.apellidos, b.apellidos) || comparar(a.nombres, b.nombres);
 
+// Quien tiene RRHH ve la ficha completa; quien solo consulta el Directorio recibe únicamente los datos de contacto
 export function usePersonal() {
+  const { can } = useAuth();
+  const completo = can('rrhh_personal.ver');
   return useQuery({
-    queryKey: ['personal'],
+    queryKey: ['personal', completo ? 'completo' : 'contactos'],
     queryFn: async () => {
-      const r = await api<{ data?: Array<Record<string, unknown>> }>('/rrhh/personal');
+      const r = await api<{ data?: Array<Record<string, unknown>> }>(completo ? '/rrhh/personal' : '/rrhh/directorio');
       return (r.data ?? []).map(aPersona).sort(ordenarPersonas);
     },
   });
@@ -174,8 +178,9 @@ export interface KpisPersonal {
 }
 
 /** Indicadores de arriba (GET /api/rrhh/kpis, igual que la versión actual). Se invalida junto con ['personal'] */
-export function useKpisPersonal() {
+export function useKpisPersonal(habilitado = true) {
   return useQuery({
+    enabled: habilitado,
     queryKey: ['personal', 'kpis'],
     queryFn: async (): Promise<KpisPersonal> => {
       const r = await api<{ data?: Record<string, unknown> }>('/rrhh/kpis');

@@ -179,6 +179,7 @@ module.exports = function globalRBAC(req, res, next) {
     // RRHH: cada pantalla con su permiso (antes no estaba mapeado y solo entraban administradores)
     else if (path.startsWith('/rrhh/tareo')) mod = ['rrhh_asistencia'];
     else if (path.startsWith('/rrhh/nomina')) mod = ['rrhh_nomina'];
+    else if (path === '/rrhh/directorio') mod = ['rrhh_personal', 'cond'];
     else if (path.startsWith('/rrhh/')) mod = ['rrhh_personal'];
     
     // ALMACEN & CONFIGURACION
