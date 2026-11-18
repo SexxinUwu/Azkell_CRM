@@ -10,6 +10,7 @@
 //
 // Permisos: 'clave.ver' según la matriz de permisos actual (ver core/auth/permisos.ts). Los administradores ven todo.
 import {
+  FolderCheck,
   Accessibility, Activity, Sparkles, TrendingUp, ReceiptText, ArrowLeftRight, Banknote, BarChart3, Boxes, Building2, Cog, Code, Contact, Disc3, Droplet, FileText, Fuel, Gauge, Gavel, HardHat, History, Hourglass, IdCard, Landmark, Layers, LayoutDashboard, List, MapPin, Package, PackageMinus, PackagePlus, Palette, Route, ScrollText, Settings, ShieldCheck, Tag, Target, Truck, UserCog, Users, Wallet, Warehouse, Wrench, CalendarDays, ClipboardCheck, ClipboardList, Clock, type LucideIcon, Bell,
 } from 'lucide-react';
 import type { RutaModulo } from '../../modules/personal/rutas.tipos';
@@ -193,6 +194,7 @@ const SECCIONES_BASE: NavSection[] = [
     title: 'RRHH',
     items: [
       { key: 'personal', label: 'Personal', to: '/rrhh/personal', icon: Contact, permissions: ver('rrhh_personal', 'cond') },
+      { key: 'documentos-personal', label: 'Documentos del personal', to: '/rrhh/documentos', icon: FolderCheck, permissions: ver('rrhh_personal') },
       { key: 'asistencia', label: 'Asistencia y turnos', to: '/personas/asistencia', icon: ClipboardCheck, permissions: ver('rrhh_asistencia') },
       { key: 'nomina', label: 'Nómina y pagos', to: '/personas/nomina', icon: Banknote, permissions: ver('rrhh_nomina') },
     ],

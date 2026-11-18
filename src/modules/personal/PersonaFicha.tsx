@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import { ChevronLeft, Contact, IdCard, Pencil, Printer, Trash2 } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import '../../core/ui/acciones-iconos.css';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { spring } from '../../core/lib/motion';
 import { nombreCompleto, type Persona } from './api';
 import { descargarVCard, fichaEnPantalla, imprimirFotocheck } from './documentos';
+import { PersonaDocumentos } from './PersonaDocumentos';
+
+type Pestana = 'ficha' | 'documentos';
 
 // RRHH › Personal: el detalle de la persona ES su ficha de registro (la misma que se imprime), con las acciones arriba a la derecha.
 export function PersonaFicha({ persona: p, onEditar, onEliminar, onVolver, verPagos }: {
@@ -22,6 +27,10 @@ export function PersonaFicha({ persona: p, onEditar, onEliminar, onVolver, verPa
   const reduce = useReducedMotion();
   const toast = useToast();
   const marco = useRef<HTMLIFrameElement>(null);
+  // La pestaña va en la dirección (?tab=documentos): así el tablero de vencimientos abre directo en Documentos y se conserva al cambiar de persona
+  const [params, setParams] = useSearchParams();
+  const pestana: Pestana = params.get('tab') === 'documentos' ? 'documentos' : 'ficha';
+  const elegir = (v: Pestana) => setParams(v === 'documentos' ? { tab: 'documentos' } : {}, { replace: true });
   const html = useMemo(() => fichaEnPantalla(p, verPagos), [p, verPagos]);
 
   // El marco crece hasta mostrar toda la hoja: el desplazamiento es el del panel, no el del marco
@@ -51,14 +60,19 @@ export function PersonaFicha({ persona: p, onEditar, onEliminar, onVolver, verPa
           <button type="button" className="tarjeta__volver pressable" onClick={onVolver}><ChevronLeft size={22} /> Personal</button>
         ) : <span />}
         <div className="acciones-iconos acciones-iconos--sinfondo tarjeta__barra-acciones" role="group" aria-label="Acciones de la ficha">
-          <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Imprimir ficha" aria-label="Imprimir ficha" icon={<Printer size={17} />} onClick={imprimir} />
+          {pestana === 'ficha' && <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--azul" data-tip="Imprimir ficha" aria-label="Imprimir ficha" icon={<Printer size={17} />} onClick={imprimir} />}
           <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--violeta" data-tip="Imprimir fotocheck" aria-label="Imprimir fotocheck" icon={<IdCard size={17} />} onClick={seguro(() => imprimirFotocheck(p))} />
           <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--verde" data-tip="Compartir contacto (.vcf)" aria-label="Compartir contacto" icon={<Contact size={17} />} onClick={() => descargarVCard(p)} />
           {onEditar && <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--ambar" data-tip="Editar" aria-label="Editar" icon={<Pencil size={17} />} onClick={onEditar} />}
           {onEliminar && <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--rojo" data-tip="Eliminar" aria-label="Eliminar" icon={<Trash2 size={17} />} onClick={onEliminar} />}
         </div>
       </div>
-      <iframe ref={marco} className="ficha-personal__hoja" title={`Ficha de ${nombreCompleto(p)}`} srcDoc={html} onLoad={ajustar} />
+      <div className="ficha-personal__pestanas">
+        <SegmentedControl<Pestana> label="Ficha o documentos" value={pestana} onChange={elegir} options={[{ value: 'ficha', label: 'Ficha' }, { value: 'documentos', label: 'Documentos' }]} />
+      </div>
+      {pestana === 'ficha'
+        ? <iframe ref={marco} className="ficha-personal__hoja" title={`Ficha de ${nombreCompleto(p)}`} srcDoc={html} onLoad={ajustar} />
+        : <PersonaDocumentos persona={p} />}
     </motion.article>
   );
 }

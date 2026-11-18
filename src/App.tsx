@@ -21,6 +21,7 @@ const InspeccionesPage = lazy(() => import('./modules/inspecciones/InspeccionesP
 const RegistrarInspeccionPage = lazy(() => import('./modules/inspecciones/RegistrarInspeccionPage').then(m => ({ default: m.RegistrarInspeccionPage })));
 const EditarInspeccionPage = lazy(() => import('./modules/inspecciones/RegistrarInspeccionPage').then(m => ({ default: m.EditarInspeccionPage })));
 const CatalogoRuta = lazy(() => import('./modules/catalogos/CatalogoRuta').then(m => ({ default: m.CatalogoRuta })));
+const DocumentosPersonalPage = lazy(() => import('./modules/personal/DocumentosPersonalPage').then(m => ({ default: m.DocumentosPersonalPage })));
 const RRHHAdministrativos = lazy(() => import('./modules/personal/PersonalPaginas').then(m => ({ default: m.RRHHAdministrativos })));
 const DirectorioAdministrativos = lazy(() => import('./modules/personal/PersonalPaginas').then(m => ({ default: m.DirectorioAdministrativos })));
 
@@ -60,6 +61,7 @@ export default function App() {
           <Route path="conductores" element={<Navigate to="/directorio/personal" replace />} />
           <Route path="directorio/personal/:id?" element={<RequirePermission any={['rrhh_personal.ver', 'cond.ver']}><DirectorioAdministrativos /></RequirePermission>} />
           <Route path="rrhh/personal/:id?" element={<RequirePermission any={['rrhh_personal.ver']}><RRHHAdministrativos /></RequirePermission>} />
+          <Route path="rrhh/documentos" element={<RequirePermission any={['rrhh_personal.ver']}><DocumentosPersonalPage /></RequirePermission>} />
           <Route path="rrhh/conductores" element={<Navigate to="/rrhh/personal" replace />} />
           {RUTAS_MODULOS.map(({ path, permisos, Page }) => (
             <Route key={path} path={path} element={<RequirePermission any={permisos}><Page /></RequirePermission>} />

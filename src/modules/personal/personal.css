@@ -18,6 +18,7 @@
 
 /* ─── Ficha de registro de personal: el detalle es la hoja que se imprime ─── */
 .ficha-personal { display: flex; flex-direction: column; min-height: 100%; }
+.ficha-personal__pestanas { display: flex; justify-content: center; padding: var(--s-2) var(--s-4) var(--s-3); }
 .ficha-personal__hoja { display: block; width: 100%; min-height: 60vh; border: 0; background: transparent; }
 
 /* ─── Distribución: lista + tarjeta ─── */
@@ -192,3 +193,53 @@
 @media (prefers-reduced-motion: reduce) {
   .contactos__indice-letra { transition: none; }
 }
+
+/* ─── Documentos del personal ─── */
+.docp { display: flex; flex-direction: column; gap: var(--s-4); padding: 0 var(--s-5) var(--s-8); max-width: 56rem; width: 100%; margin: 0 auto; box-sizing: border-box; }
+.docp__resumen { margin: 0; text-align: center; color: var(--label-2); font-size: 0.875rem; }
+.docp__grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr)); gap: var(--s-3); }
+.docp-tarjeta {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; padding: var(--s-3);
+  background: var(--surface-sunken); border: 0; border-radius: 20px; box-shadow: inset 0 0 0 0.5px var(--separator);
+  color: inherit; font: inherit; cursor: pointer; transition: transform 140ms ease-out, box-shadow 140ms;
+}
+.docp-tarjeta:hover:not(:disabled) { box-shadow: inset 0 0 0 0.5px var(--separator-strong), var(--shadow-card); }
+.docp-tarjeta:active:not(:disabled) { transform: scale(0.98); }
+.docp-tarjeta:disabled { cursor: default; opacity: 0.7; }
+.docp-tarjeta__vista { width: 100%; aspect-ratio: 4 / 3; border-radius: 14px; background: var(--fill-1); display: grid; place-items: center; color: var(--label-3); overflow: hidden; }
+.docp-tarjeta__vista img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.docp-tarjeta__titulo { font-size: 0.9375rem; font-weight: 700; line-height: 1.2; }
+.docp-tarjeta__sub { font-size: 0.75rem; color: var(--label-2); }
+.docp-estado { font-size: 0.6875rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--fill-2); color: var(--label-2); }
+.docp-estado--vigente { background: color-mix(in srgb, var(--green-ink) 14%, transparent); color: var(--green-ink); }
+.docp-estado--por_vencer { background: color-mix(in srgb, var(--amber-ink) 16%, transparent); color: var(--amber-ink); }
+.docp-estado--vencido { background: color-mix(in srgb, var(--red-ink) 14%, transparent); color: var(--red-ink); }
+.docp__otros-cab { display: flex; align-items: center; justify-content: space-between; margin-top: var(--s-2); }
+.docp__otros-cab h3 { margin: 0; font-size: 1rem; }
+.docp__vacio { margin: 0; font-size: 0.8125rem; color: var(--label-2); }
+.docp__lista { list-style: none; margin: 0; padding: 0; background: var(--surface-sunken); border-radius: 16px; box-shadow: inset 0 0 0 0.5px var(--separator); overflow: hidden; }
+.docp__lista li + li { border-top: 1px solid var(--separator); }
+.docp-fila { display: flex; align-items: center; gap: var(--s-3); width: 100%; padding: var(--s-3); background: none; border: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.docp-fila__icono { width: 40px; height: 40px; border-radius: 10px; background: var(--fill-1); display: grid; place-items: center; overflow: hidden; flex: none; color: var(--label-3); }
+.docp-fila__icono img { width: 100%; height: 100%; object-fit: cover; }
+.docp-fila__texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.docp-fila__texto small { color: var(--label-2); font-size: 0.75rem; }
+.docp-visor { display: flex; flex-direction: column; gap: var(--s-3); }
+.docp-visor__estado { margin: 0; font-size: 0.875rem; font-weight: 600; }
+.docp-visor__estado--vigente { color: var(--green-ink); }
+.docp-visor__estado--por_vencer { color: var(--amber-ink); }
+.docp-visor__estado--vencido { color: var(--red-ink); }
+.docp-visor__img { width: 100%; max-height: 60vh; object-fit: contain; border-radius: 14px; background: var(--fill-1); display: block; }
+.docp-visor__pdf { width: 100%; height: 60vh; border: 0; border-radius: 14px; background: var(--fill-1); }
+.docp-visor__meta { margin: 0; font-size: 0.75rem; color: var(--label-2); word-break: break-word; }
+.docp-visor__abrir { font-size: 0.8125rem; }
+
+/* Tablero de vencimientos */
+.docm-persona { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.docm-persona small { color: var(--label-2); font-size: 0.75rem; }
+.docm-celda { display: inline-block; min-width: 4.25rem; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: var(--fill-1); color: var(--label-2); font-variant-numeric: tabular-nums; }
+.docm-celda--vigente { background: color-mix(in srgb, var(--green-ink) 14%, transparent); color: var(--green-ink); }
+.docm-celda--por_vencer { background: color-mix(in srgb, var(--amber-ink) 16%, transparent); color: var(--amber-ink); }
+.docm-celda--vencido, .docm-celda--falta:not(.docm-celda--opcional) { background: color-mix(in srgb, var(--red-ink) 14%, transparent); color: var(--red-ink); }
+.docm-celda--opcional, .docm-celda--na { background: transparent; color: var(--label-3); font-weight: 500; }
+@media (prefers-reduced-motion: reduce) { .docp-tarjeta { transition: none; } }
