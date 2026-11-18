@@ -3,7 +3,7 @@ import './integraciones.css';
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { Building2, CheckCircle2, ChevronDown, CircleAlert, KeyRound, ListOrdered, MapPin, ShieldCheck, Zap } from 'lucide-react';
+import { Building2, CheckCircle2, ChevronDown, CircleAlert, KeyRound, Landmark, ListOrdered, MapPin, ShieldCheck, UserRound, Zap } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, PasswordInput, TextInput } from '../../core/ui/Field';
@@ -58,6 +58,7 @@ export function IntegracionesPage() {
         <div className="int-lista">
           <Wialon filas={q.data ?? []} />
           <Apisunat filas={q.data ?? []} />
+          <Sire filas={q.data ?? []} />
         </div>
       )}
     </Page>
@@ -82,7 +83,7 @@ function useGuardar() {
 
 // Tarjeta plegable: contraída muestra un resumen; al tocarla se abre con un resorte sin rebote (se puede volver a tocar a mitad del movimiento)
 function Tarjeta({ icono, tono, titulo, resumen, estado, onGuardar, children }: {
-  icono: React.ReactNode; tono: 'gps' | 'sunat'; titulo: string; resumen: string; estado: 'ok' | 'pendiente' | 'error'; onGuardar: () => void; children: React.ReactNode;
+  icono: React.ReactNode; tono: 'gps' | 'sunat' | 'sire'; titulo: string; resumen: string; estado: 'ok' | 'pendiente' | 'error'; onGuardar: () => void; children: React.ReactNode;
 }) {
   const [abierta, setAbierta] = useState(false);
   const reducir = useReducedMotion();
@@ -328,6 +329,71 @@ function Apisunat({ filas }: { filas: Fila[] }) {
       {Aviso}
       <div className="int-acciones">
         <span className="int-acciones__meta">{metaDe(filas, 'apisunat_modo') || 'Es de esta empresa: cada empresa guarda la suya.'}</span>
+        <Button variant="secondary" onClick={() => guardarYProbar(false)} disabled={ocupado}>Guardar</Button>
+        <Button variant="primary" icon={<Zap size={16} />} onClick={() => guardarYProbar(true)} loading={ocupado}>Guardar y probar conexión</Button>
+      </div>
+    </Tarjeta>
+  );
+}
+
+// SUNAT · SIRE: registros electrónicos de ventas (RVIE) y compras (RCE). Va DIRECTO a la API de SUNAT, no por APISUNAT.
+// La clave SOL y el secreto se guardan cifrados y no se vuelven a mostrar completos.
+function Sire({ filas }: { filas: Fila[] }) {
+  const toast = useToast();
+  const qc = useQueryClient();
+  const [v, setV] = useState({ ruc: '', usuario: '', clave: '', clientId: '', secreto: '' });
+  const [ocupado, setOcupado] = useState(false);
+  const [res, setRes] = useState<Resultado>(null);
+
+  useEffect(() => {
+    setV({
+      // El RUC parte del de la empresa en APISUNAT, para no escribirlo dos veces
+      ruc: valorDe(filas, 'sire_ruc') || valorDe(filas, 'apisunat_ruc_emisor') || valorDe(filas, 'sunat_ruc_emisor'),
+      usuario: valorDe(filas, 'sire_usuario_sol'), clave: valorDe(filas, 'sire_clave_sol'),
+      clientId: valorDe(filas, 'sire_client_id'), secreto: valorDe(filas, 'sire_client_secret'),
+    });
+  }, [filas]);
+
+  async function guardarYProbar(probar: boolean) {
+    setOcupado(true); setRes(null);
+    try {
+      await api('/sire/config', { method: 'PUT', body: { ruc: v.ruc, usuario_sol: v.usuario, client_id: v.clientId, client_secret: v.secreto, clave_sol: v.clave } });
+      await qc.invalidateQueries({ queryKey: ['sistema', 'integraciones-cfg'] });
+      haptic('success'); toast('SIRE guardado');
+      if (probar) {
+        const r = await api<{ ok?: boolean; error?: string; message?: string }>('/sire/probar', { method: 'POST', body: {} });
+        if (r.ok === false) throw new Error(r.error || 'No se pudo conectar');
+        setRes({ ok: true, texto: r.message || 'Conectado con el SIRE de SUNAT' });
+      }
+    } catch (err) { setRes({ ok: false, texto: errorMessage(err) }); haptic('warning'); }
+    finally { setOcupado(false); }
+  }
+
+  const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setV(a => ({ ...a, [k]: e.target.value }));
+  const completo = !!(v.ruc && v.usuario && v.clave && v.clientId && v.secreto);
+
+  return (
+    <Tarjeta icono={<Landmark size={20} />} tono="sire" titulo="SUNAT · SIRE (registros de ventas y compras)" estado={res && !res.ok ? 'error' : completo ? 'ok' : 'pendiente'}
+      resumen={completo ? `RUC ${v.ruc} · usuario SOL ${v.usuario}` : 'Aún sin credenciales de SUNAT'} onGuardar={() => guardarYProbar(false)}>
+      <Notice tone="accent">Esta conexión va directo con SUNAT (no con APISUNAT, que solo emite comprobantes). La clave SOL y el secreto se guardan cifrados y no se vuelven a mostrar. Usa un usuario SOL secundario con permiso de consulta del SIRE.</Notice>
+      <div className="int-grupo">
+        <div className="int-grupo__titulo"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><UserRound size={13} aria-hidden /> Empresa y usuario SOL</span></div>
+        <div className="int-grid">
+          <Field label="RUC de la empresa">{p => <TextInput {...p} inputMode="numeric" maxLength={11} value={v.ruc} onChange={set('ruc')} />}</Field>
+          <Field label="Usuario SOL" hint="El secundario, no el principal">{p => <TextInput {...p} value={v.usuario} onChange={set('usuario')} autoComplete="off" />}</Field>
+          <Field label="Clave SOL">{p => <PasswordInput {...p} value={v.clave} onChange={set('clave')} autoComplete="new-password" />}</Field>
+        </div>
+      </div>
+      <div className="int-grupo">
+        <div className="int-grupo__titulo"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><KeyRound size={13} aria-hidden /> Credenciales de API de SUNAT</span></div>
+        <div className="int-grid">
+          <Field label="Client ID" hint="Se generan una sola vez en SUNAT Operaciones en Línea (Clave SOL), en «Credenciales de API SUNAT»">{p => <TextInput {...p} value={v.clientId} onChange={set('clientId')} autoComplete="off" />}</Field>
+          <Field label="Client Secret">{p => <PasswordInput {...p} value={v.secreto} onChange={set('secreto')} autoComplete="new-password" />}</Field>
+        </div>
+      </div>
+      {res && <Notice tone={res.ok ? 'success' : 'error'} icon={res.ok ? <CheckCircle2 size={16} /> : <CircleAlert size={16} />}>{res.texto}</Notice>}
+      <div className="int-acciones">
+        <span className="int-acciones__meta">{metaDe(filas, 'sire_client_id') || 'Es de esta empresa: cada empresa guarda la suya.'}</span>
         <Button variant="secondary" onClick={() => guardarYProbar(false)} disabled={ocupado}>Guardar</Button>
         <Button variant="primary" icon={<Zap size={16} />} onClick={() => guardarYProbar(true)} loading={ocupado}>Guardar y probar conexión</Button>
       </div>

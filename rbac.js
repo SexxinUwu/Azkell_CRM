@@ -159,6 +159,7 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/roles')) mod = 'roles';
     else if (path.startsWith('/usuarios-v2')) mod = 'usuarios';
     else if (path.startsWith('/integraciones')) mod = 'integraciones';
+    else if (path.startsWith('/sire')) mod = ['integraciones', 'administracion'];
     else if (path.startsWith('/auditoria') || path.startsWith('/audit')) mod = 'mod_auditoria';
     else if (path.startsWith('/notificaciones')) mod = ['administracion', 'cfg_empresa'];
     // Sistema › API y desarrolladores: llaves de API y webhooks (antes sin mapeo; ahora exigen administración)

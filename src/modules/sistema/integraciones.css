@@ -39,6 +39,7 @@
 }
 .int-icono--gps { background: linear-gradient(160deg, #34c759, #1f9d4a); }
 .int-icono--sunat { background: linear-gradient(160deg, #0a84ff, #0a5fd1); }
+.int-icono--sire { background: linear-gradient(160deg, #e07b00, #b45f00); }
 
 .int-cab__texto { flex: 1; min-width: 0; }
 .int-titulo { font-size: 1.0625rem; font-weight: 650; letter-spacing: -0.01em; }
