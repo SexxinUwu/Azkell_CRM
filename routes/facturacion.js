@@ -51,6 +51,15 @@ module.exports = (db, logAudit) => {
         try { const c = await Apisunat.getConfigEmpresa(getDb(req), { documento: 'facturacion' }); return { ruc: c.ruc_emisor, razon: c.razon_social }; } catch (e) { return null; }
     };
 
+    // Cuentas donde el cliente puede pagar: las activas de Tesorería › Bancos en la moneda del comprobante, sin la de detracciones (esa va en su propio cuadro)
+    async function cuentasCobro(req, moneda) {
+        const [r] = await P(req).query(`SELECT banco, moneda, numero_cuenta, cci FROM tesoreria_bancos
+                                        WHERE UPPER(estado) = 'ACTIVO' AND UPPER(tipo_cuenta) <> 'DETRACCIONES' AND UPPER(banco) NOT LIKE 'BANCO DE LA NACI%'
+                                          AND ${moneda === 'USD' ? "(UPPER(moneda) LIKE 'D%' OR UPPER(moneda) = 'USD')" : "UPPER(moneda) LIKE 'SOL%'"}
+                                        ORDER BY id ASC LIMIT 4`).catch(() => [[]]);
+        return (r || []).map(q => ({ banco: String(q.banco || '').replace(/\s*\(.*\)\s*$/, '').trim(), moneda: moneda === 'USD' ? 'DÓLARES' : 'SOLES', cuenta: String(q.numero_cuenta || '').trim(), cci: String(q.cci || '').trim() }));
+    }
+
     // Series y cuenta de detracciones de la empresa (Sistema › Integraciones), con las series habituales por defecto
     async function config(req) {
         const cfg = await Apisunat.getConfigEmpresa(getDb(req), { documento: 'facturacion' });
@@ -133,7 +142,7 @@ module.exports = (db, logAudit) => {
         try {
             const t = tipoPlantilla(req);
             const plantilla = CPDF.normalizarPlantilla((req.body || {}).plantilla, t);
-            const pdf = await CPDF.generarPdf(CPDF.modeloEjemplo(t, await emisorEmpresa(req)), plantilla, { hash: 'AbCdEfGhIjKlMnOpQrStUvWxYz0=', leerS3 });
+            const pdf = await CPDF.generarPdf(CPDF.modeloEjemplo(t, await emisorEmpresa(req), await cuentasCobro(req, 'PEN')), plantilla, { hash: 'AbCdEfGhIjKlMnOpQrStUvWxYz0=', leerS3 });
             res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline; filename="vista-previa.pdf"', 'Cache-Control': 'no-store' });
             res.send(pdf);
         } catch (err) { responder(res, err, 'preview'); }
@@ -516,9 +525,9 @@ module.exports = (db, logAudit) => {
             // Estado y XML al día: el hash que va impreso sale del XML firmado
             if (r[0].apisunat_document_id && (!r[0].xml_url || r[0].apisunat_status !== 'ACEPTADO')) { try { await sincronizar(p, cfg, r[0]); [r] = await consulta(); } catch (e) { /* se imprime con lo que hay */ } }
             const c = r[0];
-            const [items] = await p.query(`SELECT descripcion, unidad, cantidad, valor_unitario, base FROM facturacion_items WHERE comprobante_id = ? ORDER BY linea`, [c.id]);
+            const [items] = await p.query(`SELECT descripcion, unidad, cantidad, valor_unitario, base, igv FROM facturacion_items WHERE comprobante_id = ? ORDER BY linea`, [c.id]);
             const plantilla = await plantillaGuardada(req, c.tipo_doc === '07' ? 'nc' : 'comprobante');
-            const modelo = CPDF.modeloDesdeComprobante(c, items, { ruc: cfg.ruc_emisor, razon: cfg.razon_social });
+            const modelo = CPDF.modeloDesdeComprobante(c, items, { ruc: cfg.ruc_emisor, razon: cfg.razon_social }, c.tipo_doc === '07' ? [] : await cuentasCobro(req, c.moneda === 'USD' ? 'USD' : 'PEN'));
             const pdf = await CPDF.generarPdf(modelo, plantilla, { hash: await CPDF.hashDeXml(c.xml_url), leerS3 });
             res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="${String(c.numero_completo).replace(/[^\w.-]/g, '_')}.pdf"`, 'Cache-Control': 'no-store' });
             res.send(pdf);
