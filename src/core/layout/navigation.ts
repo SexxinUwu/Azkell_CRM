@@ -85,9 +85,9 @@ const SECCIONES_BASE: NavSection[] = [
         ],
       },
       { key: 'rentabilidad', label: 'Rentabilidad', to: '/operaciones/rentabilidad', icon: TrendingUp, permissions: ver('op_rentabilidad'), noEmpresa: 'marsisa' },
-      { key: 'reporte-viajes', label: 'Reporte de viajes', to: '/operaciones/reporte-viajes', icon: BarChart3, permissions: ver('op_reporte_viajes'), soloEmpresa: 'trahesa' },
+      { key: 'reporte-viajes', label: 'Reporte de viajes', to: '/operaciones/reporte-viajes', icon: BarChart3, permissions: ver('op_reporte_viajes'), soloEmpresa: 'trahesa,yoguitransport,rosymarperu' },
       {
-        key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [], soloEmpresa: 'trahesa',
+        key: 'guias-grupo', label: 'Guías de remisión', icon: FileText, permissions: [], soloEmpresa: 'trahesa,yoguitransport,rosymarperu',
         children: [
           { key: 'guias', label: 'Guías', to: '/operaciones/guias', icon: FileText, permissions: ver('op_guias_remision') },
           { key: 'plantilla-guias', label: 'Plantilla de guías', to: '/operaciones/plantilla-guias', icon: Palette, permissions: ver('op_guias_remision') },
