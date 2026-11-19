@@ -22,7 +22,8 @@ function combustibleDe(v) {
     if (/diesel|d2|b5|petroleo/.test(x)) return 'Diésel B5';
     return null;
 }
-const horaTxt = v => { const m = /(\d{1,2}):(\d{2})/.exec(String(v ?? '')); return m ? `${m[1].padStart(2, '0')}:${m[2]}` : null; };
+const LITROS_POR_GALON = 3.78541;
+const horaTxt =v => { const m = /(\d{1,2}):(\d{2})/.exec(String(v ?? '')); return m ? `${m[1].padStart(2, '0')}:${m[2]}` : null; };
 
 const INSTRUCCIONES = `Eres un lector de vouchers y tickets de venta de combustible de grifos del Perú. Devuelve SOLO un JSON con estas claves (null si no se ve):
 {
@@ -40,7 +41,7 @@ const INSTRUCCIONES = `Eres un lector de vouchers y tickets de venta de combusti
  "km_odometro": kilometraje del odómetro si figura (entero),
  "conductor_doc": "DNI del conductor si figura"
 }
-Reglas: copia lo que ves, no inventes. Cantidad: galones para líquidos y GLP; GNV en m³; GNL en kg (pon ese número en galones). Si el ticket muestra litros, convierte a galones (1 galón = 3.785 L). Gasolina de 90 = regular; 95, 97 o 98 = premium. Números sin símbolo de moneda ni separador de miles.`;
+Reglas: copia lo que ves, no inventes. Cantidad: galones para líquidos y GLP; GNV en m³; GNL en kg (pon ese número en galones). Convierte a galones (1 galón = 3.785 L) SOLO si el ticket dice claramente que la cantidad está en litros (la palabra «litros», «lt» o «lts» en la columna de cantidad); en los grifos del Perú el precio ya es por galón y la cantidad ya viene en galones. Un «L:11», «L-3» o «Lado 2» junto al artículo es el número de surtidor o manguera, NO litros. Comprueba que cantidad × precio ≈ total: si ya coincide, no conviertas nada. Gasolina de 90 = regular; 95, 97 o 98 = premium. Números sin símbolo de moneda ni separador de miles.`;
 
 async function leerConIA(buffer, mimetype) {
     const clave = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim();
@@ -89,6 +90,12 @@ function limpiar(j) {
         km_odometro: numero(j.km_odometro) != null ? Math.round(numero(j.km_odometro)) : null,
         conductor_doc: (String(j.conductor_doc ?? '').replace(/\D/g, '').match(/^\d{8}$/) || [null])[0],
     };
+    // Si la IA convirtió de litros a galones sin que el ticket lo pidiera (p. ej. tomó «L:11» del surtidor por litros), el total y el precio no cuadran
+    // con los galones, pero sí con los galones × 3.785: la cantidad del ticket ya estaba en galones.
+    if (d.galones > 0 && d.precio_galon > 0 && d.total > 0 && Math.abs(d.galones * d.precio_galon - d.total) > Math.max(0.5, d.total * 0.02)) {
+        const esperados = d.total / d.precio_galon;
+        if (Math.abs(d.galones * LITROS_POR_GALON - esperados) <= esperados * 0.02) d.galones = Math.round(esperados * 1000) / 1000;
+    }
     if (d.total == null && d.galones != null && d.precio_galon != null) d.total = Math.round(d.galones * d.precio_galon * 100) / 100;
     if (d.precio_galon == null && d.galones && d.total) d.precio_galon = Math.round((d.total / d.galones) * 10000) / 10000;
     if (d.galones == null && d.precio_galon && d.total) d.galones = Math.round((d.total / d.precio_galon) * 1000) / 1000;
