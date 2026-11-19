@@ -10,6 +10,8 @@ const CONFIG: ConfigPlantilla = {
     ['estado', 'Estado de SUNAT', 'Sello «Aceptada por SUNAT» o «Pendiente de validación»'],
     ['detraccion', 'Información de la detracción', 'Leyenda, cuenta del Banco de la Nación, porcentaje y monto'],
     ['credito', 'Forma de pago a crédito', 'Monto neto pendiente y cuotas con su vencimiento'],
+    ['cuentas', 'Cuentas bancarias', 'Las cuentas y CCI de Tesorería › Bancos en la moneda del comprobante'],
+    ['adicional', 'Referencia y emitido por', 'Placa o guías escritas en «Referencia» y el usuario que emitió'],
     ['observaciones', 'Observaciones', 'El texto de «Observaciones» de más abajo y las de cada comprobante'],
     ['qr', 'Código QR', 'Con los datos del comprobante, como pide SUNAT'],
     ['hash', 'Código hash', 'Sale del XML firmado y se imprime junto a la leyenda'],
@@ -17,6 +19,9 @@ const CONFIG: ConfigPlantilla = {
   columnas: [
     ['unidad', 'Unidad de cada línea', 'Servicio, unidad, kilogramos…'],
     ['valor_unit', 'Valor unitario', 'Valor sin IGV de cada línea'],
+    ['precio_unit', 'Precio unitario', 'Precio con IGV de cada línea'],
+    ['igv_linea', 'IGV de la línea', 'El IGV de cada línea'],
+    ['total_linea', 'Total de la línea', 'Valor de venta y total (con IGV) de cada línea'],
     ['orden_compra', 'Orden de compra del cliente', 'Si la factura la lleva'],
   ],
   etiquetaNotas: 'Observaciones (se imprimen en todos los comprobantes)',

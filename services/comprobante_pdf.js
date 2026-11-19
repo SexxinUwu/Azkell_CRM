@@ -18,8 +18,8 @@ const TITULOS = { '01': 'FACTURA ELECTRÓNICA', '03': 'BOLETA DE VENTA ELECTRÓN
 // Facturas y boletas tienen una plantilla; las notas de crédito, otra (llevan el documento que modifican y no llevan detracción ni crédito)
 const CLAVE_PLANTILLA = 'comprobante_pdf_plantilla';
 const CLAVE_PLANTILLA_NC = 'nota_credito_pdf_plantilla';
-const BLOQUES_BASE = { estado: true, detraccion: true, credito: true, observaciones: true, qr: true, hash: true };
-const COLUMNAS_BASE = { unidad: true, valor_unit: true, orden_compra: true };
+const BLOQUES_BASE = { estado: true, detraccion: true, credito: true, cuentas: true, adicional: true, observaciones: true, qr: true, hash: true };
+const COLUMNAS_BASE = { unidad: true, valor_unit: true, precio_unit: true, igv_linea: true, total_linea: true, orden_compra: true };
 const BLOQUES_NC = { estado: true, documento: true, observaciones: true, qr: true, hash: true };
 const COLUMNAS_NC = { unidad: true, valor_unit: true };
 const bool = (v, defecto) => (typeof v === 'boolean' ? v : defecto);
@@ -57,7 +57,7 @@ async function hashDeXml(xmlUrl) {
 
 // ───────────────────────── Modelo del documento ─────────────────────────
 /** Datos del PDF a partir de una fila de facturacion_comprobantes (con f_emision y f_vence en AAAA-MM-DD) y sus líneas */
-function modeloDesdeComprobante(c, items, emisor) {
+function modeloDesdeComprobante(c, items, emisor, cuentas = []) {
     let cuenta = '';
     try { const d = JSON.parse(c.datos_json || '{}'); const cb = d['cac:PaymentMeans'] && d['cac:PaymentMeans']['cac:PayeeFinancialAccount'] && d['cac:PaymentMeans']['cac:PayeeFinancialAccount']['cbc:ID']; cuenta = cb ? String(cb._text || '') : ''; } catch (e) { /* sin UBL guardado */ }
     const moneda = c.moneda === 'USD' ? 'USD' : 'PEN';
@@ -69,7 +69,8 @@ function modeloDesdeComprobante(c, items, emisor) {
         cliente: { docTipo: c.cliente_doc_tipo, doc: c.cliente_doc, nombre: c.cliente_nombre, direccion: c.cliente_direccion || '' },
         moneda, simbolo: moneda === 'USD' ? 'US$' : 'S/',
         formaPago: c.forma_pago === 'CREDITO' ? 'CREDITO' : 'CONTADO', dias: Number(c.dias_credito) || 0,
-        lineas: items.map((l, i) => ({ n: i + 1, descripcion: l.descripcion, unidad: l.unidad, cantidad: Number(l.cantidad), vu: Number(l.valor_unitario), base: Number(l.base) })),
+        lineas: items.map((l, i) => ({ n: i + 1, descripcion: l.descripcion, unidad: l.unidad, cantidad: Number(l.cantidad), vu: Number(l.valor_unitario), base: Number(l.base), igv: Number(l.igv) || 0 })),
+        usuario: c.usuario || '', cuentas,
         base: Number(c.base) || 0, igv: Number(c.igv) || 0, total: Number(c.total) || 0,
         enLetras: montoEnLetras(Number(c.total) || 0, moneda),
         detraccion: detMonto > 0 ? { pct: Number(c.detraccion_pct) || 0, monto: detMonto, cuenta } : null,
@@ -81,7 +82,7 @@ function modeloDesdeComprobante(c, items, emisor) {
 }
 
 /** `emisorEmpresa`: { ruc, razon } de la empresa que mira la vista previa (sin él, un emisor de ejemplo) */
-function modeloEjemplo(tipo = 'comprobante', emisorEmpresa = null) {
+function modeloEjemplo(tipo = 'comprobante', emisorEmpresa = null, cuentas = []) {
     const emisorBase = { ruc: '20600066651', razon: 'TRAHESA S.A.C.' };
     const emisor = emisorEmpresa && emisorEmpresa.ruc && emisorEmpresa.razon ? emisorEmpresa : emisorBase;
     if (tipo === 'nc') {
@@ -100,9 +101,9 @@ function modeloEjemplo(tipo = 'comprobante', emisorEmpresa = null) {
         emisor,
         cliente: { docTipo: '6', doc: '20100014395', nombre: 'PRODUCTOS PARAISO DEL PERU S.A.C.', direccion: 'AV. ARGENTINA 5495, CALLAO' },
         moneda: 'PEN', simbolo: 'S/', formaPago: 'CONTADO', dias: 0,
-        lineas: [{ n: 1, descripcion: 'SERVICIO DE TRANSPORTE DE CARGA JULIACA - LIMA', unidad: 'ZZ', cantidad: 1, vu: 4237.2881, base: 4237.29 }],
-        base: 4237.29, igv: 762.71, total: 5000, enLetras: montoEnLetras(5000, 'PEN'),
-        detraccion: { pct: 4, monto: 200, cuenta: '00042047767' }, neto: 4800, ordenCompra: '', referencia: '', observacion: '', ref: null, estado: 'ACEPTADO', prueba: false, ejemplo: true,
+        lineas: [{ n: 1, descripcion: 'SERVICIO DE TRANSPORTE DE CARGA JULIACA - LIMA', unidad: 'ZZ', cantidad: 1, vu: 4237.2881, base: 4237.29, igv: 762.71 }],
+        base: 4237.29, igv: 762.71, total: 5000, enLetras: montoEnLetras(5000, 'PEN'), usuario: 'USUARIO', cuentas,
+        detraccion: { pct: 4, monto: 200, cuenta: '00042047767' }, neto: 4800, ordenCompra: '', referencia: 'PLACA ABC123 · GUÍA T001-1', observacion: '', ref: null, estado: 'ACEPTADO', prueba: false, ejemplo: true,
     };
 }
 
@@ -140,7 +141,16 @@ function construirHtml(m, plantilla, rec = {}) {
         ${c.unidad ? `<td>${esc(UNIDADES[l.unidad] || l.unidad)}</td>` : ''}
         <td class="d">${esc(nfLibre(l.cantidad, 0, 3))}</td>
         ${c.valor_unit ? `<td class="d">${esc(nfLibre(l.vu, 2, 4))}</td>` : ''}
-        <td class="d">${esc(nf(l.base))}</td></tr>`).join('');
+        ${c.precio_unit ? `<td class="d">${esc(nf(l.cantidad > 0 ? (l.base + (l.igv || 0)) / l.cantidad : 0))}</td>` : ''}
+        ${c.igv_linea ? `<td class="d">${esc(nf(l.igv))}</td>` : ''}
+        <td class="d">${esc(nf(l.base))}</td>
+        ${c.total_linea ? `<td class="d"><b>${esc(nf(l.base + (l.igv || 0)))}</b></td>` : ''}</tr>`).join('');
+    // Condiciones de pago: número de cuotas y bancos de cobro (los de Tesorería › Bancos, sin la cuenta de detracciones, que va en su cuadro)
+    const cuentasHtml = !esNc && b.cuentas && (m.cuentas || []).length ? `
+      <div class="sec"><div class="et">Cuentas bancarias</div><div class="tarj">${m.cuentas.map(q => `
+        ${q.cuenta ? `<div class="par"><div class="k">${esc(q.banco)} ${esc(q.moneda)}</div><div class="v m">${esc(q.cuenta)}</div></div>` : ''}
+        ${q.cci ? `<div class="par"><div class="k">${esc(q.banco)} CCI ${esc(q.moneda)}</div><div class="v m">${esc(q.cci)}</div></div>` : ''}`).join('')}
+      </div></div>` : '';
 
     const detHtml = m.detraccion && b.detraccion ? `
       <div class="sec"><div class="et">Información de la detracción</div><div class="tarj det">
@@ -154,6 +164,7 @@ function construirHtml(m, plantilla, rec = {}) {
 
     const creditoHtml = !esNc && b.credito && m.formaPago === 'CREDITO' ? `
       <div class="sec"><div class="et">Forma de pago: crédito</div><div class="tarj">
+        <div class="par"><div class="k">Número de cuotas</div><div class="v m">1</div></div>
         <div class="par"><div class="k">Monto neto pendiente de pago</div><div class="v m">${S} ${esc(nf(m.neto))}</div></div>
         <div class="par"><div class="k">Cuota 1 · vence el ${fecha(m.vence)}</div><div class="v m">${S} ${esc(nf(m.neto))}</div></div>
       </div></div>` : '';
@@ -198,7 +209,10 @@ ${textoMarca ? `<div class="marca-fondo ${p.marca_agua_nivel}${marcaAgua ? ' baj
     <div><div class="et">Datos</div><div class="tarj">
       <div class="par"><div class="k">Emisión</div><div class="v m">${fecha(m.emision)}${m.hora ? ` ${esc(m.hora.slice(0, 5))}` : ''}</div></div>
       <div class="par"><div class="k">Moneda</div><div class="v">${m.moneda === 'USD' ? 'Dólares (US$)' : 'Soles (S/)'}</div></div>
+      ${m.vence ? `<div class="par"><div class="k">Vencimiento</div><div class="v m">${fecha(m.vence)}</div></div>` : ''}
       ${esNc ? '' : `<div class="par"><div class="k">Forma de pago</div><div class="v">${m.formaPago === 'CREDITO' ? `Crédito (${m.dias} días)` : 'Contado'}</div></div>`}
+      ${b.adicional && m.referencia ? `<div class="par"><div class="k">Referencia</div><div class="v m">${esc(m.referencia)}</div></div>` : ''}
+      ${b.adicional && m.usuario ? `<div class="par"><div class="k">Emitido por</div><div class="v">${esc(m.usuario)}</div></div>` : ''}
       ${m.ordenCompra && c.orden_compra ? `<div class="par"><div class="k">Orden de compra</div><div class="v m">${esc(m.ordenCompra)}</div></div>` : ''}
       ${m.liquidacion ? `<div class="par"><div class="k">Liquidación</div><div class="v m">${esc(m.liquidacion)}</div></div>` : ''}
     </div></div>
@@ -209,7 +223,7 @@ ${textoMarca ? `<div class="marca-fondo ${p.marca_agua_nivel}${marcaAgua ? ' baj
     <div class="par"><div class="k">Motivo</div><div class="v">${esc(m.ref.motivo)}</div></div></div></div>` : ''}
 
   <div class="sec"><div class="et">Detalle</div>
-    <table><thead><tr><th>#</th><th>Descripción</th>${c.unidad ? '<th>Unidad</th>' : ''}<th class="d">Cant.</th>${c.valor_unit ? '<th class="d">Valor unit.</th>' : ''}<th class="d">Importe</th></tr></thead>
+    <table><thead><tr><th>#</th><th>Descripción</th>${c.unidad ? '<th>Unidad</th>' : ''}<th class="d">Cant.</th>${c.valor_unit ? '<th class="d">V. unit.</th>' : ''}${c.precio_unit ? '<th class="d">P. unit.</th>' : ''}${c.igv_linea ? '<th class="d">IGV</th>' : ''}<th class="d">${c.total_linea ? 'V. venta' : 'Importe'}</th>${c.total_linea ? '<th class="d">Total</th>' : ''}</tr></thead>
     <tbody>${lineasHtml}</tbody></table>
     <div class="tot2 tarj" style="margin-top:3mm">
       <div class="par"><div class="k">${m.igv > 0 ? 'Op. gravada' : 'Op. inafecta'}</div><div class="v m">${S} ${esc(nf(m.base))}</div></div>
@@ -221,6 +235,7 @@ ${textoMarca ? `<div class="marca-fondo ${p.marca_agua_nivel}${marcaAgua ? ' baj
 
   ${detHtml}
   ${creditoHtml}
+  ${cuentasHtml}
 
   ${b.observaciones && obs ? `<div class="sec"><div class="et">Observaciones</div><div class="tarj">${esc(obs).replace(/\n/g, '<br>')}</div></div>` : ''}
 
