@@ -31,6 +31,24 @@ function otConExtras(ot: OrdenTrabajo, extras: ExtrasPdf = {}): OrdenTrabajo {
   return { ...ot, detalles_json: det as OrdenTrabajo['detalles_json'] };
 }
 
+/** Logo de la empresa del subdominio como data URL. Los documentos clásicos lo leen de window._LOGO_BASE64
+ *  y, sin él, caían al logo de Marsisa que está fijo en el código. */
+let logoCache: Promise<string> | null = null;
+async function ponerLogoEmpresa(): Promise<void> {
+  logoCache ??= (async () => {
+    try {
+      const res = await apiFetch('/tenant-logo');
+      if (!res.ok) return '';
+      const blob = await res.blob();
+      if (!blob.type.startsWith('image/')) return '';
+      return await new Promise<string>((ok, mal) => { const l = new FileReader(); l.onload = () => ok(String(l.result)); l.onerror = () => mal(l.error); l.readAsDataURL(blob); });
+    } catch { return ''; }
+  })();
+  const logo = await logoCache;
+  if (!logo) logoCache = null;
+  else (window as unknown as { _LOGO_BASE64?: string })._LOGO_BASE64 = logo;
+}
+
 /** Pide al servidor el PDF de un documento HTML. Usa la misma sesión que el resto de la app. */
 export async function pdfDeHtml(html: string, titulo: string, horizontal = false): Promise<Blob> {
   // La falla se muestra sin "• Falla Manual :" (el resto del documento queda como en el clásico)
@@ -45,7 +63,8 @@ export async function pdfDeHtml(html: string, titulo: string, horizontal = false
 }
 
 /** PDF de cierre de la OT (con trabajos, materiales y firmas), como el clásico */
-export function pdfOt(d: DatosOtPdf): Promise<Blob> {
+export async function pdfOt(d: DatosOtPdf): Promise<Blob> {
+  await ponerLogoEmpresa();
   const numero = d.ot.id_ot || d.ot.ticket_entrada || '';
   const ot = otConExtras(d.ot, d.extras);
   const html = generarPDF_OT(ot, d.trabajos, d.materiales, false, undefined) as string;
@@ -53,18 +72,21 @@ export function pdfOt(d: DatosOtPdf): Promise<Blob> {
 }
 
 /** Plantilla vacía para llenar a mano en taller (10 filas de trabajo y observaciones), como el clásico */
-export function pdfPlantillaOt(ot: OrdenTrabajo, extras?: ExtrasPdf): Promise<Blob> {
+export async function pdfPlantillaOt(ot: OrdenTrabajo, extras?: ExtrasPdf): Promise<Blob> {
+  await ponerLogoEmpresa();
   const html = generarPDF_OT(otConExtras(ot, extras), [], [], true, undefined) as string;
   return pdfDeHtml(html, 'Plantilla orden de trabajo');
 }
 
 /** Plantilla de inspecciones F-MAN-001 (checklist), como el clásico */
-export function pdfPlantillaInspeccion(idOt: string, placa: string, fechaIng: string | null, km: string | number | undefined, rampa: string | undefined): Promise<Blob> {
+export async function pdfPlantillaInspeccion(idOt: string, placa: string, fechaIng: string | null, km: string | number | undefined, rampa: string | undefined): Promise<Blob> {
+  await ponerLogoEmpresa();
   return htmlPlantillaInspeccion(idOt, placa, fechaIng ?? '', km ?? '', rampa ?? '').then((html: string) => pdfDeHtml(html, `Plantilla inspecciones ${idOt}`));
 }
 
 /** Plantilla de llantas A4 en blanco, como el clásico */
-export function pdfPlantillaLlantas(ot: OrdenTrabajo, extras?: ExtrasPdf): Promise<Blob> {
+export async function pdfPlantillaLlantas(ot: OrdenTrabajo, extras?: ExtrasPdf): Promise<Blob> {
+  await ponerLogoEmpresa();
   const numero = ot.id_ot || ot.ticket_entrada || '';
   return htmlPlantillaLlantas(numero, otConExtras(ot, extras)).then((html: string) => pdfDeHtml(html, `Plantilla de llantas ${numero}`));
 }
