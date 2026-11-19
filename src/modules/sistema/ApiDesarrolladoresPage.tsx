@@ -1,7 +1,8 @@
 import './api-desarrolladores.css';
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, KeyRound, Plus, ShieldCheck, Trash2 } from 'lucide-react';
+import { Activity, Copy, Gauge, KeyRound, Plus, ShieldCheck, Trash2, Webhook } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, TextInput } from '../../core/ui/Field';
@@ -71,17 +72,17 @@ function TarjetaLlave({ k, onEstado, onEliminar }: {
   const toast = useToast();
   const activa = k.estado === 'activo';
   const revocada = k.estado === 'revocado';
+  const permisos = scopesDe(k);
   return (
-    <article className="apigw-tarjeta">
+    <article className={`apigw-tarjeta${activa ? '' : ' apigw-tarjeta--apagada'}`}>
       <header className="apigw-tarjeta__cab">
         <span className="apigw-icono"><KeyRound size={18} /></span>
         <div className="apigw-tarjeta__titulo">
           <strong>{k.nombre}</strong>
           <span>{k.cliente_empresa || 'Sin cliente asignado'}</span>
         </div>
-        {revocada ? (
-          <span className="apigw-estado apigw-estado--revocada">{ESTADO_LABEL.revocado}</span>
-        ) : (
+        <span className={`apigw-pildora apigw-pildora--${activa ? 'ok' : revocada ? 'off' : 'aviso'}`}>{ESTADO_LABEL[k.estado]}</span>
+        {!revocada && (
           <Switch id={`llave-${k.id}`} checked={activa} label={`Activar la llave ${k.nombre}`}
             onChange={v => onEstado(v ? 'activo' : 'inactivo')} />
         )}
@@ -95,14 +96,21 @@ function TarjetaLlave({ k, onEstado, onEliminar }: {
         </button>
       </div>
 
-      <div className="apigw-chips">
-        {scopesDe(k).map(s => <span key={s} className="apigw-chip">{etiquetaPermiso(s)}</span>)}
+      <div className="apigw-seccion-mini">
+        <span className="apigw-etiqueta">Permisos</span>
+        <div className="apigw-chips">
+          {permisos.length ? permisos.map(s => <span key={s} className="apigw-chip">{etiquetaPermiso(s)}</span>) : <span className="apigw-chip">Sin permisos</span>}
+        </div>
       </div>
 
+      <dl className="apigw-datos">
+        <div><dt>Límite</dt><dd>{k.limite_rpm}<small> /min</small></dd></div>
+        <div><dt>Peticiones</dt><dd>{k.peticiones_total.toLocaleString('es-PE')}</dd></div>
+        <div><dt>Último uso</dt><dd className="apigw-datos__texto">{k.ultimo_uso ? formatFechaHoraPe(k.ultimo_uso) : 'Nunca'}</dd></div>
+      </dl>
+
       <footer className="apigw-tarjeta__pie">
-        <span>{k.limite_rpm} peticiones/min</span>
-        <span>{k.peticiones_total.toLocaleString('es-PE')} en total</span>
-        <span>Último uso: {k.ultimo_uso ? formatFechaHoraPe(k.ultimo_uso) : 'nunca'}</span>
+        <span>{k.creado_por ? `Creada por ${k.creado_por}` : 'Creada'} · {formatFechaHoraPe(k.created_at)}</span>
         <button type="button" className="apigw-eliminar" onClick={onEliminar} aria-label={`Eliminar ${k.nombre}`}>
           <Trash2 size={15} /> Eliminar
         </button>
@@ -206,6 +214,15 @@ export function ApiDesarrolladoresPage() {
 
   const lista = llaves.data ?? [];
   const logs = useMemo(() => metricas.data?.logs ?? [], [metricas.data]);
+  const webhooks = useQuery<{ id: number; activo: boolean }[]>({ queryKey: ['sistema', 'webhooks'], queryFn: () => api('/sistema/webhooks') });
+  const [pestana, setPestana] = useState<'llaves' | 'webhooks' | 'peticiones'>('llaves');
+  const sinMovimiento = useReducedMotion();
+  const webhooksActivos = (webhooks.data ?? []).filter(w => w.activo).length;
+  const pestanas: { id: typeof pestana; etiqueta: string; n: number }[] = [
+    { id: 'llaves', etiqueta: 'Llaves', n: lista.length },
+    { id: 'webhooks', etiqueta: 'Webhooks', n: (webhooks.data ?? []).length },
+    { id: 'peticiones', etiqueta: 'Peticiones', n: logs.length },
+  ];
 
   return (
     <Page>
@@ -213,56 +230,75 @@ export function ApiDesarrolladoresPage() {
         eyebrow="Sistema"
         title="API y desarrolladores"
         subtitle="Llaves de acceso, webhooks firmados y uso de cada uno."
-        actions={<Button variant="primary" icon={<Plus size={16} />} onClick={() => setNueva(true)}>Nueva llave</Button>}
+        actions={pestana === 'llaves' ? <Button variant="primary" icon={<Plus size={16} />} onClick={() => setNueva(true)}>Nueva llave</Button> : undefined}
       />
 
       <div className="apigw-metricas">
-        <div className="apigw-metrica"><span>Llaves activas</span><strong>{metricas.data?.total_activas ?? '—'}</strong></div>
-        <div className="apigw-metrica"><span>Peticiones en total</span><strong>{(metricas.data?.peticiones_historicas ?? 0).toLocaleString('es-PE')}</strong></div>
+        <div className="apigw-metrica"><span className="apigw-metrica__icono"><KeyRound size={16} /></span><span>Llaves activas</span><strong>{metricas.data?.total_activas ?? '—'}</strong></div>
+        <div className="apigw-metrica"><span className="apigw-metrica__icono"><Webhook size={16} /></span><span>Webhooks activos</span><strong>{webhooks.data ? webhooksActivos : '—'}</strong></div>
+        <div className="apigw-metrica"><span className="apigw-metrica__icono"><Gauge size={16} /></span><span>Peticiones en total</span><strong>{(metricas.data?.peticiones_historicas ?? 0).toLocaleString('es-PE')}</strong></div>
       </div>
 
-      {llaves.isLoading ? <PageLoader /> : llaves.isError ? (
-        <Notice tone="error">{errorMessage(llaves.error)}</Notice>
-      ) : lista.length === 0 ? (
-        <EmptyState icon={<KeyRound size={22} />} title="Sin llaves todavía">
-          Crea una llave para que un sistema externo consulte los datos permitidos.
-        </EmptyState>
-      ) : (
-        <div className="apigw-lista">
-          {lista.map(k => (
-            <TarjetaLlave key={k.id} k={k}
-              onEstado={estado => cambiarEstado.mutate({ id: k.id, estado })}
-              onEliminar={() => setAEliminar(k)} />
-          ))}
-        </div>
+      <div className="apigw-pestanas" role="tablist" aria-label="Secciones de API y desarrolladores">
+        {pestanas.map(t => (
+          <button key={t.id} type="button" role="tab" aria-selected={pestana === t.id}
+            className={`apigw-pestana${pestana === t.id ? ' apigw-pestana--on' : ''}`} onClick={() => setPestana(t.id)}>
+            {pestana === t.id && (
+              <motion.span layoutId="apigw-pestana-fondo" className="apigw-pestana__fondo"
+                transition={sinMovimiento ? { duration: 0 } : { type: 'spring', bounce: 0, duration: 0.35 }} />
+            )}
+            <span className="apigw-pestana__texto">{t.etiqueta}<em>{t.n}</em></span>
+          </button>
+        ))}
+      </div>
+
+      {pestana === 'llaves' && (
+        llaves.isLoading ? <PageLoader /> : llaves.isError ? (
+          <Notice tone="error">{errorMessage(llaves.error)}</Notice>
+        ) : lista.length === 0 ? (
+          <EmptyState icon={<KeyRound size={22} />} title="Sin llaves todavía">
+            Crea una llave para que un sistema externo consulte los datos permitidos.
+          </EmptyState>
+        ) : (
+          <div className="apigw-lista">
+            {lista.map(k => (
+              <TarjetaLlave key={k.id} k={k}
+                onEstado={estado => cambiarEstado.mutate({ id: k.id, estado })}
+                onEliminar={() => setAEliminar(k)} />
+            ))}
+          </div>
+        )
       )}
 
-      <WebhooksSeccion />
+      {pestana === 'webhooks' && <WebhooksSeccion />}
 
-      <section className="apigw-bitacora">
-        <h2>Últimas peticiones</h2>
-        {logs.length === 0 ? (
-          <p className="apigw-vacio">Todavía no hay peticiones registradas.</p>
-        ) : (
-          <div className="apigw-tabla-caja">
-            <table className="apigw-tabla">
-              <thead><tr><th>Cuándo</th><th>Llave</th><th>Método</th><th>Ruta</th><th>Estado</th><th>Tiempo</th></tr></thead>
-              <tbody>
-                {logs.map((l, i) => (
-                  <tr key={i}>
-                    <td>{l.created_at ? formatFechaHoraPe(l.created_at) : '—'}</td>
-                    <td>{l.api_key_nombre}</td>
-                    <td>{l.metodo}</td>
-                    <td className="apigw-ruta">{l.endpoint}</td>
-                    <td><span className={`apigw-codigo apigw-codigo--${l.status_code < 400 ? 'ok' : 'error'}`}>{l.status_code}</span></td>
-                    <td>{l.tiempo_ms} ms</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      {pestana === 'peticiones' && (
+        <section className="apigw-bitacora">
+          {logs.length === 0 ? (
+            <EmptyState icon={<Activity size={22} />} title="Sin peticiones todavía">
+              Aquí aparecerán las consultas que hagan tus llaves, con su respuesta y tiempo.
+            </EmptyState>
+          ) : (
+            <div className="apigw-tabla-caja">
+              <table className="apigw-tabla">
+                <thead><tr><th>Cuándo</th><th>Llave</th><th>Método</th><th>Ruta</th><th>Respuesta</th><th>Tiempo</th></tr></thead>
+                <tbody>
+                  {logs.map((l, i) => (
+                    <tr key={i}>
+                      <td>{l.created_at ? formatFechaHoraPe(l.created_at) : '—'}</td>
+                      <td>{l.api_key_nombre}</td>
+                      <td><span className="apigw-metodo">{l.metodo}</span></td>
+                      <td className="apigw-ruta">{l.endpoint}</td>
+                      <td><span className={`apigw-codigo apigw-codigo--${l.status_code < 400 ? 'ok' : 'error'}`}>{l.status_code}</span></td>
+                      <td className="apigw-num">{l.tiempo_ms} ms</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
 
       <NuevaLlaveSheet open={nueva} onClose={() => setNueva(false)} onCreada={t => { setNueva(false); setTokenCreado(t); }} />
       <TokenCreadoSheet token={tokenCreado} onClose={() => setTokenCreado(null)} />

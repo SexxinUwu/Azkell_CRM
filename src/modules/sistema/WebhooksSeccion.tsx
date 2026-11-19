@@ -164,25 +164,36 @@ function TarjetaWebhook({ w, titulos, onActivo, onProbar, onVerEnvios, onElimina
   onProbar: () => void; onVerEnvios: () => void; onEliminar: () => void; probando: boolean;
 }) {
   return (
-    <article className="apigw-tarjeta">
+    <article className={`apigw-tarjeta${w.activo ? '' : ' apigw-tarjeta--apagada'}`}>
       <header className="apigw-tarjeta__cab">
         <span className="apigw-icono"><LinkIcon size={18} /></span>
         <div className="apigw-tarjeta__titulo">
           <strong>{w.nombre}</strong>
           <span className="apigw-ruta">{w.url}</span>
         </div>
+        <span className={`apigw-pildora apigw-pildora--${w.activo ? 'ok' : 'off'}`}>{w.activo ? 'Activo' : 'Pausado'}</span>
         <Switch id={`webhook-${w.id}`} checked={w.activo} label={`Activar el webhook ${w.nombre}`}
           onChange={v => onActivo(v)} />
       </header>
 
-      <div className="apigw-chips">
-        {w.eventos.map(e => <span key={e} className="apigw-chip">{titulos[e] ?? e}</span>)}
+      <div className="apigw-seccion-mini">
+        <span className="apigw-etiqueta">Eventos</span>
+        <div className="apigw-chips">
+          {w.eventos.map(e => <span key={e} className="apigw-chip">{titulos[e] ?? e}</span>)}
+        </div>
       </div>
 
+      <dl className="apigw-datos">
+        <div><dt>Secreto</dt><dd className="apigw-datos__texto apigw-ruta">{w.secreto_pista}</dd></div>
+        <div><dt>Último envío</dt><dd className="apigw-datos__texto">{w.ultimo_envio ? formatFechaHoraPe(w.ultimo_envio) : 'Nunca'}</dd></div>
+        <div><dt>Resultado</dt><dd>{w.ultimo_estado
+          ? <span className={`apigw-pildora apigw-pildora--${w.ultimo_estado === 'ENTREGADO' ? 'ok' : w.ultimo_estado === 'FALLIDO' ? 'error' : 'aviso'}`}>{ESTADO_ENVIO[w.ultimo_estado]}</span>
+          : <span className="apigw-datos__texto">—</span>}</dd></div>
+      </dl>
+
       <footer className="apigw-tarjeta__pie">
-        <span>Secreto {w.secreto_pista}</span>
-        <span>Último envío: {w.ultimo_envio ? formatFechaHoraPe(w.ultimo_envio) : 'nunca'}{w.ultimo_estado ? ` · ${ESTADO_ENVIO[w.ultimo_estado]}` : ''}</span>
-        <button type="button" className="apigw-copiar" onClick={onProbar} disabled={probando}>
+        <span>{w.creado_por ? `Creado por ${w.creado_por}` : 'Creado'}{w.creado_en ? ` · ${formatFechaHoraPe(w.creado_en)}` : ''}</span>
+        <button type="button" className="apigw-copiar apigw-pie-primero" onClick={onProbar} disabled={probando}>
           <Send size={15} /> {probando ? 'Probando…' : 'Probar'}
         </button>
         <button type="button" className="apigw-copiar" onClick={onVerEnvios}>
@@ -241,11 +252,8 @@ export function WebhooksSeccion() {
   return (
     <section className="apigw-webhooks">
       <div className="apigw-webhooks__cab">
-        <div>
-          <h2>Webhooks salientes</h2>
-          <p className="apigw-vacio">Azkell avisa a tu URL cuando ocurre un evento. Cada aviso va firmado con HMAC-SHA256.</p>
-        </div>
-        <Button variant="secondary" icon={<Plus size={16} />} onClick={() => setNuevo(true)}>Nuevo webhook</Button>
+        <p className="apigw-vacio">Azkell avisa a tu URL cuando ocurre un evento. Cada aviso va firmado con HMAC-SHA256.</p>
+        <Button variant="primary" icon={<Plus size={16} />} onClick={() => setNuevo(true)}>Nuevo webhook</Button>
       </div>
 
       {lista.isLoading ? <PageLoader /> : lista.isError ? (
