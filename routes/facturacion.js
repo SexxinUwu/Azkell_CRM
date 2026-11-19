@@ -46,6 +46,11 @@ module.exports = (db, logAudit) => {
         return dv === Number(r[10]);
     };
 
+    // Emisor de la vista previa: el RUC y la razón social de la empresa que la mira (Sistema › Integraciones › APISUNAT)
+    const emisorEmpresa = async req => {
+        try { const c = await Apisunat.getConfigEmpresa(getDb(req), { documento: 'facturacion' }); return { ruc: c.ruc_emisor, razon: c.razon_social }; } catch (e) { return null; }
+    };
+
     // Series y cuenta de detracciones de la empresa (Sistema › Integraciones), con las series habituales por defecto
     async function config(req) {
         const cfg = await Apisunat.getConfigEmpresa(getDb(req), { documento: 'facturacion' });
@@ -128,7 +133,7 @@ module.exports = (db, logAudit) => {
         try {
             const t = tipoPlantilla(req);
             const plantilla = CPDF.normalizarPlantilla((req.body || {}).plantilla, t);
-            const pdf = await CPDF.generarPdf(CPDF.modeloEjemplo(t), plantilla, { hash: 'AbCdEfGhIjKlMnOpQrStUvWxYz0=', leerS3 });
+            const pdf = await CPDF.generarPdf(CPDF.modeloEjemplo(t, await emisorEmpresa(req)), plantilla, { hash: 'AbCdEfGhIjKlMnOpQrStUvWxYz0=', leerS3 });
             res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline; filename="vista-previa.pdf"', 'Cache-Control': 'no-store' });
             res.send(pdf);
         } catch (err) { responder(res, err, 'preview'); }

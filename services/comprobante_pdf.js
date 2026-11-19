@@ -80,11 +80,14 @@ function modeloDesdeComprobante(c, items, emisor) {
     };
 }
 
-function modeloEjemplo(tipo = 'comprobante') {
+/** `emisorEmpresa`: { ruc, razon } de la empresa que mira la vista previa (sin él, un emisor de ejemplo) */
+function modeloEjemplo(tipo = 'comprobante', emisorEmpresa = null) {
+    const emisorBase = { ruc: '20600066651', razon: 'TRAHESA S.A.C.' };
+    const emisor = emisorEmpresa && emisorEmpresa.ruc && emisorEmpresa.razon ? emisorEmpresa : emisorBase;
     if (tipo === 'nc') {
         return {
             tipo: '07', numero: 'FC01-00000001', serie: 'FC01', correlativo: '00000001', emision: new Date().toISOString().slice(0, 10), hora: '10:25:00', vence: '',
-            emisor: { ruc: '20600066651', razon: 'TRAHESA S.A.C.' },
+            emisor,
             cliente: { docTipo: '6', doc: '20100014395', nombre: 'PRODUCTOS PARAISO DEL PERU S.A.C.', direccion: 'AV. ARGENTINA 5495, CALLAO' },
             moneda: 'PEN', simbolo: 'S/', formaPago: 'CONTADO', dias: 0,
             lineas: [{ n: 1, descripcion: 'SERVICIO DE TRANSPORTE DE CARGA JULIACA - LIMA', unidad: 'ZZ', cantidad: 1, vu: 4237.2881, base: 4237.29 }],
@@ -94,7 +97,7 @@ function modeloEjemplo(tipo = 'comprobante') {
     }
     return {
         tipo: '01', numero: 'F001-00000001', serie: 'F001', correlativo: '00000001', emision: new Date().toISOString().slice(0, 10), hora: '10:25:00', vence: '',
-        emisor: { ruc: '20600066651', razon: 'TRAHESA S.A.C.' },
+        emisor,
         cliente: { docTipo: '6', doc: '20100014395', nombre: 'PRODUCTOS PARAISO DEL PERU S.A.C.', direccion: 'AV. ARGENTINA 5495, CALLAO' },
         moneda: 'PEN', simbolo: 'S/', formaPago: 'CONTADO', dias: 0,
         lineas: [{ n: 1, descripcion: 'SERVICIO DE TRANSPORTE DE CARGA JULIACA - LIMA', unidad: 'ZZ', cantidad: 1, vu: 4237.2881, base: 4237.29 }],

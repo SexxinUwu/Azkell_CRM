@@ -21,6 +21,11 @@ module.exports = (db) => {
         return res.status(500).json({ ok: false, error: err && err.message ? err.message : 'Error del servidor' });
     };
 
+    // Emisor de la vista previa: el RUC y la razón social de la empresa que la mira (Sistema › Integraciones › APISUNAT)
+    const emisorEmpresa = async req => {
+        try { const c = await Apisunat.getConfigEmpresa(getDb(req)); return { ruc: c.ruc_emisor, razon: c.razon_social }; } catch (e) { return null; }
+    };
+
     // El logo se guarda en S3 (el bucket es privado): para pintarlo en el PDF se firma su URL
     const leerS3 = async url => (/amazonaws\.com/.test(String(url)) ? getPresignedUrlEstable(s3KeyFromUrl(url)) : url);
 
@@ -83,7 +88,7 @@ module.exports = (db) => {
     router.post('/pdf-plantilla/preview', async (req, res) => {
         try {
             const plantilla = G.normalizarPlantilla((req.body || {}).plantilla);
-            const pdf = await G.generarPdf(G.modeloEjemplo(plantilla), plantilla, {
+            const pdf = await G.generarPdf(G.modeloEjemplo(plantilla, await emisorEmpresa(req)), plantilla, {
                 qrUrl: 'https://e-factura.sunat.gob.pe/v1/contribuyente/gre/comprobantes/descargaqr?hashqr=EJEMPLO', leerS3,
             });
             enviarPdf(res, pdf, 'vista-previa', false);

@@ -450,10 +450,10 @@ async function generarPdf(modelo, plantillaCruda, opciones = {}) {
 }
 
 // ───────────────────────── Datos de ejemplo (vista previa de la plantilla) ─────────────────────────
-function modeloEjemplo(plantilla) {
+function modeloEjemplo(plantilla, emisorEmpresa = null) {
     return {
         tipo: '31', numero: 'V001-00000001', emision: new Date().toISOString().slice(0, 10), hora: '10:25:00', traslado: new Date().toISOString().slice(0, 10),
-        emisor: { ruc: '20600066651', razon: 'TRAHESA S.A.C.', direccion: '' },
+        emisor: emisorEmpresa && emisorEmpresa.ruc && emisorEmpresa.razon ? { direccion: '', ...emisorEmpresa } : { ruc: '20600066651', razon: 'TRAHESA S.A.C.', direccion: '' },
         remitente: { doc: '10024189592', nombre: 'CALLA BERNEDO JIOVANA TORIBIA' },
         destinatario: { doc: '20606104856', nombre: 'SIERRA MORADA SAC' },
         partida: { ubigeo: '211101', direccion: 'JR. HUASCAR NRO. 848 BARRIO SANTA BARBARA - JULIACA - SAN ROMAN - PUNO' },
