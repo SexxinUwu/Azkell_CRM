@@ -5296,6 +5296,16 @@ app.get('/api/tipo-cambio/sunat', async (req, res) => {
         res.status(503).json({ ok: false, error: 'No se pudo consultar el tipo de cambio de SUNAT: ' + err.message });
     }
 });
+// Datos de una empresa por su RUC (SUNAT): razón social, dirección y estado. Lo usa la pantalla Empresa para autocompletar.
+const { consultarRuc } = require('./services/consulta_ruc');
+app.get('/api/consulta-ruc/:ruc', verifyToken, async (req, res) => {
+    try {
+        res.json({ ok: true, ...(await consultarRuc(String(req.params.ruc || '').trim())) });
+    } catch (err) {
+        const status = err.status || 503;
+        res.status(status).json({ ok: false, error: status === 503 ? 'No se pudo consultar SUNAT ahora. Completa los datos a mano.' : err.message });
+    }
+});
 app.use('/api/tesoreria/cuentas-bancarias', require('./routes/cuentas_bancarias')(db, logAudit));
 app.use('/api/solicitudes', require('./routes/solicitudes')(db, logAudit, _generarCodigoAlmacen));
 app.use('/api/rentabilidad', require('./routes/rentabilidad')(db));
