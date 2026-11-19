@@ -1,10 +1,11 @@
 import { formatFechaHoraPe, formatSoles } from '../../core/lib/format';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Ban, CalendarDays, ClipboardCheck, Disc, Download, FileText, Gauge, Package, Pencil, Play, Plus, RotateCcw, Share2, Timer, Trash2 } from 'lucide-react';
+import { ArrowUpRight, Ban, CalendarDays, ChevronRight, ClipboardCheck, Disc, Download, FileText, Gauge, Package, Pencil, Play, Plus, Receipt, RotateCcw, Share2, Timer, Trash2, Wrench } from 'lucide-react';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { Badge, Notice } from '../../core/ui/Display';
+import { Notice } from '../../core/ui/Display';
+import { MenuOtros, type OpcionOtros } from '../../core/ui/MenuOtros';
 import { pestanaConCamion } from '../../core/ui/CargaCamion';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
@@ -21,6 +22,7 @@ import {
 } from './api';
 import { CerrarOTSheet, PausarOTSheet } from './OTAcciones';
 import '../../core/ui/botonesIcono.css';
+import './ot-detalle.css';
 import { TrabajoOTSheet } from './TrabajoOTSheet';
 import { OTServiciosTerceros } from './OTServiciosTerceros';
 import { OTNeumaticos } from './OTNeumaticos';
@@ -62,16 +64,33 @@ function DuracionPausa({ pausa, ahora }: { pausa: PausaOT; ahora: number }) {
   return <span className="ot-cronometro t-numeric">{formatoDuracion(duracionPausa(pausa, ahora))}</span>;
 }
 
-/** Tono del badge según el estado de la OT */
-function tonoEstado(estado: string): 'gray' | 'green' | 'amber' | 'accent' | 'red' {
+/** Color del encabezado según el estado de la OT */
+function tonoEstado(estado: string): 'gris' | 'verde' | 'ambar' | 'azul' | 'rojo' {
   switch (estado) {
-    case 'En Proceso': return 'green';
-    case 'Pausada':    return 'amber';
-    case 'Finalizado':
-    case 'Cerrada':    return 'gray';
-    case 'Anulado':    return 'red';
-    default:           return 'gray';
+    case 'En Proceso': return 'verde';
+    case 'Pausada':    return 'ambar';
+    case 'Finalizado': return 'azul';
+    case 'Cerrada':    return 'gris';
+    case 'Anulado':    return 'rojo';
+    default:           return 'azul';
   }
+}
+
+/** Etapas que muestra la barra de avance del encabezado */
+const PASOS = ['Ingreso', 'En trabajo', 'Finalizada', 'Cerrada'];
+function pasoDe(estado: string): number {
+  if (estado === 'Cerrada') return 3;
+  if (estado === 'Finalizado') return 2;
+  if (estado === 'En Proceso' || estado === 'Pausada') return 1;
+  return 0;
+}
+
+/** Iniciales del primer técnico de un trabajo (avatar de la fila) */
+function iniciales(personal: string): string {
+  const primero = personal.split(',')[0]?.trim() ?? '';
+  const partes = primero.split(/\s+/).filter(Boolean);
+  if (!partes.length) return '·';
+  return ((partes[0][0] ?? '') + (partes.length > 2 ? partes[2][0] : partes[1]?.[0] ?? '')).toUpperCase();
 }
 
 /** Backlog de la unidad enlazado a esta OT (se importa al crear la OT) */
@@ -96,14 +115,6 @@ interface OTDetalleProps {
   onAccion: (a: AccionOT) => void;
   onEliminar: () => void;
 }
-
-const tarjetaPlantilla = {
-  display: 'flex', alignItems: 'center', gap: 8, padding: 8, minHeight: 52, background: 'var(--surface)',
-  border: '1px solid var(--separator)', borderRadius: 12, cursor: 'pointer', textAlign: 'left' as const, color: 'var(--label)',
-};
-const iconoPlantilla = {
-  width: 34, height: 34, borderRadius: 10, display: 'grid', placeItems: 'center' as const, flexShrink: 0,
-};
 
 /** Fecha de una salida en dd/mm/yyyy, sin pasar por la zona horaria (la base guarda medianoche UTC) */
 function diaPe(s: string | null | undefined): string {
@@ -325,107 +336,218 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   // En proceso: pausar o cerrar. Pausada: reanudar (cerrar queda en el menú).
   const botonesEstado = puedeEditar && acciones.includes('pausar') ? (
     <>
-      <Button variant="primary" icon={<Timer size={15} />} onClick={() => setPausando(true)} disabled={limitePausas}>Pausar</Button>
+      <Button variant="secondary" icon={<Timer size={15} />} onClick={() => setPausando(true)} disabled={limitePausas}>Pausar</Button>
       <Button variant="primary" onClick={() => setCerrando(true)}>Cerrar OT</Button>
     </>
   ) : null;
 
+  // Diagnóstico y asignación: en pantallas anchas van en la columna lateral; en el celular, dentro de Tareas
+  const motivo = det.motivo || ot.observaciones
+    ? String(rotGetCleanMotivoDisplay(det, ot)).replace(/^•\s*/gm, '').replace(/^(Falla Manual|MANUAL)\s*:\s*/i, '')
+    : '';
+  const datosFicha = ([
+    ['Técnico responsable', ot.tecnico],
+    ['Supervisor', ot.supervisor],
+    ['Rampa', ot.rampa_origen || ot.id_rampa ? nombreRampa(ot.id_rampa) || ot.rampa_origen : ''],
+    ['Situación', ot.situacion],
+    ['Tipo', [det.tipo_ot, det.sub_tipo].filter(Boolean).join(' / ')],
+    ['Km de ingreso', det.km ? String(det.km) : ''],
+  ] as Array<[string, unknown]>)
+    .map(([k, v]) => [k, String(v ?? '').trim()] as [string, string])
+    .filter(([, v]) => !!v);
+  const hayCierre = !!(ot.comentario_cierre || ot.cerrado_por);
+
+  const ficha = (clase: string) => (
+    <div className={`otd-ficha ${clase}`}>
+      {motivo && (
+        <section className="otd-grupo">
+          <h3 className="otd-grupo__titulo">Falla reportada</h3>
+          <p className="otd-falla">{motivo}</p>
+        </section>
+      )}
+      {datosFicha.length > 0 && (
+        <section className="otd-grupo">
+          <h3 className="otd-grupo__titulo">Asignación</h3>
+          <dl className="otd-datos">
+            {datosFicha.map(([k, v]) => (
+              <div key={k} className="otd-datos__fila">
+                <dt>{k}</dt>
+                <dd className={k === 'Km de ingreso' ? 't-numeric' : undefined}>{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
+      {idsInspeccion.length > 0 && (
+        <section className="otd-grupo">
+          <h3 className="otd-grupo__titulo">Inspecciones</h3>
+          <div className="otd-enlaces">
+            {idsInspeccion.map(id => (
+              <button key={id} type="button" className="ot-enlace" onClick={() => setInspeccionAbierta(id)}>
+                Inspección {id} <ArrowUpRight size={14} />
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+      {hayCierre && (
+        <section className="otd-grupo">
+          <h3 className="otd-grupo__titulo">Cierre</h3>
+          <dl className="otd-datos">
+            {ot.comentario_cierre && <div className="otd-datos__fila otd-datos__fila--bloque"><dt>Observaciones finales</dt><dd>{ot.comentario_cierre}</dd></div>}
+            {ot.cerrado_por && <div className="otd-datos__fila"><dt>Cerrado por</dt><dd>{nombrePersona(ot.cerrado_por)}</dd></div>}
+          </dl>
+        </section>
+      )}
+    </div>
+  );
+
+  // Resumen: cada casilla abre su sección
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const irA = (s: Seccion) => {
+    setSeccion(s);
+    tabsRef.current?.scrollIntoView({ block: 'nearest' });
+  };
+  const kpis: Array<{ s: Seccion; etiqueta: string; valor: string; pie: string; icon: React.ReactNode; total?: boolean }> = [
+    { s: 'tareas', etiqueta: 'Trabajos', valor: String(trabajos.length), pie: totalTrabajos > 0 ? soles(totalTrabajos) : 'Mano de obra', icon: <Wrench size={16} /> },
+    { s: 'repuestos', etiqueta: 'Repuestos', valor: soles(costos.repuestos), pie: `${mats.length} salida${mats.length === 1 ? '' : 's'}`, icon: <Package size={16} /> },
+    { s: 'tiempos', etiqueta: 'Pausas', valor: `${pausas.length} de 3`, pie: tiempos.pausado > 0 ? formatoDuracion(tiempos.pausado) : 'Sin pausas', icon: <Timer size={16} /> },
+    { s: 'costos', etiqueta: 'Costo total', valor: soles(costos.total), pie: 'Ver desglose', icon: <Receipt size={16} />, total: true },
+  ];
+
+  // Acciones secundarias: todas en «Más», con las destructivas al final y separadas
+  const sinDatos = exportando || loadMat || loadTra;
+  const pdfSeguro = (generar: () => Promise<Blob>, nombre: string) =>
+    abrirPdf(generar, nombre).catch(err => toast(errorMessage(err), 'error'));
+  const opcionesMas: Array<OpcionOtros | false> = [
+    puedeEditar && { label: 'Editar OT', icon: <Pencil size={18} />, onSelect: () => setEditandoOT(true) },
+    puedeEditar && { label: 'Fechas', icon: <CalendarDays size={18} />, onSelect: () => setEditandoFechas(true) },
+    puedeEditar && { label: 'Kilometraje', icon: <Gauge size={18} />, onSelect: () => setEditandoKm(true) },
+    { label: 'Compartir por WhatsApp', detalle: 'PDF de la orden', icon: <Share2 size={18} />, onSelect: () => exportar('whatsapp'), disabled: sinDatos, separado: true },
+    { label: 'Plantilla de inspecciones', detalle: 'F-MAN-001', icon: <ClipboardCheck size={18} />, separado: true,
+      onSelect: () => pdfSeguro(() => pdfPlantillaInspeccion(idOt, ot.placa, ot.fecha_inicio_ot || ot.fecha_ingreso || ot.creado_en || null, extrasPdf().kmTablero, extrasPdf().rampa), `Plantilla inspecciones ${idOt}.pdf`) },
+    { label: 'Plantilla OT', detalle: 'Impresión rápida', icon: <FileText size={18} />,
+      onSelect: () => pdfSeguro(() => pdfPlantillaOt(ot, extrasPdf()), `Plantilla orden de trabajo ${idOt}.pdf`) },
+    { label: 'Plantilla de llantas', detalle: 'Formato A4 blanco', icon: <Disc size={18} />,
+      onSelect: () => pdfSeguro(() => pdfPlantillaLlantas(ot, extrasPdf()), `Plantilla de llantas ${idOt}.pdf`) },
+    puedeEditar && acciones.includes('reactivar') && { label: 'Reactivar OT', icon: <RotateCcw size={18} />, onSelect: () => onAccion('reactivar'), separado: true },
+    puedeEditar && acciones.includes('anular') && { label: 'Anular OT', icon: <Ban size={18} />, onSelect: () => onAccion('anular'), destructiva: true, separado: true },
+    puedeEliminar && { label: 'Eliminar OT', icon: <Trash2 size={18} />, onSelect: onEliminar, destructiva: true, separado: !(puedeEditar && acciones.includes('anular')) },
+  ];
+
+  const tono = tonoEstado(ot.estado);
+  const paso = pasoDe(ot.estado);
+  const cerrarPausada = puedeEditar && ot.estado === 'Pausada'
+    ? <Button variant="secondary" onClick={() => setCerrando(true)}>Cerrar OT</Button>
+    : null;
+  const pieReloj = ot.estado === 'Pausada' ? 'Reloj detenido por pausa'
+    : ot.estado === 'En Proceso' ? 'Contando en vivo'
+    : ot.fecha_hora_salida ? `Salida ${fechaCorta(ot.fecha_hora_salida)}`
+    : 'Aún sin iniciar';
+
   return (
-    <div className="ot-ficha">
-      <div className="tarjeta__barra tarjeta__barra--plana">
+    <div className="otd">
+      <div className="tarjeta__barra tarjeta__barra--plana otd__barra">
         <button type="button" className="tarjeta__volver" onClick={onVolver}>
           <span style={{ fontSize: '1.2rem' }}>‹</span> Órdenes
         </button>
-      </div>
-
-      <div className="ot-ficha__hero">
-        <LicensePlate plate={ot.placa} size="lg" />
-        <span className="ot-ficha__id t-numeric">{idOt}</span>
-        <Badge tone={tonoEstado(ot.estado)}>{etiquetaEstado(ot.estado)}</Badge>
-        {costos.total > 0 && <span className="ot-ficha__total t-numeric">{soles(costos.total)}</span>}
-      </div>
-
-      <div className="ot-acciones">
-        {principal}
-        {botonesEstado}
-        {puedeEditar && ot.estado === 'Pausada' && <Button variant="primary" onClick={() => setCerrando(true)}>Cerrar OT</Button>}
-        {/* Las demás acciones son íconos: el nombre aparece al pasar el mouse (y lo lee el lector de pantalla) */}
-        {puedeEditar && (
-          <>
-            <Button variant="secondary" iconOnly icon={<Pencil size={17} />} className="btn-tip btn-tip--azul" data-tip="Editar OT" aria-label="Editar OT" onClick={() => setEditandoOT(true)} />
-            <Button variant="secondary" iconOnly icon={<CalendarDays size={17} />} className="btn-tip btn-tip--violeta" data-tip="Fechas" aria-label="Fechas" onClick={() => setEditandoFechas(true)} />
-            <Button variant="secondary" iconOnly icon={<Gauge size={17} />} className="btn-tip btn-tip--celeste" data-tip="Kilometraje" aria-label="Kilometraje" onClick={() => setEditandoKm(true)} />
-          </>
-        )}
-        <Button variant="secondary" iconOnly icon={<Download size={17} />} className="btn-tip btn-tip--ambar" data-tip="Descargar PDF" aria-label="Descargar PDF" onClick={() => exportar('descargar')} disabled={exportando || loadMat || loadTra} />
-        <Button variant="secondary" iconOnly icon={<Share2 size={17} />} className="btn-tip btn-tip--verde" data-tip="Compartir por WhatsApp" aria-label="Compartir por WhatsApp" onClick={() => exportar('whatsapp')} disabled={exportando || loadMat || loadTra} />
-        {puedeEditar && acciones.includes('reactivar') && (
-          <Button variant="secondary" iconOnly icon={<RotateCcw size={17} />} className="btn-tip btn-tip--verde" data-tip="Reactivar OT" aria-label="Reactivar OT" onClick={() => onAccion('reactivar')} />
-        )}
-        {puedeEditar && acciones.includes('anular') && (
-          <Button variant="secondary" iconOnly icon={<Ban size={17} />} className="btn-tip btn-tip--naranja" data-tip="Anular OT" aria-label="Anular OT" onClick={() => onAccion('anular')} />
-        )}
-        {puedeEliminar && (
-          <Button variant="danger" iconOnly icon={<Trash2 size={17} />} className="btn-tip btn-tip--rojo" data-tip="Eliminar OT" aria-label="Eliminar OT" onClick={onEliminar} />
-        )}
-        {idsInspeccion.map(id => (
-          <button key={id} type="button" className="ot-enlace" onClick={() => setInspeccionAbierta(id)}>
-            Inspección {id} <ArrowUpRight size={14} />
-          </button>
-        ))}
-      </div>
-
-      {pausaActiva && (
-        <div className="ot-pausa-activa" role="status">
-          <Timer size={18} />
-          <div className="ot-pausa-activa__texto">
-            <strong>En pausa · {pausaActiva.motivo}</strong>
-            <span>Desde {fechaCorta(pausaActiva.inicio)}{pausaActiva.por ? ` · ${pausaActiva.por}` : ''}</span>
-          </div>
-          <DuracionPausa pausa={pausaActiva} ahora={ahora} />
+        <div className="otd__barra-acciones">
+          <Button variant="secondary" icon={<Download size={15} />} onClick={() => exportar('descargar')} disabled={sinDatos} aria-label="Descargar PDF de la OT">
+            PDF
+          </Button>
+          <MenuOtros label="Más" opciones={opcionesMas} />
         </div>
-      )}
+      </div>
 
-      <SegmentedControl<Seccion> label="Secciones de la OT" block value={seccion} onChange={setSeccion} options={[
-        { value: 'tareas', label: 'Tareas' },
-        { value: 'tiempos', label: 'Tiempos' },
-        { value: 'repuestos', label: 'Repuestos' },
-        { value: 'terceros', label: 'Servicios' },
-        { value: 'neumaticos', label: 'Neumáticos' },
-        { value: 'costos', label: 'Costos' },
-      ]} />
+      <div className="otd__layout">
+        <aside className="otd__lateral">
+          <section className={`otd-hero otd-hero--${tono}`} aria-label="Resumen de la orden">
+            <div className="otd-hero__cabecera">
+              <LicensePlate plate={ot.placa} size="lg" />
+              <div className="otd-hero__ident">
+                <span className="otd-hero__id t-numeric">{idOt}</span>
+                <span className="otd-estado"><span className="otd-estado__punto" aria-hidden />{etiquetaEstado(ot.estado)}</span>
+              </div>
+            </div>
+
+            <div className="otd-hero__reloj">
+              <span className="otd-hero__etiqueta">Tiempo neto de trabajo</span>
+              <span className="otd-hero__tiempo t-numeric">{tiempos.iniciado ? formatoDuracion(tiempos.neto) : '—'}</span>
+              <span className="otd-hero__pie">{pieReloj}</span>
+            </div>
+
+            {ot.estado !== 'Anulado' && (
+              <ol className="otd-pasos" aria-label="Avance de la orden">
+                {PASOS.map((p, i) => (
+                  <li key={p} className={`otd-pasos__paso${i < paso ? ' is-hecho' : ''}${i === paso ? ' is-actual' : ''}`} aria-current={i === paso ? 'step' : undefined}>
+                    <span className="otd-pasos__barra" aria-hidden />
+                    <span className="otd-pasos__nombre">{i === 1 && ot.estado === 'Pausada' ? 'En pausa' : p}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+
+            {pausaActiva && (
+              <div className="otd-pausa" role="status">
+                <Timer size={18} />
+                <div className="otd-pausa__texto">
+                  <strong>{pausaActiva.motivo}</strong>
+                  <span>Desde {fechaCorta(pausaActiva.inicio)}{pausaActiva.por ? ` · ${pausaActiva.por}` : ''}</span>
+                </div>
+                <DuracionPausa pausa={pausaActiva} ahora={ahora} />
+              </div>
+            )}
+
+            {(principal || botonesEstado || cerrarPausada) && (
+              <div className="otd-hero__acciones">
+                {principal}
+                {botonesEstado}
+                {cerrarPausada}
+              </div>
+            )}
+          </section>
+
+          <div className="otd-kpis">
+            {kpis.map(k => (
+              <button key={k.s} type="button" className={`otd-kpi${k.total ? ' otd-kpi--total' : ''}`} aria-pressed={seccion === k.s} onClick={() => irA(k.s)}>
+                <span className="otd-kpi__icono" aria-hidden>{k.icon}</span>
+                <span className="otd-kpi__etiqueta">{k.etiqueta}</span>
+                <span className="otd-kpi__valor t-numeric">{k.valor}</span>
+                <span className="otd-kpi__pie">{k.pie}</span>
+              </button>
+            ))}
+          </div>
+
+          {ficha('otd-ficha--lateral')}
+        </aside>
+
+        <div className="otd__principal">
+          <div className="otd-tabs" ref={tabsRef}>
+            <SegmentedControl<Seccion> label="Secciones de la OT" block value={seccion} onChange={setSeccion} options={[
+              { value: 'tareas', label: 'Tareas' },
+              { value: 'tiempos', label: 'Tiempos' },
+              { value: 'repuestos', label: 'Repuestos' },
+              { value: 'terceros', label: 'Servicios' },
+              { value: 'neumaticos', label: 'Neumáticos' },
+              { value: 'costos', label: 'Costos' },
+            ]} />
+          </div>
 
       {seccion === 'tareas' && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
-            <button type="button" onClick={() => abrirPdf(() => pdfPlantillaInspeccion(idOt, ot.placa, ot.fecha_inicio_ot || ot.fecha_ingreso || ot.creado_en || null, extrasPdf().kmTablero, extrasPdf().rampa), `Plantilla inspecciones ${idOt}.pdf`)} style={tarjetaPlantilla}>
-              <span style={{ ...iconoPlantilla, background: '#dcfce7', color: '#16a34a' }}><ClipboardCheck size={17} /></span>
-              <span><b style={{ display: 'block', fontSize: '0.76rem' }}>Plantilla Inspecciones</b><small style={{ color: 'var(--label-2)', fontSize: '0.64rem' }}>F-MAN-001</small></span>
-            </button>
-            <button type="button" onClick={() => abrirPdf(() => pdfPlantillaOt(ot, extrasPdf()), `Plantilla orden de trabajo ${idOt}.pdf`)} style={tarjetaPlantilla}>
-              <span style={{ ...iconoPlantilla, background: '#dbeafe', color: '#2563eb' }}><FileText size={17} /></span>
-              <span><b style={{ display: 'block', fontSize: '0.76rem' }}>Plantilla OT</b><small style={{ color: 'var(--label-2)', fontSize: '0.64rem' }}>Impresión rápida</small></span>
-            </button>
-            <button type="button" onClick={() => abrirPdf(() => pdfPlantillaLlantas(ot, extrasPdf()), `Plantilla de llantas ${idOt}.pdf`)} style={tarjetaPlantilla}>
-              <span style={{ ...iconoPlantilla, background: '#fef9c3', color: '#ca8a04' }}><Disc size={17} /></span>
-              <span><b style={{ display: 'block', fontSize: '0.76rem' }}>Plantilla de Llantas</b><small style={{ color: 'var(--label-2)', fontSize: '0.64rem' }}>Formato A4 blanco</small></span>
-            </button>
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 'var(--s-2)' }}>
-              <p className="tarjeta__grupo-titulo" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                Trabajos realizados <Badge>{trabajos.length}</Badge>
-              </p>
+          <section className="otd-seccion">
+            <header className="otd-seccion__cabecera">
+              <h3 className="otd-seccion__titulo">Trabajos realizados <span className="otd-cuenta">{trabajos.length}</span></h3>
               {puedeAgregarTrabajo && (
                 <Button size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => { setTrabajoSel(null); setTrabajoAbierto(true); }}>
-                  Agregar trabajo
+                  Agregar
                 </Button>
               )}
-            </div>
+            </header>
             {loadTra ? <PageLoader /> : trabajos.length === 0 ? (
-              <p className="t-footnote c-secondary">No hay trabajos registrados</p>
+              <p className="otd-vacio">No hay trabajos registrados{puedeAgregarTrabajo ? '. Toca «Agregar» para registrar el primero.' : '.'}</p>
             ) : (
-              <div className="tarjeta__lista">
+              <ul className="otd-lista">
                 {trabajos.map(t => {
                   const costo = trabajoCosto(t);
                   const personal = String(aObjeto(t.detalles_json).personal ?? t.tecnico ?? '');
@@ -433,35 +555,35 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                     .filter(Boolean)
                     .map(f => formatFechaHoraPe(String(f).replace('Z', '').replace(' ', 'T').slice(0, 16)));
                   return (
-                    <button key={trabajoId(t)} type="button" disabled={!puedeEditar}
-                      onClick={() => { setTrabajoSel(t); setTrabajoAbierto(true); }}
-                      style={{ display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 0, padding: 0, color: 'inherit', font: 'inherit', cursor: puedeEditar ? 'pointer' : 'default' }}>
-                      <div className="dato" style={{ alignItems: 'flex-start' }}>
-                        <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span className="t-footnote c-secondary">{t.ticket_visita}</span>
-                          </span>
-                          <span>{t.trabajo_realizado || '—'}</span>
-                          {personal && <span className="t-footnote c-secondary">{personal}</span>}
-                          {fechas.length > 0 && <span className="t-footnote c-secondary">{fechas.join(' → ')}</span>}
-                          {puedeEditar && <span className="t-footnote c-secondary" style={{ opacity: 0.7 }}>Toca para editar</span>}
+                    <li key={trabajoId(t)}>
+                      <button type="button" className="otd-fila" disabled={!puedeEditar}
+                        onClick={() => { setTrabajoSel(t); setTrabajoAbierto(true); }}
+                        aria-label={puedeEditar ? `Editar trabajo: ${t.trabajo_realizado || 'sin descripción'}` : undefined}>
+                        <span className="otd-avatar" aria-hidden>{iniciales(personal)}</span>
+                        <span className="otd-fila__cuerpo">
+                          <span className="otd-fila__titulo">{t.trabajo_realizado || '—'}</span>
+                          <span className="otd-fila__sub">{personal || 'Sin técnico asignado'}</span>
+                          {fechas.length > 0 && <span className="otd-fila__meta t-numeric">{fechas.join(' → ')}</span>}
                         </span>
-                        {costo > 0 && <span className="t-numeric" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{soles(costo)}</span>}
-                      </div>
-                    </button>
+                        {costo > 0 && <span className="otd-fila__importe t-numeric">{soles(costo)}</span>}
+                        {puedeEditar && <ChevronRight size={16} className="otd-fila__chevron" aria-hidden />}
+                      </button>
+                    </li>
                   );
                 })}
                 {totalTrabajos > 0 && (
-                  <div className="dato"><span className="dato__label">Total</span><span className="dato__valor t-numeric">{soles(totalTrabajos)}</span></div>
+                  <li className="otd-total"><span>Total mano de obra</span><span className="t-numeric">{soles(totalTrabajos)}</span></li>
                 )}
-              </div>
+              </ul>
             )}
-          </div>
+          </section>
 
           {backlog.length > 0 && (
-            <div>
-              <p className="tarjeta__grupo-titulo">Mantenimientos pendientes (Backlog) <Badge>{backlog.length}</Badge></p>
-              <div className="tarjeta__lista">
+            <section className="otd-seccion">
+              <header className="otd-seccion__cabecera">
+                <h3 className="otd-seccion__titulo">Pendientes del backlog <span className="otd-cuenta">{backlog.filter(b => b.estado === 'Completado').length}/{backlog.length}</span></h3>
+              </header>
+              <div className="otd-lista otd-lista--checks">
                 {backlog.map(b => {
                   const hecho = b.estado === 'Completado';
                   const clave = b.backlog_id;
@@ -479,31 +601,10 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                   );
                 })}
               </div>
-            </div>
+            </section>
           )}
 
-          <div>
-            <p className="tarjeta__grupo-titulo">Diagnóstico y Asignación</p>
-            <div className="tarjeta__lista">
-              {(det.motivo || ot.observaciones) && <div className="dato"><span className="dato__label">Falla Reportada</span><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{String(rotGetCleanMotivoDisplay(det, ot)).replace(/^•\s*/gm, '').replace(/^(Falla Manual|MANUAL)\s*:\s*/i, '')}</span></div>}
-              {ot.tecnico && <div className="dato"><span className="dato__label">Técnico Responsable</span><span className="dato__valor">{ot.tecnico}</span></div>}
-              {ot.supervisor && <div className="dato"><span className="dato__label">Supervisor</span><span className="dato__valor">{ot.supervisor}</span></div>}
-              {(ot.rampa_origen || ot.id_rampa) && <div className="dato"><span className="dato__label">Rampa Asignada</span><span className="dato__valor">{nombreRampa(ot.id_rampa) || ot.rampa_origen}</span></div>}
-              {ot.situacion && <div className="dato"><span className="dato__label">Situación</span><span className="dato__valor">{ot.situacion}</span></div>}
-              {(det.tipo_ot || det.sub_tipo) && <div className="dato"><span className="dato__label">Tipo</span><span className="dato__valor">{[det.tipo_ot, det.sub_tipo].filter(Boolean).join(' / ')}</span></div>}
-              {det.km ? <div className="dato"><span className="dato__label">Kilometraje de Ingreso</span><span className="dato__valor dato__valor--mono">{String(det.km)}</span></div> : null}
-            </div>
-          </div>
-
-          {(ot.comentario_cierre || ot.cerrado_por) && (
-            <div>
-              <p className="tarjeta__grupo-titulo">Cierre</p>
-              <div className="tarjeta__lista">
-                {ot.comentario_cierre && <div className="dato"><span className="dato__label">Observaciones Finales</span><span className="dato__valor" style={{ whiteSpace: 'pre-wrap' }}>{ot.comentario_cierre}</span></div>}
-                {ot.cerrado_por && <div className="dato"><span className="dato__label">Cerrado Por</span><span className="dato__valor">{nombrePersona(ot.cerrado_por)}</span></div>}
-              </div>
-            </div>
-          )}
+          {ficha('otd-ficha--movil')}
         </>
       )}
 
@@ -693,7 +794,10 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
         </div>
       )}
 
-      {exportando && <span className="t-footnote c-secondary">Preparando el PDF…</span>}
+        </div>
+      </div>
+
+      {exportando && <span className="t-footnote c-secondary" role="status">Preparando el PDF…</span>}
 
       <EditarOTSheet ot={ot} open={editandoOT} onClose={() => setEditandoOT(false)} />
       <EditarFechasSheet ot={ot} open={editandoFechas} onClose={() => setEditandoFechas(false)} />
