@@ -43,7 +43,7 @@ export function PersonaDocumentos({ persona: p }: { persona: Persona }) {
   const puedeEditar = can('rrhh_personal.crear', 'rrhh_personal.editar');
   const puedeEliminar = can('rrhh_personal.eliminar');
   const docs = q.data ?? [];
-  const esConductor = p.categoria_rol === 'CONDUCTOR';
+  const esConductor = p.categoria_rol === 'CONDUCTOR' || /conductor|chofer/i.test(p.cargo ?? '');
   // La licencia solo se pide a los conductores; si alguien más la tiene cargada, igual se muestra
   const tipos = TIPOS_DOC.filter(t => t.tipo !== 'OTRO' && (!t.soloConductor || esConductor || docs.some(d => d.tipo === t.tipo)));
   const otros = docs.filter(d => d.tipo === 'OTRO');
