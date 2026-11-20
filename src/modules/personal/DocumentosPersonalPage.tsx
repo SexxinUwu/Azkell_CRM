@@ -25,7 +25,7 @@ const COLUMNAS: ColumnaTabla[] = [
 
 interface Celdilla { estado: EstadoDoc | 'na'; doc?: DocumentoPersona; exigido: boolean }
 
-/** Estado de un documento para una persona: «na» si no se le pide (la licencia, a quien no es conductor) */
+/** Estado de un documento para una persona: «na» si no se le exige y no la tiene cargada (la licencia, a quien no es conductor) */
 function celdilla(p: Persona, t: TipoDocConfig, docs: DocumentoPersona[]): Celdilla {
   const doc = docs.find(d => d.personal_id === p.id && d.tipo === t.tipo);
   const aplica = !t.soloConductor || (p.categoria_rol === 'CONDUCTOR' || /conductor|chofer/i.test(p.cargo ?? ''));
