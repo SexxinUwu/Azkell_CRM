@@ -5,6 +5,8 @@ import * as THREE from 'three-r128';
 import maplibregl from 'maplibre-gl';
 import type { CustomLayerInterface, Map as MapaGL } from 'maplibre-gl';
 import { ZOOM_3D } from './mapaConfig';
+import { construir as construirModelo, type ConfigConstruccion } from '../../placas/tresd/modelos';
+import type { ModeloDef } from '../../placas/tresd/modelosDatos';
 import type { LngLat } from './geo';
 
 export type ClaseEstado = 'mov' | 'ral' | 'det' | 'off';
@@ -19,6 +21,9 @@ export interface DescCamion {
   trailer: 'furgon' | 'frio' | 'plataforma';
   /** Ejes del semirremolque o carreta (de su configuración S1-S3 / R2-R3) */
   ejes?: number;
+  /** Modelo 3D de la vista Placas en 3D para esta unidad (no se serializa; `mid` identifica la versión). Sin él se usa el dibujo simple. */
+  modelo?: { M: ModeloDef; cfg: ConfigConstruccion };
+  mid?: string;
   colors: number[];
   /** Cabina con trompa larga (International, Freightliner) */
   larga: boolean;
@@ -133,7 +138,24 @@ export class Camiones3D {
     const G = this.G, M = this.M.bind(this);
     const g = new THREE.Group() as Malla, v = new THREE.Group(); g.add(v);
     const [c1, c2, c3] = d.colors;
-    let len: number, front: number;
+    let len = 9, front = -4.3, usado = false;
+    // Mismo modelo 3D de la vista Placas en 3D (misma marca, carrocería, ejes y colores)
+    if (d.modelo) {
+      try {
+        const m = construirModelo(d.modelo.M, d.modelo.cfg);
+        // Como la vista Placas en 3D: el color de la ficha (o el del modelo) pinta la carrocería
+        const pintura = new THREE.Color(d.modelo.cfg.livery.length ? d.modelo.cfg.livery[0] : d.modelo.M.paint);
+        m.paintMats.forEach(mat => (mat as THREE.MeshStandardMaterial).color.copy(pintura));
+        m.root.rotation.y = Math.PI / 2; // en Placas el frente va hacia +x; aquí la unidad mira hacia -z
+        v.add(m.root);
+        v.updateMatrixWorld(true);
+        const caja = new THREE.Box3().setFromObject(m.root);
+        const cz = (caja.min.z + caja.max.z) / 2, cx = (caja.min.x + caja.max.x) / 2;
+        m.root.position.set(-cx, 0, -cz);
+        len = caja.max.z - caja.min.z; front = caja.min.z - cz; usado = true;
+      } catch (e) { console.warn('Modelo 3D de Placas no disponible, se usa el dibujo simple:', e); while (v.children.length) v.remove(v.children[0]); }
+    }
+    if (usado) { /* ya construido */ } else {
     if (d.kind !== 'semi') this.add(v, G.box, M(0x1d2026), 1.1, .35, d.kind === 'rig' ? 6.5 : 8.6, 0, .78, d.kind === 'rig' ? -4.2 : 0);
     if (d.kind === 'semi') {
       // Solo el semirremolque o la carreta: caja (con su equipo de frío si es Thermo King), patas de apoyo y ejes atrás
@@ -151,9 +173,10 @@ export class Camiones3D {
       this.wheels(v, [-3.3, 2.0, 3.3], 1.1); this.body(v, .95, 6.5, d.kind === 'reefer' ? 0xf2f4f7 : c1, c2, c3, d.kind === 'reefer' ? 'frio' : 'furgon');
       len = 9; front = fz;
     }
+    }
     // aura de estado bajo la unidad y conos de luz
     const ring = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: this.glowTex, color: ST.mov.c, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: .9 }));
-    ring.scale.set(9, 1, len + 6); ring.position.y = .06; ring.position.z = d.kind === 'rig' ? 1.2 : 0; ring.renderOrder = 1; g.add(ring);
+    ring.scale.set(9, 1, len + 6); ring.position.y = .06; ring.position.z = !usado && d.kind === 'rig' ? 1.2 : 0; ring.renderOrder = 1; g.add(ring);
     const cone = new THREE.Mesh(G.plane, new THREE.MeshBasicMaterial({ map: this.coneTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: .8 }));
     cone.scale.set(9, 1, 24); cone.position.set(0, .08, front - 12); g.add(cone);
     const beam = new THREE.Mesh(G.beam, new THREE.MeshBasicMaterial({ color: 0x38d6ff, transparent: true, opacity: .28, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -177,12 +200,15 @@ export class Camiones3D {
       vivas.add(u.placa);
       let e = this.piezas.get(u.placa);
       const clave = JSON.stringify(u.desc);
-      if (!e || e.clave !== clave) {
+      const p = u.pos;
+      // Solo se arma la unidad que se ve (los modelos de Placas son detallados): las demás se arman cuando aparecen
+      if ((!e || e.clave !== clave) && p && u.visible) {
         if (e) this.scene.remove(e.mesh);
         e = this.construir(u.desc);
         this.piezas.set(u.placa, e);
       }
-      const g = e.mesh, p = u.pos;
+      if (!e) continue;
+      const g = e.mesh;
       if (!p || !u.visible) { g.visible = false; continue; }
       const mc = maplibregl.MercatorCoordinate.fromLngLat(p, 0);
       const elev = (this.relieve && m.queryTerrainElevation(p)) || 0;
