@@ -15,9 +15,14 @@ export function descripcionCamion(p: Placa | undefined, tipoWialon: string): Des
   const marca = norm(p?.marca);
   const frio = /THERMO|TERMO|FRIGO|REFRIG/.test(sub + ' ' + marca);
   const colores = colorsOf(p?.color || '');
+  // Semirremolques y carretas (y todo lo de marca Thermo King) van sin cabina, como en la vista Placas en 3D
+  const cfg = norm(p?.configuracion).replace(/ /g, '');
+  const esRemolque = tipo !== 'TRACTO' && (/SEMI|REMOLQUE|CARRETA/.test(tipo) || /THERMO|TERMO/.test(marca));
+  const ejes = /^[SR][1-3]$/.test(cfg) ? Number(cfg[1]) : undefined;
   return {
-    kind: tipo === 'TRACTO' ? 'rig' : frio ? 'reefer' : 'box',
-    trailer: 'furgon',
+    kind: tipo === 'TRACTO' ? 'rig' : esRemolque ? 'semi' : frio ? 'reefer' : 'box',
+    trailer: esRemolque ? (frio ? 'frio' : /PLATAFORMA/.test(sub || tipo) ? 'plataforma' : 'furgon') : 'furgon',
+    ejes,
     colors: colores.length ? colores : COLORES_BASE,
     larga: /INTERNATIONAL|FREIGHTLINER/.test(marca),
   };

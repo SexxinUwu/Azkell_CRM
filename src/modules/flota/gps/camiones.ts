@@ -14,9 +14,11 @@ export const ST: Record<ClaseEstado, { c: string; l: string }> = {
 };
 
 export interface DescCamion {
-  /** rig = tracto con semirremolque · box = camión furgón · reefer = camión frigorífico */
-  kind: 'rig' | 'box' | 'reefer';
+  /** rig = tracto con semirremolque · box = camión furgón · reefer = camión frigorífico · semi = semirremolque o carreta solo (sin cabina), como en Placas */
+  kind: 'rig' | 'box' | 'reefer' | 'semi';
   trailer: 'furgon' | 'frio' | 'plataforma';
+  /** Ejes del semirremolque o carreta (de su configuración S1-S3 / R2-R3) */
+  ejes?: number;
   colors: number[];
   /** Cabina con trompa larga (International, Freightliner) */
   larga: boolean;
@@ -132,8 +134,14 @@ export class Camiones3D {
     const g = new THREE.Group() as Malla, v = new THREE.Group(); g.add(v);
     const [c1, c2, c3] = d.colors;
     let len: number, front: number;
-    this.add(v, G.box, M(0x1d2026), 1.1, .35, d.kind === 'rig' ? 6.5 : 8.6, 0, .78, d.kind === 'rig' ? -4.2 : 0);
-    if (d.kind === 'rig') {
+    if (d.kind !== 'semi') this.add(v, G.box, M(0x1d2026), 1.1, .35, d.kind === 'rig' ? 6.5 : 8.6, 0, .78, d.kind === 'rig' ? -4.2 : 0);
+    if (d.kind === 'semi') {
+      // Solo el semirremolque o la carreta: caja (con su equipo de frío si es Thermo King), patas de apoyo y ejes atrás
+      this.body(v, 0, 13.2, d.trailer === 'frio' ? 0xf2f4f7 : c1, c2, c3, d.trailer); this.add(v, G.box, M(0x1d2026), 1.0, .3, 13, 0, .95, 0);
+      this.add(v, G.box, M(0x2a2f36), .18, 1.0, .18, .9, .5, -4.8); this.add(v, G.box, M(0x2a2f36), .18, 1.0, .18, -.9, .5, -4.8);
+      const n = Math.max(1, Math.min(3, d.ejes ?? 3));
+      this.wheels(v, Array.from({ length: n }, (_, i) => 5.9 - 1.3 * (n - 1 - i)), 1.12); len = 13.4; front = -6.9;
+    } else if (d.kind === 'rig') {
       const fz = this.cab(v, -6.1, c1, c2, d.larga);
       this.wheels(v, [-6.2, -3.4, -2.1], 1.12); this.add(v, G.box, M(0x2a2f36), 1.4, .15, 1.4, 0, 1.05, -2.8);
       this.body(v, 3.2, 13.2, d.trailer === 'frio' ? 0xf2f4f7 : c1, c2, c3, d.trailer); this.add(v, G.box, M(0x1d2026), 1.0, .3, 13, 0, .95, 3.2);
