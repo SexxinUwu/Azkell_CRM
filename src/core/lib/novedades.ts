@@ -27,7 +27,7 @@ export const NOVEDADES: Novedad[] = [
         titulo: 'Los documentos de cada persona, en su ficha',
         puntos: [
           'En RRHH › Personal, la ficha de cada persona ahora tiene dos pestañas: Ficha y Documentos.',
-          'Ahí guardas la copia del DNI por ambas caras, la licencia de conducir (para los conductores), el certificado de antecedentes, el examen médico (EMO), el SCTR y el contrato firmado. También puedes agregar otros documentos, como certificados o cursos.',
+          'Ahí guardas el DNI, la licencia de conducir, el certificado de antecedentes, el examen médico (EMO), el SCTR y el contrato firmado. También puedes agregar otros documentos, como certificados o cursos.',
           'Cada documento es una tarjeta con su estado: vigente, por vencer o vencido. Sube la foto o el PDF; desde el celular puedes tomar la foto en el momento.',
           'Si subes un archivo nuevo, el anterior queda en el historial. Estos documentos son sensibles: solo los ve quien tenga el permiso de RRHH.',
         ],

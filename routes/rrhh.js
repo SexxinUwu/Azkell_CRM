@@ -23,7 +23,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage, limits: { fileSize: 10 * 1024 * 1024 } });
 // Documentos del personal: se suben a S3, así que el archivo llega en memoria
 const subirDocumento = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
-const TIPOS_DOCUMENTO = ['DNI_A', 'DNI_B', 'LICENCIA', 'ANTECEDENTES', 'EMO', 'SCTR', 'CONTRATO', 'OTRO'];
+const TIPOS_DOCUMENTO = ['DNI', 'LICENCIA', 'ANTECEDENTES', 'EMO', 'SCTR', 'CONTRATO', 'OTRO'];
 const MIME_PERMITIDOS = /^(image\/(jpeg|png|webp|heic|heif)|application\/pdf)$/i;
 
 module.exports = function (db, broadcast, logAudit) {
@@ -390,7 +390,7 @@ router.put('/personal/:id', upload.single('foto'), async (req, res) => {
 });
 
 // ═════════════════════════════════════════════════════════════════════
-// DOCUMENTOS DEL PERSONAL (DNI por ambas caras, licencia, antecedentes, EMO, SCTR, contrato…)
+// DOCUMENTOS DEL PERSONAL (DNI, licencia, antecedentes, EMO, SCTR, contrato…)
 // ═════════════════════════════════════════════════════════════════════
 const fechaODoc = v => (v && /^\d{4}-\d{2}-\d{2}/.test(String(v)) ? String(v).slice(0, 10) : null);
 
@@ -398,7 +398,7 @@ const fechaODoc = v => (v && /^\d{4}-\d{2}-\d{2}/.test(String(v)) ? String(v).sl
 router.get('/documentos', async (req, res) => {
     try {
         const tdb = getDb(req);
-        const [rows] = await tdb.query(`SELECT id, personal_id, tipo, descripcion, nombre_archivo, mime,
+        const [rows] = await tdb.query(`SELECT id, personal_id, CASE tipo WHEN 'DNI_A' THEN 'DNI' WHEN 'DNI_B' THEN 'OTRO' ELSE tipo END AS tipo, descripcion, nombre_archivo, mime,
             DATE_FORMAT(fecha_emision, '%Y-%m-%d') AS fecha_emision, DATE_FORMAT(fecha_vencimiento, '%Y-%m-%d') AS fecha_vencimiento
             FROM rrhh_personal_documentos d
             WHERE d.tipo = 'OTRO' OR d.id = (SELECT MAX(x.id) FROM rrhh_personal_documentos x WHERE x.personal_id = d.personal_id AND x.tipo = d.tipo)`);
@@ -414,6 +414,12 @@ router.get('/personal/:id/documentos', async (req, res) => {
             DATE_FORMAT(fecha_emision, '%Y-%m-%d') AS fecha_emision, DATE_FORMAT(fecha_vencimiento, '%Y-%m-%d') AS fecha_vencimiento,
             DATE_FORMAT(actualizado_en, '%Y-%m-%d %H:%i') AS actualizado_en
             FROM rrhh_personal_documentos WHERE personal_id = ? ORDER BY tipo, id DESC`, [req.params.id]);
+        // El DNI es uno solo: lo cargado antes por caras (DNI_A / DNI_B) se muestra como DNI, y la cara posterior queda como otro documento
+        for (const d of rows) {
+            if (d.tipo === 'DNI_A') d.tipo = 'DNI';
+            else if (d.tipo === 'DNI_B') { d.tipo = 'OTRO'; if (!d.descripcion) d.descripcion = 'DNI · cara posterior'; }
+        }
+        rows.sort((a, b) => (a.tipo < b.tipo ? -1 : a.tipo > b.tipo ? 1 : b.id - a.id));
         for (const d of rows) {
             try { const key = s3KeyFromUrl(d.archivo_url); d.url = key ? await getPresignedUrl(key, 3600) : d.archivo_url; } catch (e) { d.url = d.archivo_url; }
             delete d.archivo_url;

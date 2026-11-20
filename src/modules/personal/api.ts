@@ -341,9 +341,9 @@ export async function comprimirFoto(archivo: File): Promise<string> {
   }
 }
 
-// ─── Documentos del personal (DNI por ambas caras, licencia, antecedentes, EMO, SCTR, contrato…) ───
+// ─── Documentos del personal (DNI, licencia, antecedentes, EMO, SCTR, contrato…) ───
 
-export type TipoDoc = 'DNI_A' | 'DNI_B' | 'LICENCIA' | 'ANTECEDENTES' | 'EMO' | 'SCTR' | 'CONTRATO' | 'OTRO';
+export type TipoDoc = 'DNI' | 'LICENCIA' | 'ANTECEDENTES' | 'EMO' | 'SCTR' | 'CONTRATO' | 'OTRO';
 
 export interface TipoDocConfig {
   tipo: TipoDoc;
@@ -359,8 +359,7 @@ export interface TipoDocConfig {
 }
 
 export const TIPOS_DOC: TipoDocConfig[] = [
-  { tipo: 'DNI_A', titulo: 'DNI · cara frontal', corto: 'DNI frontal', vence: false, obligatorio: true },
-  { tipo: 'DNI_B', titulo: 'DNI · cara posterior', corto: 'DNI posterior', vence: false, obligatorio: true },
+  { tipo: 'DNI', titulo: 'DNI', corto: 'DNI', vence: false, obligatorio: true },
   { tipo: 'LICENCIA', titulo: 'Licencia de conducir', corto: 'Licencia', vence: true, obligatorio: true, soloConductor: true },
   { tipo: 'ANTECEDENTES', titulo: 'Certificado de antecedentes', corto: 'Antecedentes', vence: true, obligatorio: false },
   { tipo: 'EMO', titulo: 'Examen médico (EMO)', corto: 'EMO', vence: true, obligatorio: true },
