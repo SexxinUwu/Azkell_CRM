@@ -120,7 +120,7 @@ export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, rendim
   const whatsapp = `https://wa.me/?text=${encodeURIComponent(`Unidad ${u.placa}: ${estadoTxt}. ${u.ubicacion} ${maps}`.trim())}`;
 
   // Solo se muestran los datos que Wialon o el ERP tienen
-  const celdas: Array<{ t: string; v: string; ancho?: boolean }> = [];
+  const celdas: Array<{ t: string; v: string; ancho?: boolean; lineas?: Array<{ k: string; v: string }> }> = [];
   if (u.km > 0) celdas.push({ t: 'Odómetro', v: `${u.km.toLocaleString('es-PE')} km` });
   if (u.horas > 0) celdas.push({ t: 'Horómetro', v: `${u.horas.toLocaleString('es-PE')} hrs` });
   celdas.push({ t: u.voltaje ? 'Batería / ignición' : 'Ignición', v: `${u.voltaje ? `${u.voltaje} V · ` : ''}Motor ${u.ignicion ? 'ON' : 'OFF'}` });
@@ -128,7 +128,7 @@ export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, rendim
   if (gps) celdas.push({ t: u.satelites && u.altitud ? 'Satélites / altitud' : u.satelites ? 'Satélites' : 'Altitud', v: gps });
   // Unidades refrigeradas (Thermo King): temperatura de sus sensores, con la lectura de cada uno
   const temps = combustible?.temperaturas ?? [];
-  if (temps.length) celdas.push({ t: 'Temperatura (refrigeración)', v: temps.map(x => `${x.nombre.replace(/^sensor\s*/i, '')}: ${x.valor.toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} °C`).join('  ·  '), ancho: true });
+  if (temps.length) celdas.push({ t: 'Temperatura (refrigeración)', v: '', ancho: true, lineas: temps.map(x => ({ k: x.nombre.replace(/^sensor\s*/i, '') + ':', v: `${x.valor.toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} °C` })) });
   if (conductor) celdas.push({ t: 'Conductor', v: conductor, ancho: true });
   if (l?.geocerca) celdas.push({ t: 'Geocerca', v: l.geocerca, ancho: true });
 
@@ -198,7 +198,9 @@ export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, rendim
         {celdas.map(c => (
           <div key={c.t} className={`tg-cell${c.ancho ? ' tg-cell--ancho' : ''}`}>
             <span className="tg-lbl">{c.t}</span>
-            <b className={c.ancho ? undefined : 'mono'}>{c.v}</b>
+            {c.lineas
+              ? c.lineas.map(x => <div key={x.k}><b>{x.k}</b> <span className="mono">{x.v}</span></div>)
+              : <b className={c.ancho ? undefined : 'mono'}>{c.v}</b>}
           </div>
         ))}
         {u.ubicacion && (
