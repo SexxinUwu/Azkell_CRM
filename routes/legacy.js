@@ -41,7 +41,21 @@ function candidatosCombustible(sens) {
     const malo = /consum|tasa|rate|rendim|acumul|presi|temp/i;
     const esComb = (x) => /(combust|fuel|diesel|tanque|tank)/i.test(nombre(x));
     const pct = lista.filter(x => !malo.test(nombre(x)) && esComb(x) && (metrica(x) === '%' || /%/.test(nombre(x))));
-    return pct;
+    // Sin sensor en %: el de nivel de combustible en galones o litros (por ejemplo el «Combustible Total» de los Thermo King)
+    const enVolumen = lista.filter(x => x.t === 'fuel level' && /^(gal|gl|l|lt|lts|litros|galones)$/.test(metrica(x)) && !malo.test(nombre(x)) && !pct.includes(x));
+    return [...pct, ...enVolumen];
+}
+// Temperaturas de las unidades refrigeradas (Thermo King): «Sensor T° - 1», «Sensor T° - 2». Puede marcar 0 o menos de cero.
+const sensoresTemperatura = (sens) => Object.values(sens || {}).filter(x => x && x.id != null && /^sensor\s*t/i.test(String(x.n || '').trim())).sort((a, b) => String(a.n).localeCompare(String(b.n)));
+async function valorTemperatura(baseUrl, sid, unitId, sensor) {
+    try {
+        const r = await (await fetch(`${baseUrl}?svc=unit/calc_last_message&params=${encodeURIComponent(JSON.stringify({ unitId, sensorId: sensor.id, flags: 0 }))}&sid=${sid}`)).json();
+        let v = typeof r === 'number' ? r : (r && typeof r === 'object' ? (r[sensor.id] != null ? r[sensor.id] : Object.values(r)[0]) : null);
+        if (Array.isArray(v)) v = v[0];
+        // Wialon marca «sin lectura» con un número enorme (≈ -348201)
+        if (typeof v === 'number' && isFinite(v) && v > -100 && v < 200) return Math.round(v * 10) / 10;
+    } catch (e) { /* sin lectura */ }
+    return null;
 }
 async function valorSensorUltimo(baseUrl, sid, unitId, sensor) {
     try {
@@ -1649,6 +1663,7 @@ router.post('/:metodo', async (req, res) => {
             if (!login || !login.eid) return res.json({ data: { nivel: null } });
             const sid = login.eid;
             let nivel = null, nombre = '', unidad = '%';
+            const temperaturas = [];
             try {
                 const it = await (await fetch(`${baseUrl}?svc=core/search_item&params=${encodeURIComponent(JSON.stringify({ id: unitId, flags: 4096 }))}&sid=${sid}`)).json();
                 const { sensor, valor } = await elegirSensorValido(baseUrl, sid, unitId, it && it.item && it.item.sens);
@@ -1657,10 +1672,14 @@ router.post('/:metodo', async (req, res) => {
                     unidad = String(sensor.m || '%').trim() || '%';
                     if (valor != null) nivel = Math.round(valor * 10) / 10;
                 }
+                for (const st of sensoresTemperatura(it && it.item && it.item.sens)) {
+                    const v = await valorTemperatura(baseUrl, sid, unitId, st);
+                    if (v != null) temperaturas.push({ nombre: st.n, valor: v });
+                }
             } finally {
                 fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(() => {});
             }
-            return res.json({ data: { nivel, nombre, unidad } });
+            return res.json({ data: { nivel, nombre, unidad, temperaturas } });
         } catch (e) {
             return res.json({ data: { nivel: null, error: e.message } });
         }

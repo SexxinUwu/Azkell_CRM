@@ -565,10 +565,10 @@ export function useCombustible(unitId: number | null) {
     enabled: unitId != null,
     refetchInterval: 20_000,
     staleTime: 10_000,
-    queryFn: async (): Promise<{ nivel: number | null; nombre: string; unidad: string }> => {
-      const r = await api<{ data?: { nivel?: number | null; nombre?: string; unidad?: string } }>('/script/obtenerCombustibleWialon', { method: 'POST', body: { args: [{ unitId }] } });
+    queryFn: async (): Promise<{ nivel: number | null; nombre: string; unidad: string; temperaturas: Array<{ nombre: string; valor: number }> }> => {
+      const r = await api<{ data?: { nivel?: number | null; nombre?: string; unidad?: string; temperaturas?: Array<{ nombre: string; valor: number }> } }>('/script/obtenerCombustibleWialon', { method: 'POST', body: { args: [{ unitId }] } });
       const d = r?.data ?? {};
-      return { nivel: typeof d.nivel === 'number' ? d.nivel : null, nombre: d.nombre ?? '', unidad: d.unidad ?? '%' };
+      return { nivel: typeof d.nivel === 'number' ? d.nivel : null, nombre: d.nombre ?? '', unidad: d.unidad ?? '%', temperaturas: Array.isArray(d.temperaturas) ? d.temperaturas : [] };
     },
   });
 }
