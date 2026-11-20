@@ -46,7 +46,7 @@ const BASE_T = new THREE.Matrix4().makeTranslation(ORIGIN.x, ORIGIN.y, ORIGIN.z)
   .multiply(new THREE.Matrix4().makeScale(MS, -MS, MS)).multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2));
 
 type Malla = THREE.Group & { userData: { ring: THREE.Mesh; cone: THREE.Mesh; beam: THREE.Mesh } };
-interface Pieza3D { mesh: Malla; clave: string }
+interface Pieza3D { mesh: Malla; clave: string; /** Radio (m) que cubre la unidad con su aura y el cono de luz */ radio: number }
 
 export class Camiones3D {
   readonly capa: CustomLayerInterface;
@@ -183,7 +183,7 @@ export class Camiones3D {
     beam.scale.set(1.2, 90, 1.2); beam.position.y = 45; g.add(beam);
     g.userData = { ring, cone, beam };
     g.visible = false; this.scene.add(g);
-    return { mesh: g, clave: JSON.stringify(d) };
+    return { mesh: g, clave: JSON.stringify(d), radio: len / 2 + 30 };
   }
 
   private dibujar(args: { defaultProjectionData: { mainMatrix: number[] } }) {
@@ -191,11 +191,13 @@ export class Camiones3D {
     if (!m || !r) return;
     const z = m.getZoom();
     if (!this.activa || z < ZOOM_3D) return;
-    this.cam3.projectionMatrix = new THREE.Matrix4().fromArray(args.defaultProjectionData.mainMatrix).multiply(BASE_T);
+    const P = new THREE.Matrix4().fromArray(args.defaultProjectionData.mainMatrix).multiply(BASE_T);
+    this.cam3.projectionMatrix = P;
     const k = Math.max(1.3, Math.min(6, Math.pow(2, 19.1 - z))), night = this.noche, t = performance.now() / 1000;
     this.hemi.intensity = night ? .55 : .95; this.sunL.intensity = night ? .35 : .95;
     const fade = Math.min(1, (z - ZOOM_3D) / .8);
     const vivas = new Set<string>();
+    const activos: Array<{ g: Malla; radio: number }> = [];
     for (const u of this.vistas) {
       vivas.add(u.placa);
       let e = this.piezas.get(u.placa);
@@ -220,9 +222,29 @@ export class Camiones3D {
       d.cone.visible = night && u.st === 'mov';
       d.beam.visible = sel;
       if (sel) (d.beam.material as THREE.MeshBasicMaterial).opacity = .18 + .1 * Math.sin(t * 3);
+      activos.push({ g, radio: e.radio });
     }
     // Unidades que ya no están: se quitan de la escena
     for (const [placa, e] of this.piezas) if (!vivas.has(placa)) { this.scene.remove(e.mesh); this.piezas.delete(placa); }
+    // Precisión de profundidad: el mapa usa un rango de distancias enorme y las piezas de un modelo que casi se tocan (franjas, vidrios, paneles)
+    // se «pelean» y salen manchas negras al acercarse. Se ajusta el cerca/lejos al rango real de las unidades que se ven, y las que quedan fuera
+    // de la pantalla no se dibujan.
+    const e = P.elements, gradW = Math.hypot(e[3], e[7], e[11]), gx = Math.hypot(e[0], e[4], e[8]), gy = Math.hypot(e[1], e[5], e[9]);
+    const v4 = new THREE.Vector4();
+    let lo = Infinity, hi = 0;
+    for (const a of activos) {
+      const sc = a.g.scale.x, R = a.radio * sc;
+      v4.set(a.g.position.x, a.g.position.y + 2 * sc, a.g.position.z, 1).applyMatrix4(P);
+      const dw = R * gradW;
+      const visible = v4.w + dw > 0 && Math.abs(v4.x) <= v4.w + dw + R * gx && Math.abs(v4.y) <= v4.w + dw + R * gy;
+      a.g.visible = visible;
+      if (visible) { lo = Math.min(lo, v4.w - dw); hi = Math.max(hi, v4.w + dw); }
+    }
+    if (!(hi > 0)) return;
+    const n = Math.max(lo, hi * 1e-5) * .98, f = hi * 1.02;
+    const A = (f + n) / (f - n), B = -2 * f * n / (f - n);
+    const pe = this.cam3.projectionMatrix.elements;
+    pe[2] = A * e[3]; pe[6] = A * e[7]; pe[10] = A * e[11]; pe[14] = A * e[15] + B;
     r.resetState(); r.clearDepth(); r.render(this.scene, this.cam3);
   }
 
