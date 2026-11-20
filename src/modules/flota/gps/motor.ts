@@ -27,7 +27,7 @@ export interface Geocerca { id: string; name: string; color: string; ring: LngLa
 const enGeocerca = (p: LngLat, g: Geocerca) => (!g.bbox || (p[0] >= g.bbox[0] && p[0] <= g.bbox[2] && p[1] >= g.bbox[1] && p[1] <= g.bbox[3])) && enAnillo(p, g.ring);
 export interface Alerta { id: number; placa: string; icono: string; color: string; msg: string; hora: string }
 export interface Lectura { /** Segundos desde el último mensaje del equipo GPS (null si Wialon no lo informó) */ edadS: number | null; kmh: number; rumbo: number; hist: number[]; st: ClaseEstado; geocerca: string | null }
-export interface OpcionesMapa { traffic: boolean; terrain: boolean; buildings: boolean; trails: boolean; geo: boolean; smooth: boolean; models: boolean; buildingsSat: boolean }
+export interface OpcionesMapa { traffic: boolean; terrain: boolean; buildings: boolean; trails: boolean; geo: boolean; smooth: boolean; models: boolean; buildingsSat: boolean; /** Posición exacta del GPS: sin predicción, tamaño real al máximo zoom y hora del último mensaje */ exacto: boolean }
 
 interface Fix { pos: LngLat; hdg: number; t: number }
 interface U {
@@ -120,7 +120,7 @@ export class MotorTelemetria {
   readonly root: HTMLDivElement;
   readonly mapa: MapaGL;
   tema: TemaMapa;
-  opt: OpcionesMapa = { traffic: false, terrain: false, buildings: true, trails: true, geo: true, smooth: true, models: true, buildingsSat: false };
+  opt: OpcionesMapa = { traffic: false, terrain: false, buildings: true, trails: true, geo: true, smooth: true, models: true, buildingsSat: false, exacto: (() => { try { return localStorage.getItem('fleet_gps_exacto') !== '0'; } catch { return true; } })() };
 
   private mapDiv: HTMLDivElement;
   private tagLayer: HTMLDivElement;
@@ -295,6 +295,7 @@ export class MotorTelemetria {
     if (m.getLayer('units')) m.setPaintProperty('units', 'icon-opacity', this.iconOpacity());
     this.camiones.activa = o.models && !this.hist;
     this.camiones.relieve = o.terrain;
+    this.camiones.exacto = o.exacto;
     if (conRelieve) m.setTerrain(o.terrain ? { source: 'dem', exaggeration: 1.35 } : null);
     this.sucio = true; this.sucioDatos = true;
   }
@@ -346,6 +347,7 @@ export class MotorTelemetria {
       return;
     }
     this.opt[k] = v;
+    if (k === 'exacto') { try { localStorage.setItem('fleet_gps_exacto', v ? '1' : '0'); } catch { /* sin almacenamiento */ } }
     if (k === 'buildings' && this.tema === 'sat') { this.opt.buildingsSat = v; this.opt.buildings = true; }
     if (this.styleReady) this.aplicarOpciones(k === 'terrain');
     if (k === 'smooth') this.units.forEach(u => { if (u.b) { u.a = u.b; u.view = u.b.pos.slice() as LngLat; u.hview = u.b.hdg; } });
@@ -422,7 +424,9 @@ export class MotorTelemetria {
         // velocidad y rumbo, hasta ADELANTO_MAX_S), no donde estaba al mandar el mensaje. Así el tracto y su remolque, que reportan a ritmos
         // distintos, no se separan ni se invierten, y la unidad no se queda parada entre un mensaje y otro.
         const edadS = e.tPos ? Math.max(0, (Date.now() - e.tPos) / 1000) : 0;
-        const adelantar = (extra: number) => (e.velocidad > MOV_KMH ? proyectar(pos, hdg, e.velocidad, Math.min(edadS + extra, ADELANTO_MAX_S)) : pos);
+        // Con «posición exacta» no se predice: la unidad va a la última posición que mandó el GPS
+        const exacto = this.opt.exacto;
+        const adelantar = (extra: number) => (!exacto && e.velocidad > MOV_KMH ? proyectar(pos, hdg, e.velocidad, Math.min(edadS + extra, ADELANTO_MAX_S)) : pos);
         const saltoReal = u.raw ? distM(u.raw, pos) > SALTO_M : false;
         u.raw = pos;
         if (!u.b || !u.view || saltoReal || largo) {
@@ -435,7 +439,7 @@ export class MotorTelemetria {
           const destino = adelantar(dur / 1000);
           if (u.b.pos[0] !== destino[0] || u.b.pos[1] !== destino[1] || u.b.hdg !== hdg) {
             u.a = { pos: u.view.slice() as LngLat, hdg: u.hview, t: now };
-            u.b = { pos: destino, hdg, t: now + dur }; u.llego = now;
+            u.b = { pos: destino, hdg, t: now + (exacto ? Math.min(dur, 900) : dur) }; u.llego = now;
           }
         }
         this.eventos(u, pos);
@@ -616,12 +620,15 @@ export class MotorTelemetria {
       const el = u.tagEl;
       if (!el) return;
       if (!show) { el.style.display = 'none'; return; }
-      const txt = u.st + '|' + (u.st === 'off' ? 0 : Math.round(u.kmh)) + '|' + esSel;
+      // Con «posición exacta» la etiqueta dice hace cuánto mandó su último mensaje el GPS (si pasa de 20 s)
+      const edad = this.opt.exacto && u.e.tPos ? Math.max(0, Math.round((Date.now() - u.e.tPos) / 1000)) : 0;
+      const edadTxt = edad < 20 ? '' : edad < 90 ? ` · hace ${Math.round(edad / 10) * 10} s` : edad < 5400 ? ` · hace ${Math.round(edad / 60)} min` : ` · hace ${Math.round(edad / 3600)} h`;
+      const txt = u.st + '|' + (u.st === 'off' ? 0 : Math.round(u.kmh)) + '|' + esSel + '|' + edadTxt;
       if (txt !== u.tagTxt) {
         u.tagTxt = txt;
         el.classList.toggle('sel', esSel);
         (el.querySelector('i') as HTMLElement).style.background = ST[u.st].c;
-        (el.querySelector('.k') as HTMLElement).textContent = u.st === 'off' ? 'sin señal' : Math.round(u.kmh) + ' km/h';
+        (el.querySelector('.k') as HTMLElement).textContent = u.st === 'off' ? 'sin señal' : Math.round(u.kmh) + ' km/h' + edadTxt;
       }
       u.tagOff = this.opt.models && z >= 15 ? Math.min(70, 14 + (z - 15) * 18) : 18;
       this.sucio = true;

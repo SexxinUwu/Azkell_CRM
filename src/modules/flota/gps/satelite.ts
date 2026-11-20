@@ -13,6 +13,8 @@ let transparente: Promise<ArrayBuffer> | null = null;
 function imagenTransparente(): Promise<ArrayBuffer> {
   if (!transparente) {
     const c = new OffscreenCanvas(1, 1);
+    // Sin contexto el lienzo no se puede convertir a imagen («OffscreenCanvas has no rendering context»)
+    c.getContext('2d');
     transparente = c.convertToBlob({ type: 'image/png' }).then(b => b.arrayBuffer());
   }
   return transparente;
@@ -39,8 +41,9 @@ export function registrarEsri() {
     const [z, y, x] = params.url.replace(`${ESQUEMA_ESRI}://`, '').split('/');
     try {
       // Primero Clarity (más reciente); si no tiene la tesela (404), la imagen estándar de Esri
-      const c = await fetch(plantilla(MAPA_URLS.sateliteClarity, z, y, x), { signal: controlador.signal });
-      if (c.ok) {
+      // Si Clarity no tiene la tesela, responde 404 sin cabecera CORS y el navegador lo deja como error de red: se sigue con la imagen estándar
+      const c = await fetch(plantilla(MAPA_URLS.sateliteClarity, z, y, x), { signal: controlador.signal }).catch(e => { if ((e as Error).name === 'AbortError') throw e; return null; });
+      if (c && c.ok) {
         const d = await c.arrayBuffer();
         if (d.byteLength !== SAT_PLACEHOLDER_BYTES) return { data: d };
       }
