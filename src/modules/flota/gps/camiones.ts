@@ -46,7 +46,7 @@ const BASE_T = new THREE.Matrix4().makeTranslation(ORIGIN.x, ORIGIN.y, ORIGIN.z)
   .multiply(new THREE.Matrix4().makeScale(MS, -MS, MS)).multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2));
 
 type Malla = THREE.Group & { userData: { ring: THREE.Mesh; cone: THREE.Mesh; beam: THREE.Mesh } };
-interface Pieza3D { mesh: Malla; clave: string; /** Radio (m) que cubre la unidad con su aura y el cono de luz */ radio: number }
+interface Pieza3D { mesh: Malla; clave: string; /** Radio (m) del cuerpo de la unidad (sin aura ni cono de luz, que no necesitan precisión de profundidad) */ radio: number }
 
 export class Camiones3D {
   readonly capa: CustomLayerInterface;
@@ -183,7 +183,7 @@ export class Camiones3D {
     beam.scale.set(1.2, 90, 1.2); beam.position.y = 45; g.add(beam);
     g.userData = { ring, cone, beam };
     g.visible = false; this.scene.add(g);
-    return { mesh: g, clave: JSON.stringify(d), radio: len / 2 + 30 };
+    return { mesh: g, clave: JSON.stringify(d), radio: len / 2 + 5 };
   }
 
   private dibujar(args: { defaultProjectionData: { mainMatrix: number[] } }) {
@@ -241,7 +241,8 @@ export class Camiones3D {
       if (visible) { lo = Math.min(lo, v4.w - dw); hi = Math.max(hi, v4.w + dw); }
     }
     if (!(hi > 0)) return;
-    const n = Math.max(lo, hi * 1e-5) * .98, f = hi * 1.02;
+    // Cerca ≥ 2 % del lejos: si la cámara queda dentro del radio de una unidad (zoom medio con la unidad agrandada) el plano cercano no se desploma
+    const n = Math.max(lo * .98, hi * .02), f = hi * 1.02;
     const A = (f + n) / (f - n), B = -2 * f * n / (f - n);
     const pe = this.cam3.projectionMatrix.elements;
     pe[2] = A * e[3]; pe[6] = A * e[7]; pe[10] = A * e[11]; pe[14] = A * e[15] + B;
