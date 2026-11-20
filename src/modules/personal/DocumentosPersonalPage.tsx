@@ -28,7 +28,7 @@ interface Celdilla { estado: EstadoDoc | 'na'; doc?: DocumentoPersona; exigido: 
 /** Estado de un documento para una persona: «na» si no se le pide (la licencia, a quien no es conductor) */
 function celdilla(p: Persona, t: TipoDocConfig, docs: DocumentoPersona[]): Celdilla {
   const doc = docs.find(d => d.personal_id === p.id && d.tipo === t.tipo);
-  const aplica = !t.soloConductor || p.categoria_rol === 'CONDUCTOR';
+  const aplica = !t.soloConductor || (p.categoria_rol === 'CONDUCTOR' || /conductor|chofer/i.test(p.cargo ?? ''));
   if (!doc && !aplica) return { estado: 'na', exigido: false };
   return { estado: estadoDoc(doc).estado, doc, exigido: t.obligatorio && aplica };
 }
@@ -55,7 +55,7 @@ export function DocumentosPersonalPage() {
 
   const q = busqueda.trim().toUpperCase();
   const visibles = useMemo(() => filas
-    .filter(f => grupo === 'todos' || f.p.categoria_rol === 'CONDUCTOR')
+    .filter(f => grupo === 'todos' || (f.p.categoria_rol === 'CONDUCTOR' || /conductor|chofer/i.test(f.p.cargo ?? '')))
     .filter(f => filtro === 'todos' || (filtro === 'pendientes' ? f.faltan > 0 : filtro === 'por_vencer' ? f.porVencer > 0 : f.vencidos > 0))
     .filter(f => !q || [nombreCompleto(f.p), f.p.numero_documento, f.p.cargo].some(t => (t ?? '').toUpperCase().includes(q)))
     .sort((a, b) => (b.vencidos - a.vencidos) || (b.porVencer - a.porVencer) || (b.faltan - a.faltan) || a.p.apellidos.localeCompare(b.p.apellidos, 'es')),
