@@ -51,6 +51,7 @@ const HERRAMIENTAS: Array<{ k: keyof OpcionesMapa | 'overview'; tip: string; mov
   { k: 'terrain', tip: 'Relieve 3D (más pesado)', d: 'm3 20 6-10 4 6 3-4 5 8z' },
   { k: 'buildings', tip: 'Edificios 3D', d: 'M4 21V8l6-4v17M10 21h10V11l-10-3' },
   { k: 'trails', tip: 'Estelas', d: 'M3 17c4 0 4-6 8-6s4 6 8 6M20 17h.01' },
+  { k: 'exacto', tip: 'Posición exacta del GPS (sin predicción, tamaño real y hora del último mensaje)', d: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v3M12 19v3M2 12h3M19 12h3' },
   { k: 'smooth', tip: 'Movimiento suave (interpolación)', movil: false, d: 'M3 12h4l3-7 4 14 3-7h4' },
   { k: 'models', tip: 'Unidades en 3D al acercar', d: 'M2 15h13V7H2zM15 10h4l3 3v2h-7M6 18h.01M18 18h.01' },
   { k: 'overview', tip: 'Ver toda la flota', d: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5' },

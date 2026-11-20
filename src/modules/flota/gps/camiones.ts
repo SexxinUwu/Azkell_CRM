@@ -51,6 +51,8 @@ export class Camiones3D {
   activa = true;
   noche = true;
   relieve = false;
+  /** Posición exacta del GPS: la unidad se dibuja a tamaño real (1:1) al máximo zoom */
+  exacto = true;
 
   private scene = new THREE.Scene();
   private cam3 = new THREE.Camera();
@@ -188,7 +190,7 @@ export class Camiones3D {
     const z = m.getZoom();
     if (!this.activa || z < ZOOM_3D) return;
     const principal = new THREE.Matrix4().fromArray(args.defaultProjectionData.mainMatrix);
-    const k = Math.max(1.3, Math.min(6, Math.pow(2, 19.1 - z))), night = this.noche, t = performance.now() / 1000;
+    const k = Math.max(this.exacto ? 1 : 1.3, Math.min(6, Math.pow(2, 19.1 - z))), night = this.noche, t = performance.now() / 1000;
     this.hemi.intensity = night ? .55 : .95; this.sunL.intensity = night ? .35 : .95;
     const fade = Math.min(1, (z - ZOOM_3D) / .8);
     const vivas = new Set<string>();
