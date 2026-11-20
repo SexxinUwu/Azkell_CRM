@@ -404,7 +404,8 @@ export class MotorTelemetria {
   /** El retraso se acerca a su meta poco a poco (sube de a 0.4 s por segundo, baja de a 0.15 s): un cambio brusco haría saltar a la unidad */
   private ajustarRetraso(u: U, dtS: number) {
     const meta = this.retrasoMeta(u);
-    if (u.retraso === undefined) { u.retraso = meta; return; }
+    // Al empezar no se sabe cada cuánto reporta el equipo: se parte de un atraso prudente (25 s) y baja solo si reporta rápido
+    if (u.retraso === undefined) { u.retraso = Math.max(meta, 25000); return; }
     u.retraso += meta > u.retraso ? Math.min(meta - u.retraso, 400 * dtS) : -Math.min(u.retraso - meta, 150 * dtS);
   }
   /** Dónde y hacia dónde se dibuja la unidad en el instante `ahora` (ms) según sus mensajes del GPS */
@@ -539,6 +540,11 @@ export class MotorTelemetria {
       if (this.opt.smooth && !this.opt.exacto) {
         const dc = Math.exp(-realDt / 2.5); u.corr[0] *= dc; u.corr[1] *= dc;
         pos = [pos[0] + u.corr[0], pos[1] + u.corr[1]];
+      }
+      // Nunca salta: si la posición que toca está lejos de la que se ve, se llega a ella rápido pero sin teletransportarse
+      if (this.opt.smooth && this.opt.exacto && u.view) {
+        const maxM = Math.max(u.kmh, 25) / 3.6 * 3 * realDt, dM = distM(u.view, pos);
+        if (dM > maxM) { const k = maxM / dM; pos = [u.view[0] + (pos[0] - u.view[0]) * k, u.view[1] + (pos[1] - u.view[1]) * k]; }
       }
       const h = this.opt.smooth ? angLerp(u.hview, v.hdg, Math.min(1, realDt * 4)) : v.hdg;
       if (!u.view || pos[0] !== u.view[0] || pos[1] !== u.view[1] || h !== u.hview) {
