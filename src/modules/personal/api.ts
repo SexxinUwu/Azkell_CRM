@@ -415,10 +415,10 @@ export function useDocumentosTodos() {
   });
 }
 
-export async function subirDocumento(personaId: number, datos: { tipo: TipoDoc; archivo: File; fecha_emision?: string; fecha_vencimiento?: string; descripcion?: string }) {
+export async function subirDocumento(personaId: number, datos: { tipo: TipoDoc; archivo?: File | null; fecha_emision?: string; fecha_vencimiento?: string; descripcion?: string }) {
   const f = new FormData();
   f.append('tipo', datos.tipo);
-  f.append('archivo', datos.archivo);
+  if (datos.archivo) f.append('archivo', datos.archivo);
   if (datos.fecha_emision) f.append('fecha_emision', datos.fecha_emision);
   if (datos.fecha_vencimiento) f.append('fecha_vencimiento', datos.fecha_vencimiento);
   if (datos.descripcion) f.append('descripcion', datos.descripcion);

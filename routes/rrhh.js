@@ -430,23 +430,26 @@ router.post('/personal/:id/documentos', subirDocumento.single('archivo'), async 
         const personaId = Number(req.params.id);
         const tipo = String(b.tipo || '').toUpperCase();
         if (!TIPOS_DOCUMENTO.includes(tipo)) return res.status(400).json({ error: 'Tipo de documento no válido.' });
-        if (!req.file) return res.status(400).json({ error: 'Elige el archivo del documento.' });
-        if (!MIME_PERMITIDOS.test(req.file.mimetype || '')) return res.status(400).json({ error: 'Solo se aceptan fotos (JPG, PNG, WEBP) o PDF.' });
+        // El archivo es opcional (como en los documentos de Flota): sin archivo se registra el documento con sus fechas
+        if (req.file && !MIME_PERMITIDOS.test(req.file.mimetype || '')) return res.status(400).json({ error: 'Solo se aceptan fotos (JPG, PNG, WEBP) o PDF.' });
         const [pr] = await tdb.query('SELECT id FROM rrhh_personal WHERE id = ?', [personaId]);
         if (!pr.length) return res.status(404).json({ error: 'La persona no existe.' });
 
-        let ext = (req.file.originalname.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'jpg';
-        let mime = req.file.mimetype;
-        if (/^image\/hei[cf]$/i.test(mime)) { mime = 'image/jpeg'; ext = 'jpg'; }
-        const key = `rrhh/documentos/${personaId}/${tipo.toLowerCase()}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${ext}`;
-        const url = await uploadToS3(req.file.buffer, key, mime);
+        let url = '', mime = null;
+        if (req.file) {
+            let ext = (req.file.originalname.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'jpg';
+            mime = req.file.mimetype;
+            if (/^image\/hei[cf]$/i.test(mime)) { mime = 'image/jpeg'; ext = 'jpg'; }
+            const key = `rrhh/documentos/${personaId}/${tipo.toLowerCase()}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${ext}`;
+            url = await uploadToS3(req.file.buffer, key, mime);
+        }
 
         const vence = fechaODoc(b.fecha_vencimiento);
         const emision = fechaODoc(b.fecha_emision);
         const quien = (req.user && req.user.nombre) ? req.user.nombre : 'SISTEMA';
         // Cada archivo nuevo se suma al historial: el vigente es el último que se cargó
         const [ins] = await tdb.query(`INSERT INTO rrhh_personal_documentos (personal_id, tipo, descripcion, archivo_url, nombre_archivo, mime, fecha_emision, fecha_vencimiento, subido_por)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, [personaId, tipo, (b.descripcion || '').slice(0, 150) || null, url, req.file.originalname.slice(0, 255), mime, emision, vence, quien]);
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, [personaId, tipo, (b.descripcion || '').slice(0, 150) || null, url, req.file ? req.file.originalname.slice(0, 255) : null, mime, emision, vence, quien]);
         const id = ins.insertId;
         // La licencia y el examen médico alimentan los avisos de «por vencer» de la ficha
         if (vence && tipo === 'LICENCIA') await tdb.query('UPDATE rrhh_personal SET licencia_vencimiento = ? WHERE id = ?', [vence, personaId]);

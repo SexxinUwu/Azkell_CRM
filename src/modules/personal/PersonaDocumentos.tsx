@@ -87,11 +87,12 @@ export function PersonaDocumentos({ persona: p }: { persona: Persona }) {
             {porVencer > 0 && <span className="doc-alquiler__chip doc-alquiler__chip--aviso">{porVencer} por vencer</span>}
             {vencidos > 0 && <span className="doc-alquiler__chip doc-alquiler__chip--aviso">{vencidos} vencido{vencidos === 1 ? '' : 's'}</span>}
           </div>
-          {puedeEditar && <Button variant="secondary" size="sm" icon={<Plus size={14} />} onClick={() => setSubiendo({ tipo: 'OTRO', doc: null, agregar: true })}>Agregar otro documento</Button>}
+          {puedeEditar && <Button variant="secondary" size="sm" icon={<Plus size={14} />} onClick={() => setSubiendo({ tipo: 'OTRO', doc: null, agregar: true })}>Agregar documento</Button>}
         </div>
 
+      {docs.length === 0 && <p className="doc-card__vacio" style={{ padding: 'var(--s-4)' }}>Todavía no hay documentos cargados. Usa «Agregar documento» y elige de la lista.</p>}
       <div className="doc-tarjetas">
-        {tipos.map((t, i) => {
+        {tipos.filter(t => docs.some(d => d.tipo === t.tipo)).map((t, i) => {
           const historial = docs.filter(d => d.tipo === t.tipo); // el servidor los entrega del más nuevo al más antiguo
           return (
             <TarjetaPersonal key={t.tipo} num={i + 1} titulo={t.titulo} color={COLORES[i % COLORES.length]} doc={historial[0] ?? null} anteriores={historial.slice(1)}
@@ -210,7 +211,6 @@ function DocumentoSheet({ personaId, nombresPropios, abierto, onClose }: { perso
   }, [abierto]);
 
   async function guardar() {
-    if (!archivo && !doc) { setError('Elige la foto o el PDF del documento.'); return; }
     if (agregar && !seleccion) { setError('Elige el documento o escribe uno nuevo.'); return; }
     const nombre = agregar ? (esCustom ? nombreCustom : '') : descripcion.trim();
     if (tipo === 'OTRO' && !nombre) { setError('Indica qué documento es.'); return; }
@@ -219,9 +219,9 @@ function DocumentoSheet({ personaId, nombresPropios, abierto, onClose }: { perso
     setGuardando(true); setError(null);
     try {
       // Un archivo nuevo se suma al historial; sin archivo solo se corrigen las fechas del actual
-      if (archivo) await subirDocumento(personaId, { tipo, archivo, fecha_emision: emision, fecha_vencimiento: vence, descripcion: agregar ? nombre : descripcion.trim() });
+      if (archivo || !doc) await subirDocumento(personaId, { tipo, archivo, fecha_emision: emision, fecha_vencimiento: vence, descripcion: agregar ? nombre : descripcion.trim() });
       else if (doc) await corregirDocumento(doc.id, { fecha_emision: emision, fecha_vencimiento: vence, descripcion: descripcion.trim() });
-      haptic('success'); toast(archivo ? 'Documento guardado' : 'Documento actualizado');
+      haptic('success'); toast(!doc ? 'Documento guardado' : archivo ? 'Documento guardado' : 'Documento actualizado');
       await qc.invalidateQueries({ queryKey: ['personal'] });
       onClose();
     } catch (err) { setError(errorMessage(err)); haptic('warning'); } finally { setGuardando(false); }
@@ -240,7 +240,7 @@ function DocumentoSheet({ personaId, nombresPropios, abierto, onClose }: { perso
                 onCreate={t => { const n = t.trim(); if (n) setSeleccion(PREFIJO_CUSTOM + n); }} />}
             </Field>
           : tipo === 'OTRO' && <Field label="¿Qué documento es?" wide>{p => <TextInput {...p} value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Ej.: Certificado de curso de manejo defensivo" />}</Field>}
-        <Field label={doc ? 'Nuevo archivo (opcional)' : 'Foto o PDF'} wide hint={archivo?.name ?? (doc ? `Actual: ${doc.nombre_archivo ?? 'archivo cargado'}. Elige otro para sumarlo al historial; sin archivo solo se corrigen las fechas` : 'Con el celular puedes tomar la foto en el momento')}>
+        <Field label={doc ? 'Nuevo archivo (opcional)' : 'Archivo (PDF o foto)'} wide hint={archivo?.name ?? (doc ? `Actual: ${doc.nombre_archivo ?? 'archivo cargado'}. Elige otro para sumarlo al historial; sin archivo solo se corrigen las fechas` : 'Opcional. Con el celular puedes tomar la foto en el momento')}>
           {p => <ArchivoInput {...p} accept="image/*,application/pdf" capture="environment" onChange={setArchivo} />}
         </Field>
         {(cfg.vence || tipo === 'OTRO') && <Field label="Vence el" hint={cfg.vence ? undefined : 'Opcional: sin fecha, el documento queda permanente'}>{p => <TextInput {...p} type="date" value={vence} onChange={e => setVence(e.target.value)} />}</Field>}
