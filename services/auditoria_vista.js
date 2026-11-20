@@ -3,7 +3,7 @@
 // (Wialon, fotos, etc.). Solo lectura. La fecha se guarda en UTC: aquí se entrega en ISO con «Z» y el cliente la muestra en hora de Lima.
 
 /** Peticiones automáticas o de apoyo que no son decisiones de una persona */
-const RUIDO_REGEX = '^/script/obtener|presign|wialon-telemetria|imagen-lectura|^/push|^/asistente|sincronizar-remoto|/fotos/confirmar|/archivos/confirmar|/notificaciones';
+const RUIDO_REGEX = '^/script/obtener|presign|wialon-telemetria|imagen-lectura|^/push|^/asistente|sincronizar-remoto|/fotos/confirmar|/notificaciones';
 
 const CODIGO = '[A-Z]{2,4}-[0-9]{4}-[0-9]+';
 
@@ -136,6 +136,20 @@ function describirHecho(e) {
     return { categoria: 'consulta', texto: `Consultó ${ETIQUETA_MODULO[e.segmento] || e.segmento || 'el sistema'}` };
   }
 
+  // Adjuntos de una orden: quién sube o quita la factura, la cotización o el voucher (la subida es «archivos/confirmar»; «presigned» es solo el permiso previo)
+  const ADJUNTO = { factura: 'una factura', cotizacion: 'una cotización', voucher: 'un voucher' };
+  if (metodo === 'POST' && /\/entradas\/[^/]+\/archivos\/confirmar$/.test(ruta)) {
+    const tipos = [...new Set([...String(e.body_resumen || '').matchAll(/"tipo":"([a-z]+)"/g)].map(m => m[1]))].map(t => ADJUNTO[t] || 'un archivo');
+    return { categoria: 'creo', texto: `Subió ${tipos.length ? tipos.join(' y ') : 'un archivo'} a la orden ${idDeRuta(ruta, 'entradas') || quien}` };
+  }
+  const subido = ruta.match(/\/entradas\/[^/]+\/archivo\/([a-z]+)$/);
+  if (metodo === 'POST' && subido) {
+    return { categoria: 'creo', texto: `Subió ${ADJUNTO[subido[1]] || 'un archivo'} a la orden ${idDeRuta(ruta, 'entradas') || quien}` };
+  }
+  const quitado = ruta.match(/\/entradas\/[^/]+\/archivo\/([a-z]+)$/);
+  if (metodo === 'DELETE' && quitado) {
+    return { categoria: 'elimino', texto: `Eliminó ${ADJUNTO[quitado[1]] || 'un archivo'} de la orden ${idDeRuta(ruta, 'entradas') || quien}` };
+  }
   if (/\/entradas\/[^/]+\/anular$/.test(ruta)) {
     return { categoria: 'anulo', texto: `Anuló la orden ${quien}${body.motivo ? ` · Motivo: ${body.motivo}` : ''}` };
   }
