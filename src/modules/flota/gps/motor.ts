@@ -55,6 +55,16 @@ interface U {
   estadoInit: boolean;
   /** Cuándo llegó la última lectura distinta (ms, reloj de rAF) */
   llego: number;
+  /** Posición tal como la informó el GPS (sin adelantar), para detectar saltos reales */
+  raw?: LngLat;
+}
+
+/** Tope (s) que se adelanta una unidad en marcha con la velocidad y el rumbo de su último mensaje */
+const ADELANTO_MAX_S = 45;
+/** Posición tras avanzar `seg` segundos desde `p` con rumbo `hdg` (° desde el norte) a `kmh` */
+function proyectar(p: LngLat, hdg: number, kmh: number, seg: number): LngLat {
+  const d = kmh / 3.6 * seg, r = hdg * Math.PI / 180;
+  return [p[0] + d * Math.sin(r) / (111320 * Math.cos(p[1] * Math.PI / 180)), p[1] + d * Math.cos(r) / 111320];
 }
 
 export interface CallbacksMotor {
@@ -408,14 +418,25 @@ export class MotorTelemetria {
         // Con la unidad casi quieta el rumbo del GPS no sirve: se conserva el anterior
         const hdg = e.velocidad > MOV_KMH || !u.b ? e.rumbo : u.b.hdg;
         const largo = u.llego ? now - u.llego > Math.max(durUnidad * 3, 120000) : false;
-        if (!u.b || !u.view || distM(u.b.pos, pos) > SALTO_M || largo) {
+        // Un mensaje del GPS ya llega con unos segundos de atraso: una unidad en marcha se dibuja donde debe estar ahora (avanzando con su
+        // velocidad y rumbo, hasta ADELANTO_MAX_S), no donde estaba al mandar el mensaje. Así el tracto y su remolque, que reportan a ritmos
+        // distintos, no se separan ni se invierten, y la unidad no se queda parada entre un mensaje y otro.
+        const edadS = e.tPos ? Math.max(0, (Date.now() - e.tPos) / 1000) : 0;
+        const adelantar = (extra: number) => (e.velocidad > MOV_KMH ? proyectar(pos, hdg, e.velocidad, Math.min(edadS + extra, ADELANTO_MAX_S)) : pos);
+        const saltoReal = u.raw ? distM(u.raw, pos) > SALTO_M : false;
+        u.raw = pos;
+        if (!u.b || !u.view || saltoReal || largo) {
           // Primer dato, salto grande o hueco largo: se coloca sin animar
-          u.a = u.b = { pos, hdg, t: now }; u.llego = now;
-          u.view = pos.slice() as LngLat; u.hview = hdg;
-        } else if (u.b.pos[0] !== pos[0] || u.b.pos[1] !== pos[1] || u.b.hdg !== hdg) {
-          // Se dibuja desde donde está hasta la lectura nueva, tardando lo que tarda en llegar la siguiente
-          u.a = { pos: u.view.slice() as LngLat, hdg: u.hview, t: now };
-          u.b = { pos, hdg, t: now + durUnidad }; u.llego = now;
+          const ya = adelantar(0);
+          u.a = u.b = { pos: ya, hdg, t: now }; u.llego = now;
+          u.view = ya.slice() as LngLat; u.hview = hdg;
+        } else {
+          // Se dibuja desde donde está hasta donde estará cuando llegue la próxima consulta
+          const destino = adelantar(dur / 1000);
+          if (u.b.pos[0] !== destino[0] || u.b.pos[1] !== destino[1] || u.b.hdg !== hdg) {
+            u.a = { pos: u.view.slice() as LngLat, hdg: u.hview, t: now };
+            u.b = { pos: destino, hdg, t: now + dur }; u.llego = now;
+          }
         }
         this.eventos(u, pos);
       } else { u.a = u.b = null; u.view = null; u.vc.pos = null; }
