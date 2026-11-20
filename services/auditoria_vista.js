@@ -142,6 +142,10 @@ function describirHecho(e) {
     const tipos = [...new Set([...String(e.body_resumen || '').matchAll(/"tipo":"([a-z]+)"/g)].map(m => m[1]))].map(t => ADJUNTO[t] || 'un archivo');
     return { categoria: 'creo', texto: `Subió ${tipos.length ? tipos.join(' y ') : 'un archivo'} a la orden ${idDeRuta(ruta, 'entradas') || quien}` };
   }
+  const subido = ruta.match(/\/entradas\/[^/]+\/archivo\/([a-z]+)$/);
+  if (metodo === 'POST' && subido) {
+    return { categoria: 'creo', texto: `Subió ${ADJUNTO[subido[1]] || 'un archivo'} a la orden ${idDeRuta(ruta, 'entradas') || quien}` };
+  }
   const quitado = ruta.match(/\/entradas\/[^/]+\/archivo\/([a-z]+)$/);
   if (metodo === 'DELETE' && quitado) {
     return { categoria: 'elimino', texto: `Eliminó ${ADJUNTO[quitado[1]] || 'un archivo'} de la orden ${idDeRuta(ruta, 'entradas') || quien}` };
