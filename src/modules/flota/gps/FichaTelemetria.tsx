@@ -126,6 +126,9 @@ export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, rendim
   celdas.push({ t: u.voltaje ? 'Batería / ignición' : 'Ignición', v: `${u.voltaje ? `${u.voltaje} V · ` : ''}Motor ${u.ignicion ? 'ON' : 'OFF'}` });
   const gps = [u.satelites ? `${u.satelites} sat` : '', u.altitud ? `${Math.round(u.altitud)} msnm` : ''].filter(Boolean).join(' · ');
   if (gps) celdas.push({ t: u.satelites && u.altitud ? 'Satélites / altitud' : u.satelites ? 'Satélites' : 'Altitud', v: gps });
+  // Unidades refrigeradas (Thermo King): temperatura de sus sensores, con la lectura de cada uno
+  const temps = combustible?.temperaturas ?? [];
+  if (temps.length) celdas.push({ t: 'Temperatura (refrigeración)', v: temps.map(x => `${x.nombre.replace(/^sensor\s*/i, '')}: ${x.valor.toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} °C`).join('  ·  '), ancho: true });
   if (conductor) celdas.push({ t: 'Conductor', v: conductor, ancho: true });
   if (l?.geocerca) celdas.push({ t: 'Geocerca', v: l.geocerca, ancho: true });
 
