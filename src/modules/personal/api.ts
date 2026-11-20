@@ -354,6 +354,7 @@ export interface TipoDocConfig {
   vence: boolean;
   /** Se exige a todo el personal (la licencia, solo a los conductores) */
   obligatorio: boolean;
+  /** Se puede cargar a cualquiera, pero solo se exige a los conductores */
   soloConductor?: boolean;
 }
 

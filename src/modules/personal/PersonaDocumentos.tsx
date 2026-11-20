@@ -1,11 +1,12 @@
 import '../flota/documentos.css';
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, Contact, Eye, FileText, History, Plus, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { Field, TextInput } from '../../core/ui/Field';
+import { Combobox, type ComboboxOption } from '../../core/ui/Combobox';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -36,7 +37,7 @@ function textoEstado(d: DocumentoPersona): string {
 export function PersonaDocumentos({ persona: p }: { persona: Persona }) {
   const { can } = useAuth();
   const q = useDocumentosPersona(p.id);
-  const [subiendo, setSubiendo] = useState<{ tipo: TipoDoc; doc: DocumentoPersona | null } | null>(null);
+  const [subiendo, setSubiendo] = useState<{ tipo: TipoDoc; doc: DocumentoPersona | null; agregar?: boolean } | null>(null);
   const [viendo, setViendo] = useState<DocumentoPersona | null>(null);
   const [porEliminar, setPorEliminar] = useState<DocumentoPersona | null>(null);
 
@@ -44,12 +45,12 @@ export function PersonaDocumentos({ persona: p }: { persona: Persona }) {
   const puedeEliminar = can('rrhh_personal.eliminar');
   const docs = q.data ?? [];
   const esConductor = p.categoria_rol === 'CONDUCTOR' || /conductor|chofer/i.test(p.cargo ?? '');
-  // La licencia solo se pide a los conductores; si alguien más la tiene cargada, igual se muestra
-  const tipos = TIPOS_DOC.filter(t => t.tipo !== 'OTRO' && (!t.soloConductor || esConductor || docs.some(d => d.tipo === t.tipo)));
+  // La licencia se puede cargar a cualquier persona (un administrativo también la tiene); solo se le exige a los conductores
+  const tipos = TIPOS_DOC.filter(t => t.tipo !== 'OTRO');
   const otros = docs.filter(d => d.tipo === 'OTRO');
 
   // Salud: de los documentos que se exigen a esta persona, cuántos están cargados y vigentes (como la «Salud» de las unidades en Flota)
-  const exigidos = tipos.filter(t => t.obligatorio);
+  const exigidos = tipos.filter(t => t.obligatorio && (!t.soloConductor || esConductor));
   const alDia = exigidos.filter(t => { const d = docs.find(x => x.tipo === t.tipo); return d && estadoDoc(d).estado !== 'vencido'; }).length;
   const salud = exigidos.length ? Math.round((alDia / exigidos.length) * 100) : 100;
   const colorSalud = salud >= 100 ? 'var(--green-ink)' : salud >= 50 ? 'var(--amber-ink)' : 'var(--red-ink)';
@@ -86,7 +87,7 @@ export function PersonaDocumentos({ persona: p }: { persona: Persona }) {
             {porVencer > 0 && <span className="doc-alquiler__chip doc-alquiler__chip--aviso">{porVencer} por vencer</span>}
             {vencidos > 0 && <span className="doc-alquiler__chip doc-alquiler__chip--aviso">{vencidos} vencido{vencidos === 1 ? '' : 's'}</span>}
           </div>
-          {puedeEditar && <Button variant="secondary" size="sm" icon={<Plus size={14} />} onClick={() => setSubiendo({ tipo: 'OTRO', doc: null })}>Agregar otro documento</Button>}
+          {puedeEditar && <Button variant="secondary" size="sm" icon={<Plus size={14} />} onClick={() => setSubiendo({ tipo: 'OTRO', doc: null, agregar: true })}>Agregar otro documento</Button>}
         </div>
 
       <div className="doc-tarjetas">
@@ -107,7 +108,7 @@ export function PersonaDocumentos({ persona: p }: { persona: Persona }) {
 
       </section>
 
-      <DocumentoSheet personaId={p.id} abierto={subiendo} onClose={() => setSubiendo(null)} />
+      <DocumentoSheet personaId={p.id} nombresPropios={otros.map(d => d.descripcion ?? '')} abierto={subiendo} onClose={() => setSubiendo(null)} />
       <VisorDocumento doc={viendo} onClose={() => setViendo(null)} />
       <EliminarDocumento doc={porEliminar} onClose={() => setPorEliminar(null)} />
     </div>
@@ -171,7 +172,12 @@ function TarjetaPersonal({ num, titulo, color, doc, anteriores, puedeEditar, pue
 }
 
 /** Subir un documento o corregir su vencimiento */
-function DocumentoSheet({ personaId, abierto, onClose }: { personaId: number; abierto: { tipo: TipoDoc; doc: DocumentoPersona | null } | null; onClose: () => void }) {
+// Nombres que ya se usan: salen siempre en la lista de «Agregar otro documento», aunque la persona aún no tenga ninguno cargado
+const OTROS_COMUNES = ['Récord de conductores', 'Certificado de curso de manejo defensivo', 'Carnet de vacunación', 'Certificado de estudios', 'Constancia de trabajo'];
+const sinTilde = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const PREFIJO_CUSTOM = 'custom:';
+
+function DocumentoSheet({ personaId, nombresPropios, abierto, onClose }: { personaId: number; nombresPropios: string[]; abierto: { tipo: TipoDoc; doc: DocumentoPersona | null; agregar?: boolean } | null; onClose: () => void }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [archivo, setArchivo] = useState<File | null>(null);
@@ -180,24 +186,40 @@ function DocumentoSheet({ personaId, abierto, onClose }: { personaId: number; ab
   const [descripcion, setDescripcion] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const tipo = abierto?.tipo ?? 'OTRO';
+  // «Agregar otro documento»: se elige de la lista de los que se solicitan o se escribe uno nuevo (como en los documentos de Flota)
+  const [seleccion, setSeleccion] = useState('');
+  const agregar = !!abierto?.agregar;
+  const esCustom = seleccion.startsWith(PREFIJO_CUSTOM);
+  const nombreCustom = esCustom ? seleccion.slice(PREFIJO_CUSTOM.length).trim() : '';
+  const tipo: TipoDoc = agregar ? (!seleccion || esCustom ? 'OTRO' : seleccion as TipoDoc) : (abierto?.tipo ?? 'OTRO');
   const cfg = configDoc(tipo);
   const doc = abierto?.doc ?? null;
+
+  const opcionesDoc = useMemo(() => {
+    const o: ComboboxOption[] = TIPOS_DOC.filter(t => t.tipo !== 'OTRO').map(t => ({ value: t.tipo, label: t.titulo, description: t.vence ? 'Vence' : 'No vence' }));
+    const vistos = new Set<string>(TIPOS_DOC.map(t => sinTilde(t.titulo)));
+    const sumar = (t: string) => { const n = t.trim(); const k = sinTilde(n); if (!n || vistos.has(k)) return; vistos.add(k); o.push({ value: PREFIJO_CUSTOM + n, label: n }); };
+    OTROS_COMUNES.forEach(sumar); nombresPropios.forEach(sumar); if (esCustom) sumar(nombreCustom);
+    return o;
+  }, [nombresPropios, esCustom, nombreCustom]);
 
   useEffect(() => {
     if (!abierto) return;
     setArchivo(null); setError(null);
-    setEmision(abierto.doc?.fecha_emision ?? ''); setVence(abierto.doc?.fecha_vencimiento ?? ''); setDescripcion(abierto.doc?.descripcion ?? '');
+    setSeleccion(''); setEmision(abierto.doc?.fecha_emision ?? ''); setVence(abierto.doc?.fecha_vencimiento ?? ''); setDescripcion(abierto.doc?.descripcion ?? '');
   }, [abierto]);
 
   async function guardar() {
     if (!archivo && !doc) { setError('Elige la foto o el PDF del documento.'); return; }
-    if (tipo === 'OTRO' && !descripcion.trim()) { setError('Indica qué documento es.'); return; }
+    if (agregar && !seleccion) { setError('Elige el documento o escribe uno nuevo.'); return; }
+    const nombre = agregar ? (esCustom ? nombreCustom : '') : descripcion.trim();
+    if (tipo === 'OTRO' && !nombre) { setError('Indica qué documento es.'); return; }
+    if (emision && vence && vence < emision) { setError('El vencimiento es anterior a la emisión.'); return; }
     if (cfg.vence && !vence) { setError('Indica la fecha de vencimiento.'); return; }
     setGuardando(true); setError(null);
     try {
       // Un archivo nuevo se suma al historial; sin archivo solo se corrigen las fechas del actual
-      if (archivo) await subirDocumento(personaId, { tipo, archivo, fecha_emision: emision, fecha_vencimiento: vence, descripcion: descripcion.trim() });
+      if (archivo) await subirDocumento(personaId, { tipo, archivo, fecha_emision: emision, fecha_vencimiento: vence, descripcion: agregar ? nombre : descripcion.trim() });
       else if (doc) await corregirDocumento(doc.id, { fecha_emision: emision, fecha_vencimiento: vence, descripcion: descripcion.trim() });
       haptic('success'); toast(archivo ? 'Documento guardado' : 'Documento actualizado');
       await qc.invalidateQueries({ queryKey: ['personal'] });
@@ -206,15 +228,22 @@ function DocumentoSheet({ personaId, abierto, onClose }: { personaId: number; ab
   }
 
   return (
-    <Sheet open={!!abierto} onClose={() => !guardando && onClose()} title={doc ? `Actualizar · ${cfg.titulo}` : cfg.titulo}
+    <Sheet open={!!abierto} onClose={() => !guardando && onClose()} title={doc ? `Actualizar · ${cfg.titulo}` : agregar ? 'Agregar documento' : cfg.titulo}
       footer={<><Button variant="secondary" onClick={onClose} disabled={guardando}>Cancelar</Button><Button variant="primary" onClick={guardar} loading={guardando}>Guardar</Button></>}>
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
+        {agregar
+          ? <Field label="Documento" wide>
+              {p => <Combobox {...p} enHoja compacta options={opcionesDoc} value={seleccion || null} placeholder="Busca o escribe un tipo de documento"
+                tituloHoja="Tipo de documento" createLabel="Agregar tipo"
+                onChange={v => { if (v) setSeleccion(v); }}
+                onCreate={t => { const n = t.trim(); if (n) setSeleccion(PREFIJO_CUSTOM + n); }} />}
+            </Field>
+          : tipo === 'OTRO' && <Field label="¿Qué documento es?" wide>{p => <TextInput {...p} value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Ej.: Certificado de curso de manejo defensivo" />}</Field>}
         <Field label={doc ? 'Nuevo archivo (opcional)' : 'Foto o PDF'} wide hint={archivo?.name ?? (doc ? `Actual: ${doc.nombre_archivo ?? 'archivo cargado'}. Elige otro para sumarlo al historial; sin archivo solo se corrigen las fechas` : 'Con el celular puedes tomar la foto en el momento')}>
           {p => <ArchivoInput {...p} accept="image/*,application/pdf" capture="environment" onChange={setArchivo} />}
         </Field>
-        {tipo === 'OTRO' && <Field label="¿Qué documento es?" wide>{p => <TextInput {...p} value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Ej.: Certificado de curso de manejo defensivo" />}</Field>}
-        {cfg.vence && <Field label="Vence el">{p => <TextInput {...p} type="date" value={vence} onChange={e => setVence(e.target.value)} />}</Field>}
+        {(cfg.vence || tipo === 'OTRO') && <Field label="Vence el" hint={cfg.vence ? undefined : 'Opcional: sin fecha, el documento queda permanente'}>{p => <TextInput {...p} type="date" value={vence} onChange={e => setVence(e.target.value)} />}</Field>}
         <Field label="Emitido el">{p => <TextInput {...p} type="date" value={emision} onChange={e => setEmision(e.target.value)} />}</Field>
       </div>
     </Sheet>
