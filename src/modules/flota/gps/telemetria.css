@@ -87,6 +87,10 @@
 .tg-cell b { display: block; margin-top: 4px; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
 .tg-cell b.mono { font-size: 13.5px; }
 .tg-cell--ancho { grid-column: 1/3; }
+/* Temperatura de refrigeración: una línea por sensor, con el nombre en negrita y la lectura al lado */
+.tg-cell .tg-temp { margin-top: 4px; font-size: 14px; }
+.tg-cell .tg-temp b { display: inline; margin: 0 4px 0 0; }
+.tg-cell .tg-temp .mono { font-size: 13.5px; }
 .tg-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
 .tg-grab { display: none; }
 
