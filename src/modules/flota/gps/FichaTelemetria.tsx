@@ -199,7 +199,7 @@ export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, rendim
           <div key={c.t} className={`tg-cell${c.ancho ? ' tg-cell--ancho' : ''}`}>
             <span className="tg-lbl">{c.t}</span>
             {c.lineas
-              ? c.lineas.map(x => <div key={x.k}><b>{x.k}</b> <span className="mono">{x.v}</span></div>)
+              ? c.lineas.map(x => <div key={x.k} className="tg-temp"><b>{x.k}</b> <span className="mono">{x.v}</span></div>)
               : <b className={c.ancho ? undefined : 'mono'}>{c.v}</b>}
           </div>
         ))}
