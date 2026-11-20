@@ -57,6 +57,12 @@ interface U {
   llego: number;
   /** Posición tal como la informó el GPS (sin adelantar), para detectar saltos reales */
   raw?: LngLat;
+  /** Mensajes reales del GPS (con la hora del equipo) de los que sale el movimiento */
+  fixes: Array<{ t: number; pos: LngLat; hdg: number; kmh: number }>;
+  /** Tiempo (ms) entre los últimos mensajes del equipo */
+  deltas: number[];
+  /** Corrección (grados) que se va apagando, para que la predicción no dé saltos al llegar un mensaje */
+  corr: [number, number];
 }
 
 /** Tope (s) que se adelanta una unidad en marcha con la velocidad y el rumbo de su último mensaje */
@@ -152,7 +158,6 @@ export class MotorTelemetria {
   private prevActivo = false;
   private activo = false;
   private encuadreInicial = false;
-  private ultimaActual = 0;
   private qT = 0; private qN = 0; private qSlow = 0;
   private ro: ResizeObserver | null = null;
   private idAlerta = 0;
@@ -392,12 +397,29 @@ export class MotorTelemetria {
   }
 
   // ─── Datos ───
+  /** Dónde y hacia dónde se dibuja la unidad en el instante `ahora` (ms) según sus mensajes del GPS */
+  private vistaDe(u: U, ahora: number): { pos: LngLat; hdg: number } {
+    const f = u.fixes, ult = f[f.length - 1];
+    if (!this.opt.exacto) {
+      // Predicción: sigue avanzando con la última velocidad y rumbo, hasta ADELANTO_MAX_S
+      const seg = Math.min(Math.max(0, (ahora - ult.t) / 1000), ADELANTO_MAX_S);
+      return { pos: ult.kmh > MOV_KMH ? proyectar(ult.pos, ult.hdg, ult.kmh, seg) : ult.pos, hdg: ult.hdg };
+    }
+    // Posición exacta: se muestra el camino real, con un retraso algo mayor al tiempo entre mensajes del equipo (así siempre hay dos mensajes entre los que moverse)
+    const retraso = clamp(Math.max(3000, ...u.deltas) * 1.15 + 3500, 6000, 70000);
+    const td = ahora - retraso;
+    if (f.length === 1 || td <= f[0].t) return { pos: f[0].pos, hdg: f[0].hdg };
+    if (td >= ult.t) return { pos: ult.pos, hdg: ult.hdg };
+    let i = f.length - 2;
+    while (i > 0 && f[i].t > td) i--;
+    const a = f[i], b = f[i + 1], span = b.t - a.t;
+    if (span > 180000) return { pos: a.pos, hdg: a.hdg };
+    const p = (td - a.t) / span;
+    return { pos: [a.pos[0] + (b.pos[0] - a.pos[0]) * p, a.pos[1] + (b.pos[1] - a.pos[1]) * p], hdg: angLerp(a.hdg, b.hdg, p) };
+  }
   /** Llega una lectura nueva de Wialon (cada intervalo de actualización) */
   actualizar(entradas: EntradaMotor[]) {
     const now = performance.now();
-    const gap = this.ultimaActual ? now - this.ultimaActual : 4000;
-    this.ultimaActual = now;
-    const dur = clamp(gap, 1000, 12000);
     const vistos = new Set<string>();
     for (const e of entradas) {
       vistos.add(e.placa);
@@ -405,45 +427,43 @@ export class MotorTelemetria {
       if (!u) {
         u = {
           placa: e.placa, e, st: 'off', a: null, b: null, view: null, hview: 0, kmh: 0, trail: [], hist: [], geo: null, geoInit: false,
-          alertaExceso: false, visible: true, tagEl: null, tagShow: false, tagOff: 18, tagTxt: '', estadoInit: false, llego: 0,
+          alertaExceso: false, visible: true, tagEl: null, tagShow: false, tagOff: 18, tagTxt: '', estadoInit: false, llego: 0, fixes: [], deltas: [], corr: [0, 0],
           vc: { placa: e.placa, desc: e.desc, pos: null, rumbo: 0, st: 'off', sel: false, visible: true },
         };
         this.units.set(e.placa, u);
       }
       // El equipo reporta cada 10 a 30 s: la unidad se anima durante ese tiempo real entre dos mensajes (no durante los 4 s de la consulta), así no queda parada entre uno y otro
-      const tPosAnt = u.e.tPos;
-      const durUnidad = (e.tPos && tPosAnt && e.tPos > tPosAnt) ? clamp(e.tPos - tPosAnt, 1000, 45000) : dur;
       u.e = e; u.vc.desc = e.desc;
       u.kmh = e.velocidad;
       if (e.lat != null && e.lng != null) {
         const pos: LngLat = [e.lng, e.lat];
         // Con la unidad casi quieta el rumbo del GPS no sirve: se conserva el anterior
         const hdg = e.velocidad > MOV_KMH || !u.b ? e.rumbo : u.b.hdg;
-        const largo = u.llego ? now - u.llego > Math.max(durUnidad * 3, 120000) : false;
-        // Un mensaje del GPS ya llega con unos segundos de atraso: una unidad en marcha se dibuja donde debe estar ahora (avanzando con su
-        // velocidad y rumbo, hasta ADELANTO_MAX_S), no donde estaba al mandar el mensaje. Así el tracto y su remolque, que reportan a ritmos
-        // distintos, no se separan ni se invierten, y la unidad no se queda parada entre un mensaje y otro.
-        const edadS = e.tPos ? Math.max(0, (Date.now() - e.tPos) / 1000) : 0;
-        // Con «posición exacta» no se predice: la unidad va a la última posición que mandó el GPS
-        const exacto = this.opt.exacto;
-        const adelantar = (extra: number) => (!exacto && e.velocidad > MOV_KMH ? proyectar(pos, hdg, e.velocidad, Math.min(edadS + extra, ADELANTO_MAX_S)) : pos);
-        const saltoReal = u.raw ? distM(u.raw, pos) > SALTO_M : false;
-        u.raw = pos;
-        if (!u.b || !u.view || saltoReal || largo) {
-          // Primer dato, salto grande o hueco largo: se coloca sin animar
-          const ya = adelantar(0);
-          u.a = u.b = { pos: ya, hdg, t: now }; u.llego = now;
-          u.view = ya.slice() as LngLat; u.hview = hdg;
-        } else {
-          // Se dibuja desde donde está hasta donde estará cuando llegue la próxima consulta
-          const destino = adelantar(dur / 1000);
-          if (u.b.pos[0] !== destino[0] || u.b.pos[1] !== destino[1] || u.b.hdg !== hdg) {
-            u.a = { pos: u.view.slice() as LngLat, hdg: u.hview, t: now };
-            u.b = { pos: destino, hdg, t: now + (exacto ? Math.min(dur, 900) : dur) }; u.llego = now;
+        const tFix = e.tPos || Date.now();
+        const ult = u.fixes[u.fixes.length - 1];
+        if (!ult) {
+          u.fixes.push({ t: tFix, pos, hdg, kmh: e.velocidad });
+          const v = this.vistaDe(u, Date.now()); u.view = v.pos.slice() as LngLat; u.hview = v.hdg;
+        } else if (tFix > ult.t) {
+          const dt = tFix - ult.t;
+          // Salto real: más lejos de lo que pudo recorrer en ese tiempo (a la velocidad que fuera, con holgura)
+          const maxMov = (Math.max(ult.kmh, e.velocidad, 80) / 3.6) * (dt / 1000) * 1.6 + 150;
+          if (dt > 600000 || distM(ult.pos, pos) > Math.max(SALTO_M, maxMov)) {
+            u.fixes.length = 0; u.deltas.length = 0; u.corr = [0, 0];
+            u.fixes.push({ t: tFix, pos, hdg, kmh: e.velocidad });
+            u.view = pos.slice() as LngLat; u.hview = hdg;
+          } else {
+            const antes = u.view;
+            u.fixes.push({ t: tFix, pos, hdg, kmh: e.velocidad }); if (u.fixes.length > 12) u.fixes.shift();
+            u.deltas.push(clamp(dt, 1000, 300000)); if (u.deltas.length > 4) u.deltas.shift();
+            // Predicción: lo que se ve ahora y lo que ahora se predice difieren un poco; esa diferencia se apaga sola en unos segundos
+            if (!this.opt.exacto && antes) { const n = this.vistaDe(u, Date.now()).pos; u.corr = [antes[0] - n[0], antes[1] - n[1]]; }
           }
         }
+        const ultimo = u.fixes[u.fixes.length - 1];
+        u.b = { pos: ultimo.pos, hdg: ultimo.hdg, t: now }; u.a = u.b; u.llego = now; u.raw = pos;
         this.eventos(u, pos);
-      } else { u.a = u.b = null; u.view = null; u.vc.pos = null; }
+      } else { u.a = u.b = null; u.view = null; u.vc.pos = null; u.fixes.length = 0; u.deltas.length = 0; }
     }
     for (const p of [...this.units.keys()]) if (!vistos.has(p)) { this.quitarEtiqueta(this.units.get(p)!); this.units.delete(p); if (this.sel === p) this.seleccionar(null, false, true); }
     this.evaluarEstados();
@@ -497,18 +517,23 @@ export class MotorTelemetria {
     if (!this.activo || document.hidden) { this.prevActivo = false; return; }
     const m = this.mapa;
     const moviendo = m.isMoving();
-    // Interpolación entre las dos últimas posiciones
+    // Movimiento continuo a partir de los mensajes reales del GPS (con la hora del equipo), como en un navegador:
+    //  · Posición exacta (activada): la unidad recorre el camino real entre dos mensajes, con un pequeño retraso para no quedarse sin dato.
+    //  · Sin ella: se predice con la última velocidad y rumbo, y cada mensaje nuevo se corrige poco a poco.
     let anim = false;
+    const ahora = Date.now();
     this.units.forEach(u => {
-      const a = u.a, b = u.b;
-      if (!a || !b) return;
-      if (!this.opt.smooth) { u.view = b.pos; u.hview = b.hdg; return; }
-      const span = Math.max(1, b.t - a.t), p = clamp((now - a.t) / span, 0, 1);
-      if (p >= 1 && u.view && u.view[0] === b.pos[0] && u.view[1] === b.pos[1]) return;
-      u.view = [a.pos[0] + (b.pos[0] - a.pos[0]) * p, a.pos[1] + (b.pos[1] - a.pos[1]) * p];
-      u.hview = angLerp(a.hdg, b.hdg, p);
-      if (p < 1) anim = true;
-      u.vc.pos = u.view; u.vc.rumbo = u.hview; this.sucio = true; this.sucioDatos = true;
+      if (!u.fixes.length) return;
+      const v = this.opt.smooth ? this.vistaDe(u, ahora) : { pos: u.fixes[u.fixes.length - 1].pos, hdg: u.fixes[u.fixes.length - 1].hdg };
+      let pos = v.pos;
+      if (this.opt.smooth && !this.opt.exacto) {
+        const dc = Math.exp(-realDt / 2.5); u.corr[0] *= dc; u.corr[1] *= dc;
+        pos = [pos[0] + u.corr[0], pos[1] + u.corr[1]];
+      }
+      const h = this.opt.smooth ? angLerp(u.hview, v.hdg, Math.min(1, realDt * 4)) : v.hdg;
+      if (!u.view || pos[0] !== u.view[0] || pos[1] !== u.view[1] || h !== u.hview) {
+        u.view = pos; u.hview = h; u.vc.pos = pos; u.vc.rumbo = h; anim = true; this.sucio = true; this.sucioDatos = true;
+      }
     });
     this.units.forEach(u => { if (u.view && !u.vc.pos) { u.vc.pos = u.view; u.vc.rumbo = u.hview; } });
 
