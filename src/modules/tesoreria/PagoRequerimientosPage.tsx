@@ -26,7 +26,7 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'accion', titulo: 'Acción', ancho: 130 },
   { id: 'importe', titulo: 'Monto a proceder', ancho: 150, alinear: 'right' },
   { id: 'solic', titulo: 'Solicitante', ancho: 150 },
-  { id: 'centro', titulo: 'Centro costo', ancho: 120 },
+  { id: 'placa', titulo: 'Placa', ancho: 110 },
   { id: 'motivo', titulo: 'Motivo', ancho: 240 },
   { id: 'tipo', titulo: 'Tipo', ancho: 150 },
   { id: 'oc', titulo: 'N° de documento', ancho: 150 },
@@ -42,7 +42,7 @@ const COLUMNAS: ColumnaTabla[] = [
 ];
 
 const ENCABEZADOS_EXCEL = [
-  'N°', 'Estado', 'Moneda', 'Importe', 'Condición de pago', 'Días de crédito', 'Solicitante', 'Centro de costo',
+  'N°', 'Estado', 'Moneda', 'Importe', 'Condición de pago', 'Días de crédito', 'Solicitante', 'Centro de costo', 'Placa',
   'Motivo', 'Orden de compra', 'Usuario de creación', 'Fecha de registro', 'Usuario de aprobación',
   'Fecha de aprobación', 'Proveedor', 'RUC', 'Cuenta destino', 'Cuenta origen', 'N° de operación / constancia',
 ];
@@ -157,6 +157,7 @@ export function PagoRequerimientosPage() {
       Number(o.dias_credito) || 0,
       o.solicitante ?? '',
       o.centro_costo ?? '',
+      o.placa ?? '',
       o.motivo_entrada || o.motivo || '',
       codigoOC(o),
       o.creador_nombre || o.creado_por || '',
@@ -286,7 +287,7 @@ export function PagoRequerimientosPage() {
                 </Celda>
                 <Celda alinear="right" mono>{importe > 0 ? formatMoneda(importe, usd ? 'USD' : 'PEN') : '—'}</Celda>
                 <Celda>{oc.solicitante || '—'}</Celda>
-                <Celda>{oc.centro_costo || '—'}</Celda>
+                <Celda mono>{oc.placa || '—'}</Celda>
                 <Celda>{oc.motivo_entrada || oc.motivo || '—'}</Celda>
                 <Celda><TipoPago oc={oc} /></Celda>
                 <Celda mono><span className="pago-codigo">{codigoOC(oc)}</span></Celda>
