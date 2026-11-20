@@ -63,6 +63,8 @@ interface U {
   deltas: number[];
   /** Corrección (grados) que se va apagando, para que la predicción no dé saltos al llegar un mensaje */
   corr: [number, number];
+  /** Retraso (ms) con que se muestra la unidad en «posición exacta»; cambia despacio para que la unidad no salte */
+  retraso?: number;
 }
 
 /** Tope (s) que se adelanta una unidad en marcha con la velocidad y el rumbo de su último mensaje */
@@ -397,6 +399,14 @@ export class MotorTelemetria {
   }
 
   // ─── Datos ───
+  /** Retraso que conviene: algo más que el tiempo entre mensajes del equipo (así siempre hay dos mensajes entre los que moverse) */
+  private retrasoMeta(u: U): number { return clamp(Math.max(3000, ...u.deltas) * 1.15 + 3500, 6000, 70000); }
+  /** El retraso se acerca a su meta poco a poco (sube de a 0.4 s por segundo, baja de a 0.15 s): un cambio brusco haría saltar a la unidad */
+  private ajustarRetraso(u: U, dtS: number) {
+    const meta = this.retrasoMeta(u);
+    if (u.retraso === undefined) { u.retraso = meta; return; }
+    u.retraso += meta > u.retraso ? Math.min(meta - u.retraso, 400 * dtS) : -Math.min(u.retraso - meta, 150 * dtS);
+  }
   /** Dónde y hacia dónde se dibuja la unidad en el instante `ahora` (ms) según sus mensajes del GPS */
   private vistaDe(u: U, ahora: number): { pos: LngLat; hdg: number } {
     const f = u.fixes, ult = f[f.length - 1];
@@ -406,8 +416,7 @@ export class MotorTelemetria {
       return { pos: ult.kmh > MOV_KMH ? proyectar(ult.pos, ult.hdg, ult.kmh, seg) : ult.pos, hdg: ult.hdg };
     }
     // Posición exacta: se muestra el camino real, con un retraso algo mayor al tiempo entre mensajes del equipo (así siempre hay dos mensajes entre los que moverse)
-    const retraso = clamp(Math.max(3000, ...u.deltas) * 1.15 + 3500, 6000, 70000);
-    const td = ahora - retraso;
+    const td = ahora - (u.retraso ?? this.retrasoMeta(u));
     if (f.length === 1 || td <= f[0].t) return { pos: f[0].pos, hdg: f[0].hdg };
     if (td >= ult.t) return { pos: ult.pos, hdg: ult.hdg };
     let i = f.length - 2;
@@ -524,6 +533,7 @@ export class MotorTelemetria {
     const ahora = Date.now();
     this.units.forEach(u => {
       if (!u.fixes.length) return;
+      this.ajustarRetraso(u, realDt);
       const v = this.opt.smooth ? this.vistaDe(u, ahora) : { pos: u.fixes[u.fixes.length - 1].pos, hdg: u.fixes[u.fixes.length - 1].hdg };
       let pos = v.pos;
       if (this.opt.smooth && !this.opt.exacto) {
