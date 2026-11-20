@@ -663,11 +663,13 @@ export class MotorTelemetria {
       if (!show) { el.style.display = 'none'; return; }
       // Con «posición exacta» la etiqueta dice hace cuánto mandó su último mensaje el GPS (si pasa de 20 s)
       const edad = this.opt.exacto && u.e.tPos ? Math.max(0, Math.round((Date.now() - u.e.tPos) / 1000)) : 0;
-      const edadTxt = edad < 20 ? '' : edad < 90 ? ` · hace ${Math.round(edad / 10) * 10} s` : edad < 5400 ? ` · hace ${Math.round(edad / 60)} min` : ` · hace ${Math.round(edad / 3600)} h`;
+      // Siempre se muestra (en pasos de 5 s): si apareciera y desapareciera, la etiqueta cambiaría de ancho y daría un saltito cada mensaje
+      const edadTxt = !(this.opt.exacto && u.e.tPos) ? '' : edad < 90 ? ` · hace ${Math.round(edad / 5) * 5} s` : edad < 5400 ? ` · hace ${Math.round(edad / 60)} min` : ` · hace ${Math.round(edad / 3600)} h`;
       const txt = u.st + '|' + (u.st === 'off' ? 0 : Math.round(u.kmh)) + '|' + esSel + '|' + edadTxt;
       if (txt !== u.tagTxt) {
         u.tagTxt = txt;
         el.classList.toggle('sel', esSel);
+        el.classList.toggle('exa', !!edadTxt && u.st !== 'off');
         (el.querySelector('i') as HTMLElement).style.background = ST[u.st].c;
         (el.querySelector('.k') as HTMLElement).textContent = u.st === 'off' ? 'sin señal' : Math.round(u.kmh) + ' km/h' + edadTxt;
       }
