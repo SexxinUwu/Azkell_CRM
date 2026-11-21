@@ -3,6 +3,7 @@
 // y los km y el conteo de vida como entero, para que las fórmulas y tablas dinámicas del usuario funcionen.
 // Se usa write-excel-file directamente (exportarExcel de core/lib/excel no acepta formato de número).
 
+import { hoyLima } from '../../core/lib/format';
 import type { CellObject, Row, Sheet } from 'write-excel-file/browser';
 import { api } from '../../core/api/client';
 
@@ -102,7 +103,7 @@ function hoja(nombre: string, encabezados: string[], filas: Row[]): Sheet<never>
  */
 export async function exportarCicloNeumaticos(filas: FilaCicloNeumatico[]) {
   const { default: writeExcelFile } = await import('write-excel-file/browser');
-  const fecha = new Date().toISOString().slice(0, 10);
+  const fecha = hoyLima();
 
   const instaladas = filas
     .filter(f => texto(f.placa_actual) !== null)

@@ -1,3 +1,4 @@
+import { hoyLima } from '../../core/lib/format';
 import './flota.css';
 import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -250,7 +251,7 @@ function NuevaActa({ open, onClose, onHecho }: { open: boolean; onClose: () => v
   useEffect(() => {
     if (!open) return;
     setError(null); setPartes({}); setDanos([]); setAbierto(null); setConfig('T3'); setCabina('chata'); setCarroceria('furgon');
-    setV({ placa: '', fecha: new Date().toISOString().slice(0, 10), motivo: 'ENTREGA DE UNIDAD', quien_entrega: '', quien_recibe: '', kilometraje: '', observaciones: '',
+    setV({ placa: '', fecha: hoyLima(), motivo: 'ENTREGA DE UNIDAD', quien_entrega: '', quien_recibe: '', kilometraje: '', observaciones: '',
       clase: '', marca: '', modelo: '', tipo: '', color: '', numero_motor: '', numero_serie: '', empresa: '' });
     firmaE.current?.limpiar(); firmaR.current?.limpiar();
   }, [open]);

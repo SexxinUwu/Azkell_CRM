@@ -1,3 +1,4 @@
+import { hoyLima } from '../../core/lib/format';
 import './mant.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -276,7 +277,7 @@ function CompletarSheet({ plan, usuario, open, onClose }: { plan: PlanificacionI
   useEffect(() => {
     if (!open) return;
     setBusqueda('idle');
-    setFleetrun(''); setFecha(new Date().toISOString().slice(0, 10)); setKm(''); setError(null);
+    setFleetrun(''); setFecha(hoyLima()); setKm(''); setError(null);
   }, [open]);
 
   // Al escribir el código completo del Fleetrun se completan la fecha y el km reales (como el clásico, desde 8 caracteres)

@@ -235,7 +235,7 @@ module.exports = (db, logAudit) => {
             const usuario = usuarioDe(req);
             const mismo = norm(n.registrado_por) === norm(usuario);
             if (mismo && !esAdmin(req)) throw aviso('La nota debe aprobarla otra persona (Tesorería o Contabilidad), no quien la registró.', 403);
-            const [upd] = await p.query("UPDATE compras_notas_credito SET estado = 'APROBADA', aprobado_por = ?, fecha_aprobacion = NOW() WHERE id = ? AND estado = 'REGISTRADA'", [usuario, id]);
+            const [upd] = await p.query("UPDATE compras_notas_credito SET estado = 'APROBADA', aprobado_por = ?, fecha_aprobacion = (UTC_TIMESTAMP() - INTERVAL 5 HOUR) WHERE id = ? AND estado = 'REGISTRADA'", [usuario, id]);
             if (!upd || upd.affectedRows !== 1) throw aviso('La nota ya fue aprobada o cambió de estado.', 409);
             await nc.historial(p, id, 'APROBADA', `${mismo ? 'Aprobada por el mismo usuario que la registró (administrador)' : 'Aprobada'}${n.archivo_url ? '' : ' · con documento pendiente'}`, usuario);
             auditar(req, 'APROBÓ NC PROVEEDOR', `${n.codigo}${mismo ? ' (autoaprobación de administrador)' : ''}`);
@@ -326,7 +326,7 @@ module.exports = (db, logAudit) => {
 
             // Primero se cierra la nota con una actualización protegida; si otra persona la usó, no se registra el ingreso
             const [upd] = await p.query(
-                "UPDATE compras_notas_credito SET estado = 'REEMBOLSADA', saldo = 0, reembolso_fecha = CURDATE(), reembolso_constancia = ?, reembolso_url = ? WHERE id = ? AND estado IN ('APROBADA', 'APLICADA_PARCIAL') AND saldo > 0",
+                "UPDATE compras_notas_credito SET estado = 'REEMBOLSADA', saldo = 0, reembolso_fecha = DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), reembolso_constancia = ?, reembolso_url = ? WHERE id = ? AND estado IN ('APROBADA', 'APLICADA_PARCIAL') AND saldo > 0",
                 [constancia, voucherUrl, id]);
             if (!upd || upd.affectedRows !== 1) throw aviso('La nota ya no tiene saldo para reembolsar.', 409);
 
@@ -338,9 +338,9 @@ module.exports = (db, logAudit) => {
                 `INSERT INTO tesoreria_caja (fecha, hora, fecha_valuta, hora_valuta, numero_constancia_deposito, numero_factura, serie, numero, autoriza, motivo, centro_costo, sub_motivo,
                      modalidad_pago, moneda, tipo_persona, persona, tipo_movimiento, subtotal, retencion_detraccion, importe_total, tipo_cambio, descripcion, tipo_comprobante,
                      cuenta_bancaria_empresa, voucher_url, observacion, no_aplica_liquidacion, estado, usuario_creacion, usuario_aprobacion, fecha_aprobacion)
-                 VALUES (CURDATE(), CURTIME(), CURDATE(), CURTIME(), ?, ?, ?, ?, ?, 'DEVOLUCIÓN PROVEEDOR', 'CC-100', 'REEMBOLSO NOTA DE CRÉDITO',
+                 VALUES (DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), TIME(UTC_TIMESTAMP() - INTERVAL 5 HOUR), DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), TIME(UTC_TIMESTAMP() - INTERVAL 5 HOUR), ?, ?, ?, ?, ?, 'DEVOLUCIÓN PROVEEDOR', 'CC-100', 'REEMBOLSO NOTA DE CRÉDITO',
                      'TRANSFERENCIA', ?, 'PROVEEDOR', ?, 'INGRESO', ?, 0, ?, 1, ?, 'NOTA DE CRÉDITO',
-                     ?, ?, ?, 0, 'PROCESADO', ?, ?, NOW())`,
+                     ?, ?, ?, 0, 'PROCESADO', ?, ?, (UTC_TIMESTAMP() - INTERVAL 5 HOUR))`,
                 [constancia, `${n.serie}-${n.numero}`, anio, String(sig).padStart(5, '0'), usuario, n.moneda === 'USD' ? 'DOLARES' : 'SOLES', n.proveedor_nombre, monto, monto,
                     `REEMBOLSO NOTA DE CRÉDITO ${n.codigo} (${n.serie}-${n.numero})`, cuenta, voucherUrl, `Reembolso de la nota ${n.codigo} | Operación ${constancia}`, usuario, usuario]);
             await p.query('UPDATE compras_notas_credito SET reembolso_caja_id = ? WHERE id = ?', [caja.insertId, id]);

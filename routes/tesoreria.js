@@ -6,6 +6,7 @@ const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl } = require('../
 const { sendWarehousePaymentVoucherWhatsapp } = require('../services/whatsappService');
 const { recalcularLiquidacionViaje } = require('../services/liquidacion_viaje');
 const { fechaVencimiento } = require('../services/condicion_oc');
+const { hoyLima } = require('../services/horaLima');
 
 module.exports = function (db, broadcast, logAudit) {
     logAudit = envolverLogAudit(logAudit, db);
@@ -577,7 +578,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             const netoCobrar = parseFloat(rows[0].neto_cobrar) || 0;
             const netoCobrado = parseFloat(b.neto_cobrado) || 0;
-            const fechaDeposito = safeDate(b.fecha_deposito) || new Date().toISOString().slice(0, 10);
+            const fechaDeposito = safeDate(b.fecha_deposito) || hoyLima();
             const diferencia = netoCobrado - netoCobrar;
 
             let sustentoUrl = rows[0].sustento_pago_url || null;
@@ -652,7 +653,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             const nuevaSerie = (b.nueva_serie || '').trim().toUpperCase();
             const nuevoNumero = (b.nuevo_numero || '').trim();
-            const nuevaFecha = safeDate(b.nueva_fecha_factura) || new Date().toISOString().slice(0, 10);
+            const nuevaFecha = safeDate(b.nueva_fecha_factura) || hoyLima();
 
             if (!ncSerie || !ncNumero) {
                 return res.status(400).json({ error: 'Debe especificar Serie y Número de la Nota de Crédito.' });
@@ -1077,9 +1078,9 @@ module.exports = function (db, broadcast, logAudit) {
             `;
 
             const [result] = await tdb.query(insertSql, [
-                safeDate(b.fecha) || new Date().toISOString().slice(0, 10),
+                safeDate(b.fecha) || hoyLima(),
                 (b.hora || '').trim() || new Date().toTimeString().slice(0, 8),
-                safeDate(b.fecha_valuta) || safeDate(b.fecha) || new Date().toISOString().slice(0, 10),
+                safeDate(b.fecha_valuta) || safeDate(b.fecha) || hoyLima(),
                 (b.hora_valuta || b.hora || '').trim() || new Date().toTimeString().slice(0, 8),
                 (b.numero_constancia_deposito || '').trim(),
                 (b.numero_factura || '').trim(),
@@ -1248,7 +1249,7 @@ module.exports = function (db, broadcast, logAudit) {
                 UPDATE tesoreria_caja SET
                     estado = 'APROBADO',
                     usuario_aprobacion = ?,
-                    fecha_aprobacion = NOW()
+                    fecha_aprobacion = (UTC_TIMESTAMP() - INTERVAL 5 HOUR)
                 WHERE id = ?
             `, [userName, id]);
 
@@ -2035,7 +2036,7 @@ module.exports = function (db, broadcast, logAudit) {
                         tipo_persona, persona, tipo_movimiento, subtotal, importe_total,
                         descripcion, estado, usuario_creacion
                     ) VALUES (
-                        CURDATE(), CURTIME(), ?, ?, ?, ?, ?, ?,
+                        DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), TIME(UTC_TIMESTAMP() - INTERVAL 5 HOUR), ?, ?, ?, ?, ?, ?,
                         'Gastos de Viaje y Ruta', 'CC-300', ?, ?, 'SOLES',
                         'CONDUCTOR', ?, 'INGRESO', ?, ?,
                         ?, 'PENDIENTE', ?
@@ -2137,7 +2138,7 @@ module.exports = function (db, broadcast, logAudit) {
                             tipo_persona, persona, tipo_movimiento, subtotal, importe_total,
                             descripcion, estado, usuario_creacion
                         ) VALUES (
-                            CURDATE(), CURTIME(), ?, ?, ?, ?, ?, ?,
+                            DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), TIME(UTC_TIMESTAMP() - INTERVAL 5 HOUR), ?, ?, ?, ?, ?, ?,
                             'Gastos de Viaje y Ruta', ?, ?, ?, 'SOLES',
                             'CONDUCTOR', ?, 'EGRESO', ?, ?,
                             ?, 'PENDIENTE', ?
@@ -2479,7 +2480,7 @@ module.exports = function (db, broadcast, logAudit) {
                 }
                 const [upV] = await tdb.query(
                     `UPDATE tesoreria_caja SET estado = 'PROCESADO', numero_constancia_deposito = ?, cuenta_bancaria_empresa = ?, modalidad_pago = ?, voucher_url = COALESCE(?, voucher_url),
-                        fecha_valuta = CURDATE(), hora_valuta = CURTIME(), observacion = CONCAT(COALESCE(observacion, ''), ' | Pagado por ', ?)
+                        fecha_valuta = DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), hora_valuta = TIME(UTC_TIMESTAMP() - INTERVAL 5 HOUR), observacion = CONCAT(COALESCE(observacion, ''), ' | Pagado por ', ?)
                      WHERE id = ? AND UPPER(estado) = 'APROBADO' AND origen = 'VALE_COMBUSTIBLE'`,
                     [numeroConstancia, cuentaOrigen, cuentaOrigen.includes('CAJA') ? 'EFECTIVO' : 'TRANSFERENCIA', voucherVale, usuarioPago, vr[0].caja_id]);
                 if (!upV || upV.affectedRows !== 1) return res.status(409).json({ error: 'El vale no está aprobado o ya fue pagado.' });
@@ -2578,7 +2579,7 @@ module.exports = function (db, broadcast, logAudit) {
                     url_voucher = ?,
                     pagado_por = ?,
                     cuenta_bancaria_proveedor = COALESCE(NULLIF(?, ''), cuenta_bancaria_proveedor),
-                    fecha_pago = NOW()
+                    fecha_pago = (UTC_TIMESTAMP() - INTERVAL 5 HOUR)
                 WHERE id = ? AND LOWER(TRIM(estado)) IN ('aprobado', 'autorizado', 'pago parcial')
             `, [numeroConstancia, cuentaOrigen, voucherUrl, usuarioPago, cuentaDestinoElegida, id]);
             if (!updOc || updOc.affectedRows === 0) {
@@ -2627,7 +2628,7 @@ module.exports = function (db, broadcast, logAudit) {
                         voucher_url, observacion, no_aplica_liquidacion,
                         estado, usuario_creacion, usuario_aprobacion, fecha_aprobacion
                     ) VALUES (
-                        CURDATE(), CURTIME(), CURDATE(), CURTIME(),
+                        DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), TIME(UTC_TIMESTAMP() - INTERVAL 5 HOUR), DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), TIME(UTC_TIMESTAMP() - INTERVAL 5 HOUR),
                         ?, ?, ?, ?,
                         ?, '', '', ?,
                         ?, ?, ?, ?, ?, ?,
@@ -2635,7 +2636,7 @@ module.exports = function (db, broadcast, logAudit) {
                         0, ?, ?, ?,
                         'ORDEN DE COMPRA', ?, ?,
                         ?, ?, 0,
-                        'PROCESADO', ?, ?, NOW()
+                        'PROCESADO', ?, ?, (UTC_TIMESTAMP() - INTERVAL 5 HOUR)
                     )
                 `;
 

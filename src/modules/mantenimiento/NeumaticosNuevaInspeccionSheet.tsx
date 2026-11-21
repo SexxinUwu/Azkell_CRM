@@ -1,3 +1,4 @@
+import { hoyLima } from '../../core/lib/format';
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
@@ -104,7 +105,7 @@ export function NeumaticosNuevaInspeccionSheet({ open, placaInicial = '', onClos
   const [guardando, setGuardando] = useState(false);
   // Cabecera del formulario
   const [placa, setPlaca]           = useState('');
-  const [fecha, setFecha]           = useState(() => new Date().toISOString().split('T')[0]);
+  const [fecha, setFecha]           = useState(() => hoyLima());
   const [km, setKm]                 = useState('');
   const [inspector, setInspector]   = useState('');
   const [diasProp, setDiasProp]     = useState('30');
@@ -132,7 +133,7 @@ export function NeumaticosNuevaInspeccionSheet({ open, placaInicial = '', onClos
   useEffect(() => {
     if (!open) return;
     setPlaca('');
-    setFecha(new Date().toISOString().split('T')[0]);
+    setFecha(hoyLima());
     setKm('');
     setInspector('');
     setDiasProp('30');

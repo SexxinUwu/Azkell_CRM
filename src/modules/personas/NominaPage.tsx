@@ -15,7 +15,7 @@ import { api, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
-import { formatFechaPe, formatSoles } from '../../core/lib/format';
+import { formatFechaPe, formatSoles, hoyLima } from '../../core/lib/format';
 import { imprimirBoleta } from './nominaBoleta';
 
 interface Fila {
@@ -239,7 +239,7 @@ function SstSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
 
   useEffect(() => {
     if (!open) return;
-    setPid(''); setTipo('ENTREGA_EPP'); setDesc(''); setFecha(new Date().toISOString().slice(0, 10)); setVenc(''); setFirmado(false); setArchivo(null); setError(null);
+    setPid(''); setTipo('ENTREGA_EPP'); setDesc(''); setFecha(hoyLima()); setVenc(''); setFirmado(false); setArchivo(null); setError(null);
   }, [open]);
 
   async function guardar() {

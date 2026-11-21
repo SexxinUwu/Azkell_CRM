@@ -1,3 +1,4 @@
+import { hoyLima } from '../../core/lib/format';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
@@ -59,7 +60,7 @@ interface Form {
 type Campo = 'intermediario' | 'cliente' | 'ruta' | 'flete';
 
 const str = (v: unknown) => (v === null || v === undefined ? '' : String(v));
-const hoy = () => new Date().toISOString().slice(0, 10);
+const hoy = () => hoyLima();
 
 const CONTRATACIONES: Array<{ value: Form['contratacion']; label: string }> = [{ value: 'CLIENTE DIRECTO', label: 'Cliente directo' }, { value: 'INTERMEDIARIO', label: 'Por intermediario' }];
 const EJECUCIONES: Array<{ value: Form['ejecucion']; label: string }> = [{ value: 'PROPIO', label: 'Flota propia' }, { value: 'TERCERO', label: 'Transportista tercero' }];

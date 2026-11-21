@@ -1,6 +1,7 @@
 const express = require('express');
 const { uploadToS3, getPresignedUrl, getPresignedUploadUrl, s3KeyFromUrl, urlPublicaDeKey } = require('../utils/s3');
 const eventosNotif = require('../services/notificaciones_eventos');
+const { hoyLima, ahoraLimaMin } = require('../services/horaLima');
 
 module.exports = function (db, broadcast, logAudit) {
     const router = express.Router();
@@ -1101,7 +1102,7 @@ module.exports = function (db, broadcast, logAudit) {
 
                 const situacionVal = item.situacion || 'En atención';
 
-                let fIngDate = fecha_ingreso ? fecha_ingreso.split('T')[0] : new Date().toISOString().split('T')[0];
+                let fIngDate = fecha_ingreso ? fecha_ingreso.split('T')[0] : hoyLima();
                 let fIngTime = fecha_ingreso && fecha_ingreso.includes('T') ? fecha_ingreso.split('T')[1].substring(0, 5) : new Date().toTimeString().substring(0, 5);
                 let dtIngreso = `${fIngDate} ${fIngTime}:00`;
 
@@ -1178,7 +1179,7 @@ module.exports = function (db, broadcast, logAudit) {
                     // Registrar en Módulo Status Rampa (tabla taller_rampas)
                     if (id_rampa && id_rampa !== 'En Ruta' && id_rampa !== 'En Espera') {
                         const obsRampa = descFallasClean || `${item.subtipo_ot || 'Falla'}: ${item.tipo_ot || 'Correctivo'}`;
-                        let fIngDate = fecha_ingreso ? fecha_ingreso.split('T')[0] : new Date().toISOString().split('T')[0];
+                        let fIngDate = fecha_ingreso ? fecha_ingreso.split('T')[0] : hoyLima();
                         let fIngTime = fecha_ingreso && fecha_ingreso.includes('T') ? fecha_ingreso.split('T')[1].substring(0, 5) : new Date().toTimeString().substring(0, 5);
 
                         let fSalDate = fecha_salida && fecha_salida.includes('T') ? fecha_salida.split('T')[0] : null;
@@ -1283,7 +1284,7 @@ module.exports = function (db, broadcast, logAudit) {
         const backlogId = `BK-${anio}-${String(num + 1).padStart(4, '0')}`;
         await tdb.promise().query(
             `INSERT INTO ot_backlog (backlog_id, placa, km, tema, tarea, reportado_por, fecha_reporte, estado, creado_por, ticket_ot)
-             VALUES (?, ?, ?, 'Falla crítica', ?, ?, CURDATE(), 'Pendiente', ?, ?)`,
+             VALUES (?, ?, ?, 'Falla crítica', ?, ?, DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), 'Pendiente', ?, ?)`,
             [backlogId, placa || '', km || 0, descripcion, reportadoPor || 'Sistema', 'Sistema', folio]
         );
         // Aviso de falla crítica (WhatsApp / correo / SMS según la regla "Alerta crítica de checklist"). No bloquea ni lanza errores.
@@ -1490,7 +1491,7 @@ module.exports = function (db, broadcast, logAudit) {
             try { const p = JSON.parse(rep[campo] || '[]'); if (Array.isArray(p)) lista = p; } catch (e) { lista = []; }
 
             // Las fallas que ya están en el reporte se conservan tal cual; aquí solo se agregan las nuevas
-            const ahora = new Date().toISOString().slice(0, 16).replace('T', ' ');
+            const ahora = ahoraLimaMin();
             const existentes = new Set(lista.map(f => String(f.obs ?? f.observacion ?? '').trim().toLowerCase()));
             const nuevas = [];
             for (const t of textos) {

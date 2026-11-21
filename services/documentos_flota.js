@@ -17,7 +17,7 @@ async function documentosVencidosPara(pdb, placas) {
 
     const [rows] = await pdb.query(
         `SELECT UPPER(TRIM(placa)) AS placa, UPPER(TRIM(tipo_documento)) AS tipo, MAX(fecha_vencimiento) AS vence,
-                MAX(fecha_vencimiento) < CURDATE() AS vencido
+                MAX(fecha_vencimiento) < DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR) AS vencido
          FROM documentos_flota
          WHERE UPPER(TRIM(placa)) IN (?) AND UPPER(TRIM(tipo_documento)) IN (?)
          GROUP BY UPPER(TRIM(placa)), UPPER(TRIM(tipo_documento))`,

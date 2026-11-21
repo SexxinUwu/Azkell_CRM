@@ -1,3 +1,4 @@
+import { hoyLima } from '../../core/lib/format';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQueryClient } from '@tanstack/react-query';
@@ -23,7 +24,7 @@ import {
   type RampaEntrada,
 } from './api';
 
-const hoyISO = () => new Date().toISOString().slice(0, 10);
+const hoyISO = () => hoyLima();
 const horaAhora = () => new Date().toTimeString().slice(0, 5);
 const dia = (s: string | null | undefined) => (s ? String(s).split('T')[0] : '');
 const hora = (s: string | null | undefined) => (s ? String(s).slice(0, 5) : '');

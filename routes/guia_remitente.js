@@ -8,6 +8,7 @@ const express = require('express');
 const router = express.Router();
 const ApisunatService = require('../services/apisunatService');
 const SunatGrService = require('../services/sunatGrService');
+const { hoyLima } = require('../services/horaLima');
 
 module.exports = function(db, broadcast, logAudit) {
 
@@ -361,8 +362,8 @@ module.exports = function(db, broadcast, logAudit) {
                 numeroGuia,
                 serie,
                 correlativo,
-                data.fecha_emision || new Date().toISOString().split('T')[0],
-                data.fecha_traslado || data.fecha_emision || new Date().toISOString().split('T')[0],
+                data.fecha_emision || hoyLima(),
+                data.fecha_traslado || data.fecha_emision || hoyLima(),
                 data.modalidad_transporte || '01',
                 data.motivo_traslado || '01',
                 data.descripcion_motivo || 'VENTA',
@@ -928,7 +929,7 @@ module.exports = function(db, broadcast, logAudit) {
             );
             const correlativo = (corrRows[0]?.ultimo || 0) + 1;
             const numeroGuia = `${serie}-${String(correlativo).padStart(8, '0')}`;
-            const hoy = new Date().toISOString().split('T')[0];
+            const hoy = hoyLima();
 
             const [insertResult] = await dbConn.query(`
                 INSERT INTO guias_remitente (

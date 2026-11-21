@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl } = require('../utils/s3');
+const { hoyLima } = require('../services/horaLima');
 
 // Configuración de almacenamiento de archivos y fotos para RRHH
 const storage = multer.diskStorage({
@@ -112,8 +113,8 @@ router.get('/kpis', async (req, res) => {
                 SUM(CASE WHEN categoria_rol = 'MECANICO_TALLER' AND estado = 'ACTIVO' THEN 1 ELSE 0 END) as taller,
                 SUM(CASE WHEN categoria_rol = 'ADMINISTRATIVO' AND estado = 'ACTIVO' THEN 1 ELSE 0 END) as admin,
                 SUM(CASE WHEN categoria_rol = 'LIMPIEZA_SERVICIOS' AND estado = 'ACTIVO' THEN 1 ELSE 0 END) as limpieza,
-                SUM(CASE WHEN fecha_fin_contrato IS NOT NULL AND fecha_fin_contrato BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) as contratos_por_vencer,
-                SUM(CASE WHEN licencia_vencimiento IS NOT NULL AND licencia_vencimiento BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) as brevetes_por_vencer,
+                SUM(CASE WHEN fecha_fin_contrato IS NOT NULL AND fecha_fin_contrato BETWEEN DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR) AND DATE_ADD(DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), INTERVAL 30 DAY) THEN 1 ELSE 0 END) as contratos_por_vencer,
+                SUM(CASE WHEN licencia_vencimiento IS NOT NULL AND licencia_vencimiento BETWEEN DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR) AND DATE_ADD(DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), INTERVAL 30 DAY) THEN 1 ELSE 0 END) as brevetes_por_vencer,
                 SUM(CASE WHEN sctr_salud_vigente = 0 OR sctr_pension_vigente = 0 THEN 1 ELSE 0 END) as sctr_alertas
             FROM rrhh_personal
         `);
@@ -249,7 +250,7 @@ router.post('/personal', upload.single('foto'), async (req, res) => {
             b.sede || 'BASE PRINCIPAL',
             b.centro_costo_codigo || 'CC-100',
             b.jefe_inmediato || null,
-            b.fecha_ingreso || new Date().toISOString().slice(0, 10),
+            b.fecha_ingreso || hoyLima(),
             b.fecha_cese || null,
             b.estado || 'ACTIVO',
             b.tipo_contrato || 'PLAZO_FIJO',
@@ -476,7 +477,7 @@ router.put('/personal/documentos/:docId', async (req, res) => {
         const [doc] = await tdb.query('SELECT id, personal_id, tipo FROM rrhh_personal_documentos WHERE id = ?', [req.params.docId]);
         if (!doc.length) return res.status(404).json({ error: 'El documento no existe.' });
         const vence = fechaODoc(b.fecha_vencimiento);
-        await tdb.query('UPDATE rrhh_personal_documentos SET fecha_vencimiento = ?, fecha_emision = ?, descripcion = ?, actualizado_en = NOW() WHERE id = ?',
+        await tdb.query('UPDATE rrhh_personal_documentos SET fecha_vencimiento = ?, fecha_emision = ?, descripcion = ?, actualizado_en = (UTC_TIMESTAMP() - INTERVAL 5 HOUR) WHERE id = ?',
             [vence, fechaODoc(b.fecha_emision), (b.descripcion || '').slice(0, 150) || null, doc[0].id]);
         if (vence && doc[0].tipo === 'LICENCIA') await tdb.query('UPDATE rrhh_personal SET licencia_vencimiento = ? WHERE id = ?', [vence, doc[0].personal_id]);
         if (vence && doc[0].tipo === 'EMO') await tdb.query('UPDATE rrhh_personal SET emo_fecha_vencimiento = ? WHERE id = ?', [vence, doc[0].personal_id]);
@@ -610,7 +611,7 @@ router.post('/tareo/guardar', async (req, res) => {
 router.post('/tareo/sincronizar-viajes', async (req, res) => {
     try {
         const tdb = getDb(req);
-        const fecha = req.body.fecha || new Date().toISOString().slice(0, 10);
+        const fecha = req.body.fecha || hoyLima();
 
         // Obtener conductores con ordenes de viaje activas en la fecha
         const [viajes] = await tdb.query(`
@@ -764,7 +765,7 @@ router.post('/sst', upload.single('documento'), async (req, res) => {
         `, [
             b.personal_id,
             b.tipo_registro,
-            b.fecha_registro || new Date().toISOString().slice(0, 10),
+            b.fecha_registro || hoyLima(),
             b.descripcion.trim(),
             b.fecha_vencimiento || null,
             doc_url,

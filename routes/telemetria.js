@@ -5,6 +5,7 @@
 
 const express = require('express');
 const { listarGeocercas } = require('../services/wialon_geocercas');
+const { hoyLima } = require('../services/horaLima');
 
 module.exports = function(db) {
     const router = express.Router();
@@ -70,7 +71,7 @@ module.exports = function(db) {
             const placa = String(b.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
             if (!placa) return res.status(400).json({ error: 'placa requerida' });
 
-            const fecha = b.fecha || new Date().toISOString().split('T')[0];
+            const fecha = b.fecha || hoyLima();
             const raw = b.raw_json ? JSON.stringify(b.raw_json) : null;
 
             await tdb.promise().query(`
@@ -118,7 +119,7 @@ module.exports = function(db) {
             const items = Array.isArray(req.body?.items) ? req.body.items : [];
             if (!items.length) return res.json({ ok: true, guardados: 0 });
 
-            const fecha = new Date().toISOString().split('T')[0];
+            const fecha = hoyLima();
             let guardados = 0;
 
             for (const b of items) {

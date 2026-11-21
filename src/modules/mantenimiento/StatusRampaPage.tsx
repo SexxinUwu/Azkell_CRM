@@ -1,4 +1,4 @@
-import { formatFechaPe } from '../../core/lib/format';
+import { formatFechaPe, mesLima } from '../../core/lib/format';
 import './mant.css';
 import './StatusRampa.css';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -206,7 +206,7 @@ function PanelAnaliticas({ activas, historial }: { activas: RampaEntrada[]; hist
   const criticas = tiempos.filter(h => h > 48).length;
 
   // Historial del mes actual
-  const mesActual = new Date().toISOString().slice(0, 7);
+  const mesActual = mesLima();
   const histMes = historial.filter(e =>
     (e.fecha_salida ?? e.fecha_ingreso ?? '').slice(0, 7) === mesActual
   ).length;

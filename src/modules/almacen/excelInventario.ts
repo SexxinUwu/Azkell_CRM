@@ -1,6 +1,7 @@
 // Inventario ↔ Excel, nativo (sin abrir la versión actual).
 // Exporta lo que está filtrado en pantalla; importa con POST /api/almacen/inventario/importar,
 // el mismo endpoint de la versión actual (siempre CREA artículos: no actualiza los existentes).
+import { hoyLima } from '../../core/lib/format';
 import { api } from '../../core/api/client';
 import { costoUnitarioSoles, type ArticuloInv } from './api';
 
@@ -131,7 +132,7 @@ export async function exportar(articulos: ArticuloInv[]) {
     Number(a.costo_referencial) || 0, a.moneda === 'USD' ? (Number(a.tc_ultima_oc) || '') : '', costoFinalSoles(a), Number(a.stock_actual) || 0, Number(a.stock_min) || 0, Number(a.stock_max) || 0,
     a.marca ?? '', a.sistema ?? '', a.tipo ?? '', a.sub_tipo ?? '', a.ubicacion ?? '', a.anaquel ?? '', a.estado_art ?? '', a.observaciones ?? '',
   ]);
-  const fecha = new Date().toISOString().slice(0, 10);
+  const fecha = hoyLima();
   await writeExcelFile([
     { data: [ENCABEZADOS_EXPORT.map(cab), ...filas], sheet: 'Inventario', columns: ENCABEZADOS_EXPORT.map(h => ({ width: Math.max(12, h.length + 4) })), stickyRowsCount: 1 },
   ]).toFile(`Inventario-Azkell-${fecha}.xlsx`);

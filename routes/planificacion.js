@@ -1,5 +1,6 @@
 const express = require('express');
 const { AsyncLocalStorage } = require('async_hooks');
+const { hoyLima } = require('../services/horaLima');
 const router = express.Router();
 const tenantStorage = new AsyncLocalStorage();
 
@@ -819,7 +820,7 @@ router.post('/fleetrun-backfill-codigos', (req, res) => {
                 const r = rows[idx];
                 const fechaStr = r.fecha
                     ? (r.fecha instanceof Date ? r.fecha.toISOString() : String(r.fecha)).split('T')[0]
-                    : new Date().toISOString().split('T')[0];
+                    : hoyLima();
 
                 generarIdFleetrunUnico(r.placa, r.tipo_mp, fechaStr, (nuevoId) => {
                     db.query(
@@ -939,7 +940,7 @@ router.get('/km-historico/:placa', (req, res) => {
         `SELECT fecha, km_gps, horas_motor
          FROM km_snapshots
          WHERE placa = ?
-           AND fecha >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+           AND fecha >= DATE_SUB(DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), INTERVAL ? DAY)
          ORDER BY fecha ASC`,
         [placa, dias],
         (err, rows) => {
@@ -971,7 +972,7 @@ router.get('/km-historico', (req, res) => {
             MAX(s1.km_gps) AS km_actual,
             MAX(s1.fecha)  AS ultima_fecha
          FROM km_snapshots s1
-         WHERE s1.fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+         WHERE s1.fecha >= DATE_SUB(DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), INTERVAL 30 DAY)
          GROUP BY s1.placa
          HAVING snapshots >= 2
          ORDER BY s1.placa`,

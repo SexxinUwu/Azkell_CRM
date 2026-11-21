@@ -45,7 +45,7 @@ module.exports = function (db, broadcast, logAudit) {
     /** Registra la aprobación de Tesorería o de Gerencia (solo la primera vez) y devuelve la fila actualizada */
     async function aprobarPor(tdb, tabla, id, rol, usuario) {
         const col = rol === 'tesoreria' ? 'aprob_tesoreria' : 'aprob_gerencia';
-        await tdb.query(`UPDATE ${tabla} SET ${col}_por = ?, ${col}_at = NOW() WHERE id = ? AND ${col}_por IS NULL`, [usuario, id]);
+        await tdb.query(`UPDATE ${tabla} SET ${col}_por = ?, ${col}_at = (UTC_TIMESTAMP() - INTERVAL 5 HOUR) WHERE id = ? AND ${col}_por IS NULL`, [usuario, id]);
         return filaPorId(tdb, tabla, id);
     }
 
@@ -230,7 +230,7 @@ module.exports = function (db, broadcast, logAudit) {
             if (ocId) {
                 const restante = redondear(ocPendiente.pendiente - monto);
                 if (restante <= 0.005) {
-                    await tdb.query("UPDATE entradas_inv SET estado = 'Procesado', pagado_por = ?, fecha_pago = NOW(), numero_operacion = ? WHERE id = ?",
+                    await tdb.query("UPDATE entradas_inv SET estado = 'Procesado', pagado_por = ?, fecha_pago = (UTC_TIMESTAMP() - INTERVAL 5 HOUR), numero_operacion = ? WHERE id = ?",
                         [usuario, `CAJA CHICA #${r.insertId}`, ocId]);
                 } else {
                     await tdb.query("UPDATE entradas_inv SET estado = 'Pago parcial' WHERE id = ?", [ocId]);
@@ -253,7 +253,7 @@ module.exports = function (db, broadcast, logAudit) {
             if (mov.estado_sustento === 'DESCONTADO') return res.status(409).json({ error: 'El gasto ya fue descontado al responsable: ya no admite sustento.' });
             if (!req.file) return res.status(400).json({ error: 'Adjunta el voucher o la constancia de pago.' });
             const url = await subirComprobante(req.file, 'sustento');
-            await tdb.query("UPDATE caja_chica_movimientos SET comprobante_url = ?, estado_sustento = 'SUSTENTADO', plazo_vence = NULL, sustentado_at = NOW() WHERE id = ?", [url, mov.id]);
+            await tdb.query("UPDATE caja_chica_movimientos SET comprobante_url = ?, estado_sustento = 'SUSTENTADO', plazo_vence = NULL, sustentado_at = (UTC_TIMESTAMP() - INTERVAL 5 HOUR) WHERE id = ?", [url, mov.id]);
             auditar(req, 'SUSTENTÓ', `Sustento del gasto de caja chica ${mov.id}`);
             res.json({ ok: true, url });
         } catch (err) {

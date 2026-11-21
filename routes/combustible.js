@@ -1,6 +1,7 @@
 const express = require('express');
 const { audit: auditar, actorFrom, diff } = require('../services/auditoria');
 const mysql = require('mysql2/promise');
+const { ahoraLima } = require('../services/horaLima');
 
 module.exports = function (db, broadcast, logAudit) {
     const router = express.Router();
@@ -709,7 +710,7 @@ module.exports = function (db, broadcast, logAudit) {
             const valesTable = getValesTable(req);
             const body = req.body || {};
 
-            const fecha = body.fecha ? new Date(body.fecha).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const fecha = body.fecha ? new Date(body.fecha).toISOString().slice(0, 19).replace('T', ' ') : ahoraLima();
             const estado = (body.estado || 'VÁLIDO').toUpperCase().trim();
             const correlativo = (body.correlativo || '').trim();
             const estado_pago = (body.estado_pago || 'NO PAGADO').toUpperCase().trim();
@@ -798,7 +799,7 @@ module.exports = function (db, broadcast, logAudit) {
             };
 
             const parseFecha = (v) => {
-                if (!v) return new Date().toISOString().slice(0, 19).replace('T', ' ');
+                if (!v) return ahoraLima();
                 const str = String(v).trim();
                 const parts = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
                 if (parts) {
@@ -814,7 +815,7 @@ module.exports = function (db, broadcast, logAudit) {
                 if (!isNaN(dt.getTime())) {
                     return dt.toISOString().slice(0, 19).replace('T', ' ');
                 }
-                return new Date().toISOString().slice(0, 19).replace('T', ' ');
+                return ahoraLima();
             };
 
             let insertados = 0;

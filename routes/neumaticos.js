@@ -1,5 +1,6 @@
 const express = require('express');
 const { uploadToS3, getPresignedUrl } = require('../utils/s3');
+const { hoyLima } = require('../services/horaLima');
 
 const { 
     DEFAULT_MARCAS, 
@@ -273,7 +274,7 @@ module.exports = function (db, broadcast, logAudit) {
             const placaRaw = req.body.placa || req.body.vehiculo_placa || '';
             const placa = String(placaRaw).trim().toUpperCase();
 
-            const fecha_inspeccion = req.body.fecha_inspeccion || new Date().toISOString().split('T')[0];
+            const fecha_inspeccion = req.body.fecha_inspeccion || hoyLima();
 
             // Kilometraje: lee km_vehiculo, odometro_km, o kilometraje
             const kmRaw = (req.body.km_vehiculo !== undefined && req.body.km_vehiculo !== null && req.body.km_vehiculo !== '')
@@ -640,8 +641,8 @@ module.exports = function (db, broadcast, logAudit) {
                 // 2. Vigencia de inspecciones de la flota activa en uso
                 tdb.query(`
                     SELECT 
-                        CAST(COALESCE(SUM(CASE WHEN i1.fecha_proxima >= CURDATE() THEN 1 ELSE 0 END), 0) AS UNSIGNED) as vigentes,
-                        CAST(COALESCE(SUM(CASE WHEN i1.fecha_proxima < CURDATE() THEN 1 ELSE 0 END), 0) AS UNSIGNED) as no_vigentes
+                        CAST(COALESCE(SUM(CASE WHEN i1.fecha_proxima >= DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR) THEN 1 ELSE 0 END), 0) AS UNSIGNED) as vigentes,
+                        CAST(COALESCE(SUM(CASE WHEN i1.fecha_proxima < DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR) THEN 1 ELSE 0 END), 0) AS UNSIGNED) as no_vigentes
                     FROM neumaticos_inspecciones i1
                     INNER JOIN (
                         SELECT placa, MAX(fecha_inspeccion) as max_fecha
@@ -722,7 +723,7 @@ module.exports = function (db, broadcast, logAudit) {
                         last_i.fecha_inspeccion,
                         last_i.km_vehiculo,
                         last_i.fecha_proxima,
-                        DATEDIFF(last_i.fecha_proxima, CURDATE()) as dias_restantes,
+                        DATEDIFF(last_i.fecha_proxima, DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR)) as dias_restantes,
                         COALESCE(det_stats.total_llantas, 0) as total_llantas,
                         COALESCE(det_stats.total_criticas, 0) as total_criticas
                     FROM placas p
@@ -1322,12 +1323,12 @@ module.exports = function (db, broadcast, logAudit) {
                 
                 // Formateo seguro de fecha
                 if (!fecha_inspeccion || isNaN(new Date(fecha_inspeccion).getTime())) {
-                    fecha_inspeccion = new Date().toISOString().split('T')[0];
+                    fecha_inspeccion = hoyLima();
                 } else {
                     try {
                         fecha_inspeccion = new Date(fecha_inspeccion).toISOString().split('T')[0];
                     } catch(e) {
-                        fecha_inspeccion = new Date().toISOString().split('T')[0];
+                        fecha_inspeccion = hoyLima();
                     }
                 }
 

@@ -374,7 +374,7 @@ module.exports = function (db, broadcast, logAudit) {
                 `UPDATE ordenes_compra 
                  SET estado = ?, 
                      aprobado_por = ?, 
-                     aprobado_en = NOW(), 
+                     aprobado_en = (UTC_TIMESTAMP() - INTERVAL 5 HOUR), 
                      motivo_rechazo = ? 
                  WHERE id = ?`,
                 [newOcStatus, aprobador, reason || null, tok.orden_compra_id]
@@ -382,7 +382,7 @@ module.exports = function (db, broadcast, logAudit) {
 
             // Almacén y Tesorería leen entradas_inv: si no se puede actualizar, se revierte todo (sin aprobación a medias)
             const [entradaActualizada] = await tdb.query(
-                `UPDATE entradas_inv SET estado = ?, autoriza = ?, aprobado_por = ?, fecha_aprobacion = NOW() WHERE id = ?`,
+                `UPDATE entradas_inv SET estado = ?, autoriza = ?, aprobado_por = ?, fecha_aprobacion = (UTC_TIMESTAMP() - INTERVAL 5 HOUR) WHERE id = ?`,
                 [newOcStatus === 'APROBADA' ? 'Aprobado' : 'Rechazado', aprobador, aprobador, tok.codigo]
             );
             if (!entradaActualizada.affectedRows) throw new Error(`No se encontró la orden ${tok.codigo} en Almacén`);
@@ -391,7 +391,7 @@ module.exports = function (db, broadcast, logAudit) {
             await tdb.query(
                 `UPDATE oc_approval_tokens 
                  SET estado = ?, 
-                     usado_en = NOW(), 
+                     usado_en = (UTC_TIMESTAMP() - INTERVAL 5 HOUR), 
                      motivo_rechazo = ? 
                  WHERE id = ?`,
                 [newTokStatus, reason || null, tok.id]

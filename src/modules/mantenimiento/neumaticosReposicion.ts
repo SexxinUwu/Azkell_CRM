@@ -1,5 +1,6 @@
 // Requerimiento de llantas para reposición: una llanta entra cuando su remanente es MENOR O IGUAL al umbral elegido
 // (por defecto 3 mm, igual que el clásico). El semáforo global (crítica < 3 mm) no cambia: esto es solo el pedido de compra.
+import { hoyLima } from '../../core/lib/format';
 import { exportarExcel, exportarExcelHojas } from '../../core/lib/excel';
 import { generarPDFBlob } from '../../core/lib/pdf';
 import { pestanaConCamion } from '../../core/ui/CargaCamion';
@@ -49,7 +50,7 @@ export async function exportarUltimasExcel(llantas: LlantaUltima[]) {
     num(l.r1), num(l.r2), num(l.r3), num(l.r4), num(l.remanente_promedio),
     num(l.presion_ant), num(l.presion_actual), txt(l.estado), txt(l.observaciones),
   ]);
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = hoyLima();
   await exportarExcel('Ultimas-inspecciones-neumaticos-' + hoy, 'Últimas inspecciones',
     ['Placa', 'Empresa', 'Tipo de unidad', 'Marca unidad', 'Fecha inspección', 'Posición', 'Tipo de llanta', 'Marca', 'Medida', 'Modelo',
       'R1 (mm)', 'R2 (mm)', 'R3 (mm)', 'R4 (mm)', 'Remanente promedio (mm)', 'Presión ant.', 'Presión actual', 'Estado', 'Observaciones'],

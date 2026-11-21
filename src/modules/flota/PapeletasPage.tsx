@@ -19,7 +19,7 @@ import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
-import { formatMoneda } from '../../core/lib/format';
+import { formatMoneda, hoyLima } from '../../core/lib/format';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import {
@@ -87,7 +87,7 @@ export function PapeletasPage() {
   const [pago, setPago] = useState<Papeleta | null>(null);
   const [importando, setImportando] = useState(false);
 
-  const hoy = q.data?.hoy ?? new Date().toISOString().slice(0, 10);
+  const hoy = q.data?.hoy ?? hoyLima();
   const todas = useMemo(() => q.data?.data ?? [], [q.data]);
   const entidades = cat.data?.entidades ?? [];
   const refrescar = () => qc.invalidateQueries({ queryKey: RAIZ_PAPELETAS });

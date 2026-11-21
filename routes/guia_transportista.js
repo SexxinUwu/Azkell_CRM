@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const ApisunatService = require('../services/apisunatService');
+const { hoyLima } = require('../services/horaLima');
 
 module.exports = function(db, broadcast, logAudit) {
 
@@ -391,8 +392,8 @@ module.exports = function(db, broadcast, logAudit) {
                     numero_guia: numeroGuia,
                     serie,
                     correlativo,
-                    fecha_emision: d.fecha_emision || new Date().toISOString().slice(0, 10),
-                    fecha_traslado: d.fecha_traslado || d.fecha_emision || new Date().toISOString().slice(0, 10),
+                    fecha_emision: d.fecha_emision || hoyLima(),
+                    fecha_traslado: d.fecha_traslado || d.fecha_emision || hoyLima(),
                     transportista_ruc: creds.ruc_emisor,
                     transportista_razon_social: creds.razon_social,
                     transportista_reg_mtc: (d.registro_mtc || '').trim(),
@@ -577,7 +578,7 @@ module.exports = function(db, broadcast, logAudit) {
                 codTraslado: guia.motivo_traslado || '01',
                 desTraslado: guia.descripcion_motivo || 'VENTA',
                 indTransbordo: guia.indicador_transbordo ? '1' : '0',
-                fecInicioTraslado: guia.fecha_traslado ? new Date(guia.fecha_traslado).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+                fecInicioTraslado: guia.fecha_traslado ? new Date(guia.fecha_traslado).toISOString().slice(0, 10) : hoyLima(),
                 pesoTotal: Number(guia.peso_total || 1),
                 uniMedida: guia.unidad_medida || 'KGM',
                 modTraslado: '01',
@@ -821,8 +822,8 @@ module.exports = function(db, broadcast, logAudit) {
                     numero_guia: nuevaGuia,
                     serie,
                     correlativo: nuevoCorrelativo,
-                    fecha_emision: new Date().toISOString().slice(0, 10),
-                    fecha_traslado: new Date().toISOString().slice(0, 10),
+                    fecha_emision: hoyLima(),
+                    fecha_traslado: hoyLima(),
                     transportista_ruc: original.transportista_ruc,
                     transportista_razon_social: original.transportista_razon_social,
                     transportista_reg_mtc: original.transportista_reg_mtc,

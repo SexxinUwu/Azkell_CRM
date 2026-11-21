@@ -1,3 +1,4 @@
+import { hoyLima } from '../../core/lib/format';
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, Plus, RefreshCw, Trash2, Truck } from 'lucide-react';
@@ -20,7 +21,7 @@ const CORTES = ['Corte 1', 'Corte 2'];
 const ZONAS = ['Base', 'Mantenimiento', 'Lavado'];
 const ESTADOS = ['Cargado', 'Con Devolución', 'Vacío', 'En Ruta'];
 const dia = (s?: string | null) => (s ? String(s).slice(0, 10) : '');
-const hoy = () => new Date().toISOString().slice(0, 10);
+const hoy = () => hoyLima();
 
 /** Corte vigente: Corte 1 de 05:00 a 16:59, Corte 2 de 17:00 a 04:59 */
 const corteActual = () => { const h = new Date().getHours(); return h >= 5 && h < 17 ? 'Corte 1' : 'Corte 2'; };

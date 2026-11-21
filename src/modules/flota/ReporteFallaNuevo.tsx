@@ -1,3 +1,4 @@
+import { ahoraLimaMin } from '../../core/lib/format';
 import './checklist.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -402,7 +403,7 @@ export function ReporteFallaNuevo({ open, reporte = null, onClose, onHecho }: {
     if (!editando && total === 0) { setError('Marca al menos una falla, importa un backlog o escribe una falla manual.'); return; }
     if (!placaT && manualesLlenos.some(m => m.unidad !== 'remolque')) { setError('Una falla manual es del camión, pero no hay placa de camión. Indícala o cambia la falla a carreta.'); return; }
     if (!placaR && manualesLlenos.some(m => m.unidad === 'remolque')) { setError('Una falla manual es de la carreta, pero no hay placa de carreta. Indícala o cambia la falla a camión.'); return; }
-    const ahora = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    const ahora = ahoraLimaMin();
     const armar = (m: Record<string, Marca>) => Object.entries(m).map(([k, x]) => {
       const [sistema, ...resto] = k.split('||');
       return { sistema, item: resto.join('||'), obs: x.obs, observacion: x.obs, estado: 'FALLA', fecha: ahora };

@@ -11,13 +11,13 @@ module.exports = (db) => {
     router.get('/indicadores', async (req, res) => {
         const tdb = getDb(req);
         const [caja, combOp, combMar, docs, ots, pap] = await Promise.all([
-            consulta(tdb, "SELECT COUNT(*) AS n FROM tesoreria_caja WHERE DATE(fecha) = CURDATE() AND estado <> 'ANULADO'"),
-            consulta(tdb, "SELECT ROUND(SUM(galones), 1) AS g FROM operaciones_combustible_vales WHERE DATE(fecha) = CURDATE() AND estado <> 'ANULADO'"),
-            consulta(tdb, "SELECT ROUND(SUM(galones), 1) AS g FROM marsisa_combustible_vales WHERE DATE(fecha) = CURDATE() AND estado <> 'ANULADO'"),
-            consulta(tdb, 'SELECT COUNT(*) AS n FROM vehiculos_flota WHERE soat_vencimiento < CURDATE() OR rt_vencimiento < CURDATE()'),
+            consulta(tdb, "SELECT COUNT(*) AS n FROM tesoreria_caja WHERE DATE(fecha) = DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR) AND estado <> 'ANULADO'"),
+            consulta(tdb, "SELECT ROUND(SUM(galones), 1) AS g FROM operaciones_combustible_vales WHERE DATE(fecha) = DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR) AND estado <> 'ANULADO'"),
+            consulta(tdb, "SELECT ROUND(SUM(galones), 1) AS g FROM marsisa_combustible_vales WHERE DATE(fecha) = DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR) AND estado <> 'ANULADO'"),
+            consulta(tdb, 'SELECT COUNT(*) AS n FROM vehiculos_flota WHERE soat_vencimiento < DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR) OR rt_vencimiento < DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR)'),
             consulta(tdb, "SELECT COUNT(*) AS n FROM ordenes_trabajo WHERE estado NOT LIKE '%final%' AND estado NOT LIKE '%cerr%' AND estado NOT LIKE '%anul%'"),
             // Papeletas pendientes de pago que ya vencieron o vencen en 3 días (plazo de pago o fin del descuento)
-            consulta(tdb, "SELECT COUNT(*) AS n FROM papeletas WHERE estado IN ('PENDIENTE', 'EN_DESCARGO') AND ((fecha_limite_pago IS NOT NULL AND fecha_limite_pago <= DATE_ADD(CURDATE(), INTERVAL 3 DAY)) OR (descuento_monto > 0 AND fecha_limite_descuento BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 3 DAY)))"),
+            consulta(tdb, "SELECT COUNT(*) AS n FROM papeletas WHERE estado IN ('PENDIENTE', 'EN_DESCARGO') AND ((fecha_limite_pago IS NOT NULL AND fecha_limite_pago <= DATE_ADD(DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), INTERVAL 3 DAY)) OR (descuento_monto > 0 AND fecha_limite_descuento BETWEEN DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR) AND DATE_ADD(DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), INTERVAL 3 DAY)))"),
         ]);
         const cifra = (filas, campo, texto) => (filas && filas[0] && filas[0][campo] != null ? texto(Number(filas[0][campo])) : null);
         res.json({

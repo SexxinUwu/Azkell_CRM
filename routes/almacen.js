@@ -30,6 +30,7 @@ const nombreLlanta = ({ marca, modelo, medida }) => {
 const { createApprovalToken } = require('../services/ocApprovalService');
 const { sendApprovalWhatsapp, sendTreasuryNotificationWhatsapp, sendDecisionConfirmationWhatsapp } = require('../services/whatsappService');
 const eventosNotif = require('../services/notificaciones_eventos');
+const { hoyLima } = require('../services/horaLima');
 
 async function despacharAprobacionWhatsAppAlmacen(req, tdb, entradaId, bodyData) {
     try {
@@ -764,7 +765,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 ELSE NULL
             END,
             INTERVAL COALESCE(dias_propuestos, 30) DAY
-        ) < CURDATE()
+        ) < DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR)
     `;
         const qFleetrunVenc = `
         SELECT COUNT(*) AS cnt FROM (
@@ -841,7 +842,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         const costoSoles = (monedaVal === 'USD' && tc) ? costoRef * tc : costoRef;
         const cantInicial = parseFloat(cantidad_inicial) || 0;
         const stockReg = cantInicial > 0 ? cantInicial : 0;
-        const fechaReg = cantInicial > 0 ? new Date().toISOString().split('T')[0] : null;
+        const fechaReg = cantInicial > 0 ? hoyLima() : null;
 
         // Generar descripcion concatenada desde los campos individuales
         let marcasArr = [];
@@ -1193,7 +1194,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             return res.status(400).json({ error: 'stock_fisico requerido' });
         }
         const stockVal = parseFloat(stock_fisico);
-        const fechaHoy = new Date().toISOString().split('T')[0];
+        const fechaHoy = hoyLima();
 
         // Obtener stock virtual actual para registrar en observaciones
         getDb(req).query(`SELECT
@@ -1249,7 +1250,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                         if (err) return reject(err);
                         const cantInicial = parseFloat(f.cantidad_inicial) || 0;
                         const stockReg = cantInicial > 0 ? cantInicial : 0;
-                        const fechaReg = cantInicial > 0 ? new Date().toISOString().split('T')[0] : null;
+                        const fechaReg = cantInicial > 0 ? hoyLima() : null;
                         getDb(req).query(`INSERT INTO inventario
                         (id,descripcion,articulo,codigo_articulo,familia,almacen,unidad,moneda,costo_referencial,
                          marca,observaciones,marca_unidad,sistema,sub_sistema,tipo,sub_tipo,
@@ -1832,7 +1833,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 centro_costo, sub_motivo, autoriza, url_cotizacion
             ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
                 [
-                    id, fecha || new Date().toISOString().split('T')[0], proveedor_id || null, proveedor_nombre || null,
+                    id, fecha || hoyLima(), proveedor_id || null, proveedor_nombre || null,
                     documento_referencia || null, moneda || 'PEN', tc || null, total_pen, observaciones || null, tipo_igv || 'sin_igv',
                     creado_por || null, motivo_entrada || null, placa || null, tipo_orden || 'Orden de compra', condicion_pago || 'Al contado',
                     dias_credito || 30, ot_id || null, 'Registrado',
@@ -1964,7 +1965,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                     creado_por, motivo_entrada, tipo_orden, condicion_pago, dias_credito, estado, serie, numero_correlativo, dias_pagar,
                     prioridad, solicitante, estado_factura, centro_costo)
                  VALUES (?, ?, ?, ?, 'PEN', 1, ?, ?, ?, ?, 'Reencauche de llantas', 'Orden de compra', ?, ?, 'Registrado', ?, ?, ?, 'Normal', ?, 'Pendiente', 'CC-100')`,
-                [id, new Date().toISOString().split('T')[0], b.proveedor_id || null, proveedorNombre, total, motivo, b.tipo_igv || 'sin_igv',
+                [id, hoyLima(), b.proveedor_id || null, proveedorNombre, total, motivo, b.tipo_igv || 'sin_igv',
                  usuario, condEntrada, cond.dias_credito, String(anio), id, condEntrada === 'A crédito' ? cond.dias_credito : 0, usuario]);
             for (const L of lineas) {
                 await conn.query(
@@ -2051,7 +2052,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             serie=?, numero_correlativo=?, dias_pagar=?, prioridad=?, cuenta_bancaria_proveedor=?, cuenta_bancaria_empresa=?, solicitante=?, estado_factura=?,
             centro_costo=?, sub_motivo=?, autoriza=?`;
         const updateParams = [
-            fecha || new Date().toISOString().split('T')[0], proveedor_id || null, proveedor_nombre || null,
+            fecha || hoyLima(), proveedor_id || null, proveedor_nombre || null,
             documento_referencia || null, moneda || 'PEN', tc || null, total_pen,
             observaciones || null, tipo_igv || 'sin_igv', motivo_entrada || null, placa || null, tipo_orden || 'Orden de compra', condicion_pago || 'Al contado', dias_credito || 30, ot_id || null,
             serie || null, numero_correlativo || null, parseInt(dias_pagar) || 0, prioridad || 'Normal',
@@ -2198,7 +2199,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             if (esAprob) {
                 setFields.push('autoriza=?');
                 params.push(aprobadorVal);
-                setFields.push('fecha_aprobacion=NOW()');
+                setFields.push('fecha_aprobacion=(UTC_TIMESTAMP() - INTERVAL 5 HOUR)');
             } else if (estado.toLowerCase() === 'registrado') {
                 setFields.push('fecha_aprobacion=NULL');
             }
@@ -2258,7 +2259,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
                     if (esAprob) {
                         await promiseDb.query(
-                            "UPDATE ordenes_compra SET estado = 'APROBADA', aprobado_por = ?, aprobado_en = NOW() WHERE codigo = ?",
+                            "UPDATE ordenes_compra SET estado = 'APROBADA', aprobado_por = ?, aprobado_en = (UTC_TIMESTAMP() - INTERVAL 5 HOUR) WHERE codigo = ?",
                             [aprobadorVal, id]
                         );
 
@@ -2376,7 +2377,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         catch (errReenc) { return res.status(errReenc.aviso ? errReenc.status : 500).json({ error: errReenc.message }); }
         // Se guarda quién anuló y cuándo (el aprobador es otra persona y se muestra aparte)
         const quienAnula = String((req.user && (req.user.nombre || req.user.correo)) || (req.body && req.body.usuario) || '').slice(0, 150) || null;
-        tdb.query('UPDATE entradas_inv SET estado=?, motivo_anulacion=?, anulado_por=?, fecha_anulacion=NOW() WHERE id=?',
+        tdb.query('UPDATE entradas_inv SET estado=?, motivo_anulacion=?, anulado_por=?, fecha_anulacion=(UTC_TIMESTAMP() - INTERVAL 5 HOUR) WHERE id=?',
             ['Anulado', String(motivo || '').trim(), quienAnula, id], (err, result) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); }
@@ -2763,7 +2764,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 if (err) return res.status(500).json({ error: err.message });
                 const total_pen = _calcularTotalPen(items || [], tc, moneda);
                 targetDb.query('INSERT INTO salidas_inv (id,fecha,tipo_destino,placa,responsable,responsable_id,moneda,tipo_cambio,total_pen,observaciones,creado_por,ticket_ot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
-                    [id, fecha || new Date().toISOString().split('T')[0], tipo_destino, placa || null, responsable || null,
+                    [id, fecha || hoyLima(), tipo_destino, placa || null, responsable || null,
                         responsable_id || null, moneda || 'PEN', tc || null, total_pen, observaciones || null, solUser, ticket_ot || null],
                     (err2) => {
                         if (err2) return res.status(500).json({ error: err2.message });

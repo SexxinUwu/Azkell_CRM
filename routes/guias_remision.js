@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const SunatGrService = require('../services/sunatGrService');
 const ApisunatService = require('../services/apisunatService');
+const { hoyLima } = require('../services/horaLima');
 
 module.exports = function(db, tenantStorage) {
 
@@ -1138,7 +1139,7 @@ module.exports = function(db, tenantStorage) {
                     estado_sunat, codigo_respuesta_sunat, observaciones_sunat, modo_emision, foto_evidencia, fecha_entrega, numero_transporte
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'REGISTRADO MANUAL', '0', ?, 'MANUAL', ?, ?, ?)
             `, [
-                numGuia, d.tipo_documento || '09', d.fecha_emision || new Date().toISOString().slice(0, 10), d.fecha_traslado || d.fecha_emision || new Date().toISOString().slice(0, 10),
+                numGuia, d.tipo_documento || '09', d.fecha_emision || hoyLima(), d.fecha_traslado || d.fecha_emision || hoyLima(),
                 d.remitente_ruc, d.remitente_razon_social || '—', d.destinatario_ruc || '—', d.destinatario_razon_social || '—',
                 d.punto_partida_direccion || '—', d.punto_partida_ubigeo || '', d.punto_llegada_direccion || '—', d.punto_llegada_ubigeo || '',
                 d.placa_tracto || '—', d.placa_carreta || '—', d.conductor_tipo_doc || 'DNI', d.conductor_num_doc || '—', d.conductor_nombre || '—', d.conductor_licencia || '—',
@@ -1429,8 +1430,8 @@ module.exports = function(db, tenantStorage) {
             `, [
                 numeroGuiaCompleto,
                 tipoDoc,
-                grtData.fecha_emision || new Date().toISOString().slice(0, 10),
-                grtData.fecha_traslado || new Date().toISOString().slice(0, 10),
+                grtData.fecha_emision || hoyLima(),
+                grtData.fecha_traslado || hoyLima(),
                 grtData.remitente_ruc || null,
                 grtData.remitente_razon_social || null,
                 grtData.destinatario_ruc || null,

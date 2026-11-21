@@ -1,3 +1,4 @@
+import { hoyLima } from '../../core/lib/format';
 import { api, ApiError } from '../../core/api/client';
 
 // Excel de kits: copia de modulos/mantenimiento/kits-mp/logica.js (kitsDescargarPlantilla, kitsExportarExcel,
@@ -24,7 +25,7 @@ export async function exportarKitsExcel(filas: Registro[]) {
   const ws = XLSX.utils.json_to_sheet(filas);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Kits_MP');
-  XLSX.writeFile(wb, `Kits_Mantenimiento_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  XLSX.writeFile(wb, `Kits_Mantenimiento_${hoyLima()}.xlsx`);
 }
 
 /**

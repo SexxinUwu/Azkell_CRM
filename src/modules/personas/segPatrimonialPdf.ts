@@ -1,3 +1,4 @@
+import { hoyLima } from '../../core/lib/format';
 // Status "Unidades en Base" (F-SEG-0010): calca de _subBuildPdfHtml, subDeterminarTipo y _subFormatNombreConductor
 // del clásico (modulos/seguridad/unidades-base/logica.js). El HTML y sus estilos en línea son los del clásico.
 // Exporta como el clásico (subExportarPDF): abre una ventana con el documento y manda imprimir al cargar.
@@ -160,7 +161,7 @@ export function htmlStatusUnidadesBase(items: UnidadBaseReporte[], fechaFiltro: 
  */
 export function abrirStatusUnidadesBase(items: UnidadBaseReporte[]): boolean {
   // Igual que el clásico: fecha del filtro (por defecto, hoy en UTC) y logo de la empresa o el de respaldo
-  const fechaFiltro = new Date().toISOString().split('T')[0];
+  const fechaFiltro = hoyLima();
   let logo = '';
   try { logo = localStorage.getItem('fleet_empresa_logo') || ''; } catch { /* sin almacenamiento */ }
   const w = window as unknown as { _LOGO_BASE64?: string };

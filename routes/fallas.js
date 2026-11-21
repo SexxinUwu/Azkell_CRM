@@ -115,7 +115,7 @@ module.exports = function (db) {
                     SUM(CASE WHEN estado NOT IN ${TERMINADOS_SQL} OR estado IS NULL THEN 1 ELSE 0 END) AS abiertas,
                     SUM(CASE WHEN critica = 1 AND (estado NOT IN ${TERMINADOS_SQL} OR estado IS NULL) THEN 1 ELSE 0 END) AS criticas,
                     SUM(CASE WHEN estado = 'SIN_STOCK' THEN 1 ELSE 0 END) AS sin_stock,
-                    SUM(CASE WHEN DATE(fecha_reporte) = CURDATE() THEN 1 ELSE 0 END) AS hoy
+                    SUM(CASE WHEN DATE(fecha_reporte) = DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR) THEN 1 ELSE 0 END) AS hoy
                 FROM reportes_fallas
             `);
             res.json(rows[0] || {});
@@ -158,7 +158,7 @@ module.exports = function (db) {
             const backlogId = await siguienteBacklog(tdb);
             await tdb.promise().query(
                 `INSERT INTO ot_backlog (backlog_id, placa, km, tema, tarea, reportado_por, fecha_reporte, estado, creado_por, ticket_ot)
-                 VALUES (?, ?, ?, ?, ?, ?, CURDATE(), 'Pendiente', ?, ?)`,
+                 VALUES (?, ?, ?, ?, ?, ?, DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), 'Pendiente', ?, ?)`,
                 [backlogId, placa, km, String(b.tipo_falla).slice(0, 100), b.descripcion, usuario, 'Sistema', folio]
             );
 

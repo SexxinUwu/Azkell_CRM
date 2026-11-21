@@ -7,6 +7,7 @@ const eventosNotif = require('../services/notificaciones_eventos');
 const { htmlAPdf } = require('../services/ot_pdf');
 const { htmlReporteFleetrun } = require('../services/fleetrun_reporte');
 const { COSTO_OT_SQL } = require('../services/costos_taller');
+const { hoyLima } = require('../services/horaLima');
 const router = express.Router();
 
 module.exports = (db, logAudit, _generarCodigoAlmacen) => {
@@ -127,7 +128,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                                     `UPDATE taller_rampas SET 
                                         estado = 'Liberado', 
                                         situacion = 'Liberado', 
-                                        fecha_salida_real = COALESCE(fecha_salida_real, CURDATE()), 
+                                        fecha_salida_real = COALESCE(fecha_salida_real, DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR)), 
                                         hora_salida_real = COALESCE(hora_salida_real, CAST(CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00') AS TIME)), 
                                         fecha_liberado = COALESCE(fecha_liberado, CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-05:00')) 
                                      WHERE id = ?`,
@@ -1045,7 +1046,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         if (textoServicio.length) return res.status(400).json({ error: 'Eso es un servicio, no un artículo. Agrégalo en Servicios de terceros: ' + textoServicio.map(d => d.descripcion).join(', ') });
         // Todo se escribe en la base de esta empresa (req.db), nunca en una base fija
         const targetDb = req.db || db;
-        const fecha = new Date().toISOString().split('T')[0];
+        const fecha = hoyLima();
         const anio = new Date().getFullYear();
         const tc = parseFloat(tipo_cambio) || 1;
 

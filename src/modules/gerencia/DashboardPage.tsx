@@ -1,3 +1,4 @@
+import { hoyLima } from '../../core/lib/format';
 import '../mantenimiento/mant.css';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -172,7 +173,7 @@ export function DashboardPage() {
   }).length;
   const otsHoy = otsData.filter(o => {
     const f = String(o.fecha_cierre ?? o.updated_at ?? '').split('T')[0];
-    return f === new Date().toISOString().split('T')[0];
+    return f === hoyLima();
   }).length;
 
   // ─── Inventario ──────────────────────────────────────────────────────────────

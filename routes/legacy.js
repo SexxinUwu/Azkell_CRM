@@ -1,6 +1,7 @@
 const express = require('express');
 const { normalizarTipo } = require('../utils/tipo_unidad');
 const { crearResolutorPlacas } = require('../services/wialon_placas');
+const { hoyLima } = require('../services/horaLima');
 const router = express.Router();
 
 
@@ -1297,7 +1298,7 @@ router.post('/:metodo', async (req, res) => {
             // Para nuevos: generar código legible si no viene uno
             const placaNueva  = (form.f_placa  || '').toUpperCase();
             const tipoMpNuevo = form.f_tipomp  || '';
-            const fechaNueva  = form.f_fecha   || new Date().toISOString().split('T')[0];
+            const fechaNueva  = form.f_fecha   || hoyLima();
             if (form.f_id && !String(form.f_id).match(/^FL-\d{13}$/)) {
                 // ID manual enviado por el frontend (no timestamp)
                 _ejecutarGuardado(form.f_id);
@@ -1614,7 +1615,7 @@ router.post('/:metodo', async (req, res) => {
                 if (geoPendiente) geoPendiente.finally(cerrarSesionWialon); else cerrarSesionWialon();
 
                 // ── Snapshot automático de KM GPS (una vez por día por placa) ──
-                const hoy = new Date().toISOString().split('T')[0];
+                const hoy = hoyLima();
                 vehiculosLive.forEach(v => {
                     if (!v.placa || (!v.km && !v.horas)) return;
                     reqDb.query(

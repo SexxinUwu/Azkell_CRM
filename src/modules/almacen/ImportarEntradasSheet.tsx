@@ -1,3 +1,4 @@
+import { hoyLima } from '../../core/lib/format';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
 import { ImportarValidadoSheet, leerTabla, textoCelda, type FilaRevisada } from '../../core/ui/ImportarValidadoSheet';
@@ -63,7 +64,7 @@ export function ImportarEntradasSheet({ open, onClose, inventario }: { open: boo
 
     const filas = datos.map(({ fila, celdas }) => {
       const v = (campo: keyof typeof ALIAS) => (pos[campo] >= 0 ? textoCelda(celdas[pos[campo]]) : '');
-      const fechaTexto = fechaIso(v('fecha')) || new Date().toISOString().slice(0, 10);
+      const fechaTexto = fechaIso(v('fecha')) || hoyLima();
       const moneda = (v('moneda') || 'PEN').toUpperCase();
       const invId = v('inventario').toUpperCase();
       const cantidad = numero(v('cantidad'));

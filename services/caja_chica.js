@@ -138,11 +138,11 @@ async function registrarEgresoCentral(tdb, { monto, moneda, descripcion, cuentaE
             tipo_comprobante, cuenta_bancaria_persona, cuenta_bancaria_empresa, voucher_url, observacion, no_aplica_liquidacion,
             estado, usuario_creacion, usuario_aprobacion, fecha_aprobacion
         ) VALUES (
-            CURDATE(), CURTIME(), CURDATE(), CURTIME(), '', '', ?, ?,
+            DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), TIME(UTC_TIMESTAMP() - INTERVAL 5 HOUR), DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), TIME(UTC_TIMESTAMP() - INTERVAL 5 HOUR), '', '', ?, ?,
             '', '', '', '', ?, 'CAJA CHICA', 'CC-100', 'Caja chica', 'TRANSFERENCIA BANCARIA', ?,
             'ADMINISTRATIVO', 'CAJA CHICA', 'EGRESO', ?, 0, ?, 1, ?,
             'VALE PROVISIONAL DE CAJA', '', ?, NULL, '', 0,
-            'REGISTRADO', ?, ?, NOW()
+            'REGISTRADO', ?, ?, (UTC_TIMESTAMP() - INTERVAL 5 HOUR)
         )`,
         [serie, numero, usuario, moneda, monto, monto, descripcion, cuentaEmpresa || '', usuario, usuario]
     );

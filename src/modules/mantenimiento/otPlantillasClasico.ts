@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Copias del clásico (modulos/mantenimiento/reportes-ot/logica.js): plantilla de inspecciones y plantilla de llantas.
 // El diseño y el contenido no cambian. Solo cambia el final: devuelven el HTML y el servidor lo convierte a PDF.
+import { hoyLima } from '../../core/lib/format';
 import { rotEscHtml } from './otPdfClasico';
 import { api } from '../../core/api/client';
 
@@ -293,7 +294,7 @@ export async function htmlPlantillaLlantas(idOt, otObj) {
 
     var placa = (ot.placa || ot.placa_vehiculo || '---').toUpperCase().trim();
     var tipoOT = (ot.tipo_ot || ot.tipo || 'Preventivo').toUpperCase();
-    var fechaInicio = ot.fecha_inicio_ot || ot.fecha_ingreso || ot.creado_en || new Date().toISOString().split('T')[0];
+    var fechaInicio = ot.fecha_inicio_ot || ot.fecha_ingreso || ot.creado_en || hoyLima();
     try { fechaInicio = String(fechaInicio).split('T')[0]; } catch(e){}
     var detL = {};
     try { detL = typeof ot.detalles_json === 'string' ? JSON.parse(ot.detalles_json) : (ot.detalles_json || {}); } catch(e){}

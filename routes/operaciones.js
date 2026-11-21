@@ -4,6 +4,7 @@ const { getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
 const { recalcularLiquidacionViaje } = require('../services/liquidacion_viaje');
 const { documentosVencidosPara, mensajeAdvertencia } = require('../services/documentos_flota');
 const { rentabilidadPeriodo } = require('../services/rentabilidad');
+const { hoyLima } = require('../services/horaLima');
 
 module.exports = function (db, broadcast, logAudit, opciones = {}) {
     // Hora de Lima (America/Lima), como el resto del sistema; toISOString daría UTC
@@ -1869,7 +1870,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
         const ruta = osTexto(b.ruta, 150) ? osTexto(b.ruta, 150).toUpperCase() : null;
         const tramo = tramosDeRuta(ruta);
         return {
-            fecha: osFecha(b.fecha) || new Date().toISOString().slice(0, 10),
+            fecha: osFecha(b.fecha) || hoyLima(),
             fecha_entrega: osFecha(b.fecha_entrega),
             moneda: osTexto(b.moneda, 20) || 'SOLES',
             tipo_cambio: osNumero(b.tipo_cambio) ?? 3.75,
@@ -2003,7 +2004,7 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
                 let next = 1;
                 if (rows.length) { const p = parseInt(String(rows[0].viaje).replace(`${year}-`, ''), 10); if (!isNaN(p)) next = p + 1; }
                 const codigo = `${year}-${String(next).padStart(8, '0')}`;
-                const fechaViaje = `${osFecha(o.fecha instanceof Date ? o.fecha.toISOString() : o.fecha) || new Date().toISOString().slice(0, 10)} 00:00:00`;
+                const fechaViaje = `${osFecha(o.fecha instanceof Date ? o.fecha.toISOString() : o.fecha) || hoyLima()} 00:00:00`;
                 const pesoO = await pesoReal(con, o);
                 const d = req.body || {};
                 const tercero = String(d.ejecucion || o.ejecucion || '').toUpperCase() === 'TERCERO';
@@ -2097,14 +2098,14 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             if (nuevo === 'EN_EJECUCION') {
                 if (!viaje) return res.status(409).json({ ok: false, error: 'Asigna un viaje antes de iniciar el servicio.' });
                 if (viaje.ejecucion === 'TERCERO' ? !viaje.tercero_nombre : (!viaje.conductor || !viaje.placa_tracto)) return res.status(409).json({ ok: false, error: viaje.ejecucion === 'TERCERO' ? `El viaje ${viaje.viaje} aún no tiene transportista tercero.` : `El viaje ${viaje.viaje} aún no tiene conductor y tracto.` });
-                const fecha = fechaInicio || new Date().toISOString().slice(0, 10);
+                const fecha = fechaInicio || hoyLima();
                 await tdb.query(`UPDATE operaciones_ordenes_servicio SET estado_servicio = 'EN_EJECUCION' WHERE id = ?`, [o.id]);
                 if (!['INICIADO', 'FINALIZADO'].includes(String(viaje.estado).toUpperCase())) {
                     await tdb.query(`UPDATE operaciones_ordenes_viaje SET estado = 'INICIADO', fecha_inicio = COALESCE(fecha_inicio, ?) WHERE viaje = ?`, [`${fecha} 00:00:00`, viaje.viaje]);
                 }
                 // La cuenta por cobrar en Tesorería queda pendiente de implementar: por ahora no se genera nada (sincronizarCuentaPorCobrar sigue definida para retomarla)
             } else if (nuevo === 'ENTREGADO') {
-                await tdb.query(`UPDATE operaciones_ordenes_servicio SET estado_servicio = 'ENTREGADO', fecha_entrega = COALESCE(fecha_entrega, CURDATE()) WHERE id = ?`, [o.id]);
+                await tdb.query(`UPDATE operaciones_ordenes_servicio SET estado_servicio = 'ENTREGADO', fecha_entrega = COALESCE(fecha_entrega, DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR)) WHERE id = ?`, [o.id]);
             } else if (nuevo === 'ANULADO') {
                 await tdb.query(`UPDATE operaciones_ordenes_servicio SET estado_servicio = 'ANULADO' WHERE id = ?`, [o.id]);
                 await tdb.query(`DELETE FROM operaciones_ordenes_viaje_rutas WHERE orden = ?`, [o.codigo_orden]);

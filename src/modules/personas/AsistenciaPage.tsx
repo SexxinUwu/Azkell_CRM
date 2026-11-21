@@ -1,3 +1,4 @@
+import { hoyLima } from '../../core/lib/format';
 import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -77,7 +78,7 @@ export function AsistenciaPage() {
 
   async function autocompletarHoy() {
     if (!m) return;
-    const fecha = new Date().toISOString().slice(0, 10);
+    const fecha = hoyLima();
     setOcupado(true);
     try {
       await api('/rrhh/tareo/guardar', {
@@ -94,7 +95,7 @@ export function AsistenciaPage() {
   async function sincronizar() {
     setOcupado(true);
     try {
-      const r = await api<{ message?: string }>('/rrhh/tareo/sincronizar-viajes', { method: 'POST', body: { fecha: new Date().toISOString().slice(0, 10) } });
+      const r = await api<{ message?: string }>('/rrhh/tareo/sincronizar-viajes', { method: 'POST', body: { fecha: hoyLima() } });
       haptic('success'); toast(r.message || 'Sincronización completada');
       await qc.invalidateQueries({ queryKey: ['rrhh', 'tareo'] });
     } catch (err) { toast(errorMessage(err), 'error'); haptic('warning'); }
@@ -233,7 +234,7 @@ function LicenciaSheet({ open, personal, onClose }: { open: boolean; personal: P
 
   useEffect(() => {
     if (!open) return;
-    const h = new Date().toISOString().slice(0, 10);
+    const h = hoyLima();
     setPid(''); setTipo('VACACIONES'); setIni(h); setFin(h); setMotivo(''); setError(null);
   }, [open]);
 

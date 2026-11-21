@@ -95,13 +95,7 @@ export function fechaOrden(o: { fecha?: string | null; created_at?: string | nul
 }
 
 /** Hoy en Lima (AAAA-MM-DD), para los filtros */
-export function hoyLima(): string {
-  try {
-    return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
-  } catch {
-    return new Date().toISOString().slice(0, 10);
-  }
-}
+export { hoyLima } from '../../core/lib/format';
 
 /** Hoy en la zona local (AAAA-MM-DD), para la fecha de registro del formulario */
 export function hoyLocal(): string {

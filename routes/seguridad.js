@@ -5,6 +5,7 @@
 const express = require('express');
 const router  = express.Router();
 const multer  = require('multer');
+const { hoyLima } = require('../services/horaLima');
 const upload  = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } }); // 15MB max
 
 module.exports = (db, logAudit) => {
@@ -812,7 +813,7 @@ module.exports = (db, logAudit) => {
     // ── GET /seguridad/unidades-base/panorama-en-vivo — Panorama 360° en Vivo ──
     router.get('/seguridad/unidades-base/panorama-en-vivo', (req, res) => {
         const tdb = getDb(req);
-        const fechaTarget = req.query.fecha || new Date().toISOString().split('T')[0];
+        const fechaTarget = req.query.fecha || hoyLima();
         const corteTarget = req.query.corte || 'ALL';
         const empresaTarget = (req.query.empresa || 'TODAS').toUpperCase().trim();
 
@@ -1542,7 +1543,7 @@ module.exports = (db, logAudit) => {
                 SELECT 
                     COALESCE(empresa, 'MARSISA') as empresa,
                     COUNT(*) as total_actas,
-                    SUM(CASE WHEN fecha = CURDATE() THEN 1 ELSE 0 END) as hoy,
+                    SUM(CASE WHEN fecha = DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR) THEN 1 ELSE 0 END) as hoy,
                     COUNT(DISTINCT placa) as vehiculos_evaluados
                 FROM seg_entrega_vehiculos
                 GROUP BY COALESCE(empresa, 'MARSISA')
@@ -1942,7 +1943,7 @@ module.exports = (db, logAudit) => {
                 const values = [
                     regId,
                     regId,
-                    fecha || new Date().toISOString().slice(0, 10),
+                    fecha || hoyLima(),
                     motivo || 'ENTREGA DE UNIDAD',
                     String(quien_entrega).trim().toUpperCase(),
                     String(quien_recibe).trim().toUpperCase(),
@@ -2020,7 +2021,7 @@ module.exports = (db, logAudit) => {
         `;
 
         const values = [
-            fecha || new Date().toISOString().slice(0, 10),
+            fecha || hoyLima(),
             String(quien_recibe || '').trim().toUpperCase(),
             clase || null,
             marca || null,

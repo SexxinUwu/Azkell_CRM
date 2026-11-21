@@ -126,3 +126,23 @@ export function initials(name: string) {
 export function firstName(name: string) {
   return name.trim().split(/\s+/)[0] ?? name;
 }
+
+// ── Hora de Lima para registrar fechas y horas ──
+// Nunca usar new Date().toISOString() para guardar fechas u horas del negocio: da la hora UTC (5 horas adelantada)
+// y después de las 7 p. m. incluso el día siguiente.
+const partesFmt = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+function partesLima(d: Date) {
+  const p: Record<string, string> = {};
+  for (const x of partesFmt.formatToParts(d)) p[x.type] = x.value;
+  return p;
+}
+/** AAAA-MM-DD de hoy en Lima */
+export const hoyLima = (d: Date = new Date()) => { const p = partesLima(d); return `${p.year}-${p.month}-${p.day}`; };
+/** AAAA-MM de este mes en Lima */
+export const mesLima = (d: Date = new Date()) => { const p = partesLima(d); return `${p.year}-${p.month}`; };
+/** AAAA-MM-DD HH:mm:ss en Lima */
+export const ahoraLima = (d: Date = new Date()) => { const p = partesLima(d); return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`; };
+/** AAAA-MM-DD HH:mm en Lima */
+export const ahoraLimaMin = (d: Date = new Date()) => ahoraLima(d).slice(0, 16);
+/** AAAA-MM-DDTHH:mm en Lima (formato de datetime-local) */
+export const ahoraLimaLocal = (d: Date = new Date()) => ahoraLimaMin(d).replace(' ', 'T');

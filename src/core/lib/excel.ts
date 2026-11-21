@@ -1,3 +1,4 @@
+import { hoyLima } from '../../core/lib/format';
 // Exportar tablas a Excel (.xlsx) desde cualquier pantalla. Carga la librería solo al usarla.
 // Date = fecha nativa de Excel (aaaa-mm-dd, o aaaa-mm-dd hh:mm:ss si trae hora, como el clásico). Se arma con UTC para que la hora no cambie.
 /** Texto con enlace (p. ej. "Ver factura" que abre el archivo) */
@@ -51,7 +52,7 @@ export interface HojaExcel { hoja: string; encabezados: string[]; filas: Celda[]
 /** Un .xlsx con varias hojas, en el orden dado. */
 export async function exportarExcelHojas(nombre: string, hojas: HojaExcel[]) {
   const { default: writeExcelFile } = await import('write-excel-file/browser');
-  const fecha = new Date().toISOString().slice(0, 10);
+  const fecha = hoyLima();
   await writeExcelFile(hojas.map(({ hoja, encabezados, filas }) => ({
     data: [encabezados.map(cab), ...filas.map(f => f.map(celdaDe))],
     sheet: hoja.slice(0, 31),

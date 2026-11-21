@@ -9,7 +9,7 @@ import { useToast } from '../../core/ui/Toast';
 import { ApiError, errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
-import { formatSoles } from '../../core/lib/format';
+import { formatSoles, hoyLima } from '../../core/lib/format';
 import { useOrdenesTrabajoData } from '../mantenimiento/api';
 import {
   costoSolesArticulo, ETIQUETA_DESTINO, guardarSalida, solicitarMateriales, TIPO_ORDEN_AJUSTE, TIPO_ORDEN_SALIDA, TIPOS_DESTINO,
@@ -88,7 +88,7 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset,
       const cargados = (s.items ?? []).map(i => ({ ...i, uid: nuevoUid(), cantidad: Number(i.cantidad), costo_unitario: Number(i.costo_unitario), importe: Number(i.importe) }));
       setItems(cargados.length ? cargados : [itemVacio(nuevoUid())]);
     } else {
-      setFecha(new Date().toISOString().split('T')[0]);
+      setFecha(hoyLima());
       setTipoOrden(TIPO_ORDEN_SALIDA);
       setTipoDestino(preset?.tipo_destino ?? 'Vehiculo');
       setPlaca(preset?.placa ?? '');

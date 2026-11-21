@@ -8,6 +8,7 @@ if (!process.env.JWT_SECRET) {
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
+const { hoyLima, ahoraLima } = require('./services/horaLima');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -2184,7 +2185,7 @@ async function enviarEmailAlerta(para, asunto, htmlBody, attachments = [], targe
 // ── Scheduler de alertas de retraso (+1/+3/+7 días) ──────────────────────
 // Corre una vez al día (cada 24h), revisa planes vencidos y manda emails
 async function verificarAlertasRetraso() {
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = hoyLima();
     // Planes activos cuya fecha_fin_ventana ya pasó
     db.query(
         `SELECT p.*, pl.cliente, pl.marca
@@ -2590,7 +2591,7 @@ app.use('/api', (req, res, next) => {
         const str = JSON.stringify(sinSecretos);
         bodyResumen = str.length > 500 ? str.slice(0, 497) + '…' : str;
     } catch {}
-    const fechaStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const fechaStr = ahoraLima();
     const firma = _auditFirma({ fechaStr, usuario, correo, ip, metodo: req.method, ruta, modulo, accion, bodyResumen });
 
     // "Después": lo que respondió el servidor. "Antes": lo fija el handler con req.auditAntes = {...}
@@ -3517,7 +3518,7 @@ app.post('/api/ordenes', (req, res) => {
             };
 
             // 2. Ensamblamos las fechas para SQL
-            const fechaHoraSQL = (fecha && hora) ? `${fecha} ${hora}:00` : new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const fechaHoraSQL = (fecha && hora) ? `${fecha} ${hora}:00` : ahoraLima();
             const fechaHoraEstSQL = (fecha_est && hora_est) ? `${fecha_est} ${hora_est}:00` : null;
 
             // 3. Insertamos usando la columna correcta: fecha_hora_salida
