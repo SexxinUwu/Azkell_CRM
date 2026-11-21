@@ -1168,8 +1168,9 @@ module.exports = function (db, broadcast, logAudit) {
 
                     // Los trabajos de la OT (uno por falla) quedan registrados desde el inicio, con su técnico
                     if (trabajosDet.length) {
-                        const filasTrabajo = trabajosDet.map((td, idx) => [`${idOt}-${idx + 1}`, idOt, placa, td.desc, td.tecnico || '', 'En Proceso']);
-                        await tdb.promise().query('INSERT INTO trabajos_ot (id_ot, ticket_visita, placa, trabajo_realizado, tecnico, estado) VALUES ?', [filasTrabajo]);
+                        const filasTrabajo = trabajosDet.map((td, idx) => [`${idOt}-${idx + 1}`, idOt, placa, td.desc, td.tecnico || '', 'En Proceso',
+                            JSON.stringify({ origen: 'reporte_falla', folio_reporte: rep.folio || null, falla_reportada: td.desc, personal: td.tecnico || '' })]);
+                        await tdb.promise().query('INSERT INTO trabajos_ot (id_ot, ticket_visita, placa, trabajo_realizado, tecnico, estado, detalles_json) VALUES ?', [filasTrabajo]);
                     }
 
                     otsCreadas.push({ idOt, placa, unidad: item.unidad, tipo_ot: item.tipo_ot, subtipo_ot: item.subtipo_ot, supervisor: supervisorStr, tecnicos: tecnicosStr, id: resOt.insertId });

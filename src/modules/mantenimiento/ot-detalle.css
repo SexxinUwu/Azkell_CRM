@@ -211,3 +211,5 @@
 @media (prefers-contrast: more) {
   .otd-hero, .otd-kpi, .otd-lista, .otd-datos, .otd-falla { box-shadow: none; border: 1px solid var(--separator-strong); }
 }
+.otd-fila__estado { font-size: 0.75rem; color: var(--amber-ink); font-weight: 600; }
+.otd-fila__estado--ok { color: var(--green-ink, #15803d); }

@@ -549,6 +549,10 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                 {trabajos.map(t => {
                   const costo = trabajoCosto(t);
                   const personal = String(aObjeto(t.detalles_json).personal ?? t.tecnico ?? '');
+                  const det = aObjeto(t.detalles_json);
+                  const registrado = !!(t.fecha_trabajo || t.fecha_salida || costo > 0 || det.realizado_registrado === true);
+                  const reportado = String(det.falla_reportada ?? '').trim();
+                  const origen = det.origen === 'reporte_falla' ? `Reporte de fallas${det.folio_reporte ? ` ${det.folio_reporte}` : ''}` : det.origen === 'rampa' ? 'Status de rampa' : '';
                   const fechas = [t.fecha_trabajo, t.fecha_salida]
                     .filter(Boolean)
                     .map(f => formatFechaHoraPe(String(f).replace('Z', '').replace(' ', 'T').slice(0, 16)));
@@ -562,6 +566,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                           <span className="otd-fila__titulo">{t.trabajo_realizado || '—'}</span>
                           <span className="otd-fila__sub">{personal || 'Sin técnico asignado'}</span>
                           {fechas.length > 0 && <span className="otd-fila__meta t-numeric">{fechas.join(' → ')}</span>}
+                          {origen && <span className="otd-fila__meta">Reportado: {reportado || t.trabajo_realizado} · {origen}</span>}
+                          {origen && <span className={`otd-fila__estado${registrado ? ' otd-fila__estado--ok' : ''}`}>{registrado ? 'Realizado' : 'Falta registrar lo realizado (fechas y horas)'}</span>}
                         </span>
                         {costo > 0 && <span className="otd-fila__importe t-numeric">{soles(costo)}</span>}
                         {puedeEditar && <ChevronRight size={16} className="otd-fila__chevron" aria-hidden />}

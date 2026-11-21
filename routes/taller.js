@@ -318,8 +318,9 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                     [nuevoId, nuevoId, placa, JSON.stringify(detalles), usuario, dtIngreso, dtIngreso, dtSalida, idRampa],
                     (errOt) => {
                         if (errOt) return res.status(500).json({ error: errOt.message });
-                        const filasT = trabajos.map((x, i) => [`${nuevoId}-${i + 1}`, nuevoId, placa, x.desc, x.tecnico, 'En Proceso']);
-                        targetDb.query('INSERT INTO trabajos_ot (id_ot, ticket_visita, placa, trabajo_realizado, tecnico, estado) VALUES ?', [filasT], (errT) => {
+                        const filasT = trabajos.map((x, i) => [`${nuevoId}-${i + 1}`, nuevoId, placa, x.desc, x.tecnico, 'En Proceso',
+                            JSON.stringify({ origen: 'rampa', falla_reportada: x.desc, personal: x.tecnico || '' })]);
+                        targetDb.query('INSERT INTO trabajos_ot (id_ot, ticket_visita, placa, trabajo_realizado, tecnico, estado, detalles_json) VALUES ?', [filasT], (errT) => {
                             if (errT) return res.status(500).json({ error: errT.message });
                             if (typeof logAudit === 'function') logAudit(req, 'MANTENIMIENTO', 'Taller & OT', 'CREÓ', `Creó la OT ${nuevoId} desde la rampa ${r.rampa} (${placa})`);
                             res.json({ ok: true, id: nuevoId, id_ot: nuevoId });
