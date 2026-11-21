@@ -256,15 +256,25 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
       const fr = limpioMotivo(dt.falla_reportada); const tr = limpioMotivo(t.trabajo_realizado);
       return k !== '' && (fr === k || tr === k || (tr !== '' && (tr.includes(k) || k.includes(tr))));
     };
-    const filas: Array<{ motivo: string; trabajo: TrabajoOT | null }> = motivos.map(m => {
+    const filas: Array<{ motivo: string; trabajo: TrabajoOT | null; backlog?: BacklogOT }> = motivos.map(m => {
       const idx = libres.findIndex(t => coincide(t, m));
       const t = idx >= 0 ? libres.splice(idx, 1)[0] : null;
       return { motivo: m, trabajo: t };
     });
+    // Las tareas del backlog ligadas a la OT también son motivos de ingreso (si ya figuran entre las fallas, no se repiten)
+    for (const b of backlog) {
+      const k = limpioMotivo(b.tarea);
+      const ya = filas.find(f => { const m = limpioMotivo(f.motivo); return k !== '' && m !== '' && (m.includes(k) || k.includes(m)); });
+      if (ya) { ya.backlog = b; continue; }
+      const idx = libres.findIndex(t => coincide(t, b.tarea));
+      const t = idx >= 0 ? libres.splice(idx, 1)[0] : null;
+      filas.push({ motivo: b.tarea, trabajo: t, backlog: b });
+    }
     libres.forEach(t => filas.push({ motivo: '', trabajo: t }));
     return filas;
   })();
-  const motivosHechos = filasMotivo.filter(f => f.trabajo && registradoT(f.trabajo)).length;
+  const filaHecha = (f: { trabajo: TrabajoOT | null; backlog?: BacklogOT }) => (!!f.trabajo && registradoT(f.trabajo)) || f.backlog?.estado === 'Completado';
+  const motivosHechos = filasMotivo.filter(filaHecha).length;
   // Un motivo sin trabajo registrado está Pendiente mientras la OT sigue abierta; al cerrarse pasa a No realizado
   const otCerrada = ['Finalizado', 'Cerrada', 'Anulada', 'Anulado'].includes(ot.estado);
   const mats = (materiales ?? []).filter(m => m.estado !== 'Anulado');
@@ -589,7 +599,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                     const t = f.trabajo;
                     const dt = t ? aObjeto(t.detalles_json) : {};
                     const costo = t ? trabajoCosto(t) : 0;
-                    const hecho = !!t && registradoT(t);
+                    const hecho = filaHecha(f);
                     const personal = t ? String(dt.personal ?? t.tecnico ?? '') : '';
                     const fecha = (v: unknown) => (v ? formatFechaHoraPe(String(v).replace('Z', '').replace(' ', 'T').slice(0, 16)) : '—');
                     const abrir = () => { setTrabajoSel(t); setMotivoSel(t ? null : f.motivo || null); setTrabajoAbierto(true); };
@@ -597,7 +607,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                     return (
                       <tr key={t ? trabajoId(t) : `m-${idx}`} className={clic ? 'otd-tr--clic' : undefined} onClick={clic ? abrir : undefined}>
                         <Celda mono>{idx + 1}</Celda>
-                        <Celda>{f.motivo ? f.motivo.replace(/^falla manual\s*:\s*/i, '') : 'Adicional (sin motivo de ingreso)'}</Celda>
+                        <Celda>{f.motivo ? `${f.backlog ? `Backlog ${f.backlog.backlog_id} · ` : ''}${f.motivo.replace(/^falla manual\s*:\s*/i, '')}` : 'Adicional (sin motivo de ingreso)'}</Celda>
                         <Celda>{t ? (t.trabajo_realizado || '—') : '—'}</Celda>
                         <Celda>{t ? (personal || 'Sin técnico') : '—'}</Celda>
                         <Celda mono>{t ? fecha(t.fecha_trabajo) : '—'}</Celda>
