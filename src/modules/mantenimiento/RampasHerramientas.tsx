@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { Reorder, useDragControls, useReducedMotion } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { GripVertical, Pencil, Plus, Trash2 } from 'lucide-react';
+import { GripVertical, Plus, Trash2 } from 'lucide-react';
+import { Pencil } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { TextInput } from '../../core/ui/Field';

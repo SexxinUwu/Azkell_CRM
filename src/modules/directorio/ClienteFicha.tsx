@@ -1,7 +1,8 @@
 import '../../core/ui/acciones-iconos.css';
 import './clientes.css';
 import { useQuery } from '@tanstack/react-query';
-import { Copy, Mail, MessageCircle, Pencil, Phone, Trash2 } from 'lucide-react';
+import { Copy, Mail, Phone, Trash2 } from 'lucide-react';
+import { MessageCircle, Pencil } from '../../core/ui/IconosArchivo';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';

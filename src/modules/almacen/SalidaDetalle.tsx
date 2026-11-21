@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { FileText, PackageCheck, Pencil, Trash2 } from 'lucide-react';
+import { FileText, PackageCheck, Trash2 } from 'lucide-react';
+import { Pencil } from '../../core/ui/IconosArchivo';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Badge } from '../../core/ui/Display';

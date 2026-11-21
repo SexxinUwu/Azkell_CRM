@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { Box, History, Pencil, Printer, Trash2 } from 'lucide-react';
+import { Box, History, Printer, Trash2 } from 'lucide-react';
+import { Pencil } from '../../core/ui/IconosArchivo';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';

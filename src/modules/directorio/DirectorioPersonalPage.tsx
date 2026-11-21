@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Mail, MessageCircle, Phone, SearchX, Users } from 'lucide-react';
+import { Mail, Phone, SearchX, Users } from 'lucide-react';
+import { MessageCircle } from '../../core/ui/IconosArchivo';
 import { PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';

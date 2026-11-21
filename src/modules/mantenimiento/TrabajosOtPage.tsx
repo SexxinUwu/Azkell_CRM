@@ -2,8 +2,8 @@ import './mant.css';
 import '../almacen/almacen.css'; // tabla .inv-kardex, igual que la lista de OT
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, Pencil, SearchX, Trash2, Users, Wrench } from 'lucide-react';
-import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
+import { CircleAlert, SearchX, Trash2, Users, Wrench } from 'lucide-react';
+import { FileSpreadsheet, Pencil } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';

@@ -1,8 +1,8 @@
 import './mant.css';
 import { Fragment, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Bus, ChevronDown, ChevronRight, Clock, Columns3, Download, Gauge, History, ListChecks, MessageCircle, Pencil, Plus, SearchX, ShieldCheck, SlidersHorizontal, Trash2, Upload } from 'lucide-react';
-import { FileSpreadsheet, FilePdf } from '../../core/ui/IconosArchivo';
+import { AlertTriangle, Bus, ChevronDown, ChevronRight, Clock, Columns3, Download, Gauge, History, ListChecks, Plus, SearchX, ShieldCheck, SlidersHorizontal, Trash2, Upload } from 'lucide-react';
+import { FileSpreadsheet, FilePdf, MessageCircle, Pencil } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, TextInput } from '../../core/ui/Field';

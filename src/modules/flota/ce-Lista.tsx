@@ -1,8 +1,8 @@
 import './ce-portal-lista.css';
 import '../../core/ui/acciones-iconos.css';
 import { useMemo, useState } from 'react';
-import { CalendarCheck, CarFront, ClipboardList, Eye, LayoutGrid, MessageCircle, Pencil, Plus, RefreshCw, SearchX, SlidersHorizontal, Trash2 } from 'lucide-react';
-import { FileSpreadsheet, FilePdf } from '../../core/ui/IconosArchivo';
+import { CalendarCheck, CarFront, ClipboardList, Eye, LayoutGrid, Plus, RefreshCw, SearchX, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { FileSpreadsheet, FilePdf, MessageCircle, Pencil } from '../../core/ui/IconosArchivo';
 import { Button } from '../../core/ui/Button';
 import { MenuFila } from '../../core/ui/MenuFila';
 import { Badge, EmptyState, Notice } from '../../core/ui/Display';

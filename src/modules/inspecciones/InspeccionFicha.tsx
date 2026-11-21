@@ -1,8 +1,8 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
-import { AlertTriangle, Check, Disc3, FileText, MessageCircle, Minus, Pencil, Trash2, X } from 'lucide-react';
-import { FilePdf } from '../../core/ui/IconosArchivo';
+import { AlertTriangle, Check, Disc3, FileText, Minus, Trash2, X } from 'lucide-react';
+import { FilePdf, MessageCircle, Pencil } from '../../core/ui/IconosArchivo';
 import '../../core/ui/acciones-iconos.css';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';

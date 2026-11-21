@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Banknote, Clock, FileText, Pencil, RotateCcw, Trash2 } from 'lucide-react';
+import { Banknote, Clock, FileText, RotateCcw, Trash2 } from 'lucide-react';
+import { Pencil } from '../../core/ui/IconosArchivo';
 import { Sheet } from '../../core/ui/Sheet';
 import { Badge } from '../../core/ui/Display';
 import { Button } from '../../core/ui/Button';

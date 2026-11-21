@@ -1,12 +1,12 @@
 import { formatFechaHoraPe, formatSoles } from '../../core/lib/format';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Ban, CalendarDays, ChevronRight, ClipboardCheck, Disc, FileText, Gauge, Package, Pencil, Play, Plus, Receipt, RotateCcw, Timer, Trash2, Wrench } from 'lucide-react';
+import { ArrowUpRight, Ban, CalendarDays, ChevronRight, ClipboardCheck, Disc, FileText, Gauge, Package, Play, Plus, Receipt, RotateCcw, Timer, Trash2, Wrench } from 'lucide-react';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { AccionesExpandibles, type AccionExpandible } from '../../core/ui/AccionesExpandibles';
-import { IconoPdf, IconoWhatsapp } from '../../core/ui/IconosArchivo';
+import { IconoPdf, IconoWhatsapp, Pencil } from '../../core/ui/IconosArchivo';
 import { pestanaConCamion } from '../../core/ui/CargaCamion';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';

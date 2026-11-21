@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Lock, Pencil, Plus, RefreshCw, SearchX, Trash2 } from 'lucide-react';
+import { Lock, Plus, RefreshCw, SearchX, Trash2 } from 'lucide-react';
+import { Pencil } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';

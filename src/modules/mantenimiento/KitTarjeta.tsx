@@ -1,5 +1,6 @@
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { ChevronRight, Trash2 } from 'lucide-react';
+import { Pencil } from '../../core/ui/IconosArchivo';
 import { BotonTip } from '../../core/ui/BotonTip';
 import { formatSoles } from '../../core/lib/format';
 import { spring } from '../../core/lib/motion';

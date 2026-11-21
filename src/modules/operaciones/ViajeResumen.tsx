@@ -1,7 +1,8 @@
 import './seguimiento.css';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, FilePlus2, Flag, MessageCircle, Phone, Play, ShieldAlert } from 'lucide-react';
+import { ArrowRight, FilePlus2, Flag, Phone, Play, ShieldAlert } from 'lucide-react';
+import { MessageCircle } from '../../core/ui/IconosArchivo';
 import { api } from '../../core/api/client';
 import { aFecha, avanceReal, duracion, hora, num, SeguimientoServicio } from './SeguimientoServicio';
 

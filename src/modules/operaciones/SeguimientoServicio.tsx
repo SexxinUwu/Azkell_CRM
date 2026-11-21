@@ -1,6 +1,7 @@
 import './seguimiento.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, MessageCircle, Phone } from 'lucide-react';
+import { Check, Phone } from 'lucide-react';
+import { MessageCircle } from '../../core/ui/IconosArchivo';
 import { BrandMark } from '../../core/layout/BrandMark';
 
 export interface ViajeSeguimiento {

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import JsBarcode from 'jsbarcode';
-import { Edit, MapPin, Package, Printer, RefreshCw, Trash2 } from 'lucide-react';
+import { MapPin, Package, Printer, RefreshCw, Trash2 } from 'lucide-react';
+import { Pencil } from '../../core/ui/IconosArchivo';
 import { Button } from '../../core/ui/Button';
 import { MenuOtros } from '../../core/ui/MenuOtros';
 import { costoUnitarioSoles, stockTono, useKardex, valorEnStock, type ArticuloInv } from './api';
@@ -98,7 +99,7 @@ export function InventarioFicha({ articulo: a, onEditar, onEliminar, onActualiza
             Imprimir
           </Button>
           <Button variant="secondary" size="sm" icon={<RefreshCw size={15} />} onClick={() => setRegularizando(true)}>Regularizar</Button>
-          {onEditar && <Button variant="primary" size="sm" icon={<Edit size={15} />} onClick={onEditar}>Editar</Button>}
+          {onEditar && <Button variant="primary" size="sm" icon={<Pencil size={15} />} onClick={onEditar}>Editar</Button>}
           <MenuOtros opciones={[
             onEliminar && { label: 'Eliminar artículo', icon: <Trash2 size={17} />, destructiva: true, onSelect: onEliminar },
           ]} />

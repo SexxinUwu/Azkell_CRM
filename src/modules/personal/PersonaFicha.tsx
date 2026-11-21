@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
-import { ChevronLeft, Contact, IdCard, Pencil, Printer, Trash2 } from 'lucide-react';
+import { ChevronLeft, Contact, IdCard, Printer, Trash2 } from 'lucide-react';
+import { Pencil } from '../../core/ui/IconosArchivo';
 import { Button } from '../../core/ui/Button';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import '../../core/ui/acciones-iconos.css';

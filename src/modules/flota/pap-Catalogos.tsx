@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Building2, Download, Gavel, Pencil, Plus, Trash2, Upload } from 'lucide-react';
-import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
+import { Building2, Download, Gavel, Plus, Trash2, Upload } from 'lucide-react';
+import { FileSpreadsheet, Pencil } from '../../core/ui/IconosArchivo';
 import { Button } from '../../core/ui/Button';
 import { Combobox } from '../../core/ui/Combobox';
 import { Badge, EmptyState, Notice } from '../../core/ui/Display';

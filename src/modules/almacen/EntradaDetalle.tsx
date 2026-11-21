@@ -1,7 +1,7 @@
 import '../../core/ui/acciones-iconos.css';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Ban, Check, CircleAlert, CreditCard, Eye, Package, Paperclip, Pencil, Shield, Trash2, X } from 'lucide-react';
-import { FilePdf } from '../../core/ui/IconosArchivo';
+import { Ban, Check, CircleAlert, CreditCard, Eye, Package, Paperclip, Shield, Trash2, X } from 'lucide-react';
+import { FilePdf, Pencil } from '../../core/ui/IconosArchivo';
 import { formatFechaHoraPe, formatFechaPe, formatMoneda } from '../../core/lib/format';
 import { type EntradaInv } from './api';
 import {

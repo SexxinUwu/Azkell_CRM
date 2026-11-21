@@ -1,7 +1,8 @@
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Pencil, Plus, SearchX, Trash2 } from 'lucide-react';
+import { MapPin, Plus, SearchX, Trash2 } from 'lucide-react';
+import { Pencil } from '../../core/ui/IconosArchivo';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { ConfirmSheet } from '../../core/ui/Sheet';

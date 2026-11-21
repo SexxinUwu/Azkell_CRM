@@ -6,9 +6,8 @@ import '../../core/ui/botonesIcono.css';
 import './almacenFlota.css';
 import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  ArrowDownToLine, ArrowUpFromLine, Boxes, CircleAlert, Coins, Eye, ImageOff, Package, Pencil, Plus, RefreshCw, SearchX, Truck, Warehouse, X,
-} from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Boxes, CircleAlert, Coins, Eye, ImageOff, Package, Plus, RefreshCw, SearchX, Truck, Warehouse, X } from 'lucide-react';
+import { Pencil } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { BotonTip } from '../../core/ui/BotonTip';

@@ -1,8 +1,8 @@
 import './checklist.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Check, FileText, MessageCircle, Pencil, Plus, Trash2, Wrench, X } from 'lucide-react';
-import { FilePdf } from '../../core/ui/IconosArchivo';
+import { Check, FileText, Plus, Trash2, Wrench, X } from 'lucide-react';
+import { FilePdf, MessageCircle, Pencil } from '../../core/ui/IconosArchivo';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { VisorFotos } from '../../core/ui/VisorFotos';

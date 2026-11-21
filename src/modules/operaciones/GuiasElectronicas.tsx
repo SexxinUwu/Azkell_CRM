@@ -1,8 +1,8 @@
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Copy, FileText, Pencil, Plus, RefreshCw, Send, SearchX, Trash2 } from 'lucide-react';
-import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
+import { Check, Copy, FileText, Plus, RefreshCw, Send, SearchX, Trash2 } from 'lucide-react';
+import { FileSpreadsheet, Pencil } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';

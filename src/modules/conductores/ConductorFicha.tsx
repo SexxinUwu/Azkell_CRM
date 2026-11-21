@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { MessageCircle, Pencil, Phone, Trash2 } from 'lucide-react';
+import { Phone, Trash2 } from 'lucide-react';
+import { MessageCircle, Pencil } from '../../core/ui/IconosArchivo';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { spring } from '../../core/lib/motion';

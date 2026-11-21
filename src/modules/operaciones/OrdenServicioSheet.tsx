@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { ArrowLeft, ArrowRight, CircleAlert, MapPin, Pencil, Receipt, Route, Truck, UserRound } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CircleAlert, MapPin, Receipt, Route, Truck, UserRound } from 'lucide-react';
+import { Pencil } from '../../core/ui/IconosArchivo';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';

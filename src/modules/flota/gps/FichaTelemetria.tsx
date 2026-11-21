@@ -1,6 +1,7 @@
 // Ficha de la unidad: velocímetro, brújula, velocidad de los últimos 2 minutos y solo los datos que existen.
 import { useEffect, useRef, useState } from 'react';
-import { MapPin, MessageCircle, Navigation, Route, X } from 'lucide-react';
+import { MapPin, Navigation, Route, X } from 'lucide-react';
+import { MessageCircle } from '../../../core/ui/IconosArchivo';
 import { Button } from '../../../core/ui/Button';
 import { LicensePlate } from '../../../core/ui/LicensePlate';
 import { AsaHoja, ZonaArrastre } from './HojaGesto';

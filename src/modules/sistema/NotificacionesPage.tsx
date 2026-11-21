@@ -1,20 +1,8 @@
 import './configuracion.css';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  BellRing,
-  CheckCircle2,
-  CreditCard,
-  Mail,
-  MessageCircle,
-  Package,
-  QrCode,
-  RefreshCw,
-  Save,
-  Send,
-  ShieldCheck,
-  Smartphone,
-} from 'lucide-react';
+import { BellRing, CheckCircle2, CreditCard, Mail, Package, QrCode, RefreshCw, Save, Send, ShieldCheck, Smartphone } from 'lucide-react';
+import { MessageCircle } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, FileDown, FileUp, Pencil, Plus, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, FileDown, FileUp, Plus, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import { Pencil } from '../../core/ui/IconosArchivo';
 import '../../core/ui/acciones-iconos.css';
 import './incidencias.css';
 import { Button, PageLoader } from '../../core/ui/Button';

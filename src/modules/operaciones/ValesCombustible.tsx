@@ -1,8 +1,8 @@
 import '../mantenimiento/mant.css';
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ban, CircleAlert, Fuel, Pencil, Plus, RefreshCw, RotateCcw, SearchX, Trash2, Upload, X } from 'lucide-react';
-import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
+import { Ban, CircleAlert, Fuel, Plus, RefreshCw, RotateCcw, SearchX, Trash2, Upload, X } from 'lucide-react';
+import { FileSpreadsheet, Pencil } from '../../core/ui/IconosArchivo';
 import { ImportarValesSheet } from './ImportarValesSheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';

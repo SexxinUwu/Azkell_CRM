@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { FileText, Handshake, Pencil, Search, Send } from 'lucide-react';
+import { FileText, Handshake, Search, Send } from 'lucide-react';
+import { Pencil } from '../../core/ui/IconosArchivo';
 import { EmptyState, Badge } from '../../core/ui/Display';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { MenuFila } from '../../core/ui/MenuFila';

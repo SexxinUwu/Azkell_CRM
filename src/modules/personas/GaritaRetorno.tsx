@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, Download, Eye, FileDown, Images, ListChecks, LogIn, MessageCircle, PenLine, ShieldCheck, ShieldAlert, Trash2, Truck } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, Download, Eye, FileDown, Images, ListChecks, LogIn, PenLine, ShieldCheck, ShieldAlert, Trash2, Truck } from 'lucide-react';
+import { MessageCircle } from '../../core/ui/IconosArchivo';
 import { Button } from '../../core/ui/Button';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';

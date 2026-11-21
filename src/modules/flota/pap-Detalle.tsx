@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Ban, Check, Gavel, Paperclip, Pencil, RotateCcw, Trash2, Undo2, Wallet } from 'lucide-react';
-import { FilePdf } from '../../core/ui/IconosArchivo';
+import { AlertTriangle, Ban, Check, Gavel, Paperclip, RotateCcw, Trash2, Undo2, Wallet } from 'lucide-react';
+import { FilePdf, Pencil } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { Field, TextInput } from '../../core/ui/Field';
