@@ -4,6 +4,7 @@ import './seguimiento.css';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, FileCode2, FileText, Link2, Link2Off, Plus, RefreshCw, Search, SearchX, Send } from 'lucide-react';
+import { FilePdf } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../core/ui/FiltrosListado';
@@ -272,8 +273,8 @@ export function GuiasPage() {
               <tr key={g.id} className="tabla-redim__fila--click" onClick={() => { haptic('selection'); setAbiertaId(g.id); }}>
                 <Celda>
                   <span style={{ display: 'inline-flex', gap: 2 }}>
-                    {g.apisunat_status && g.apisunat_status !== 'ERROR_APISUNAT' && <IconoFila texto="Ver el PDF con nuestro diseño" tono="azul" icono={<FileText size={15} />} onClick={() => verPdfPropio(g)} />}
-                    {g.pdf_url && <IconoFila texto="PDF de APISUNAT" tono="rojo" icono={<FileText size={15} />} onClick={() => abrir(g.pdf_url)} />}
+                    {g.apisunat_status && g.apisunat_status !== 'ERROR_APISUNAT' && <IconoFila texto="Ver el PDF con nuestro diseño" tono="azul" icono={<FilePdf size={15} />} onClick={() => verPdfPropio(g)} />}
+                    {g.pdf_url && <IconoFila texto="PDF de APISUNAT" tono="rojo" icono={<FilePdf size={15} />} onClick={() => abrir(g.pdf_url)} />}
                     {g.xml_url && <IconoFila texto="Descargar el XML firmado" tono="violeta" icono={<FileCode2 size={15} />} onClick={() => abrir(g.xml_url)} />}
                     {g.cdr_url && <IconoFila texto="Constancia de recepción de SUNAT" tono="verde" icono={<CheckCircle2 size={15} />} onClick={() => abrir(g.cdr_url)} />}
                     {puedeEditar && g.apisunat_status && g.apisunat_status !== 'ERROR_APISUNAT' && g.apisunat_status !== 'ACEPTADO' && <IconoFila texto="Actualizar estado en SUNAT" tono="azul" icono={<Search size={15} />} cargando={sincronizando === g.id} onClick={() => void sincronizar(g)} />}

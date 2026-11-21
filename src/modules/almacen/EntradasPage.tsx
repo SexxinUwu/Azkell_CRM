@@ -2,7 +2,8 @@ import '../../core/ui/acciones-iconos.css';
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleCheck, ClipboardList, Coins, CreditCard, Download, Eye, FileSpreadsheet, FileDown, Package, PackagePlus, Pencil, Plus, Paperclip, RefreshCw, SearchX, Trash2, Upload } from 'lucide-react';
+import { CircleCheck, ClipboardList, Coins, CreditCard, Download, Eye, Package, PackagePlus, Pencil, Plus, Paperclip, RefreshCw, SearchX, Trash2, Upload } from 'lucide-react';
+import { FileSpreadsheet, FilePdf } from '../../core/ui/IconosArchivo';
 import { exportarConsolidadoOC, exportarDetalleArticulosOC, descargarPlantillaEntradas } from './exportarEntradas';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -155,7 +156,7 @@ function menuDe(o: EntradaInv, a: AccionesFila): Array<OpcionOtros | false | nul
     { label: 'Ver detalle', icon: <Eye size={17} />, onSelect: () => a.onVer(o) },
     { label: 'Adjuntos y sustentos', icon: <Paperclip size={17} />, onSelect: () => a.onAdjuntos(o) },
     a.onPagar && estadoPagable(o.estado) && !esCredito(o.condicion_pago) && { label: 'Confirmar pago', icon: <CreditCard size={17} />, onSelect: () => a.onPagar?.(o) },
-    { label: 'Imprimir PDF', icon: <FileDown size={17} />, onSelect: () => a.onPdf(o) },
+    { label: 'Imprimir PDF', icon: <FilePdf size={17} />, onSelect: () => a.onPdf(o) },
     a.onEditar && estadoEditable(o.estado) && { label: 'Editar orden', icon: <Pencil size={17} />, onSelect: () => a.onEditar?.(o) },
     a.onEliminar && estadoEditable(o.estado) && { label: 'Eliminar', icon: <Trash2 size={17} />, destructiva: true, separado: true, onSelect: () => a.onEliminar?.(o) },
   ];
@@ -630,7 +631,7 @@ function TarjetaOrden({ orden: o, acciones }: { orden: EntradaInv; acciones: Acc
         </span>
         <div className="oc-tarjeta-orden__acciones">
           <Button size="sm" variant="secondary" icon={<Eye size={14} />} onClick={() => acciones.onVer(o)}>Detalle</Button>
-          <Button size="sm" variant="secondary" icon={<FileDown size={14} />} onClick={() => acciones.onPdf(o)}>PDF</Button>
+          <Button size="sm" variant="secondary" icon={<FilePdf size={14} />} onClick={() => acciones.onPdf(o)}>PDF</Button>
           <MenuOtros soloIcono label="Acciones" opciones={menuDe(o, acciones)} />
         </div>
       </div>

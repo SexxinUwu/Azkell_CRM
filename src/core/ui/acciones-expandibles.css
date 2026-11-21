@@ -42,3 +42,8 @@
 @media (prefers-color-scheme: dark) {
   .acc-exp__boton--gris { --acc-fondo: rgba(255, 255, 255, 0.1); }
 }
+
+/* Iconos originales (PDF, Excel, WhatsApp…): llevan sus propios colores, la casilla es neutra */
+.acc-exp__boton--original { --acc-color: var(--label, #1d1d1f); --acc-fondo: rgba(0, 0, 0, 0.05); }
+.acc-exp__boton--original .acc-exp__icono img { width: 22px; height: 22px; }
+@media (prefers-color-scheme: dark) { .acc-exp__boton--original { --acc-fondo: rgba(255, 255, 255, 0.1); } }

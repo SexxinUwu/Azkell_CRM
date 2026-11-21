@@ -5,7 +5,8 @@ import '../tesoreria/pago.css';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { CircleAlert, Download, FileSearch, FileSpreadsheet, FileText, Landmark, SearchX } from 'lucide-react';
+import { CircleAlert, Download, FileSearch, FileText, Landmark, SearchX } from 'lucide-react';
+import { FileSpreadsheet, FilePdf } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../core/ui/FiltrosListado';
@@ -291,7 +292,7 @@ function DetalleSheet({ id, fila, onClose }: { id: number | null; fila: Fila | n
         <Button variant="secondary" onClick={onClose}>Cerrar</Button>
         <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={() => { void excelDelComprobante(); }} disabled={!q.data}>Excel de este comprobante</Button>
         {fila?.cruce?.archivo && <Button variant="primary" icon={<FileText size={16} />} onClick={() => abrir(fila.cruce!.archivo!)}>Ver documento adjunto</Button>}
-        {fila?.libro === 'VENTAS' && fila.sistema_id && <Button variant="primary" icon={<FileText size={16} />} onClick={() => abrir(`/api/facturacion/${fila.sistema_id}/pdf-propio`)}>PDF de nuestro sistema</Button>}
+        {fila?.libro === 'VENTAS' && fila.sistema_id && <Button variant="primary" icon={<FilePdf size={16} />} onClick={() => abrir(`/api/facturacion/${fila.sistema_id}/pdf-propio`)}>PDF de nuestro sistema</Button>}
       </>}>
       {fila?.libro === 'COMPRAS' && (
         <Notice tone={fila.cruce?.estado === 'NO' ? 'error' : fila.cruce?.estado === 'PROBABLE' ? 'accent' : 'success'}>

@@ -1,6 +1,7 @@
 import '../mantenimiento/mant.css';
 import { useState } from 'react';
-import { FileSpreadsheet, HardHat, SearchX } from 'lucide-react';
+import { HardHat, SearchX } from 'lucide-react';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';

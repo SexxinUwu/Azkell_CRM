@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, ArrowLeftCircle, CheckCircle2, FileText, FileSpreadsheet, Eye, Hourglass, LayoutGrid, MapPin, MessageCircle, Plus, RefreshCw, ShieldCheck, SlidersHorizontal, Trash2, Truck, User } from 'lucide-react';
+import { AlertTriangle, ArrowLeftCircle, CheckCircle2, FileText, Eye, Hourglass, LayoutGrid, MapPin, MessageCircle, Plus, RefreshCw, ShieldCheck, SlidersHorizontal, Trash2, Truck, User } from 'lucide-react';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';

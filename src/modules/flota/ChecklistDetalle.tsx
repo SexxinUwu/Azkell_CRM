@@ -2,6 +2,7 @@ import './checklist.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Check, FileText, MessageCircle, Pencil, Plus, Trash2, Wrench, X } from 'lucide-react';
+import { FilePdf } from '../../core/ui/IconosArchivo';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { VisorFotos } from '../../core/ui/VisorFotos';
@@ -122,7 +123,7 @@ export function ChecklistDetalle({ falla, open, puedeEditar, puedeOTs, puedeElim
     <Sheet open={open} onClose={onClose} title={`Reporte de fallas ${falla.folio}`}
       footer={<div className="ckd-acciones">
         {onEditar && puedeEditar && !estadoFinal && <Button variant="secondary" icon={<Pencil size={16} />} onClick={onEditar}>Editar reporte</Button>}
-        <Button variant="secondary" icon={<FileText size={16} />} onClick={onPdf} disabled={!pdfListo}>PDF F-MAN-001</Button>
+        <Button variant="secondary" icon={<FilePdf size={16} />} onClick={onPdf} disabled={!pdfListo}>PDF F-MAN-001</Button>
         <Button variant="secondary" icon={<MessageCircle size={16} />} onClick={onWhatsApp} disabled={!pdfListo}>WhatsApp</Button>
         {onAgregarFallas && puedeEditar && !estadoFinal && <Button variant="secondary" icon={<Plus size={16} />} onClick={onAgregarFallas}>Agregar fallas</Button>}
         {onGenerarOTs && puedeOTs && !estadoFinal && <Button variant="primary" icon={<Wrench size={16} />} onClick={onGenerarOTs}>Generar OTs</Button>}

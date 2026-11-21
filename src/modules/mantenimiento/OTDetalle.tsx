@@ -1,11 +1,12 @@
 import { formatFechaHoraPe, formatSoles } from '../../core/lib/format';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Ban, CalendarDays, ChevronRight, ClipboardCheck, Disc, Download, FileText, Gauge, Package, Pencil, Play, Plus, Receipt, RotateCcw, Share2, Timer, Trash2, Wrench } from 'lucide-react';
+import { ArrowUpRight, Ban, CalendarDays, ChevronRight, ClipboardCheck, Disc, FileText, Gauge, Package, Pencil, Play, Plus, Receipt, RotateCcw, Timer, Trash2, Wrench } from 'lucide-react';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { AccionesExpandibles, type AccionExpandible } from '../../core/ui/AccionesExpandibles';
+import { IconoPdf, IconoWhatsapp } from '../../core/ui/IconosArchivo';
 import { pestanaConCamion } from '../../core/ui/CargaCamion';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
@@ -423,8 +424,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     puedeEditar && { label: 'Editar OT', icon: <Pencil />, tono: 'azul', onSelect: () => setEditandoOT(true) },
     puedeEditar && { label: 'Fechas', icon: <CalendarDays />, tono: 'violeta', onSelect: () => setEditandoFechas(true) },
     puedeEditar && { label: 'Kilometraje', icon: <Gauge />, tono: 'ambar', onSelect: () => setEditandoKm(true) },
-    { label: 'Descargar PDF', detalle: 'PDF de la orden', icon: <Download />, tono: 'gris', onSelect: () => exportar('descargar'), disabled: sinDatos, separado: true },
-    { label: 'Compartir por WhatsApp', detalle: 'PDF de la orden', icon: <Share2 />, tono: 'whatsapp', onSelect: () => exportar('whatsapp'), disabled: sinDatos },
+    { label: 'Descargar PDF', detalle: 'PDF de la orden', icon: <IconoPdf />, tono: 'original', onSelect: () => exportar('descargar'), disabled: sinDatos, separado: true },
+    { label: 'Compartir por WhatsApp', detalle: 'PDF de la orden', icon: <IconoWhatsapp />, tono: 'original', onSelect: () => exportar('whatsapp'), disabled: sinDatos },
     { label: 'Plantilla de inspecciones', detalle: 'F-MAN-001', icon: <ClipboardCheck />, tono: 'verde', separado: true,
       onSelect: () => pdfSeguro(() => pdfPlantillaInspeccion(idOt, ot.placa, ot.fecha_inicio_ot || ot.fecha_ingreso || ot.creado_en || null, extrasPdf().kmTablero, extrasPdf().rampa), `Plantilla inspecciones ${idOt}.pdf`) },
     { label: 'Plantilla OT', detalle: 'Impresión rápida', icon: <FileText />, tono: 'azul',

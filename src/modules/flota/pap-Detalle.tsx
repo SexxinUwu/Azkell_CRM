@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Ban, Check, FileDown, FileText, Gavel, Paperclip, Pencil, RotateCcw, Trash2, Undo2, Wallet } from 'lucide-react';
+import { AlertTriangle, Ban, Check, Gavel, Paperclip, Pencil, RotateCcw, Trash2, Undo2, Wallet } from 'lucide-react';
+import { FilePdf } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { Field, TextInput } from '../../core/ui/Field';
@@ -111,7 +112,7 @@ export function PapDetalle({ id, onClose, onEditar, onPago }: {
             {puedePagar && d.saldo > 0 && d.estado !== 'ANULADA' && <Button variant="primary" icon={<Wallet size={16} />} onClick={() => onPago(d)}>Registrar pago</Button>}
             {puedeEditar && d.estado !== 'ANULADA' && <Button variant="secondary" icon={<Pencil size={16} />} onClick={() => onEditar(d)}>Editar</Button>}
             <MenuFila etiqueta="Más acciones" acciones={[
-              { label: 'Descargar PDF', icon: <FileDown size={17} />, onSelect: () => { void abrirPdfFicha(d).catch(e => toast(errorMessage(e), 'error')); } },
+              { label: 'Descargar PDF', icon: <FilePdf size={17} />, onSelect: () => { void abrirPdfFicha(d).catch(e => toast(errorMessage(e), 'error')); } },
               puedeEditar && ['PENDIENTE', 'EN_DESCARGO'].includes(d.estado) && { label: 'Registrar descargo', icon: <Gavel size={17} />, onSelect: () => { setExpediente(d.descargo_expediente ?? ''); setResultado(d.descargo_resultado ?? 'PENDIENTE'); setFechaDesc(hoyLima()); setObs(''); setDialogo('descargo'); } },
               puedeEditar && d.quien_asume !== 'EMPRESA' && d.estado === 'PAGADA' && { label: 'Reembolso de quien asume', icon: <Undo2 size={17} />, onSelect: () => { setMontoReem(String(d.pagado)); setDialogo('reembolso'); } },
               puedeEditar && d.estado === 'ANULADA' && { label: 'Reactivar', icon: <RotateCcw size={17} />, onSelect: () => { void ejecutar(() => reactivarPapeleta(d.id), 'Papeleta reactivada'); } },
@@ -179,7 +180,7 @@ export function PapDetalle({ id, onClose, onEditar, onPago }: {
                   {d.evidencias.map(e => (
                     <div key={e.key} className="pap-galeria__item">
                       {esPdf(e.key)
-                        ? <a href={e.url} target="_blank" rel="noreferrer" className="pap-galeria__doc"><FileText size={22} /><span>PDF</span></a>
+                        ? <a href={e.url} target="_blank" rel="noreferrer" className="pap-galeria__doc"><FilePdf size={22} /><span>PDF</span></a>
                         : <button type="button" className="pap-galeria__foto" aria-label="Ver evidencia" onClick={() => setVisor(Math.max(0, fotos.findIndex(f => f.key === e.key)))}><img src={e.url} alt="Evidencia" loading="lazy" /></button>}
                       {puedeEditar && <BotonTip tip="Quitar archivo" className="pap-galeria__quitar" onClick={() => { void ejecutar(() => quitarEvidencia(d.id, e.key), 'Archivo quitado'); }}><Trash2 size={13} /></BotonTip>}
                     </div>

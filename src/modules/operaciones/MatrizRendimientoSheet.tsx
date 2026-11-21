@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, Download, FileSpreadsheet, Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { CircleAlert, Download, Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Sheet, ConfirmSheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice } from '../../core/ui/Display';

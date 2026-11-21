@@ -2,7 +2,8 @@ import './ce-detalle.css';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, useReducedMotion } from 'motion/react';
-import { CalendarDays, CarFront, Cog, FileText, Fingerprint, Gauge, Hash, Layers, MessageCircle, Palette, Pencil, ShieldAlert, ShieldCheck, Tag, Truck } from 'lucide-react';
+import { CalendarDays, CarFront, Cog, Fingerprint, Gauge, Hash, Layers, MessageCircle, Palette, Pencil, ShieldAlert, ShieldCheck, Tag, Truck } from 'lucide-react';
+import { FilePdf } from '../../core/ui/IconosArchivo';
 import type { ReactNode } from 'react';
 import { Button } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
@@ -78,7 +79,7 @@ export function CeDetalle({ acta, ocupado, puedeEditar, onClose, onEditar, onPdf
     <Sheet open={!!acta} onClose={onClose} ancho anclaAbajo ligera title={acta ? `Acta ${acta.numero_inventario || acta.id}` : ''}
       footer={acta ? (
         <>
-          <Button variant="secondary" icon={<FileText size={16} />} disabled={ocupado} onClick={() => onPdf(acta)}>PDF</Button>
+          <Button variant="secondary" icon={<FilePdf size={16} />} disabled={ocupado} onClick={() => onPdf(acta)}>PDF</Button>
           <Button variant="secondary" icon={<MessageCircle size={16} />} disabled={ocupado} onClick={() => onWhatsApp(acta)}>WhatsApp</Button>
           {puedeEditar && <Button variant="primary" icon={<Pencil size={16} />} disabled={ocupado} onClick={() => onEditar(acta)}>Editar acta</Button>}
         </>

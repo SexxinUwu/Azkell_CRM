@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { haptic } from '../lib/haptics';
 import './acciones-expandibles.css';
 
-export type TonoAccion = 'azul' | 'verde' | 'violeta' | 'ambar' | 'rojo' | 'whatsapp' | 'gris';
+export type TonoAccion = 'azul' | 'verde' | 'violeta' | 'ambar' | 'rojo' | 'whatsapp' | 'gris' | 'original';
 
 export interface AccionExpandible {
   label: string;

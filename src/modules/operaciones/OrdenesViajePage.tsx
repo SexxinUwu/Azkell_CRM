@@ -2,9 +2,8 @@ import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  CheckCircle2, CircleAlert, ClipboardList, FileSpreadsheet, FolderOpen, LayoutGrid, MapPin, Pencil, Play, RefreshCw, SearchX, Trash2, Truck, Wallet,
-} from 'lucide-react';
+import { CheckCircle2, CircleAlert, ClipboardList, FolderOpen, LayoutGrid, MapPin, Pencil, Play, RefreshCw, SearchX, Trash2, Truck, Wallet } from 'lucide-react';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';

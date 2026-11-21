@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { CircleAlert, FileSpreadsheet, Upload } from 'lucide-react';
+import { CircleAlert, Upload } from 'lucide-react';
+import { FileSpreadsheet } from './IconosArchivo';
 import { Sheet } from './Sheet';
 import { Button } from './Button';
 import { Notice } from './Display';

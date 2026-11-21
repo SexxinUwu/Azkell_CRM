@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import { AlertTriangle, Check, Disc3, FileText, MessageCircle, Minus, Pencil, Trash2, X } from 'lucide-react';
+import { FilePdf } from '../../core/ui/IconosArchivo';
 import '../../core/ui/acciones-iconos.css';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
@@ -161,7 +162,7 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
 
             <div className="insp-acciones">
               <div className="acciones-iconos acciones-iconos--sinfondo">
-                <button type="button" className="acciones-iconos__boton acciones-iconos__boton--rojo" data-tip="Abrir PDF" aria-label="Abrir PDF" onClick={descargar} disabled={ocupado}><FileText size={22} /></button>
+                <button type="button" className="acciones-iconos__boton acciones-iconos__boton--rojo" data-tip="Abrir PDF" aria-label="Abrir PDF" onClick={descargar} disabled={ocupado}><FilePdf size={22} /></button>
                 <button type="button" className="acciones-iconos__boton acciones-iconos__boton--whatsapp" data-tip="Compartir por WhatsApp" aria-label="Compartir por WhatsApp" onClick={whatsapp} disabled={ocupado}><MessageCircle size={22} /></button>
               </div>
             </div>

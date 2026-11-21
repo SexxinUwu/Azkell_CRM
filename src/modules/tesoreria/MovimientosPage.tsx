@@ -1,7 +1,8 @@
 import '../mantenimiento/mant.css';
 import './mov.css';
 import { useMemo, useState } from 'react';
-import { ArrowLeftRight, FileSpreadsheet, FileText, Printer, SearchX } from 'lucide-react';
+import { ArrowLeftRight, Printer, SearchX } from 'lucide-react';
+import { FileSpreadsheet, FilePdf } from '../../core/ui/IconosArchivo';
 import { PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput } from '../../core/ui/Field';
@@ -144,7 +145,7 @@ export function MovimientosPage() {
         subtitle={isLoading ? 'Cargando…' : `${lista.length} ${lista.length === 1 ? 'registro' : 'registros'}${filtrando ? ` de ${todos.length}` : ''} · ${periodo}`}
         actions={
           <div style={{ display: 'flex', gap: 8 }}>
-            <BotonTip tip="Generar PDF" className="btn btn--secondary btn--icon btn-tip btn-tip--rojo" onClick={exportarPdf} disabled={lista.length === 0}><FileText size={18} /></BotonTip>
+            <BotonTip tip="Generar PDF" className="btn btn--secondary btn--icon btn-tip btn-tip--rojo" onClick={exportarPdf} disabled={lista.length === 0}><FilePdf size={18} /></BotonTip>
             <BotonTip tip="Exportar Excel" className="btn btn--secondary btn--icon btn-tip btn-tip--verde" onClick={exportar} disabled={lista.length === 0}><FileSpreadsheet size={18} /></BotonTip>
             <BotonTip tip="Imprimir listado" className="btn btn--secondary btn--icon btn-tip btn-tip--azul" onClick={() => window.print()}><Printer size={18} /></BotonTip>
           </div>

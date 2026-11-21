@@ -1,7 +1,8 @@
 import '../mantenimiento/mant.css';
 import '../../core/ui/acciones-iconos.css';
 import { useMemo, useState } from 'react';
-import { FileSpreadsheet, MapPinned, SearchX } from 'lucide-react';
+import { MapPinned, SearchX } from 'lucide-react';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { AccionesCabecera } from '../../core/ui/AccionesCabecera';
 import { PageLoader } from '../../core/ui/Button';
 import { Combobox } from '../../core/ui/Combobox';

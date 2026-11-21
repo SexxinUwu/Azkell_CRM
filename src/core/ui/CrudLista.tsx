@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { CircleAlert, FileSpreadsheet, Plus, SearchX, Trash2 } from 'lucide-react';
+import { CircleAlert, Plus, SearchX, Trash2 } from 'lucide-react';
+import { FileSpreadsheet } from './IconosArchivo';
 import { Button, PageLoader } from './Button';
 import { EmptyState, Notice, Page, PageHeader } from './Display';
 import { Field, SearchField, SelectInput, TextInput } from './Field';

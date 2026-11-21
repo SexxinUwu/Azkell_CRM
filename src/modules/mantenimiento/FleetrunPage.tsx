@@ -1,7 +1,8 @@
 import './mant.css';
 import { Fragment, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Bus, ChevronDown, ChevronRight, Clock, Columns3, Download, FileDown, FileSpreadsheet, Gauge, History, ListChecks, MessageCircle, Pencil, Plus, SearchX, ShieldCheck, SlidersHorizontal, Trash2, Upload } from 'lucide-react';
+import { AlertTriangle, Bus, ChevronDown, ChevronRight, Clock, Columns3, Download, Gauge, History, ListChecks, MessageCircle, Pencil, Plus, SearchX, ShieldCheck, SlidersHorizontal, Trash2, Upload } from 'lucide-react';
+import { FileSpreadsheet, FilePdf } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, TextInput } from '../../core/ui/Field';
@@ -825,7 +826,7 @@ export function FleetrunPage() {
               {puedeCrear && <AccionIcono tip="Importar desde Excel" color="azul" icono={<Upload size={18} />} onClick={() => setImportando(true)} />}
               <AccionIcono tip="Exportar Excel" color="verde" icono={<Download size={18} />} onClick={exportar} />
               <AccionIcono tip="Elegir columnas" color="violeta" icono={<Columns3 size={18} />} onClick={() => setEditandoColumnas(true)} disabled={movil} />
-              <AccionIcono tip="Descargar PDF del reporte" color="rojo" icono={<FileDown size={18} />}
+              <AccionIcono tip="Descargar PDF del reporte" color="rojo" icono={<FilePdf size={18} />}
                 disabled={historial || generando !== null || !filtrados.length} onClick={() => generarReporte('pdf')} />
               <AccionIcono tip="Enviar reporte por WhatsApp" color="verde" icono={<MessageCircle size={18} />}
                 disabled={historial || generando !== null || !filtrados.length} onClick={() => generarReporte('whatsapp')} />

@@ -1,7 +1,8 @@
 import './auditoriaPage.css';
 import '../../core/ui/botonesIcono.css';
 import { useEffect, useMemo, useState } from 'react';
-import { Ban, CircleSlash, Eye, FileSpreadsheet, History, ListTree, RefreshCw, ShieldCheck, ShieldAlert, Trash2, UserRound, Users } from 'lucide-react';
+import { Ban, CircleSlash, Eye, History, ListTree, RefreshCw, ShieldCheck, ShieldAlert, Trash2, UserRound, Users } from 'lucide-react';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { BotonTip } from '../../core/ui/BotonTip';

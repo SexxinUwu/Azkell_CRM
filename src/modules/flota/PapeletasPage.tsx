@@ -3,7 +3,8 @@ import '../../core/ui/botonesIcono.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'motion/react';
-import { AlertTriangle, Ban, BarChart3, ChevronDown, Clock, Download, Eye, FileDown, FileSpreadsheet, Gavel, Pencil, Plus, ReceiptText, RefreshCw, SlidersHorizontal, TimerReset, Upload, Wallet } from 'lucide-react';
+import { AlertTriangle, Ban, BarChart3, ChevronDown, Clock, Download, Eye, Gavel, Pencil, Plus, ReceiptText, RefreshCw, SlidersHorizontal, TimerReset, Upload, Wallet } from 'lucide-react';
+import { FileSpreadsheet, FilePdf } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { ChoiceChips } from '../../core/ui/Chips';
 import { EmptyState, Notice, Page } from '../../core/ui/Display';
@@ -192,7 +193,7 @@ export function PapeletasPage() {
           <BotonTip tip="Actualizar" className="btn btn--plain btn--icono btn--icono-acento" disabled={q.isFetching} onClick={() => { void refrescar(); }}><RefreshCw size={18} /></BotonTip>
           <MenuFila etiqueta="Más acciones" acciones={[
             { label: 'Exportar a Excel', icon: <Download size={17} />, onSelect: () => { exportarPapeletasExcel(filas).catch(aviso); } },
-            { label: 'Reporte en PDF', icon: <FileDown size={17} />, onSelect: () => { abrirPdfReporte(filas, `${ESTADO_FILTRO[tarjeta]}${activos ? ' · con filtros' : ''}`).catch(aviso); } },
+            { label: 'Reporte en PDF', icon: <FilePdf size={17} />, onSelect: () => { abrirPdfReporte(filas, `${ESTADO_FILTRO[tarjeta]}${activos ? ' · con filtros' : ''}`).catch(aviso); } },
             { label: 'Descargar plantilla de Excel', icon: <FileSpreadsheet size={17} />, onSelect: () => { descargarPlantillaPapeletas(entidades).catch(aviso); } },
             puedeCrear && { label: 'Importar desde Excel', icon: <Upload size={17} />, onSelect: () => setImportando(true), separada: true },
           ]} />

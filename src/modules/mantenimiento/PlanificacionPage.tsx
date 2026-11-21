@@ -1,7 +1,8 @@
 import './mant.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CalendarClock, CheckCircle2, CheckCircle, CircleAlert, FileSpreadsheet, History, Pencil, Plus, SearchX, Wrench, XCircle } from 'lucide-react';
+import { CalendarClock, CheckCircle2, CheckCircle, CircleAlert, History, Pencil, Plus, SearchX, Wrench, XCircle } from 'lucide-react';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { useNavigate } from 'react-router-dom';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Boxes, Download, DollarSign, FileSpreadsheet, LayoutGrid, Package, PackageMinus, PackagePlus, PackageX, Plus, RefreshCw, SearchX, CheckSquare, TriangleAlert, Upload } from 'lucide-react';
+import { Boxes, Download, DollarSign, LayoutGrid, Package, PackageMinus, PackagePlus, PackageX, Plus, RefreshCw, SearchX, CheckSquare, TriangleAlert, Upload } from 'lucide-react';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page } from '../../core/ui/Display';
 import { TextInput } from '../../core/ui/Field';

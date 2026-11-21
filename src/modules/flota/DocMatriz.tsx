@@ -1,9 +1,9 @@
 import { Button } from '../../core/ui/Button';
-import { FileSpreadsheet } from 'lucide-react';
 import { exportarExcel } from '../../core/lib/excel';
 import { DOCS, colorDoc, textoDias } from './docsEstado';
 import type { FilaExpediente } from './DocExpediente';
 import { formatFechaPe } from '../../core/lib/format';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 
 const fechaCorta = formatFechaPe;
 // Una fecha que llega como 2026-12-04T00:00:00.000Z se muestra solo como 2026-12-04

@@ -5,7 +5,8 @@ import '../almacen/almacen.css';
 import '../almacen/entradas.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckCheck, ClipboardCheck, ClipboardList, Clock, Eye, FileDown, FileSpreadsheet, MapPin, Pencil, Plus, RefreshCw, SearchX, SlidersHorizontal, Trash2, Wrench } from 'lucide-react';
+import { CheckCheck, ClipboardCheck, ClipboardList, Clock, Eye, MapPin, Pencil, Plus, RefreshCw, SearchX, SlidersHorizontal, Trash2, Wrench } from 'lucide-react';
+import { FileSpreadsheet, FilePdf } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { TextInput } from '../../core/ui/Field';
@@ -227,7 +228,7 @@ export function ChecklistPage() {
     const final = /final|anula/i.test(f.estado);
     return [
       { label: 'Ver detalle', icon: <Eye size={17} />, onSelect: () => accion('detalle', f) },
-      { label: 'Imprimir PDF F-MAN-001', icon: <FileDown size={17} />, disabled: !cfg.data || generandoPdf, onSelect: () => accion('pdf', f) },
+      { label: 'Imprimir PDF F-MAN-001', icon: <FilePdf size={17} />, disabled: !cfg.data || generandoPdf, onSelect: () => accion('pdf', f) },
       permisos.editar && !final && { label: 'Editar reporte', icon: <Pencil size={17} />, onSelect: () => accion('editar', f) },
       permisos.editar && !final && { label: 'Agregar fallas', icon: <Plus size={17} />, onSelect: () => accion('agregar', f) },
       permisos.ots && { label: 'Generar / ver OTs', icon: <Wrench size={17} />, onSelect: () => accion('ots', f) },
@@ -425,7 +426,7 @@ function TarjetaFalla({ falla: f, opciones, pdfListo, onDetalle, onPdf }: {
       <div className="oc-tarjeta-orden__pie">
         <div className="oc-tarjeta-orden__acciones" style={{ marginLeft: 'auto' }}>
           <Button size="sm" variant="secondary" icon={<Eye size={14} />} onClick={onDetalle}>Detalle</Button>
-          <Button size="sm" variant="secondary" icon={<FileDown size={14} />} disabled={!pdfListo} onClick={onPdf}>PDF</Button>
+          <Button size="sm" variant="secondary" icon={<FilePdf size={14} />} disabled={!pdfListo} onClick={onPdf}>PDF</Button>
           <MenuOtros soloIcono label="Acciones" opciones={opciones} />
         </div>
       </div>

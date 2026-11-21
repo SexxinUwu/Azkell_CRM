@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Download, ExternalLink, FileSpreadsheet, FileText, RotateCcw } from 'lucide-react';
+import { Download, ExternalLink, FileText, RotateCcw } from 'lucide-react';
+import { FileSpreadsheet } from '../../../core/ui/IconosArchivo';
 import { motion, useReducedMotion } from 'motion/react';
 import { errorMessage } from '../../../core/api/client';
 import { springSnappy } from '../../../core/lib/motion';
