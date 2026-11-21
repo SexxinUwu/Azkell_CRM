@@ -19,7 +19,7 @@ export interface RegistroMp {
   frecuencia_km: number | null; frecuencia_horas: number | null; frecuencia_dias: number | null;
   tipo: string; sistema: string; descripcion: string;
 }
-interface Resultado { ok?: boolean; insertados: number; actualizados: number; error?: string }
+interface Resultado { ok?: boolean; insertados: number; actualizados: number; rechazados?: string[]; error?: string }
 
 type Celda = string | number | boolean | Date | null;
 
@@ -114,7 +114,7 @@ export function ImportarFrecuenciasSheet({ open, onClose }: { open: boolean; onC
       if (r.ok === false) throw new Error(r.error || 'No se pudo importar');
       setResultado(r);
       haptic('success');
-      toast(`${r.insertados} nuevas, ${r.actualizados} actualizadas`);
+      toast(`${r.insertados} nuevas, ${r.actualizados} actualizadas${r.rechazados?.length ? `, ${r.rechazados.length} tipos fuera del catálogo` : ''}`);
       await qc.invalidateQueries({ queryKey: ['mant', 'tipos-mantenimiento'] });
     } catch (err) { setError(errorMessage(err)); haptic('warning'); }
     finally { setEnviando(false); }
@@ -140,6 +140,9 @@ export function ImportarFrecuenciasSheet({ open, onClose }: { open: boolean; onC
         {resultado && (
           <div className="field field--wide">
             <Notice tone="success">Importación completada: {resultado.insertados} nuevas y {resultado.actualizados} actualizadas.</Notice>
+            {!!resultado.rechazados?.length && (
+              <Notice tone="accent">No se importaron {resultado.rechazados.length} tipos que no están en el catálogo de tipos de preventivo: {resultado.rechazados.slice(0, 8).join(', ')}{resultado.rechazados.length > 8 ? '…' : ''}. Créalos en Catálogos › Tipos de preventivo y vuelve a importar.</Notice>
+            )}
           </div>
         )}
       </div>

@@ -1312,12 +1312,18 @@ router.post('/:metodo', async (req, res) => {
         const tipoPedido = String((isEdit ? form.editF_tipomp : form.f_tipomp) || '').replace(/\s+/g, ' ').replace(/\s+,/g, ',').trim();
         if (isEdit) form.editF_tipomp = tipoPedido; else form.f_tipomp = tipoPedido;
         reqDb.query(
-            "SELECT 1 FROM tipos_mantenimiento WHERE UPPER(TRIM(REPLACE(REPLACE(tipo_mp, '  ', ' '), ' ,', ','))) = UPPER(?) LIMIT 1",
-            [tipoPedido],
+            `SELECT
+                (SELECT COUNT(*) FROM tipos_preventivo WHERE activo = 1) AS en_catalogo_total,
+                (SELECT COUNT(*) FROM tipos_preventivo WHERE activo = 1 AND UPPER(TRIM(REPLACE(REPLACE(nombre, '  ', ' '), ' ,', ','))) = UPPER(?)) AS en_catalogo,
+                (SELECT COUNT(*) FROM tipos_mantenimiento WHERE UPPER(TRIM(REPLACE(REPLACE(tipo_mp, '  ', ' '), ' ,', ','))) = UPPER(?)) AS en_frecuencias`,
+            [tipoPedido, tipoPedido],
             (errTipo, filasTipo) => {
                 if (errTipo) return res.json({ data: 'Error BD: ' + errTipo.message });
-                if (!tipoPedido || !filasTipo.length) {
-                    return res.json({ data: `Error: el tipo de mantenimiento «${tipoPedido || 'vacío'}» no está en la lista de tipos de preventivo. Regístralo primero en Frecuencias de mantenimiento.` });
+                const f = filasTipo[0] || {};
+                // Con catálogo: el tipo debe estar en el catálogo. Sin catálogo (empresa nueva): basta con que tenga frecuencia.
+                const valido = tipoPedido && (f.en_catalogo_total > 0 ? f.en_catalogo > 0 : f.en_frecuencias > 0);
+                if (!valido) {
+                    return res.json({ data: `Error: el tipo de mantenimiento «${tipoPedido || 'vacío'}» no está en el catálogo de tipos de preventivo. Créalo primero en Catálogos › Tipos de preventivo.` });
                 }
                 _continuar();
             }

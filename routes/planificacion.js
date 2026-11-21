@@ -1040,10 +1040,25 @@ router.get('/tipos-mantenimiento', (req, res) => {
 // Nombre sin espacios dobles ni sueltos (un espacio de más impedía que el tipo coincidiera con sus registros)
 const limpiarNombreMp = (v) => String(v ?? '').replace(/\s+/g, ' ').replace(/\s+,/g, ',').trim();
 
-router.post('/tipos-mantenimiento', (req, res) => {
+// Un tipo de preventivo solo existe si está en el catálogo (Catálogos › Tipos de preventivo).
+// Si la empresa aún no tiene catálogo, no se bloquea nada.
+const MSG_TIPO_NUEVO = (n) => `«${n}» no está en el catálogo de tipos de preventivo. Créalo primero en Catálogos › Tipos de preventivo y vuelve a intentar.`;
+async function tiposDelCatalogo(tdb) {
+    const [filas] = await tdb.promise().query('SELECT nombre FROM tipos_preventivo WHERE activo = 1');
+    return new Set(filas.map(f => limpiarNombreMp(f.nombre).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()));
+}
+const claveTipo = (n) => limpiarNombreMp(n).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+async function validarTipoEnCatalogo(tdb, nombre) {
+    const set = await tiposDelCatalogo(tdb);
+    return set.size === 0 || set.has(claveTipo(nombre));
+}
+
+router.post('/tipos-mantenimiento', async (req, res) => {
     const { marca, uts, combustible, modelo, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion } = req.body;
     const tipo_mp = limpiarNombreMp(req.body.tipo_mp);
     if (!marca || !tipo_mp) return res.status(400).json({ error: 'Marca y tipo_mp son requeridos' });
+    try { if (!(await validarTipoEnCatalogo(req.db || db, tipo_mp))) return res.status(400).json({ error: MSG_TIPO_NUEVO(tipo_mp) }); }
+    catch (e) { return res.status(500).json({ error: e.message }); }
     db.query(
         `INSERT INTO tipos_mantenimiento (marca, tipo_mp, uts, combustible, modelo, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion)
          VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
@@ -1055,10 +1070,12 @@ router.post('/tipos-mantenimiento', (req, res) => {
     );
 });
 
-router.put('/tipos-mantenimiento/:id', (req, res) => {
+router.put('/tipos-mantenimiento/:id', async (req, res) => {
     const { id } = req.params;
     const { marca, uts, combustible, modelo, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion } = req.body;
     const tipo_mp = limpiarNombreMp(req.body.tipo_mp);
+    try { if (!(await validarTipoEnCatalogo(req.db || db, tipo_mp))) return res.status(400).json({ error: MSG_TIPO_NUEVO(tipo_mp) }); }
+    catch (e) { return res.status(500).json({ error: e.message }); }
     db.query('SELECT marca, tipo_mp FROM tipos_mantenimiento WHERE id = ?', [id], (errSel, previo) => {
         if (errSel) return res.status(500).json({ error: errSel.message });
         const antes = previo && previo[0];
@@ -1112,12 +1129,16 @@ router.post('/tipos-mantenimiento/importar', async (req, res) => {
         return res.status(400).json({ error: 'Sin registros' });
 
     let insertados = 0, actualizados = 0;
+    const rechazados = new Set();
     try {
+        const catalogo = await tiposDelCatalogo(tdb);
         for (const r of registros) {
             const marca   = (r.marca   || '').toUpperCase().trim();
-            const tipo_mp = (r.tipo_mp || '').toUpperCase().trim();
+            const tipo_mp = limpiarNombreMp(r.tipo_mp || '').toUpperCase();
             const uts     = (r.uts     || 'LOCAL').toUpperCase().trim();
             if (!marca || !tipo_mp) continue;
+            // Solo se importan frecuencias de tipos que ya están en el catálogo
+            if (catalogo.size && !catalogo.has(claveTipo(tipo_mp))) { rechazados.add(tipo_mp); continue; }
 
             const combustible = (r.combustible || '').toUpperCase().trim();
             const modelo = (r.modelo || '').toUpperCase().trim();
@@ -1147,7 +1168,7 @@ router.post('/tipos-mantenimiento/importar', async (req, res) => {
                 insertados++;
             }
         }
-        res.json({ ok: true, insertados, actualizados });
+        res.json({ ok: true, insertados, actualizados, rechazados: [...rechazados] });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

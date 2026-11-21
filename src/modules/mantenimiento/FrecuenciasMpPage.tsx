@@ -93,7 +93,8 @@ export function FrecuenciasMpPage() {
   const datosPlaca = (campo: 'marca' | 'modelo' | 'combustible' | 'uts') => (placas.data ?? []).map(p => String(p[campo] ?? ''));
   const opcionesMarca = useMemo(() => opciones(datosRegla('marca'), datosPlaca('marca')), [lista.data, placas.data]);
   const opcionesModelo = useMemo(() => opciones(datosRegla('modelo'), datosPlaca('modelo')), [lista.data, placas.data]);
-  const opcionesTipoMp = useMemo(() => opciones(tiposCatalogo.data ?? [], datosRegla('tipo_mp')), [lista.data, tiposCatalogo.data]);
+  // Solo los tipos del catálogo (si la empresa aún no tiene catálogo, los que ya tienen frecuencia)
+  const opcionesTipoMp = useMemo(() => ((tiposCatalogo.data ?? []).length ? opciones(tiposCatalogo.data ?? []) : opciones(datosRegla('tipo_mp'))), [lista.data, tiposCatalogo.data]);
   const opcionesTipo = useMemo(() => opciones(['Cambio', 'Inspección', 'Regulación', 'Calibración', 'Engrase', 'Limpieza', 'Ajuste'], datosRegla('tipo')), [lista.data]);
   const opcionesSistema = useMemo(() => opciones(['Motor', 'Transmisión / Caja', 'Diferencial', 'Frenos', 'Suspensión', 'Eléctrico', 'Neumáticos', 'Dirección', 'Refrigeración', 'Combustible', 'Cabina'], datosRegla('sistema')), [lista.data]);
   const opcionesCombustible = useMemo(() => opciones(['DIÉSEL', 'GNV', 'GLP'], datosRegla('combustible'), datosPlaca('combustible')), [lista.data, placas.data]);
@@ -150,7 +151,7 @@ export function FrecuenciasMpPage() {
     finally { setGuardando(false); }
   }
 
-  const lista2 = (k: keyof Borrador, label: string, opcionesCampo: ComboboxOption[], wide = false, ayuda?: string) => (
+  const lista2 = (k: keyof Borrador, label: string, opcionesCampo: ComboboxOption[], wide = false, ayuda?: string, soloLista = false) => (
     <Field label={label} wide={wide} hint={ayuda}>
       {p => (
         <Combobox
@@ -160,7 +161,7 @@ export function FrecuenciasMpPage() {
           value={String(borrador?.[k] ?? '') || null}
           enHoja compacta tituloHoja={label}
           onChange={v => setBorrador(b => (b ? { ...b, [k]: v ?? '' } : b))}
-          onCreate={texto => setBorrador(b => (b ? { ...b, [k]: sinEspaciosDobles(texto) } : b))}
+          onCreate={soloLista ? undefined : (texto => setBorrador(b => (b ? { ...b, [k]: sinEspaciosDobles(texto) } : b)))}
           createLabel="Usar"
           placeholder="Elige o escribe para buscar…"
         />
@@ -225,7 +226,7 @@ export function FrecuenciasMpPage() {
           <div className="form-grid">
             {lista2('marca', 'Marca', opcionesMarca, false, 'Elige o escribe una marca nueva')}
             {lista2('modelo', 'Modelo', opcionesModelo, false, 'Vacío = todos los modelos de la marca')}
-            {lista2('tipo_mp', 'Tipo de mantenimiento', opcionesTipoMp, true, borrador.id ? 'Si cambias el nombre, los mantenimientos ya hechos pasan al nombre nuevo (no se borra nada)' : 'Ej. CAMBIO DE ACEITE Y FILTROS, PM1')}
+            {lista2('tipo_mp', 'Tipo de mantenimiento', opcionesTipoMp, true, 'Solo tipos del catálogo. Si falta uno, créalo en Catálogos › Tipos de preventivo.', true)}
             {txt('frecuencia_km', 'Cada (km)')}{txt('frecuencia_horas', 'Cada (horas de motor)')}{txt('frecuencia_dias', 'Cada (días)')}
             {lista2('tipo', 'Tipo', opcionesTipo)}{lista2('sistema', 'Sistema', opcionesSistema)}{lista2('combustible', 'Combustible', opcionesCombustible)}{lista2('uts', 'UTS', opcionesUts, false, 'Vacío = todas las UTS')}
             {txt('descripcion', 'Descripción', true)}
