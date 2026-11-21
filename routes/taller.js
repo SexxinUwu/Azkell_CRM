@@ -874,6 +874,21 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
+    // Regla: si se registra el trabajo realizado, el inicio y el fin son obligatorios. En una OT ya cerrada no se exige.
+    function validarInicioFin(tdb, ticket, texto, ini, fin, cb) {
+        if (!String(texto || '').trim() || (ini && fin)) return cb(null);
+        tdb.query('SELECT estado FROM ordenes_trabajo WHERE ticket_entrada = ? OR id_ot = ? LIMIT 1', [ticket, ticket], (err, filas) => {
+            if (err) return cb(null);
+            const estado = filas && filas[0] ? String(filas[0].estado || '') : '';
+            if (['Finalizado', 'Cerrada', 'Anulada', 'Anulado'].includes(estado)) return cb(null);
+            cb('Si registras el trabajo realizado debes indicar la fecha y hora de inicio y de fin.');
+        });
+    }
+
+    router.post('/ot-trabajos', (req, res, next) => {
+        validarInicioFin(req.db || db, req.body.ticket_visita, req.body.trabajo_realizado, req.body.fecha_trabajo, req.body.fecha_salida,
+            (msg) => (msg ? res.status(400).json({ error: msg }) : next()));
+    });
     router.post('/ot-trabajos', (req, res) => {
         // ticket_visita del body = ticket_entrada de la OT (FK de asociación al OT)
         const { ticket_visita: ticketEntrada, trabajo_realizado, fecha_trabajo, fecha_salida, creado_por, detalles_json } = req.body;
@@ -953,7 +968,9 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         if (accion === 'editar') {
             const { trabajo_realizado, fecha_trabajo, fecha_salida, personal, costo, estado, realizado_registrado } = req.body;
             const tdbT = req.db || db;
-            tdbT.query(`SELECT detalles_json FROM trabajos_ot WHERE (id_ot = ? AND id_ot != '') OR (id_ot = '' AND ticket_visita = ?) LIMIT 1`, [idTrabajo, idTrabajo], (errSel, filasSel) => {
+            tdbT.query(`SELECT detalles_json, ticket_visita FROM trabajos_ot WHERE (id_ot = ? AND id_ot != '') OR (id_ot = '' AND ticket_visita = ?) LIMIT 1`, [idTrabajo, idTrabajo], (errSel, filasSel) => {
+            validarInicioFin(tdbT, filasSel && filasSel[0] ? filasSel[0].ticket_visita : '', trabajo_realizado, fecha_trabajo, fecha_salida, (msgValid) => {
+            if (msgValid) return res.status(400).json({ error: msgValid });
             let detPrevio = {};
             try { const raw = filasSel && filasSel[0] ? filasSel[0].detalles_json : null; detPrevio = typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw || {}); } catch (e) { detPrevio = {}; }
             const detNuevo = { ...detPrevio, personal: personal || '', costo: parseFloat(costo) || 0 };
@@ -969,6 +986,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                     if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 }
             );
+            });
             });
             return;
         }

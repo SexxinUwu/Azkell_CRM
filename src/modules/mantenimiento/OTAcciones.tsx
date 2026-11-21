@@ -7,7 +7,7 @@ import { Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import {
-  aObjeto, ejecutarAccionOT, liberarRampa, marcarDisponibilidadEnBase, otId, pausarOT, trabajosDeOT, useTrabajosOT,
+  aObjeto, ejecutarAccionOT, limpioMotivo, liberarRampa, marcarDisponibilidadEnBase, otId, pausarOT, trabajosDeOT, useTrabajosOT,
   type OrdenTrabajo,
 } from './api';
 
@@ -100,7 +100,7 @@ const GENERICOS = /^(falla reportada|falla observada|observado en checklist|obse
 
 type ItemCierre = { clave: string; texto: string; backlog_id: string | null };
 
-export function CerrarOTSheet({ ot, open, onClose, usuario }: { ot: OrdenTrabajo; open: boolean; onClose: () => void; usuario: string }) {
+export function CerrarOTSheet({ ot, hechos, open, onClose, usuario }: { ot: OrdenTrabajo; /** Motivos de ingreso y si ya tienen su trabajo registrado (clave: motivo normalizado) */ hechos?: Record<string, boolean>; open: boolean; onClose: () => void; usuario: string }) {
   const qc = useQueryClient();
   const toast = useToast();
   const { data: trabajosTodos } = useTrabajosOT();
@@ -133,8 +133,16 @@ export function CerrarOTSheet({ ot, open, onClose, usuario }: { ot: OrdenTrabajo
     return lista;
   }, [ot, trabajosTodos]);
 
-  const realizado = (clave: string) => marcados[clave] ?? true;
-  const alternar = (clave: string) => setMarcados(p => ({ ...p, [clave]: !(p[clave] ?? true) }));
+  // Por defecto, un motivo está realizado si ya tiene su trabajo registrado; si no, pasará a No realizado y volverá al backlog
+  const sugerido = (it: ItemCierre) => {
+    if (!hechos) return true;
+    const k = limpioMotivo(it.texto);
+    const clave = Object.keys(hechos).find(h => h !== '' && k !== '' && (h.includes(k) || k.includes(h)));
+    return clave === undefined ? true : hechos[clave];
+  };
+  const realizado = (clave: string) => marcados[clave] ?? sugerido(items.find(i => i.clave === clave) as ItemCierre);
+  const alternar = (clave: string) => setMarcados(p => ({ ...p, [clave]: !realizado(clave) }));
+  const sinTrabajo = items.filter(it => !realizado(it.clave)).length;
 
   async function confirmar() {
     setEnviando(true);
@@ -203,6 +211,11 @@ export function CerrarOTSheet({ ot, open, onClose, usuario }: { ot: OrdenTrabajo
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
+        {sinTrabajo > 0 && (
+          <p style={{ margin: 0, fontSize: 13, color: '#b45309', background: '#fef3c7', borderRadius: 12, padding: '10px 12px' }}>
+            Quedan {sinTrabajo} {sinTrabajo === 1 ? 'motivo sin trabajo registrado' : 'motivos sin trabajo registrado'}. Al cerrar pasarán a <b>No realizado</b> y volverán al <b>backlog</b> de la unidad. Si sí se hicieron, márcalos como realizados.
+          </p>
+        )}
         {items.length === 0 && <p style={{ margin: 0, fontSize: 13, color: 'var(--label-2)', textAlign: 'center' }}>No hay trabajos ni motivos registrados.</p>}
         {items.map(it => {
           const ok = realizado(it.clave);

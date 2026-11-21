@@ -18,7 +18,7 @@ import { compartirPDF } from '../../core/lib/pdf';
 import { InspeccionFicha } from '../inspecciones/InspeccionFicha';
 import { useInspecciones, type Inspeccion } from '../inspecciones/api';
 import {
-  aObjeto, trabajoId, accionesDisponibles, costosOT, duracionPausa, etiquetaEstado, formatoDuracion, otDetalles, otId,
+  aObjeto, trabajoId, accionesDisponibles, limpioMotivo, backlogHecho, otYaCerrada, costosOT, duracionPausa, etiquetaEstado, formatoDuracion, otDetalles, otId,
   pausasDe, tiempoNetoOT, trabajoCosto, trabajosDeOT, useInspeccionesDeOT, useMateriales, useTrabajosOT,
   type AccionOT, type MaterialSalida, type OrdenTrabajo, type PausaOT, type TrabajoOT,
 } from './api';
@@ -90,8 +90,6 @@ const COLUMNAS_TRABAJOS: ColumnaTabla[] = [
   { id: 'importe', titulo: 'Importe', ancho: 90 },
 ];
 
-/** Texto comparable: sin viñetas, numeración, acentos ni mayúsculas */
-const limpioMotivo = (x: unknown) => String(x ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/^\s*[•\d.)-]+\s*/, '').replace(/^falla manual\s*:\s*/i, '').replace(/\s+/g, ' ').trim().toLowerCase();
 
 /** Motivos por los que ingresó la unidad (las fallas del reporte o de la rampa) */
 function motivosDeIngreso(d: Record<string, unknown>): string[] {
@@ -248,35 +246,64 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   const totalTrabajos = trabajos.reduce((sum, t) => sum + trabajoCosto(t), 0);
   // Una fila por cada motivo de ingreso con su trabajo; los trabajos que no corresponden a un motivo van como adicionales
   const registradoT = (t: TrabajoOT) => { const dt = aObjeto(t.detalles_json); return !!(t.fecha_trabajo || t.fecha_salida || trabajoCosto(t) > 0 || dt.realizado_registrado === true); };
+  type FilaMotivo = { motivo: string; trabajo: TrabajoOT | null; backlog?: BacklogOT; veces?: number; continuacion?: boolean };
   const filasMotivo = (() => {
-    const motivos = motivosDeIngreso(det as Record<string, unknown>);
+    // Un motivo repetido (reporte y backlog con el mismo texto) sale una sola vez, con su cantidad
+    const vistos = new Map<string, { texto: string; veces: number }>();
+    for (const m of motivosDeIngreso(det as Record<string, unknown>)) {
+      const k = limpioMotivo(m) || m;
+      const v = vistos.get(k);
+      if (v) v.veces += 1; else vistos.set(k, { texto: m, veces: 1 });
+    }
     const libres = [...trabajos];
     const coincide = (t: TrabajoOT, m: string) => {
       const dt = aObjeto(t.detalles_json); const k = limpioMotivo(m);
       const fr = limpioMotivo(dt.falla_reportada); const tr = limpioMotivo(t.trabajo_realizado);
       return k !== '' && (fr === k || tr === k || (tr !== '' && (tr.includes(k) || k.includes(tr))));
     };
-    const filas: Array<{ motivo: string; trabajo: TrabajoOT | null; backlog?: BacklogOT }> = motivos.map(m => {
-      const idx = libres.findIndex(t => coincide(t, m));
+    const filas: FilaMotivo[] = [];
+    for (const { texto, veces } of vistos.values()) {
+      const idx = libres.findIndex(t => coincide(t, texto));
       const t = idx >= 0 ? libres.splice(idx, 1)[0] : null;
-      return { motivo: m, trabajo: t };
-    });
+      filas.push({ motivo: texto, trabajo: t, veces });
+      // Más trabajos que declaran el mismo motivo van debajo de él
+      const k = limpioMotivo(texto);
+      for (let n = libres.length - 1; n >= 0; n--) {
+        if (limpioMotivo(aObjeto(libres[n].detalles_json).falla_reportada) === k) filas.push({ motivo: '', trabajo: libres.splice(n, 1)[0], continuacion: true });
+      }
+    }
     // Las tareas del backlog ligadas a la OT también son motivos de ingreso (si ya figuran entre las fallas, no se repiten)
     for (const b of backlog) {
       const k = limpioMotivo(b.tarea);
-      const ya = filas.find(f => { const m = limpioMotivo(f.motivo); return k !== '' && m !== '' && (m.includes(k) || k.includes(m)); });
+      const ya = filas.find(f => { const m = limpioMotivo(f.motivo); return !f.continuacion && k !== '' && m !== '' && (m.includes(k) || k.includes(m)); });
       if (ya) { ya.backlog = b; continue; }
       const idx = libres.findIndex(t => coincide(t, b.tarea));
       const t = idx >= 0 ? libres.splice(idx, 1)[0] : null;
       filas.push({ motivo: b.tarea, trabajo: t, backlog: b });
     }
     libres.forEach(t => filas.push({ motivo: '', trabajo: t }));
+    // Los trabajos que continúan un motivo quedan pegados a él
     return filas;
   })();
-  const filaHecha = (f: { trabajo: TrabajoOT | null; backlog?: BacklogOT }) => (!!f.trabajo && registradoT(f.trabajo)) || f.backlog?.estado === 'Completado';
-  const motivosHechos = filasMotivo.filter(filaHecha).length;
+  // Una OT ya cerrada: lo que quedó anotado al cerrar manda; si no hay anotación, un motivo con trabajo se da por realizado
+  const otCerrada = otYaCerrada(ot.estado);
+  const cierreAnotado = Array.isArray((det as Record<string, unknown>).motivos_cierre_checklist) ? ((det as Record<string, unknown>).motivos_cierre_checklist as Array<{ texto?: string; realizado?: boolean }>) : [];
+  const segunCierre = (m: string): boolean | undefined => {
+    const k = limpioMotivo(m);
+    const e = cierreAnotado.find(c => { const x = limpioMotivo(c.texto); return x !== '' && k !== '' && (x.includes(k) || k.includes(x)); });
+    return e ? e.realizado === true : undefined;
+  };
+  const filaHecha = (f: FilaMotivo) => (!!f.trabajo && registradoT(f.trabajo)) || backlogHecho(f.backlog?.estado) || (otCerrada && (segunCierre(f.motivo) ?? !!f.trabajo));
+  const filasPrincipales = filasMotivo.filter(f => !f.continuacion);
+  // Un motivo está hecho si cualquiera de sus trabajos lo está
+  const hechoMotivo = (f: FilaMotivo) => filaHecha(f) || filasMotivo.some(c => c.continuacion && c.trabajo && registradoT(c.trabajo) && limpioMotivo(aObjeto(c.trabajo.detalles_json).falla_reportada) === limpioMotivo(f.motivo));
+  const motivosHechos = filasPrincipales.filter(hechoMotivo).length;
   // Un motivo sin trabajo registrado está Pendiente mientras la OT sigue abierta; al cerrarse pasa a No realizado
-  const otCerrada = ['Finalizado', 'Cerrada', 'Anulada', 'Anulado'].includes(ot.estado);
+  // Para el cierre: qué motivos ya tienen su trabajo registrado
+  const hechosMotivos: Record<string, boolean> = {};
+  filasPrincipales.forEach(f => { if (f.motivo) hechosMotivos[limpioMotivo(f.motivo)] = hechoMotivo(f); });
+  // Motivos aún sin trabajo (para elegirlos al agregar uno)
+  const motivosLibres = filasPrincipales.filter(f => f.motivo && !hechoMotivo(f) && !f.trabajo).map(f => f.motivo);
   const mats = (materiales ?? []).filter(m => m.estado !== 'Anulado');
   // Servicios que llegaron como ítems de vale (clásico: rotEsItemServicio): salen de Repuestos y van a Terceros
   const esServicioItem = (d: string) => {
@@ -457,7 +484,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     tabsRef.current?.scrollIntoView({ block: 'nearest' });
   };
   const kpis: Array<{ s: Seccion; etiqueta: string; valor: string; pie: string; icon: React.ReactNode; total?: boolean }> = [
-    { s: 'tareas', etiqueta: 'Trabajos', valor: String(trabajos.length), pie: totalTrabajos > 0 ? soles(totalTrabajos) : 'Mano de obra', icon: <Wrench size={16} /> },
+    { s: 'tareas', etiqueta: 'Trabajos', valor: `${motivosHechos}/${filasPrincipales.length}`, pie: totalTrabajos > 0 ? soles(totalTrabajos) : 'Mano de obra', icon: <Wrench size={16} /> },
     { s: 'repuestos', etiqueta: 'Repuestos', valor: soles(costos.repuestos), pie: `${mats.length} salida${mats.length === 1 ? '' : 's'}`, icon: <Package size={16} /> },
     { s: 'tiempos', etiqueta: 'Pausas', valor: `${pausas.length} de 3`, pie: tiempos.pausado > 0 ? formatoDuracion(tiempos.pausado) : 'Sin pausas', icon: <Timer size={16} /> },
     { s: 'costos', etiqueta: 'Costo total', valor: soles(costos.total), pie: 'Ver desglose', icon: <Receipt size={16} />, total: true },
@@ -583,7 +610,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
         <>
           <section className="otd-seccion">
             <header className="otd-seccion__cabecera">
-              <h3 className="otd-seccion__titulo">Motivos y trabajos <span className="otd-cuenta">{motivosHechos}/{filasMotivo.length} realizados</span></h3>
+              <h3 className="otd-seccion__titulo">Motivos y trabajos <span className="otd-cuenta">{motivosHechos}/{filasPrincipales.length} realizados</span></h3>
               {puedeAgregarTrabajo && (
                 <Button size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => { setTrabajoSel(null); setMotivoSel(null); setTrabajoAbierto(true); }}>
                   Agregar
@@ -599,15 +626,15 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                     const t = f.trabajo;
                     const dt = t ? aObjeto(t.detalles_json) : {};
                     const costo = t ? trabajoCosto(t) : 0;
-                    const hecho = filaHecha(f);
+                    const hecho = f.continuacion ? (!!t && (registradoT(t) || otCerrada)) : hechoMotivo(f);
                     const personal = t ? String(dt.personal ?? t.tecnico ?? '') : '';
-                    const fecha = (v: unknown) => (v ? formatFechaHoraPe(String(v).replace('Z', '').replace(' ', 'T').slice(0, 16)) : '—');
+                    const fecha = (v: unknown) => (v ? formatFechaHoraPe(String(v).replace('Z', '').replace(' ', 'T').slice(0, 16)) : 'Sin datos');
                     const abrir = () => { setTrabajoSel(t); setMotivoSel(t ? null : f.motivo || null); setTrabajoAbierto(true); };
                     const clic = t ? puedeEditar : puedeAgregarTrabajo;
                     return (
                       <tr key={t ? trabajoId(t) : `m-${idx}`} className={clic ? 'otd-tr--clic' : undefined} onClick={clic ? abrir : undefined}>
                         <Celda mono>{idx + 1}</Celda>
-                        <Celda>{f.motivo ? `${f.backlog ? `Backlog ${f.backlog.backlog_id} · ` : ''}${f.motivo.replace(/^falla manual\s*:\s*/i, '')}` : 'Adicional (sin motivo de ingreso)'}</Celda>
+                        <Celda>{f.continuacion ? '↳ mismo motivo' : f.motivo ? `${f.backlog ? `Backlog ${f.backlog.backlog_id} · ` : ''}${f.motivo.replace(/^falla manual\s*:\s*/i, '')}${f.veces && f.veces > 1 ? ` (repetido ×${f.veces})` : ''}` : 'Adicional (sin motivo de ingreso)'}</Celda>
                         <Celda>{t ? (t.trabajo_realizado || '—') : '—'}</Celda>
                         <Celda>{t ? (personal || 'Sin técnico') : '—'}</Celda>
                         <Celda mono>{t ? fecha(t.fecha_trabajo) : '—'}</Celda>
@@ -854,8 +881,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
         onConfirm={eliminarSolicitud} title="Eliminar solicitud"
         message="¿Eliminar esta solicitud de material?" confirmLabel="Eliminar" />
       <PausarOTSheet ot={ot} open={pausando} onClose={() => setPausando(false)} usuario={usuario} />
-      <CerrarOTSheet ot={ot} open={cerrando} onClose={() => setCerrando(false)} usuario={usuario} />
-      <TrabajoOTSheet ot={ot} trabajo={trabajoSel} motivo={motivoSel} open={trabajoAbierto} onClose={() => setTrabajoAbierto(false)} usuario={usuario} />
+      <CerrarOTSheet ot={ot} hechos={hechosMotivos} open={cerrando} onClose={() => setCerrando(false)} usuario={usuario} />
+      <TrabajoOTSheet ot={ot} trabajo={trabajoSel} motivo={motivoSel} motivosLibres={motivosLibres} open={trabajoAbierto} onClose={() => setTrabajoAbierto(false)} usuario={usuario} />
       <SalidaFormulario
         comoSolicitud
         open={solicitando}

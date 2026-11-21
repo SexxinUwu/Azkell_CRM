@@ -355,6 +355,13 @@ export const editarTrabajo = (id: string, d: {
   trabajo_realizado: string; fecha_trabajo: string | null; fecha_salida: string | null; personal: string; costo: number; estado: string;
 }) => api<{ ok: boolean }>(`/ot-trabajos/${encodeURIComponent(id)}`, { method: 'PUT', body: { accion: 'editar', ...d } });
 
+/** Texto comparable de un motivo: sin viñetas, numeración, acentos, «falla manual:» ni mayúsculas */
+export const limpioMotivo = (x: unknown) => String(x ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/^\s*[•\d.)-]+\s*/, '').replace(/^falla manual\s*:\s*/i, '').replace(/\s+/g, ' ').trim().toLowerCase();
+/** Estados de un backlog que significan «ya se hizo» (la pantalla usa Completado y el cierre de OT guarda Realizado) */
+export const backlogHecho = (estado: string | null | undefined) => estado === 'Completado' || estado === 'Realizado';
+/** Estados de una OT que ya no admite trabajos nuevos */
+export const otYaCerrada = (estado: string | null | undefined) => ['Finalizado', 'Cerrada', 'Anulada', 'Anulado'].includes(String(estado ?? ''));
+
 export const crearTrabajo = (d: {
   ticket_visita: string; trabajo_realizado: string; fecha_trabajo: string | null; fecha_salida: string | null;
   creado_por: string; personal: string; costo: number; falla_reportada?: string;

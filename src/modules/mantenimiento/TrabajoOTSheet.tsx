@@ -5,13 +5,14 @@ import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { Field, TextInput } from '../../core/ui/Field';
 import { CampoMultiple } from '../../core/ui/CampoMultiple';
+import { Combobox } from '../../core/ui/Combobox';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { usePersonalSolicitante } from '../almacen/SelectoresSalida';
 import {
-  aObjeto, crearTrabajo, editarTrabajo, eliminarTrabajo, estadoTrabajo, trabajoCosto, trabajoId,
+  aObjeto, crearTrabajo, otYaCerrada, editarTrabajo, eliminarTrabajo, estadoTrabajo, trabajoCosto, trabajoId,
   type OrdenTrabajo, type TrabajoOT,
 } from './api';
 
@@ -31,12 +32,14 @@ function personalDe(t: TrabajoOT): string[] {
   return p.split(',').map(x => x.trim()).filter(Boolean);
 }
 
-export function TrabajoOTSheet({ ot, trabajo, motivo, open, onClose, usuario }: {
+export function TrabajoOTSheet({ ot, trabajo, motivo, motivosLibres = [], open, onClose, usuario }: {
   ot: OrdenTrabajo;
   /** Trabajo a editar; null para agregar uno nuevo */
   trabajo: TrabajoOT | null;
   /** Motivo de ingreso al que responde el trabajo nuevo (opcional) */
   motivo?: string | null;
+  /** Motivos de ingreso que aún no tienen trabajo: se puede elegir a cuál responde el trabajo nuevo */
+  motivosLibres?: string[];
   open: boolean;
   onClose: () => void;
   usuario: string;
@@ -49,6 +52,7 @@ export function TrabajoOTSheet({ ot, trabajo, motivo, open, onClose, usuario }: 
   const [ini, setIni] = useState('');
   const [fin, setFin] = useState('');
   const [costo, setCosto] = useState('0');
+  const [motivoElegido, setMotivoElegido] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [borrando, setBorrando] = useState(false);
@@ -64,7 +68,8 @@ export function TrabajoOTSheet({ ot, trabajo, motivo, open, onClose, usuario }: 
     } else {
       setDesc(''); setPersonal([]); setIni(ahoraLocal()); setFin(''); setCosto('0');
     }
-  }, [open, trabajo]);
+    setMotivoElegido(motivo ?? '');
+  }, [open, trabajo, motivo]);
 
   const opciones = useMemo(
     () => [...new Set([...(personalQ.data ?? []), ...personal])].sort((a, b) => a.localeCompare(b, 'es')),
@@ -78,6 +83,8 @@ export function TrabajoOTSheet({ ot, trabajo, motivo, open, onClose, usuario }: 
 
   async function guardar() {
     if (!desc.trim()) { setError('La descripción es requerida.'); haptic('warning'); return; }
+    // Si se registra el trabajo realizado, el inicio y el fin son obligatorios (en una OT ya cerrada no se exige)
+    if (!otYaCerrada(ot.estado) && (!ini || !fin)) { setError('Si registras el trabajo realizado debes indicar la fecha y hora de inicio y de fin.'); haptic('warning'); return; }
     if (ini && fin && fin < ini) { setError('La hora de fin es anterior al inicio.'); haptic('warning'); return; }
     setEnviando(true); setError(null);
     const costoNum = parseFloat(costo.replace(',', '.')) || 0;
@@ -92,7 +99,7 @@ export function TrabajoOTSheet({ ot, trabajo, motivo, open, onClose, usuario }: 
         await crearTrabajo({
           ticket_visita: ot.ticket_entrada || ot.id_ot || '', trabajo_realizado: desc.trim().toUpperCase(),
           fecha_trabajo: ini || null, fecha_salida: fin || null, creado_por: usuario,
-          personal: personal.join(', '), costo: costoNum, falla_reportada: motivo || undefined,
+          personal: personal.join(', '), costo: costoNum, falla_reportada: motivoElegido || undefined,
         });
         toast('Trabajo registrado');
       }
@@ -137,8 +144,10 @@ export function TrabajoOTSheet({ ot, trabajo, motivo, open, onClose, usuario }: 
         <div className="form-grid">
           <p className="t-footnote c-secondary field field--wide" style={{ margin: 0 }}>OT {ot.ticket_entrada || ot.id_ot} · registro de labor realizada</p>
           {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
-          {!edicion && motivo && (
-            <Field label="Motivo de ingreso" wide>{() => <p style={{ margin: 0, fontWeight: 600 }}>{motivo.replace(/^falla manual\s*:\s*/i, '')}</p>}</Field>
+          {!edicion && (motivosLibres.length > 0 || motivo) && (
+            <Field label="Motivo de ingreso al que responde" wide>
+              {p => <Combobox {...p} enHoja compacta tituloHoja="Motivo de ingreso" options={[...new Set([...(motivo ? [motivo] : []), ...motivosLibres])].map(m => ({ value: m, label: m.replace(/^falla manual\s*:\s*/i, '') }))} value={motivoElegido || null} onChange={v => setMotivoElegido(v ?? '')} placeholder="Sin motivo (trabajo adicional)" />}
+            </Field>
           )}
           <Field label="Descripción del trabajo realizado *" wide>
             {p => (
@@ -150,8 +159,8 @@ export function TrabajoOTSheet({ ot, trabajo, motivo, open, onClose, usuario }: 
           <Field label="Personal / Técnico(s) ejecutores" wide>
             {p => <CampoMultiple id={p.id} titulo="Técnico(s) ejecutores" opciones={opciones} valor={personal} onChange={setPersonal} placeholder="Seleccionar técnico(s)…" vacio="No hay personal que coincida." />}
           </Field>
-          <Field label="Fecha y hora inicio">{p => <TextInput {...p} type="datetime-local" value={ini} onChange={e => setIni(e.target.value)} />}</Field>
-          <Field label="Fecha y hora fin">{p => <TextInput {...p} type="datetime-local" value={fin} min={ini || undefined} onChange={e => setFin(e.target.value)} />}</Field>
+          <Field label="Fecha y hora inicio *">{p => <TextInput {...p} type="datetime-local" value={ini} onChange={e => setIni(e.target.value)} />}</Field>
+          <Field label="Fecha y hora fin *">{p => <TextInput {...p} type="datetime-local" value={fin} min={ini || undefined} onChange={e => setFin(e.target.value)} />}</Field>
           <Field label="Costo estimado del trabajo (S/)" wide>{p => <TextInput {...p} inputMode="decimal" value={costo} onChange={e => setCosto(e.target.value)} />}</Field>
         </div>
       </Sheet>
