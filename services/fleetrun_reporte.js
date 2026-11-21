@@ -60,7 +60,7 @@ function filasDelReporte(filas, incluirVigentes = false) {
       });
     }
     porPlaca.get(placa).mantenimientos.push({
-      tipo: f.tipo || '-', fecha: f.fecha || 'Plan inicial', kmCambio, kmGps, kmProx, kmRestante, estado, obs: f.obs || '',
+      tipo: f.tipo || '-', fecha: f.fecha || 'Plan inicial', kmCambio, kmGps, kmProx, kmRestante, estado, obs: f.obs || '', frecuencia,
     });
   }
   return [...porPlaca.values()];
@@ -139,6 +139,11 @@ const ESTILO = `
   .punto { color: #0a84ff; font-weight: 800; }
   .km { font-family: 'SF Mono', Menlo, Consolas, monospace; font-weight: 600; font-size: 8.2px; }
   .ubi { font-size: 7.2px; color: #424245; line-height: 1.25; }
+  tr.grupo td { background: #f5f5f7; border-top: 1px solid #e5e5ea; padding: 6px 8px; font-size: 8.2px; }
+  tr.grupo .grupo-dato { margin-left: 10px; color: #3a3a3c; font-weight: 600; }
+  tr.grupo .ubi { font-weight: 400; color: #6e6e73; }
+  .tipo-fila { font-weight: 600; font-size: 8.4px; }
+  .obs-fila { color: #6e6e73; font-size: 7.6px; }
   .pie { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; font-size: 7.6px; color: #86868b; }
 `;
 
@@ -170,6 +175,51 @@ function filaHtml(u, indice, completo) {
     <td class="c uts" style="color:${utsColor};">${esc(u.uts)}</td>
     <td class="ubi" title="${esc(u.ubicacion)}">${esc(u.ubicacion)}</td>
   </tr>`;
+}
+
+/** Estado completo: cada preventivo en su propia fila, agrupado por placa (igual que la tabla de la pantalla) */
+function tablaCompleta(unidades) {
+  const filas = unidades.map(u => {
+    const unidad = u.esHoras ? ' h' : ' km';
+    const tono = TONO[u.estadoGlobal];
+    const cabecera = `
+    <tr class="grupo"><td colspan="9">
+      <span class="placa">${esc(u.placa)}</span>
+      <span class="grupo-dato">${esc(u.clase)}</span><span class="grupo-dato marca-texto">${esc(u.marca)}</span>
+      <span class="grupo-dato">${esc(u.uts)}</span><span class="grupo-dato">Km real ${numero(u.kmGps)}${unidad}</span>
+      <span class="grupo-dato ubi">${esc(u.ubicacion)}</span>
+      <span class="pill" style="color:${tono.tinta};background:${tono.fondo};float:right;">${u.mantenimientos.length} ${u.mantenimientos.length === 1 ? 'preventivo' : 'preventivos'}</span>
+    </td></tr>`;
+    const detalle = u.mantenimientos.map(m => {
+      const t = TONO[m.estado];
+      const falta = m.kmRestante;
+      return `
+    <tr>
+      <td class="c fecha">${esc(m.fecha)}</td>
+      <td class="tipo-fila">${esc(tipoOracion(m.tipo))}</td>
+      <td class="r km">${numero(m.kmCambio)}${unidad}</td>
+      <td class="r km">${numero(m.kmGps)}${unidad}</td>
+      <td class="c"><span class="pill" style="color:${t.tinta};background:${t.fondo};">${falta <= 0 ? '' : '+'}${numero(falta)}${unidad}</span></td>
+      <td class="r km">${numero(m.kmProx)}${unidad}</td>
+      <td class="r km">${m.frecuencia ? numero(m.frecuencia) + unidad : '—'}</td>
+      <td class="obs-fila">${esc(m.obs || '—')}</td>
+      <td class="c"><span class="pill" style="color:${t.tinta};background:${t.fondo};">${t.etiqueta}</span></td>
+    </tr>`;
+    }).join('');
+    return cabecera + detalle;
+  }).join('');
+  return `
+  <table class="tabla">
+    <colgroup>
+      <col style="width:8%"><col style="width:24%"><col style="width:10%"><col style="width:10%"><col style="width:9%"><col style="width:10%"><col style="width:9%"><col style="width:11%"><col style="width:9%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Fecha</th><th style="text-align:left;">Tipo preventivo</th><th>Km cambio</th><th>Km actual</th><th>Cuánto falta</th><th>Km próximo</th><th>Frecuencia</th><th style="text-align:left;">Observación</th><th>Estado</th>
+      </tr>
+    </thead>
+    <tbody>${filas}</tbody>
+  </table>`;
 }
 
 /**
@@ -217,7 +267,7 @@ function htmlReporteFleetrun(datos) {
     <div class="tarjeta" style="background:#fef3c7"><span class="tarjeta-num" style="color:#b45309">${proximas}</span><span class="tarjeta-txt">Próximas a vencer</span></div>
     ${completo ? `<div class="tarjeta" style="background:#dcfce7"><span class="tarjeta-num" style="color:#15803d">${vigentes}</span><span class="tarjeta-txt">Vigentes</span></div>` : ''}
   </div>
-  <table class="tabla">
+  ${completo ? tablaCompleta(unidades) : `  <table class="tabla">
     <colgroup>
       <col style="width:7%"><col style="width:6%"><col style="width:7%"><col style="width:7%"><col style="width:7%">
       <col style="width:19%"><col style="width:8%"><col style="width:8%"><col style="width:8%"><col style="width:5%"><col style="width:18%">
@@ -231,6 +281,7 @@ function htmlReporteFleetrun(datos) {
     </thead>
     <tbody>${filas}</tbody>
   </table>
+  `}
   <div class="pie">
     <span>Sistema ERP Azkell Fleet · Mantenimiento preventivo</span>
     <span>Documento oficial · ${fechaCorta}</span>
