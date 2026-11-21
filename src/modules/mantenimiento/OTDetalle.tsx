@@ -81,14 +81,27 @@ function tonoEstado(estado: string): 'gris' | 'verde' | 'ambar' | 'azul' | 'rojo
 /** Etapas que muestra la barra de avance del encabezado */
 const COLUMNAS_TRABAJOS: ColumnaTabla[] = [
   { id: 'n', titulo: '#', ancho: 40, minimo: 36 },
-  { id: 'trabajo', titulo: 'Trabajo', ancho: 260 },
+  { id: 'motivo', titulo: 'Motivo de ingreso', ancho: 250 },
+  { id: 'trabajo', titulo: 'Trabajo realizado', ancho: 260 },
   { id: 'tecnico', titulo: 'Técnico', ancho: 170 },
   { id: 'inicio', titulo: 'Inicio', ancho: 120 },
   { id: 'fin', titulo: 'Fin', ancho: 120 },
-  { id: 'origen', titulo: 'Origen', ancho: 150 },
   { id: 'estado', titulo: 'Estado', ancho: 100 },
   { id: 'importe', titulo: 'Importe', ancho: 90 },
 ];
+
+/** Texto comparable: sin viñetas, numeración, acentos ni mayúsculas */
+const limpioMotivo = (x: unknown) => String(x ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/^\s*[•\d.)-]+\s*/, '').replace(/^falla manual\s*:\s*/i, '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+/** Motivos por los que ingresó la unidad (las fallas del reporte o de la rampa) */
+function motivosDeIngreso(d: Record<string, unknown>): string[] {
+  const det = d.trabajos_det;
+  if (Array.isArray(det) && det.length) return (det as Array<{ desc?: string }>).map(f => String(f?.desc ?? '').trim()).filter(Boolean);
+  const desc = String(d.descripcion_falla ?? '').split('\n').map(l => l.replace(/^\s*•\s*/, '').trim()).filter(Boolean);
+  if (desc.length) return desc;
+  const motivo = String(d.motivo ?? '').split(' · ').map(l => l.trim()).filter(Boolean);
+  return motivo;
+}
 const PASOS = ['Ingreso', 'En trabajo', 'Cerrada'];
 function pasoDe(estado: string): number {
   if (estado === 'Cerrada' || estado === 'Finalizado') return 2;
@@ -220,6 +233,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   // Formulario de trabajo: abierto para agregar (trabajoSel null) o para editar uno existente
   const [trabajoAbierto, setTrabajoAbierto] = useState(false);
   const [trabajoSel, setTrabajoSel] = useState<TrabajoOT | null>(null);
+  const [motivoSel, setMotivoSel] = useState<string | null>(null);
   // Igual que el clásico (esAprobada): se pueden agregar trabajos desde Aprobada hasta Cerrada, también ya finalizada
   const puedeAgregarTrabajo = puedeEditar && ['Aprobada', 'En Proceso', 'Pausada', 'Finalizado', 'Cerrada'].includes(ot.estado);
 
@@ -232,6 +246,25 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
 
   const trabajos = trabajosDeOT(ot, trabajosTodos ?? []);
   const totalTrabajos = trabajos.reduce((sum, t) => sum + trabajoCosto(t), 0);
+  // Una fila por cada motivo de ingreso con su trabajo; los trabajos que no corresponden a un motivo van como adicionales
+  const registradoT = (t: TrabajoOT) => { const dt = aObjeto(t.detalles_json); return !!(t.fecha_trabajo || t.fecha_salida || trabajoCosto(t) > 0 || dt.realizado_registrado === true); };
+  const filasMotivo = (() => {
+    const motivos = motivosDeIngreso(det as Record<string, unknown>);
+    const libres = [...trabajos];
+    const coincide = (t: TrabajoOT, m: string) => {
+      const dt = aObjeto(t.detalles_json); const k = limpioMotivo(m);
+      const fr = limpioMotivo(dt.falla_reportada); const tr = limpioMotivo(t.trabajo_realizado);
+      return k !== '' && (fr === k || tr === k || (tr !== '' && (tr.includes(k) || k.includes(tr))));
+    };
+    const filas: Array<{ motivo: string; trabajo: TrabajoOT | null }> = motivos.map(m => {
+      const idx = libres.findIndex(t => coincide(t, m));
+      const t = idx >= 0 ? libres.splice(idx, 1)[0] : null;
+      return { motivo: m, trabajo: t };
+    });
+    libres.forEach(t => filas.push({ motivo: '', trabajo: t }));
+    return filas;
+  })();
+  const motivosHechos = filasMotivo.filter(f => f.trabajo && registradoT(f.trabajo)).length;
   const mats = (materiales ?? []).filter(m => m.estado !== 'Anulado');
   // Servicios que llegaron como ítems de vale (clásico: rotEsItemServicio): salen de Repuestos y van a Terceros
   const esServicioItem = (d: string) => {
@@ -538,39 +571,36 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
         <>
           <section className="otd-seccion">
             <header className="otd-seccion__cabecera">
-              <h3 className="otd-seccion__titulo">Trabajos realizados <span className="otd-cuenta">{trabajos.length}</span></h3>
+              <h3 className="otd-seccion__titulo">Motivos y trabajos <span className="otd-cuenta">{motivosHechos}/{filasMotivo.length} realizados</span></h3>
               {puedeAgregarTrabajo && (
-                <Button size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => { setTrabajoSel(null); setTrabajoAbierto(true); }}>
+                <Button size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => { setTrabajoSel(null); setMotivoSel(null); setTrabajoAbierto(true); }}>
                   Agregar
                 </Button>
               )}
             </header>
-            {loadTra ? <PageLoader /> : trabajos.length === 0 ? (
+            {loadTra ? <PageLoader /> : filasMotivo.length === 0 ? (
               <p className="otd-vacio">No hay trabajos registrados{puedeAgregarTrabajo ? '. Toca «Agregar» para registrar el primero.' : '.'}</p>
             ) : (
               <>
-                <TablaRedimensionable id="ot-trabajos-v1" columnas={COLUMNAS_TRABAJOS} ariaLabel="Trabajos realizados" altoMax="50vh" className="tabla-redim--compacta">
-                  {trabajos.map((t, idx) => {
-                    const costo = trabajoCosto(t);
-                    const dt = aObjeto(t.detalles_json);
-                    const personal = String(dt.personal ?? t.tecnico ?? '');
-                    const registrado = !!(t.fecha_trabajo || t.fecha_salida || costo > 0 || dt.realizado_registrado === true);
-                    // Las OT anteriores no guardaron el origen en el trabajo: se deduce de las fallas con que se abrió la OT
-                    const limpio = (x: unknown) => String(x ?? '').replace(/^\s*[•\d.)-]+\s*/, '').trim().toLowerCase();
-                    const deLaOT = Array.isArray(det.trabajos_det) && (det.trabajos_det as Array<{ desc?: string }>).some(f => limpio(f.desc) === limpio(t.trabajo_realizado));
-                    const folio = String(dt.folio_reporte ?? det.folio_reporte ?? '').trim();
-                    const origen = dt.origen === 'reporte_falla' || (!dt.origen && deLaOT && folio) ? `Reporte de fallas${folio ? ` ${folio}` : ''}`
-                      : dt.origen === 'rampa' || (!dt.origen && deLaOT) ? 'Status de rampa' : 'Agregado a mano';
-                    const fecha = (f: unknown) => (f ? formatFechaHoraPe(String(f).replace('Z', '').replace(' ', 'T').slice(0, 16)) : '—');
+                <TablaRedimensionable id="ot-trabajos-v2" columnas={COLUMNAS_TRABAJOS} ariaLabel="Motivos de ingreso y trabajos realizados" altoMax="60vh" className="tabla-redim--compacta">
+                  {filasMotivo.map((f, idx) => {
+                    const t = f.trabajo;
+                    const dt = t ? aObjeto(t.detalles_json) : {};
+                    const costo = t ? trabajoCosto(t) : 0;
+                    const hecho = !!t && registradoT(t);
+                    const personal = t ? String(dt.personal ?? t.tecnico ?? '') : '';
+                    const fecha = (v: unknown) => (v ? formatFechaHoraPe(String(v).replace('Z', '').replace(' ', 'T').slice(0, 16)) : '—');
+                    const abrir = () => { setTrabajoSel(t); setMotivoSel(t ? null : f.motivo || null); setTrabajoAbierto(true); };
+                    const clic = t ? puedeEditar : puedeAgregarTrabajo;
                     return (
-                      <tr key={trabajoId(t)} className={puedeEditar ? 'otd-tr--clic' : undefined} onClick={puedeEditar ? () => { setTrabajoSel(t); setTrabajoAbierto(true); } : undefined}>
+                      <tr key={t ? trabajoId(t) : `m-${idx}`} className={clic ? 'otd-tr--clic' : undefined} onClick={clic ? abrir : undefined}>
                         <Celda mono>{idx + 1}</Celda>
-                        <Celda>{t.trabajo_realizado || '—'}</Celda>
-                        <Celda>{personal || 'Sin técnico'}</Celda>
-                        <Celda mono>{fecha(t.fecha_trabajo)}</Celda>
-                        <Celda mono>{fecha(t.fecha_salida)}</Celda>
-                        <Celda>{origen}</Celda>
-                        <Celda><span className={`otd-fila__estado${registrado ? ' otd-fila__estado--ok' : ''}`}>{registrado ? 'Realizado' : 'Por registrar'}</span></Celda>
+                        <Celda>{f.motivo ? f.motivo.replace(/^falla manual\s*:\s*/i, '') : 'Adicional (sin motivo de ingreso)'}</Celda>
+                        <Celda>{t ? (t.trabajo_realizado || '—') : '—'}</Celda>
+                        <Celda>{t ? (personal || 'Sin técnico') : '—'}</Celda>
+                        <Celda mono>{t ? fecha(t.fecha_trabajo) : '—'}</Celda>
+                        <Celda mono>{t ? fecha(t.fecha_salida) : '—'}</Celda>
+                        <Celda><span className={`otd-fila__estado${hecho ? ' otd-fila__estado--ok' : ''}`}>{hecho ? 'Realizado' : 'Pendiente'}</span></Celda>
                         <Celda mono alinear="right">{costo > 0 ? soles(costo) : '—'}</Celda>
                       </tr>
                     );
@@ -813,7 +843,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
         message="¿Eliminar esta solicitud de material?" confirmLabel="Eliminar" />
       <PausarOTSheet ot={ot} open={pausando} onClose={() => setPausando(false)} usuario={usuario} />
       <CerrarOTSheet ot={ot} open={cerrando} onClose={() => setCerrando(false)} usuario={usuario} />
-      <TrabajoOTSheet ot={ot} trabajo={trabajoSel} open={trabajoAbierto} onClose={() => setTrabajoAbierto(false)} usuario={usuario} />
+      <TrabajoOTSheet ot={ot} trabajo={trabajoSel} motivo={motivoSel} open={trabajoAbierto} onClose={() => setTrabajoAbierto(false)} usuario={usuario} />
       <SalidaFormulario
         comoSolicitud
         open={solicitando}

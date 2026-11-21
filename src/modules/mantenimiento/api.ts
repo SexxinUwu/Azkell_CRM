@@ -357,12 +357,12 @@ export const editarTrabajo = (id: string, d: {
 
 export const crearTrabajo = (d: {
   ticket_visita: string; trabajo_realizado: string; fecha_trabajo: string | null; fecha_salida: string | null;
-  creado_por: string; personal: string; costo: number;
+  creado_por: string; personal: string; costo: number; falla_reportada?: string;
 }) => api<{ ok: boolean; id_ot: string }>('/ot-trabajos', {
   method: 'POST',
   body: {
     ticket_visita: d.ticket_visita, trabajo_realizado: d.trabajo_realizado, fecha_trabajo: d.fecha_trabajo,
-    fecha_salida: d.fecha_salida, creado_por: d.creado_por, detalles_json: { personal: d.personal, costo: d.costo },
+    fecha_salida: d.fecha_salida, creado_por: d.creado_por, detalles_json: { personal: d.personal, costo: d.costo, ...(d.falla_reportada ? { falla_reportada: d.falla_reportada } : {}) },
   },
 });
 

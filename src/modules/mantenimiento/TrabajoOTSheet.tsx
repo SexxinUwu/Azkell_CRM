@@ -31,10 +31,12 @@ function personalDe(t: TrabajoOT): string[] {
   return p.split(',').map(x => x.trim()).filter(Boolean);
 }
 
-export function TrabajoOTSheet({ ot, trabajo, open, onClose, usuario }: {
+export function TrabajoOTSheet({ ot, trabajo, motivo, open, onClose, usuario }: {
   ot: OrdenTrabajo;
   /** Trabajo a editar; null para agregar uno nuevo */
   trabajo: TrabajoOT | null;
+  /** Motivo de ingreso al que responde el trabajo nuevo (opcional) */
+  motivo?: string | null;
   open: boolean;
   onClose: () => void;
   usuario: string;
@@ -90,7 +92,7 @@ export function TrabajoOTSheet({ ot, trabajo, open, onClose, usuario }: {
         await crearTrabajo({
           ticket_visita: ot.ticket_entrada || ot.id_ot || '', trabajo_realizado: desc.trim().toUpperCase(),
           fecha_trabajo: ini || null, fecha_salida: fin || null, creado_por: usuario,
-          personal: personal.join(', '), costo: costoNum,
+          personal: personal.join(', '), costo: costoNum, falla_reportada: motivo || undefined,
         });
         toast('Trabajo registrado');
       }
@@ -135,6 +137,9 @@ export function TrabajoOTSheet({ ot, trabajo, open, onClose, usuario }: {
         <div className="form-grid">
           <p className="t-footnote c-secondary field field--wide" style={{ margin: 0 }}>OT {ot.ticket_entrada || ot.id_ot} · registro de labor realizada</p>
           {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
+          {!edicion && motivo && (
+            <Field label="Motivo de ingreso" wide>{() => <p style={{ margin: 0, fontWeight: 600 }}>{motivo.replace(/^falla manual\s*:\s*/i, '')}</p>}</Field>
+          )}
           <Field label="Descripción del trabajo realizado *" wide>
             {p => (
               <textarea {...p} className="input" rows={3} value={desc} onChange={e => setDesc(e.target.value)}
