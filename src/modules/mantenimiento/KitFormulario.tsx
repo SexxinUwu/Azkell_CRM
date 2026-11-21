@@ -14,7 +14,6 @@ import { api, errorMessage } from '../../core/api/client';
 import { useInventario } from '../almacen/api';
 import { usePlacas } from '../placas/api';
 import { useTiposPreventivo } from './fleetrunApi';
-import { claseMp } from './KitTarjeta';
 import {
   buscarItemAlmacen, codigoDeArticulo, conFormatoInv, mapearAlmacen, marcasDisponibles, modelosDeMarca,
   type ArticuloKit, type KitGrupo, type KitItem,
@@ -278,20 +277,15 @@ export function KitFormulario({ kit, kitsExistentes, open, onClose, onPedirElimi
 
             <div className="kf-grid">
               <Field label="Marca">
-                {p => <Combobox {...p} options={opcionesMarca} value={marca} onChange={cambiarMarca} placeholder="Seleccione marca…" />}
+                {p => <Combobox {...p} enHoja compacta tituloHoja="Marca" options={opcionesMarca} value={marca} onChange={cambiarMarca} placeholder="Seleccione marca…" />}
               </Field>
               <Field label="Nombre del kit (opcional)">
                 {p => <TextInput {...p} value={alias} onChange={e => setAlias(e.target.value)} placeholder="Ej. Filtros y aceite de motor" />}
               </Field>
 
-              <div className="field kf-ancho">
-                <span className="field__label">Tipo de preventivo</span>
-                <div className="kf-tipos" role="radiogroup" aria-label="Tipo de preventivo">
-                  {opcionesTipo.map(t => (
-                    <button key={t.value} type="button" role="radio" aria-checked={tipo === t.value} className={`kt-mp kf-tipo ${claseMp(t.value)}`} onClick={() => setTipo(t.value)}>{t.label}</button>
-                  ))}
-                </div>
-              </div>
+              <Field label="Tipo de preventivo" wide>
+                {p => <Combobox {...p} enHoja compacta tituloHoja="Tipo de preventivo" options={opcionesTipo} value={tipo || null} onChange={v => setTipo(v ?? '')} placeholder="Seleccione el tipo de preventivo…" />}
+              </Field>
 
               <div className="field kf-ancho">
                 <div className="kf-modelos__cab">

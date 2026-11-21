@@ -139,13 +139,16 @@ export function modelosDeMarca(marca: string, placas: Placa[], modelosKits: stri
   return Array.from(set).sort();
 }
 
-/** Marcas de las motoras de la flota más las de los kits (sin GENERAL) */
+/** Equipos de frío (Thermo King): llevan mantenimiento propio aunque la unidad sea un semirremolque */
+const esEquipoFrio = (p: Placa) => /THERMO|TERMO|FRIGO|REFRIG/.test(`${p.marca} ${p.subTipo}`.toUpperCase());
+
+/** Marcas de las motoras de la flota, de los equipos de frío (Thermo King) y de los kits (sin GENERAL) */
 export function marcasDisponibles(placas: Placa[], marcasKits: string[]): string[] {
   const set = new Set<string>();
   for (const p of placas) {
     const m = p.marca.trim().toUpperCase();
     if (!m || m === '-' || m === 'S/M' || m === 'SIN MARCA') continue;
-    if (esMotora(p)) set.add(m);
+    if (esMotora(p) || esEquipoFrio(p)) set.add(m);
   }
   for (const m of marcasKits) if (m && m !== 'GENERAL') set.add(m);
   return Array.from(set).sort((a, b) => a.localeCompare(b));
