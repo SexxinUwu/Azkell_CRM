@@ -218,3 +218,19 @@
 .otd-tr--clic:hover td { background: var(--surface-sunken); }
 .otd-total--tabla { display: flex; justify-content: space-between; margin: 8px 4px 0; font-weight: 700; }
 .otd-fila__estado--no { color: var(--red-ink); }
+
+/* Escritorio: el detalle ocupa exactamente la altura de la pantalla (hasta donde llega la barra lateral);
+   no hay barra de desplazamiento de la página. Cada columna se desplaza por su cuenta, sin barra visible. */
+@media (min-width: 1024px) {
+  .page--fill .otd { flex: 1 1 auto; min-height: 0; padding-bottom: 0; }
+  .page--fill .otd__layout { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; }
+  .page--fill .otd__layout::-webkit-scrollbar { display: none; }
+  .page--fill .otd__lateral, .page--fill .otd__principal { scrollbar-width: none; -ms-overflow-style: none; }
+  .page--fill .otd__lateral::-webkit-scrollbar, .page--fill .otd__principal::-webkit-scrollbar { display: none; }
+}
+@container otd (min-width: 56rem) {
+  @media (min-width: 1024px) {
+    .page--fill .otd__layout { overflow: hidden; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+    .page--fill .otd__lateral, .page--fill .otd__principal { min-height: 0; overflow-y: auto; padding-bottom: var(--s-4); }
+  }
+}

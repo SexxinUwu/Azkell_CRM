@@ -288,7 +288,7 @@ export function OrdenesTrabajoPage() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <Page>
+    <Page fill={soloDetalle}>
       {!soloDetalle && (
         <PageHeader
           eyebrow="Mantenimiento"
