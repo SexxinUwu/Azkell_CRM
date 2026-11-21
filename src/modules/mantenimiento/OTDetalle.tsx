@@ -659,7 +659,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
               </header>
               <div className="otd-lista otd-lista--checks">
                 {backlog.map(b => {
-                  const hecho = b.estado === 'Completado';
+                  // Si el motivo de este backlog ya tiene su trabajo registrado, la tarea figura realizada
+                  const hecho = backlogHecho(b.estado) || filasMotivo.some(f => f.backlog?.backlog_id === b.backlog_id && hechoMotivo(f) && !!f.trabajo && registradoT(f.trabajo));
                   const clave = b.backlog_id;
                   return (
                     <div key={clave} className="ot-linea">

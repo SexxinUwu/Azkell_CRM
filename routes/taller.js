@@ -556,6 +556,10 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                         } else {
                             // Si NO se realizó y NO viene de un backlog ya registrado como pendiente
                             if (!item.backlog_id && !item.id_backlog) {
+                              // Si el motivo ya tiene un trabajo registrado con fechas, no se manda al backlog
+                              targetDb.query('SELECT trabajo_realizado FROM trabajos_ot WHERE ticket_visita = ? AND (fecha_trabajo IS NOT NULL OR fecha_salida IS NOT NULL)', [ticketId], (errReg, regs) => {
+                                const kMot = claveMotivo(textoMotivo);
+                                if (!errReg && kMot && (regs || []).some(r => { const t = claveMotivo(r.trabajo_realizado); return t && (t === kMot || t.includes(kMot) || kMot.includes(t)); })) return;
                                 generarId(req.db || db, 'ot_backlog', 'backlog_id', 'BK', anioBk, (nuevoBkId) => {
                                     targetDb.query(
                                         `INSERT INTO ot_backlog (backlog_id, placa, km, tema, tarea, reportado_por, fecha_reporte, estado, creado_por, ticket_ot)
@@ -566,6 +570,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                                         }
                                     );
                                 });
+                              });
                             }
                         }
                     }
@@ -874,6 +879,20 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         });
     });
 
+    // Texto comparable de un motivo o tarea (sin «falla manual:», acentos ni mayúsculas)
+    const claveMotivo = (x) => String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/^\s*[•\d.)-]+\s*/, '').replace(/^falla manual\s*:\s*/i, '').replace(/\s+/g, ' ').trim().toLowerCase();
+    // Si un trabajo con fechas responde a una tarea del backlog ligada a la OT, esa tarea ya está realizada
+    function sincronizarBacklogConTrabajo(tdb, ticket, texto, ini, fin) {
+        if (!ticket || !(ini || fin)) return;
+        const k = claveMotivo(texto);
+        if (!k) return;
+        tdb.query("SELECT id, tarea FROM ot_backlog WHERE ticket_ot = ? AND estado NOT IN ('Realizado', 'Completado', 'Anulado')", [ticket], (err, filas) => {
+            if (err || !filas) return;
+            const ids = filas.filter(b => { const t = claveMotivo(b.tarea); return t && (t === k || t.includes(k) || k.includes(t)); }).map(b => b.id);
+            if (ids.length) tdb.query("UPDATE ot_backlog SET estado = 'Realizado' WHERE id IN (?)", [ids], () => { });
+        });
+    }
+
     // Regla: si se registra el trabajo realizado, el inicio y el fin son obligatorios. En una OT ya cerrada no se exige.
     function validarInicioFin(tdb, ticket, texto, ini, fin, cb) {
         if (!String(texto || '').trim() || (ini && fin)) return cb(null);
@@ -892,6 +911,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     router.post('/ot-trabajos', (req, res) => {
         // ticket_visita del body = ticket_entrada de la OT (FK de asociación al OT)
         const { ticket_visita: ticketEntrada, trabajo_realizado, fecha_trabajo, fecha_salida, creado_por, detalles_json } = req.body;
+        sincronizarBacklogConTrabajo(req.db || db, ticketEntrada, trabajo_realizado, fecha_trabajo, fecha_salida);
         const anio = new Date().getFullYear();
         const detJson = typeof detalles_json === 'string' ? detalles_json : JSON.stringify(detalles_json || {});
         const personal = (typeof detalles_json === 'object' && detalles_json) ? (detalles_json.personal || '') : '';
@@ -971,6 +991,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             tdbT.query(`SELECT detalles_json, ticket_visita FROM trabajos_ot WHERE (id_ot = ? AND id_ot != '') OR (id_ot = '' AND ticket_visita = ?) LIMIT 1`, [idTrabajo, idTrabajo], (errSel, filasSel) => {
             validarInicioFin(tdbT, filasSel && filasSel[0] ? filasSel[0].ticket_visita : '', trabajo_realizado, fecha_trabajo, fecha_salida, (msgValid) => {
             if (msgValid) return res.status(400).json({ error: msgValid });
+            sincronizarBacklogConTrabajo(tdbT, filasSel && filasSel[0] ? filasSel[0].ticket_visita : '', trabajo_realizado, fecha_trabajo, fecha_salida);
             let detPrevio = {};
             try { const raw = filasSel && filasSel[0] ? filasSel[0].detalles_json : null; detPrevio = typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw || {}); } catch (e) { detPrevio = {}; }
             const detNuevo = { ...detPrevio, personal: personal || '', costo: parseFloat(costo) || 0 };
