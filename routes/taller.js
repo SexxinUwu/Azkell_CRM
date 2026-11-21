@@ -545,13 +545,18 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                             // Si se realizó y venía de un backlog existente, marcarlo como Realizado
                             if (item.backlog_id || item.id_backlog) {
                                 const bId = item.backlog_id || item.id_backlog;
-                                targetDb.query(
-                                    "UPDATE ot_backlog SET estado = 'Realizado' WHERE id = ? OR backlog_id = ?",
-                                    [bId, bId],
-                                    (errBkUp) => {
-                                        if (!errBkUp) console.log(`✅ Backlog ${bId} completado y cerrado por OT ${ticketId}`);
-                                    }
-                                );
+                                // Solo se marca realizado si el motivo tiene su trabajo registrado con fechas; si no, sigue pendiente
+                                targetDb.query('SELECT trabajo_realizado FROM trabajos_ot WHERE ticket_visita = ? AND (fecha_trabajo IS NOT NULL OR fecha_salida IS NOT NULL)', [ticketId], (errRegB, regsB) => {
+                                    const kB = claveMotivo(textoMotivo);
+                                    if (errRegB || !kB || !(regsB || []).some(r => { const t = claveMotivo(r.trabajo_realizado); return t && (t === kB || t.includes(kB) || kB.includes(t)); })) return;
+                                    targetDb.query(
+                                        "UPDATE ot_backlog SET estado = 'Realizado' WHERE id = ? OR backlog_id = ?",
+                                        [bId, bId],
+                                        (errBkUp) => {
+                                            if (!errBkUp) console.log(`✅ Backlog ${bId} completado y cerrado por OT ${ticketId}`);
+                                        }
+                                    );
+                                });
                             }
                         } else {
                             // Si NO se realizó y NO viene de un backlog ya registrado como pendiente

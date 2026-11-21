@@ -18,7 +18,7 @@ import { compartirPDF } from '../../core/lib/pdf';
 import { InspeccionFicha } from '../inspecciones/InspeccionFicha';
 import { useInspecciones, type Inspeccion } from '../inspecciones/api';
 import {
-  aObjeto, trabajoId, accionesDisponibles, limpioMotivo, backlogHecho, otYaCerrada, costosOT, duracionPausa, etiquetaEstado, formatoDuracion, otDetalles, otId,
+  aObjeto, trabajoId, accionesDisponibles, limpioMotivo, otYaCerrada, costosOT, duracionPausa, etiquetaEstado, formatoDuracion, otDetalles, otId,
   pausasDe, tiempoNetoOT, trabajoCosto, trabajosDeOT, useInspeccionesDeOT, useMateriales, useTrabajosOT,
   type AccionOT, type MaterialSalida, type OrdenTrabajo, type PausaOT, type TrabajoOT,
 } from './api';
@@ -219,7 +219,6 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   const [cerrando, setCerrando] = useState(false);
   const [exportando, setExportando] = useState(false);
   const [inspeccionAbierta, setInspeccionAbierta] = useState<string | null>(null);
-  const [marcando, setMarcando] = useState<string | null>(null);
   const [solicitando, setSolicitando] = useState(false);
   // Edición de la OT (encabezado, fechas, kilometraje) y de solicitudes de material (clásico: rot-drawer-editar-ot, fechas, km)
   const [editandoOT, setEditandoOT] = useState(false);
@@ -293,7 +292,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     const e = cierreAnotado.find(c => { const x = limpioMotivo(c.texto); return x !== '' && k !== '' && (x.includes(k) || k.includes(x)); });
     return e ? e.realizado === true : undefined;
   };
-  const filaHecha = (f: FilaMotivo) => (!!f.trabajo && registradoT(f.trabajo)) || backlogHecho(f.backlog?.estado) || (otCerrada && (segunCierre(f.motivo) ?? !!f.trabajo));
+  // Un motivo solo está realizado cuando se registró su trabajo (nunca porque alguien marque el backlog). En una OT ya cerrada, un trabajo existente sin fechas cuenta como hecho salvo que al cerrar se anotara lo contrario.
+  const filaHecha = (f: FilaMotivo) => !!f.trabajo && (registradoT(f.trabajo) || (otCerrada && (segunCierre(f.motivo) ?? true)));
   const filasPrincipales = filasMotivo.filter(f => !f.continuacion);
   // Un motivo está hecho si cualquiera de sus trabajos lo está
   const hechoMotivo = (f: FilaMotivo) => filaHecha(f) || filasMotivo.some(c => c.continuacion && c.trabajo && registradoT(c.trabajo) && limpioMotivo(aObjeto(c.trabajo.detalles_json).falla_reportada) === limpioMotivo(f.motivo));
@@ -355,21 +355,6 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   }
 
   /** Marca o desmarca un ítem del backlog enlazado (Completado / Pendiente) */
-  async function alternarBacklog(b: BacklogOT, completado: boolean) {
-    setMarcando(b.backlog_id);
-    try {
-      await api(`/ot-backlog/${b.id}`, {
-        method: 'PUT',
-        body: { placa: b.placa, tarea: b.tarea, tema: b.tema ?? '', km: b.km ?? 0, reportado_por: b.reportado_por ?? '', ticket_ot: b.ticket_ot, estado: completado ? 'Completado' : 'En Progreso' },
-      });
-      await qc.invalidateQueries({ queryKey: ['mant', 'ot-backlog'] });
-    } catch (err) {
-      toast(errorMessage(err), 'error');
-    } finally {
-      setMarcando(null);
-    }
-  }
-
   /** PDF en otra pestaña (visor de PDF): la pestaña se abre al tocar el botón y muestra el camión mientras se genera, como en el acta de entrega */
   async function abrirPdf(generar: () => Promise<Blob>, nombre: string) {
     const win = window.open('', '_blank');
@@ -655,17 +640,17 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
           {backlog.length > 0 && (
             <section className="otd-seccion">
               <header className="otd-seccion__cabecera">
-                <h3 className="otd-seccion__titulo">Pendientes del backlog <span className="otd-cuenta">{backlog.filter(b => b.estado === 'Completado').length}/{backlog.length}</span></h3>
+                <h3 className="otd-seccion__titulo">Pendientes del backlog <span className="otd-cuenta">{backlog.filter(b => filasMotivo.some(f => f.backlog?.backlog_id === b.backlog_id && hechoMotivo(f))).length}/{backlog.length}</span></h3>
               </header>
               <div className="otd-lista otd-lista--checks">
                 {backlog.map(b => {
-                  // Si el motivo de este backlog ya tiene su trabajo registrado, la tarea figura realizada
-                  const hecho = backlogHecho(b.estado) || filasMotivo.some(f => f.backlog?.backlog_id === b.backlog_id && hechoMotivo(f) && !!f.trabajo && registradoT(f.trabajo));
+                  // La marca no se pone a mano: aparece sola cuando el motivo de este backlog tiene su trabajo registrado
+                  const hecho = filasMotivo.some(f => f.backlog?.backlog_id === b.backlog_id && hechoMotivo(f));
                   const clave = b.backlog_id;
                   return (
                     <div key={clave} className="ot-linea">
                       <button type="button" role="checkbox" aria-checked={hecho} className={`ot-check-tarea${hecho ? ' ot-check-tarea--ok' : ''}`}
-                        disabled={!puedeEditar || marcando === clave} onClick={() => alternarBacklog(b, !hecho)} aria-label={`Marcar ${b.tarea}`}>
+                        disabled tabIndex={-1} aria-label={hecho ? `${b.tarea}: realizada` : `${b.tarea}: pendiente`}>
                         {hecho && <span aria-hidden>✓</span>}
                       </button>
                       <div className="ot-linea__cuerpo">
