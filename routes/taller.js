@@ -630,18 +630,44 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                         if (err2) return res.status(500).json({ error: err2.message });
 
                         if (Array.isArray(trabajos_det) && trabajos_det.length > 0) {
-                            targetDb.query('DELETE FROM trabajos_ot WHERE ticket_visita = ? OR id_ot = ?', [ticketId, ticketId], () => {
-                                const insVals = trabajos_det.map((td, idx) => [
-                                    `${ticketId}-${idx + 1}`,
-                                    ticketId,
-                                    placaOT || '',
-                                    td.desc || '',
-                                    td.tecnico || '',
-                                    'En Proceso'
-                                ]);
-                                if (insVals.length > 0) {
-                                    targetDb.query('INSERT INTO trabajos_ot (id_ot, ticket_visita, placa, trabajo_realizado, tecnico, estado) VALUES ?', [insVals], () => { });
-                                }
+                            // Los trabajos ya registrados (con fechas, horas, costo o detalle) NUNCA se borran ni se rehacen al editar la OT:
+                            // solo se actualiza el técnico de los que coinciden, se agregan los nuevos y se quitan los que el usuario sacó
+                            // y todavía no tenían nada registrado.
+                            const norm = (t) => String(t || '').replace(/^\s*\d+[.)-]?\s*/, '').trim().toLowerCase();
+                            const objDet = (raw) => { try { return typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw || {}); } catch (e) { return {}; } };
+                            targetDb.query('SELECT id_ot, trabajo_realizado, tecnico, fecha_trabajo, fecha_salida, detalles_json FROM trabajos_ot WHERE ticket_visita = ? OR id_ot = ?', [ticketId, ticketId], (errT, existentes) => {
+                                if (errT) { console.warn('editar OT: no se pudieron leer los trabajos:', errT.message); return; }
+                                const filas = existentes || [];
+                                const registrado = (f) => !!(f.fecha_trabajo || f.fecha_salida || (parseFloat(objDet(f.detalles_json).costo) || 0) > 0 || objDet(f.detalles_json).realizado_registrado === true);
+                                const usados = new Set();
+                                const sufijos = filas.map(f => { const m = String(f.id_ot || '').startsWith(ticketId + '-') ? String(f.id_ot).match(/-(\d+)$/) : null; return m ? parseInt(m[1], 10) : 0; });
+                                let siguiente = (sufijos.length ? Math.max(...sufijos) : 0) + 1;
+                                trabajos_det.forEach((td) => {
+                                    const desc = String(td.desc || '').trim();
+                                    if (!desc) return;
+                                    let f = td.id_trabajo ? filas.find(x => x.id_ot === td.id_trabajo && !usados.has(x.id_ot)) : null;
+                                    if (!f) f = filas.find(x => !usados.has(x.id_ot) && norm(x.trabajo_realizado) === norm(desc));
+                                    if (f) {
+                                        usados.add(f.id_ot);
+                                        const tec = String(td.tecnico || '');
+                                        const sets = []; const vals = [];
+                                        if (tec !== String(f.tecnico || '')) {
+                                            sets.push('tecnico = ?'); vals.push(tec);
+                                            sets.push('detalles_json = ?'); vals.push(JSON.stringify({ ...objDet(f.detalles_json), personal: tec }));
+                                        }
+                                        // Solo se cambia el texto de un trabajo que todavía no tiene nada registrado
+                                        if (td.id_trabajo && f.id_ot === td.id_trabajo && norm(f.trabajo_realizado) !== norm(desc) && !registrado(f)) { sets.push('trabajo_realizado = ?'); vals.push(desc); }
+                                        if (sets.length) targetDb.query('UPDATE trabajos_ot SET ' + sets.join(', ') + ' WHERE id_ot = ?', [...vals, f.id_ot], () => { });
+                                    } else {
+                                        const nuevoId = `${ticketId}-${siguiente++}`;
+                                        targetDb.query('INSERT INTO trabajos_ot (id_ot, ticket_visita, placa, trabajo_realizado, tecnico, estado, detalles_json) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                                            [nuevoId, ticketId, placaOT || '', desc, td.tecnico || '', 'En Proceso', JSON.stringify({ personal: td.tecnico || '', costo: 0 })], () => { });
+                                    }
+                                });
+                                // Los que el usuario sacó del formulario: solo se borran si no tenían nada registrado
+                                filas.filter(f => !usados.has(f.id_ot) && !registrado(f)).forEach(f => {
+                                    targetDb.query('DELETE FROM trabajos_ot WHERE id_ot = ?', [f.id_ot], () => { });
+                                });
                             });
                         }
 
@@ -918,10 +944,16 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         const idTrabajo = req.params.id;
         const { accion } = req.body;
         if (accion === 'editar') {
-            const { trabajo_realizado, fecha_trabajo, fecha_salida, personal, costo, estado } = req.body;
-            const detJson = JSON.stringify({ personal: personal || '', costo: parseFloat(costo) || 0 });
+            const { trabajo_realizado, fecha_trabajo, fecha_salida, personal, costo, estado, realizado_registrado } = req.body;
+            const tdbT = req.db || db;
+            tdbT.query(`SELECT detalles_json FROM trabajos_ot WHERE (id_ot = ? AND id_ot != '') OR (id_ot = '' AND ticket_visita = ?) LIMIT 1`, [idTrabajo, idTrabajo], (errSel, filasSel) => {
+            let detPrevio = {};
+            try { const raw = filasSel && filasSel[0] ? filasSel[0].detalles_json : null; detPrevio = typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw || {}); } catch (e) { detPrevio = {}; }
+            const detNuevo = { ...detPrevio, personal: personal || '', costo: parseFloat(costo) || 0 };
+            if (realizado_registrado !== undefined) detNuevo.realizado_registrado = !!realizado_registrado;
+            const detJson = JSON.stringify(detNuevo);
             // Fallback: registros viejos pueden tener id_ot vacío → usar ticket_visita
-            (req.db || db).query(
+            tdbT.query(
                 `UPDATE trabajos_ot SET trabajo_realizado=?, tecnico=?, fecha_trabajo=?, fecha_salida=?, detalles_json=?, estado=?
              WHERE (id_ot = ? AND id_ot != '') OR (id_ot = '' AND ticket_visita = ?)`,
                 [trabajo_realizado || '', personal || '', fecha_trabajo || null, fecha_salida || null, detJson, estado || 'Pendiente', idTrabajo, idTrabajo],
@@ -930,6 +962,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                     if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 }
             );
+            });
             return;
         }
         res.status(400).json({ error: 'Acción desconocida' });
