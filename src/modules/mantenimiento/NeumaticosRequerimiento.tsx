@@ -1,14 +1,9 @@
 import { useMemo, useState } from 'react';
 import { ClipboardCopy, Disc3, ShoppingCart } from 'lucide-react';
+import { IconoExcel, IconoPdf } from '../../core/ui/IconosArchivo';
 
-/** Logos de archivo: PDF en rojo y Excel en verde (sin texto alrededor) */
-export const LogoArchivo = ({ tipo }: { tipo: 'pdf' | 'excel' }) => (
-  <svg width={22} height={22} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-    <path d="M6 2h8l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill={tipo === 'pdf' ? '#dc2626' : '#15803d'} />
-    <path d="M14 2v5h5" fill={tipo === 'pdf' ? '#fca5a5' : '#86efac'} />
-    <text x="12" y="16.5" textAnchor="middle" fontSize="5.5" fontWeight="700" fill="#fff" fontFamily="Arial, sans-serif">{tipo === 'pdf' ? 'PDF' : 'XLS'}</text>
-  </svg>
-);
+/** Logos de archivo: los iconos propios de PDF y Excel (los mismos de todo el sistema) */
+export const LogoArchivo = ({ tipo }: { tipo: 'pdf' | 'excel' }) => (tipo === 'pdf' ? <IconoPdf /> : <IconoExcel />);
 import { VehiculosTarjetas } from './NeumaticosVehiculos';
 import { Button } from '../../core/ui/Button';
 import { EmptyState } from '../../core/ui/Display';

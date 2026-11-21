@@ -2,7 +2,10 @@ import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarClock, Download, Plus, SearchX, Trash2 } from 'lucide-react';
-import { FileSpreadsheet, Pencil } from '../../core/ui/IconosArchivo';
+import { FilePdf, FileSpreadsheet, Pencil } from '../../core/ui/IconosArchivo';
+import { MenuOtros } from '../../core/ui/MenuOtros';
+import { exportarFrecuenciasExcel, descargarFrecuenciasPDF } from './frecuenciasSalidas';
+import { useEmpresaNombre } from './FleetrunPage';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, TextInput } from '../../core/ui/Field';
@@ -67,6 +70,8 @@ export function FrecuenciasMpPage() {
   const [guardando, setGuardando] = useState(false);
   const [porEliminar, setPorEliminar] = useState<TipoMp | null>(null);
   const [importando, setImportando] = useState(false);
+  const [exportandoPdf, setExportandoPdf] = useState(false);
+  const empresa = useEmpresaNombre();
   const puedeEditar = can('cfg_mant.editar', 'cfg_mant.crear');
 
   const lista = useQuery<TipoMp[]>({
@@ -107,6 +112,20 @@ export function FrecuenciasMpPage() {
       (!fFrec.length || fFrec.some(f => (f === 'km' ? r.frecuencia_km : f === 'horas' ? r.frecuencia_horas : r.frecuencia_dias))) &&
       (!t || [r.marca, r.modelo, r.tipo_mp, r.tipo, r.sistema, r.combustible, r.uts, r.descripcion].some(v => (v ?? '').toUpperCase().includes(t))));
   }, [lista.data, q, fMarca, fModelo, fTipoMp, fTipo, fSistema, fCombustible, fUts, fFrec]);
+
+  // Texto de lo que se está viendo (búsqueda y filtros) para el encabezado del PDF
+  const textoFiltros = () => [
+    q.trim() && `Búsqueda: ${q.trim()}`, fMarca.length && `Marca: ${fMarca.join(', ')}`, fModelo.length && `Modelo: ${fModelo.join(', ')}`,
+    fTipoMp.length && `Tipo de MP: ${fTipoMp.join(', ')}`, fTipo.length && `Tipo: ${fTipo.join(', ')}`, fSistema.length && `Sistema: ${fSistema.join(', ')}`,
+    fCombustible.length && `Combustible: ${fCombustible.join(', ')}`, fUts.length && `UTS: ${fUts.join(', ')}`,
+    fFrec.length && `Frecuencia: ${fFrec.map(f => FRECUENCIAS.find(x => x.value === f)?.label ?? f).join(', ')}`,
+  ].filter((x): x is string => typeof x === 'string' && x !== '');
+  async function exportarPdf() {
+    setExportandoPdf(true);
+    try { await descargarFrecuenciasPDF(datos, textoFiltros(), empresa.data ?? ''); haptic('success'); }
+    catch (e) { toast(errorMessage(e), 'error'); }
+    finally { setExportandoPdf(false); }
+  }
 
   const refrescar = () => qc.invalidateQueries({ queryKey: ['mant', 'tipos-mantenimiento'] });
 
@@ -180,8 +199,12 @@ export function FrecuenciasMpPage() {
       <PageHeader eyebrow="Mantenimiento" title="Frecuencias de mantenimiento"
         subtitle={lista.isLoading ? 'Cargando…' : `${(lista.data ?? []).length} frecuencias por marca y modelo`}
         actions={<>
-          <Button variant="secondary" icon={<Download size={16} />} onClick={() => descargarPlantillaFrecuencias()}>Plantilla</Button>
-          {puedeEditar && <Button variant="secondary" icon={<FileSpreadsheet size={16} />} onClick={() => setImportando(true)}>Importar Excel</Button>}
+          <MenuOtros label="Plantilla e importar" opciones={[
+            { label: 'Descargar plantilla', icon: <Download size={18} />, detalle: 'Excel con el formato para importar', onSelect: () => descargarPlantillaFrecuencias() },
+            puedeEditar && { label: 'Importar Excel', icon: <FileSpreadsheet size={18} />, detalle: 'Carga o actualiza frecuencias desde un Excel', onSelect: () => setImportando(true) },
+          ]} />
+          <Button variant="secondary" icon={<FileSpreadsheet size={16} />} disabled={!datos.length} onClick={() => { exportarFrecuenciasExcel(datos).catch(e => toast(errorMessage(e), 'error')); }}>Exportar Excel</Button>
+          <Button variant="secondary" icon={<FilePdf size={16} />} disabled={!datos.length || exportandoPdf} loading={exportandoPdf} onClick={exportarPdf}>Exportar PDF</Button>
           {puedeEditar && <Button variant="primary" icon={<Plus size={16} />} onClick={abrirNuevo}>Nueva frecuencia</Button>}
         </>} />
 

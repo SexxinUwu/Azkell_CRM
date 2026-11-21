@@ -5,7 +5,7 @@ import './documentos.css';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, CircleAlert, Clock, Download, FileText, Gavel, Plus, RefreshCw, Settings2, SlidersHorizontal, Wrench } from 'lucide-react';
+import { Briefcase, CircleAlert, Clock, FileText, Gavel, Plus, RefreshCw, Settings2, SlidersHorizontal, Wrench } from 'lucide-react';
 import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
@@ -234,7 +234,7 @@ export function DocumentosPage() {
             onClick={() => setConfigurando(true)}><Settings2 size={18} /></BotonTip>
           {seleccion && <span className="doc-conf__insignia" title="Hay un filtro de placas activo">{seleccion.size}/{todas.length}</span>}
           <MenuFila etiqueta="Más acciones" acciones={[
-            { label: 'Descargar plantilla Excel', icon: <Download size={17} />, onSelect: () => { descargarPlantilla().catch(aviso); } },
+            { label: 'Descargar plantilla Excel', icon: <FileSpreadsheet size={17} />, onSelect: () => { descargarPlantilla().catch(aviso); } },
             puedeEditar && { label: 'Importar documentos', icon: <FileSpreadsheet size={17} />, onSelect: () => setImportando(true) },
           ]} />
           {puedeEditar && (

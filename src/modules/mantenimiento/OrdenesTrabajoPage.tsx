@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, CheckCircle2, Eye, Filter, Lock, Pause, Play, Plus, ScrollText, SearchX, Trash2, XCircle } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { SearchField, TextInput } from '../../core/ui/Field';
 import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../core/ui/FiltrosListado';
 import { ListaMultiple } from '../../core/ui/ListaMultiple';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
@@ -564,12 +564,11 @@ const COLUMNAS_BACKLOG: ColumnaTabla[] = [
   { id: 'ot', titulo: 'OT', ancho: 110 },
   { id: 'estado', titulo: 'Estado', ancho: 130 },
 ];
-const ESTADOS_BACKLOG = ['Pendiente', 'En Progreso', 'Completado', 'Cancelado'];
-// El cierre de una OT guarda «Realizado»: para el usuario es lo mismo que Completado
-const estadoVista = (e: string) => (e === 'Realizado' ? 'Completado' : e);
-const TONO_BACKLOG: Record<string, string> = { Pendiente: 'amber', 'En Progreso': 'accent', Completado: 'green', Cancelado: 'gray' };
+// El backlog solo está Pendiente o Realizado, y cambia solo al registrar el trabajo de su motivo en la OT
+const ESTADOS_BACKLOG = ['Pendiente', 'Realizado'];
+const estadoVista = (e: string) => (e === 'Realizado' || e === 'Completado' ? 'Realizado' : e === 'Cancelado' || e === 'Anulado' ? 'Cancelado' : 'Pendiente');
 
-function BacklogTab({ onCrear, qc, toast }: { onCrear: () => void; qc: ReturnType<typeof useQueryClient>; toast: (msg: string, tone?: 'error') => void }) {
+function BacklogTab({ onCrear }: { onCrear: () => void; qc?: ReturnType<typeof useQueryClient>; toast?: (msg: string, tone?: 'error') => void }) {
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('Todos');
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
@@ -597,15 +596,6 @@ function BacklogTab({ onCrear, qc, toast }: { onCrear: () => void; qc: ReturnTyp
   const cuenta = (e: string) => (e === 'Todos' ? items.length : items.filter(it => estadoVista(it.estado) === e).length);
   const temas = useMemo(() => [...new Set(items.map(it => it.tema ?? '').filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es')).map(v => ({ value: v, label: v })), [items]);
   const placas = useMemo(() => [...new Set(items.map(it => it.placa).filter(Boolean))].sort().map(v => ({ value: v, label: v })), [items]);
-
-  async function cambiarEstado(id: number, estado: string) {
-    try {
-      await api(`/ot-backlog/${id}`, { method: 'PUT', body: { estado } });
-      qc.invalidateQueries({ queryKey: ['mant', 'ot-backlog'] });
-    } catch (e) {
-      toast(errorMessage(e), 'error');
-    }
-  }
 
   const ESTADOS_BK = ['Todos', ...ESTADOS_BACKLOG];
   const hayFiltros = !!busqueda || activos > 0 || filtroEstado !== 'Todos';
@@ -646,12 +636,7 @@ function BacklogTab({ onCrear, qc, toast }: { onCrear: () => void; qc: ReturnTyp
                 <Celda mono alinear="right">{it.km ? Number(it.km).toLocaleString('es-PE') : '—'}</Celda>
                 <Celda>{it.reportado_por || '—'}</Celda>
                 <Celda mono>{it.ticket_ot || 'Sin OT'}</Celda>
-                <Celda>
-                  <SelectInput value={est} onChange={e => cambiarEstado(it.id, e.target.value)} aria-label={`Estado de ${it.tarea}`}
-                    style={{ fontSize: '0.75rem', padding: '1px 6px', minHeight: 0, fontWeight: 600, color: `var(--${TONO_BACKLOG[est] === 'amber' ? 'amber' : TONO_BACKLOG[est] === 'green' ? 'green' : TONO_BACKLOG[est] === 'accent' ? 'blue' : 'gray'}-ink)` }}>
-                    {ESTADOS_BACKLOG.map(s => <option key={s} value={s}>{s}</option>)}
-                  </SelectInput>
-                </Celda>
+                <Celda><Badge tone={est === 'Realizado' ? 'green' : est === 'Cancelado' ? 'gray' : 'amber'}>{est}</Badge></Celda>
               </tr>
             );
           })}

@@ -262,7 +262,7 @@ export function NeumaticosAnalisisPage() {
         actions={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <Button variant="secondary" size="sm" icon={<Upload size={15} />} onClick={() => setImportar(true)}>Importar Excel</Button>
-            <Button variant="secondary" size="sm" icon={<Download size={15} />} onClick={exportar}>Exportar Excel</Button>
+            <Button variant="secondary" size="sm" icon={<FileSpreadsheet size={15} />} onClick={exportar}>Exportar Excel</Button>
             <Button variant="secondary" size="sm" icon={<RefreshCw size={15} />} loading={isFetching} onClick={() => { void refetch(); }}>Actualizar</Button>
             <Button variant="primary" size="sm" icon={<Plus size={15} />} onClick={() => abrirInspeccion()}>Nueva Inspección</Button>
             <MenuOtros opciones={[

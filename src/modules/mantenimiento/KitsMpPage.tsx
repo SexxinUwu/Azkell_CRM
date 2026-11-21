@@ -2,7 +2,7 @@ import './mant.css';
 import './kits.css';
 import { useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronsDownUp, ChevronsUpDown, Download, PackageCheck, Plus, SearchX, Upload } from 'lucide-react';
+import { ChevronsDownUp, ChevronsUpDown, PackageCheck, Plus, SearchX, Upload } from 'lucide-react';
 import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { BotonTip } from '../../core/ui/BotonTip';
@@ -179,7 +179,7 @@ export function KitsMpPage() {
         <div className="kt-cabecera__acciones">
           <BotonTip tip="Descargar plantilla Excel" className="btn btn--secondary btn--icon btn-tip btn-tip--verde" onClick={() => { void descargarPlantillaKits(); }}><FileSpreadsheet size={17} /></BotonTip>
           <BotonTip tip="Subir Excel" className="btn btn--secondary btn--icon btn-tip btn-tip--celeste" onClick={() => inputExcel.current?.click()}><Upload size={17} /></BotonTip>
-          <BotonTip tip="Exportar Excel" className="btn btn--secondary btn--icon btn-tip btn-tip--violeta" onClick={() => { void exportar(); }}><Download size={17} /></BotonTip>
+          <BotonTip tip="Exportar Excel" className="btn btn--secondary btn--icon btn-tip btn-tip--violeta" onClick={() => { void exportar(); }}><FileSpreadsheet size={17} /></BotonTip>
           <Button variant="primary" icon={<Plus size={16} />} onClick={() => { setKitEditando(null); setFormAbierto(true); }}>Nuevo kit</Button>
         </div>
       </header>

@@ -1339,6 +1339,8 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
 
     router.put('/ot-backlog/:id', (req, res) => {
         const { estado, placa, km, tema, tarea, reportado_por, ticket_ot } = req.body;
+        // El estado del backlog no se cambia a mano: pasa a Realizado solo cuando se registra el trabajo de su motivo en la OT
+        if (estado !== undefined) return res.status(400).json({ error: 'El estado del backlog no se cambia a mano: cambia solo al registrar el trabajo en la OT.' });
         // Modo edición completa
         if (placa !== undefined || tarea !== undefined) {
             if (!tarea || !placa) return res.status(400).json({ error: 'placa y tarea son requeridos' });
