@@ -333,7 +333,7 @@ function tipoDeDocumento(doc) {
             let d = {}; try { d = JSON.parse(s.datos_json || '{}'); } catch (e) { d = {}; }
             const resultado = await tipo.aplicar(req, conn, d);
             const comentario = texto((req.body || {}).comentario, 500);
-            const [u] = await conn.query("UPDATE solicitudes SET estado = 'APROBADA', revisado_por = ?, revisado_en = (UTC_TIMESTAMP() - INTERVAL 5 HOUR), comentario_revision = ?, resultado_json = ? WHERE id = ? AND estado = 'PENDIENTE'",
+            const [u] = await conn.query("UPDATE solicitudes SET estado = 'APROBADA', revisado_por = ?, revisado_en = NOW(), comentario_revision = ?, resultado_json = ? WHERE id = ? AND estado = 'PENDIENTE'",
                 [usuarioDe(req), comentario || null, JSON.stringify(resultado), s.id]);
             if (u.affectedRows !== 1) throw new Error('No se pudo cerrar la solicitud.');
             await historial(conn, s.id, 'APROBADA', usuarioDe(req), comentario);
@@ -354,7 +354,7 @@ function tipoDeDocumento(doc) {
             const s = r[0];
             if (s.estado !== 'PENDIENTE') throw aviso(`La solicitud ya está ${s.estado.toLowerCase()}.`, 409);
             if (!puedeAprobar(req)) throw aviso('No tienes permiso para revisar solicitudes (Gerencia › Aprobación de solicitudes).', 403);
-            const [u] = await conn.query("UPDATE solicitudes SET estado = 'RECHAZADA', revisado_por = ?, revisado_en = (UTC_TIMESTAMP() - INTERVAL 5 HOUR), comentario_revision = ? WHERE id = ? AND estado = 'PENDIENTE'", [usuarioDe(req), comentario, s.id]);
+            const [u] = await conn.query("UPDATE solicitudes SET estado = 'RECHAZADA', revisado_por = ?, revisado_en = NOW(), comentario_revision = ? WHERE id = ? AND estado = 'PENDIENTE'", [usuarioDe(req), comentario, s.id]);
             if (u.affectedRows !== 1) throw new Error('No se pudo cerrar la solicitud.');
             await historial(conn, s.id, 'RECHAZADA', usuarioDe(req), comentario);
             await conn.commit();

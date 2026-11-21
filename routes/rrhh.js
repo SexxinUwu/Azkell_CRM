@@ -477,7 +477,7 @@ router.put('/personal/documentos/:docId', async (req, res) => {
         const [doc] = await tdb.query('SELECT id, personal_id, tipo FROM rrhh_personal_documentos WHERE id = ?', [req.params.docId]);
         if (!doc.length) return res.status(404).json({ error: 'El documento no existe.' });
         const vence = fechaODoc(b.fecha_vencimiento);
-        await tdb.query('UPDATE rrhh_personal_documentos SET fecha_vencimiento = ?, fecha_emision = ?, descripcion = ?, actualizado_en = (UTC_TIMESTAMP() - INTERVAL 5 HOUR) WHERE id = ?',
+        await tdb.query('UPDATE rrhh_personal_documentos SET fecha_vencimiento = ?, fecha_emision = ?, descripcion = ?, actualizado_en = NOW() WHERE id = ?',
             [vence, fechaODoc(b.fecha_emision), (b.descripcion || '').slice(0, 150) || null, doc[0].id]);
         if (vence && doc[0].tipo === 'LICENCIA') await tdb.query('UPDATE rrhh_personal SET licencia_vencimiento = ? WHERE id = ?', [vence, doc[0].personal_id]);
         if (vence && doc[0].tipo === 'EMO') await tdb.query('UPDATE rrhh_personal SET emo_fecha_vencimiento = ? WHERE id = ?', [vence, doc[0].personal_id]);

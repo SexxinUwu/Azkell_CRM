@@ -1249,7 +1249,7 @@ module.exports = function (db, broadcast, logAudit) {
                 UPDATE tesoreria_caja SET
                     estado = 'APROBADO',
                     usuario_aprobacion = ?,
-                    fecha_aprobacion = (UTC_TIMESTAMP() - INTERVAL 5 HOUR)
+                    fecha_aprobacion = NOW()
                 WHERE id = ?
             `, [userName, id]);
 
@@ -1843,7 +1843,7 @@ module.exports = function (db, broadcast, logAudit) {
             ];
             const valores = [
                 (b.orden_viaje || '').trim(),
-                safeDate(b.fecha) || new Date(),
+                safeDate(b.fecha) || hoyLima(),
                 (b.conductor || '').trim(),
                 (b.tipo_gasto || 'Gastos de Viaje y Ruta').trim(),
                 (b.sub_motivo || '').trim(),
@@ -2579,7 +2579,7 @@ module.exports = function (db, broadcast, logAudit) {
                     url_voucher = ?,
                     pagado_por = ?,
                     cuenta_bancaria_proveedor = COALESCE(NULLIF(?, ''), cuenta_bancaria_proveedor),
-                    fecha_pago = (UTC_TIMESTAMP() - INTERVAL 5 HOUR)
+                    fecha_pago = NOW()
                 WHERE id = ? AND LOWER(TRIM(estado)) IN ('aprobado', 'autorizado', 'pago parcial')
             `, [numeroConstancia, cuentaOrigen, voucherUrl, usuarioPago, cuentaDestinoElegida, id]);
             if (!updOc || updOc.affectedRows === 0) {
@@ -2636,7 +2636,7 @@ module.exports = function (db, broadcast, logAudit) {
                         0, ?, ?, ?,
                         'ORDEN DE COMPRA', ?, ?,
                         ?, ?, 0,
-                        'PROCESADO', ?, ?, (UTC_TIMESTAMP() - INTERVAL 5 HOUR)
+                        'PROCESADO', ?, ?, NOW()
                     )
                 `;
 

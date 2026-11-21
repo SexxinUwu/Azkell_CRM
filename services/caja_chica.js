@@ -142,7 +142,7 @@ async function registrarEgresoCentral(tdb, { monto, moneda, descripcion, cuentaE
             '', '', '', '', ?, 'CAJA CHICA', 'CC-100', 'Caja chica', 'TRANSFERENCIA BANCARIA', ?,
             'ADMINISTRATIVO', 'CAJA CHICA', 'EGRESO', ?, 0, ?, 1, ?,
             'VALE PROVISIONAL DE CAJA', '', ?, NULL, '', 0,
-            'REGISTRADO', ?, ?, (UTC_TIMESTAMP() - INTERVAL 5 HOUR)
+            'REGISTRADO', ?, ?, NOW()
         )`,
         [serie, numero, usuario, moneda, monto, monto, descripcion, cuentaEmpresa || '', usuario, usuario]
     );

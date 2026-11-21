@@ -2199,7 +2199,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
             if (esAprob) {
                 setFields.push('autoriza=?');
                 params.push(aprobadorVal);
-                setFields.push('fecha_aprobacion=(UTC_TIMESTAMP() - INTERVAL 5 HOUR)');
+                setFields.push('fecha_aprobacion=NOW()');
             } else if (estado.toLowerCase() === 'registrado') {
                 setFields.push('fecha_aprobacion=NULL');
             }
@@ -2259,7 +2259,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
                     if (esAprob) {
                         await promiseDb.query(
-                            "UPDATE ordenes_compra SET estado = 'APROBADA', aprobado_por = ?, aprobado_en = (UTC_TIMESTAMP() - INTERVAL 5 HOUR) WHERE codigo = ?",
+                            "UPDATE ordenes_compra SET estado = 'APROBADA', aprobado_por = ?, aprobado_en = NOW() WHERE codigo = ?",
                             [aprobadorVal, id]
                         );
 
@@ -2377,7 +2377,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
         catch (errReenc) { return res.status(errReenc.aviso ? errReenc.status : 500).json({ error: errReenc.message }); }
         // Se guarda quién anuló y cuándo (el aprobador es otra persona y se muestra aparte)
         const quienAnula = String((req.user && (req.user.nombre || req.user.correo)) || (req.body && req.body.usuario) || '').slice(0, 150) || null;
-        tdb.query('UPDATE entradas_inv SET estado=?, motivo_anulacion=?, anulado_por=?, fecha_anulacion=(UTC_TIMESTAMP() - INTERVAL 5 HOUR) WHERE id=?',
+        tdb.query('UPDATE entradas_inv SET estado=?, motivo_anulacion=?, anulado_por=?, fecha_anulacion=NOW() WHERE id=?',
             ['Anulado', String(motivo || '').trim(), quienAnula, id], (err, result) => {
                 if (err) return res.status(500).json({ error: err.message });
                 if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); }

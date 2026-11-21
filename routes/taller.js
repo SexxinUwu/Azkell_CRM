@@ -7,7 +7,7 @@ const eventosNotif = require('../services/notificaciones_eventos');
 const { htmlAPdf } = require('../services/ot_pdf');
 const { htmlReporteFleetrun } = require('../services/fleetrun_reporte');
 const { COSTO_OT_SQL } = require('../services/costos_taller');
-const { hoyLima } = require('../services/horaLima');
+const { hoyLima, ahoraLima } = require('../services/horaLima');
 const router = express.Router();
 
 module.exports = (db, logAudit, _generarCodigoAlmacen) => {
@@ -292,7 +292,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             const dia = d => (d instanceof Date
                 ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
                 : String(d || '').slice(0, 10));
-            const dtIngreso = `${dia(r.fecha_ingreso) || dia(new Date())} ${r.hora_ingreso || '00:00:00'}`;
+            const dtIngreso = `${dia(r.fecha_ingreso) || hoyLima()} ${r.hora_ingreso || '00:00:00'}`;
             const dtSalida = r.fecha_salida ? `${dia(r.fecha_salida)} ${r.hora_salida || '00:00:00'}` : null;
             const km = parseInt(b.km, 10) || parseInt(r.km, 10) || 0;
             const tecnicos = Array.from(new Set(trabajos.map(x => x.tecnico)));
@@ -342,7 +342,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             targetDb.query(
                 `INSERT INTO ordenes_trabajo (ticket_entrada, id_ot, placa, estado, detalles_json, creado_por, fecha_ingreso, id_rampa)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                [nuevoId, nuevoId, placa.toUpperCase(), estado || 'Pendiente', detJson, creado_por || '', fecha_ingreso || new Date(), id_rampa || null],
+                [nuevoId, nuevoId, placa.toUpperCase(), estado || 'Pendiente', detJson, creado_por || '', fecha_ingreso || ahoraLima(), id_rampa || null],
                 (err, result) => {
                     if (err) return res.status(500).json({ error: err.message });
                     if (typeof logAudit === 'function') {

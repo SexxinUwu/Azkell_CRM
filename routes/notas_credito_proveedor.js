@@ -235,7 +235,7 @@ module.exports = (db, logAudit) => {
             const usuario = usuarioDe(req);
             const mismo = norm(n.registrado_por) === norm(usuario);
             if (mismo && !esAdmin(req)) throw aviso('La nota debe aprobarla otra persona (Tesorería o Contabilidad), no quien la registró.', 403);
-            const [upd] = await p.query("UPDATE compras_notas_credito SET estado = 'APROBADA', aprobado_por = ?, fecha_aprobacion = (UTC_TIMESTAMP() - INTERVAL 5 HOUR) WHERE id = ? AND estado = 'REGISTRADA'", [usuario, id]);
+            const [upd] = await p.query("UPDATE compras_notas_credito SET estado = 'APROBADA', aprobado_por = ?, fecha_aprobacion = NOW() WHERE id = ? AND estado = 'REGISTRADA'", [usuario, id]);
             if (!upd || upd.affectedRows !== 1) throw aviso('La nota ya fue aprobada o cambió de estado.', 409);
             await nc.historial(p, id, 'APROBADA', `${mismo ? 'Aprobada por el mismo usuario que la registró (administrador)' : 'Aprobada'}${n.archivo_url ? '' : ' · con documento pendiente'}`, usuario);
             auditar(req, 'APROBÓ NC PROVEEDOR', `${n.codigo}${mismo ? ' (autoaprobación de administrador)' : ''}`);
@@ -340,7 +340,7 @@ module.exports = (db, logAudit) => {
                      cuenta_bancaria_empresa, voucher_url, observacion, no_aplica_liquidacion, estado, usuario_creacion, usuario_aprobacion, fecha_aprobacion)
                  VALUES (DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), TIME(UTC_TIMESTAMP() - INTERVAL 5 HOUR), DATE(UTC_TIMESTAMP() - INTERVAL 5 HOUR), TIME(UTC_TIMESTAMP() - INTERVAL 5 HOUR), ?, ?, ?, ?, ?, 'DEVOLUCIÓN PROVEEDOR', 'CC-100', 'REEMBOLSO NOTA DE CRÉDITO',
                      'TRANSFERENCIA', ?, 'PROVEEDOR', ?, 'INGRESO', ?, 0, ?, 1, ?, 'NOTA DE CRÉDITO',
-                     ?, ?, ?, 0, 'PROCESADO', ?, ?, (UTC_TIMESTAMP() - INTERVAL 5 HOUR))`,
+                     ?, ?, ?, 0, 'PROCESADO', ?, ?, NOW())`,
                 [constancia, `${n.serie}-${n.numero}`, anio, String(sig).padStart(5, '0'), usuario, n.moneda === 'USD' ? 'DOLARES' : 'SOLES', n.proveedor_nombre, monto, monto,
                     `REEMBOLSO NOTA DE CRÉDITO ${n.codigo} (${n.serie}-${n.numero})`, cuenta, voucherUrl, `Reembolso de la nota ${n.codigo} | Operación ${constancia}`, usuario, usuario]);
             await p.query('UPDATE compras_notas_credito SET reembolso_caja_id = ? WHERE id = ?', [caja.insertId, id]);
