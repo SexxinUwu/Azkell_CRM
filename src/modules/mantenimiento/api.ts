@@ -57,13 +57,14 @@ export const FILTROS_OT = [
   { clave: 'Recepción', etiqueta: 'Recepción', estados: ['Pendiente'] },
   { clave: 'En Proceso', etiqueta: 'En proceso', estados: ['En Proceso'] },
   { clave: 'Pausada', etiqueta: 'Pausada', estados: ['Pausada'] },
-  { clave: 'Finalizada', etiqueta: 'Finalizada', estados: ['Finalizado', 'Cerrada'] },
+  { clave: 'Finalizada', etiqueta: 'Cerrada', estados: ['Finalizado', 'Cerrada'] },
   { clave: 'Anulada', etiqueta: 'Anulada', estados: ['Anulado'] },
 ] as const;
 
 export function etiquetaEstado(estado: string): string {
   if (estado === 'Pendiente') return 'Recepción';
-  if (estado === 'Cerrada') return 'Finalizada';
+  // Al cerrar la OT el sistema guarda el estado «Finalizado»: para el usuario es lo mismo, una OT cerrada
+  if (estado === 'Cerrada' || estado === 'Finalizado') return 'Cerrada';
   return estado;
 }
 

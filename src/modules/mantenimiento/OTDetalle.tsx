@@ -78,10 +78,9 @@ function tonoEstado(estado: string): 'gris' | 'verde' | 'ambar' | 'azul' | 'rojo
 }
 
 /** Etapas que muestra la barra de avance del encabezado */
-const PASOS = ['Ingreso', 'En trabajo', 'Finalizada', 'Cerrada'];
+const PASOS = ['Ingreso', 'En trabajo', 'Cerrada'];
 function pasoDe(estado: string): number {
-  if (estado === 'Cerrada') return 3;
-  if (estado === 'Finalizado') return 2;
+  if (estado === 'Cerrada' || estado === 'Finalizado') return 2;
   if (estado === 'En Proceso' || estado === 'Pausada') return 1;
   return 0;
 }

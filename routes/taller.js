@@ -615,6 +615,11 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 if (req.body.km_gps !== undefined) {
                     det.km_gps = parseInt(req.body.km_gps) || 0;
                 }
+                // Unidades que se miden en horas (Thermo King): la tabla y el PDF muestran las horas del motor
+                if (req.body.horas_motor !== undefined) {
+                    const h = Number(req.body.horas_motor);
+                    det.horas_motor = Number.isFinite(h) ? h : 0;
+                }
 
                 if (tecnicos !== undefined) {
                     const arrTec = Array.isArray(tecnicos) ? tecnicos.filter(Boolean) : (tecnicos ? [tecnicos] : []);

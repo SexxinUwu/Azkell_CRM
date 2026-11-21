@@ -81,7 +81,7 @@ export function EditarOTSheet({ ot, open, onClose }: { ot: OrdenTrabajo; open: b
     setSubtipo(String(det.sub_tipo ?? det.subtipo_ot ?? subs[0] ?? ''));
     setSupervisor(String(det.supervisor ?? ot.supervisor ?? '').trim() || null);
     setSituacion(String(det.situacion_inicial ?? ot.situacion ?? 'En atención'));
-    setKm(String(det.km || det.horas_motor || ''));
+    setKm(String(det.horas_motor ? det.horas_motor : (det.km || '')));
     setFilas(base.length ? base : [nueva('MANTENIMIENTO / REVISIÓN GENERAL', tecs[0] || '')]);
     setNotas(notasTxt);
     setSeq(contador.n);
@@ -131,7 +131,7 @@ export function EditarOTSheet({ ot, open, onClose }: { ot: OrdenTrabajo; open: b
         motivo,
         tecnicos: tecnicosFinales,
         trabajos_det: trabajosDet,
-        ...(kmNum !== null ? { km: kmNum } : {}),
+        ...(kmNum !== null ? (otDetalles(ot).horas_motor ? { horas_motor: kmNum } : { km: kmNum }) : {}),
       });
       toast('OT actualizada correctamente');
       onClose();
@@ -168,8 +168,8 @@ export function EditarOTSheet({ ot, open, onClose }: { ot: OrdenTrabajo; open: b
             {p => <Combobox {...p} enHoja compacta tituloHoja="Situación de la unidad" options={listaSituaciones.map(s => ({ value: s, label: s }))} value={situacion || null}
               onChange={v => setSituacion(v ?? '')} placeholder="Seleccione la situación…" />}
           </Field>
-          <Field label="Kilometraje (km)">
-            {p => <TextInput {...p} type="number" inputMode="numeric" min={0} value={km} onChange={e => setKm(e.target.value)} placeholder="Kilometraje de la unidad" />}
+          <Field label={otDetalles(ot).horas_motor ? 'Horas del motor (hrs)' : 'Kilometraje (km)'}>
+            {p => <TextInput {...p} type="number" inputMode="numeric" min={0} value={km} onChange={e => setKm(e.target.value)} placeholder={otDetalles(ot).horas_motor ? 'Horas del motor de la unidad' : 'Kilometraje de la unidad'} />}
           </Field>
         </div>
 
@@ -353,7 +353,7 @@ export function EditarKmSheet({ ot, open, onClose }: { ot: OrdenTrabajo; open: b
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
-    if (open) setValor(String(det.km || det.horas_motor || ''));
+    if (open) setValor(String(det.horas_motor ? det.horas_motor : (det.km || '')));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, ot]);
 
@@ -365,8 +365,9 @@ export function EditarKmSheet({ ot, open, onClose }: { ot: OrdenTrabajo; open: b
     }
     setGuardando(true);
     try {
-      await ejecutarAccionOT(otId(ot), 'editar', { km: n });
-      toast('Kilometraje actualizado');
+      // Las unidades que se miden en horas (Thermo King) muestran las horas del motor en la tabla y en el PDF: se editan esas
+      await ejecutarAccionOT(otId(ot), 'editar', det.horas_motor ? { horas_motor: n } : { km: n });
+      toast(det.horas_motor ? 'Horas del motor actualizadas' : 'Kilometraje actualizado');
       onClose();
       await qc.invalidateQueries({ queryKey: ['mant', 'ots'] });
     } catch (e) {
@@ -377,12 +378,12 @@ export function EditarKmSheet({ ot, open, onClose }: { ot: OrdenTrabajo; open: b
   }
 
   return (
-    <Sheet open={open} onClose={() => !guardando && onClose()} title="Kilometraje de la unidad"
+    <Sheet open={open} onClose={() => !guardando && onClose()} title={det.horas_motor ? 'Horas del motor de la unidad' : 'Kilometraje de la unidad'}
       footer={<>
         <Button variant="secondary" onClick={onClose} disabled={guardando}>Cancelar</Button>
         <Button variant="primary" onClick={guardar} loading={guardando}>Guardar</Button>
       </>}>
-      <Field label="Kilometraje actual">
+      <Field label={det.horas_motor ? 'Horas del motor actuales' : 'Kilometraje actual'}>
         {p => <TextInput {...p} type="number" inputMode="numeric" min={0} value={valor} onChange={e => setValor(e.target.value)} />}
       </Field>
     </Sheet>
