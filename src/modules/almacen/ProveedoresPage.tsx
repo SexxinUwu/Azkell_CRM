@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Building2, CircleAlert, Download, FileSpreadsheet, Mail, MessageCircle, Phone, Plus, SearchX, Star, Upload } from 'lucide-react';
+import { Building2, CircleAlert, Download, Mail, MessageCircle, Phone, Plus, SearchX, Star, Upload } from 'lucide-react';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';

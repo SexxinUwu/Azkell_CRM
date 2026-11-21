@@ -4,7 +4,7 @@ import { CircleAlert, Trash2 } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { Field, TextInput } from '../../core/ui/Field';
-import { MultiSelect } from '../../core/ui/MultiSelect';
+import { CampoMultiple } from '../../core/ui/CampoMultiple';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
@@ -142,9 +142,9 @@ export function TrabajoOTSheet({ ot, trabajo, open, onClose, usuario }: {
                 style={{ textTransform: 'uppercase', fontWeight: 600, minHeight: 88, resize: 'vertical' }} />
             )}
           </Field>
-          <div className="field field--wide">
-            <MultiSelect label="Personal / Técnico(s) ejecutores" options={opciones} value={personal} onChange={setPersonal} placeholder="Seleccionar técnico(s)..." />
-          </div>
+          <Field label="Personal / Técnico(s) ejecutores" wide>
+            {p => <CampoMultiple id={p.id} titulo="Técnico(s) ejecutores" opciones={opciones} valor={personal} onChange={setPersonal} placeholder="Seleccionar técnico(s)…" vacio="No hay personal que coincida." />}
+          </Field>
           <Field label="Fecha y hora inicio">{p => <TextInput {...p} type="datetime-local" value={ini} onChange={e => setIni(e.target.value)} />}</Field>
           <Field label="Fecha y hora fin">{p => <TextInput {...p} type="datetime-local" value={fin} min={ini || undefined} onChange={e => setFin(e.target.value)} />}</Field>
           <Field label="Costo estimado del trabajo (S/)" wide>{p => <TextInput {...p} inputMode="decimal" value={costo} onChange={e => setCosto(e.target.value)} />}</Field>

@@ -1,11 +1,12 @@
 import { formatFechaHoraPe, formatSoles } from '../../core/lib/format';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Ban, CalendarDays, ChevronRight, ClipboardCheck, Disc, Download, FileText, Gauge, Package, Pencil, Play, Plus, Receipt, RotateCcw, Share2, Timer, Trash2, Wrench } from 'lucide-react';
+import { ArrowUpRight, Ban, CalendarDays, ChevronRight, ClipboardCheck, Disc, FileText, Gauge, Package, Pencil, Play, Plus, Receipt, RotateCcw, Timer, Trash2, Wrench } from 'lucide-react';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
-import { MenuOtros, type OpcionOtros } from '../../core/ui/MenuOtros';
+import { AccionesExpandibles, type AccionExpandible } from '../../core/ui/AccionesExpandibles';
+import { IconoPdf, IconoWhatsapp } from '../../core/ui/IconosArchivo';
 import { pestanaConCamion } from '../../core/ui/CargaCamion';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
@@ -415,24 +416,25 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     { s: 'costos', etiqueta: 'Costo total', valor: soles(costos.total), pie: 'Ver desglose', icon: <Receipt size={16} />, total: true },
   ];
 
-  // Acciones secundarias: todas en «Más», con las destructivas al final y separadas
+  // Acciones: iconos de color (el nombre se abre al costado al pasar el mouse), con las destructivas al final y separadas
   const sinDatos = exportando || loadMat || loadTra;
   const pdfSeguro = (generar: () => Promise<Blob>, nombre: string) =>
     abrirPdf(generar, nombre).catch(err => toast(errorMessage(err), 'error'));
-  const opcionesMas: Array<OpcionOtros | false> = [
-    puedeEditar && { label: 'Editar OT', icon: <Pencil size={18} />, onSelect: () => setEditandoOT(true) },
-    puedeEditar && { label: 'Fechas', icon: <CalendarDays size={18} />, onSelect: () => setEditandoFechas(true) },
-    puedeEditar && { label: 'Kilometraje', icon: <Gauge size={18} />, onSelect: () => setEditandoKm(true) },
-    { label: 'Compartir por WhatsApp', detalle: 'PDF de la orden', icon: <Share2 size={18} />, onSelect: () => exportar('whatsapp'), disabled: sinDatos, separado: true },
-    { label: 'Plantilla de inspecciones', detalle: 'F-MAN-001', icon: <ClipboardCheck size={18} />, separado: true,
+  const accionesOT: Array<AccionExpandible | false> = [
+    puedeEditar && { label: 'Editar OT', icon: <Pencil />, tono: 'azul', onSelect: () => setEditandoOT(true) },
+    puedeEditar && { label: 'Fechas', icon: <CalendarDays />, tono: 'violeta', onSelect: () => setEditandoFechas(true) },
+    puedeEditar && { label: 'Kilometraje', icon: <Gauge />, tono: 'ambar', onSelect: () => setEditandoKm(true) },
+    { label: 'Descargar PDF', detalle: 'PDF de la orden', icon: <IconoPdf />, tono: 'original', onSelect: () => exportar('descargar'), disabled: sinDatos, separado: true },
+    { label: 'Compartir por WhatsApp', detalle: 'PDF de la orden', icon: <IconoWhatsapp />, tono: 'original', onSelect: () => exportar('whatsapp'), disabled: sinDatos },
+    { label: 'Plantilla de inspecciones', detalle: 'F-MAN-001', icon: <ClipboardCheck />, tono: 'verde', separado: true,
       onSelect: () => pdfSeguro(() => pdfPlantillaInspeccion(idOt, ot.placa, ot.fecha_inicio_ot || ot.fecha_ingreso || ot.creado_en || null, extrasPdf().kmTablero, extrasPdf().rampa), `Plantilla inspecciones ${idOt}.pdf`) },
-    { label: 'Plantilla OT', detalle: 'Impresión rápida', icon: <FileText size={18} />,
+    { label: 'Plantilla OT', detalle: 'Impresión rápida', icon: <FileText />, tono: 'azul',
       onSelect: () => pdfSeguro(() => pdfPlantillaOt(ot, extrasPdf()), `Plantilla orden de trabajo ${idOt}.pdf`) },
-    { label: 'Plantilla de llantas', detalle: 'Formato A4 blanco', icon: <Disc size={18} />,
+    { label: 'Plantilla de llantas', detalle: 'Formato A4 blanco', icon: <Disc />, tono: 'violeta',
       onSelect: () => pdfSeguro(() => pdfPlantillaLlantas(ot, extrasPdf()), `Plantilla de llantas ${idOt}.pdf`) },
-    puedeEditar && acciones.includes('reactivar') && { label: 'Reactivar OT', icon: <RotateCcw size={18} />, onSelect: () => onAccion('reactivar'), separado: true },
-    puedeEditar && acciones.includes('anular') && { label: 'Anular OT', icon: <Ban size={18} />, onSelect: () => onAccion('anular'), destructiva: true, separado: true },
-    puedeEliminar && { label: 'Eliminar OT', icon: <Trash2 size={18} />, onSelect: onEliminar, destructiva: true, separado: !(puedeEditar && acciones.includes('anular')) },
+    puedeEditar && acciones.includes('reactivar') && { label: 'Reactivar OT', icon: <RotateCcw />, tono: 'verde', onSelect: () => onAccion('reactivar'), separado: true },
+    puedeEditar && acciones.includes('anular') && { label: 'Anular OT', icon: <Ban />, tono: 'ambar', onSelect: () => onAccion('anular'), separado: true },
+    puedeEliminar && { label: 'Eliminar OT', icon: <Trash2 />, tono: 'rojo', onSelect: onEliminar, separado: !(puedeEditar && (acciones.includes('anular') || acciones.includes('reactivar'))) },
   ];
 
   const tono = tonoEstado(ot.estado);
@@ -452,10 +454,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
           <span style={{ fontSize: '1.2rem' }}>‹</span> Órdenes
         </button>
         <div className="otd__barra-acciones">
-          <Button variant="secondary" icon={<Download size={15} />} onClick={() => exportar('descargar')} disabled={sinDatos} aria-label="Descargar PDF de la OT">
-            PDF
-          </Button>
-          <MenuOtros label="Más" opciones={opcionesMas} />
+          <AccionesExpandibles acciones={accionesOT} etiqueta="Acciones de la orden de trabajo" />
         </div>
       </div>
 

@@ -1,0 +1,49 @@
+/* Acciones como iconos de color: el nombre se abre hacia el costado al pasar el mouse o enfocar con el teclado */
+.acc-exp { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.acc-exp__celda { display: inline-flex; align-items: center; gap: 6px; }
+.acc-exp__sep { width: 1px; height: 22px; background: var(--separator, rgba(0, 0, 0, 0.12)); margin: 0 4px; }
+
+.acc-exp__boton {
+  --acc-color: var(--label, #1d1d1f); --acc-fondo: rgba(0, 0, 0, 0.06);
+  display: inline-flex; align-items: center; height: 38px; padding: 0; border: 0; border-radius: 12px; cursor: pointer;
+  color: var(--acc-color); background: var(--acc-fondo); font: inherit; font-weight: 600; font-size: 0.8125rem; white-space: nowrap;
+  transition: background-color 0.18s ease, transform 0.12s ease, box-shadow 0.2s ease;
+}
+.acc-exp__icono { display: grid; place-items: center; width: 38px; height: 38px; flex: none; }
+.acc-exp__icono svg { width: 19px; height: 19px; }
+
+/* El texto está colapsado (ancho 0) y se despliega con una animación suave, sin saltos de altura */
+.acc-exp__texto {
+  display: grid; grid-template-columns: 0fr; opacity: 0;
+  transition: grid-template-columns 0.26s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.18s ease;
+}
+.acc-exp__texto > span { overflow: hidden; min-width: 0; }
+.acc-exp__boton:hover .acc-exp__texto,
+.acc-exp__boton:focus-visible .acc-exp__texto { grid-template-columns: 1fr; opacity: 1; }
+.acc-exp__boton:hover .acc-exp__texto > span,
+.acc-exp__boton:focus-visible .acc-exp__texto > span { padding-right: 14px; }
+
+.acc-exp__boton:hover:not(:disabled) { background: color-mix(in srgb, var(--acc-color) 20%, transparent); box-shadow: 0 6px 16px color-mix(in srgb, var(--acc-color) 22%, transparent); }
+.acc-exp__boton:active:not(:disabled) { transform: scale(0.96); }
+.acc-exp__boton:focus-visible { outline: 2px solid var(--acc-color); outline-offset: 2px; }
+.acc-exp__boton:disabled { opacity: 0.4; cursor: default; }
+
+.acc-exp__boton--azul { --acc-color: #0a64d6; --acc-fondo: rgba(0, 122, 255, 0.12); }
+.acc-exp__boton--verde { --acc-color: #15803d; --acc-fondo: rgba(52, 199, 89, 0.15); }
+.acc-exp__boton--violeta { --acc-color: #6d28d9; --acc-fondo: rgba(124, 58, 237, 0.13); }
+.acc-exp__boton--ambar { --acc-color: #b45309; --acc-fondo: rgba(245, 158, 11, 0.16); }
+.acc-exp__boton--rojo { --acc-color: var(--red-ink, #c5221f); --acc-fondo: rgba(255, 59, 48, 0.11); }
+.acc-exp__boton--whatsapp { --acc-color: #128c7e; --acc-fondo: rgba(37, 211, 102, 0.16); }
+.acc-exp__boton--gris { --acc-color: var(--label, #1d1d1f); --acc-fondo: rgba(0, 0, 0, 0.06); }
+
+@media (prefers-reduced-motion: reduce) {
+  .acc-exp__texto, .acc-exp__boton { transition: none; }
+}
+@media (prefers-color-scheme: dark) {
+  .acc-exp__boton--gris { --acc-fondo: rgba(255, 255, 255, 0.1); }
+}
+
+/* Iconos originales (PDF, Excel, WhatsApp…): llevan sus propios colores, la casilla es neutra */
+.acc-exp__boton--original { --acc-color: var(--label, #1d1d1f); --acc-fondo: rgba(0, 0, 0, 0.05); }
+.acc-exp__boton--original .acc-exp__icono img { width: 22px; height: 22px; }
+@media (prefers-color-scheme: dark) { .acc-exp__boton--original { --acc-fondo: rgba(255, 255, 255, 0.1); } }

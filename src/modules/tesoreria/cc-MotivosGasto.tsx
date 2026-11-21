@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, FileSpreadsheet, Plus, SearchX, Tags } from 'lucide-react';
+import { CircleAlert, Plus, SearchX, Tags } from 'lucide-react';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Combobox, type ComboboxOption } from '../../core/ui/Combobox';

@@ -4,6 +4,7 @@ import './ce-formulario.css';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Camera, CheckCheck, ChevronDown, CircleAlert, FileText, ListChecks, Minus, NotebookPen, PenLine, Plus, Search, Trash2, Truck } from 'lucide-react';
+import { FilePdf } from '../../core/ui/IconosArchivo';
 import { Button } from '../../core/ui/Button';
 import { CargaCamion } from '../../core/ui/CargaCamion';
 import { EmptyState, Notice } from '../../core/ui/Display';
@@ -897,7 +898,7 @@ export function CeFormulario({ registro, empresa, modo, hoja, onCerrar, onGuarda
         )}
         {soloLectura ? (
           <>
-            <Button variant="secondary" icon={<FileText size={16} />} loading={generandoPdf} onClick={pdfDelRegistro}>Generar PDF</Button>
+            <Button variant="secondary" icon={<FilePdf size={16} />} loading={generandoPdf} onClick={pdfDelRegistro}>Generar PDF</Button>
             <Button variant="primary" onClick={onCerrar}>Cerrar</Button>
           </>
         ) : (

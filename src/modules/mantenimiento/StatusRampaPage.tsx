@@ -3,7 +3,8 @@ import './mant.css';
 import './StatusRampa.css';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronRight, Clock, FileSpreadsheet, FileText, LayoutDashboard, LogOut, MessageCircle, Pencil, Plus, RefreshCw, RotateCcw, SearchX, Settings2, Trash2, Wrench } from 'lucide-react';
+import { ChevronRight, Clock, FileText, LayoutDashboard, LogOut, MessageCircle, Pencil, Plus, RefreshCw, RotateCcw, SearchX, Settings2, Trash2, Wrench } from 'lucide-react';
+import { FileSpreadsheet, FilePdf } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -418,7 +419,7 @@ export function StatusRampaPage() {
               <Button variant="plain" iconOnly className="btn--icono btn--icono-acento" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar"
                 onClick={() => qc.invalidateQueries({ queryKey: ['mant'] })} />
               <BotonAccion titulo="Exportar historial a Excel" color="#15803d" icono={<FileSpreadsheet size={19} />} onClick={exportarHistorialExcel} />
-              <BotonAccion titulo="Ver PDF del reporte" color="var(--red-ink)" icono={<FileText size={19} />} onClick={verPdf} />
+              <BotonAccion titulo="Ver PDF del reporte" color="var(--red-ink)" icono={<FilePdf size={19} />} onClick={verPdf} />
               <BotonAccion titulo="Enviar reporte por WhatsApp" color="#16a34a" icono={<MessageCircle size={19} />} onClick={enviarWa} />
               <BotonAccion titulo="Configurar rampas" color="var(--label-2)" icono={<Settings2 size={19} />} onClick={() => setConfigurando(true)} />
               {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => { setRampaInicial(undefined); setFormulario({ entrada: null }); }}>Ingresar</Button>}

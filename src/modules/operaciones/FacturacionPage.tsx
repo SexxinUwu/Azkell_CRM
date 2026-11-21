@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Check, CheckCircle2, CircleAlert, Coins, FilePlus2, FileCode2, FileText, Info, Package, Pencil, ReceiptText, RefreshCw, Search, SearchX, Send, ShieldCheck, Trash2, Undo2, Users, Wallet } from 'lucide-react';
+import { FilePdf } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../core/ui/FiltrosListado';
@@ -310,8 +311,8 @@ export function FacturacionPage() {
                   <tr key={c.id}>
                     <Celda>
                       <span style={{ display: 'inline-flex', gap: 2 }}>
-                        {c.apisunat_status && <IconoFila texto="Ver el PDF con nuestro diseño" tono="azul" icono={<FileText size={15} />} onClick={() => verPdfPropio(c)} />}
-                        {c.pdf_url && <IconoFila texto="PDF de APISUNAT" tono="rojo" icono={<FileText size={15} />} onClick={() => abrir(c.pdf_url)} />}
+                        {c.apisunat_status && <IconoFila texto="Ver el PDF con nuestro diseño" tono="azul" icono={<FilePdf size={15} />} onClick={() => verPdfPropio(c)} />}
+                        {c.pdf_url && <IconoFila texto="PDF de APISUNAT" tono="rojo" icono={<FilePdf size={15} />} onClick={() => abrir(c.pdf_url)} />}
                         {c.xml_url && <IconoFila texto="Descargar el XML firmado" tono="violeta" icono={<FileCode2 size={15} />} onClick={() => abrir(c.xml_url)} />}
                         {c.cdr_url && <IconoFila texto="Constancia de recepción de SUNAT" tono="verde" icono={<CheckCircle2 size={15} />} onClick={() => abrir(c.cdr_url)} />}
                         {puedeEmitir && c.apisunat_status !== 'ACEPTADO' && e.texto === 'Enviada' && <IconoFila texto="Actualizar estado en SUNAT" tono="azul" icono={<Search size={15} />} cargando={sincronizando === c.id} onClick={() => { void sincronizar(c); }} />}

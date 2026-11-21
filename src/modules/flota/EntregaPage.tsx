@@ -2,7 +2,8 @@ import './flota.css';
 import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, ClipboardList, FileSpreadsheet, FileText, ListChecks, MessageCircle, Plus, SearchX, Trash2 } from 'lucide-react';
+import { CircleAlert, ClipboardList, ListChecks, MessageCircle, Plus, SearchX, Trash2 } from 'lucide-react';
+import { FileSpreadsheet, FilePdf } from '../../core/ui/IconosArchivo';
 import '../../core/ui/acciones-iconos.css';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { ChoiceChips } from '../../core/ui/Chips';
@@ -172,7 +173,7 @@ export function EntregaPage() {
       <Sheet open={!!abierta} onClose={() => setAbiertoId(null)} title={abierta ? `Acta ${abierta.numero_inventario || abierta.id}` : ''}
         footer={abierta ? (
           <>
-            <Button variant="secondary" icon={<FileText size={16} />} loading={ocupado} onClick={() => imprimirActa(abierta)}>PDF del acta</Button>
+            <Button variant="secondary" icon={<FilePdf size={16} />} loading={ocupado} onClick={() => imprimirActa(abierta)}>PDF del acta</Button>
             <Button variant="secondary" icon={<MessageCircle size={16} />} disabled={ocupado} onClick={() => whatsappActa(abierta)}>WhatsApp</Button>
             {puedeEliminar && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={() => setPorEliminar(abierta)}>Eliminar</Button>}
           </>

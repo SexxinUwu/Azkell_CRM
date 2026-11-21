@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CalendarCheck, FileSpreadsheet, PackageSearch, PlusCircle, SearchX } from 'lucide-react';
+import { CalendarCheck, PackageSearch, PlusCircle, SearchX } from 'lucide-react';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice } from '../../core/ui/Display';
 import { SearchField, SelectInput } from '../../core/ui/Field';

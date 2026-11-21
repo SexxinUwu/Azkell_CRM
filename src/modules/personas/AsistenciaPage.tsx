@@ -1,7 +1,8 @@
 import '../mantenimiento/mant.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarCheck, CalendarOff, CheckCheck, CircleAlert, FileSpreadsheet, RefreshCw } from 'lucide-react';
+import { CalendarCheck, CalendarOff, CheckCheck, CircleAlert, RefreshCw } from 'lucide-react';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';

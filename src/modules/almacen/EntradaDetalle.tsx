@@ -1,6 +1,7 @@
 import '../../core/ui/acciones-iconos.css';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Ban, Check, CircleAlert, CreditCard, Eye, FileDown, Package, Paperclip, Pencil, Shield, Trash2, X } from 'lucide-react';
+import { Ban, Check, CircleAlert, CreditCard, Eye, Package, Paperclip, Pencil, Shield, Trash2, X } from 'lucide-react';
+import { FilePdf } from '../../core/ui/IconosArchivo';
 import { formatFechaHoraPe, formatFechaPe, formatMoneda } from '../../core/lib/format';
 import { type EntradaInv } from './api';
 import {
@@ -149,7 +150,7 @@ export function EntradaDetalle({
         {onEditar && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Editar orden" aria-label="Editar orden" onClick={onEditar}><Pencil size={17} /></button>}
         <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Adjuntos y sustentos" aria-label="Adjuntos y sustentos" onClick={onAdjuntos}><Paperclip size={17} /></button>
         {onConfirmarPago && pagable && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Confirmar pago" aria-label="Confirmar pago" onClick={onConfirmarPago}><CreditCard size={17} /></button>}
-        <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Descargar PDF" aria-label="Descargar PDF" disabled={generandoPdf} onClick={onPdf}><FileDown size={17} /></button>
+        <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Descargar PDF" aria-label="Descargar PDF" disabled={generandoPdf} onClick={onPdf}><FilePdf size={17} /></button>
         <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Vista previa" aria-label="Vista previa" onClick={onVistaPrevia}><Eye size={17} /></button>
         {onAnular && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--peligro" data-tip="Anular orden" aria-label="Anular orden" onClick={onAnular}><Ban size={17} /></button>}
         {onEliminar && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--peligro" data-tip="Eliminar" aria-label="Eliminar" onClick={onEliminar}><Trash2 size={17} /></button>}

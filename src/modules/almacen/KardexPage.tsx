@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import './almacen.css';
-import { FileSpreadsheet, History, Package, SearchX } from 'lucide-react';
+import { History, Package, SearchX } from 'lucide-react';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';

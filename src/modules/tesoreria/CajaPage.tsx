@@ -5,10 +5,8 @@ import '../almacen/entradas.css';
 import './mov.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  ArrowDownLeft, ArrowUpRight, Banknote, Boxes, CircleCheck, ClipboardList, Coins, Eye, FileSpreadsheet, Pencil, Plus, RefreshCw, SearchX,
-  Upload, Wallet,
-} from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Banknote, Boxes, CircleCheck, ClipboardList, Coins, Eye, Pencil, Plus, RefreshCw, SearchX, Upload, Wallet } from 'lucide-react';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { TextInput } from '../../core/ui/Field';

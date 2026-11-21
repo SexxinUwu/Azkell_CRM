@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Contact, FileSpreadsheet, Plus, SearchX, TriangleAlert, UserPlus } from 'lucide-react';
+import { Contact, Plus, SearchX, TriangleAlert, UserPlus } from 'lucide-react';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import '../../core/ui/acciones-iconos.css';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';

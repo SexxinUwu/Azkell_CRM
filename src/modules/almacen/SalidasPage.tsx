@@ -1,7 +1,8 @@
 import '../../core/ui/acciones-iconos.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleCheck, ClipboardList, Coins, Eye, FileDown, FileSpreadsheet, FileText, PackageCheck, PackageMinus, Plus, RefreshCw, SearchX, Trash2 } from 'lucide-react';
+import { CircleCheck, ClipboardList, Coins, Eye, PackageCheck, PackageMinus, Plus, RefreshCw, SearchX, Trash2 } from 'lucide-react';
+import { FileSpreadsheet, FilePdf } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
@@ -195,7 +196,7 @@ export function SalidasPage() {
   function menuDe(s: SalidaInv): Array<OpcionOtros | false | null | undefined> {
     return [
       { label: 'Ver detalle', icon: <Eye size={17} />, onSelect: () => abrirDetalle(s) },
-      { label: 'Imprimir PDF', icon: <FileDown size={17} />, onSelect: () => { void pdf(s, false); } },
+      { label: 'Imprimir PDF', icon: <FilePdf size={17} />, onSelect: () => { void pdf(s, false); } },
       estadoSalida(s) === 'Pendiente' && puedeEliminar && { label: 'Anular', icon: <Trash2 size={17} />, destructiva: true, separado: true, onSelect: () => setAnulandoId(s.id) },
     ];
   }
@@ -395,7 +396,7 @@ export function SalidasPage() {
                       </div>
                     </button>
                     <div className="sal-tarjeta__acciones">
-                      <Button size="sm" variant="secondary" icon={<FileText size={14} />} onClick={() => pdf(s, false)}>PDF</Button>
+                      <Button size="sm" variant="secondary" icon={<FilePdf size={14} />} onClick={() => pdf(s, false)}>PDF</Button>
                       {estado === 'Pendiente' && puedeEliminar && (
                         <Button size="sm" variant="danger" icon={<Trash2 size={14} />} onClick={() => { setAnulandoId(s.id); }}>Anular</Button>
                       )}

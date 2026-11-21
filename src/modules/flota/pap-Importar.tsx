@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { CircleAlert, Download, FileSpreadsheet, Upload } from 'lucide-react';
+import { CircleAlert, Download, Upload } from 'lucide-react';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { Sheet } from '../../core/ui/Sheet';

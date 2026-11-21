@@ -1,7 +1,8 @@
 import './ce-portal-lista.css';
 import '../../core/ui/acciones-iconos.css';
 import { useMemo, useState } from 'react';
-import { CalendarCheck, CarFront, ClipboardList, Eye, FileSpreadsheet, FileText, LayoutGrid, MessageCircle, Pencil, Plus, RefreshCw, SearchX, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { CalendarCheck, CarFront, ClipboardList, Eye, LayoutGrid, MessageCircle, Pencil, Plus, RefreshCw, SearchX, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { FileSpreadsheet, FilePdf } from '../../core/ui/IconosArchivo';
 import { Button } from '../../core/ui/Button';
 import { MenuFila } from '../../core/ui/MenuFila';
 import { Badge, EmptyState, Notice } from '../../core/ui/Display';
@@ -242,7 +243,7 @@ function Acciones({ registro, ocupado, puedeEliminar, onAccion }: {
     <MenuFila etiqueta={`Acciones del acta ${n}`} deshabilitado={ocupado} acciones={[
       { label: 'Ver detalle', icon: <Eye size={17} />, onSelect: accion('ver') },
       { label: 'Editar acta', icon: <Pencil size={17} />, onSelect: accion('editar') },
-      { label: 'Ver PDF', icon: <FileText size={17} />, onSelect: accion('pdf') },
+      { label: 'Ver PDF', icon: <FilePdf size={17} />, onSelect: accion('pdf') },
       { label: 'Enviar por WhatsApp', icon: <MessageCircle size={17} />, onSelect: accion('whatsapp') },
       puedeEliminar && { label: 'Eliminar acta', icon: <Trash2 size={17} />, onSelect: accion('eliminar'), destructiva: true, separada: true },
     ]} />

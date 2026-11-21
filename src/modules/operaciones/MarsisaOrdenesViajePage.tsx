@@ -1,7 +1,8 @@
 import '../mantenimiento/mant.css';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, FileSpreadsheet, Pencil, RefreshCw, Route, SearchX, Truck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, RefreshCw, Route, SearchX, Truck } from 'lucide-react';
+import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
