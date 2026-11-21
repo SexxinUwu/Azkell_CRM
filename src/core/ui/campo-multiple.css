@@ -1,0 +1,9 @@
+.campo-multiple__boton { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left; cursor: pointer; }
+.campo-multiple__vacio { color: var(--label-2, #6e6e73); }
+.campo-multiple__chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.campo-multiple__chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 4px 4px 10px; border-radius: 999px;
+  background: var(--accent-soft, rgba(245, 99, 0, 0.12)); color: var(--accent, #f56300); font-size: 0.8125rem; font-weight: 600;
+}
+.campo-multiple__chip button { display: grid; place-items: center; width: 20px; height: 20px; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
+.campo-multiple__chip button:hover { background: color-mix(in srgb, currentColor 16%, transparent); }

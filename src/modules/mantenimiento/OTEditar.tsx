@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PencilLine, Plus, Trash2 } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
-import { Field, TextInput, SelectInput } from '../../core/ui/Field';
+import { Field, TextInput } from '../../core/ui/Field';
 import { Combobox } from '../../core/ui/Combobox';
 import { Notice } from '../../core/ui/Display';
 import { useToast } from '../../core/ui/Toast';
@@ -51,6 +51,7 @@ export function EditarOTSheet({ ot, open, onClose }: { ot: OrdenTrabajo; open: b
   const [subtipo, setSubtipo] = useState('');
   const [supervisor, setSupervisor] = useState<string | null>(null);
   const [situacion, setSituacion] = useState('En atención');
+  const [km, setKm] = useState('');
   const [filas, setFilas] = useState<FilaTrabajo[]>([]);
   const [notas, setNotas] = useState('');
   const [guardando, setGuardando] = useState(false);
@@ -80,6 +81,7 @@ export function EditarOTSheet({ ot, open, onClose }: { ot: OrdenTrabajo; open: b
     setSubtipo(String(det.sub_tipo ?? det.subtipo_ot ?? subs[0] ?? ''));
     setSupervisor(String(det.supervisor ?? ot.supervisor ?? '').trim() || null);
     setSituacion(String(det.situacion_inicial ?? ot.situacion ?? 'En atención'));
+    setKm(String(det.km || det.horas_motor || ''));
     setFilas(base.length ? base : [nueva('MANTENIMIENTO / REVISIÓN GENERAL', tecs[0] || '')]);
     setNotas(notasTxt);
     setSeq(contador.n);
@@ -114,6 +116,8 @@ export function EditarOTSheet({ ot, open, onClose }: { ot: OrdenTrabajo; open: b
       trabajosDet.push({ desc, tecnico: f.tecnico });
       if (f.tecnico && !tecnicosFinales.includes(f.tecnico)) tecnicosFinales.push(f.tecnico);
     }
+    const kmNum = km.trim() === '' ? null : Number(km);
+    if (kmNum !== null && (!Number.isFinite(kmNum) || kmNum < 0)) { toast('Ingresa un kilometraje válido.', 'error'); return; }
     let motivo = tareasFinales.map((t, i) => `${i + 1}. ${t}`).join('\n');
     if (notas.trim()) motivo += `\nNota: ${notas.trim()}`;
 
@@ -127,6 +131,7 @@ export function EditarOTSheet({ ot, open, onClose }: { ot: OrdenTrabajo; open: b
         motivo,
         tecnicos: tecnicosFinales,
         trabajos_det: trabajosDet,
+        ...(kmNum !== null ? { km: kmNum } : {}),
       });
       toast('OT actualizada correctamente');
       onClose();
@@ -149,22 +154,22 @@ export function EditarOTSheet({ ot, open, onClose }: { ot: OrdenTrabajo; open: b
 
         <div className="form-grid">
           <Field label="Tipo de OT (*)">
-            {p => <SelectInput {...p} value={tipo} onChange={e => cambiarTipo(e.target.value)}>
-              {TIPOS_OT.map(t => <option key={t} value={t}>{t}</option>)}
-            </SelectInput>}
+            {p => <Combobox {...p} enHoja compacta tituloHoja="Tipo de OT" options={TIPOS_OT.map(t => ({ value: t, label: t }))} value={tipo}
+              onChange={v => { if (v) cambiarTipo(v); }} placeholder="Seleccione el tipo…" />}
           </Field>
           <Field label="Sub tipo de OT (*)">
-            {p => <SelectInput {...p} value={subtipo} onChange={e => setSubtipo(e.target.value)} disabled={!subtipos.length}>
-              {subtipos.map(s => <option key={s} value={s}>{s}</option>)}
-            </SelectInput>}
+            {p => <Combobox {...p} enHoja compacta tituloHoja="Sub tipo de OT" options={subtipos.map(s => ({ value: s, label: s }))} value={subtipo || null}
+              onChange={v => setSubtipo(v ?? '')} disabled={!subtipos.length} placeholder="Seleccione el sub tipo…" />}
           </Field>
           <Field label="Supervisor responsable (*)">
-            {p => <Combobox {...p} options={opcionesPersonal} value={supervisor} onChange={setSupervisor} placeholder="Seleccione supervisor…" />}
+            {p => <Combobox {...p} enHoja compacta tituloHoja="Supervisor responsable" options={opcionesPersonal} value={supervisor} onChange={setSupervisor} placeholder="Seleccione supervisor…" />}
           </Field>
           <Field label="Situación de la unidad (*)">
-            {p => <SelectInput {...p} value={situacion} onChange={e => setSituacion(e.target.value)}>
-              {listaSituaciones.map(s => <option key={s} value={s}>{s}</option>)}
-            </SelectInput>}
+            {p => <Combobox {...p} enHoja compacta tituloHoja="Situación de la unidad" options={listaSituaciones.map(s => ({ value: s, label: s }))} value={situacion || null}
+              onChange={v => setSituacion(v ?? '')} placeholder="Seleccione la situación…" />}
+          </Field>
+          <Field label="Kilometraje (km)">
+            {p => <TextInput {...p} type="number" inputMode="numeric" min={0} value={km} onChange={e => setKm(e.target.value)} placeholder="Kilometraje de la unidad" />}
           </Field>
         </div>
 
@@ -184,7 +189,7 @@ export function EditarOTSheet({ ot, open, onClose }: { ot: OrdenTrabajo; open: b
                 {p => <TextInput {...p} value={f.desc} placeholder="DESCRIPCIÓN DEL TRABAJO…" onChange={e => editarFila(f.key, { desc: e.target.value })} />}
               </Field>
               <Field label="Técnico">
-                {p => <Combobox {...p} options={opcionesPersonal} value={f.tecnico || null} onChange={v => editarFila(f.key, { tecnico: v ?? '' })} placeholder="Seleccione técnico…" />}
+                {p => <Combobox {...p} enHoja compacta tituloHoja={`Técnico · trabajo ${idx + 1}`} options={opcionesPersonal} value={f.tecnico || null} onChange={v => editarFila(f.key, { tecnico: v ?? '' })} placeholder="Seleccione técnico…" />}
               </Field>
               <Button variant="plain" iconOnly icon={<Trash2 size={16} />} aria-label={`Quitar trabajo ${idx + 1}`} title="Quitar trabajo"
                 onClick={() => setFilas(prev => prev.filter(x => x.key !== f.key))} disabled={filas.length <= 1} />
