@@ -222,7 +222,7 @@ export function FrecuenciasMpPage() {
           <div className="form-grid">
             {lista2('marca', 'Marca', opcionesMarca, false, 'Elige o escribe una marca nueva')}
             {lista2('modelo', 'Modelo', opcionesModelo, false, 'Vacío = todos los modelos de la marca')}
-            {lista2('tipo_mp', 'Tipo de mantenimiento', opcionesTipoMp, true, 'Ej. CAMBIO DE ACEITE Y FILTROS, PM1')}
+            {lista2('tipo_mp', 'Tipo de mantenimiento', opcionesTipoMp, true, borrador.id ? 'Si cambias el nombre, los mantenimientos ya hechos pasan al nombre nuevo (no se borra nada)' : 'Ej. CAMBIO DE ACEITE Y FILTROS, PM1')}
             {txt('frecuencia_km', 'Cada (km)')}{txt('frecuencia_horas', 'Cada (horas de motor)')}{txt('frecuencia_dias', 'Cada (días)')}
             {lista2('tipo', 'Tipo', opcionesTipo)}{lista2('sistema', 'Sistema', opcionesSistema)}{lista2('combustible', 'Combustible', opcionesCombustible)}{lista2('uts', 'UTS', opcionesUts, false, 'Vacío = todas las UTS')}
             {txt('descripcion', 'Descripción', true)}

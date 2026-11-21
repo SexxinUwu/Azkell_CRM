@@ -1036,8 +1036,12 @@ router.get('/tipos-mantenimiento', (req, res) => {
     });
 });
 
+// Nombre sin espacios dobles ni sueltos (un espacio de más impedía que el tipo coincidiera con sus registros)
+const limpiarNombreMp = (v) => String(v ?? '').replace(/\s+/g, ' ').replace(/\s+,/g, ',').trim();
+
 router.post('/tipos-mantenimiento', (req, res) => {
-    const { marca, tipo_mp, uts, combustible, modelo, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion } = req.body;
+    const { marca, uts, combustible, modelo, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion } = req.body;
+    const tipo_mp = limpiarNombreMp(req.body.tipo_mp);
     if (!marca || !tipo_mp) return res.status(400).json({ error: 'Marca y tipo_mp son requeridos' });
     db.query(
         `INSERT INTO tipos_mantenimiento (marca, tipo_mp, uts, combustible, modelo, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion)
@@ -1052,16 +1056,32 @@ router.post('/tipos-mantenimiento', (req, res) => {
 
 router.put('/tipos-mantenimiento/:id', (req, res) => {
     const { id } = req.params;
-    const { marca, tipo_mp, uts, combustible, modelo, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion } = req.body;
-    db.query(
-        `UPDATE tipos_mantenimiento SET marca=?, tipo_mp=?, uts=?, combustible=?, modelo=?, frecuencia_km=?,
-         frecuencia_horas=?, frecuencia_dias=?, tipo=?, sistema=?, descripcion=? WHERE id=?`,
-        [marca, tipo_mp, uts || '', combustible || null, modelo || null, frecuencia_km || null, frecuencia_horas || null, frecuencia_dias || null, tipo || '', sistema || '', descripcion || '', id],
-        (err) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({ ok: true });
-        }
-    );
+    const { marca, uts, combustible, modelo, frecuencia_km, frecuencia_horas, frecuencia_dias, tipo, sistema, descripcion } = req.body;
+    const tipo_mp = limpiarNombreMp(req.body.tipo_mp);
+    db.query('SELECT marca, tipo_mp FROM tipos_mantenimiento WHERE id = ?', [id], (errSel, previo) => {
+        if (errSel) return res.status(500).json({ error: errSel.message });
+        const antes = previo && previo[0];
+        db.query(
+            `UPDATE tipos_mantenimiento SET marca=?, tipo_mp=?, uts=?, combustible=?, modelo=?, frecuencia_km=?,
+             frecuencia_horas=?, frecuencia_dias=?, tipo=?, sistema=?, descripcion=? WHERE id=?`,
+            [marca, tipo_mp, uts || '', combustible || null, modelo || null, frecuencia_km || null, frecuencia_horas || null, frecuencia_dias || null, tipo || '', sistema || '', descripcion || '', id],
+            (err) => {
+                if (err) return res.status(500).json({ error: err.message });
+                // Al renombrar un tipo, los mantenimientos ya hechos pasan al nombre nuevo (no se borra ninguno):
+                // así hay una sola fila por tipo, con su historial completo y su frecuencia
+                const nombreAntes = limpiarNombreMp(antes && antes.tipo_mp);
+                if (!antes || !nombreAntes || nombreAntes.toUpperCase() === tipo_mp.toUpperCase()) return res.json({ ok: true });
+                db.query(
+                    `UPDATE fleetrun SET tipo_mp = ? WHERE UPPER(TRIM(REPLACE(REPLACE(tipo_mp, '  ', ' '), ' ,', ','))) = UPPER(?) AND marca = ?`,
+                    [tipo_mp, nombreAntes, antes.marca],
+                    (errFr, r) => {
+                        if (errFr) return res.json({ ok: true, aviso: 'El tipo se guardó, pero no se pudo actualizar su historial: ' + errFr.message });
+                        res.json({ ok: true, registros_actualizados: r ? r.affectedRows : 0 });
+                    }
+                );
+            }
+        );
+    });
 });
 
 router.delete('/tipos-mantenimiento/:id', (req, res) => {
