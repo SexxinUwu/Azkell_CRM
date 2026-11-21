@@ -549,10 +549,15 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                 {trabajos.map(t => {
                   const costo = trabajoCosto(t);
                   const personal = String(aObjeto(t.detalles_json).personal ?? t.tecnico ?? '');
-                  const det = aObjeto(t.detalles_json);
-                  const registrado = !!(t.fecha_trabajo || t.fecha_salida || costo > 0 || det.realizado_registrado === true);
-                  const reportado = String(det.falla_reportada ?? '').trim();
-                  const origen = det.origen === 'reporte_falla' ? `Reporte de fallas${det.folio_reporte ? ` ${det.folio_reporte}` : ''}` : det.origen === 'rampa' ? 'Status de rampa' : '';
+                  const dt = aObjeto(t.detalles_json);
+                  const registrado = !!(t.fecha_trabajo || t.fecha_salida || costo > 0 || dt.realizado_registrado === true);
+                  // Las OT anteriores no guardaron el origen en el trabajo: se deduce de las fallas con que se abrió la OT
+                  const limpio = (x: unknown) => String(x ?? '').replace(/^\s*[•\d.)-]+\s*/, '').trim().toLowerCase();
+                  const deLaOT = Array.isArray(det.trabajos_det) && (det.trabajos_det as Array<{ desc?: string }>).some(f => limpio(f.desc) === limpio(t.trabajo_realizado));
+                  const reportado = String(dt.falla_reportada ?? (deLaOT ? t.trabajo_realizado : '')).trim();
+                  const folio = String(dt.folio_reporte ?? det.folio_reporte ?? '').trim();
+                  const origen = dt.origen === 'reporte_falla' || (!dt.origen && deLaOT && folio) ? `Reporte de fallas${folio ? ` ${folio}` : ''}`
+                    : dt.origen === 'rampa' || (!dt.origen && deLaOT) ? 'Status de rampa' : '';
                   const fechas = [t.fecha_trabajo, t.fecha_salida]
                     .filter(Boolean)
                     .map(f => formatFechaHoraPe(String(f).replace('Z', '').replace(' ', 'T').slice(0, 16)));
