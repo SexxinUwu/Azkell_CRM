@@ -217,3 +217,4 @@
 .otd-tr--clic { cursor: pointer; }
 .otd-tr--clic:hover td { background: var(--surface-sunken); }
 .otd-total--tabla { display: flex; justify-content: space-between; margin: 8px 4px 0; font-weight: 700; }
+.otd-fila__estado--no { color: var(--red-ink); }

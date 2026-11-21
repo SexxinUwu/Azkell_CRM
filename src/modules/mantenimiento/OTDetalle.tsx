@@ -265,6 +265,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     return filas;
   })();
   const motivosHechos = filasMotivo.filter(f => f.trabajo && registradoT(f.trabajo)).length;
+  // Un motivo sin trabajo registrado está Pendiente mientras la OT sigue abierta; al cerrarse pasa a No realizado
+  const otCerrada = ['Finalizado', 'Cerrada', 'Anulada', 'Anulado'].includes(ot.estado);
   const mats = (materiales ?? []).filter(m => m.estado !== 'Anulado');
   // Servicios que llegaron como ítems de vale (clásico: rotEsItemServicio): salen de Repuestos y van a Terceros
   const esServicioItem = (d: string) => {
@@ -600,7 +602,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                         <Celda>{t ? (personal || 'Sin técnico') : '—'}</Celda>
                         <Celda mono>{t ? fecha(t.fecha_trabajo) : '—'}</Celda>
                         <Celda mono>{t ? fecha(t.fecha_salida) : '—'}</Celda>
-                        <Celda><span className={`otd-fila__estado${hecho ? ' otd-fila__estado--ok' : ''}`}>{hecho ? 'Realizado' : 'Pendiente'}</span></Celda>
+                        <Celda><span className={`otd-fila__estado${hecho ? ' otd-fila__estado--ok' : otCerrada ? ' otd-fila__estado--no' : ''}`}>{hecho ? 'Realizado' : otCerrada ? 'No realizado' : 'Pendiente'}</span></Celda>
                         <Celda mono alinear="right">{costo > 0 ? soles(costo) : '—'}</Celda>
                       </tr>
                     );
