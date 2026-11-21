@@ -533,3 +533,7 @@
 .ot-fila__sub { font-size: 0.8125rem; color: var(--label-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ot-fila__flecha { color: var(--label-3); }
 @media (prefers-reduced-motion: reduce) { .ot-fila { transition: none; } }
+
+/* Frecuencias de mantenimiento: filas compactas */
+.tabla-redim.tabla-redim--compacta tbody td { padding: 3px 10px; font-size: 0.8125rem; line-height: 1.25; }
+.tabla-redim.tabla-redim--compacta thead th { padding-top: 7px; padding-bottom: 7px; }

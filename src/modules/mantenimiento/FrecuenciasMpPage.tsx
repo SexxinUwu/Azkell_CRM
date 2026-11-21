@@ -5,7 +5,10 @@ import { CalendarClock, Download, Pencil, Plus, SearchX, Trash2 } from 'lucide-r
 import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { Field, TextInput } from '../../core/ui/Field';
+import '../../core/ui/listado.css';
+import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
+import { ListaMultiple } from '../../core/ui/ListaMultiple';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { Combobox, type ComboboxOption } from '../../core/ui/Combobox';
@@ -26,23 +29,38 @@ interface TipoMp {
 type Borrador = Partial<Omit<TipoMp, 'id' | 'frecuencia_km' | 'frecuencia_horas' | 'frecuencia_dias'>> & { id?: number; frecuencia_km?: string; frecuencia_horas?: string; frecuencia_dias?: string };
 
 const aNumero = (v?: string) => (v && v.trim() ? parseInt(v, 10) || null : null);
-const frec = (r: TipoMp) => [r.frecuencia_km ? `${r.frecuencia_km.toLocaleString('es-PE')} km` : null, r.frecuencia_horas ? `${r.frecuencia_horas} h` : null, r.frecuencia_dias ? `${r.frecuencia_dias} días` : null].filter(Boolean).join(' · ') || '—';
 
 const COLUMNAS: ColumnaTabla[] = [
-  { id: 'marca', titulo: 'Marca', ancho: 150 },
-  { id: 'modelo', titulo: 'Modelo', ancho: 170 },
-  { id: 'tipo_mp', titulo: 'Tipo de MP', ancho: 220 },
-  { id: 'frec', titulo: 'Frecuencia', ancho: 260 },
-  { id: 'sistema', titulo: 'Sistema', ancho: 170 },
-  { id: 'acciones', titulo: 'Acciones', ancho: 130, minimo: 110 },
+  { id: 'marca', titulo: 'Marca', ancho: 100 },
+  { id: 'modelo', titulo: 'Modelo', ancho: 110 },
+  { id: 'tipo_mp', titulo: 'Tipo de MP', ancho: 160 },
+  { id: 'tipo', titulo: 'Tipo', ancho: 90 },
+  { id: 'sistema', titulo: 'Sistema', ancho: 110 },
+  { id: 'combustible', titulo: 'Combustible', ancho: 90 },
+  { id: 'uts', titulo: 'UTS', ancho: 80 },
+  { id: 'km', titulo: 'Cada (km)', ancho: 90 },
+  { id: 'horas', titulo: 'Cada (horas)', ancho: 90 },
+  { id: 'dias', titulo: 'Cada (días)', ancho: 90 },
+  { id: 'descripcion', titulo: 'Descripción', ancho: 220 },
+  { id: 'acciones', titulo: 'Acciones', ancho: 96, minimo: 90 },
 ];
+
+const FRECUENCIAS = [{ value: 'km', label: 'Por kilometraje' }, { value: 'horas', label: 'Por horas de motor' }, { value: 'dias', label: 'Por días' }];
 
 export function FrecuenciasMpPage() {
   const { can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
   const [q, setQ] = useState('');
-  const [marca, setMarca] = useState('');
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
+  const [fMarca, setFMarca] = useState<string[]>([]);
+  const [fModelo, setFModelo] = useState<string[]>([]);
+  const [fTipoMp, setFTipoMp] = useState<string[]>([]);
+  const [fTipo, setFTipo] = useState<string[]>([]);
+  const [fSistema, setFSistema] = useState<string[]>([]);
+  const [fCombustible, setFCombustible] = useState<string[]>([]);
+  const [fUts, setFUts] = useState<string[]>([]);
+  const [fFrec, setFFrec] = useState<string[]>([]);
   const [borrador, setBorrador] = useState<Borrador | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [porEliminar, setPorEliminar] = useState<TipoMp | null>(null);
@@ -54,7 +72,9 @@ export function FrecuenciasMpPage() {
     queryFn: () => api<unknown>('/tipos-mantenimiento').then(r => (Array.isArray(r) ? r : ((r as { data?: TipoMp[] }).data ?? [])) as TipoMp[]),
     staleTime: 60_000,
   });
-  const marcas = useMemo(() => [...new Set((lista.data ?? []).map(r => (r.marca ?? '').trim()).filter(Boolean))].sort(), [lista.data]);
+  const valores = (campo: keyof TipoMp) => [...new Set((lista.data ?? []).map(r => String(r[campo] ?? '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es')).map(v => ({ value: v, label: v }));
+  const activos = fMarca.length + fModelo.length + fTipoMp.length + fTipo.length + fSistema.length + fCombustible.length + fUts.length + fFrec.length;
+  const limpiarFiltros = () => { setFMarca([]); setFModelo([]); setFTipoMp([]); setFTipo([]); setFSistema([]); setFCombustible([]); setFUts([]); setFFrec([]); };
   const placas = usePlacas();
   const tiposCatalogo = useTiposPreventivo();
   const opciones = (...listas: Array<Array<string | null | undefined>>): ComboboxOption[] => {
@@ -78,10 +98,12 @@ export function FrecuenciasMpPage() {
   const opcionesUts = useMemo(() => opciones(['NACIONAL', 'LOCAL', 'RUTA'], datosRegla('uts'), datosPlaca('uts')), [lista.data, placas.data]);
   const datos = useMemo(() => {
     const t = q.trim().toUpperCase();
+    const en = (sel: string[], v: string | null) => !sel.length || sel.includes((v ?? '').trim());
     return (lista.data ?? []).filter(r =>
-      (!marca || r.marca === marca) &&
-      (!t || r.tipo_mp.toUpperCase().includes(t) || (r.modelo ?? '').toUpperCase().includes(t) || (r.sistema ?? '').toUpperCase().includes(t)));
-  }, [lista.data, q, marca]);
+      en(fMarca, r.marca) && en(fModelo, r.modelo) && en(fTipoMp, r.tipo_mp) && en(fTipo, r.tipo) && en(fSistema, r.sistema) && en(fCombustible, r.combustible) && en(fUts, r.uts) &&
+      (!fFrec.length || fFrec.some(f => (f === 'km' ? r.frecuencia_km : f === 'horas' ? r.frecuencia_horas : r.frecuencia_dias))) &&
+      (!t || [r.marca, r.modelo, r.tipo_mp, r.tipo, r.sistema, r.combustible, r.uts, r.descripcion].some(v => (v ?? '').toUpperCase().includes(t))));
+  }, [lista.data, q, fMarca, fModelo, fTipoMp, fTipo, fSistema, fCombustible, fUts, fFrec]);
 
   const refrescar = () => qc.invalidateQueries({ queryKey: ['mant', 'tipos-mantenimiento'] });
 
@@ -151,7 +173,7 @@ export function FrecuenciasMpPage() {
 
   return (
     <Page>
-      <PageHeader eyebrow="Mantenimiento" title="Frecuencias de mantenimiento preventivo"
+      <PageHeader eyebrow="Mantenimiento" title="Frecuencias de mantenimiento"
         subtitle={lista.isLoading ? 'Cargando…' : `${(lista.data ?? []).length} frecuencias por marca y modelo`}
         actions={<>
           <Button variant="secondary" icon={<Download size={16} />} onClick={() => descargarPlantillaFrecuencias()}>Plantilla</Button>
@@ -160,25 +182,25 @@ export function FrecuenciasMpPage() {
         </>} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-        <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
-          <SearchField value={q} onChange={setQ} placeholder="Tipo de MP, modelo o sistema…" />
-          <SelectInput value={marca} onChange={e => setMarca(e.target.value)} aria-label="Marca" style={{ width: 'auto' }}>
-            <option value="">Todas las marcas</option>
-            {marcas.map(m => <option key={m} value={m}>{m}</option>)}
-          </SelectInput>
-        </div>
+        <BarraFiltros busqueda={q} onBusqueda={setQ} placeholder="Marca, modelo, tipo de MP, sistema…" activos={activos} onAbrirFiltros={() => setFiltrosAbiertos(true)} />
 
         {lista.isLoading ? <PageLoader /> : lista.isError ? <Notice tone="error">{errorMessage(lista.error)}</Notice> : datos.length === 0 ? (
-          <EmptyState icon={q || marca ? <SearchX size={22} /> : <CalendarClock size={22} />} title={q || marca ? 'Sin coincidencias' : 'Sin frecuencias'}>Agrega el primer tipo de mantenimiento preventivo.</EmptyState>
+          <EmptyState icon={q || activos ? <SearchX size={22} /> : <CalendarClock size={22} />} title={q || activos ? 'Sin coincidencias' : 'Sin frecuencias'}>Agrega el primer tipo de mantenimiento preventivo.</EmptyState>
         ) : (
-          <TablaRedimensionable id="frecuencias-mp" columnas={COLUMNAS} ariaLabel="Frecuencias de mantenimiento preventivo" altoMax="70vh">
+          <TablaRedimensionable id="frecuencias-mp-v2" columnas={COLUMNAS} ariaLabel="Frecuencias de mantenimiento" altoMax="70vh" className="tabla-redim--compacta">
             {datos.map(r => (
               <tr key={r.id}>
                 <Celda>{r.marca}</Celda>
                 <Celda>{r.modelo || '—'}</Celda>
                 <Celda>{r.tipo_mp}</Celda>
-                <Celda mono>{frec(r)}</Celda>
+                <Celda>{r.tipo || '—'}</Celda>
                 <Celda>{r.sistema || '—'}</Celda>
+                <Celda>{r.combustible || '—'}</Celda>
+                <Celda>{r.uts || 'Todas'}</Celda>
+                <Celda mono>{r.frecuencia_km ? r.frecuencia_km.toLocaleString('es-PE') : '—'}</Celda>
+                <Celda mono>{r.frecuencia_horas ? r.frecuencia_horas.toLocaleString('es-PE') : '—'}</Celda>
+                <Celda mono>{r.frecuencia_dias ? r.frecuencia_dias.toLocaleString('es-PE') : '—'}</Celda>
+                <Celda>{r.descripcion || '—'}</Celda>
                 <Celda>
                   {puedeEditar && (
                     <span style={{ display: 'inline-flex', gap: 'var(--s-1)' }}>
@@ -207,6 +229,17 @@ export function FrecuenciasMpPage() {
           </div>
         )}
       </Sheet>
+
+      <HojaFiltros open={filtrosAbiertos} onClose={() => setFiltrosAbiertos(false)} activos={activos} onLimpiar={limpiarFiltros} resultado={datos.length} unidad="frecuencia">
+        <GrupoFiltro titulo="Marca"><ListaMultiple etiqueta="Marca" valor={fMarca} onChange={setFMarca} opciones={valores('marca')} /></GrupoFiltro>
+        <GrupoFiltro titulo="Modelo"><ListaMultiple etiqueta="Modelo" valor={fModelo} onChange={setFModelo} opciones={valores('modelo')} /></GrupoFiltro>
+        <GrupoFiltro titulo="Tipo de MP"><ListaMultiple etiqueta="Tipo de MP" valor={fTipoMp} onChange={setFTipoMp} opciones={valores('tipo_mp')} /></GrupoFiltro>
+        <GrupoFiltro titulo="Tipo"><ListaMultiple etiqueta="Tipo" valor={fTipo} onChange={setFTipo} opciones={valores('tipo')} /></GrupoFiltro>
+        <GrupoFiltro titulo="Sistema"><ListaMultiple etiqueta="Sistema" valor={fSistema} onChange={setFSistema} opciones={valores('sistema')} /></GrupoFiltro>
+        <GrupoFiltro titulo="Combustible"><ListaMultiple etiqueta="Combustible" valor={fCombustible} onChange={setFCombustible} opciones={valores('combustible')} /></GrupoFiltro>
+        <GrupoFiltro titulo="UTS"><ListaMultiple etiqueta="UTS" valor={fUts} onChange={setFUts} opciones={valores('uts')} /></GrupoFiltro>
+        <GrupoFiltro titulo="Frecuencia"><ListaMultiple etiqueta="Frecuencia" valor={fFrec} onChange={setFFrec} opciones={FRECUENCIAS} /></GrupoFiltro>
+      </HojaFiltros>
 
       <ImportarFrecuenciasSheet open={importando} onClose={() => setImportando(false)} />
 
