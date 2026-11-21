@@ -1,10 +1,11 @@
 import { formatFechaHoraPe, formatSoles } from '../../core/lib/format';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Ban, CalendarDays, ChevronRight, ClipboardCheck, Disc, FileText, Gauge, Package, Play, Plus, Receipt, RotateCcw, Timer, Trash2, Wrench } from 'lucide-react';
+import { ArrowUpRight, Ban, CalendarDays, ClipboardCheck, Disc, FileText, Gauge, Package, Play, Plus, Receipt, RotateCcw, Timer, Trash2, Wrench } from 'lucide-react';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { AccionesExpandibles, type AccionExpandible } from '../../core/ui/AccionesExpandibles';
 import { IconoPdf, IconoWhatsapp, Pencil } from '../../core/ui/IconosArchivo';
 import { pestanaConCamion } from '../../core/ui/CargaCamion';
@@ -78,19 +79,21 @@ function tonoEstado(estado: string): 'gris' | 'verde' | 'ambar' | 'azul' | 'rojo
 }
 
 /** Etapas que muestra la barra de avance del encabezado */
+const COLUMNAS_TRABAJOS: ColumnaTabla[] = [
+  { id: 'n', titulo: '#', ancho: 40, minimo: 36 },
+  { id: 'trabajo', titulo: 'Trabajo', ancho: 260 },
+  { id: 'tecnico', titulo: 'Técnico', ancho: 170 },
+  { id: 'inicio', titulo: 'Inicio', ancho: 120 },
+  { id: 'fin', titulo: 'Fin', ancho: 120 },
+  { id: 'origen', titulo: 'Origen', ancho: 150 },
+  { id: 'estado', titulo: 'Estado', ancho: 100 },
+  { id: 'importe', titulo: 'Importe', ancho: 90 },
+];
 const PASOS = ['Ingreso', 'En trabajo', 'Cerrada'];
 function pasoDe(estado: string): number {
   if (estado === 'Cerrada' || estado === 'Finalizado') return 2;
   if (estado === 'En Proceso' || estado === 'Pausada') return 1;
   return 0;
-}
-
-/** Iniciales del primer técnico de un trabajo (avatar de la fila) */
-function iniciales(personal: string): string {
-  const primero = personal.split(',')[0]?.trim() ?? '';
-  const partes = primero.split(/\s+/).filter(Boolean);
-  if (!partes.length) return '·';
-  return ((partes[0][0] ?? '') + (partes.length > 2 ? partes[2][0] : partes[1]?.[0] ?? '')).toUpperCase();
 }
 
 /** Backlog de la unidad enlazado a esta OT (se importa al crear la OT) */
@@ -545,45 +548,38 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
             {loadTra ? <PageLoader /> : trabajos.length === 0 ? (
               <p className="otd-vacio">No hay trabajos registrados{puedeAgregarTrabajo ? '. Toca «Agregar» para registrar el primero.' : '.'}</p>
             ) : (
-              <ul className="otd-lista">
-                {trabajos.map(t => {
-                  const costo = trabajoCosto(t);
-                  const personal = String(aObjeto(t.detalles_json).personal ?? t.tecnico ?? '');
-                  const dt = aObjeto(t.detalles_json);
-                  const registrado = !!(t.fecha_trabajo || t.fecha_salida || costo > 0 || dt.realizado_registrado === true);
-                  // Las OT anteriores no guardaron el origen en el trabajo: se deduce de las fallas con que se abrió la OT
-                  const limpio = (x: unknown) => String(x ?? '').replace(/^\s*[•\d.)-]+\s*/, '').trim().toLowerCase();
-                  const deLaOT = Array.isArray(det.trabajos_det) && (det.trabajos_det as Array<{ desc?: string }>).some(f => limpio(f.desc) === limpio(t.trabajo_realizado));
-                  const reportado = String(dt.falla_reportada ?? (deLaOT ? t.trabajo_realizado : '')).trim();
-                  const folio = String(dt.folio_reporte ?? det.folio_reporte ?? '').trim();
-                  const origen = dt.origen === 'reporte_falla' || (!dt.origen && deLaOT && folio) ? `Reporte de fallas${folio ? ` ${folio}` : ''}`
-                    : dt.origen === 'rampa' || (!dt.origen && deLaOT) ? 'Status de rampa' : '';
-                  const fechas = [t.fecha_trabajo, t.fecha_salida]
-                    .filter(Boolean)
-                    .map(f => formatFechaHoraPe(String(f).replace('Z', '').replace(' ', 'T').slice(0, 16)));
-                  return (
-                    <li key={trabajoId(t)}>
-                      <button type="button" className="otd-fila" disabled={!puedeEditar}
-                        onClick={() => { setTrabajoSel(t); setTrabajoAbierto(true); }}
-                        aria-label={puedeEditar ? `Editar trabajo: ${t.trabajo_realizado || 'sin descripción'}` : undefined}>
-                        <span className="otd-avatar" aria-hidden>{iniciales(personal)}</span>
-                        <span className="otd-fila__cuerpo">
-                          <span className="otd-fila__titulo">{t.trabajo_realizado || '—'}</span>
-                          <span className="otd-fila__sub">{personal || 'Sin técnico asignado'}</span>
-                          {fechas.length > 0 && <span className="otd-fila__meta t-numeric">{fechas.join(' → ')}</span>}
-                          {origen && <span className="otd-fila__meta">Reportado: {reportado || t.trabajo_realizado} · {origen}</span>}
-                          {origen && <span className={`otd-fila__estado${registrado ? ' otd-fila__estado--ok' : ''}`}>{registrado ? 'Realizado' : 'Falta registrar lo realizado (fechas y horas)'}</span>}
-                        </span>
-                        {costo > 0 && <span className="otd-fila__importe t-numeric">{soles(costo)}</span>}
-                        {puedeEditar && <ChevronRight size={16} className="otd-fila__chevron" aria-hidden />}
-                      </button>
-                    </li>
-                  );
-                })}
+              <>
+                <TablaRedimensionable id="ot-trabajos-v1" columnas={COLUMNAS_TRABAJOS} ariaLabel="Trabajos realizados" altoMax="50vh" className="tabla-redim--compacta">
+                  {trabajos.map((t, idx) => {
+                    const costo = trabajoCosto(t);
+                    const dt = aObjeto(t.detalles_json);
+                    const personal = String(dt.personal ?? t.tecnico ?? '');
+                    const registrado = !!(t.fecha_trabajo || t.fecha_salida || costo > 0 || dt.realizado_registrado === true);
+                    // Las OT anteriores no guardaron el origen en el trabajo: se deduce de las fallas con que se abrió la OT
+                    const limpio = (x: unknown) => String(x ?? '').replace(/^\s*[•\d.)-]+\s*/, '').trim().toLowerCase();
+                    const deLaOT = Array.isArray(det.trabajos_det) && (det.trabajos_det as Array<{ desc?: string }>).some(f => limpio(f.desc) === limpio(t.trabajo_realizado));
+                    const folio = String(dt.folio_reporte ?? det.folio_reporte ?? '').trim();
+                    const origen = dt.origen === 'reporte_falla' || (!dt.origen && deLaOT && folio) ? `Reporte de fallas${folio ? ` ${folio}` : ''}`
+                      : dt.origen === 'rampa' || (!dt.origen && deLaOT) ? 'Status de rampa' : 'Agregado a mano';
+                    const fecha = (f: unknown) => (f ? formatFechaHoraPe(String(f).replace('Z', '').replace(' ', 'T').slice(0, 16)) : '—');
+                    return (
+                      <tr key={trabajoId(t)} className={puedeEditar ? 'otd-tr--clic' : undefined} onClick={puedeEditar ? () => { setTrabajoSel(t); setTrabajoAbierto(true); } : undefined}>
+                        <Celda mono>{idx + 1}</Celda>
+                        <Celda>{t.trabajo_realizado || '—'}</Celda>
+                        <Celda>{personal || 'Sin técnico'}</Celda>
+                        <Celda mono>{fecha(t.fecha_trabajo)}</Celda>
+                        <Celda mono>{fecha(t.fecha_salida)}</Celda>
+                        <Celda>{origen}</Celda>
+                        <Celda><span className={`otd-fila__estado${registrado ? ' otd-fila__estado--ok' : ''}`}>{registrado ? 'Realizado' : 'Por registrar'}</span></Celda>
+                        <Celda mono alinear="right">{costo > 0 ? soles(costo) : '—'}</Celda>
+                      </tr>
+                    );
+                  })}
+                </TablaRedimensionable>
                 {totalTrabajos > 0 && (
-                  <li className="otd-total"><span>Total mano de obra</span><span className="t-numeric">{soles(totalTrabajos)}</span></li>
+                  <p className="otd-total otd-total--tabla"><span>Total mano de obra</span><span className="t-numeric">{soles(totalTrabajos)}</span></p>
                 )}
-              </ul>
+              </>
             )}
           </section>
 

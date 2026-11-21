@@ -213,3 +213,7 @@
 }
 .otd-fila__estado { font-size: 0.75rem; color: var(--amber-ink); font-weight: 600; }
 .otd-fila__estado--ok { color: var(--green-ink, #15803d); }
+.tabla-redim.tabla-redim--compacta tbody td { padding: 3px 10px; font-size: 0.8125rem; line-height: 1.25; }
+.otd-tr--clic { cursor: pointer; }
+.otd-tr--clic:hover td { background: var(--surface-sunken); }
+.otd-total--tabla { display: flex; justify-content: space-between; margin: 8px 4px 0; font-weight: 700; }
