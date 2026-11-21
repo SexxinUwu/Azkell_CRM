@@ -5,7 +5,7 @@ import * as THREE from 'three-r128';
 import maplibregl from 'maplibre-gl';
 import type { CustomLayerInterface, Map as MapaGL } from 'maplibre-gl';
 import { ZOOM_3D } from './mapaConfig';
-import { construir as construirModelo, type ConfigConstruccion } from '../../placas/tresd/modelos';
+import { compartidos, construir as construirModelo, type ConfigConstruccion } from '../../placas/tresd/modelos';
 import type { ModeloDef } from '../../placas/tresd/modelosDatos';
 import type { LngLat } from './geo';
 
@@ -42,7 +42,21 @@ export interface VistaCamion {
 
 
 type Malla = THREE.Group & { userData: { ring: THREE.Mesh; cone: THREE.Mesh; beam: THREE.Mesh } };
-interface Pieza3D { mesh: Malla; clave: string; /** Radio (m) del cuerpo de la unidad (sin aura ni cono de luz, que no necesitan precisión de profundidad) */ radio: number }
+/**
+ * Cada unidad tiene dos dibujos: uno simple (muy liviano) y el detallado de Placas (200-370 mallas y 55 000-185 000 triángulos, 50-260 ms en armarse).
+ * Con muchas unidades juntas (la base) solo las que se ven grandes en pantalla usan el detallado; el resto, el simple.
+ */
+interface Pieza3D {
+  sim: Malla; radioSim: number;
+  det: Malla | null; radioDet: number;
+  clave: string;
+  /** Última vez (ms) que se dibujó con el detallado */
+  usoDet: number;
+}
+/** Piezas detalladas a la vez en pantalla, y las que se conservan armadas */
+const MAX_DETALLADAS = 3, MAX_GUARDADAS = 6;
+/** Mitad del tamaño en pantalla (px) desde el cual se usa el dibujo detallado (la unidad seleccionada, desde menos) */
+const PX_DETALLE = 70, PX_DETALLE_SEL = 36;
 
 export class Camiones3D {
   readonly capa: CustomLayerInterface;
@@ -132,13 +146,13 @@ export class Camiones3D {
     this.add(g, G.box, M(0xff2a2a, { emissive: 0xff0000, emissiveIntensity: 1.3 }), .3, .16, .06, -1.1, .95, z + len / 2 + .04);
   }
 
-  private construir(d: DescCamion): Pieza3D {
+  private construirGrupo(d: DescCamion, simple: boolean): { g: Malla; radio: number } {
     const G = this.G, M = this.M.bind(this);
     const g = new THREE.Group() as Malla, v = new THREE.Group(); g.add(v);
     const [c1, c2, c3] = d.colors;
     let len = 9, front = -4.3, usado = false;
     // Mismo modelo 3D de la vista Placas en 3D (misma marca, carrocería, ejes y colores)
-    if (d.modelo) {
+    if (d.modelo && !simple) {
       try {
         const m = construirModelo(d.modelo.M, d.modelo.cfg);
         // Como la vista Placas en 3D: el color de la ficha (o el del modelo) pinta la carrocería
@@ -154,7 +168,7 @@ export class Camiones3D {
       } catch (e) { console.warn('Modelo 3D de Placas no disponible, se usa el dibujo simple:', e); while (v.children.length) v.remove(v.children[0]); }
     }
     if (usado) { /* ya construido */ } else {
-    if (d.kind !== 'semi') this.add(v, G.box, M(0x1d2026), 1.1, .35, d.kind === 'rig' ? 6.5 : 8.6, 0, .78, d.kind === 'rig' ? -4.2 : 0);
+    if (d.kind !== 'semi') this.add(v, G.box, M(0x1d2026), 1.1, .35, 8.6, 0, .78, 0);
     if (d.kind === 'semi') {
       // Solo el semirremolque o la carreta: caja (con su equipo de frío si es Thermo King), patas de apoyo y ejes atrás
       this.body(v, 0, 13.2, d.trailer === 'frio' ? 0xf2f4f7 : c1, c2, c3, d.trailer); this.add(v, G.box, M(0x1d2026), 1.0, .3, 13, 0, .95, 0);
@@ -162,10 +176,10 @@ export class Camiones3D {
       const n = Math.max(1, Math.min(3, d.ejes ?? 3));
       this.wheels(v, Array.from({ length: n }, (_, i) => 5.9 - 1.3 * (n - 1 - i)), 1.12); len = 13.4; front = -6.9;
     } else if (d.kind === 'rig') {
-      const fz = this.cab(v, -6.1, c1, c2, d.larga);
-      this.wheels(v, [-6.2, -3.4, -2.1], 1.12); this.add(v, G.box, M(0x2a2f36), 1.4, .15, 1.4, 0, 1.05, -2.8);
-      this.body(v, 3.2, 13.2, d.trailer === 'frio' ? 0xf2f4f7 : c1, c2, c3, d.trailer); this.add(v, G.box, M(0x1d2026), 1.0, .3, 13, 0, .95, 3.2);
-      this.wheels(v, [6.9, 8.2, 9.5], 1.12); len = 17.5; front = fz;
+      // Solo el tracto (como en Placas): cabina, chasis, ejes y quinta rueda
+      const fz = this.cab(v, -3.2, c1, c2, d.larga);
+      this.wheels(v, [-3.3, 1.2, 2.5], 1.1); this.add(v, G.box, M(0x2a2f36), 1.4, .15, 1.4, 0, 1.05, 1.9);
+      len = 9; front = fz;
     } else {
       const fz = this.cab(v, -3.2, c1, c2, d.larga);
       this.wheels(v, [-3.3, 2.0, 3.3], 1.1); this.body(v, .95, 6.5, d.kind === 'reefer' ? 0xf2f4f7 : c1, c2, c3, d.kind === 'reefer' ? 'frio' : 'furgon');
@@ -181,65 +195,123 @@ export class Camiones3D {
     beam.scale.set(1.2, 90, 1.2); beam.position.y = 45; g.add(beam);
     g.userData = { ring, cone, beam };
     g.visible = false; this.scene.add(g);
-    return { mesh: g, clave: JSON.stringify(d), radio: len / 2 + 5 };
+    return { g, radio: len / 2 + 5 };
   }
 
+  /** Arma la versión simple de la unidad (la detallada solo cuando se pide) */
+  private armar(d: DescCamion): Pieza3D {
+    const s = this.construirGrupo(d, true);
+    return { sim: s.g, radioSim: s.radio, det: null, radioDet: s.radio, clave: JSON.stringify(d), usoDet: 0 };
+  }
+
+  /** Libera lo propio de un grupo (geometrías y texturas de Placas, aura y cono); lo compartido se conserva */
+  private liberarGrupo(g: THREE.Object3D) {
+    this.scene.remove(g);
+    const comp = compartidos as Set<object>, geos = new Set<object>(Object.values(this.G)), mats = new Set<object>(Object.values(this.matCache));
+    const tex = new Set<object>([this.glowTex, this.coneTex]);
+    g.traverse(o => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      if (m.geometry && !comp.has(m.geometry) && !geos.has(m.geometry)) m.geometry.dispose();
+      for (const mt of (Array.isArray(m.material) ? m.material : [m.material])) {
+        if (!mt || mats.has(mt)) continue;
+        const t = (mt as THREE.MeshStandardMaterial).map;
+        if (t && !comp.has(t) && !tex.has(t)) t.dispose();
+        mt.dispose();
+      }
+    });
+  }
+
+  private ultimaDet = 0;
+  private ultimaLimpieza = 0;
   private dibujar(args: { defaultProjectionData: { mainMatrix: number[] } }) {
     const m = this.mapa, r = this.renderer;
     if (!m || !r) return;
     const z = m.getZoom();
     if (!this.activa || z < ZOOM_3D) return;
     const principal = new THREE.Matrix4().fromArray(args.defaultProjectionData.mainMatrix);
-    const k = Math.max(this.exacto ? 1 : 1.3, Math.min(6, Math.pow(2, 19.1 - z))), night = this.noche, t = performance.now() / 1000;
+    const k = Math.max(this.exacto ? 1 : 1.3, Math.min(6, Math.pow(2, 19.1 - z))), night = this.noche, t = performance.now() / 1000, ahora = performance.now();
     this.hemi.intensity = night ? .55 : .95; this.sunL.intensity = night ? .35 : .95;
     const fade = Math.min(1, (z - ZOOM_3D) / .8);
+    const lienzo = m.getCanvas(), W = lienzo.clientWidth || 1, H = lienzo.clientHeight || 1;
     const vivas = new Set<string>();
-    const activos: Array<{ g: Malla; radio: number; mc: maplibregl.MercatorCoordinate; elev: number; P: THREE.Matrix4; w: number; lo: number; hi: number }> = [];
+    interface Cand { u: VistaCamion; e: Pieza3D; mc: maplibregl.MercatorCoordinate; elev: number; P: THREE.Matrix4; w: number; px: number }
+    const cands: Cand[] = [];
     const v4 = new THREE.Vector4();
+    // 1) Cada unidad que se ve: su dibujo simple, su matriz y su tamaño en pantalla
     for (const u of this.vistas) {
       vivas.add(u.placa);
       let e = this.piezas.get(u.placa);
       const clave = JSON.stringify(u.desc);
       const p = u.pos;
-      // Solo se arma la unidad que se ve (los modelos de Placas son detallados): las demás se arman cuando aparecen
       if ((!e || e.clave !== clave) && p && u.visible) {
-        if (e) this.scene.remove(e.mesh);
-        e = this.construir(u.desc);
+        if (e) { this.liberarGrupo(e.sim); if (e.det) this.liberarGrupo(e.det); }
+        e = this.armar(u.desc);
         this.piezas.set(u.placa, e);
       }
       if (!e) continue;
-      const g = e.mesh;
-      g.visible = false;
+      e.sim.visible = false; if (e.det) e.det.visible = false;
       if (!p || !u.visible) continue;
       const mc = maplibregl.MercatorCoordinate.fromLngLat(p, 0);
       const elev = (this.relieve && m.queryTerrainElevation(p)) || 0;
-      g.rotation.y = -u.rumbo * Math.PI / 180; g.scale.setScalar(k * fade + .001);
-      const d = g.userData, sel = u.sel;
-      (d.ring.material as THREE.MeshBasicMaterial).color.set(ST[u.st].c);
-      (d.ring.material as THREE.MeshBasicMaterial).opacity = (sel ? .95 : .6) * (night ? 1 : .7);
-      d.cone.visible = night && u.st === 'mov';
-      d.beam.visible = sel;
-      if (sel) (d.beam.material as THREE.MeshBasicMaterial).opacity = .18 + .1 * Math.sin(t * 3);
       // Cada unidad se dibuja con su propio origen (su posición): los números del modelo quedan pequeños y no pierden precisión.
       // Con un origen común en Lima, a 400-600 km los vértices se redondeaban a ~6 cm y las piezas casi pegadas (parrilla, parachoques, franjas) salían manchadas.
-      g.position.set(0, elev, 0);
-      const ms = mc.meterInMercatorCoordinateUnits();
+      const ms = mc.meterInMercatorCoordinateUnits(), sc = k * fade + .001;
       const P = principal.clone()
         .multiply(new THREE.Matrix4().makeTranslation(mc.x, mc.y, 0))
         .multiply(new THREE.Matrix4().makeScale(ms, -ms, ms))
         .multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2));
-      // ¿Se ve en pantalla? y rango de distancias (w) que ocupa, para ajustar cerca/lejos a la propia unidad
-      const sc = g.scale.x, R = e.radio * sc, pe = P.elements;
+      const R = e.radioSim * sc, pe = P.elements;
       v4.set(0, elev + 2 * sc, 0, 1).applyMatrix4(P);
       const dw = R * Math.hypot(pe[3], pe[7], pe[11]);
       const gx = Math.hypot(pe[0], pe[4], pe[8]), gy = Math.hypot(pe[1], pe[5], pe[9]);
       if (!(v4.w + dw > 0 && Math.abs(v4.x) <= v4.w + dw + R * gx && Math.abs(v4.y) <= v4.w + dw + R * gy)) continue;
-      activos.push({ g, radio: e.radio, mc, elev, P, w: v4.w, lo: v4.w - dw, hi: v4.w + dw });
+      const px = Math.max(R * gx / Math.max(v4.w, 1e-12) * W / 2, R * gy / Math.max(v4.w, 1e-12) * H / 2);
+      cands.push({ u, e, mc, elev, P, w: v4.w, px });
     }
     // Unidades que ya no están: se quitan de la escena
-    for (const [placa, e] of this.piezas) if (!vivas.has(placa)) { this.scene.remove(e.mesh); this.piezas.delete(placa); }
-    if (!activos.length) return;
-    // De la más lejana a la más cercana: cada una se dibuja con su propia profundidad
+    for (const [placa, e] of this.piezas) if (!vivas.has(placa)) { this.liberarGrupo(e.sim); if (e.det) this.liberarGrupo(e.det); this.piezas.delete(placa); }
+    if (!cands.length) return;
+
+    // 2) El dibujo detallado, solo para las que se ven grandes (primero la seleccionada y las más grandes), como máximo MAX_DETALLADAS,
+    //    y armando una por vez (cada una tarda 50-260 ms): con 15 unidades juntas, como en la base, el mapa se congelaba
+    const orden = [...cands].sort((a, b) => (Number(b.u.sel) - Number(a.u.sel)) || b.px - a.px);
+    let nDet = 0;
+    const usaDet = new Set<Cand>();
+    for (const c of orden) {
+      if (nDet >= MAX_DETALLADAS || !c.u.desc.modelo) break;
+      if (c.px < (c.u.sel ? PX_DETALLE_SEL : PX_DETALLE)) continue;
+      if (!c.e.det) {
+        if (ahora - this.ultimaDet < 700) continue;
+        try {
+          const d = this.construirGrupo(c.u.desc, false);
+          c.e.det = d.g; c.e.radioDet = d.radio; this.ultimaDet = performance.now();
+        } catch (err) { console.warn('Modelo detallado no disponible:', err); continue; }
+      }
+      usaDet.add(c); nDet++; c.e.usoDet = ahora;
+    }
+    // Se conservan armadas pocas piezas detalladas: las que hace rato no se usan se liberan
+    if (ahora - this.ultimaLimpieza > 2000) {
+      this.ultimaLimpieza = ahora;
+      const conDet = [...this.piezas.values()].filter(e => e.det).sort((a, b) => a.usoDet - b.usoDet);
+      for (let i = 0; i < conDet.length - MAX_GUARDADAS; i++) { if (ahora - conDet[i].usoDet > 8000) { this.liberarGrupo(conDet[i].det!); conDet[i].det = null; } }
+    }
+
+    // 3) Posición, rango de profundidad y dibujo de cada una, de la más lejana a la más cercana
+    const activos: Array<{ g: Malla; P: THREE.Matrix4; w: number; lo: number; hi: number }> = [];
+    for (const c of cands) {
+      const grande = usaDet.has(c), g = grande ? c.e.det! : c.e.sim, radio = grande ? c.e.radioDet : c.e.radioSim;
+      g.position.set(0, c.elev, 0);
+      g.rotation.y = -c.u.rumbo * Math.PI / 180; g.scale.setScalar(k * fade + .001);
+      const d = g.userData, sel = c.u.sel;
+      (d.ring.material as THREE.MeshBasicMaterial).color.set(ST[c.u.st].c);
+      (d.ring.material as THREE.MeshBasicMaterial).opacity = (sel ? .95 : .6) * (night ? 1 : .7);
+      d.cone.visible = night && c.u.st === 'mov';
+      d.beam.visible = sel;
+      if (sel) (d.beam.material as THREE.MeshBasicMaterial).opacity = .18 + .1 * Math.sin(t * 3);
+      const sc = g.scale.x, pe = c.P.elements, dw = radio * sc * Math.hypot(pe[3], pe[7], pe[11]);
+      activos.push({ g, P: c.P, w: c.w, lo: c.w - dw, hi: c.w + dw });
+    }
     activos.sort((a, b) => b.w - a.w);
     r.resetState();
     for (const a of activos.slice(-40)) {
@@ -257,7 +329,7 @@ export class Camiones3D {
 
   /** Libera la escena (solo al cerrar la sesión) */
   liberar() {
-    this.piezas.forEach(e => this.scene.remove(e.mesh));
+    this.piezas.forEach(e => { this.liberarGrupo(e.sim); if (e.det) this.liberarGrupo(e.det); });
     this.piezas.clear();
     Object.values(this.G).forEach(g => g.dispose());
     Object.values(this.matCache).forEach(m => m.dispose());
