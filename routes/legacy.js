@@ -1279,6 +1279,7 @@ router.post('/:metodo', async (req, res) => {
             });
         };
 
+        const _continuar = () => {
         if (isEdit) {
             const placaEnviada = (form.editF_placa || '').trim();
             if (!placaEnviada) {
@@ -1304,6 +1305,22 @@ router.post('/:metodo', async (req, res) => {
                 generarIdFleetrunUnico(placaNueva, tipoMpNuevo, fechaNueva, _ejecutarGuardado);
             }
         }
+        };
+
+        // Solo se registra un preventivo cuyo tipo esté en la lista de tipos de preventivo (Frecuencias de mantenimiento)
+        const tipoPedido = String((isEdit ? form.editF_tipomp : form.f_tipomp) || '').replace(/\s+/g, ' ').replace(/\s+,/g, ',').trim();
+        if (isEdit) form.editF_tipomp = tipoPedido; else form.f_tipomp = tipoPedido;
+        reqDb.query(
+            "SELECT 1 FROM tipos_mantenimiento WHERE UPPER(TRIM(REPLACE(REPLACE(tipo_mp, '  ', ' '), ' ,', ','))) = UPPER(?) LIMIT 1",
+            [tipoPedido],
+            (errTipo, filasTipo) => {
+                if (errTipo) return res.json({ data: 'Error BD: ' + errTipo.message });
+                if (!tipoPedido || !filasTipo.length) {
+                    return res.json({ data: `Error: el tipo de mantenimiento «${tipoPedido || 'vacío'}» no está en la lista de tipos de preventivo. Regístralo primero en Frecuencias de mantenimiento.` });
+                }
+                _continuar();
+            }
+        );
         return;
     }
 

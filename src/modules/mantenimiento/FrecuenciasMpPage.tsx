@@ -28,6 +28,8 @@ interface TipoMp {
 }
 type Borrador = Partial<Omit<TipoMp, 'id' | 'frecuencia_km' | 'frecuencia_horas' | 'frecuencia_dias'>> & { id?: number; frecuencia_km?: string; frecuencia_horas?: string; frecuencia_dias?: string };
 
+/** Un solo espacio entre palabras y ninguno al borde: un espacio de más hacía que el tipo no coincidiera con sus registros */
+const sinEspaciosDobles = (t: string) => t.replace(/\s+/g, ' ').replace(/\s+,/g, ',').trim();
 const aNumero = (v?: string) => (v && v.trim() ? parseInt(v, 10) || null : null);
 
 const COLUMNAS: ColumnaTabla[] = [
@@ -116,7 +118,7 @@ export function FrecuenciasMpPage() {
     if (!borrador) return;
     if (!(borrador.marca ?? '').trim() || !(borrador.tipo_mp ?? '').trim()) { toast('La marca y el tipo de MP son obligatorios', 'error'); haptic('warning'); return; }
     const cuerpo = {
-      marca: (borrador.marca ?? '').trim().toUpperCase(), tipo_mp: (borrador.tipo_mp ?? '').trim().toUpperCase(),
+      marca: sinEspaciosDobles(borrador.marca ?? '').toUpperCase(), tipo_mp: sinEspaciosDobles(borrador.tipo_mp ?? '').toUpperCase(),
       modelo: (borrador.modelo ?? '').trim().toUpperCase() || null, uts: (borrador.uts ?? '').trim().toUpperCase() || null,
       combustible: (borrador.combustible ?? '').trim().toUpperCase() || null, tipo: (borrador.tipo ?? '').trim() || null,
       sistema: (borrador.sistema ?? '').trim() || null, descripcion: (borrador.descripcion ?? '').trim() || null,
@@ -156,8 +158,9 @@ export function FrecuenciasMpPage() {
           aria-describedby={p['aria-describedby']}
           options={opcionesCampo}
           value={String(borrador?.[k] ?? '') || null}
+          enHoja compacta tituloHoja={label}
           onChange={v => setBorrador(b => (b ? { ...b, [k]: v ?? '' } : b))}
-          onCreate={texto => setBorrador(b => (b ? { ...b, [k]: texto.trim() } : b))}
+          onCreate={texto => setBorrador(b => (b ? { ...b, [k]: sinEspaciosDobles(texto) } : b))}
           createLabel="Usar"
           placeholder="Elige o escribe para buscar…"
         />
