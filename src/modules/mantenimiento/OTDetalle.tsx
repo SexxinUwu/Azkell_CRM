@@ -1,3 +1,4 @@
+import { mantenerUrl } from '../../core/lib/blobUrl';
 import { formatFechaHoraPe, formatSoles } from '../../core/lib/format';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -363,7 +364,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
       const url = URL.createObjectURL(await generar());
       if (win) win.location.href = url;
       else { const a = document.createElement('a'); a.href = url; a.download = nombre; document.body.appendChild(a); a.click(); a.remove(); }
-      setTimeout(() => URL.revokeObjectURL(url), 120_000);
+      mantenerUrl(url);
     } catch (err) {
       win?.close();
       throw err;

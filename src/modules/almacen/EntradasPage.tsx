@@ -1,3 +1,4 @@
+import { mantenerUrl } from '../../core/lib/blobUrl';
 import '../../core/ui/acciones-iconos.css';
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
@@ -353,7 +354,7 @@ export function EntradasPage() {
         const url = URL.createObjectURL(blob);
         if (ventana) ventana.location.href = url;
         else window.open(url, '_blank');
-        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        mantenerUrl(url);
       } else {
         descargarArchivo(blob, `Orden_de_Compra_${codigoLimpio(o.id)}.pdf`);
       }

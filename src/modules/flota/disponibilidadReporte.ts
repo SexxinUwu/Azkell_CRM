@@ -1,6 +1,7 @@
 // PDF de la disponibilidad: lo que se ve con los filtros, en A4 horizontal, con el logo y el título de la empresa y la flota
 // segmentada por estado (en ruta, en base, en mantenimiento). El HTML se arma aquí y el servidor lo convierte con Chromium (texto real).
 // Se abre en otra pestaña con el visor del navegador; el mismo PDF se comparte por WhatsApp.
+import { mantenerUrl } from '../../core/lib/blobUrl';
 import { apiFetch } from '../../core/api/client';
 import { pestanaConCamion } from '../../core/ui/CargaCamion';
 import { compartirPDF } from '../../core/lib/pdf';
@@ -143,7 +144,7 @@ export async function abrirDisponibilidadPDF(filas: VehiculoDisponibilidad[], es
   try {
     const url = URL.createObjectURL(await pedirPdf(filas, estadoElegido, criterios, empresa));
     if (ventana) ventana.location.href = url; else window.open(url, '_blank');
-    setTimeout(() => URL.revokeObjectURL(url), 120_000);
+    mantenerUrl(url);
   } catch (err) { ventana?.close(); throw err; }
 }
 

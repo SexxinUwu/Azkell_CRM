@@ -1,6 +1,7 @@
 // Garita: acta del registro de control (F-SEG-002) en HTML para imprimir/guardar PDF y compartir.
 // Replica el acta del clásico (modulos/seguridad/unidades/logica.js: _sguBuildPageHtml / Completo).
 // Usa las clases de Tailwind de /libs/tailwind.min.js dentro de una ventana o iframe aparte, igual que el clásico.
+import { mantenerUrl } from '../../core/lib/blobUrl';
 import { api } from '../../core/api/client';
 
 export type FaseActa = 'salida' | 'retorno' | 'completo';
@@ -330,7 +331,7 @@ export function abrirActaParaImprimir(html: string, titulo: string, placas: stri
     + `</body></html>`;
   const url = URL.createObjectURL(new Blob([doc], { type: 'text/html;charset=utf-8' }));
   const w = window.open(url, '_blank');
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  mantenerUrl(url);
   return !!w;
 }
 

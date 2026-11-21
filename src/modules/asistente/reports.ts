@@ -1,5 +1,6 @@
 // Archivos de los reportes del asistente. Los datos llegan del servidor (con los permisos de la
 // persona) y el archivo se arma aquí, en el navegador. Las librerías se cargan solo al usarlas.
+import { mantenerUrl } from '../../core/lib/blobUrl';
 import { api } from '../../core/api/client';
 
 export type ReportType = 'placas' | 'inspecciones' | 'conductores' | 'fleetrun' | 'costos_ot' | 'ordenes_trabajo' | 'compras' | 'inventario' | 'neumaticos';
@@ -157,11 +158,11 @@ export function saveFile(file: ReportFile) {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  mantenerUrl(url);
 }
 
 export function openFile(file: ReportFile) {
   const url = URL.createObjectURL(file.blob);
   window.open(url, '_blank', 'noopener');
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  mantenerUrl(url);
 }

@@ -1,5 +1,6 @@
 // Herramientas de Status de rampa: configurador de bahías, reporte PDF y envío por WhatsApp.
 // Las reglas del reporte (qué bahías salen) están en rampasReporte.ts.
+import { mantenerUrl } from '../../core/lib/blobUrl';
 import { useState } from 'react';
 import { Reorder, useDragControls, useReducedMotion } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -172,7 +173,7 @@ export async function abrirPdfRampas(filas: FilaPdfRampa[] | Promise<FilaPdfRamp
     const blob = await generarPdfRampas(await filas, d);
     const url = URL.createObjectURL(blob);
     win.location.href = url;
-    setTimeout(() => URL.revokeObjectURL(url), 120_000);
+    mantenerUrl(url);
   } catch (err) {
     win.close();
     throw err;

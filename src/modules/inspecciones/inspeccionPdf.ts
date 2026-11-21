@@ -1,6 +1,7 @@
 // Informe de una inspección en PDF: sencillo de leer, con el medidor de combustible, las fallas con su observación y foto,
 // las fotos de evidencia y la firma del inspector. El HTML se arma aquí y el servidor lo convierte con Chromium (texto real);
 // las fotos se incrustan en el servidor (por eso el HTML lleva marcas @@FOTO:n@@).
+import { mantenerUrl } from '../../core/lib/blobUrl';
 import { apiFetch } from '../../core/api/client';
 import { pestanaConCamion } from '../../core/ui/CargaCamion';
 import { htmlInspeccion, type DatosInspeccionPdf } from './inspeccionPdfHtml';
@@ -36,6 +37,6 @@ export async function abrirPdfInspeccion(d: DatosInspeccionPdf): Promise<void> {
   try {
     const url = URL.createObjectURL(await pdfInspeccion(d));
     if (ventana) ventana.location.href = url; else window.open(url, '_blank');
-    setTimeout(() => URL.revokeObjectURL(url), 120_000);
+    mantenerUrl(url);
   } catch (err) { ventana?.close(); throw err; }
 }

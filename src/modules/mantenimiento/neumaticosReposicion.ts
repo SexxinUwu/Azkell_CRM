@@ -1,5 +1,6 @@
 // Requerimiento de llantas para reposición: una llanta entra cuando su remanente es MENOR O IGUAL al umbral elegido
 // (por defecto 3 mm, igual que el clásico). El semáforo global (crítica < 3 mm) no cambia: esto es solo el pedido de compra.
+import { mantenerUrl } from '../../core/lib/blobUrl';
 import { hoyLima } from '../../core/lib/format';
 import { exportarExcel, exportarExcelHojas } from '../../core/lib/excel';
 import { generarPDFBlob } from '../../core/lib/pdf';
@@ -210,7 +211,7 @@ export async function abrirResumenPdf(filas: FilaResumen[], umbral: number) {
     const url = URL.createObjectURL(blob);
     if (win) win.location.href = url;
     else { const a = document.createElement('a'); a.href = url; a.download = `Reposicion-neumaticos-${textoUmbral(umbral).replace(/\s/g, '')}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
-    setTimeout(() => URL.revokeObjectURL(url), 120_000);
+    mantenerUrl(url);
   } catch (err) {
     win?.close();
     throw err;

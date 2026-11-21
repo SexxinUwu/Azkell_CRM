@@ -1,3 +1,4 @@
+import { mantenerUrl } from '../../core/lib/blobUrl';
 import { useRef, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { Box, History, Printer, Trash2 } from 'lucide-react';
@@ -73,7 +74,7 @@ export function PlacaFicha({ placa, onClose, onEditar, onEliminar }: { placa: Pl
       }
       const url = URL.createObjectURL(await res.blob());
       ventana.location.href = url;
-      window.setTimeout(() => URL.revokeObjectURL(url), 5 * 60_000);
+      mantenerUrl(url);
       haptic('success');
     } catch (err) {
       ventana.close();

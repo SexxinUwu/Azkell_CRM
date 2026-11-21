@@ -1,3 +1,4 @@
+import { mantenerUrl } from '../../core/lib/blobUrl';
 import '../../core/ui/acciones-iconos.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -264,7 +265,7 @@ export function SalidasPage() {
       if (vistaPrevia && ventana) {
         const url = URL.createObjectURL(blob);
         ventana.location.href = url;
-        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        mantenerUrl(url);
       } else {
         ventana?.close();
         descargarArchivo(blob, `Salida_${s.id}.pdf`);

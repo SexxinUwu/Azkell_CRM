@@ -1,3 +1,4 @@
+import { mantenerUrl } from '../../core/lib/blobUrl';
 import { hoyLima } from '../../core/lib/format';
 import { otDetalles, otFecha, otId, type OrdenTrabajo } from './api';
 import { costoOT } from './tiemposTaller';
@@ -106,7 +107,7 @@ export async function abrirPdfReportesOT(lista: OrdenTrabajo[], filtros: string[
     const url = URL.createObjectURL(doc.output('blob'));
     if (win) win.location.href = url;
     else { const a = document.createElement('a'); a.href = url; a.download = `Reporte_OT_${hoyLima()}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
-    setTimeout(() => URL.revokeObjectURL(url), 120_000);
+    mantenerUrl(url);
   } catch (err) {
     win?.close();
     throw err;

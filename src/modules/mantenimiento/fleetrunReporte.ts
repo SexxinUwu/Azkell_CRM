@@ -1,5 +1,6 @@
 // Reporte F-MAN-006 de mantenimientos preventivos: la pantalla arma las filas visibles y el servidor (services/fleetrun_reporte.js)
 // lo convierte a PDF con Chromium, con el mismo formato del clásico. También sirve para mandarlo por WhatsApp.
+import { mantenerUrl } from '../../core/lib/blobUrl';
 import { apiFetch } from '../../core/api/client';
 import { pestanaConCamion } from '../../core/ui/CargaCamion';
 
@@ -76,7 +77,7 @@ export async function abrirPdfEnVisor(generar: () => Promise<Blob>, nombre: stri
     const url = URL.createObjectURL(await generar());
     if (win) win.location.href = url;
     else { const a = document.createElement('a'); a.href = url; a.download = nombre; document.body.appendChild(a); a.click(); a.remove(); }
-    setTimeout(() => URL.revokeObjectURL(url), 120_000);
+    mantenerUrl(url);
   } catch (err) {
     win?.close();
     throw err;
