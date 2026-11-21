@@ -80,7 +80,7 @@ export function FrecuenciasMpPage() {
   const opciones = (...listas: Array<Array<string | null | undefined>>): ComboboxOption[] => {
     const vistos = new Map<string, string>();
     for (const l of listas) for (const v of l) {
-      const texto = (v ?? '').trim().replace(/s+/g, ' ');
+      const texto = (v ?? '').trim().replace(/\s+/g, ' ');
       if (!texto) continue;
       const clave = texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (!vistos.has(clave)) vistos.set(clave, texto);
@@ -197,15 +197,15 @@ export function FrecuenciasMpPage() {
                 <Celda>{r.sistema || '—'}</Celda>
                 <Celda>{r.combustible || '—'}</Celda>
                 <Celda>{r.uts || 'Todas'}</Celda>
-                <Celda mono>{r.frecuencia_km ? r.frecuencia_km.toLocaleString('es-PE') : '—'}</Celda>
-                <Celda mono>{r.frecuencia_horas ? r.frecuencia_horas.toLocaleString('es-PE') : '—'}</Celda>
-                <Celda mono>{r.frecuencia_dias ? r.frecuencia_dias.toLocaleString('es-PE') : '—'}</Celda>
+                <Celda mono>{r.frecuencia_km ? Number(r.frecuencia_km).toLocaleString('es-PE') : '—'}</Celda>
+                <Celda mono>{r.frecuencia_horas ? Number(r.frecuencia_horas).toLocaleString('es-PE') : '—'}</Celda>
+                <Celda mono>{r.frecuencia_dias ? Number(r.frecuencia_dias).toLocaleString('es-PE') : '—'}</Celda>
                 <Celda>{r.descripcion || '—'}</Celda>
                 <Celda>
                   {puedeEditar && (
                     <span style={{ display: 'inline-flex', gap: 'var(--s-1)' }}>
-                      <Button variant="secondary" icon={<Pencil size={15} />} aria-label={`Editar ${r.tipo_mp}`} onClick={() => abrirEditar(r)}>{''}</Button>
-                      <Button variant="secondary" icon={<Trash2 size={15} />} aria-label={`Eliminar ${r.tipo_mp}`} onClick={() => setPorEliminar(r)}>{''}</Button>
+                      <Button variant="plain" size="sm" iconOnly icon={<Pencil size={14} />} aria-label={`Editar ${r.tipo_mp}`} onClick={() => abrirEditar(r)}>{''}</Button>
+                      <Button variant="plain" size="sm" iconOnly icon={<Trash2 size={14} />} aria-label={`Eliminar ${r.tipo_mp}`} onClick={() => setPorEliminar(r)}>{''}</Button>
                     </span>
                   )}
                 </Celda>

@@ -2,7 +2,9 @@
 // Una sola plantilla para la pantalla nueva y el clásico. Recibe las filas de mantenimiento ya leídas por el cliente
 // (una por placa y tipo) y decide aquí qué entra al reporte: vencidos y próximos a vencer, agrupados por placa.
 
-const ESTADO = { VENCIDO: 'VENCIDO', PROXIMO: 'PROXIMO' };
+const ESTADO = { VENCIDO: 'VENCIDO', PROXIMO: 'PROXIMO', VIGENTE: 'VIGENTE' };
+// Orden de gravedad: vencido primero, vigente al final
+const GRAVEDAD = { VENCIDO: 1, PROXIMO: 2, VIGENTE: 3 };
 
 const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const numero = (v) => Number(v || 0).toLocaleString('es-PE');
@@ -24,8 +26,8 @@ function rangoUts(uts) {
   return u === 'NACIONAL' ? 1 : u === 'LOCAL' ? 2 : 3;
 }
 
-/** Una fila del reporte por cada tipo de mantenimiento vencido o próximo; sin tipo vigente no entra */
-function filasDelReporte(filas) {
+/** Una fila del reporte por cada tipo de mantenimiento vencido o próximo; los vigentes solo entran si se pide el estado completo */
+function filasDelReporte(filas, incluirVigentes = false) {
   const porPlaca = new Map();
   for (const f of filas) {
     const kmGps = Number(f.kmGps) || 0;
@@ -39,6 +41,7 @@ function filasDelReporte(filas) {
     let estado;
     if (kmRestante <= 0) estado = ESTADO.VENCIDO;
     else if (kmRestante <= umbral) estado = ESTADO.PROXIMO;
+    else if (incluirVigentes) estado = ESTADO.VIGENTE;
     else continue;
 
     const placa = String(f.placa || '-').trim().toUpperCase();
@@ -66,18 +69,14 @@ function filasDelReporte(filas) {
 /** Ordena cada placa (vencidos primero) y calcula su estado global y su mantenimiento más crítico */
 function unidadesOrdenadas(unidades) {
   for (const u of unidades) {
-    u.mantenimientos.sort((a, b) => {
-      if (a.estado === ESTADO.VENCIDO && b.estado !== ESTADO.VENCIDO) return -1;
-      if (a.estado !== ESTADO.VENCIDO && b.estado === ESTADO.VENCIDO) return 1;
-      return a.kmRestante - b.kmRestante;
-    });
-    u.estadoGlobal = u.mantenimientos.some(m => m.estado === ESTADO.VENCIDO) ? ESTADO.VENCIDO : ESTADO.PROXIMO;
+    u.mantenimientos.sort((a, b) => (GRAVEDAD[a.estado] - GRAVEDAD[b.estado]) || (a.kmRestante - b.kmRestante));
+    u.estadoGlobal = u.mantenimientos[0].estado;
     u.masCritico = u.mantenimientos[0];
   }
   return unidades.sort((a, b) => {
     const r = rangoUts(a.uts) - rangoUts(b.uts);
     if (r) return r;
-    const e = (a.estadoGlobal === ESTADO.VENCIDO ? 1 : 2) - (b.estadoGlobal === ESTADO.VENCIDO ? 1 : 2);
+    const e = GRAVEDAD[a.estadoGlobal] - GRAVEDAD[b.estadoGlobal];
     if (e) return e;
     return a.masCritico.kmRestante - b.masCritico.kmRestante;
   });
@@ -143,16 +142,20 @@ const ESTILO = `
   .pie { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; font-size: 7.6px; color: #86868b; }
 `;
 
+const TONO = {
+  VENCIDO: { tinta: '#b91c1c', fondo: '#fee2e2', etiqueta: 'VENCIDO' },
+  PROXIMO: { tinta: '#b45309', fondo: '#fef3c7', etiqueta: 'PRÓXIMO' },
+  VIGENTE: { tinta: '#15803d', fondo: '#dcfce7', etiqueta: 'VIGENTE' },
+};
+
 /** Una fila del reporte: los tonos de estado son suaves (fondo claro y texto del mismo color) */
-function filaHtml(u, indice) {
+function filaHtml(u, indice, completo) {
   const unidad = u.esHoras ? ' h' : ' km';
-  const vencido = u.estadoGlobal === ESTADO.VENCIDO;
-  const tinta = vencido ? '#b91c1c' : '#b45309';
-  const fondo = vencido ? '#fee2e2' : '#fef3c7';
-  const etiqueta = vencido ? 'VENCIDO' : 'PRÓXIMO';
+  const { tinta, fondo, etiqueta } = TONO[u.estadoGlobal];
   const falta = u.masCritico.kmRestante;
   const utsColor = rangoUts(u.uts) === 1 ? '#0a64d6' : rangoUts(u.uts) === 2 ? '#0f766e' : '#475569';
-  const obs = u.mantenimientos.map(m => `<div class="tipo"><span class="punto">•</span> ${esc(tipoOracion(m.tipo))}</div>`).join('');
+  // En el estado completo cada preventivo lleva el color de su estado (rojo, ámbar o verde)
+  const obs = u.mantenimientos.map(m => `<div class="tipo"><span class="punto" style="color:${completo ? TONO[m.estado].tinta : '#0a84ff'}">•</span> ${esc(tipoOracion(m.tipo))}</div>`).join('');
   return `
   <tr>
     <td class="c"><span class="placa">${esc(u.placa)}</span></td>
@@ -174,15 +177,17 @@ function filaHtml(u, indice) {
  * @param {object} datos  { filas, empresa, logo (data URL o null), emisor, ahora (Date) }
  */
 function htmlReporteFleetrun(datos) {
-  const unidades = unidadesOrdenadas(filasDelReporte(datos.filas || []));
+  const completo = !!datos.incluirVigentes;
+  const unidades = unidadesOrdenadas(filasDelReporte(datos.filas || [], completo));
   const vencidas = unidades.filter(u => u.estadoGlobal === ESTADO.VENCIDO).length;
-  const proximas = unidades.length - vencidas;
+  const proximas = unidades.filter(u => u.estadoGlobal === ESTADO.PROXIMO).length;
+  const vigentes = unidades.filter(u => u.estadoGlobal === ESTADO.VIGENTE).length;
   const ahora = datos.ahora || new Date();
   const fmt = new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
   const partes = Object.fromEntries(fmt.formatToParts(ahora).map(p => [p.type, p.value]));
   const emision = `${partes.day}/${partes.month}/${partes.year} ${partes.hour}:${partes.minute}`;
   const fechaCorta = `${partes.day}/${partes.month}/${partes.year}`;
-  const filas = unidades.map((u, i) => filaHtml(u, i + 1)).join('');
+  const filas = unidades.map((u, i) => filaHtml(u, i + 1, completo)).join('');
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -207,9 +212,10 @@ function htmlReporteFleetrun(datos) {
     <span>Emitido por <b style="color:#1d1d1f">${esc(datos.emisor || '—')}</b></span>
   </div>
   <div class="resumen">
-    <div class="tarjeta"><span class="tarjeta-num" style="color:#3a3a3c">${unidades.length}</span><span class="tarjeta-txt">Unidades en alerta</span></div>
+    <div class="tarjeta"><span class="tarjeta-num" style="color:#3a3a3c">${unidades.length}</span><span class="tarjeta-txt">${completo ? 'Unidades' : 'Unidades en alerta'}</span></div>
     <div class="tarjeta" style="background:#fee2e2"><span class="tarjeta-num" style="color:#b91c1c">${vencidas}</span><span class="tarjeta-txt">Vencidas</span></div>
     <div class="tarjeta" style="background:#fef3c7"><span class="tarjeta-num" style="color:#b45309">${proximas}</span><span class="tarjeta-txt">Próximas a vencer</span></div>
+    ${completo ? `<div class="tarjeta" style="background:#dcfce7"><span class="tarjeta-num" style="color:#15803d">${vigentes}</span><span class="tarjeta-txt">Vigentes</span></div>` : ''}
   </div>
   <table class="tabla">
     <colgroup>
@@ -219,7 +225,7 @@ function htmlReporteFleetrun(datos) {
     <thead>
       <tr>
         <th>Placa</th><th>Clase</th><th>Marca</th><th>F. últ. cambio</th><th>Estado</th>
-        <th style="text-align:left;">Preventivos pendientes</th>
+        <th style="text-align:left;">${completo ? 'Preventivos' : 'Preventivos pendientes'}</th>
         <th>Km real</th><th>Km faltante</th><th>Km próximo</th><th>UTS</th><th style="text-align:left;">Ubicación</th>
       </tr>
     </thead>

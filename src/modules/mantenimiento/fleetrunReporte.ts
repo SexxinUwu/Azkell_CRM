@@ -54,12 +54,12 @@ async function logoComoDataUrl(): Promise<string | null> {
 }
 
 /** Pide el PDF del reporte al servidor (Chromium) */
-export async function pedirReportePreventivo(filas: FilaReporte[], empresa: string, emisor: string): Promise<Blob> {
+export async function pedirReportePreventivo(filas: FilaReporte[], empresa: string, emisor: string, incluirVigentes = false): Promise<Blob> {
   const logo = await logoComoDataUrl();
   const res = await apiFetch('/taller/fleetrun-pdf', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filas, empresa, emisor, logo }),
+    body: JSON.stringify({ filas, empresa, emisor, logo, incluirVigentes }),
   });
   if (!res.ok) throw new Error('No se pudo generar el PDF del reporte');
   return res.blob();

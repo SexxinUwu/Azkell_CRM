@@ -437,6 +437,7 @@ export function FleetrunPage() {
   const [ocultas, setOcultas]     = useState<Set<ColId>>(leerColumnasOcultas);
   const [editandoColumnas, setEditandoColumnas] = useState(false);
   const [generando, setGenerando] = useState<'pdf' | 'whatsapp' | null>(null);
+  const [elegirReporte, setElegirReporte] = useState<'pdf' | 'whatsapp' | null>(null);
   // Filtros avanzados (clásico: Fecha, Cliente, UTS y Estado con casillas; las casillas de estado mandan sobre el segmento)
   const [avanzados, setAvanzados]   = useState(false);
   const [fechaF, setFechaF]         = useState('');
@@ -683,10 +684,11 @@ export function FleetrunPage() {
     });
   }
 
-  async function generarReporte(tipo: 'pdf' | 'whatsapp') {
+  async function generarReporte(tipo: 'pdf' | 'whatsapp', incluirVigentes = false) {
+    setElegirReporte(null);
     setGenerando(tipo);
     try {
-      const generar = () => pedirReportePreventivo(filasReporte(), empresa.data ?? '', user?.email ?? '');
+      const generar = () => pedirReportePreventivo(filasReporte(), empresa.data ?? '', user?.email ?? '', incluirVigentes);
       if (tipo === 'pdf') {
         await abrirPdfEnVisor(generar, nombreReportePreventivo());
       } else {
@@ -827,9 +829,9 @@ export function FleetrunPage() {
               <AccionIcono tip="Exportar Excel" color="verde" icono={<Download size={18} />} onClick={exportar} />
               <AccionIcono tip="Elegir columnas" color="violeta" icono={<Columns3 size={18} />} onClick={() => setEditandoColumnas(true)} disabled={movil} />
               <AccionIcono tip="Descargar PDF del reporte" color="rojo" icono={<FilePdf size={18} />}
-                disabled={historial || generando !== null || !filtrados.length} onClick={() => generarReporte('pdf')} />
+                disabled={historial || generando !== null || !filtrados.length} onClick={() => setElegirReporte('pdf')} />
               <AccionIcono tip="Enviar reporte por WhatsApp" color="verde" icono={<MessageCircle size={18} />}
-                disabled={historial || generando !== null || !filtrados.length} onClick={() => generarReporte('whatsapp')} />
+                disabled={historial || generando !== null || !filtrados.length} onClick={() => setElegirReporte('whatsapp')} />
             </div>
           </div>
 
@@ -962,6 +964,14 @@ export function FleetrunPage() {
           )}
         </div>
       )}
+
+      <Sheet open={elegirReporte !== null} onClose={() => setElegirReporte(null)} title="¿Qué incluir en el reporte?">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+          <Button variant="secondary" onClick={() => elegirReporte && generarReporte(elegirReporte, false)}>Solo pendientes (vencidos y por vencer)</Button>
+          <Button variant="primary" onClick={() => elegirReporte && generarReporte(elegirReporte, true)}>Estado completo (incluye los vigentes)</Button>
+          <p className="t-footnote" style={{ margin: 0 }}>El reporte respeta la búsqueda y los filtros que tienes en pantalla. Con el estado completo puedes mostrar a tu cliente que su unidad está en buen estado.</p>
+        </div>
+      </Sheet>
 
       <HojaFiltros open={avanzados} onClose={() => setAvanzados(false)} activos={avanzadosActivos} onLimpiar={limpiarAvanzados} resultado={filtrados.length} unidad="registro">
         <GrupoFiltro titulo="Estado">

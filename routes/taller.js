@@ -1556,6 +1556,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 filas,
                 empresa: String(req.body?.empresa || '').slice(0, 120),
                 emisor: String(req.body?.emisor || '').slice(0, 120),
+                incluirVigentes: req.body?.incluirVigentes === true,
                 logo,
             });
             const pdf = await htmlAPdf(html, 'Estado de mantenimiento preventivo - F-MAN-006', true);
