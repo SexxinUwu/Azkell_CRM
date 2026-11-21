@@ -4,10 +4,14 @@ import '../almacen/almacen.css'; // estilos de tabla (.inv-kardex) que usa la li
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, BookOpen, CheckCircle2, Eye, Filter, Lock, Pause, Play, Plus, ScrollText, SearchX, Trash2, XCircle } from 'lucide-react';
+import { BookOpen, CheckCircle2, Eye, Filter, Lock, Pause, Play, Plus, ScrollText, SearchX, Trash2, XCircle } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../core/ui/FiltrosListado';
+import { ListaMultiple } from '../../core/ui/ListaMultiple';
+import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
+import '../../core/ui/listado.css';
 import { ChoiceChips } from '../../core/ui/Chips';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
@@ -548,27 +552,51 @@ function SimpleLabel({ label, children }: { label: string; children: React.React
   );
 }
 
-// ─── Tab Backlog ──────────────────────────────────────────────────────────────
+// ─── Tab Backlog ─────────────────────────────────────────────────────────────
+
+const COLUMNAS_BACKLOG: ColumnaTabla[] = [
+  { id: 'fecha', titulo: 'Fecha', ancho: 90 },
+  { id: 'placa', titulo: 'Placa', ancho: 90 },
+  { id: 'tema', titulo: 'Tema', ancho: 130 },
+  { id: 'tarea', titulo: 'Tarea', ancho: 380 },
+  { id: 'km', titulo: 'Km', ancho: 90 },
+  { id: 'reporta', titulo: 'Reportado por', ancho: 170 },
+  { id: 'ot', titulo: 'OT', ancho: 110 },
+  { id: 'estado', titulo: 'Estado', ancho: 130 },
+];
+const ESTADOS_BACKLOG = ['Pendiente', 'En Progreso', 'Completado', 'Cancelado'];
+// El cierre de una OT guarda «Realizado»: para el usuario es lo mismo que Completado
+const estadoVista = (e: string) => (e === 'Realizado' ? 'Completado' : e);
+const TONO_BACKLOG: Record<string, string> = { Pendiente: 'amber', 'En Progreso': 'accent', Completado: 'green', Cancelado: 'gray' };
 
 function BacklogTab({ onCrear, qc, toast }: { onCrear: () => void; qc: ReturnType<typeof useQueryClient>; toast: (msg: string, tone?: 'error') => void }) {
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('Todos');
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
+  const [temasF, setTemasF] = useState<string[]>([]);
+  const [placasF, setPlacasF] = useState<string[]>([]);
+  const [vinculo, setVinculo] = useState<'todos' | 'con' | 'sin'>('todos');
   const { data, isLoading } = useBacklog();
-  const items = data ?? [];
+  const items = useMemo(() => [...(data ?? [])].sort((a, b) => String(b.fecha_reporte ?? '').localeCompare(String(a.fecha_reporte ?? '')) || b.id - a.id), [data]);
 
   const visibles = useMemo(() => {
+    const q = busqueda.trim().toUpperCase();
     return items.filter(it => {
-      const passEst = filtroEstado === 'Todos' || it.estado === filtroEstado;
-      if (!passEst) return false;
-      if (!busqueda) return true;
-      const q = busqueda.toUpperCase();
-      return (
-        it.placa.toUpperCase().includes(q) ||
-        it.tarea.toUpperCase().includes(q) ||
-        (it.tema ?? '').toUpperCase().includes(q)
-      );
+      if (filtroEstado !== 'Todos' && estadoVista(it.estado) !== filtroEstado) return false;
+      if (temasF.length && !temasF.includes(it.tema ?? '')) return false;
+      if (placasF.length && !placasF.includes(it.placa)) return false;
+      if (vinculo === 'con' && !it.ticket_ot) return false;
+      if (vinculo === 'sin' && it.ticket_ot) return false;
+      if (!q) return true;
+      return [it.placa, it.tarea, it.tema, it.reportado_por, it.ticket_ot, it.backlog_id].some(v => String(v ?? '').toUpperCase().includes(q));
     });
-  }, [items, filtroEstado, busqueda]);
+  }, [items, filtroEstado, busqueda, temasF, placasF, vinculo]);
+
+  const activos = temasF.length + placasF.length + (vinculo !== 'todos' ? 1 : 0);
+  const limpiar = () => { setTemasF([]); setPlacasF([]); setVinculo('todos'); };
+  const cuenta = (e: string) => (e === 'Todos' ? items.length : items.filter(it => estadoVista(it.estado) === e).length);
+  const temas = useMemo(() => [...new Set(items.map(it => it.tema ?? '').filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es')).map(v => ({ value: v, label: v })), [items]);
+  const placas = useMemo(() => [...new Set(items.map(it => it.placa).filter(Boolean))].sort().map(v => ({ value: v, label: v })), [items]);
 
   async function cambiarEstado(id: number, estado: string) {
     try {
@@ -579,11 +607,12 @@ function BacklogTab({ onCrear, qc, toast }: { onCrear: () => void; qc: ReturnTyp
     }
   }
 
-  const ESTADOS_BK = ['Todos', 'Pendiente', 'En Progreso', 'Completado', 'Cancelado'];
+  const ESTADOS_BK = ['Todos', ...ESTADOS_BACKLOG];
+  const hayFiltros = !!busqueda || activos > 0 || filtroEstado !== 'Todos';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-      <SearchField value={busqueda} onChange={setBusqueda} placeholder="Placa, tarea, tema…" />
+      <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Placa, tarea, tema, OT…" activos={activos} onAbrirFiltros={() => setFiltrosAbiertos(true)} />
 
       <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
         {ESTADOS_BK.map(e => (
@@ -594,53 +623,48 @@ function BacklogTab({ onCrear, qc, toast }: { onCrear: () => void; qc: ReturnTyp
               background: filtroEstado === e ? 'var(--ink)' : 'var(--fill)',
               color: filtroEstado === e ? 'var(--label-inverse)' : 'var(--label-2)',
             }}>
-            {e}
+            {e} <span className="t-numeric" style={{ opacity: 0.7, marginLeft: 4 }}>{cuenta(e)}</span>
           </button>
         ))}
       </div>
 
       {isLoading ? <PageLoader /> : visibles.length === 0 ? (
-        <EmptyState icon={busqueda ? <SearchX size={22} /> : <BookOpen size={22} />}
-          title={busqueda ? 'Sin coincidencias' : 'Backlog vacío'}>
-          {!busqueda && <Button variant="primary" size="sm" icon={<Plus size={14} />} onClick={onCrear}>Agregar tarea</Button>}
+        <EmptyState icon={hayFiltros ? <SearchX size={22} /> : <BookOpen size={22} />}
+          title={hayFiltros ? 'Sin coincidencias' : 'Backlog vacío'}>
+          {!hayFiltros && <Button variant="primary" size="sm" icon={<Plus size={14} />} onClick={onCrear}>Agregar tarea</Button>}
         </EmptyState>
       ) : (
-        <div className="tarjeta__lista">
+        <TablaRedimensionable id="backlog-v2" columnas={COLUMNAS_BACKLOG} ariaLabel="Backlog de mantenimiento" altoMax="68vh" className="tabla-redim--compacta">
           {visibles.map(it => {
-            const col = it.estado === 'Completado' ? 'green'
-              : it.estado === 'Cancelado' ? 'gray'
-              : it.estado === 'En Progreso' ? 'blue'
-              : 'yellow';
+            const est = estadoVista(it.estado);
             return (
-              <div key={it.id} className="ot-fila" style={{ cursor: 'default' }}>
-                <div className="ot-fila__icono" style={{ background: `var(--${col}-tint)`, color: `var(--${col}-ink)` }}>
-                  <AlertCircle size={15} />
-                </div>
-                <div className="ot-fila__cuerpo">
-                  <span className="ot-fila__id">{it.placa}</span>
-                  <span className="ot-fila__sub">
-                    {it.tema ? `[${it.tema}] ` : ''}{it.tarea}
-                    {it.km ? ` · ${Number(it.km).toLocaleString('es-PE')} km` : ''}
-                  </span>
-                </div>
-                <div className="ot-fila__derecha">
-                  <SelectInput
-                    value={it.estado}
-                    onChange={e => cambiarEstado(it.id, e.target.value)}
-                    style={{ fontSize: '0.78rem', padding: '2px 6px' }}
-                    onClick={e => e.stopPropagation()}
-                  >
-                    {['Pendiente', 'En Progreso', 'Completado', 'Cancelado'].map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
+              <tr key={it.id}>
+                <Celda mono>{formatFechaPe(it.fecha_reporte)}</Celda>
+                <Celda mono><strong>{it.placa}</strong></Celda>
+                <Celda>{it.tema || '—'}</Celda>
+                <Celda>{it.tarea}</Celda>
+                <Celda mono alinear="right">{it.km ? Number(it.km).toLocaleString('es-PE') : '—'}</Celda>
+                <Celda>{it.reportado_por || '—'}</Celda>
+                <Celda mono>{it.ticket_ot || 'Sin OT'}</Celda>
+                <Celda>
+                  <SelectInput value={est} onChange={e => cambiarEstado(it.id, e.target.value)} aria-label={`Estado de ${it.tarea}`}
+                    style={{ fontSize: '0.75rem', padding: '1px 6px', minHeight: 0, fontWeight: 600, color: `var(--${TONO_BACKLOG[est] === 'amber' ? 'amber' : TONO_BACKLOG[est] === 'green' ? 'green' : TONO_BACKLOG[est] === 'accent' ? 'blue' : 'gray'}-ink)` }}>
+                    {ESTADOS_BACKLOG.map(s => <option key={s} value={s}>{s}</option>)}
                   </SelectInput>
-                  <span className="ot-fila__fecha">{formatFechaPe(it.fecha_reporte)}</span>
-                </div>
-              </div>
+                </Celda>
+              </tr>
             );
           })}
-        </div>
+        </TablaRedimensionable>
       )}
+
+      <HojaFiltros open={filtrosAbiertos} onClose={() => setFiltrosAbiertos(false)} activos={activos} onLimpiar={limpiar} resultado={visibles.length} unidad="tarea">
+        <GrupoFiltro titulo="Tema"><ListaMultiple etiqueta="Tema" valor={temasF} onChange={setTemasF} opciones={temas} /></GrupoFiltro>
+        <GrupoFiltro titulo="Placa"><ListaMultiple etiqueta="Placa" valor={placasF} onChange={setPlacasF} opciones={placas} /></GrupoFiltro>
+        <GrupoFiltro titulo="Vinculada a una OT">
+          <ListaEleccion value={vinculo} onChange={setVinculo} opciones={[{ value: 'todos', label: 'Todas' }, { value: 'con', label: 'Con OT' }, { value: 'sin', label: 'Sin OT' }]} />
+        </GrupoFiltro>
+      </HojaFiltros>
     </div>
   );
 }
