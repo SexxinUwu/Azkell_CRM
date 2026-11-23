@@ -243,13 +243,15 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             `;
             const params = [];
 
-            if (fecha_desde) {
-                sql += ` AND DATE(COALESCE(ov.fecha_viaje, ov.fecha_inicio, ov.creado_en)) >= ?`;
-                params.push(fecha_desde);
-            }
-            if (fecha_hasta) {
-                sql += ` AND DATE(COALESCE(ov.fecha_viaje, ov.fecha_inicio, ov.creado_en)) <= ?`;
-                params.push(fecha_hasta);
+            // Rango de fechas del viaje. Con incluir_abiertos=1, los viajes por iniciar y los que están en ruta salen siempre, aunque caigan fuera del rango
+            const fechaDelViaje = 'DATE(COALESCE(ov.fecha_viaje, ov.fecha_inicio, ov.creado_en))';
+            const rango = [];
+            if (fecha_desde) { rango.push(`${fechaDelViaje} >= ?`); params.push(fecha_desde); }
+            if (fecha_hasta) { rango.push(`${fechaDelViaje} <= ?`); params.push(fecha_hasta); }
+            if (rango.length) {
+                sql += String(req.query.incluir_abiertos || '') === '1'
+                    ? ` AND ((${rango.join(' AND ')}) OR ov.estado IN ('ACTIVO', 'INICIADO'))`
+                    : ` AND ${rango.join(' AND ')}`;
             }
 
             if (q && String(q).trim()) {
