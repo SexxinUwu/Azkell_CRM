@@ -51,7 +51,7 @@ async function leerConIA(buffer, mimetype) {
         generationConfig: { responseMimeType: 'application/json', temperature: 0 },
     });
     let ultimo = 'No se pudo leer el voucher.';
-    for (let ronda = 0; ronda < 2; ronda++) {
+    for (let ronda = 0; ronda < 3; ronda++) {
         let saturado = false;
         for (const modelo of MODELOS) {
             try {
@@ -59,6 +59,7 @@ async function leerConIA(buffer, mimetype) {
                     method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave }, body: cuerpo, signal: AbortSignal.timeout(25000),
                 });
                 const data = await res.json().catch(() => null);
+                if (!res.ok) console.warn(`[vale-ia] ${modelo} ronda ${ronda + 1}: HTTP ${res.status} ${data && data.error ? String(data.error.message).slice(0, 200) : ''}`);
                 if (res.status === 429) { ultimo = 'La IA llegó a su límite por hoy. Registra los datos a mano.'; continue; }
                 if (res.status === 503 || res.status === 500) { saturado = true; ultimo = 'La IA está saturada. Vuelve a intentarlo en un minuto o registra los datos a mano.'; continue; }
                 if (!res.ok) { ultimo = (data && data.error && data.error.message) ? String(data.error.message).slice(0, 160) : `Error ${res.status}`; continue; }
@@ -66,11 +67,12 @@ async function leerConIA(buffer, mimetype) {
                 return limpiar(JSON.parse(textos.replace(/^```json\s*|```$/g, '').trim()));
             } catch (e) {
                 saturado = true;
+                console.warn(`[vale-ia] ${modelo} ronda ${ronda + 1}: ${e.name} ${String(e.message).slice(0, 120)}`);
                 ultimo = e.name === 'TimeoutError' ? 'La IA tardó demasiado. Vuelve a intentarlo o registra los datos a mano.' : (ultimo || e.message);
             }
         }
         if (!saturado) break;
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, 4000 * (ronda + 1)));
     }
     throw aviso(ultimo, 502);
 }

@@ -149,7 +149,7 @@ async function leerConIA(buffer, mimetype) {
     });
     let ultimo = 'No se pudo leer la guía.';
     // Si todos los modelos están saturados (503) se reintenta una vez más tras una pausa corta
-    for (let ronda = 0; ronda < 2; ronda++) {
+    for (let ronda = 0; ronda < 3; ronda++) {
         let saturado = false;
         for (const modelo of MODELOS) {
             try {
@@ -157,6 +157,7 @@ async function leerConIA(buffer, mimetype) {
                     method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': clave }, body: cuerpo, signal: AbortSignal.timeout(25000),
                 });
                 const data = await res.json().catch(() => null);
+                if (!res.ok) console.warn(`[gre-ia] ${modelo} ronda ${ronda + 1}: HTTP ${res.status} ${data && data.error ? String(data.error.message).slice(0, 200) : ''}`);
                 if (res.status === 429) { ultimo = 'La IA llegó a su límite por hoy. Intenta más tarde o registra los datos a mano.'; continue; }
                 if (res.status === 503 || res.status === 500) { saturado = true; ultimo = 'La IA está saturada en este momento. Vuelve a intentarlo en un minuto o registra los datos a mano.'; continue; }
                 if (!res.ok) { ultimo = (data && data.error && data.error.message) ? String(data.error.message).slice(0, 160) : `Error ${res.status}`; continue; }
@@ -165,11 +166,12 @@ async function leerConIA(buffer, mimetype) {
                 return limpiar(json, 'IA', null);
             } catch (e) {
                 saturado = true;
+                console.warn(`[gre-ia] ${modelo} ronda ${ronda + 1}: ${e.name} ${String(e.message).slice(0, 120)}`);
                 ultimo = e.name === 'TimeoutError' ? 'La IA tardó demasiado. Vuelve a intentarlo o registra los datos a mano.' : (ultimo || e.message);
             }
         }
         if (!saturado) break;
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise(r => setTimeout(r, 4000 * (ronda + 1)));
     }
     throw aviso(ultimo, 502);
 }

@@ -49,6 +49,7 @@ async function leerPapeletaConIA(buffer, mimetype, entidades) {
                 signal: AbortSignal.timeout(30000),
             });
             const data = await res.json().catch(() => null);
+            if (!res.ok) console.warn(`[papeleta-ia] ${modelo}: HTTP ${res.status} ${data && data.error ? String(data.error.message).slice(0, 200) : ''}`);
             if (res.status === 429) { ultimo = 'La IA llegó a su límite por hoy. Intenta más tarde o registra los datos a mano.'; continue; }
             if (!res.ok) { ultimo = (data && data.error && data.error.message) ? String(data.error.message).slice(0, 160) : `Error ${res.status}`; continue; }
             const textos = ((data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || []).filter(p => p.text && !p.thought).map(p => p.text).join('');
