@@ -1,7 +1,7 @@
 import './seguimiento.css';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ban, Building2, CalendarDays, ExternalLink, Link2, Link2Off, Package, Send, Trash2, Truck, UserRound } from 'lucide-react';
+import { Ban, Building2, CalendarDays, ExternalLink, Link2, Link2Off, Package, Pencil, Send, Trash2, Truck, UserRound } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
@@ -11,6 +11,7 @@ import { haptic } from '../../core/lib/haptics';
 import { FichaCard, FichaGrid, PuntosStrip, TituloFicha } from './FichaCards';
 import { ETIQUETA_ORIGEN, ETIQUETA_TIPO, fechaGuia, fmtKg, type Guia } from './guiasApi';
 import { GrtSheet } from './GrtSheet';
+import { GuiaRegistrarSheet } from './GuiaRegistrarSheet';
 import { PastillaGuia } from './PastillaGuia';
 import { useUbigeos } from './ubigeos';
 
@@ -22,12 +23,15 @@ export function GuiaFicha({ id, onClose, puedeEditar, onVincular }: { id: number
   const [accion, setAccion] = useState<'anular' | 'eliminar' | 'desvincular' | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [grt, setGrt] = useState(false);
+  const [editando, setEditando] = useState(false);
 
   const q = useQuery<Guia>({
     queryKey: ['operaciones', 'guia', id], enabled: id != null, staleTime: 10_000,
     queryFn: () => api<{ data: Guia }>(`/operaciones/gre/guias/${id}`).then(r => r.data),
   });
   const g = q.data;
+  // Una guía con su GRE Transportista ya enviada a SUNAT no se edita ni se elimina; una vinculada a un servicio no se elimina hasta desvincularla
+  const conGrt = !!g?.grt_status && g.grt_status !== 'ERROR_APISUNAT';
   const distrito = (u?: string | null) => (u ? (ubigeos.data ?? []).find(x => x.codigo === u)?.distrito ?? '' : '');
 
   async function ejecutar() {
@@ -58,7 +62,8 @@ export function GuiaFicha({ id, onClose, puedeEditar, onVincular }: { id: number
         title={g ? <TituloFicha codigo={g.numero_completo} estado={<PastillaGuia estado={g.estado} guia={g} />} sub={`GRE ${ETIQUETA_TIPO[g.tipo]} · ${ETIQUETA_ORIGEN[g.origen]}`} /> : ''}
         footer={g && puedeEditar && g.estado !== 'ANULADA' && g.origen === 'RECIBIDA' ? (
           <>
-            {!g.orden_servicio_codigo && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={() => setAccion('eliminar')}>Eliminar</Button>}
+            {!g.orden_servicio_codigo && !conGrt && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={() => setAccion('eliminar')}>Eliminar</Button>}
+            {!conGrt && <Button variant="secondary" icon={<Pencil size={16} />} onClick={() => setEditando(true)}>Editar</Button>}
             {g.orden_servicio_codigo && g.origen === 'RECIBIDA' && g.tipo === 'REMITENTE' && <Button variant="secondary" icon={<Send size={16} />} onClick={() => setGrt(true)}>GRE Transportista</Button>}
             <Button variant="secondary" icon={<Ban size={16} />} onClick={() => setAccion('anular')}>Anular</Button>
             {g.orden_servicio_codigo
@@ -79,6 +84,8 @@ export function GuiaFicha({ id, onClose, puedeEditar, onVincular }: { id: number
             <PuntosStrip
               carga={{ titulo: distrito(g.partida_ubigeo) || null, detalle: g.partida_direccion, extra: g.partida_ubigeo ? `Ubigeo ${g.partida_ubigeo}` : null }}
               descarga={{ titulo: distrito(g.llegada_ubigeo) || null, detalle: g.llegada_direccion, extra: g.llegada_ubigeo ? `Ubigeo ${g.llegada_ubigeo}` : null }} />
+            {conGrt && <Notice tone="accent">Ya tiene la GRE Transportista {g.grt_numero}: esta guía no se puede editar ni eliminar.</Notice>}
+            {!conGrt && g.origen === 'RECIBIDA' && g.orden_servicio_codigo && puedeEditar && <Notice tone="accent">Está vinculada al servicio {g.orden_servicio_codigo}. Para eliminarla, primero desvincúlala. Puedes corregir sus datos con Editar.</Notice>}
             {g.origen === 'EMITIDA' && (
               <Notice tone={g.apisunat_status === 'ACEPTADO' ? 'success' : g.apisunat_status === 'RECHAZADO' || g.apisunat_faults ? 'error' : 'accent'}>
                 Emitida por nosotros en <strong>{g.modo_emision === 'produccion' ? 'producción' : 'prueba'}</strong>{g.guias_incluidas ? ` · cubre ${g.guias_incluidas}` : ''}{g.apisunat_status ? ` · APISUNAT: ${g.apisunat_status}` : ''}{g.apisunat_faults ? ` — ${g.apisunat_faults}` : ''}
@@ -97,6 +104,7 @@ export function GuiaFicha({ id, onClose, puedeEditar, onVincular }: { id: number
       <ConfirmSheet open={!!accion} onClose={() => !ocupado && setAccion(null)} onConfirm={ejecutar} loading={ocupado}
         title={accion ? MENSAJES[accion].titulo : ''} message={accion ? MENSAJES[accion].texto : ''} confirmLabel={accion ? MENSAJES[accion].boton : ''} />
       <GrtSheet guia={grt && g ? g : null} onClose={() => setGrt(false)} />
+      <GuiaRegistrarSheet open={editando && !!g} editar={editando && g ? g : null} onClose={() => setEditando(false)} onRegistrada={() => setEditando(false)} />
     </>
   );
 }
