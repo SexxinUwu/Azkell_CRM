@@ -22,6 +22,8 @@ const { ipKeyGenerator } = require('express-rate-limit');
 const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl, getPresignedUploadUrl } = require('./utils/s3');
 const { AsyncLocalStorage } = require('async_hooks');
 const tenantStorage = new AsyncLocalStorage();
+// Las consultas anidadas conservan la empresa de la petición (ver services/contexto_mysql.js)
+require('./services/contexto_mysql');
 const crypto = require('crypto');
 
 const app = express();

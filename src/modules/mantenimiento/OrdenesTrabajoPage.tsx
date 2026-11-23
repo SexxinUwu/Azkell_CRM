@@ -426,7 +426,7 @@ export function OrdenesTrabajoPage() {
                     <thead style={{ textTransform: 'uppercase', letterSpacing: '0.03em', fontWeight: 800 }}>
                       <tr>
                         <th style={{ textAlign: 'center' }}>Acciones</th><th>N° OT</th><th>Fecha</th><th>Placa</th><th style={{ textAlign: 'right' }}>Kilometraje</th>
-                        <th>Tipo / Sub tipo</th><th>Supervisor</th><th>Status rampa</th><th>Motivo de Ingreso</th>
+                        <th>Tipo / Sub tipo</th><th>Supervisor</th><th>Estado de rampa</th><th>Motivo de Ingreso</th>
                         <th style={{ textAlign: 'right' }}>Costo total</th><th style={{ width: 56, textAlign: 'center' }}>Ver</th>
                       </tr>
                     </thead>

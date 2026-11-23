@@ -281,7 +281,7 @@ export function GenerarOTsSheet({ falla, open, onClose }: { falla: ReporteFalla;
                   </SelectInput>
                 )}
               </Field>
-              <Field label="Situación (Status Rampa)">
+              <Field label="Situación (Estado de rampas)">
                 {p => (
                   <SelectInput {...p} value={t.situacion} onChange={e => cambiar(t.key, { situacion: e.target.value })}>
                     {[...new Set(['En atención', ...situaciones])].map(s => <option key={s} value={s}>{s}</option>)}

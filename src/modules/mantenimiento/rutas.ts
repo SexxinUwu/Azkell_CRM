@@ -54,7 +54,7 @@ export const RUTAS: RutaModulo[] = [
     path: 'mantenimiento/status-rampa/*',
     permisos: ['status_rampa.ver', 'admin'],
     Page: lazy(() => import('./StatusRampaPage').then(m => ({ default: m.StatusRampaPage }))),
-    nav: { key: 'status-rampa', label: 'Status de rampa', to: '/mantenimiento/status-rampa', icon: 'Wrench', permisos: ['status_rampa.ver'] },
+    nav: { key: 'status-rampa', label: 'Estado de rampas', to: '/mantenimiento/status-rampa', icon: 'Wrench', permisos: ['status_rampa.ver'] },
   },
   {
     path: 'mantenimiento/fleetrun/*',

@@ -412,7 +412,7 @@ export function StatusRampaPage() {
       {!soloDetalle && (
         <PageHeader
           eyebrow="Mantenimiento"
-          title="Status de rampa"
+          title="Estado de rampas"
           subtitle={isLoading ? 'Cargando…' : `${activas.length} rampas activas`}
           actions={
             <>
