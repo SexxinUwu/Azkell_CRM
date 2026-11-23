@@ -195,3 +195,21 @@ model OrdenViajeRuta {
   @@index([viaje], map: "idx_viaje")
   @@map("operaciones_ordenes_viaje_rutas")
 }
+
+// Puntos de carga y descarga de cada cliente (catálogo para llenar las guías)
+model OperacionesPunto {
+  id             Int      @id @default(autoincrement())
+  cliente_nombre String   @db.VarChar(255)
+  tipo           String   @db.VarChar(10)
+  codigo         String?  @db.VarChar(30)
+  nombre         String   @db.VarChar(150)
+  direccion      String   @db.VarChar(255)
+  ubigeo         String?  @db.VarChar(6)
+  referencia     String?  @db.VarChar(255)
+  estado         Int      @default(1) @db.TinyInt
+  creado_por     String?  @db.VarChar(150)
+  creado_en      DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([cliente_nombre, tipo, estado], map: "idx_punto_cliente")
+  @@map("operaciones_puntos")
+}

@@ -1,7 +1,7 @@
 import './servicios.css';
 import './seguimiento.css';
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, CircleAlert, FileText, PenLine, Sparkles, UploadCloud } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
@@ -14,6 +14,14 @@ import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { cargarUbigeos, ubigeoDeDireccion, useOpcionesUbigeo, useUbigeos } from './ubigeos';
 import type { Guia, LecturaGuia, TipoGuia } from './guiasApi';
+import { usePuntos, type Punto } from './puntosApi';
+
+/** Datos de una orden de servicio que sirven para llenar la guía */
+interface ServicioGuia {
+  id: number; codigo_orden: string; cliente_nombre: string; estado_servicio?: string | null; origen?: string | null; destino?: string | null;
+  remitente_generador?: string | null; destinatario?: string | null; direccion_origen?: string | null; ubigeo_origen?: string | null;
+  direccion_destino?: string | null; ubigeo_destino?: string | null; descripcion_carga?: string | null; fecha_entrega_fmt?: string | null;
+}
 
 interface Form {
   tipo: TipoGuia; serie_numero: string; fecha_emision: string; fecha_traslado: string;
@@ -21,7 +29,7 @@ interface Form {
   transportista_ruc: string; transportista_nombre: string; modalidad: '' | 'PUBLICO' | 'PRIVADO'; motivo: string;
   partida_ubigeo: string; partida_direccion: string; llegada_ubigeo: string; llegada_direccion: string;
   peso: string; bultos: string; descripcion: string; observaciones: string; placa: string; conductor_nombre: string; conductor_doc: string; licencia: string; vehiculo_tuc: string; vehiculo_autorizacion: string;
-  fuente: 'XML' | 'IA' | 'MANUAL'; items: LecturaGuia['items']; trae_transporte: boolean;
+  fuente: 'XML' | 'IA' | 'MANUAL'; items: LecturaGuia['items']; trae_transporte: boolean; fecha_comprometida: string; hora_comprometida: string;
 }
 type Campo = 'serie_numero' | 'emisor' | 'peso';
 type Lado = 'partida' | 'llegada';
@@ -29,7 +37,7 @@ type Lado = 'partida' | 'llegada';
 const VACIO: Form = {
   tipo: 'REMITENTE', serie_numero: '', fecha_emision: '', fecha_traslado: '', remitente_ruc: '', remitente_nombre: '', destinatario_doc: '', destinatario_nombre: '',
   transportista_ruc: '', transportista_nombre: '', modalidad: '', motivo: '', partida_ubigeo: '', partida_direccion: '', llegada_ubigeo: '', llegada_direccion: '',
-  peso: '', bultos: '', descripcion: '', observaciones: '', placa: '', conductor_nombre: '', conductor_doc: '', licencia: '', vehiculo_tuc: '', vehiculo_autorizacion: '', fuente: 'MANUAL', items: [], trae_transporte: false,
+  peso: '', bultos: '', descripcion: '', observaciones: '', placa: '', conductor_nombre: '', conductor_doc: '', licencia: '', vehiculo_tuc: '', vehiculo_autorizacion: '', fuente: 'MANUAL', items: [], trae_transporte: false, fecha_comprometida: '', hora_comprometida: '',
 };
 const s = (v: unknown) => (v == null ? '' : String(v));
 const desdeLectura = (l: LecturaGuia): Form => ({
@@ -38,7 +46,7 @@ const desdeLectura = (l: LecturaGuia): Form => ({
   transportista_ruc: s(l.transportista_ruc), transportista_nombre: s(l.transportista_nombre), modalidad: l.modalidad ?? '', motivo: s(l.motivo),
   partida_ubigeo: s(l.partida_ubigeo), partida_direccion: s(l.partida_direccion), llegada_ubigeo: s(l.llegada_ubigeo), llegada_direccion: s(l.llegada_direccion),
   peso: l.peso_kg != null ? String(l.peso_kg) : '', bultos: s(l.bultos), descripcion: s(l.descripcion), observaciones: s(l.observaciones), placa: s(l.placa),
-  conductor_nombre: s(l.conductor_nombre), conductor_doc: s(l.conductor_doc), licencia: s(l.licencia), vehiculo_tuc: s(l.vehiculo_tuc), vehiculo_autorizacion: s(l.vehiculo_autorizacion), fuente: l.fuente, items: l.items ?? [], trae_transporte: l.trae_transporte,
+  conductor_nombre: s(l.conductor_nombre), conductor_doc: s(l.conductor_doc), licencia: s(l.licencia), vehiculo_tuc: s(l.vehiculo_tuc), vehiculo_autorizacion: s(l.vehiculo_autorizacion), fuente: l.fuente, items: l.items ?? [], trae_transporte: l.trae_transporte, fecha_comprometida: '', hora_comprometida: '',
 });
 
 /** Datos de una guía ya registrada, para corregirlos en el mismo formulario */
@@ -52,7 +60,7 @@ const desdeGuia = (g: Guia): Form => {
     partida_ubigeo: s(g.partida_ubigeo), partida_direccion: s(g.partida_direccion), llegada_ubigeo: s(g.llegada_ubigeo), llegada_direccion: s(g.llegada_direccion),
     peso: Number(g.peso_kg) > 0 ? String(g.peso_kg) : '', bultos: s(g.bultos), descripcion: s(g.descripcion), observaciones: s(g.observaciones), placa: s(g.placa),
     conductor_nombre: s(g.conductor_nombre), conductor_doc: s(g.conductor_doc), licencia: s(g.licencia), vehiculo_tuc: s(g.vehiculo_tuc), vehiculo_autorizacion: s(g.vehiculo_autorizacion),
-    fuente: g.fuente, items, trae_transporte: !!g.trae_transporte,
+    fuente: g.fuente, items, trae_transporte: !!g.trae_transporte, fecha_comprometida: s(g.fecha_comprometida), hora_comprometida: s(g.hora_comprometida),
   };
 };
 
@@ -79,6 +87,13 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
   // Lo que propuso el lector (XML o IA): al guardar se envía para comparar con lo que la persona confirmó
   const [lectura, setLectura] = useState<LecturaGuia | null>(null);
   const [duplicada, setDuplicada] = useState(false);
+  // Servicio al que se vincula la guía al registrarla (opcional) y catálogo de puntos de carga y descarga
+  const [servicioId, setServicioId] = useState<string | null>(null);
+  const servicios = useQuery({
+    queryKey: ['operaciones', 'servicios-para-guia'], enabled: open && !editar, staleTime: 60_000,
+    queryFn: () => api<{ data?: ServicioGuia[] }>('/operaciones/ordenes-servicio').then(r => r.data ?? []),
+  });
+  const puntos = usePuntos(open);
   const [tocados, setTocados] = useState<Set<Campo>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [arrastrando, setArrastrando] = useState(false);
@@ -87,7 +102,7 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
   const [auto, setAuto] = useState<Record<Lado, boolean>>({ partida: false, llegada: false });
 
   useEffect(() => {
-    if (open) { setFase('subir'); setArchivo(null); setF(VACIO); setLectura(null); setAdvertencias([]); setDuplicada(false); setTocados(new Set()); setError(null); setArrastrando(false); setAuto({ partida: false, llegada: false });
+    if (open) { setFase('subir'); setArchivo(null); setF(VACIO); setLectura(null); setServicioId(null); setAdvertencias([]); setDuplicada(false); setTocados(new Set()); setError(null); setArrastrando(false); setAuto({ partida: false, llegada: false });
       // Editar una guía ya registrada: se abre directo con sus datos, sin subir el archivo otra vez
       if (editar) { setF(desdeGuia(editar)); setFase('revisar'); }
     }
@@ -95,6 +110,37 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
   }, [open, editar?.id]);
 
   const set = (p: Partial<Form>) => setF(x => ({ ...x, ...p }));
+  const opcionesServicio = (servicios.data ?? [])
+    .filter(x => !['ANULADO', 'ENTREGADO'].includes(String(x.estado_servicio ?? '').toUpperCase()))
+    .map(x => ({ value: String(x.id), label: `${x.codigo_orden} · ${x.cliente_nombre}`, description: [x.origen, x.destino].filter(Boolean).join(' → '), keywords: `${x.remitente_generador ?? ''} ${x.destinatario ?? ''}` }));
+  const servicio = (servicios.data ?? []).find(x => String(x.id) === servicioId) ?? null;
+  // Elegir el servicio completa solo lo que está vacío: lo que dice la guía del cliente manda
+  function elegirServicio(v: string | null) {
+    setServicioId(v);
+    const os = (servicios.data ?? []).find(x => String(x.id) === v);
+    if (!os) return;
+    setF(x => ({
+      ...x,
+      remitente_nombre: x.remitente_nombre || s(os.remitente_generador || os.cliente_nombre), destinatario_nombre: x.destinatario_nombre || s(os.destinatario),
+      partida_direccion: x.partida_direccion || s(os.direccion_origen), partida_ubigeo: x.partida_ubigeo || s(os.ubigeo_origen),
+      llegada_direccion: x.llegada_direccion || s(os.direccion_destino), llegada_ubigeo: x.llegada_ubigeo || s(os.ubigeo_destino),
+      descripcion: x.descripcion || s(os.descripcion_carga), fecha_comprometida: x.fecha_comprometida || s(os.fecha_entrega_fmt),
+    }));
+  }
+  // Puntos del catálogo: los del cliente del servicio si hay; si no, todos los de ese tipo
+  const puntosDe = (lado: Lado): Punto[] => {
+    const tipo = lado === 'partida' ? 'CARGA' : 'DESCARGA';
+    const todos = (puntos.data ?? []).filter(p => p.tipo === tipo);
+    const cli = (servicio?.cliente_nombre ?? '').trim().toLowerCase();
+    const delCliente = cli ? todos.filter(p => p.cliente_nombre.trim().toLowerCase() === cli) : [];
+    return delCliente.length ? delCliente : todos;
+  };
+  function elegirPunto(lado: Lado, idPunto: string | null) {
+    const p = (puntos.data ?? []).find(x => String(x.id) === idPunto);
+    if (!p) return;
+    set({ [`${lado}_direccion`]: p.direccion, [`${lado}_ubigeo`]: p.ubigeo ?? '' } as Partial<Form>);
+    setAuto(a => ({ ...a, [lado]: false }));
+  }
   const tocar = (c: Campo) => setTocados(x => new Set(x).add(c));
   const emisor = f.tipo === 'TRANSPORTISTA' ? f.transportista_ruc : f.remitente_ruc;
   const errores: Partial<Record<Campo, string>> = {};
@@ -147,7 +193,7 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
         transportista_ruc: f.transportista_ruc, transportista_nombre: f.transportista_nombre, modalidad: f.modalidad || null, motivo: f.motivo,
         partida_ubigeo: f.partida_ubigeo, partida_direccion: f.partida_direccion, llegada_ubigeo: f.llegada_ubigeo, llegada_direccion: f.llegada_direccion,
         peso_kg: Number(f.peso.replace(',', '.')), bultos: f.bultos ? Number(f.bultos) : null, descripcion: f.descripcion, observaciones: f.observaciones, items: f.items,
-        placa: f.placa, conductor_nombre: f.conductor_nombre, conductor_doc: f.conductor_doc, licencia: f.licencia, vehiculo_tuc: f.vehiculo_tuc, vehiculo_autorizacion: f.vehiculo_autorizacion, trae_transporte: f.trae_transporte, fuente: f.fuente,
+        placa: f.placa, conductor_nombre: f.conductor_nombre, conductor_doc: f.conductor_doc, licencia: f.licencia, vehiculo_tuc: f.vehiculo_tuc, vehiculo_autorizacion: f.vehiculo_autorizacion, trae_transporte: f.trae_transporte, fuente: f.fuente, fecha_comprometida: f.fecha_comprometida || null, hora_comprometida: f.hora_comprometida || null,
       };
       if (editar) {
         const m = await api<{ ok?: boolean; error?: string; message?: string }>(`/operaciones/gre/guias/${editar.id}`, { method: 'PUT', body: datos });
@@ -163,6 +209,17 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
       const r = await api<{ ok?: boolean; error?: string; id?: number; message?: string }>('/operaciones/gre/guias', { method: 'POST', body: cuerpo });
       if (r.ok === false) throw new Error(r.error || 'No se pudo registrar la guía');
       haptic('success'); toast(r.message || 'Guía registrada');
+      // Con un servicio elegido, la guía queda vinculada en el mismo paso
+      if (servicioId && r.id) {
+        try {
+          const v = await api<{ ok?: boolean; error?: string; message?: string }>(`/operaciones/gre/guias/${r.id}/vincular`, { method: 'POST', body: { orden_servicio_id: Number(servicioId) } });
+          if (v.ok === false) throw new Error(v.error || 'No se pudo vincular');
+          toast(v.message || 'Guía vinculada');
+        } catch (errV) { toast(`La guía se registró, pero no se pudo vincular: ${errorMessage(errV)}`, 'error'); }
+        await qc.invalidateQueries({ queryKey: ['operaciones'] });
+        onRegistrada(undefined);
+        return;
+      }
       await qc.invalidateQueries({ queryKey: ['operaciones'] });
       if (vincular && r.id) {
         const d = await api<{ data: Guia }>(`/operaciones/gre/guias/${r.id}`);
@@ -184,8 +241,8 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
       ) : fase === 'revisar' ? (
         <>
           <Button variant="secondary" icon={<ArrowLeft size={16} />} onClick={() => setFase('subir')} disabled={ocupado}>Otro archivo</Button>
-          <Button variant="secondary" onClick={() => guardar(false)} loading={guardando === 'solo'} disabled={ocupado}>Registrar</Button>
-          <Button variant="primary" onClick={() => guardar(true)} loading={guardando === 'vincular'} disabled={ocupado}>Registrar y vincular a un servicio</Button>
+          <Button variant={servicioId ? 'primary' : 'secondary'} onClick={() => guardar(false)} loading={guardando === 'solo'} disabled={ocupado}>{servicioId ? 'Registrar y vincular' : 'Registrar'}</Button>
+          {!servicioId && <Button variant="primary" onClick={() => guardar(true)} loading={guardando === 'vincular'} disabled={ocupado}>Registrar y vincular a un servicio</Button>}
         </>
       ) : <Button variant="secondary" onClick={onClose} disabled={fase === 'leyendo'}>Cancelar</Button>}>
       <div className="gr gr--compacto">
@@ -224,6 +281,18 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
             {advertencias.length > 0 && <Notice tone="accent" icon={<CircleAlert size={16} />}>{advertencias.map(a => <div key={a}>{a}</div>)}</Notice>}
             {f.trae_transporte && <Notice tone="accent">Esta guía ya trae los datos del transporte (transportista, vehículo, conductor y fecha de traslado). Según la norma de SUNAT, puede que no haga falta emitir nuestra GRE Transportista: confírmalo antes de decidir.</Notice>}
 
+            <Seccion titulo="Servicio y entrega" nota={editar ? 'cuándo se comprometió la entrega' : 'opcional · con un servicio elegido, la guía queda vinculada al guardar'}>
+              {!editar && (
+                <Field label="Servicio" hint="Completa lo que falte en la guía: dirección, destinatario y fecha de entrega">
+                  {p => <Combobox {...p} options={opcionesServicio} value={servicioId} loading={servicios.isLoading} placeholder="Busca la orden de servicio" onChange={elegirServicio} />}
+                </Field>
+              )}
+              <div className="gr__g3">
+                <Field label="Fecha comprometida de entrega" hint="Sirve para medir el cumplimiento (On Time)">{p => <TextInput {...p} type="date" value={f.fecha_comprometida} onChange={e => set({ fecha_comprometida: e.target.value })} />}</Field>
+                <Field label="Hora comprometida" hint="Solo si el cliente pactó hora">{p => <TextInput {...p} type="time" value={f.hora_comprometida} onChange={e => set({ hora_comprometida: e.target.value })} />}</Field>
+              </div>
+            </Seccion>
+
             <Seccion titulo="La guía">
               <SegmentedControl block label="Tipo de guía" value={f.tipo} onChange={v => set({ tipo: v })} options={[{ value: 'REMITENTE', label: 'GRE Remitente' }, { value: 'TRANSPORTISTA', label: 'GRE Transportista' }]} />
               <div className="gr__g3">
@@ -251,6 +320,11 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
               <div className="gr__g2">
                 {(['partida', 'llegada'] as const).map(lado => (
                   <div key={lado} className="gr__lado">
+                    {puntosDe(lado).length > 0 && (
+                      <Field label="Punto del catálogo" hint={servicio ? `Puntos de ${servicio.cliente_nombre}` : 'Elige uno para llenar la dirección y el distrito'}>
+                        {p => <Combobox {...p} options={puntosDe(lado).map(x => ({ value: String(x.id), label: `${x.codigo ? `${x.codigo} · ` : ''}${x.nombre}`, description: `${x.cliente_nombre} · ${x.direccion}`, keywords: x.direccion }))} value={null} placeholder="Busca un punto" onChange={v => elegirPunto(lado, v)} />}
+                      </Field>
+                    )}
                     <Field label={lado === 'partida' ? 'Distrito de partida' : 'Distrito de llegada'} hint={pista(lado)}>
                       {p => <Combobox {...p} options={ubi.opciones} value={f[`${lado}_ubigeo`] || null} loading={ubi.cargando} placeholder="Busca el distrito"
                         onChange={v => { set({ [`${lado}_ubigeo`]: v ?? '' } as Partial<Form>); setAuto(a => ({ ...a, [lado]: false })); }} />}

@@ -16,6 +16,8 @@ export interface Guia {
   orden_servicio_id: number | null; orden_servicio_codigo: string | null; servicio_cliente?: string | null;
   estado: EstadoGuia; fuente: 'XML' | 'IA' | 'MANUAL'; archivo_url: string | null; archivo_nombre: string | null; archivo_ver_url?: string | null;
   observaciones: string | null; usuario: string | null; creado_en: string | null;
+  /** Cuándo se comprometió la entrega al cliente (base del indicador On Time); la hora solo si el cliente la pactó */
+  fecha_comprometida?: string | null; hora_comprometida?: string | null;
   /** Solo en las guías que emitimos nosotros */
   placa_carreta?: string | null; viaje?: string | null; guia_relacionada_id?: number | null; apisunat_status?: string | null; apisunat_faults?: string | null; pdf_url?: string | null; modo_emision?: string | null;
   xml_url?: string | null; cdr_url?: string | null; guias_relacionadas_ids?: string | null;
