@@ -37,7 +37,7 @@ const GRUPOS_ACCESO: Array<{ titulo: string; icono: ReactNode; enlaces: Array<{ 
   { titulo: 'Taller y OTs', icono: <Wrench size={13} />, enlaces: [
     { to: '/mantenimiento/reportes-ot', label: 'Órdenes de trabajo', icono: <ScrollText size={17} /> },
     { to: '/mantenimiento/dashboard', label: 'Dashboard de mantenimiento', icono: <LayoutDashboard size={17} /> },
-    { to: '/mantenimiento/status-rampa', label: 'Status de rampa', icono: <Wrench size={17} /> },
+    { to: '/mantenimiento/status-rampa', label: 'Estado de rampas', icono: <Wrench size={17} /> },
   ] },
   { titulo: 'Almacén y stock', icono: <Boxes size={13} />, enlaces: [
     { to: '/almacen/inventario', label: 'Inventario', icono: <Boxes size={17} /> },

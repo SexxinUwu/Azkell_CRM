@@ -33,7 +33,7 @@ export const MODULOS_PERMISO: ModuloPermiso[] = [
   { grupo: 'MANTENIMIENTO', key: 'cfg_mant', nombre: 'Configuración de Mantenimiento', desc: 'Frecuencias, kits MP, tipos MP y configuración de métricas', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'pers_mant', nombre: 'Personal de Taller', desc: 'Técnicos y personal del taller', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'mant_dashboard', nombre: 'Dashboard Mantenimiento', desc: 'Centro de comando de taller e inspecciones', lcad: true },
-  { grupo: 'MANTENIMIENTO', key: 'status_rampa', nombre: 'Status Rampa', desc: 'Gestión visual en taller', lcad: true },
+  { grupo: 'MANTENIMIENTO', key: 'status_rampa', nombre: 'Estado de rampas', desc: 'Gestión visual en taller', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'insp', nombre: 'Análisis de Inspecciones', desc: 'Registro de inspecciones', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'fleet', nombre: 'Mantenimiento Preventivo', desc: 'Datos operativos de la flota', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'reportes_ot', nombre: 'Reportes OT', desc: 'Métricas de mantenimiento', lcad: true },
