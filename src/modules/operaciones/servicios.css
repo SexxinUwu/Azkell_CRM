@@ -125,3 +125,11 @@ button.os-viaje:active { transform: scale(0.985); transition-duration: 0.08s; }
 .gr-pasos__ico { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--bg, #fff); font-size: 0.6875rem; font-weight: 700; }
 .gr-pasos__btn--ok .gr-pasos__ico { background: var(--green-ink, #1c9a53); color: #fff; }
 .gr-pasos__nota { margin: 0; font-size: 0.8125rem; color: var(--label-2); }
+
+/* Qué se transporta: todas las columnas en la misma fila (código primero) y la descripción se puede agrandar */
+.gr-lin { overflow-x: auto; display: flex; flex-direction: column; gap: 8px; padding-bottom: 4px; }
+.gr-lin__fila { display: grid; grid-template-columns: 7rem minmax(14rem, 1fr) 5.5rem 11rem 5.5rem 5.5rem 2.25rem; gap: 8px; align-items: start; min-width: 54rem; }
+.gr-lin__cab { font-size: 0.75rem; font-weight: 600; color: var(--label-2); padding: 0 4px; }
+.gr-lin__fila .input:not(.combobox__input) { min-height: 2.5rem; padding: 0 0.75rem; font-size: 0.9375rem; }
+.gr-lin__fila .input.gr-lin__desc { padding: 0.55rem 0.75rem; line-height: 1.3; font-family: inherit; resize: vertical; min-height: 2.5rem; height: 2.5rem; }
+.gr-lin__fila .combobox__input { min-height: 2.5rem; font-size: 0.9375rem; padding-left: 2.25rem; padding-right: 2rem; }

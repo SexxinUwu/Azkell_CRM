@@ -82,6 +82,7 @@ function leerXml(buffer) {
     const partida = bloque(bloque(envio, 'cac:Delivery'), 'cac:Despatch') || bloque(envio, 'cac:Despatch');
     const salida = bloque(partida, 'cac:DespatchAddress');
     const lineas = bloques(raiz, 'cac:DespatchLine').map(l => ({
+        codigo: valor(bloque(bloque(l, 'cac:Item'), 'cac:SellersItemIdentification'), 'cbc:ID'),
         descripcion: valor(bloque(l, 'cac:Item'), 'cbc:Description'),
         cantidad: numero(valor(l, 'cbc:DeliveredQuantity')),
         unidad: atributo(l, 'cbc:DeliveredQuantity', 'unitCode'),
@@ -132,7 +133,7 @@ Devuelve SOLO un JSON con estas claves (usa null cuando el dato no se vea con cl
 - peso: peso bruto total como número; unidad_peso: KGM para kilogramos o TNE para toneladas, según lo impreso
 - bultos: cantidad de bultos o unidades, si aparece como total
 - descripcion: resumen corto de los bienes
-- items: lista de bienes [{"descripcion": "...", "cantidad": 0, "unidad": "NIU"}]
+- items: lista de bienes [{"codigo": "...", "descripcion": "...", "cantidad": 0, "unidad": "NIU"}]. codigo: el código del producto si la línea lo trae (por ejemplo 20075410); la descripcion NO debe repetir ese código
 - indicador_vehiculos_conductores: SI o NO, según lo que diga "Indicador para registrar vehículos y conductores del transportista" (null si no aparece)
 - observaciones: el texto de Observaciones tal como está impreso (a veces trae placas y el conductor)
 - placa: placa del vehículo sin guiones, solo si está en el campo de vehículo de la guía (no la tomes de las observaciones)
@@ -197,7 +198,7 @@ function limpiar(j, fuente, codigoTipo) {
     if (peso == null || peso <= 0) advertencias.push('No se leyó el peso bruto total.');
     else if (peso < 5) advertencias.push(`El peso leído es muy bajo (${peso} kg): verifica la unidad (kilos o toneladas).`);
     const ubigeo = v => { const d = soloDigitos(v); return d && d.length === 6 ? d : null; };
-    const items = (Array.isArray(j.items) ? j.items : []).slice(0, 60).map(i => ({ descripcion: texto(i && i.descripcion, 200), cantidad: numero(i && i.cantidad), unidad: texto(i && i.unidad, 10) })).filter(i => i.descripcion);
+    const items = (Array.isArray(j.items) ? j.items : []).slice(0, 60).map(i => ({ codigo: texto(i && i.codigo, 40), descripcion: texto(i && i.descripcion, 200), cantidad: numero(i && i.cantidad), unidad: texto(i && i.unidad, 10) })).filter(i => i.descripcion);
     const datos = {
         tipo,
         serie: id.serie, numero: id.numero, numero_completo: id.completo,
