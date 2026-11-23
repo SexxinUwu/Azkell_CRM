@@ -34,7 +34,7 @@ export interface LecturaGuia {
   partida_ubigeo: string | null; partida_direccion: string | null; llegada_ubigeo: string | null; llegada_direccion: string | null;
   peso_kg: number | null; bultos: number | null; descripcion: string | null; observaciones: string | null; items: { descripcion: string | null; cantidad: number | null; unidad: string | null }[];
   placa: string | null; conductor_nombre: string | null; conductor_doc: string | null; licencia: string | null; vehiculo_tuc?: string | null; vehiculo_autorizacion?: string | null;
-  trae_transporte: boolean; fuente: 'XML' | 'IA'; advertencias: string[];
+  trae_transporte: boolean; fuente: 'XML' | 'IA'; advertencias: string[]; modelo?: string;
 }
 
 export const ETIQUETA_ESTADO_GUIA: Record<EstadoGuia, string> = { REGISTRADA: 'Registrada', VINCULADA: 'Vinculada', ANULADA: 'Anulada' };

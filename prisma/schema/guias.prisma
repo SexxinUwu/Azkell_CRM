@@ -293,3 +293,20 @@ model GreGuia {
   @@index([fecha_emision], map: "idx_gre_fecha")
   @@map("gre_guias")
 }
+
+model GreLecturaIa {
+  id                Int       @id @default(autoincrement())
+  guia_id           Int?
+  numero_completo   String    @db.VarChar(30)
+  fuente            String    @db.VarChar(10)
+  modelo            String?   @db.VarChar(60)
+  campos_total      Int       @default(0)
+  campos_corregidos Int       @default(0)
+  diferencias_json  String?   @db.Text
+  usuario           String?   @db.VarChar(150)
+  creado_en         DateTime  @default(now()) @db.Timestamp(0)
+
+  @@index([guia_id], map: "idx_gre_lectura_guia")
+  @@index([creado_en], map: "idx_gre_lectura_fecha")
+  @@map("gre_lecturas_ia")
+}

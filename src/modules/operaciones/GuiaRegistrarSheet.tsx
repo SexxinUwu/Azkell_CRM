@@ -61,6 +61,8 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: bool
   const [archivo, setArchivo] = useState<File | null>(null);
   const [f, setF] = useState<Form>(VACIO);
   const [advertencias, setAdvertencias] = useState<string[]>([]);
+  // Lo que propuso el lector (XML o IA): al guardar se envía para comparar con lo que la persona confirmó
+  const [lectura, setLectura] = useState<LecturaGuia | null>(null);
   const [duplicada, setDuplicada] = useState(false);
   const [tocados, setTocados] = useState<Set<Campo>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +72,7 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: bool
   const [auto, setAuto] = useState<Record<Lado, boolean>>({ partida: false, llegada: false });
 
   useEffect(() => {
-    if (open) { setFase('subir'); setArchivo(null); setF(VACIO); setAdvertencias([]); setDuplicada(false); setTocados(new Set()); setError(null); setArrastrando(false); setAuto({ partida: false, llegada: false }); }
+    if (open) { setFase('subir'); setArchivo(null); setF(VACIO); setLectura(null); setAdvertencias([]); setDuplicada(false); setTocados(new Set()); setError(null); setArrastrando(false); setAuto({ partida: false, llegada: false }); }
   }, [open]);
 
   const set = (p: Partial<Form>) => setF(x => ({ ...x, ...p }));
@@ -107,7 +109,7 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: bool
           }
         }
       } catch { /* sin catálogo: la persona elige el distrito */ }
-      setF(inicial); setAuto(marcas); setAdvertencias(r.datos.advertencias ?? []); setDuplicada(!!r.duplicada); haptic('success');
+      setF(inicial); setLectura(r.datos); setAuto(marcas); setAdvertencias(r.datos.advertencias ?? []); setDuplicada(!!r.duplicada); haptic('success');
       setFase('revisar');
     } catch (err) { setError(errorMessage(err)); setFase('subir'); haptic('warning'); }
   }
@@ -121,6 +123,7 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: bool
     try {
       const cuerpo = new FormData();
       cuerpo.append('datos', JSON.stringify({
+        lectura_original: f.fuente === 'MANUAL' ? undefined : lectura,
         origen: 'RECIBIDA', tipo: f.tipo, numero_completo: f.serie_numero.trim().toUpperCase(), fecha_emision: f.fecha_emision || null, fecha_traslado: f.fecha_traslado || null,
         remitente_ruc: f.remitente_ruc, remitente_nombre: f.remitente_nombre, destinatario_doc: f.destinatario_doc, destinatario_nombre: f.destinatario_nombre,
         transportista_ruc: f.transportista_ruc, transportista_nombre: f.transportista_nombre, modalidad: f.modalidad || null, motivo: f.motivo,
@@ -169,7 +172,7 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: bool
               <li><FileText size={16} aria-hidden /><span><b>XML:</b> se lee exacto, sin errores.</span></li>
               <li><Sparkles size={16} aria-hidden /><span><b>Foto o PDF:</b> la IA propone los datos y tú los confirmas antes de guardar.</span></li>
             </ul>
-            <Button variant="plain" icon={<PenLine size={16} />} onClick={() => { setF(VACIO); setAdvertencias([]); setAuto({ partida: false, llegada: false }); setFase('revisar'); }}>Prefiero llenarla a mano</Button>
+            <Button variant="plain" icon={<PenLine size={16} />} onClick={() => { setF(VACIO); setLectura(null); setAdvertencias([]); setAuto({ partida: false, llegada: false }); setFase('revisar'); }}>Prefiero llenarla a mano</Button>
           </>
         )}
 

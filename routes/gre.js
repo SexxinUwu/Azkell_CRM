@@ -5,6 +5,7 @@ const express = require('express');
 const multer = require('multer');
 const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrlEstable } = require('../utils/s3');
 const { leerGuia, rucValido, separarSerie } = require('../services/gre_lectura');
+const { registrarLectura } = require('../services/gre_lectura_log');
 const Apisunat = require('../services/apisunatService');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -155,6 +156,8 @@ module.exports = (db, logAudit) => {
             const [r] = await P(req).query(
                 `INSERT INTO gre_guias (${cols.join(', ')}, archivo_url, archivo_nombre, estado, usuario) VALUES (${cols.map(() => '?').join(', ')}, ?, ?, 'REGISTRADA', ?)`,
                 [...cols.map(k => d[k]), archivo_url, archivo_nombre, usuarioDe(req)]);
+            // Lo que leyó el lector contra lo que la persona confirmó: sirve para medir y mejorar la lectura (nunca bloquea el registro)
+            await registrarLectura(P(req), { guiaId: r.insertId, numero: d.numero_completo, fuente: d.fuente, original: b.lectura_original, final: d, usuario: usuarioDe(req) });
             if (logAudit) logAudit({ req, accion: 'REGISTRAR_GUIA', modulo: 'OPERACIONES', detalle: `Registrada guía ${d.numero_completo} (${d.tipo}, ${d.origen})` });
             res.json({ ok: true, id: r.insertId, message: `Guía ${d.numero_completo} registrada.` });
         } catch (err) { responder(res, err, 'registrar'); }
