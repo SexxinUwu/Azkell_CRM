@@ -323,6 +323,9 @@ module.exports = (db, logAudit) => {
         const delCliente = normPlaca(g.placa) && normPlaca(g.placa) === normPlaca(tracto) ? { tuc: g.vehiculo_tuc || '', aut: g.vehiculo_autorizacion || '' } : { tuc: '', aut: '' };
         const vt = { tuc: pT.tuc || delCliente.tuc || hT.tuc, aut: pT.aut || delCliente.aut || cfg.autorizacion_mtc || hT.aut };
         const vc = { tuc: pC.tuc || hC.tuc, aut: pC.aut || cfg.autorizacion_mtc || hC.aut };
+        // Si la guía del cliente designa como transportista a otra empresa, el traslado lo hacemos por encargo de ella: es transporte subcontratado
+        const rucPropio = String(cfg.ruc_emisor || '').trim();
+        const otroTransportista = /^\d{11}$/.test(String(g.transportista_ruc || '')) && String(g.transportista_ruc) !== rucPropio;
         const propuesta = {
             serie: cfg.serie_grt,
             // SUNAT no acepta que el traslado empiece antes de la emisión (error 3343): si la fecha de la guía del cliente ya pasó, se propone hoy
@@ -338,6 +341,7 @@ module.exports = (db, logAudit) => {
             ...(() => { const n = partirNombre((cond && cond.nombre) || (viaje && viaje.conductor) || ''); return { conductor_nombre: n.nombres, conductor_apellidos: n.apellidos }; })(), conductor_num_doc: (cond && cond.dni) || '', conductor_licencia: (cond && cond.licencia) || '',
             tuc_tracto: vt.tuc, aut_tracto: vt.aut, tuc_carreta: vc.tuc, aut_carreta: vc.aut,
             registro_mtc: cfg.registro_mtc || '', items,
+            subcontratado: otroTransportista, subcontratante_ruc: otroTransportista ? String(g.transportista_ruc) : '', subcontratante_razon_social: otroTransportista ? String(g.transportista_nombre || '') : '',
         };
         return { propuesta, viaje: viaje ? viaje.viaje : null };
     }
@@ -355,6 +359,10 @@ module.exports = (db, logAudit) => {
         if (!/^\d{8}$/.test(String(d.conductor_num_doc || '').trim())) f.push('DNI del conductor (8 dígitos)');
         if (!String(d.conductor_licencia || '').trim()) f.push('licencia del conductor');
         if (!String(d.registro_mtc || '').trim()) f.push('registro MTC de la empresa');
+        if (d.subcontratado) {
+            if (!rucValido(String(d.subcontratante_ruc || ''))) f.push('RUC válido de la empresa que nos subcontrata');
+            if (!String(d.subcontratante_razon_social || '').trim()) f.push('razón social de la empresa que nos subcontrata');
+        }
         return f;
     }
 
@@ -474,6 +482,12 @@ module.exports = (db, logAudit) => {
                 tuc_carreta: String(b.tuc_carreta ?? bp.tuc_carreta).trim().toUpperCase(),
                 aut_carreta: String(b.aut_carreta ?? bp.aut_carreta).trim(),
             };
+            // Subcontratación (RS 123-2022, art. 3.7): si la guía del cliente designa a otra empresa como transportista, la nuestra va como traslado subcontratado
+            d.subcontratado = b.subcontratado === undefined ? !!bp.subcontratado : !!b.subcontratado;
+            d.subcontratante_ruc = d.subcontratado ? (digitos(b.subcontratante_ruc ?? bp.subcontratante_ruc, 11) || '') : '';
+            d.subcontratante_razon_social = d.subcontratado ? String(b.subcontratante_razon_social ?? bp.subcontratante_razon_social ?? '').trim().slice(0, 200) : '';
+            if (bp.subcontratado && !d.subcontratado) throw aviso(`La guía del cliente designa como transportista a ${bp.subcontratante_razon_social || bp.subcontratante_ruc} (RUC ${bp.subcontratante_ruc}). Si hacemos el traslado por encargo de esa empresa, marca «Traslado subcontratado»: SUNAT exige indicarlo en nuestra guía.`, 422);
+            if (d.subcontratado && d.subcontratante_ruc === String(cfg.ruc_emisor || '').trim()) throw aviso('La empresa que subcontrata no puede ser la misma que emite la guía.', 422);
             // Guías de remitente que cubre esta GRE Transportista (por defecto solo la elegida): su peso y sus ítems se suman
             const cand = await candidatasGrt(p, g, base.viaje);
             const ids = new Set([g.id, ...(Array.isArray(b.guias_ids) ? b.guias_ids.map(Number).filter(Number.isInteger) : [])]);
@@ -515,6 +529,7 @@ module.exports = (db, logAudit) => {
                 peso_kg: d.peso_bruto_total, descripcion: texto(elegidas.map(c => c.descripcion).filter(Boolean).join('; ') || g.descripcion, 500), items_json: JSON.stringify(d.items),
                 placa: d.placa_tracto, placa_carreta: d.placa_carreta || null, conductor_nombre: texto(`${d.conductor_nombre} ${d.conductor_apellidos}`.trim(), 150), conductor_doc: d.conductor_num_doc, licencia: texto(d.conductor_licencia, 30),
                 trae_transporte: 0, orden_servicio_id: g.orden_servicio_id, orden_servicio_codigo: g.orden_servicio_codigo, estado: 'VINCULADA', fuente: 'MANUAL',
+                observaciones: d.subcontratado ? texto(`Traslado en unidades subcontratadas. Subcontrata: RUC ${d.subcontratante_ruc} ${d.subcontratante_razon_social}`, 2000) : null,
                 usuario: usuarioDe(req), viaje: base.viaje || null, guia_relacionada_id: g.id, guias_relacionadas_ids: elegidas.map(c => c.id).join(','), modo_emision: cfg.modo,
             };
             let id;
