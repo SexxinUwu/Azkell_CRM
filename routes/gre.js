@@ -171,6 +171,8 @@ module.exports = (db, logAudit) => {
             if (!prev.length) throw aviso('Guía no encontrada.', 404);
             if (prev[0].origen === 'EMITIDA') throw aviso('Una guía emitida por nosotros no se edita.', 409);
             if (prev[0].estado === 'ANULADA') throw aviso('Una guía anulada ya no se edita.', 409);
+            const grtEmitida = await grtExistente(p, req.params.id);
+            if (grtEmitida && grtEmitida.apisunat_document_id) throw aviso(`La guía ya tiene la GRE Transportista ${grtEmitida.numero_completo}: no se puede editar.`, 409);
             const d = datosDeGuia(req.body || {}, false);
             const [dup] = await p.query(`SELECT id FROM gre_guias WHERE tipo = ? AND emisor_ruc = ? AND numero_completo = ? AND id <> ? LIMIT 1`, [d.tipo, d.emisor_ruc, d.numero_completo, req.params.id]);
             if (dup.length) throw aviso(`Ya existe otra guía ${d.numero_completo} de ese emisor.`, 409);
@@ -237,6 +239,8 @@ module.exports = (db, logAudit) => {
             const [g] = await p.query(`SELECT id, origen, numero_completo, orden_servicio_codigo, archivo_url FROM gre_guias WHERE id = ?`, [req.params.id]);
             if (!g.length) throw aviso('Guía no encontrada.', 404);
             if (g[0].origen === 'EMITIDA') throw aviso('Una guía emitida no se elimina del sistema.', 409);
+            const grtEmitida = await grtExistente(p, req.params.id);
+            if (grtEmitida && grtEmitida.apisunat_document_id) throw aviso(`La guía ya tiene la GRE Transportista ${grtEmitida.numero_completo}: no se puede eliminar.`, 409);
             if (g[0].orden_servicio_codigo) throw aviso('Desvincula la guía del servicio antes de eliminarla.', 409);
             await p.query(`DELETE FROM gre_guias WHERE id = ?`, [g[0].id]);
             if (g[0].archivo_url) { try { await deleteFromS3(s3KeyFromUrl(g[0].archivo_url)); } catch (e) { /* el archivo queda huérfano pero el registro ya no existe */ } }

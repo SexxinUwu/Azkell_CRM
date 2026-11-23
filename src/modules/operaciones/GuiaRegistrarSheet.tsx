@@ -41,6 +41,21 @@ const desdeLectura = (l: LecturaGuia): Form => ({
   conductor_nombre: s(l.conductor_nombre), conductor_doc: s(l.conductor_doc), licencia: s(l.licencia), vehiculo_tuc: s(l.vehiculo_tuc), vehiculo_autorizacion: s(l.vehiculo_autorizacion), fuente: l.fuente, items: l.items ?? [], trae_transporte: l.trae_transporte,
 });
 
+/** Datos de una guía ya registrada, para corregirlos en el mismo formulario */
+const desdeGuia = (g: Guia): Form => {
+  let items: LecturaGuia['items'] = [];
+  try { items = g.items_json ? JSON.parse(g.items_json) : []; } catch { items = []; }
+  return {
+    tipo: g.tipo, serie_numero: s(g.numero_completo), fecha_emision: s(g.fecha_emision), fecha_traslado: s(g.fecha_traslado),
+    remitente_ruc: s(g.remitente_ruc), remitente_nombre: s(g.remitente_nombre), destinatario_doc: s(g.destinatario_doc), destinatario_nombre: s(g.destinatario_nombre),
+    transportista_ruc: s(g.transportista_ruc), transportista_nombre: s(g.transportista_nombre), modalidad: g.modalidad === 'PUBLICO' || g.modalidad === 'PRIVADO' ? g.modalidad : '', motivo: s(g.motivo),
+    partida_ubigeo: s(g.partida_ubigeo), partida_direccion: s(g.partida_direccion), llegada_ubigeo: s(g.llegada_ubigeo), llegada_direccion: s(g.llegada_direccion),
+    peso: Number(g.peso_kg) > 0 ? String(g.peso_kg) : '', bultos: s(g.bultos), descripcion: s(g.descripcion), observaciones: s(g.observaciones), placa: s(g.placa),
+    conductor_nombre: s(g.conductor_nombre), conductor_doc: s(g.conductor_doc), licencia: s(g.licencia), vehiculo_tuc: s(g.vehiculo_tuc), vehiculo_autorizacion: s(g.vehiculo_autorizacion),
+    fuente: g.fuente, items, trae_transporte: !!g.trae_transporte,
+  };
+};
+
 function Seccion({ titulo, nota, children }: { titulo: string; nota?: string; children: ReactNode }) {
   return (
     <section className="os-seccion">
@@ -51,7 +66,7 @@ function Seccion({ titulo, nota, children }: { titulo: string; nota?: string; ch
 }
 
 /** Registrar una guía que entrega el cliente: se sube el XML, la foto o el PDF, se leen los datos y la persona los confirma. */
-export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: boolean; onClose: () => void; onRegistrada: (guia?: Guia) => void }) {
+export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { open: boolean; onClose: () => void; onRegistrada: (guia?: Guia) => void; editar?: Guia | null }) {
   const toast = useToast();
   const qc = useQueryClient();
   const ubi = useOpcionesUbigeo();
@@ -72,8 +87,12 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: bool
   const [auto, setAuto] = useState<Record<Lado, boolean>>({ partida: false, llegada: false });
 
   useEffect(() => {
-    if (open) { setFase('subir'); setArchivo(null); setF(VACIO); setLectura(null); setAdvertencias([]); setDuplicada(false); setTocados(new Set()); setError(null); setArrastrando(false); setAuto({ partida: false, llegada: false }); }
-  }, [open]);
+    if (open) { setFase('subir'); setArchivo(null); setF(VACIO); setLectura(null); setAdvertencias([]); setDuplicada(false); setTocados(new Set()); setError(null); setArrastrando(false); setAuto({ partida: false, llegada: false });
+      // Editar una guía ya registrada: se abre directo con sus datos, sin subir el archivo otra vez
+      if (editar) { setF(desdeGuia(editar)); setFase('revisar'); }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editar?.id]);
 
   const set = (p: Partial<Form>) => setF(x => ({ ...x, ...p }));
   const tocar = (c: Campo) => setTocados(x => new Set(x).add(c));
@@ -121,16 +140,25 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: bool
     if (Object.keys(errores).length) { haptic('warning'); return; }
     setError(null); setGuardando(vincular ? 'vincular' : 'solo');
     try {
-      const cuerpo = new FormData();
-      cuerpo.append('datos', JSON.stringify({
-        lectura_original: f.fuente === 'MANUAL' ? undefined : lectura,
+      const datos = {
+        lectura_original: editar || f.fuente === 'MANUAL' ? undefined : lectura,
         origen: 'RECIBIDA', tipo: f.tipo, numero_completo: f.serie_numero.trim().toUpperCase(), fecha_emision: f.fecha_emision || null, fecha_traslado: f.fecha_traslado || null,
         remitente_ruc: f.remitente_ruc, remitente_nombre: f.remitente_nombre, destinatario_doc: f.destinatario_doc, destinatario_nombre: f.destinatario_nombre,
         transportista_ruc: f.transportista_ruc, transportista_nombre: f.transportista_nombre, modalidad: f.modalidad || null, motivo: f.motivo,
         partida_ubigeo: f.partida_ubigeo, partida_direccion: f.partida_direccion, llegada_ubigeo: f.llegada_ubigeo, llegada_direccion: f.llegada_direccion,
         peso_kg: Number(f.peso.replace(',', '.')), bultos: f.bultos ? Number(f.bultos) : null, descripcion: f.descripcion, observaciones: f.observaciones, items: f.items,
         placa: f.placa, conductor_nombre: f.conductor_nombre, conductor_doc: f.conductor_doc, licencia: f.licencia, vehiculo_tuc: f.vehiculo_tuc, vehiculo_autorizacion: f.vehiculo_autorizacion, trae_transporte: f.trae_transporte, fuente: f.fuente,
-      }));
+      };
+      if (editar) {
+        const m = await api<{ ok?: boolean; error?: string; message?: string }>(`/operaciones/gre/guias/${editar.id}`, { method: 'PUT', body: datos });
+        if (m.ok === false) throw new Error(m.error || 'No se pudo guardar los cambios');
+        haptic('success'); toast(m.message || 'Guía actualizada');
+        await qc.invalidateQueries({ queryKey: ['operaciones'] });
+        onRegistrada(undefined);
+        return;
+      }
+      const cuerpo = new FormData();
+      cuerpo.append('datos', JSON.stringify(datos));
       if (archivo) cuerpo.append('archivo', archivo);
       const r = await api<{ ok?: boolean; error?: string; id?: number; message?: string }>('/operaciones/gre/guias', { method: 'POST', body: cuerpo });
       if (r.ok === false) throw new Error(r.error || 'No se pudo registrar la guía');
@@ -147,8 +175,13 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada }: { open: bool
   const ocupado = guardando !== null;
   const pista = (lado: Lado) => (f[`${lado}_ubigeo`] ? (auto[lado] ? 'Detectado de la dirección · confírmalo' : `Ubigeo ${f[`${lado}_ubigeo`]}`) : 'Opcional · se detecta de la dirección');
   return (
-    <Sheet ancho open={open} onClose={() => !ocupado && fase !== 'leyendo' && onClose()} title="Registrar guía"
-      footer={fase === 'revisar' ? (
+    <Sheet ancho open={open} onClose={() => !ocupado && fase !== 'leyendo' && onClose()} title={editar ? `Editar guía ${editar.numero_completo}` : 'Registrar guía'}
+      footer={fase === 'revisar' && editar ? (
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={ocupado}>Cancelar</Button>
+          <Button variant="primary" onClick={() => guardar(false)} loading={guardando === 'solo'} disabled={ocupado}>Guardar cambios</Button>
+        </>
+      ) : fase === 'revisar' ? (
         <>
           <Button variant="secondary" icon={<ArrowLeft size={16} />} onClick={() => setFase('subir')} disabled={ocupado}>Otro archivo</Button>
           <Button variant="secondary" onClick={() => guardar(false)} loading={guardando === 'solo'} disabled={ocupado}>Registrar</Button>
