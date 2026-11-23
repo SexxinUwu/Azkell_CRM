@@ -25,6 +25,14 @@ module.exports = function (db, broadcast, logAudit) {
                 const [r] = await tdb.query(`SELECT ${campos.replace(', detraccion', '')} FROM persona_cuentas_bancarias WHERE documento = ? AND estado = 1 ORDER BY principal DESC, id ASC`, [d]);
                 return r;
             }
+            // Cuentas de una persona (Cuentas del personal, por DNI)
+            const delPersonal = async (docu) => {
+                if (!docu) return [];
+                const [r] = await tdb.query(`SELECT ${campos.replace(', detraccion', '')} FROM persona_cuentas_bancarias WHERE documento = ? AND estado = 1 ORDER BY principal DESC, id ASC`, [docu]);
+                return r;
+            };
+            // Personal de la empresa elegido como proveedor (id "PER-<DNI>"): sus cuentas viven en Cuentas del personal
+            if (String(proveedorId || '').startsWith('PER-')) return await delPersonal(String(proveedorId).slice(4).trim());
             let ids = [];
             if (proveedorId) ids.push(String(proveedorId));
             else if (d) {
@@ -33,9 +41,13 @@ module.exports = function (db, broadcast, logAudit) {
                 const [e] = await tdb.query('SELECT id FROM combustible_estaciones_proveedores WHERE TRIM(proveedor_ruc) = ? LIMIT 1', [d]).catch(() => [[]]);
                 if (e.length) ids.push('EST-' + e[0].id);
             }
-            if (!ids.length) return [];
+            if (!ids.length) return await delPersonal(d);
             const [r] = await tdb.query(`SELECT ${campos} FROM proveedor_cuentas_bancarias WHERE proveedor_id IN (?) AND estado = 1 ORDER BY principal DESC, id ASC`, [ids]);
-            return r;
+            if (r.length) return r;
+            // Sin cuentas de proveedor: probar con las de la persona que tenga el mismo documento
+            let docu = d;
+            if (!docu && proveedorId) { const [p] = await tdb.query('SELECT TRIM(numero_documento) AS doc FROM proveedores_inv WHERE id = ? LIMIT 1', [String(proveedorId)]); if (p.length) docu = p[0].doc; }
+            return await delPersonal(docu);
         } catch (e) { console.warn('cuentasRegistradasDestino:', e.message); return []; }
     }
 
