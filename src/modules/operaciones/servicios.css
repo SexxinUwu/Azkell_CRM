@@ -117,3 +117,11 @@ button.os-viaje:active { transform: scale(0.985); transition-duration: 0.08s; }
 .os-cifra { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 .os-cifra small { font-size: 0.875rem; font-weight: 600; color: var(--label-2); margin-left: 6px; }
 .os-fuerte { font-weight: 600; }
+
+/* Registrar guía por pasos: el paso completo se marca en verde */
+.gr-pasos { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.gr-pasos__btn { display: inline-flex; align-items: center; gap: 6px; flex: 1 0 auto; justify-content: center; padding: 7px 12px; border: 0; border-radius: 999px; background: var(--fill); color: var(--label-2); font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.gr-pasos__btn--on { color: var(--label); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.gr-pasos__ico { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--bg, #fff); font-size: 0.6875rem; font-weight: 700; }
+.gr-pasos__btn--ok .gr-pasos__ico { background: var(--green-ink, #1c9a53); color: #fff; }
+.gr-pasos__nota { margin: 0; font-size: 0.8125rem; color: var(--label-2); }

@@ -2,7 +2,7 @@ import './servicios.css';
 import './seguimiento.css';
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, CircleAlert, FileText, PenLine, Plus, Sparkles, Trash2, UploadCloud } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, CircleAlert, FileText, PenLine, Plus, Sparkles, Trash2, UploadCloud } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
@@ -23,6 +23,16 @@ interface ServicioGuia {
   remitente_generador?: string | null; destinatario?: string | null; direccion_origen?: string | null; ubigeo_origen?: string | null;
   direccion_destino?: string | null; ubigeo_destino?: string | null; descripcion_carga?: string | null; fecha_entrega_fmt?: string | null;
 }
+
+/** Pasos del formulario: cada uno agrupa lo que se confirma junto. Arriba se marca en verde el que ya está completo. */
+const PASOS_GUIA = [
+  { titulo: 'Servicio', sub: 'A qué servicio pertenece y cuándo se comprometió la entrega' },
+  { titulo: 'Guía', sub: 'Número, fechas y motivo del traslado' },
+  { titulo: 'Partes', sub: 'Quién envía y quién recibe' },
+  { titulo: 'Puntos', sub: 'De dónde sale y a dónde llega' },
+  { titulo: 'Carga', sub: 'Qué se transporta y quién lo lleva' },
+] as const;
+const ULTIMO = PASOS_GUIA.length - 1;
 
 /** Una línea de «Qué se transporta»: un producto o bulto */
 interface LineaForm { descripcion: string; codigo: string; cantidad: string; unidad: string; peso: string; volumen: string }
@@ -95,6 +105,7 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
   // Lo que propuso el lector (XML o IA): al guardar se envía para comparar con lo que la persona confirmó
   const [lectura, setLectura] = useState<LecturaGuia | null>(null);
   const [duplicada, setDuplicada] = useState(false);
+  const [paso, setPaso] = useState(0);
   // Servicio al que se vincula la guía al registrarla (opcional) y catálogo de puntos de carga y descarga
   const [servicioId, setServicioId] = useState<string | null>(null);
   const servicios = useQuery({
@@ -117,6 +128,7 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editar?.id]);
 
+  useEffect(() => { if (fase !== 'revisar') setPaso(0); }, [fase]);
   const set = (p: Partial<Form>) => setF(x => ({ ...x, ...p }));
   // Líneas de «Qué se transporta»: siempre se ve al menos una; los totales salen de las líneas
   const lineas = f.items.length ? f.items : [LINEA_VACIA];
@@ -178,6 +190,14 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
   if (!/^\d{11}$/.test(emisor.trim())) errores.emisor = f.tipo === 'TRANSPORTISTA' ? 'Indica el RUC (11 dígitos) del transportista que emitió la guía.' : 'Indica el RUC (11 dígitos) del remitente que emitió la guía.';
   if (!(Number(f.peso.replace(',', '.')) > 0)) errores.peso = 'Indica el peso bruto total en kilos.';
   const ver = (c: Campo) => (tocados.has(c) ? errores[c] ?? null : null);
+  // Un paso queda en verde cuando tiene lo necesario; el de servicio es opcional y se marca si se eligió algo
+  const completo = [
+    !!servicioId || !!f.fecha_comprometida,
+    !errores.serie_numero && !!f.motivo.trim(),
+    !errores.emisor && !!f.remitente_nombre.trim() && !!f.destinatario_nombre.trim(),
+    !!f.partida_direccion.trim() && !!f.llegada_direccion.trim() && /^\d{6}$/.test(f.partida_ubigeo) && /^\d{6}$/.test(f.llegada_ubigeo),
+    !errores.peso && f.items.some(i => i.descripcion.trim()),
+  ];
 
   // Si no hay distrito elegido, lo saca del final de la dirección («… - ATE - LIMA - LIMA»)
   function detectar(lado: Lado) {
@@ -213,7 +233,7 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
 
   async function guardar(vincular: boolean) {
     setTocados(new Set(['serie_numero', 'emisor', 'peso']));
-    if (Object.keys(errores).length) { haptic('warning'); return; }
+    if (Object.keys(errores).length) { setPaso(errores.serie_numero ? 1 : errores.emisor ? 2 : 4); haptic('warning'); return; }
     setError(null); setGuardando(vincular ? 'vincular' : 'solo');
     try {
       const datos = {
@@ -266,14 +286,22 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
     <Sheet ancho open={open} onClose={() => !ocupado && fase !== 'leyendo' && onClose()} title={editar ? `Editar guía ${editar.numero_completo}` : 'Registrar guía'}
       footer={fase === 'revisar' && editar ? (
         <>
-          <Button variant="secondary" onClick={onClose} disabled={ocupado}>Cancelar</Button>
-          <Button variant="primary" onClick={() => guardar(false)} loading={guardando === 'solo'} disabled={ocupado}>Guardar cambios</Button>
+          {paso > 0
+            ? <Button variant="secondary" icon={<ArrowLeft size={16} />} onClick={() => setPaso(paso - 1)} disabled={ocupado}>Atrás</Button>
+            : <Button variant="secondary" onClick={onClose} disabled={ocupado}>Cancelar</Button>}
+          {paso < ULTIMO
+            ? <Button variant="primary" icon={<ArrowRight size={16} />} onClick={() => setPaso(paso + 1)}>Siguiente</Button>
+            : <Button variant="primary" onClick={() => guardar(false)} loading={guardando === 'solo'} disabled={ocupado}>Guardar cambios</Button>}
         </>
       ) : fase === 'revisar' ? (
         <>
-          <Button variant="secondary" icon={<ArrowLeft size={16} />} onClick={() => setFase('subir')} disabled={ocupado}>Otro archivo</Button>
-          <Button variant={servicioId ? 'primary' : 'secondary'} onClick={() => guardar(false)} loading={guardando === 'solo'} disabled={ocupado}>{servicioId ? 'Registrar y vincular' : 'Registrar'}</Button>
-          {!servicioId && <Button variant="primary" onClick={() => guardar(true)} loading={guardando === 'vincular'} disabled={ocupado}>Registrar y vincular a un servicio</Button>}
+          {paso > 0
+            ? <Button variant="secondary" icon={<ArrowLeft size={16} />} onClick={() => setPaso(paso - 1)} disabled={ocupado}>Atrás</Button>
+            : <Button variant="secondary" icon={<ArrowLeft size={16} />} onClick={() => setFase('subir')} disabled={ocupado}>Otro archivo</Button>}
+          {paso < ULTIMO
+            ? <Button variant="primary" icon={<ArrowRight size={16} />} onClick={() => setPaso(paso + 1)}>Siguiente</Button>
+            : <Button variant={servicioId ? 'primary' : 'secondary'} onClick={() => guardar(false)} loading={guardando === 'solo'} disabled={ocupado}>{servicioId ? 'Registrar y vincular' : 'Registrar'}</Button>}
+          {paso >= ULTIMO && !servicioId && <Button variant="primary" onClick={() => guardar(true)} loading={guardando === 'vincular'} disabled={ocupado}>Registrar y vincular a un servicio</Button>}
         </>
       ) : <Button variant="secondary" onClick={onClose} disabled={fase === 'leyendo'}>Cancelar</Button>}>
       <div className="gr gr--compacto">
@@ -307,12 +335,22 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
 
         {fase === 'revisar' && (
           <>
+            <div className="gr-pasos" role="tablist" aria-label="Pasos de la guía">
+              {PASOS_GUIA.map((p, i) => (
+                <button key={p.titulo} type="button" role="tab" aria-selected={i === paso} onClick={() => setPaso(i)}
+                  className={`gr-pasos__btn${i === paso ? ' gr-pasos__btn--on' : ''}${completo[i] ? ' gr-pasos__btn--ok' : ''}`}>
+                  <span className="gr-pasos__ico">{completo[i] ? <Check size={13} strokeWidth={3} aria-label="Completo" /> : i + 1}</span>
+                  <span>{p.titulo}</span>
+                </button>
+              ))}
+            </div>
+            <p className="gr-pasos__nota">Paso {paso + 1} de {PASOS_GUIA.length} · {PASOS_GUIA[paso].sub}</p>
             {archivo && <p className="gr__archivo"><FileText size={15} aria-hidden /> {archivo.name} · {f.fuente === 'XML' ? 'leída del XML' : f.fuente === 'IA' ? 'leída con IA: revisa cada dato' : 'a mano'}</p>}
             {duplicada && <Notice tone="error" icon={<CircleAlert size={16} />}>Esta guía ya está registrada. Si guardas, el sistema lo impedirá; revisa el número y el RUC del emisor.</Notice>}
             {advertencias.length > 0 && <Notice tone="accent" icon={<CircleAlert size={16} />}>{advertencias.map(a => <div key={a}>{a}</div>)}</Notice>}
             {f.trae_transporte && <Notice tone="accent">Esta guía ya trae los datos del transporte (transportista, vehículo, conductor y fecha de traslado). Según la norma de SUNAT, puede que no haga falta emitir nuestra GRE Transportista: confírmalo antes de decidir.</Notice>}
 
-            <Seccion titulo="Servicio y entrega" nota={editar ? 'cuándo se comprometió la entrega' : 'opcional · con un servicio elegido, la guía queda vinculada al guardar'}>
+            <div hidden={paso !== 0}><Seccion titulo="Servicio y entrega" nota={editar ? 'cuándo se comprometió la entrega' : 'opcional · con un servicio elegido, la guía queda vinculada al guardar'}>
               {!editar && (
                 <Field label="Servicio" hint="Completa lo que falte en la guía: dirección, destinatario y fecha de entrega">
                   {p => <Combobox {...p} options={opcionesServicio} value={servicioId} loading={servicios.isLoading} placeholder="Busca la orden de servicio" onChange={elegirServicio} />}
@@ -322,9 +360,9 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
                 <Field label="Fecha comprometida de entrega" hint="Sirve para medir el cumplimiento (On Time)">{p => <TextInput {...p} type="date" value={f.fecha_comprometida} onChange={e => set({ fecha_comprometida: e.target.value })} />}</Field>
                 <Field label="Hora comprometida" hint="Solo si el cliente pactó hora">{p => <TextInput {...p} type="time" value={f.hora_comprometida} onChange={e => set({ hora_comprometida: e.target.value })} />}</Field>
               </div>
-            </Seccion>
+            </Seccion></div>
 
-            <Seccion titulo="La guía">
+            <div hidden={paso !== 1}><Seccion titulo="La guía">
               <SegmentedControl block label="Tipo de guía" value={f.tipo} onChange={v => set({ tipo: v })} options={[{ value: 'REMITENTE', label: 'GRE Remitente' }, { value: 'TRANSPORTISTA', label: 'GRE Transportista' }]} />
               <div className="gr__g3">
                 <Field label="Serie y número *" error={ver('serie_numero')}>
@@ -342,9 +380,9 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
                   </SelectInput>
                 )}
               </Field>
-            </Seccion>
+            </Seccion></div>
 
-            <Seccion titulo="Quién envía y quién recibe">
+            <div hidden={paso !== 2}><Seccion titulo="Quién envía y quién recibe">
               <div className="gr__g4">
                 <Field label={f.tipo === 'REMITENTE' ? 'RUC remitente *' : 'RUC remitente'} error={f.tipo === 'REMITENTE' ? ver('emisor') : null}>
                   {p => <TextInput {...p} inputMode="numeric" maxLength={11} value={f.remitente_ruc} onBlur={() => tocar('emisor')} onChange={e => set({ remitente_ruc: e.target.value.replace(/\D/g, '') })} />}
@@ -353,9 +391,9 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
                 <Field label="RUC o DNI destinatario">{p => <TextInput {...p} inputMode="numeric" maxLength={11} value={f.destinatario_doc} onChange={e => set({ destinatario_doc: e.target.value.replace(/\D/g, '') })} />}</Field>
                 <div className="gr__s3"><Field label="Destinatario">{p => <TextInput {...p} value={f.destinatario_nombre} onChange={e => set({ destinatario_nombre: e.target.value })} />}</Field></div>
               </div>
-            </Seccion>
+            </Seccion></div>
 
-            <Seccion titulo="Punto de partida y de llegada">
+            <div hidden={paso !== 3}><Seccion titulo="Punto de partida y de llegada">
               <div className="gr__g2">
                 {(['partida', 'llegada'] as const).map(lado => (
                   <div key={lado} className="gr__lado">
@@ -374,9 +412,9 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
                   </div>
                 ))}
               </div>
-            </Seccion>
+            </Seccion></div>
 
-            <Seccion titulo="Qué se transporta" nota="una línea por producto o bulto · los totales se calculan de las líneas">
+            <div hidden={paso !== 4}><Seccion titulo="Qué se transporta" nota="una línea por producto o bulto · los totales se calculan de las líneas">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {lineas.map((l, i) => (
                   <div key={i} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end' }}>
@@ -401,9 +439,9 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
               {totales.peso > 0 && Math.abs(totales.peso - num(f.peso)) > 0.001 && (
                 <p className="os-nota">Las líneas suman {totales.peso.toLocaleString('es-PE', { maximumFractionDigits: 3 })} kg y el peso bruto de la guía dice {num(f.peso) ? `${num(f.peso).toLocaleString('es-PE')} kg` : 'vacío'}. <button type="button" onClick={() => set({ peso: String(Math.round(totales.peso * 1000) / 1000) })} style={{ all: 'unset', cursor: 'pointer', color: 'var(--blue-ink, #0a63c9)', fontWeight: 600 }}>Usar la suma de las líneas</button></p>
               )}
-            </Seccion>
+            </Seccion></div>
 
-            <Seccion titulo="Carga y transporte" nota="el transporte solo si la guía lo trae">
+            <div hidden={paso !== 4}><Seccion titulo="Carga y transporte" nota="el transporte solo si la guía lo trae">
               <div className="gr__g4">
                 <Field label="Peso bruto (kg) *" error={ver('peso')}>
                   {p => <TextInput {...p} inputMode="decimal" value={f.peso} placeholder="0" onBlur={() => tocar('peso')} onChange={e => set({ peso: e.target.value.replace(/[^\d.,]/g, '') })} />}
@@ -419,7 +457,7 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
                 <Field label="Licencia">{p => <TextInput {...p} value={f.licencia} onChange={e => set({ licencia: e.target.value })} />}</Field>
               </div>
               <Field label="Observaciones de la guía">{p => <TextInput {...p} value={f.observaciones} title={f.observaciones} onChange={e => set({ observaciones: e.target.value })} />}</Field>
-            </Seccion>
+            </Seccion></div>
           </>
         )}
       </div>
