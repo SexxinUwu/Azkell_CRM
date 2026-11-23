@@ -3333,7 +3333,7 @@ function getCatRampasSafe(targetDb, cb) {
 }
 
 app.get('/api/cat-rampas', (req, res) => {
-    getCatRampasSafe(db, (err, rows) => {
+    getCatRampasSafe(req.db || db, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows || []);
     });
@@ -3344,7 +3344,7 @@ function nombreRampaUnico(req, res, next) {
     if (req.body.nombre_rampa === undefined) return next();
     const nombre = String(req.body.nombre_rampa || '').trim();
     if (!nombre) return res.status(400).json({ error: 'El nombre de la rampa es obligatorio' });
-    db.query('SELECT id FROM cat_rampas WHERE LOWER(TRIM(nombre_rampa)) = LOWER(?) AND id <> ? LIMIT 1',
+    (req.db || db).query('SELECT id FROM cat_rampas WHERE LOWER(TRIM(nombre_rampa)) = LOWER(?) AND id <> ? LIMIT 1',
         [nombre, req.params.id || 0], (err, rows) => {
             if (err) return next();
             if (rows && rows.length) return res.status(409).json({ error: `Ya existe una rampa llamada «${nombre}»` });
@@ -3355,9 +3355,9 @@ function nombreRampaUnico(req, res, next) {
 app.post('/api/cat-rampas', nombreRampaUnico, (req, res) => {
     const { nombre_rampa, sede, color } = req.body;
     if (!nombre_rampa) return res.status(400).json({ error: 'nombre_rampa requerido' });
-    db.query('ALTER TABLE cat_rampas ADD COLUMN color VARCHAR(50) NULL DEFAULT "#ef4444"', () => {
-        db.query('ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0', () => {
-            db.query('INSERT INTO cat_rampas (nombre_rampa, sede, estado, color) VALUES (?,?,?,?)',
+    (req.db || db).query('ALTER TABLE cat_rampas ADD COLUMN color VARCHAR(50) NULL DEFAULT "#ef4444"', () => {
+        (req.db || db).query('ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0', () => {
+            (req.db || db).query('INSERT INTO cat_rampas (nombre_rampa, sede, estado, color) VALUES (?,?,?,?)',
                 [nombre_rampa.trim(), sede || 'Principal', 'Disponible', color || '#ef4444'], (err, r) => {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ ok: true, id: r.insertId });
@@ -3370,10 +3370,10 @@ app.post('/api/cat-rampas', nombreRampaUnico, (req, res) => {
 app.put('/api/cat-rampas/reorder', (req, res) => {
     const items = req.body;
     if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: 'items requeridos' });
-    db.query('ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0', () => {
+    (req.db || db).query('ALTER TABLE cat_rampas ADD COLUMN orden INT NOT NULL DEFAULT 0', () => {
         const updates = items.map(item =>
             new Promise((resolve, reject) =>
-                db.query('UPDATE cat_rampas SET orden=? WHERE id=?', [item.orden, item.id],
+                (req.db || db).query('UPDATE cat_rampas SET orden=? WHERE id=?', [item.orden, item.id],
                     (err) => err ? reject(err) : resolve())
             )
         );
@@ -3393,9 +3393,9 @@ app.put('/api/cat-rampas/:id', nombreRampaUnico, (req, res) => {
     if (en_reporte !== undefined) { sets.push('en_reporte=?'); vals.push(en_reporte ? 1 : 0); }
     if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
     vals.push(req.params.id);
-    db.query('ALTER TABLE cat_rampas ADD COLUMN color VARCHAR(50) NULL DEFAULT "#ef4444"', () => {
-        db.query('ALTER TABLE cat_rampas ADD COLUMN en_reporte TINYINT(1) NOT NULL DEFAULT 1', () => {
-            db.query(`UPDATE cat_rampas SET ${sets.join(',')} WHERE id=?`, vals, (err) => {
+    (req.db || db).query('ALTER TABLE cat_rampas ADD COLUMN color VARCHAR(50) NULL DEFAULT "#ef4444"', () => {
+        (req.db || db).query('ALTER TABLE cat_rampas ADD COLUMN en_reporte TINYINT(1) NOT NULL DEFAULT 1', () => {
+            (req.db || db).query(`UPDATE cat_rampas SET ${sets.join(',')} WHERE id=?`, vals, (err) => {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ ok: true });
             });
@@ -3404,10 +3404,10 @@ app.put('/api/cat-rampas/:id', nombreRampaUnico, (req, res) => {
 });
 
 app.delete('/api/cat-rampas/:id', (req, res) => {
-    db.query('ALTER TABLE taller_rampas ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT "Activo"', () => {
-        db.query('SELECT COUNT(*) AS cnt FROM taller_rampas WHERE rampa=? AND (estado IS NULL OR estado="Activo")', [req.params.id], (err, rows) => {
+    (req.db || db).query('ALTER TABLE taller_rampas ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT "Activo"', () => {
+        (req.db || db).query('SELECT COUNT(*) AS cnt FROM taller_rampas WHERE rampa=? AND (estado IS NULL OR estado="Activo")', [req.params.id], (err, rows) => {
             if (err) {
-                db.query('DELETE FROM cat_rampas WHERE id=?', [req.params.id], (err2) => {
+                (req.db || db).query('DELETE FROM cat_rampas WHERE id=?', [req.params.id], (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
                     return res.json({ ok: true });
                 });
@@ -3416,7 +3416,7 @@ app.delete('/api/cat-rampas/:id', (req, res) => {
             if (rows && rows[0] && rows[0].cnt > 0) {
                 return res.status(400).json({ error: 'La rampa tiene unidades activas. Libéralas primero.' });
             }
-            db.query('DELETE FROM cat_rampas WHERE id=?', [req.params.id], (err2) => {
+            (req.db || db).query('DELETE FROM cat_rampas WHERE id=?', [req.params.id], (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
                 res.json({ ok: true });
             });
@@ -3426,9 +3426,9 @@ app.delete('/api/cat-rampas/:id', (req, res) => {
 
 // A. Obtener Catálogos (Rampas y Situaciones) para el Front-End
 app.get('/api/catalogos_taller', (req, res) => {
-    getCatRampasSafe(db, (err1, rampas) => {
+    getCatRampasSafe(req.db || db, (err1, rampas) => {
         if (err1) return res.status(500).json({ error: err1.message });
-        db.query("SELECT * FROM cat_situaciones ORDER BY id ASC", (err2, situaciones) => {
+        (req.db || db).query("SELECT * FROM cat_situaciones ORDER BY id ASC", (err2, situaciones) => {
             if (err2) return res.status(500).json({ error: err2.message });
             res.json({ rampas: rampas || [], situaciones: situaciones || [] });
         });
