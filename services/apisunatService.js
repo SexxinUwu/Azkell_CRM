@@ -513,6 +513,18 @@ class ApisunatService {
         body['cac:Shipment'] = {
             'cbc:ID': t('SUNAT_Envio'),
             'cbc:GrossWeightMeasure': { _attributes: { unitCode: data.unidad_medida || 'KGM' }, _text: kg },
+            // Traslado subcontratado (RS 123-2022, art. 3.7 y Anexo 14 UBL 2.1, campos 57 a 61): el tercero que hace el traslado indica que es subcontratado,
+            // que el flete lo paga el subcontratador y el RUC y nombre de la empresa que subcontrata.
+            ...(data.subcontratado && /^\d{11}$/.test(String(data.subcontratante_ruc || '')) ? {
+                'cbc:SpecialInstructions': [t('SUNAT_Envio_IndicadorTrasporteSubcontratado'), t('SUNAT_Envio_IndicadorPagadorFlete_Subcontratador')],
+                'cac:Consignment': {
+                    'cbc:ID': t('SUNAT_Envio'),
+                    'cac:LogisticsOperatorParty': {
+                        'cbc:CustomerAssignedAccountID': { _attributes: { schemeID: '6' }, _text: String(data.subcontratante_ruc) },
+                        'cac:Party': { 'cac:PartyLegalEntity': { 'cbc:RegistrationName': t(String(data.subcontratante_razon_social || '').trim()) } },
+                    },
+                },
+            } : {}),
             'cac:ShipmentStage': {
                 'cac:TransitPeriod': { 'cbc:StartDate': t(data.fecha_traslado) },
                 'cac:CarrierParty': {

@@ -17,6 +17,7 @@ interface Propuesta {
   remitente_ruc: string; remitente_razon_social: string; destinatario_ruc: string; destinatario_razon_social: string;
   punto_partida_direccion: string; punto_llegada_direccion: string; peso_bruto_total: number;
   placa_tracto: string; placa_carreta: string; conductor_nombre: string; conductor_apellidos: string; conductor_num_doc: string; conductor_licencia: string; registro_mtc: string; tuc_tracto: string; aut_tracto: string; tuc_carreta: string; aut_carreta: string;
+  subcontratado: boolean; subcontratante_ruc: string; subcontratante_razon_social: string;
   items: { descripcion: string; cantidad: number; unidad_medida: string }[];
 }
 interface Respuesta {
@@ -26,7 +27,7 @@ interface Respuesta {
   ambiente: { modo: 'prueba' | 'produccion'; lista: boolean; motivo: string | null }; guia_trae_transporte: boolean;
 }
 
-const EDITABLES = /placa del tracto|nombres y apellidos|DNI del conductor|licencia|registro MTC/;
+const EDITABLES = /placa del tracto|nombres y apellidos|DNI del conductor|licencia|registro MTC|nos subcontrata/;
 
 /** Emite nuestra GRE Transportista a partir de una guía de remitente recibida y vinculada: los datos salen de la guía y del viaje, la persona los revisa y confirma. */
 export function GrtSheet({ guia, onClose }: { guia: Guia | null; onClose: () => void }) {
@@ -67,6 +68,10 @@ export function GrtSheet({ guia, onClose }: { guia: Guia | null; onClose: () => 
     if (!/^\d{8}$/.test(f.conductor_num_doc.trim())) propios.push('DNI del conductor (8 dígitos)');
     if (!f.conductor_licencia.trim()) propios.push('licencia del conductor');
     if (!f.registro_mtc.trim()) propios.push('registro MTC de la empresa');
+    if (f.subcontratado) {
+      if (!/^\d{11}$/.test(f.subcontratante_ruc.trim())) propios.push('RUC válido de la empresa que nos subcontrata');
+      if (!f.subcontratante_razon_social.trim()) propios.push('razón social de la empresa que nos subcontrata');
+    }
   }
   const faltan = [...fijos, ...propios];
   const yaEmitida = !!r?.existente?.apisunat_document_id;
@@ -155,6 +160,25 @@ export function GrtSheet({ guia, onClose }: { guia: Guia | null; onClose: () => 
               </div>
             </section>
           )}
+
+          <section className="os-seccion">
+            <h3 className="os-seccion__titulo">Subcontratación <span className="gr__nota">· obligatoria si la guía del cliente designa a otra empresa de transporte</span></h3>
+            <div className="os-seccion__cuerpo">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input type="checkbox" checked={f.subcontratado} disabled={yaEmitida} onChange={e => set({ subcontratado: e.target.checked })} />
+                <span>Traslado subcontratado: lo hacemos por encargo de otra empresa de transporte</span>
+              </label>
+              {f.subcontratado && (
+                <>
+                  <div className="gr__g4">
+                    <Field label="RUC de la empresa que nos subcontrata">{p => <TextInput {...p} inputMode="numeric" maxLength={11} value={f.subcontratante_ruc} onChange={e => set({ subcontratante_ruc: e.target.value.replace(/\D/g, '') })} />}</Field>
+                    <div className="gr__s2"><Field label="Razón social">{p => <TextInput {...p} value={f.subcontratante_razon_social} onChange={e => set({ subcontratante_razon_social: e.target.value })} />}</Field></div>
+                  </div>
+                  <p className="os-nota">Esta guía la emitimos nosotros como transportista que hace el traslado. SUNAT exige indicar que es traslado en unidades subcontratadas, el RUC y nombre de quien subcontrata, y que el flete lo paga esa empresa.</p>
+                </>
+              )}
+            </div>
+          </section>
 
           <section className="os-seccion">
             <h3 className="os-seccion__titulo">Transporte <span className="gr__nota">· sale del viaje, corrígelo si hace falta</span></h3>
