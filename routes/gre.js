@@ -87,7 +87,9 @@ module.exports = (db, logAudit) => {
             llegada_ubigeo: ubigeo(b.llegada_ubigeo), llegada_direccion: texto(b.llegada_direccion, 255),
             peso_kg: Math.round(peso * 100) / 100, bultos: Number.isInteger(Number(b.bultos)) && Number(b.bultos) > 0 ? Number(b.bultos) : null,
             descripcion: texto(b.descripcion, 500),
-            items_json: Array.isArray(b.items) && b.items.length ? JSON.stringify(b.items.slice(0, 60)) : null,
+            items_json: Array.isArray(b.items) && b.items.length
+                ? JSON.stringify(b.items.slice(0, 60).map(i => ({ descripcion: texto(i && i.descripcion, 250), codigo: texto(i && i.codigo, 40), cantidad: Number(i && i.cantidad) || null, unidad: texto(i && i.unidad, 10), peso_kg: Number(i && i.peso_kg) || null, volumen_m3: Number(i && i.volumen_m3) || null })).filter(i => i.descripcion))
+                : null,
             placa: texto(b.placa, 20) ? String(b.placa).toUpperCase().replace(/[^A-Z0-9]/g, '') : null,
             conductor_nombre: texto(b.conductor_nombre, 150), conductor_doc: digitos(b.conductor_doc, 15), licencia: texto(b.licencia, 30),
             vehiculo_tuc: texto(b.vehiculo_tuc, 30), vehiculo_autorizacion: texto(b.vehiculo_autorizacion, 30),

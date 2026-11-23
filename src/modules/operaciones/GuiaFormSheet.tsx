@@ -8,6 +8,7 @@ import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
+import { MOTIVOS_TRASLADO } from './motivosTraslado';
 
 // Redacción de borradores de guía de remitente (GRE) y de transportista (GRT).
 // Solo guarda borradores (POST/PUT). La emisión a SUNAT vive en GuiasElectronicas y depende del ambiente.
@@ -35,19 +36,9 @@ interface Form {
 type StrKeys = { [K in keyof Form]: Form[K] extends string ? K : never }[keyof Form];
 type BoolKeys = { [K in keyof Form]: Form[K] extends boolean ? K : never }[keyof Form];
 
-// Motivos de traslado tomados de las listas de la versión actual
-const MOTIVOS: Record<TipoGuia, [string, string][]> = {
-  remitente: [
-    ['01', '01 - Venta'], ['02', '02 - Compra'], ['04', '04 - Traslado entre establecimientos'], ['08', '08 - Importación'],
-    ['09', '09 - Exportación'], ['13', '13 - Otros'], ['14', '14 - Venta con entrega a terceros'],
-    ['18', '18 - Emisor itinerante'], ['19', '19 - Traslado a zona primaria'],
-  ],
-  transportista: [
-    ['01', '01 - Prestación de servicios de transporte'], ['02', '02 - Compra'], ['04', '04 - Traslado entre establecimientos'],
-    ['08', '08 - Importación'], ['09', '09 - Exportación'], ['13', '13 - Otros'], ['14', '14 - Venta sujeta a confirmación'],
-    ['17', '17 - Traslado de bienes para transformación'], ['18', '18 - Traslado emisor itinerante'],
-  ],
-};
+// Motivos de traslado: Catálogo N.° 20 de SUNAT (el mismo para la guía de remitente y la de transportista)
+const MOTIVOS_SUNAT: [string, string][] = MOTIVOS_TRASLADO.map(([c, d]) => [c, `${c} - ${d}`]);
+const MOTIVOS: Record<TipoGuia, [string, string][]> = { remitente: MOTIVOS_SUNAT, transportista: MOTIVOS_SUNAT };
 const UNIDADES_PESO: [string, string][] = [['KGM', 'Kilogramo (KGM)'], ['TNE', 'Tonelada (TNE)']];
 const UNIDADES_ITEM: [string, string][] = [['NIU', 'Unidad (NIU)'], ['KGM', 'Kilogramo (KGM)'], ['TNE', 'Tonelada (TNE)'], ['LTR', 'Litro (LTR)'], ['GLL', 'Galón (GLL)']];
 const TIPOS_DOC_CONDUCTOR: [string, string][] = [['1', 'DNI'], ['4', 'Carné de extranjería'], ['7', 'Pasaporte']];
