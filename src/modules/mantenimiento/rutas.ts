@@ -110,6 +110,16 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'planificacion', label: 'Planificación', to: '/mantenimiento/planificacion', icon: 'History', permisos: ['plan.ver'] },
   },
   {
+    path: 'mantenimiento/siniestros/*',
+    permisos: ['siniestros.ver', 'admin'],
+    Page: lazy(() => import('./SiniestrosPage').then(m => ({ default: m.SiniestrosPage }))),
+  },
+  {
+    path: 'mantenimiento/siniestros-analisis/*',
+    permisos: ['siniestros.ver', 'admin'],
+    Page: lazy(() => import('./SiniestrosAnalisisPage').then(m => ({ default: m.SiniestrosAnalisisPage }))),
+  },
+  {
     path: 'mantenimiento/otros/*',
     permisos: [],
     Page: lazy(() => import('./OtrosMantenimientoPage').then(m => ({ default: m.OtrosMantenimientoPage }))),

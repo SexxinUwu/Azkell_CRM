@@ -23,6 +23,7 @@ Sistema integral de gestión de flotas (Lima, Perú): vehículos, mantenimiento,
 - **Inspecciones técnicas:** registro de inspecciones por categoría (motor, neumáticos, frenos, etc.), wizard por fases, firma digital y exportación a PDF.
 - **Fleetrun (Datos de Mantenimiento):** historial de mantenimientos preventivos por vehículo, con km, fechas y estado.
 - **Estado de rampas:** resumen de inspecciones vigentes y vencidas por tipo de vehículo.
+- **Siniestros y daños** (Mantenimiento › Otros): registro de cada siniestro de la flota (fecha, placa, conductor, tipo de incidencia, técnico, horas en taller, costo de repuestos y mano de obra y estado). Se registra a mano o se importa el Excel de control; los motivos se configuran desde la misma pantalla. **Análisis de siniestros** muestra los gráficos: costo por tipo, por conductor, por mes, por unidad y horas por técnico.
 - **GPS (Flota > GPS):** mapa con la posición en tiempo real de las unidades desde Wialon.
 - **Papeletas (Flota > Papeletas):** registro de papeletas y multas de SUTRAN, SAT, PNP y otras entidades. Con la placa se completan la unidad y el conductor; con el código de infracción, la descripción, la gravedad y la multa. Se puede subir una foto y se leen los datos (hay que revisarlos). Controla descargo, plazos de descuento y de pago, pagos, anulación y reembolso. Tesorería las paga desde Tesorería > Papeletas y se crea el egreso en Caja. Se pueden importar desde Excel y sacar PDF.
 - **Almacén / Inventario:** productos, familias, marcas y movimientos de stock.

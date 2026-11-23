@@ -43,6 +43,7 @@ export const MODULOS_PERMISO: ModuloPermiso[] = [
   { grupo: 'MANTENIMIENTO', key: 'neumaticos.reencauche', nombre: 'Neumáticos: enviar a reencauche', desc: 'Retirar llantas para reencauche', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'neumaticos.mover', nombre: 'Neumáticos: mover en unidad', desc: 'Instalar y retirar llantas de una unidad', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'incidencias_ruta', nombre: 'Incidencias en Ruta', desc: 'Reportes e incidencias de auxilio en ruta', lcad: true },
+  { grupo: 'MANTENIMIENTO', key: 'siniestros', nombre: 'Siniestros y daños', desc: 'Registro, importación y análisis de siniestros, daños y su costo', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'otros_mant', nombre: 'Otros (Catálogos y Parámetros)', desc: 'Hub de mantenimiento, plan, KPIs y configuraciones MP', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'cfg_fleetrun', nombre: 'Configuración de Umbrales Fleetrun', desc: 'Definir umbrales de alerta preventiva por UTS', lcad: true },
   { grupo: 'ALMACÉN', key: 'dash_alm', nombre: 'Dashboard', desc: 'Analítica de almacén', lcad: true },

@@ -472,3 +472,41 @@ enum PlanificacionSource {
   manual_excel
   auto_generada
 }
+
+// Control de siniestros, daños e incidencias de flota
+model Siniestro {
+  id              Int       @id @default(autoincrement())
+  codigo          String    @unique(map: "uq_siniestro_codigo") @db.VarChar(20)
+  fecha           DateTime  @db.Date
+  placa           String    @db.VarChar(20)
+  marca           String?   @db.VarChar(60)
+  conductor       String?   @db.VarChar(150)
+  ubicacion       String?   @db.VarChar(255)
+  tipo_incidencia String    @db.VarChar(120)
+  detalle         String?   @db.Text
+  tecnico         String?   @db.VarChar(150)
+  inicio          DateTime? @db.DateTime(0)
+  fin             DateTime? @db.DateTime(0)
+  horas_taller    Decimal   @default(0) @db.Decimal(8, 1)
+  costo_repuestos Decimal   @default(0) @db.Decimal(12, 2)
+  costo_mano_obra Decimal   @default(0) @db.Decimal(12, 2)
+  costo_total     Decimal   @default(0) @db.Decimal(12, 2)
+  estado          String    @default("En Reparación") @db.VarChar(30)
+  creado_por      String?   @db.VarChar(150)
+  creado_en       DateTime  @default(now()) @db.Timestamp(0)
+  actualizado_en  DateTime  @default(now()) @db.Timestamp(0)
+
+  @@index([fecha], map: "idx_siniestro_fecha")
+  @@index([placa], map: "idx_siniestro_placa")
+  @@map("mantenimiento_siniestros")
+}
+
+// Motivos (tipos de incidencia) configurables del control de siniestros
+model SiniestroMotivo {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique(map: "uq_siniestro_motivo") @db.VarChar(120)
+  activo    Int      @default(1) @db.TinyInt
+  creado_en DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("mantenimiento_siniestros_motivos")
+}

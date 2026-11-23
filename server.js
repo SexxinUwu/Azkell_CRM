@@ -3298,6 +3298,8 @@ app.use('/api', require('./routes/notas_credito_proveedor')(db, logAudit));
 // PDF del informe de inspección (HTML del cliente convertido con Chromium; las fotos las incrusta el servidor)
 app.use('/api', require('./routes/inspeccion_pdf')());
 
+// Control de siniestros y daños de flota (Mantenimiento › Otros). Va antes del router general de mantenimiento.
+app.use('/api/mantenimiento/siniestros', require('./routes/siniestros')(db, logAudit));
 const mantenimientoRoutes = require('./routes/mantenimiento')(db, logAudit);
 app.use('/api/mantenimiento', mantenimientoRoutes);
 app.use('/api', mantenimientoRoutes);
