@@ -35,7 +35,7 @@ module.exports = (db, logAudit) => {
         g.modalidad, g.motivo, g.partida_ubigeo, g.partida_direccion, g.llegada_ubigeo, g.llegada_direccion,
         g.peso_kg, g.bultos, g.descripcion, g.items_json, g.placa, g.conductor_nombre, g.conductor_doc, g.licencia, g.vehiculo_tuc, g.vehiculo_autorizacion, g.trae_transporte,
         g.placa_carreta, g.viaje, g.guia_relacionada_id, g.apisunat_status, g.apisunat_faults, g.pdf_url, g.modo_emision,
-        g.orden_servicio_id, g.orden_servicio_codigo, g.estado, g.fuente, g.archivo_url, g.archivo_nombre, g.observaciones, g.usuario,
+        g.orden_servicio_id, g.orden_servicio_codigo, g.estado, g.fuente, g.archivo_url, g.archivo_nombre, g.observaciones, g.usuario, DATE_FORMAT(g.fecha_comprometida, '%Y-%m-%d') AS fecha_comprometida, g.hora_comprometida,
         DATE_FORMAT(g.creado_en, '%Y-%m-%d %H:%i') AS creado_en, g.xml_url, g.cdr_url, g.guias_relacionadas_ids,
         (SELECT t.numero_completo FROM gre_guias t WHERE t.origen = 'EMITIDA' AND t.tipo = 'TRANSPORTISTA' AND t.estado <> 'ANULADA'
             AND (t.guia_relacionada_id = g.id OR FIND_IN_SET(g.id, t.guias_relacionadas_ids)) ORDER BY t.id DESC LIMIT 1) AS grt_numero,
@@ -94,6 +94,8 @@ module.exports = (db, logAudit) => {
             trae_transporte: b.trae_transporte ? 1 : 0,
             fuente: ['XML', 'IA', 'MANUAL'].includes(String(b.fuente).toUpperCase()) ? String(b.fuente).toUpperCase() : 'MANUAL',
             observaciones: texto(b.observaciones, 2000),
+            // Cuándo se comprometió la entrega (base del indicador On Time); la hora solo si el cliente la pactó
+            fecha_comprometida: fechaOpc(b.fecha_comprometida), hora_comprometida: /^([01]\d|2[0-3]):[0-5]\d$/.test(String(b.hora_comprometida || '')) ? String(b.hora_comprometida) : null,
         };
     }
 
@@ -348,6 +350,7 @@ module.exports = (db, logAudit) => {
             ...(() => { const n = partirNombre((cond && cond.nombre) || (viaje && viaje.conductor) || ''); return { conductor_nombre: n.nombres, conductor_apellidos: n.apellidos }; })(), conductor_num_doc: (cond && cond.dni) || '', conductor_licencia: (cond && cond.licencia) || '',
             tuc_tracto: vt.tuc, aut_tracto: vt.aut, tuc_carreta: vc.tuc, aut_carreta: vc.aut,
             registro_mtc: cfg.registro_mtc || '', items,
+            fecha_comprometida: g.fecha_comprometida ? new Date(g.fecha_comprometida).toISOString().slice(0, 10) : '', hora_comprometida: g.hora_comprometida || '',
             subcontratado: otroTransportista, subcontratante_ruc: otroTransportista ? String(g.transportista_ruc) : '', subcontratante_razon_social: otroTransportista ? String(g.transportista_nombre || '') : '',
         };
         return { propuesta, viaje: viaje ? viaje.viaje : null };
@@ -495,6 +498,9 @@ module.exports = (db, logAudit) => {
             d.subcontratante_razon_social = d.subcontratado ? String(b.subcontratante_razon_social ?? bp.subcontratante_razon_social ?? '').trim().slice(0, 200) : '';
             if (bp.subcontratado && !d.subcontratado) throw aviso(`La guía del cliente designa como transportista a ${bp.subcontratante_razon_social || bp.subcontratante_ruc} (RUC ${bp.subcontratante_ruc}). Si hacemos el traslado por encargo de esa empresa, marca «Traslado subcontratado»: SUNAT exige indicarlo en nuestra guía.`, 422);
             if (d.subcontratado && d.subcontratante_ruc === String(cfg.ruc_emisor || '').trim()) throw aviso('La empresa que subcontrata no puede ser la misma que emite la guía.', 422);
+            // Entrega comprometida: sale de la guía del cliente y se puede corregir aquí
+            d.fecha_comprometida = fechaOpc(b.fecha_comprometida ?? bp.fecha_comprometida) || null;
+            d.hora_comprometida = /^([01]\d|2[0-3]):[0-5]\d$/.test(String(b.hora_comprometida ?? bp.hora_comprometida ?? '')) ? String(b.hora_comprometida ?? bp.hora_comprometida) : null;
             // Guías de remitente que cubre esta GRE Transportista (por defecto solo la elegida): su peso y sus ítems se suman
             const cand = await candidatasGrt(p, g, base.viaje);
             const ids = new Set([g.id, ...(Array.isArray(b.guias_ids) ? b.guias_ids.map(Number).filter(Number.isInteger) : [])]);
@@ -536,6 +542,7 @@ module.exports = (db, logAudit) => {
                 peso_kg: d.peso_bruto_total, descripcion: texto(elegidas.map(c => c.descripcion).filter(Boolean).join('; ') || g.descripcion, 500), items_json: JSON.stringify(d.items),
                 placa: d.placa_tracto, placa_carreta: d.placa_carreta || null, conductor_nombre: texto(`${d.conductor_nombre} ${d.conductor_apellidos}`.trim(), 150), conductor_doc: d.conductor_num_doc, licencia: texto(d.conductor_licencia, 30),
                 trae_transporte: 0, orden_servicio_id: g.orden_servicio_id, orden_servicio_codigo: g.orden_servicio_codigo, estado: 'VINCULADA', fuente: 'MANUAL',
+                fecha_comprometida: d.fecha_comprometida, hora_comprometida: d.hora_comprometida,
                 observaciones: d.subcontratado ? texto(`Traslado en unidades subcontratadas. Subcontrata: RUC ${d.subcontratante_ruc} ${d.subcontratante_razon_social}`, 2000) : null,
                 usuario: usuarioDe(req), viaje: base.viaje || null, guia_relacionada_id: g.id, guias_relacionadas_ids: elegidas.map(c => c.id).join(','), modo_emision: cfg.modo,
             };
@@ -550,6 +557,7 @@ module.exports = (db, logAudit) => {
                 id = ins.insertId;
             }
 
+            await p.query('UPDATE gre_guias SET fecha_comprometida = ?, hora_comprometida = ? WHERE id = ?', [d.fecha_comprometida, d.hora_comprometida, g.id]);
             const body = Apisunat.buildGrtUbl({
                 ...d, serie, numero, fecha_emision: fila.fecha_emision, hora_emision: horaLima(),
                 gre_relacionadas: elegidas.map(c => ({ numero: c.numero_completo, ruc: c.emisor_ruc || d.remitente_ruc, tipo: '09' })),

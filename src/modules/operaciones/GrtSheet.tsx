@@ -17,7 +17,7 @@ interface Propuesta {
   remitente_ruc: string; remitente_razon_social: string; destinatario_ruc: string; destinatario_razon_social: string;
   punto_partida_direccion: string; punto_llegada_direccion: string; peso_bruto_total: number;
   placa_tracto: string; placa_carreta: string; conductor_nombre: string; conductor_apellidos: string; conductor_num_doc: string; conductor_licencia: string; registro_mtc: string; tuc_tracto: string; aut_tracto: string; tuc_carreta: string; aut_carreta: string;
-  subcontratado: boolean; subcontratante_ruc: string; subcontratante_razon_social: string;
+  subcontratado: boolean; subcontratante_ruc: string; subcontratante_razon_social: string; fecha_comprometida: string; hora_comprometida: string;
   items: { descripcion: string; cantidad: number; unidad_medida: string }[];
 }
 interface Respuesta {
@@ -186,6 +186,8 @@ export function GrtSheet({ guia, onClose }: { guia: Guia | null; onClose: () => 
               <div className="gr__g4">
                 <Field label="Serie">{p => <TextInput {...p} value={f.serie} maxLength={4} onChange={e => set({ serie: e.target.value.toUpperCase() })} disabled />}</Field>
                 <Field label="Inicio del traslado">{p => <TextInput {...p} type="date" value={f.fecha_traslado} onChange={e => set({ fecha_traslado: e.target.value })} />}</Field>
+                <Field label="Entrega comprometida" hint="Para el indicador On Time">{p => <TextInput {...p} type="date" value={f.fecha_comprometida} onChange={e => set({ fecha_comprometida: e.target.value })} />}</Field>
+                <Field label="Hora comprometida">{p => <TextInput {...p} type="time" value={f.hora_comprometida} onChange={e => set({ hora_comprometida: e.target.value })} />}</Field>
                 <Field label="Placa del tracto">{p => <TextInput {...p} value={f.placa_tracto} onChange={e => set({ placa_tracto: e.target.value.toUpperCase() })} />}</Field>
                 <Field label="Placa de la carreta">{p => <TextInput {...p} value={f.placa_carreta} onChange={e => set({ placa_carreta: e.target.value.toUpperCase() })} />}</Field>
                 <Field label="Nombres del conductor">{p => <TextInput {...p} value={f.conductor_nombre} onChange={e => set({ conductor_nombre: e.target.value })} />}</Field>

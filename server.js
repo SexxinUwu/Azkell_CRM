@@ -5285,6 +5285,8 @@ app.use('/api/combustible', combustibleRouter);
 app.use('/api/operaciones/vales', require('./routes/vales_viaje')(db, logAudit));
 app.use('/api/operaciones/gre', require('./routes/gre_pdf')(db, logAudit));
 app.use('/api/operaciones/gre', require('./routes/gre')(db, logAudit));
+// Puntos de carga y descarga de cada cliente (catálogo para llenar las guías). Va antes de /api/operaciones.
+app.use('/api/operaciones/puntos', require('./routes/puntos')(db, logAudit));
 app.use('/api/operaciones', require('./routes/operaciones')(db, broadcast, logAudit, { recorridoWialon: combustibleRouter.recorridoWialon }));
 app.use('/api/guias-remision', require('./routes/guias_remision')(db, broadcast, logAudit));
 app.use('/api/guia-transportista', require('./routes/guia_transportista')(db, broadcast, logAudit));

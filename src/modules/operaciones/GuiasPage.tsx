@@ -3,9 +3,10 @@ import '../../core/ui/acciones-iconos.css';
 import './seguimiento.css';
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, FileCode2, FileText, Link2, Link2Off, Plus, RefreshCw, Search, SearchX, Send } from 'lucide-react';
+import { CheckCircle2, FileCode2, FileText, Link2, Link2Off, MapPin, Plus, RefreshCw, Search, SearchX, Send } from 'lucide-react';
 import { FilePdf } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
+import { AccionesCabecera } from '../../core/ui/AccionesCabecera';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../core/ui/FiltrosListado';
 import { IconoFila } from '../../core/ui/IconoFila';
@@ -19,6 +20,7 @@ import { haptic } from '../../core/lib/haptics';
 import { ESTADO_SUNAT, ETIQUETA_ESTADO_GUIA, ETIQUETA_ORIGEN, fechaGuia, fmtKg, kgDe, useGuias, type EstadoGuia, type Guia } from './guiasApi';
 import { GuiaFicha } from './GuiaFicha';
 import { GuiaRegistrarSheet } from './GuiaRegistrarSheet';
+import { PuntosSheet } from './PuntosSheet';
 import { GrtSheet } from './GrtSheet';
 import { PastillaGuia } from './PastillaGuia';
 import { GuiaVincularSheet } from './GuiaVincularSheet';
@@ -90,6 +92,7 @@ export function GuiasPage() {
   const [sunat, setSunat] = useState('');
   const [ambiente, setAmbiente] = useState('');
   const [registrando, setRegistrando] = useState(false);
+  const [puntosAbierto, setPuntosAbierto] = useState(false);
   const [vincular, setVincular] = useState<Guia | null>(null);
   const [emitir, setEmitir] = useState<Guia | null>(null);
   const [abiertaId, setAbiertaId] = useState<number | null>(null);
@@ -179,7 +182,12 @@ export function GuiasPage() {
     <Page>
       <PageHeader eyebrow="Operaciones" title="Guías de remisión" subtitle={subtitulo}
         actions={esRemitente
-          ? (puedeCrear ? <Button variant="primary" icon={<Plus size={16} />} onClick={() => setRegistrando(true)}>Registrar guía</Button> : undefined)
+          ? (
+          <>
+            <AccionesCabecera etiqueta="Acciones de guías" acciones={[{ label: 'Puntos de carga y descarga', icon: <MapPin size={17} />, tono: 'azul', onClick: () => setPuntosAbierto(true) }]} />
+            {puedeCrear ? <Button variant="primary" icon={<Plus size={16} />} onClick={() => setRegistrando(true)}>Registrar guía</Button> : null}
+          </>
+        )
           : <Button variant="secondary" icon={<RefreshCw size={16} />} onClick={sincronizarPendientes} loading={sincronizando === 'todas'} disabled={!pendientes.length}>Actualizar estados</Button>} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
@@ -298,6 +306,7 @@ export function GuiasPage() {
         )}
       </div>
 
+      <PuntosSheet open={puntosAbierto} onClose={() => setPuntosAbierto(false)} puedeEditar={puedeEditar} />
       <GuiaRegistrarSheet open={registrando} onClose={() => setRegistrando(false)} onRegistrada={g => { setRegistrando(false); if (g) setVincular(g); }} />
       <GuiaVincularSheet guia={vincular} onClose={() => setVincular(null)} />
       <GrtSheet guia={emitir} onClose={() => setEmitir(null)} />
