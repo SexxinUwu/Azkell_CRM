@@ -156,6 +156,7 @@ export function GrtSheet({ guia, onClose }: { guia: Guia | null; onClose: () => 
                     </li>
                   ))}
                 </ul>
+                {(r.guias ?? []).some(c => !c.compatible) && <p className="os-nota">Las guías que no se agrupan llevan <strong>su propia GRE Transportista</strong>: SUNAT pide una por cada remitente, destinatario, punto de llegada y vehículo (RS 123-2022, art. 3.3). Emite esta y luego abre la otra guía para emitir la suya.</p>}
                 <p className="os-nota">Total a transportar: <strong>{fmtKg(pesoSel)}</strong> en {elegidas.length} {elegidas.length === 1 ? 'guía' : 'guías'}. Deben tener el mismo remitente, destinatario y puntos de partida y llegada.</p>
               </div>
             </section>
