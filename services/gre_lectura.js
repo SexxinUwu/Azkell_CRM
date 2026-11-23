@@ -163,7 +163,7 @@ async function leerConIA(buffer, mimetype) {
                 if (!res.ok) { ultimo = (data && data.error && data.error.message) ? String(data.error.message).slice(0, 160) : `Error ${res.status}`; continue; }
                 const textos = ((data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || []).filter(p => p.text && !p.thought).map(p => p.text).join('');
                 const json = JSON.parse(textos.replace(/^```json\s*|```$/g, '').trim());
-                return limpiar(json, 'IA', null);
+                return { ...limpiar(json, 'IA', null), modelo };
             } catch (e) {
                 saturado = true;
                 console.warn(`[gre-ia] ${modelo} ronda ${ronda + 1}: ${e.name} ${String(e.message).slice(0, 120)}`);
