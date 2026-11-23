@@ -121,10 +121,15 @@ function useDocumentosVencidos() {
   });
 }
 
-function useViajes(q: string) {
+// Fecha de hoy en Perú y primer día de este mes: el rango por defecto es del 1 a hoy y se renueva solo cada mes
+const hoyIso = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+const inicioMesIso = () => `${hoyIso().slice(0, 7)}-01`;
+
+function useViajes(q: string, desde: string, hasta: string) {
   return useQuery<Viaje[]>({
-    queryKey: ['operaciones', 'ordenes-viaje', q],
-    queryFn: () => api<{ data?: Viaje[] }>(`/operaciones/ordenes-viaje?limit=500${q ? `&q=${encodeURIComponent(q)}` : ''}`).then(r => r.data ?? []),
+    queryKey: ['operaciones', 'ordenes-viaje', q, desde, hasta],
+    // incluir_abiertos: los viajes por iniciar o en ruta salen siempre, aunque sean de otro mes
+    queryFn: () => api<{ data?: Viaje[] }>(`/operaciones/ordenes-viaje?limit=500&incluir_abiertos=1${desde ? `&fecha_desde=${desde}` : ''}${hasta ? `&fecha_hasta=${hasta}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}`).then(r => r.data ?? []),
     staleTime: 20_000,
   });
 }
@@ -138,6 +143,9 @@ export function OrdenesViajePage() {
   const [q, setQ] = useState('');
   const [estado, setEstado] = useState('');
   const [filtrando, setFiltrando] = useState(false);
+  const [desde, setDesde] = useState(inicioMesIso);
+  const [hasta, setHasta] = useState(hoyIso);
+  const esMes = desde === inicioMesIso() && hasta === hoyIso();
   // ?viaje=V-0001 abre la ficha de ese viaje (lo usa Programación); el parámetro se quita al abrirla
   const [params, setParams] = useSearchParams();
   const [abiertoId, setAbiertoId] = useState<string | null>(params.get('viaje'));
@@ -150,7 +158,7 @@ export function OrdenesViajePage() {
   const [sincronizar, setSincronizar] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
 
-  const { data, isLoading, isError, error } = useViajes(q);
+  const { data, isLoading, isError, error } = useViajes(q, desde, hasta);
   const docsVencidos = useDocumentosVencidos();
   const vencidosPorPlaca = useMemo(() => {
     const m = new Map<string, string[]>();
@@ -208,7 +216,19 @@ export function OrdenesViajePage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
         <BarraFiltros busqueda={busqueda} placeholder="Viaje, conductor, placa o ruta…" activos={estado ? 1 : 0} onAbrirFiltros={() => setFiltrando(true)}
-          onBusqueda={v => { setBusqueda(v); window.clearTimeout((window as unknown as { _ovT?: number })._ovT); (window as unknown as { _ovT?: number })._ovT = window.setTimeout(() => setQ(v.trim()), 350); }} />
+          onBusqueda={v => { setBusqueda(v); window.clearTimeout((window as unknown as { _ovT?: number })._ovT); (window as unknown as { _ovT?: number })._ovT = window.setTimeout(() => setQ(v.trim()), 350); }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <TextInput type="date" aria-label="Viajes desde" value={desde} max={hasta || undefined} onChange={e => setDesde(e.target.value)} style={{ width: 150 }} />
+            <span className="t-footnote c-secondary" aria-hidden>→</span>
+            <TextInput type="date" aria-label="Viajes hasta" value={hasta} min={desde || undefined} onChange={e => setHasta(e.target.value)} style={{ width: 150 }} />
+          </span>
+        </BarraFiltros>
+        {!esMes && (
+          <p className="t-footnote c-secondary" style={{ margin: 0 }}>
+            {desde || hasta ? <button type="button" onClick={() => { setDesde(''); setHasta(''); }} style={{ all: 'unset', cursor: 'pointer', color: 'var(--blue-ink, #0a63c9)', fontWeight: 600 }}>Ver todos</button> : null}
+            {desde || hasta ? ' · ' : ''}<button type="button" onClick={() => { setDesde(inicioMesIso()); setHasta(hoyIso()); }} style={{ all: 'unset', cursor: 'pointer', color: 'var(--blue-ink, #0a63c9)', fontWeight: 600 }}>Volver a este mes</button>
+          </p>
+        )}
 
         <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={estado ? 1 : 0} onLimpiar={() => setEstado('')} resultado={visibles.length} unidad="viaje">
           <GrupoFiltro titulo="Estado">
