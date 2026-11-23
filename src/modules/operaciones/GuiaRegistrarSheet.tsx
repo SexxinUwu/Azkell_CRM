@@ -1,13 +1,13 @@
 import './servicios.css';
 import './seguimiento.css';
-import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, Check, CircleAlert, FileText, PenLine, Plus, Sparkles, Trash2, UploadCloud } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
-import { Field, SelectInput, TextInput } from '../../core/ui/Field';
-import { Combobox } from '../../core/ui/Combobox';
+import { Field, TextInput } from '../../core/ui/Field';
+import { Combobox, type ComboboxOption } from '../../core/ui/Combobox';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
@@ -40,6 +40,66 @@ const LINEA_VACIA: LineaForm = { descripcion: '', codigo: '', cantidad: '', unid
 const UNIDADES: Array<[string, string]> = [['NIU', 'Unidad'], ['BX', 'Caja'], ['BE', 'Fardo o bulto'], ['KGM', 'Kilogramo'], ['TNE', 'Tonelada'], ['LTR', 'Litro'], ['GLL', 'Galón'], ['MTR', 'Metro'], ['ZZ', 'Otra']];
 const num = (v: string) => { const n = Number(String(v).replace(',', '.')); return Number.isFinite(n) ? n : 0; };
 
+/** El código del producto va en su casilla: si la guía lo trae pegado al inicio de la descripción («20075410 COLCHON…»), se separa */
+const separarCodigo = (codigo: string, descripcion: string) => {
+  if (codigo.trim()) return { codigo: codigo.trim(), descripcion };
+  const m = /^([A-Z0-9][A-Z0-9-]{3,19})\s+(.+)$/i.exec(descripcion.trim());
+  return m && /\d/.test(m[1]) ? { codigo: m[1], descripcion: m[2] } : { codigo: '', descripcion };
+};
+
+// Serie y número van en dos casillas; el número se completa con ceros al salir de la casilla
+const serieDe = (v: string) => (v.includes('-') ? v.slice(0, v.indexOf('-')) : v);
+const numeroDe = (v: string) => (v.includes('-') ? v.slice(v.indexOf('-') + 1) : '');
+const unirSerie = (serie: string, numero: string) => { const s4 = serie.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4); const n8 = numero.replace(/\D/g, '').slice(0, 8); return s4 || n8 ? `${s4}-${n8}` : ''; };
+
+interface ClienteLite { razon_social?: string | null; ruc_dni?: string | null }
+
+/** RUC y razón social que se completan entre sí: al escribir el RUC se busca en los clientes (y en SUNAT si no está); al elegir o escribir el nombre se completa el RUC */
+function ParteEmpresa({ etiquetaDoc, etiquetaNombre, doc, nombre, errorDoc, clientes, onChange, onTocarDoc }: {
+  etiquetaDoc: string; etiquetaNombre: string; doc: string; nombre: string; errorDoc?: string | null; clientes: ClienteLite[];
+  onChange: (doc: string, nombre?: string) => void; onTocarDoc?: () => void;
+}) {
+  const [consultando, setConsultando] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const ultimo = useRef('');
+  const opciones = useMemo<ComboboxOption[]>(() => {
+    const m = new Map<string, ComboboxOption>();
+    clientes.forEach(c => { const n = String(c.razon_social ?? '').trim(); if (n && !m.has(n)) m.set(n, { value: n, label: n, description: String(c.ruc_dni ?? '').trim() || undefined, keywords: String(c.ruc_dni ?? '') }); });
+    if (nombre.trim() && !m.has(nombre.trim())) m.set(nombre.trim(), { value: nombre.trim(), label: nombre.trim() });
+    return [...m.values()].sort((a, b) => a.label.localeCompare(b.label, 'es'));
+  }, [clientes, nombre]);
+  const porDoc = (d: string) => clientes.find(c => String(c.ruc_dni ?? '').replace(/\D/g, '') === d);
+  async function escribirDoc(valor: string) {
+    const d = valor.replace(/\D/g, '').slice(0, 11);
+    ultimo.current = d; setAviso(null);
+    const c = porDoc(d);
+    if (c) { onChange(d, String(c.razon_social ?? '').trim()); return; }
+    onChange(d);
+    if (/^(10|15|17|20)\d{9}$/.test(d)) {
+      setConsultando(true);
+      try {
+        const r = await api<{ razon_social?: string }>(`/consulta-ruc/${d}`);
+        if (ultimo.current === d && r.razon_social) onChange(d, r.razon_social);
+      } catch { if (ultimo.current === d) setAviso('No se encontró en SUNAT: escribe el nombre.'); }
+      finally { if (ultimo.current === d) setConsultando(false); }
+    }
+  }
+  return (
+    <>
+      <Field label={etiquetaDoc} error={errorDoc ?? undefined} hint={consultando ? 'Consultando SUNAT…' : aviso ?? undefined}>
+        {p => <TextInput {...p} inputMode="numeric" maxLength={11} value={doc} onBlur={onTocarDoc} onChange={e => void escribirDoc(e.target.value)} />}
+      </Field>
+      <div className="gr__s3">
+        <Field label={etiquetaNombre}>
+          {p => <Combobox {...p} options={opciones} value={nombre.trim() || null} limit={50} placeholder="Busca por razón social o RUC" createLabel="Usar este nombre"
+            onChange={v => { if (v == null) { onChange(doc, ''); return; } const c = clientes.find(x => String(x.razon_social ?? '').trim() === v); const r = String(c?.ruc_dni ?? '').replace(/\D/g, ''); onChange(r || doc, v); }}
+            onCreate={t => onChange(doc, t.trim())} />}
+        </Field>
+      </div>
+    </>
+  );
+}
+
 interface Form {
   tipo: TipoGuia; serie_numero: string; fecha_emision: string; fecha_traslado: string;
   remitente_ruc: string; remitente_nombre: string; destinatario_doc: string; destinatario_nombre: string;
@@ -63,7 +123,7 @@ const desdeLectura = (l: LecturaGuia): Form => ({
   transportista_ruc: s(l.transportista_ruc), transportista_nombre: s(l.transportista_nombre), modalidad: l.modalidad ?? '', motivo: s(l.motivo),
   partida_ubigeo: s(l.partida_ubigeo), partida_direccion: s(l.partida_direccion), llegada_ubigeo: s(l.llegada_ubigeo), llegada_direccion: s(l.llegada_direccion),
   peso: l.peso_kg != null ? String(l.peso_kg) : '', bultos: s(l.bultos), descripcion: s(l.descripcion), observaciones: s(l.observaciones), placa: s(l.placa),
-  conductor_nombre: s(l.conductor_nombre), conductor_doc: s(l.conductor_doc), licencia: s(l.licencia), vehiculo_tuc: s(l.vehiculo_tuc), vehiculo_autorizacion: s(l.vehiculo_autorizacion), fuente: l.fuente, items: (l.items ?? []).map(i => ({ ...LINEA_VACIA, descripcion: s(i.descripcion), cantidad: i.cantidad != null ? String(i.cantidad) : '', unidad: s(i.unidad) || 'NIU' })), trae_transporte: l.trae_transporte, fecha_comprometida: '', hora_comprometida: '',
+  conductor_nombre: s(l.conductor_nombre), conductor_doc: s(l.conductor_doc), licencia: s(l.licencia), vehiculo_tuc: s(l.vehiculo_tuc), vehiculo_autorizacion: s(l.vehiculo_autorizacion), fuente: l.fuente, items: (l.items ?? []).map(i => ({ ...LINEA_VACIA, ...separarCodigo(s(i.codigo), s(i.descripcion)), cantidad: i.cantidad != null ? String(i.cantidad) : '', unidad: s(i.unidad) || 'NIU' })), trae_transporte: l.trae_transporte, fecha_comprometida: '', hora_comprometida: '',
 });
 
 /** Datos de una guía ya registrada, para corregirlos en el mismo formulario */
@@ -78,7 +138,7 @@ const desdeGuia = (g: Guia): Form => {
     peso: Number(g.peso_kg) > 0 ? String(g.peso_kg) : '', bultos: s(g.bultos), descripcion: s(g.descripcion), observaciones: s(g.observaciones), placa: s(g.placa),
     conductor_nombre: s(g.conductor_nombre), conductor_doc: s(g.conductor_doc), licencia: s(g.licencia), vehiculo_tuc: s(g.vehiculo_tuc), vehiculo_autorizacion: s(g.vehiculo_autorizacion),
     fuente: g.fuente, trae_transporte: !!g.trae_transporte,
-    items: items.map(i => ({ descripcion: s(i.descripcion), codigo: s(i.codigo), cantidad: i.cantidad != null ? String(i.cantidad) : '', unidad: s(i.unidad) || 'NIU', peso: i.peso_kg != null ? String(i.peso_kg) : '', volumen: i.volumen_m3 != null ? String(i.volumen_m3) : '' })), fecha_comprometida: s(g.fecha_comprometida), hora_comprometida: s(g.hora_comprometida),
+    items: items.map(i => ({ ...separarCodigo(s(i.codigo), s(i.descripcion)), cantidad: i.cantidad != null ? String(i.cantidad) : '', unidad: s(i.unidad) || 'NIU', peso: i.peso_kg != null ? String(i.peso_kg) : '', volumen: i.volumen_m3 != null ? String(i.volumen_m3) : '' })), fecha_comprometida: s(g.fecha_comprometida), hora_comprometida: s(g.hora_comprometida),
   };
 };
 
@@ -138,13 +198,21 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
   const totales = lineas.reduce((t, l) => ({ cantidad: t.cantidad + num(l.cantidad), peso: t.peso + num(l.peso), volumen: t.volumen + num(l.volumen) }), { cantidad: 0, peso: 0, volumen: 0 });
   // El motivo se elige del catálogo de SUNAT; si la guía trae uno que no se reconoce, se conserva como opción
   const motivoCat = motivoDeTexto(f.motivo);
+  const opcionesMotivo: ComboboxOption[] = [
+    ...(f.motivo && !motivoCat ? [{ value: f.motivo, label: f.motivo }] : []),
+    ...MOTIVOS_TRASLADO.map(([c, d]) => ({ value: d, label: d, description: `Código ${c}`, keywords: c })),
+  ];
+  const opcionesUnidad = (actual: string): ComboboxOption[] => [
+    ...(actual && !UNIDADES.some(([c]) => c === actual) ? [{ value: actual, label: actual }] : []),
+    ...UNIDADES.map(([c, d]) => ({ value: c, label: `${d} (${c})` })),
+  ];
   const opcionesServicio = (servicios.data ?? [])
     .filter(x => !['ANULADO', 'ENTREGADO'].includes(String(x.estado_servicio ?? '').toUpperCase()))
     .map(x => ({ value: String(x.id), label: `${x.codigo_orden} · ${x.cliente_nombre}`, description: [x.origen, x.destino].filter(Boolean).join(' → '), keywords: `${x.remitente_generador ?? ''} ${x.destinatario ?? ''}` }));
   const servicio = (servicios.data ?? []).find(x => String(x.id) === servicioId) ?? null;
   // La orden de servicio guarda solo los nombres: el RUC se busca en la tabla de clientes (mismo nombre)
   const clientes = useQuery({
-    queryKey: ['directorio', 'clientes'], enabled: open && !editar, staleTime: 5 * 60_000,
+    queryKey: ['directorio', 'clientes'], enabled: open, staleTime: 5 * 60_000,
     queryFn: () => api<unknown>('/clientes').then(r => (Array.isArray(r) ? r : ((r as { data?: unknown[] })?.data ?? [])) as { razon_social?: string | null; ruc_dni?: string | null }[]),
   });
   const rucDe = (nombre: unknown) => {
@@ -154,6 +222,16 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
     return String(c?.ruc_dni ?? '').replace(/\D/g, '');
   };
   // Distrito: el de la orden; si no tiene, se deduce del final de la dirección
+  const clientesLista = clientes.data ?? [];
+  // Si la guía trae el nombre pero no el RUC (lectura con IA o del servicio), se completa con el de la tabla de clientes
+  useEffect(() => {
+    if (fase !== 'revisar' || !clientes.data?.length) return;
+    setF(x => {
+      const r = x.remitente_ruc || rucDe(x.remitente_nombre); const d = x.destinatario_doc || rucDe(x.destinatario_nombre); const t = x.transportista_ruc || rucDe(x.transportista_nombre);
+      return r === x.remitente_ruc && d === x.destinatario_doc && t === x.transportista_ruc ? x : { ...x, remitente_ruc: r, destinatario_doc: d, transportista_ruc: t };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fase, clientes.data, f.remitente_nombre, f.destinatario_nombre, f.transportista_nombre]);
   const ubigeoPara = (ub: unknown, direccion: unknown) => s(ub) || ubigeoDeDireccion(s(direccion), catalogo.data ?? [])?.codigo || '';
   // Elegir el servicio completa solo lo que está vacío: lo que dice la guía del cliente manda
   function elegirServicio(v: string | null) {
@@ -366,30 +444,31 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
               <SegmentedControl block label="Tipo de guía" value={f.tipo} onChange={v => set({ tipo: v })} options={[{ value: 'REMITENTE', label: 'GRE Remitente' }, { value: 'TRANSPORTISTA', label: 'GRE Transportista' }]} />
               <div className="gr__g3">
                 <Field label="Serie y número *" error={ver('serie_numero')}>
-                  {p => <TextInput {...p} value={f.serie_numero} placeholder="T001-00000123" style={{ textTransform: 'uppercase' }} onBlur={() => tocar('serie_numero')} onChange={e => set({ serie_numero: e.target.value })} />}
+                  {p => (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <TextInput {...p} aria-label="Serie" value={serieDe(f.serie_numero)} maxLength={4} placeholder="T002" style={{ textTransform: 'uppercase', flex: '0 0 5.5rem' }}
+                        onBlur={() => tocar('serie_numero')} onChange={e => set({ serie_numero: unirSerie(e.target.value, numeroDe(f.serie_numero)) })} />
+                      <TextInput aria-label="Número" inputMode="numeric" value={numeroDe(f.serie_numero)} maxLength={8} placeholder="00501031" style={{ flex: 1 }}
+                        onBlur={e => { tocar('serie_numero'); const n = e.target.value.replace(/\D/g, ''); if (n) set({ serie_numero: unirSerie(serieDe(f.serie_numero), n.padStart(8, '0')) }); }}
+                        onChange={e => set({ serie_numero: unirSerie(serieDe(f.serie_numero), e.target.value) })} />
+                    </div>
+                  )}
                 </Field>
                 <Field label="Emisión">{p => <TextInput {...p} type="date" value={f.fecha_emision} onChange={e => set({ fecha_emision: e.target.value })} />}</Field>
                 <Field label="Inicio del traslado">{p => <TextInput {...p} type="date" value={f.fecha_traslado} onChange={e => set({ fecha_traslado: e.target.value })} />}</Field>
               </div>
               <Field label="Motivo del traslado">
-                {p => (
-                  <SelectInput {...p} value={motivoCat ? motivoCat[1] : f.motivo} onChange={e => set({ motivo: e.target.value })}>
-                    <option value="">Elige el motivo</option>
-                    {f.motivo && !motivoCat && <option value={f.motivo}>{f.motivo}</option>}
-                    {MOTIVOS_TRASLADO.map(([c, d]) => <option key={c} value={d}>{c} · {d}</option>)}
-                  </SelectInput>
-                )}
+                {p => <Combobox {...p} options={opcionesMotivo} value={motivoCat ? motivoCat[1] : (f.motivo || null)} placeholder="Elige el motivo" onChange={v => set({ motivo: v ?? '' })} />}
               </Field>
             </Seccion></div>
 
-            <div hidden={paso !== 2}><Seccion titulo="Quién envía y quién recibe">
+            <div hidden={paso !== 2}><Seccion titulo="Quién envía y quién recibe" nota="busca por razón social o escribe el RUC: se completan entre sí">
               <div className="gr__g4">
-                <Field label={f.tipo === 'REMITENTE' ? 'RUC remitente *' : 'RUC remitente'} error={f.tipo === 'REMITENTE' ? ver('emisor') : null}>
-                  {p => <TextInput {...p} inputMode="numeric" maxLength={11} value={f.remitente_ruc} onBlur={() => tocar('emisor')} onChange={e => set({ remitente_ruc: e.target.value.replace(/\D/g, '') })} />}
-                </Field>
-                <div className="gr__s3"><Field label="Remitente">{p => <TextInput {...p} value={f.remitente_nombre} onChange={e => set({ remitente_nombre: e.target.value })} />}</Field></div>
-                <Field label="RUC o DNI destinatario">{p => <TextInput {...p} inputMode="numeric" maxLength={11} value={f.destinatario_doc} onChange={e => set({ destinatario_doc: e.target.value.replace(/\D/g, '') })} />}</Field>
-                <div className="gr__s3"><Field label="Destinatario">{p => <TextInput {...p} value={f.destinatario_nombre} onChange={e => set({ destinatario_nombre: e.target.value })} />}</Field></div>
+                <ParteEmpresa etiquetaDoc={f.tipo === 'REMITENTE' ? 'RUC remitente *' : 'RUC remitente'} etiquetaNombre="Remitente" doc={f.remitente_ruc} nombre={f.remitente_nombre}
+                  errorDoc={f.tipo === 'REMITENTE' ? ver('emisor') : null} clientes={clientesLista} onTocarDoc={() => tocar('emisor')}
+                  onChange={(d, n) => set({ remitente_ruc: d, ...(n !== undefined ? { remitente_nombre: n } : {}) })} />
+                <ParteEmpresa etiquetaDoc="RUC o DNI destinatario" etiquetaNombre="Destinatario" doc={f.destinatario_doc} nombre={f.destinatario_nombre} clientes={clientesLista}
+                  onChange={(d, n) => set({ destinatario_doc: d, ...(n !== undefined ? { destinatario_nombre: n } : {}) })} />
               </div>
             </Seccion></div>
 
@@ -415,19 +494,16 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
             </Seccion></div>
 
             <div hidden={paso !== 4}><Seccion titulo="Qué se transporta" nota="una línea por producto o bulto · los totales se calculan de las líneas">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="gr-lin">
+                <div className="gr-lin__fila gr-lin__cab" aria-hidden><span>Código</span><span>Descripción</span><span>Cantidad</span><span>Unidad</span><span>Peso (kg)</span><span>Vol. (m³)</span><span /></div>
                 {lineas.map((l, i) => (
-                  <div key={i} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end' }}>
-                    <div style={{ flex: '1 1 240px' }}>{i === 0 && <span className="t-footnote c-secondary">Descripción</span>}<TextInput aria-label="Descripción" value={l.descripcion} placeholder="Ej.: Cajas de pollo congelado" onChange={e => setLinea(i, { descripcion: e.target.value })} /></div>
-                    <div style={{ flex: '0 1 100px' }}>{i === 0 && <span className="t-footnote c-secondary">Código</span>}<TextInput aria-label="Código" value={l.codigo} onChange={e => setLinea(i, { codigo: e.target.value })} /></div>
-                    <div style={{ flex: '0 1 90px' }}>{i === 0 && <span className="t-footnote c-secondary">Cantidad</span>}<TextInput aria-label="Cantidad" inputMode="decimal" value={l.cantidad} onChange={e => setLinea(i, { cantidad: e.target.value.replace(/[^\d.,]/g, '') })} /></div>
-                    <div style={{ flex: '0 1 130px' }}>{i === 0 && <span className="t-footnote c-secondary">Unidad</span>}
-                      <SelectInput aria-label="Unidad" value={l.unidad} onChange={e => setLinea(i, { unidad: e.target.value })}>
-                        {!UNIDADES.some(([c]) => c === l.unidad) && <option value={l.unidad}>{l.unidad}</option>}
-                        {UNIDADES.map(([c, d]) => <option key={c} value={c}>{d} ({c})</option>)}
-                      </SelectInput></div>
-                    <div style={{ flex: '0 1 90px' }}>{i === 0 && <span className="t-footnote c-secondary">Peso (kg)</span>}<TextInput aria-label="Peso en kilos" inputMode="decimal" value={l.peso} onChange={e => setLinea(i, { peso: e.target.value.replace(/[^\d.,]/g, '') })} /></div>
-                    <div style={{ flex: '0 1 90px' }}>{i === 0 && <span className="t-footnote c-secondary">Vol. (m³)</span>}<TextInput aria-label="Volumen en metros cúbicos" inputMode="decimal" value={l.volumen} onChange={e => setLinea(i, { volumen: e.target.value.replace(/[^\d.,]/g, '') })} /></div>
+                  <div key={i} className="gr-lin__fila">
+                    <TextInput aria-label="Código" value={l.codigo} onChange={e => setLinea(i, { codigo: e.target.value })} />
+                    <textarea className="input gr-lin__desc" aria-label="Descripción" rows={1} value={l.descripcion} placeholder="Ej.: Cajas de pollo congelado" onChange={e => setLinea(i, { descripcion: e.target.value })} />
+                    <TextInput aria-label="Cantidad" inputMode="decimal" value={l.cantidad} onChange={e => setLinea(i, { cantidad: e.target.value.replace(/[^\d.,]/g, '') })} />
+                    <Combobox options={opcionesUnidad(l.unidad)} value={l.unidad || null} placeholder="Unidad" onChange={v => setLinea(i, { unidad: v ?? 'NIU' })} />
+                    <TextInput aria-label="Peso en kilos" inputMode="decimal" value={l.peso} onChange={e => setLinea(i, { peso: e.target.value.replace(/[^\d.,]/g, '') })} />
+                    <TextInput aria-label="Volumen en metros cúbicos" inputMode="decimal" value={l.volumen} onChange={e => setLinea(i, { volumen: e.target.value.replace(/[^\d.,]/g, '') })} />
                     <Button variant="plain" size="sm" iconOnly icon={<Trash2 size={15} />} aria-label="Quitar línea" disabled={lineas.length === 1 && !l.descripcion} onClick={() => quitarLinea(i)} />
                   </div>
                 ))}
@@ -448,10 +524,9 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
                 </Field>
                 <Field label="Bultos">{p => <TextInput {...p} inputMode="numeric" value={f.bultos} onChange={e => set({ bultos: e.target.value.replace(/\D/g, '') })} />}</Field>
                 <div className="gr__s2"><Field label="Descripción general">{p => <TextInput {...p} value={f.descripcion} onChange={e => set({ descripcion: e.target.value })} />}</Field></div>
-                <Field label={f.tipo === 'TRANSPORTISTA' ? 'RUC transportista *' : 'RUC transportista'} error={f.tipo === 'TRANSPORTISTA' ? ver('emisor') : null}>
-                  {p => <TextInput {...p} inputMode="numeric" maxLength={11} value={f.transportista_ruc} onBlur={() => tocar('emisor')} onChange={e => set({ transportista_ruc: e.target.value.replace(/\D/g, '') })} />}
-                </Field>
-                <div className="gr__s3"><Field label="Transportista">{p => <TextInput {...p} value={f.transportista_nombre} onChange={e => set({ transportista_nombre: e.target.value })} />}</Field></div>
+                <ParteEmpresa etiquetaDoc={f.tipo === 'TRANSPORTISTA' ? 'RUC transportista *' : 'RUC transportista'} etiquetaNombre="Transportista" doc={f.transportista_ruc} nombre={f.transportista_nombre}
+                  errorDoc={f.tipo === 'TRANSPORTISTA' ? ver('emisor') : null} clientes={clientesLista} onTocarDoc={() => tocar('emisor')}
+                  onChange={(d, n) => set({ transportista_ruc: d, ...(n !== undefined ? { transportista_nombre: n } : {}) })} />
                 <Field label="Placa">{p => <TextInput {...p} value={f.placa} style={{ textTransform: 'uppercase' }} onChange={e => set({ placa: e.target.value })} />}</Field>
                 <div className="gr__s2"><Field label="Conductor">{p => <TextInput {...p} value={f.conductor_nombre} onChange={e => set({ conductor_nombre: e.target.value })} />}</Field></div>
                 <Field label="Licencia">{p => <TextInput {...p} value={f.licencia} onChange={e => set({ licencia: e.target.value })} />}</Field>
