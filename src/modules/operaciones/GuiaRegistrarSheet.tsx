@@ -12,7 +12,7 @@ import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
-import { cargarUbigeos, ubigeoDeDireccion, useOpcionesUbigeo, useUbigeos } from './ubigeos';
+import { cargarUbigeos, normalizar, ubigeoDeDireccion, useOpcionesUbigeo, useUbigeos } from './ubigeos';
 import type { Guia, LecturaGuia, TipoGuia } from './guiasApi';
 import { usePuntos, type Punto } from './puntosApi';
 
@@ -114,6 +114,19 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
     .filter(x => !['ANULADO', 'ENTREGADO'].includes(String(x.estado_servicio ?? '').toUpperCase()))
     .map(x => ({ value: String(x.id), label: `${x.codigo_orden} · ${x.cliente_nombre}`, description: [x.origen, x.destino].filter(Boolean).join(' → '), keywords: `${x.remitente_generador ?? ''} ${x.destinatario ?? ''}` }));
   const servicio = (servicios.data ?? []).find(x => String(x.id) === servicioId) ?? null;
+  // La orden de servicio guarda solo los nombres: el RUC se busca en la tabla de clientes (mismo nombre)
+  const clientes = useQuery({
+    queryKey: ['directorio', 'clientes'], enabled: open && !editar, staleTime: 5 * 60_000,
+    queryFn: () => api<unknown>('/clientes').then(r => (Array.isArray(r) ? r : ((r as { data?: unknown[] })?.data ?? [])) as { razon_social?: string | null; ruc_dni?: string | null }[]),
+  });
+  const rucDe = (nombre: unknown) => {
+    const n = normalizar(nombre);
+    if (!n) return '';
+    const c = (clientes.data ?? []).find(x => normalizar(x.razon_social) === n);
+    return String(c?.ruc_dni ?? '').replace(/\D/g, '');
+  };
+  // Distrito: el de la orden; si no tiene, se deduce del final de la dirección
+  const ubigeoPara = (ub: unknown, direccion: unknown) => s(ub) || ubigeoDeDireccion(s(direccion), catalogo.data ?? [])?.codigo || '';
   // Elegir el servicio completa solo lo que está vacío: lo que dice la guía del cliente manda
   function elegirServicio(v: string | null) {
     setServicioId(v);
@@ -122,8 +135,9 @@ export function GuiaRegistrarSheet({ open, onClose, onRegistrada, editar }: { op
     setF(x => ({
       ...x,
       remitente_nombre: x.remitente_nombre || s(os.remitente_generador || os.cliente_nombre), destinatario_nombre: x.destinatario_nombre || s(os.destinatario),
-      partida_direccion: x.partida_direccion || s(os.direccion_origen), partida_ubigeo: x.partida_ubigeo || s(os.ubigeo_origen),
-      llegada_direccion: x.llegada_direccion || s(os.direccion_destino), llegada_ubigeo: x.llegada_ubigeo || s(os.ubigeo_destino),
+      remitente_ruc: x.remitente_ruc || rucDe(os.remitente_generador || os.cliente_nombre), destinatario_doc: x.destinatario_doc || rucDe(os.destinatario),
+      partida_direccion: x.partida_direccion || s(os.direccion_origen), partida_ubigeo: x.partida_ubigeo || ubigeoPara(os.ubigeo_origen, x.partida_direccion || os.direccion_origen),
+      llegada_direccion: x.llegada_direccion || s(os.direccion_destino), llegada_ubigeo: x.llegada_ubigeo || ubigeoPara(os.ubigeo_destino, x.llegada_direccion || os.direccion_destino),
       descripcion: x.descripcion || s(os.descripcion_carga), fecha_comprometida: x.fecha_comprometida || s(os.fecha_entrega_fmt),
     }));
   }
