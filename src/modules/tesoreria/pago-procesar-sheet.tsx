@@ -300,7 +300,7 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
                 <dt>Proveedor</dt>
                 <dd>
                   <b>{oc.proveedor_nombre || '—'}</b>
-                  <span>RUC {oc.proveedor_ruc || '—'} · {oc.condicion_pago || 'Al contado'}</span>
+                  <span>{/^d{8}$/.test((oc.proveedor_ruc || '').trim()) ? 'DNI' : 'RUC'} {oc.proveedor_ruc || '—'} · {oc.condicion_pago || 'Al contado'}</span>
                 </dd>
                 <dt>Motivo y destino</dt>
                 <dd>

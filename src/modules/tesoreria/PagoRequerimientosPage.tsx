@@ -300,7 +300,7 @@ export function PagoRequerimientosPage() {
                 <Celda>
                   <span className="pago-prov">
                     <span className="pago-prov__nombre">{oc.proveedor_nombre || '—'}</span>
-                    {oc.proveedor_ruc && <span className="pago-prov__ruc">RUC {oc.proveedor_ruc}</span>}
+                    {oc.proveedor_ruc && <span className="pago-prov__ruc">{/^d{8}$/.test(oc.proveedor_ruc.trim()) ? 'DNI' : 'RUC'} {oc.proveedor_ruc}</span>}
                   </span>
                 </Celda>
                 <Celda><CuentaCelda texto={oc.cuenta_bancaria_proveedor} usd={usdDestino} /></Celda>

@@ -2295,7 +2295,8 @@ module.exports = function (db, broadcast, logAudit) {
 
                 const pInfo = (oc.proveedor_id && provsMap[oc.proveedor_id]) ||
                               (oc.proveedor_nombre && provsMap[oc.proveedor_nombre.toLowerCase()]) || null;
-                const proveedorRuc = pInfo ? pInfo.numero_documento : '';
+                // Personal elegido como proveedor (id "PER-<DNI>"): no está en proveedores_inv, su documento va en el propio id
+                const proveedorRuc = pInfo ? pInfo.numero_documento : (String(oc.proveedor_id || '').startsWith('PER-') ? String(oc.proveedor_id).slice(4).trim() : '');
 
                 // Cuenta bancaria de destino (Proveedor)
                 let cuentaDestino = oc.cuenta_bancaria_proveedor || '';
