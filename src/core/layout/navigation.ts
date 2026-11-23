@@ -10,7 +10,7 @@
 //
 // Permisos: 'clave.ver' según la matriz de permisos actual (ver core/auth/permisos.ts). Los administradores ven todo.
 import {
-  Accessibility, Activity, Sparkles, TrendingUp, ReceiptText, ArrowLeftRight, Banknote, BarChart3, Boxes, Building2, Cog, Code, Contact, Disc3, Droplet, FileText, Fuel, Gauge, Gavel, HardHat, History, Hourglass, IdCard, Landmark, Layers, LayoutDashboard, List, MapPin, Package, PackageMinus, PackagePlus, Palette, Route, ScrollText, Settings, ShieldCheck, Tag, Target, Truck, UserCog, Users, Wallet, Warehouse, Wrench, CalendarDays, ClipboardCheck, ClipboardList, Clock, type LucideIcon, Bell,
+  Accessibility, Activity, TriangleAlert, Sparkles, TrendingUp, ReceiptText, ArrowLeftRight, Banknote, BarChart3, Boxes, Building2, Cog, Code, Contact, Disc3, Droplet, FileText, Fuel, Gauge, Gavel, HardHat, History, Hourglass, IdCard, Landmark, Layers, LayoutDashboard, List, MapPin, Package, PackageMinus, PackagePlus, Palette, Route, ScrollText, Settings, ShieldCheck, Tag, Target, Truck, UserCog, Users, Wallet, Warehouse, Wrench, CalendarDays, ClipboardCheck, ClipboardList, Clock, type LucideIcon, Bell,
 } from 'lucide-react';
 import type { RutaModulo } from '../../modules/personal/rutas.tipos';
 
@@ -57,6 +57,8 @@ export const OTROS_MANTENIMIENTO: NavItem[] = [
         { key: 'tipos-mp', label: 'Tipos MP', to: '/mantenimiento/tipos-mp', icon: Wrench, permissions: ver('cfg_mant') },
         { key: 'fleetrun-config', label: 'Umbrales Fleetrun', to: '/mantenimiento/fleetrun-config', icon: Gauge, permissions: ver('cfg_fleetrun') },
         { key: 'config-metrica', label: 'Config. métrica', to: '/mantenimiento/config-metrica', icon: Target, permissions: ver('cfg_mant') },
+  { key: 'siniestros', label: 'Siniestros y daños', to: '/mantenimiento/siniestros', icon: TriangleAlert, permissions: ver('siniestros') },
+  { key: 'siniestros-analisis', label: 'Análisis de siniestros', to: '/mantenimiento/siniestros-analisis', icon: BarChart3, permissions: ver('siniestros') },
   { key: 'personal-taller', label: 'Personal Taller', to: '/mantenimiento/personal', icon: UserCog, permissions: ver('pers_mant') },
   { key: 'situaciones', label: 'Situaciones', to: '/preferencias/situaciones', icon: Tag, permissions: ver('cfg_situacion') },
 ];

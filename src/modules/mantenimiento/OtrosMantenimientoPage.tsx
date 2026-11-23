@@ -11,6 +11,8 @@ const DESCRIPCION: Record<string, string> = {
   kpis: 'Indicadores de productividad, tiempos y cumplimiento del taller.',
   productividad: 'Horas y trabajos realizados por cada técnico.',
   'finanzas-taller': 'Costos de repuestos y mano de obra del taller.',
+  siniestros: 'Registra y carga desde Excel los siniestros y daños de la flota, con su costo y horas de taller.',
+  'siniestros-analisis': 'Gráficos de costo por tipo, conductor, mes y unidad para ver dónde se pierde dinero.',
   'frecuencias-mp': 'Cada cuántos kilómetros o días toca cada preventivo.',
   'kits-mp': 'Kits de materiales y repuestos por tipo de servicio.',
   'tipos-mp': 'Tipos de mantenimiento preventivo y sus alertas.',
@@ -23,6 +25,7 @@ const DESCRIPCION: Record<string, string> = {
 const SECCIONES: Array<{ titulo: string; tono: SeccionHub['tono']; claves: string[] }> = [
   { titulo: 'Programación operativa', tono: 'blue', claves: ['planificacion', 'backlog'] },
   { titulo: 'Rendimiento e indicadores', tono: 'green', claves: ['kpis', 'productividad', 'finanzas-taller'] },
+  { titulo: 'Siniestros y daños', tono: 'amber', claves: ['siniestros', 'siniestros-analisis'] },
   { titulo: 'Configuración y parámetros', tono: 'violet', claves: ['frecuencias-mp', 'kits-mp', 'tipos-mp', 'fleetrun-config', 'config-metrica', 'personal-taller', 'situaciones'] },
 ];
 

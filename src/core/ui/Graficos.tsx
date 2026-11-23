@@ -30,8 +30,10 @@ export function useColores(colores: string[]): string[] {
  * Dona con leyenda propia (nombre, cantidad y porcentaje). El centro muestra el total o el texto que se pase.
  * Los colores se pasan como tokens CSS, p. ej. 'var(--green-ink)'.
  */
-export function DonaGrafico({ porciones, centro, altura = 180, onElegir }: {
+export function DonaGrafico({ porciones, centro, altura = 180, onElegir, formato = (n: number) => String(n) }: {
   porciones: Porcion[]; centro?: string; altura?: number; onElegir?: (nombre: string) => void;
+  /** Cómo se escribe cada valor (por ejemplo en soles); por defecto el número tal cual */
+  formato?: (n: number) => string;
 }) {
   const colores = useColores(porciones.map(p => p.color));
   const total = porciones.reduce((s, p) => s + p.valor, 0);
@@ -46,7 +48,7 @@ export function DonaGrafico({ porciones, centro, altura = 180, onElegir }: {
               paddingAngle={total > 0 ? 2 : 0} stroke="none" isAnimationActive={false}>
               {datos.map(d => <Cell key={d.nombre} fill={d.fill} style={onElegir ? { cursor: 'pointer' } : undefined} onClick={onElegir ? () => onElegir(d.nombre) : undefined} />)}
             </Pie>
-            <Tooltip formatter={(v) => `${v}`} />
+            <Tooltip formatter={(v) => formato(Number(v))} />
           </PieChart>
         </ResponsiveContainer>
         {centro !== undefined && (
@@ -62,7 +64,7 @@ export function DonaGrafico({ porciones, centro, altura = 180, onElegir }: {
             <li key={d.nombre} onClick={onElegir ? () => onElegir(d.nombre) : undefined} style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', fontSize: '0.8125rem', cursor: onElegir ? 'pointer' : undefined }}>
               <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: d.fill, flexShrink: 0 }} />
               <span style={{ flex: 1, minWidth: 0, color: 'var(--label-2)', fontWeight: 600 }}>{d.nombre}</span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{d.valor}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{formato(d.valor)}</span>
               <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--label-2)', width: 40, textAlign: 'right' }}>{pct}%</span>
             </li>
           );

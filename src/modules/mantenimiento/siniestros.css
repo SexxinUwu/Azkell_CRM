@@ -1,0 +1,36 @@
+/* Siniestros y daños: filtros del registro y gráficos del análisis. Reutiliza las tarjetas y los totales de incidencias.css. */
+
+.sin-filtros {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) auto minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--s-2);
+  align-items: center;
+}
+.sin-fechas { display: inline-flex; align-items: center; gap: 6px; }
+.sin-fechas .input { width: 9.5rem; }
+.sin-periodo { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-3); margin-bottom: var(--s-3); }
+@media (max-width: 900px) { .sin-filtros { grid-template-columns: 1fr; } }
+
+/* Análisis: seis totales y rejilla de gráficos */
+.sin-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--s-3); }
+@media (max-width: 1100px) { .sin-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .sin-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.sin-grilla { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+.sin-ancha { grid-column: 1 / -1; }
+@media (max-width: 900px) { .sin-grilla { grid-template-columns: minmax(0, 1fr); } }
+.sin-tabla { overflow-x: auto; }
+.sin-tabla td:nth-child(n + 2), .sin-tabla th:nth-child(n + 2) { text-align: right; }
+.sin-tabla td:first-child, .sin-tabla th:first-child { text-align: left; }
+
+/* Detalle que aparece al pasar el cursor sobre una barra o columna */
+.sin-burbuja {
+  display: flex; flex-direction: column; gap: 2px; max-width: 18rem; padding: var(--s-2) var(--s-3);
+  background: var(--surface); border: 1px solid var(--separator); border-radius: var(--r-md); box-shadow: var(--shadow-raised); font-size: 0.8125rem;
+}
+.sin-burbuja strong { font-size: 0.8125rem; }
+.sin-burbuja__sub { color: var(--label-2); font-size: 0.75rem; }
+
+/* Configurar motivos */
+.sin-motivos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.sin-motivos li { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) 0; border-bottom: 1px solid var(--separator); }
+.sin-motivos__nombre { flex: 1; min-width: 0; font-weight: 600; font-size: 0.9375rem; }

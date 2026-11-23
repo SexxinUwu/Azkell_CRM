@@ -266,6 +266,8 @@ module.exports = function globalRBAC(req, res, next) {
     // PDF de la inspección: el POST solo convierte el documento, no guarda nada; quien ve las inspecciones puede imprimirlas
     else if (path === '/mantenimiento/inspecciones/pdf') { mod = ['insp']; accion = 'l'; }
     else if (path.startsWith('/inspecciones') || path.startsWith('/mantenimiento/inspecciones')) mod = ['insp'];
+    // Control de siniestros y daños de flota (Mantenimiento › Otros): su propio permiso
+    else if (path.startsWith('/mantenimiento/siniestros')) mod = ['siniestros'];
     else if (path.startsWith('/planificacion')) mod = ['plan'];
     else if (path.startsWith('/mantenimiento-kits') || path.startsWith('/tipos-preventivo') || path.startsWith('/tipos-mantenimiento')) mod = ['cfg_mant'];
     else if (path.startsWith('/config-metrica')) mod = ['cfg_metrica', 'cfg_mant'];
