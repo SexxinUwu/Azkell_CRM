@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import { Briefcase, CircleAlert, Clock, Eye, FileText, FolderDown, History, ListChecks, RefreshCw, SearchX, Settings2, SlidersHorizontal, Truck, Wrench } from 'lucide-react';
@@ -153,7 +153,10 @@ export function DocsMarsisaPage() {
   const [elegidas, setElegidas] = useState<Set<string> | null>(() => leerSeleccion(CLAVE_PLACAS));
   const [configurando, setConfigurando] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
+  // Guardado de archivos: el botón se queda corto y el avance sale en una «nube» flotante (con opción de detener)
   const [guardando, setGuardando] = useState<string | null>(null);
+  const [progreso, setProgreso] = useState<{ total: number; restan: number } | null>(null);
+  const detener = useRef(false);
   const [abriendo, setAbriendo] = useState<number | null>(null);
   const [fallosArchivos, setFallosArchivos] = useState<Array<{ id: number; error: string }> | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -225,12 +228,15 @@ export function DocsMarsisaPage() {
 
   /** Copia a Azkell los archivos que faltan, por tandas, hasta que no quede ninguno (o ya no avance) */
   async function guardarArchivos() {
+    detener.current = false;
+    setProgreso({ total: sinArchivosGuardados, restan: sinArchivosGuardados });
     setGuardando('Preparando…'); setError(null); setFallosArchivos(null);
     try {
       // Los que fallan se apartan para seguir con los demás (y se muestran al final con su motivo)
       const falloIds: number[] = []; const motivos: Array<{ id: number; error: string }> = [];
       let fallidos = 0;
       for (let vuelta = 0; vuelta < 400; vuelta++) {
+        if (detener.current) break;
         // Una tanda corta (el servidor devuelve lo avanzado). Si el proxy corta una (502/504), se reintenta: lo ya guardado se conserva
         let r: { ok?: boolean; error?: string; guardados: number; fallidos: unknown[]; pendientes: number; detener: boolean; limitado?: number } | null = null;
         for (let intento = 0; intento < 4 && !r; intento++) {
@@ -241,19 +247,21 @@ export function DocsMarsisaPage() {
         if (r.ok === false) throw new Error(r.error || 'No se pudieron guardar los archivos');
         // La API de Marsisa limita las consultas por minuto: se espera lo que pide y se sigue (no cuenta como fallo)
         if (r.limitado) {
-          for (let seg = r.limitado; seg > 0; seg--) { setGuardando(`La API pidió esperar… ${seg} s · quedan ${r.pendientes}`); await new Promise(x => setTimeout(x, 1000)); }
+          for (let seg = r.limitado; seg > 0; seg--) { setGuardando(`La API de Marsisa pidió esperar… ${seg} s`); await new Promise(x => setTimeout(x, 1000)); }
           continue;
         }
         fallidos += r.fallidos.length;
         for (const x of r.fallidos as Array<{ id: number; error: string }>) { falloIds.push(x.id); motivos.push(x); }
-        setGuardando(r.pendientes > 0 ? `Guardando archivos… quedan ${r.pendientes}` : 'Terminando…');
+        const quedan = r.pendientes;
+        setProgreso(p => (p ? { ...p, restan: quedan } : p));
+        setGuardando(quedan > 0 ? 'Copiando los archivos a Azkell…' : 'Terminando…');
         if (r.pendientes === 0) break;
       }
       if (motivos.length) setFallosArchivos(motivos);
       haptic(fallidos ? 'warning' : 'success'); toast(fallidos ? `Archivos guardados; ${fallidos} no se pudieron bajar (el motivo está arriba)` : 'Archivos guardados');
       await qc.invalidateQueries({ queryKey: ['operaciones', 'docs-marsisa'] });
     } catch (e) { setError(errorMessage(e)); haptic('warning'); }
-    finally { setGuardando(null); }
+    finally { setGuardando(null); setProgreso(null); }
   }
 
   async function verArchivo(d: DocExterno) {
@@ -292,7 +300,7 @@ export function DocsMarsisaPage() {
           {puedeSincronizar && sinArchivosGuardados > 0 && (
             <Button variant="secondary" icon={<FolderDown size={16} />} onClick={() => { void guardarArchivos(); }} loading={guardando !== null} disabled={sincronizando}
               title="Copia a Azkell los archivos que aún solo están en la API, para que abran al instante">
-              {guardando ?? `Guardar archivos (${sinArchivosGuardados})`}
+              {`Guardar archivos (${sinArchivosGuardados})`}
             </Button>
           )}
           {esAdmin && (
@@ -305,6 +313,18 @@ export function DocsMarsisaPage() {
         </div>
       </header>
 
+      {guardando !== null && progreso && (
+        <div className="doc-nube" role="status" aria-live="polite">
+          <div className="doc-nube__fila">
+            <span className="spinner" aria-hidden />
+            <strong>Guardando archivos</strong>
+            <span className="doc-nube__n t-numeric">{Math.max(0, progreso.total - progreso.restan)} de {progreso.total}</span>
+            <button type="button" className="doc-nube__parar" onClick={() => { detener.current = true; setGuardando('Deteniendo…'); }}>Detener</button>
+          </div>
+          <div className="doc-nube__barra"><i style={{ width: `${progreso.total ? Math.min(100, Math.round(((progreso.total - progreso.restan) / progreso.total) * 100)) : 0}%` }} /></div>
+          <small>{guardando}</small>
+        </div>
+      )}
       {error && <Notice tone="error">{error}</Notice>}
       {fallosArchivos && fallosArchivos.length > 0 && (
         <Notice tone="error">
