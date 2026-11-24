@@ -21,7 +21,7 @@ module.exports = (db, logAudit) => {
     const aviso = (msg, status = 400) => Object.assign(new Error(msg), { status });
     const usuarioDe = req => String((req.user && (req.user.nombre || req.user.correo || req.user.email)) || 'sistema').slice(0, 150);
     const responder = (res, err, etiqueta) => {
-        if (err && err.status) return res.status(err.status).json({ ok: false, error: err.message });
+        if (err && err.status) return res.status(err.status).json({ ok: false, error: err.message, ...(err.esperar ? { esperar: err.esperar } : {}) });
         if (err && err.code === 'ER_NO_SUCH_TABLE') return res.status(409).json({ ok: false, error: 'Falta aplicar la actualización de la base de datos de esta empresa.' });
         console.error(`[docs-marsisa] ${etiqueta}:`, err && err.message);
         return res.status(500).json({ ok: false, error: 'No se pudo completar la operación.' });
@@ -47,12 +47,23 @@ module.exports = (db, logAudit) => {
         try {
             const r = await fetch(cfg.url + ruta, { headers: { Authorization: `Bearer ${cfg.token}`, Accept: 'application/json' }, signal: ctl.signal, redirect: 'manual' });
             const cuerpo = await r.json().catch(() => null);
+            // La API limita cuántas consultas por minuto acepta (429): se avisa cuánto esperar (Retry-After, entre 3 y 60 s)
+            if (r.status === 429) { const e = aviso('La API de Marsisa pidió esperar un momento (demasiadas consultas seguidas).', 429); e.esperar = Math.min(60, Math.max(3, Number(r.headers.get('retry-after')) || 8)); throw e; }
             if (!r.ok) throw aviso(`La API respondió ${r.status}${cuerpo && cuerpo.message ? `: ${cuerpo.message}` : ''}.`, r.status === 401 || r.status === 403 ? 502 : 502);
             return cuerpo;
         } catch (e) {
             if (e && e.status) throw e;
             throw aviso(e && e.name === 'AbortError' ? 'La API no respondió a tiempo.' : 'No se pudo conectar con la API de documentos.', 502);
         } finally { clearTimeout(t); }
+    }
+
+    const dormir = ms => new Promise(r => setTimeout(r, ms));
+    /** Igual que pedir, pero si la API pide esperar (429) espera y reintenta unas veces (para lecturas que no se pueden saltar) */
+    async function pedirConEspera(cfg, ruta) {
+        for (let intento = 0; ; intento++) {
+            try { return await pedir(cfg, ruta); }
+            catch (e) { if (!(e && e.status === 429) || intento >= 3) throw e; await dormir(Math.min(15, e.esperar || 8) * 1000); }
+        }
     }
 
     /** Estado según la fecha de vencimiento de hoy: vigente, por vencer (30 días o menos), vencido o sin vencimiento */
@@ -96,7 +107,8 @@ module.exports = (db, logAudit) => {
             const docs = [];
             let ultima = 1;
             for (let pagina = 1; pagina <= ultima && pagina <= MAX_PAGINAS; pagina++) {
-                const r = await pedir(cfg, `/documentos?page=${pagina}`);
+                if (pagina > 1) await dormir(300);
+                const r = await pedirConEspera(cfg, `/documentos?page=${pagina}`);
                 const lista = Array.isArray(r && r.data) ? r.data : [];
                 docs.push(...lista);
                 ultima = Number(r && r.meta && r.meta.ultima_pagina) || 1;
@@ -190,14 +202,21 @@ module.exports = (db, logAudit) => {
             const filtroExcluir = excluir.length ? 'AND id_remoto NOT IN (?)' : '';
             const par = excluir.length ? [excluir] : [];
             const [pend] = await P(req).query(`SELECT id, id_remoto FROM marsisa_docs_flota_ext WHERE tiene_archivo = 1 AND eliminado_remoto = 0 AND archivo_url IS NULL ${filtroExcluir} ORDER BY id LIMIT ?`, [...par, limite]);
-            let guardados = 0; const fallidos = [];
+            let guardados = 0; let limitado = 0; const fallidos = [];
             for (const f of pend) {
                 if (Date.now() - inicio > PRESUPUESTO_MS) break;
-                try { await guardarArchivo(req, cfg, f); guardados++; } catch (e) { fallidos.push({ id: f.id_remoto, error: e && e.message ? String(e.message).slice(0, 120) : 'error' }); }
+                try { await guardarArchivo(req, cfg, f); guardados++; }
+                catch (e) {
+                    // Si la API pide esperar (429) no es un fallo del archivo: se corta la tanda y el cliente espera lo que se indica
+                    if (e && e.status === 429) { limitado = e.esperar || 8; break; }
+                    fallidos.push({ id: f.id_remoto, error: e && e.message ? String(e.message).slice(0, 120) : 'error' });
+                }
+                // Ritmo suave para no pasar el límite de consultas por minuto de la API
+                await dormir(900);
             }
             const [[{ n }]] = await P(req).query(`SELECT COUNT(*) AS n FROM marsisa_docs_flota_ext WHERE tiene_archivo = 1 AND eliminado_remoto = 0 AND archivo_url IS NULL ${filtroExcluir}`, par);
             // Los que fallaron siguen pendientes: si en esta tanda no se guardó ninguno, se corta para no repetir sin fin
-            res.json({ ok: true, guardados, fallidos, pendientes: Number(n), detener: pend.length > 0 && guardados === 0 });
+            res.json({ ok: true, guardados, fallidos, pendientes: Number(n), limitado, detener: !limitado && pend.length > 0 && guardados === 0 && fallidos.length === pend.length });
         } catch (err) { responder(res, err, 'archivos'); }
     });
 
