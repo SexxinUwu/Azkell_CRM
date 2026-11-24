@@ -2466,14 +2466,9 @@ function verifyTokenBase(req, res, next) {
                     try { rP = typeof uObj.rol_permisos === 'string' ? JSON.parse(uObj.rol_permisos || '{}') : (uObj.rol_permisos || {}); } catch(e){}
                     try { uP = typeof uObj.permisos_json === 'string' ? JSON.parse(uObj.permisos_json || '{}') : (uObj.permisos_json || {}); } catch(e){}
 
-                    let merged = { ...rP };
-                    for (let key in uP) {
-                        if (!merged[key]) {
-                            merged[key] = uP[key];
-                        } else if (typeof uP[key] === 'object' && typeof merged[key] === 'object') {
-                            merged[key] = { ...merged[key], ...uP[key] };
-                        }
-                    }
+                    // Con rol asignado, los permisos son los del rol (igual que al iniciar sesión). Antes los permisos propios del usuario,
+                    // una copia vieja de otro rol con ceros, pisaban a los del rol y el servidor negaba lo que la pantalla mostraba.
+                    let merged = (uObj.rol_id && Object.keys(rP).length) ? { ...rP } : { ...uP };
 
                     req.user.permisos = JSON.stringify(merged);
                     req.user.rol = uObj.rol_nombre || uObj.rol || 'Personalizado';
