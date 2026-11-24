@@ -6,7 +6,7 @@ import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import { BotonTip } from '../../core/ui/BotonTip';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
@@ -194,17 +194,16 @@ export function PagoRequerimientosPage() {
         title="Pago de requerimientos"
         subtitle={lista.isLoading ? 'Cargando…' : `${ocs.length} ${ocs.length === 1 ? 'orden' : 'órdenes'} en esta vista`}
         actions={
-          <MenuOtros opciones={[
-            { label: 'Actualizar', icon: <RefreshCw size={17} />,
-              onSelect: () => { qc.invalidateQueries({ queryKey: ['tesoreria', 'pago-req'] }); } },
-            { label: 'Exportar Excel', icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-          ]} />
+          <div className="pago-acciones">
+            <BotonTip tip="Actualizar" className="btn btn--plain btn--icono" onClick={() => { qc.invalidateQueries({ queryKey: ['tesoreria', 'pago-req'] }); }}><RefreshCw size={18} /></BotonTip>
+            <BotonTip tip="Exportar Excel" className="btn btn--plain btn--icono" onClick={() => { void exportar(); }}><FileSpreadsheet size={18} /></BotonTip>
+          </div>
         }
       />
 
       {lista.isError && <Notice tone="error">{errorMessage(lista.error)}</Notice>}
 
-      <div className="pago-kpis">
+      <div className="pago-kpis pago-kpis--compacto">
         {tiles.map(k => (
           <button key={k.id} type="button" className={`pago-kpi pressable${k.activo ? ' pago-kpi--activo' : ''}`}
             aria-pressed={k.activo} onClick={k.ir}>

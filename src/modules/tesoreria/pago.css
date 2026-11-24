@@ -281,3 +281,12 @@
 .pago-tabla .pago-prov__ruc { flex-shrink: 0; }
 .pago-tabla .pago-cuenta { flex-wrap: nowrap; }
 .pago-tabla .btn { min-height: 26px; padding-block: 2px; }
+
+/* Cabeceras compactas: más espacio para la tabla */
+.pago-acciones { display: inline-flex; gap: 2px; }
+.pago-kpis--compacto { gap: var(--s-2); margin-bottom: var(--s-2); }
+.pago-kpis--compacto .pago-kpi { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 8px; padding: 6px 12px; }
+.pago-kpis--compacto .pago-kpi__valor { font-size: 1rem; }
+.pago-kpis--compacto .pago-kpi__etiqueta { font-size: 0.75rem; }
+.pago-barra { margin-bottom: var(--s-2); }
+.pago-tabla thead th { padding: 6px 10px; font-size: 0.625rem; }
