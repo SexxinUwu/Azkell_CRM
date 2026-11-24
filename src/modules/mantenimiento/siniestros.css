@@ -34,3 +34,13 @@
 .sin-motivos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .sin-motivos li { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) 0; border-bottom: 1px solid var(--separator); }
 .sin-motivos__nombre { flex: 1; min-width: 0; font-weight: 600; font-size: 0.9375rem; }
+
+/* Fotos de los daños (FotosSiniestro.tsx) */
+.sin-fotos { display: flex; flex-direction: column; gap: var(--s-3); }
+.sin-fotos__guardadas { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: var(--s-2); }
+.sin-fotos__item { position: relative; aspect-ratio: 1; }
+.sin-fotos__foto { display: block; width: 100%; height: 100%; padding: 0; border: 1px solid var(--separator); border-radius: var(--r-md); overflow: hidden; cursor: pointer; background: var(--fill); }
+.sin-fotos__foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sin-fotos__quitar { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 999px; background: rgba(0, 0, 0, 0.6); color: #fff; cursor: pointer; }
+.sin-fotos__quitar:disabled { opacity: 0.5; }
+.sin-fotos__n { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: var(--accent-tint); color: var(--accent); font-size: 0.6875rem; font-weight: 700; vertical-align: middle; }

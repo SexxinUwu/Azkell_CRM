@@ -10,7 +10,11 @@ export interface Siniestro {
   id: number; codigo: string; fecha: string; placa: string; marca: string | null; conductor: string | null; ubicacion: string | null;
   tipo_incidencia: string; detalle: string | null; tecnico: string | null; inicio: string | null; fin: string | null;
   horas_taller: number | string; costo_repuestos: number | string; costo_mano_obra: number | string; costo_total: number | string; estado: string;
+  /** Cantidad de fotos de los daños */
+  n_fotos?: number;
 }
+
+export interface FotoSiniestro { id: number; url: string; nombre: string | null; subido_por: string | null; creado_en: string }
 
 export interface FiltroSiniestros { desde: string; hasta: string; placa?: string; tipo?: string; estado?: string; q?: string }
 
@@ -62,6 +66,22 @@ export type DatosSiniestro = Omit<Siniestro, 'id' | 'codigo' | 'horas_taller' | 
 
 export const guardarSiniestro = (id: number | null, datos: Record<string, unknown>) =>
   api<{ ok?: boolean; error?: string; message?: string; codigo?: string }>(id ? `/mantenimiento/siniestros/${id}` : '/mantenimiento/siniestros', { method: id ? 'PUT' : 'POST', body: datos });
+
+export function useFotosSiniestro(id: number | null) {
+  return useQuery<FotoSiniestro[]>({
+    queryKey: ['mant', 'siniestros', 'fotos', id], enabled: !!id, staleTime: 20_000,
+    queryFn: () => api<{ data?: FotoSiniestro[] }>(`/mantenimiento/siniestros/${id}/fotos`).then(r => r.data ?? []),
+  });
+}
+
+export function subirFotosSiniestro(id: number, archivos: File[]) {
+  const f = new FormData();
+  archivos.forEach(a => f.append('fotos', a));
+  return api<{ ok?: boolean; error?: string; data?: FotoSiniestro[] }>(`/mantenimiento/siniestros/${id}/fotos`, { method: 'POST', body: f });
+}
+
+export const quitarFotoSiniestro = (id: number, fotoId: number) =>
+  api<{ ok?: boolean; error?: string; data?: FotoSiniestro[] }>(`/mantenimiento/siniestros/${id}/fotos/${fotoId}`, { method: 'DELETE' });
 
 export const eliminarSiniestro = (id: number) => api<{ ok?: boolean; error?: string }>(`/mantenimiento/siniestros/${id}`, { method: 'DELETE' });
 
