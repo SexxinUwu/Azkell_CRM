@@ -952,13 +952,12 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
                     const pct = (v: number, d: number, color: string, cant: number) => (
                       <span title={`${cant.toLocaleString('es-PE')} lecturas`} style={{ color, fontWeight: 700 }}>{fmt(v, d)} %</span>
                     );
-                    const sobrePct = rpmR && rpmR.con_motor > 0 ? (rpmR.conteos.sobre / rpmR.con_motor) * 100 : 0;
                     const puntos = rpmR ? ajusteAMeta(rpmR) : 0;
                     celdas.push(
                       <Celda key="rpm-bajo" alinear="right" mono>{rpmR ? pct(rpmR.porcentajes.bajo, 1, '#a16207', rpmR.conteos.bajo) : rpmEstado}</Celda>,
                       <Celda key="rpm-verde" alinear="right" mono>{rpmR ? pct(rpmR.porcentajes.verde, 1, '#15803d', rpmR.conteos.verde) : rpmEstado}</Celda>,
                       <Celda key="rpm-pot" alinear="right" mono>{rpmR ? pct(rpmR.porcentajes.potencia, 1, '#1e2a5a', rpmR.conteos.potencia) : rpmEstado}</Celda>,
-                      <Celda key="rpm-sobre" alinear="right" mono>{rpmR ? pct(sobrePct, 2, '#7f1d3a', rpmR.conteos.sobre) : rpmEstado}</Celda>,
+                      <Celda key="rpm-sobre" alinear="right" mono>{rpmR ? <span title="Lecturas por encima del último rango del motor (no entran en el 100 %)" style={{ color: '#7f1d3a', fontWeight: 700 }}>{rpmR.conteos.sobre.toLocaleString('es-PE')}</span> : rpmEstado}</Celda>,
                       <Celda key="rpm-nota" alinear="center">{rpmR ? <span title={`${notaRpm(puntos).txt}: qué tan cerca está el reparto de la meta 20 / 60 / 20`}><Pastilla color={notaRpm(puntos).color}>{String(puntos)}</Pastilla></span> : rpmEstado}</Celda>,
                     );
                   }
