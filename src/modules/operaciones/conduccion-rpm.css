@@ -1,0 +1,44 @@
+/* Operaciones Marsisa › Conducción por RPM (ConduccionRpmPage.tsx). Prefijo rpm- */
+.rpm-filtros { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--s-3); margin-bottom: var(--s-4); }
+.rpm-filtros .field { min-width: 12rem; flex: 1 1 12rem; max-width: 18rem; }
+.rpm-filtros__rapidos { display: flex; gap: 6px; padding-bottom: 6px; }
+.rpm-filtros__rapidos button { border: 0; background: var(--fill); color: var(--label); font: inherit; font-size: 0.8125rem; font-weight: 600; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.rpm-filtros__rapidos button:hover { background: var(--fill-strong, var(--fill)); }
+.rpm-espera { display: flex; justify-content: center; padding: var(--s-6) 0; }
+
+.rpm-resultado { display: flex; flex-direction: column; gap: var(--s-3); }
+.rpm-tarjeta { background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-card); padding: var(--s-4); }
+
+.rpm-resumen { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-4) var(--s-6); }
+.rpm-resumen__placa { display: flex; align-items: center; gap: var(--s-3); }
+.rpm-resumen__placa small { display: block; color: var(--label-2); font-size: 0.75rem; }
+.rpm-resumen__nota { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 14px; background: var(--fill); }
+.rpm-resumen__nota small { display: block; color: var(--label-2); font-size: 0.6875rem; }
+.rpm-resumen__valor { font-size: 1.75rem; font-weight: 700; line-height: 1; }
+.rpm-resumen__nota[data-tono="ok"] .rpm-resumen__valor { color: var(--green-ink, #1a7f37); }
+.rpm-resumen__nota[data-tono="medio"] .rpm-resumen__valor { color: var(--amber-ink, #9a6700); }
+.rpm-resumen__nota[data-tono="mal"] .rpm-resumen__valor { color: var(--red-ink, #cf222e); }
+.rpm-datos { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-6); margin: 0 0 0 auto; }
+.rpm-datos div { display: flex; flex-direction: column; }
+.rpm-datos dt { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; color: var(--label-2); }
+.rpm-datos dd { margin: 0; font-size: 1.125rem; font-weight: 700; }
+
+.rpm-barra { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: var(--fill); margin-bottom: var(--s-4); }
+.rpm-barra i { display: block; height: 100%; transition: width 0.5s ease; }
+.rpm-barra__ambar { background: var(--amber, #d4a72c); }
+.rpm-barra__ambar--2 { opacity: 0.75; }
+.rpm-barra__verde { background: var(--green, #2da44e); }
+
+.rpm-cuadro { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--s-2); }
+@media (max-width: 900px) { .rpm-cuadro { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.rpm-celda { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; padding: 12px 8px; border-radius: 14px; background: var(--fill); }
+.rpm-celda__titulo { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--label-2); }
+.rpm-celda__rango { font-size: 0.8125rem; font-weight: 600; background: var(--surface); padding: 2px 10px; border-radius: 999px; }
+.rpm-celda__n { font-size: 1.5rem; line-height: 1.2; }
+.rpm-celda__pct { font-size: 1rem; font-weight: 700; }
+.rpm-celda__meta { font-size: 0.6875rem; color: var(--label-2); }
+.rpm-celda--ambar .rpm-celda__rango { background: color-mix(in srgb, var(--amber, #d4a72c) 22%, var(--surface)); }
+.rpm-celda--verde { background: color-mix(in srgb, var(--green, #2da44e) 14%, var(--surface)); }
+.rpm-celda--verde .rpm-celda__rango { background: color-mix(in srgb, var(--green, #2da44e) 30%, var(--surface)); }
+.rpm-celda--rojo .rpm-celda__n { color: var(--red-ink, #cf222e); }
+.rpm-pie { margin: var(--s-3) 0 0; color: var(--label-2); font-size: 0.75rem; }

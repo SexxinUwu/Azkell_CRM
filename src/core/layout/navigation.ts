@@ -120,6 +120,7 @@ const SECCIONES_BASE: NavSection[] = [
           { key: 'marsisa-matriz', label: 'Matriz de combustible (D2)', to: '/operaciones/matriz-combustible', icon: Target, permissions: ver('combustible_analisis'), soloEmpresa: 'marsisa' },
           { key: 'marsisa-analisis', label: 'Análisis de combustible (D2)', to: '/operaciones/analisis-combustible', icon: Gauge, permissions: ver('combustible_analisis'), soloEmpresa: 'marsisa' },
           { key: 'marsisa-urea', label: 'Análisis de urea', to: '/operaciones/urea', icon: Droplet, permissions: ver('urea_analisis', 'combustible_analisis'), soloEmpresa: 'marsisa' },
+          { key: 'marsisa-conduccion-rpm', label: 'Conducción por RPM', to: '/operaciones/conduccion-rpm', icon: Gauge, permissions: ver('combustible_analisis'), soloEmpresa: 'marsisa' },
         ],
       },
     ],
