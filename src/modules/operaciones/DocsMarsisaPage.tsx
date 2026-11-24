@@ -1,7 +1,7 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'motion/react';
-import { Briefcase, CircleAlert, Clock, Eye, FileText, FolderDown, History, RefreshCw, SearchX, Settings2, SlidersHorizontal, Truck, Wrench } from 'lucide-react';
+import { Briefcase, CircleAlert, Clock, Eye, FileText, FolderDown, History, ListChecks, RefreshCw, SearchX, Settings2, SlidersHorizontal, Truck, Wrench } from 'lucide-react';
 import { MenuFila } from '../../core/ui/MenuFila';
 import '../flota/flota.css';
 import '../mantenimiento/mant.css';
@@ -12,7 +12,8 @@ import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { Badge, EmptyState, Notice, Page } from '../../core/ui/Display';
 import { BotonTip } from '../../core/ui/BotonTip';
 import { SearchField } from '../../core/ui/Field';
-import { ChoiceChips, ToggleChips } from '../../core/ui/Chips';
+import { ChoiceChips } from '../../core/ui/Chips';
+import { Sheet } from '../../core/ui/Sheet';
 import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
 import { exportarExcel } from '../../core/lib/excel';
 import { Combobox } from '../../core/ui/Combobox';
@@ -613,6 +614,7 @@ const fechaCorta = (v: string | null) => (v ? formatFechaPe(v) : '—');
  */
 function PorDocumento({ unidades, tipos, onVerDocumentos }: { unidades: Unidad[]; tipos: Array<{ value: string; label: string }>; onVerDocumentos: (placa: string) => void }) {
   const [elegidos, setElegidos] = useState<string[]>([]);
+  const [eligiendo, setEligiendo] = useState(false);
   const [modo, setModo] = useState<ModoDoc>('todas');
   const toast = useToast();
 
@@ -643,10 +645,8 @@ function PorDocumento({ unidades, tipos, onVerDocumentos }: { unidades: Unidad[]
   return (
     <div className="doc-alq">
       <div className="doc-alq__resumen">
-        <div style={{ flex: '1 1 20rem', minWidth: 0 }}>
-          <p className="t-footnote c-secondary" style={{ margin: '0 0 6px' }}>Elige uno o varios documentos</p>
-          <ToggleChips label="Documentos a revisar" value={elegidos} onChange={setElegidos} options={tipos} />
-        </div>
+        <Button variant="secondary" icon={<ListChecks size={16} />} onClick={() => setEligiendo(true)}>{elegidos.length ? `Documentos elegidos (${elegidos.length})` : 'Elegir documentos'}</Button>
+        {elegidos.length > 0 && <span className="t-footnote c-secondary" style={{ flex: '1 1 12rem', minWidth: 0 }}>{elegidos.map(nombres).join(' · ')}</span>}
       </div>
       {elegidos.length === 0 ? (
         <EmptyState icon={<FileText size={22} />} title="Elige un documento">Marca uno o varios tipos de documento para ver qué unidades lo tienen y a cuáles les falta.</EmptyState>
@@ -684,6 +684,50 @@ function PorDocumento({ unidades, tipos, onVerDocumentos }: { unidades: Unidad[]
           )}
         </>
       )}
+      <ElegirDocumentosSheet open={eligiendo} onClose={() => setEligiendo(false)} opciones={tipos} elegidos={elegidos} onAplicar={setElegidos} />
     </div>
+  );
+}
+
+/** Lista para elegir uno o varios tipos de documento (con búsqueda y casillas en cada fila, como la de placas a mostrar) */
+function ElegirDocumentosSheet({ open, onClose, opciones, elegidos, onAplicar }: {
+  open: boolean; onClose: () => void; opciones: Array<{ value: string; label: string }>; elegidos: string[]; onAplicar: (v: string[]) => void;
+}) {
+  const [marcados, setMarcados] = useState<Set<string>>(new Set());
+  const [q, setQ] = useState('');
+  useEffect(() => { if (open) { setMarcados(new Set(elegidos)); setQ(''); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const visibles = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    return t ? opciones.filter(o => o.label.toLowerCase().includes(t)) : opciones;
+  }, [opciones, q]);
+  const cambiar = (valores: string[], marcar: boolean) => setMarcados(prev => { const s = new Set(prev); valores.forEach(v => (marcar ? s.add(v) : s.delete(v))); return s; });
+
+  return (
+    <Sheet open={open} onClose={onClose} title="Documentos a revisar"
+      footer={<>
+        <Button variant="secondary" onClick={() => { haptic('selection'); onAplicar([]); onClose(); }}>Quitar todos</Button>
+        <Button variant="primary" disabled={!marcados.size} onClick={() => { haptic('success'); onAplicar(opciones.filter(o => marcados.has(o.value)).map(o => o.value)); onClose(); }}>
+          {marcados.size ? `Ver ${marcados.size} ${marcados.size === 1 ? 'documento' : 'documentos'}` : 'Elige al menos uno'}
+        </Button>
+      </>}>
+      <div className="doc-conf">
+        <input className="doc-conf__buscar" type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar documento…" aria-label="Buscar documento" />
+        <div className="doc-conf__acciones">
+          <button type="button" onClick={() => cambiar(visibles.map(o => o.value), true)}>Marcar {q ? 'los visibles' : 'todos'}</button>
+          <button type="button" onClick={() => cambiar(visibles.map(o => o.value), false)}>Quitar {q ? 'los visibles' : 'todos'}</button>
+          <span>{marcados.size} de {opciones.length}</span>
+        </div>
+        <div className="doc-conf__lista" role="group" aria-label="Documentos">
+          {visibles.map(o => (
+            <label key={o.value} className="doc-conf__fila">
+              <input type="checkbox" checked={marcados.has(o.value)} onChange={e => cambiar([o.value], e.target.checked)} />
+              <span style={{ color: 'var(--label)', fontWeight: 600 }}>{o.label}</span>
+            </label>
+          ))}
+          {!visibles.length && <p className="c-secondary" style={{ padding: 'var(--s-3)' }}>No hay documentos con ese texto.</p>}
+        </div>
+        <p className="c-secondary" style={{ fontSize: '0.8125rem', margin: 0 }}>Con un documento ves qué unidades lo tienen y cuáles no; con varios, quiénes los tienen todos y a quiénes les falta alguno.</p>
+      </div>
+    </Sheet>
   );
 }
