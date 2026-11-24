@@ -297,11 +297,23 @@ export function DocsMarsisaPage() {
         </Button>
         <div className="doc-cab__acciones">
           {q.data?.ultima_sincronizacion && <span className="t-footnote c-secondary doc-cab__sinc" title={`Última sincronización: ${q.data.ultima_sincronizacion}`}>Sinc. {q.data.ultima_sincronizacion.slice(5, 10).split('-').reverse().join('/')} {q.data.ultima_sincronizacion.slice(11)}</span>}
-          {puedeSincronizar && sinArchivosGuardados > 0 && (
-            <Button variant="secondary" icon={<FolderDown size={16} />} onClick={() => { void guardarArchivos(); }} loading={guardando !== null} disabled={sincronizando}
-              title="Copia a Azkell los archivos que aún solo están en la API, para que abran al instante">
-              {`Guardar archivos (${sinArchivosGuardados})`}
-            </Button>
+          {puedeSincronizar && (sinArchivosGuardados > 0 || guardando !== null) && (
+            <div className="doc-guardar">
+              <button type="button" className="doc-guardar__btn" disabled={sincronizando || guardando !== null} onClick={() => { void guardarArchivos(); }}
+                aria-label={guardando !== null ? 'Guardando archivos' : `Guardar archivos (${sinArchivosGuardados})`}>
+                {guardando !== null ? <span className="spinner" aria-hidden /> : <><FolderDown size={16} /><span className="t-numeric">{sinArchivosGuardados}</span></>}
+              </button>
+              <div className="doc-guardar__tip" role="status" aria-live="polite">
+                {guardando !== null && progreso ? (
+                  <>
+                    <div className="doc-guardar__fila"><strong>Guardando archivos</strong><span className="t-numeric">{Math.max(0, progreso.total - progreso.restan)} de {progreso.total}</span></div>
+                    <div className="doc-nube__barra"><i style={{ width: `${progreso.total ? Math.min(100, Math.round(((progreso.total - progreso.restan) / progreso.total) * 100)) : 0}%` }} /></div>
+                    <small>{guardando}</small>
+                    <button type="button" className="doc-nube__parar" onClick={() => { detener.current = true; setGuardando('Deteniendo…'); }}>Detener</button>
+                  </>
+                ) : <span>Guardar archivos: copia a Azkell los {sinArchivosGuardados} que aún solo están en la API, para que abran al instante</span>}
+              </div>
+            </div>
           )}
           {esAdmin && (
             <>
@@ -313,18 +325,6 @@ export function DocsMarsisaPage() {
         </div>
       </header>
 
-      {guardando !== null && progreso && (
-        <div className="doc-nube" role="status" aria-live="polite">
-          <div className="doc-nube__fila">
-            <span className="spinner" aria-hidden />
-            <strong>Guardando archivos</strong>
-            <span className="doc-nube__n t-numeric">{Math.max(0, progreso.total - progreso.restan)} de {progreso.total}</span>
-            <button type="button" className="doc-nube__parar" onClick={() => { detener.current = true; setGuardando('Deteniendo…'); }}>Detener</button>
-          </div>
-          <div className="doc-nube__barra"><i style={{ width: `${progreso.total ? Math.min(100, Math.round(((progreso.total - progreso.restan) / progreso.total) * 100)) : 0}%` }} /></div>
-          <small>{guardando}</small>
-        </div>
-      )}
       {error && <Notice tone="error">{error}</Notice>}
       {fallosArchivos && fallosArchivos.length > 0 && (
         <Notice tone="error">
