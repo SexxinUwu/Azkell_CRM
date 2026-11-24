@@ -124,6 +124,9 @@ export function NeumaticosTablero() {
   const configCodigo = configParaPosiciones(datos?.configuracion, posiciones.map(p => p.posicion));
   const configFicha = configReconocida(datos?.configuracion);
   const cfg = configCodigo ? CONFIGURACIONES[configCodigo] : null;
+  // La disposición 4X2 la comparten un tracto (T2) y un camión (C2): el nombre sale del tipo que dice la ficha de la placa
+  const tipoFicha = String(datos?.configuracion ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const nombreUnidad = /^T\d/.test(tipoFicha) ? `Tracto ${tipoFicha}` : /^C\d/.test(tipoFicha) ? `Camión ${tipoFicha}` : (cfg?.nombre ?? '');
   const posicionActiva = montadas.find(m => m.llanta.codigo === seleccion)?.posicion ?? posLibre ?? '';
 
   const buscada = busqueda.trim().toLowerCase();
@@ -280,7 +283,7 @@ export function NeumaticosTablero() {
       <PageHeader
         eyebrow="Mantenimiento · Neumáticos"
         title="Tablero de movimientos"
-        subtitle={placa ? `${placa}${cfg && configCodigo ? ` · ${configCodigo} · ${cfg.nombre}` : ''}` : 'Elige una unidad para ver y mover sus neumáticos'}
+        subtitle={placa ? `${placa}${cfg && configCodigo ? ` · ${configCodigo} · ${nombreUnidad}` : ''}` : 'Elige una unidad para ver y mover sus neumáticos'}
         actions={
           <PlacaPicker
             id="ntb-placa"
@@ -357,7 +360,7 @@ export function NeumaticosTablero() {
               </div>
               <p className="t-footnote c-secondary">
                 {cfg && configCodigo
-                  ? `${configCodigo} · ${cfg.nombre} · ${montadas.length} llantas montadas`
+                  ? `${configCodigo} · ${nombreUnidad} · ${montadas.length} llantas montadas`
                   : datos?.configuracion ? `Configuración ${datos.configuracion} no reconocida` : 'Sin configuración de ejes registrada'}
               </p>
               {configFicha && configCodigo && configFicha !== configCodigo && (
