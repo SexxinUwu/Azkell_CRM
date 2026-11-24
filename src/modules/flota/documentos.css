@@ -334,3 +334,10 @@
 .doc-pap-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 0; border-radius: 999px; background: var(--amber-tint); color: var(--amber-ink); font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer; transition: transform 0.18s cubic-bezier(.3,1.4,.5,1); }
 .doc-pap-chip:active { transform: scale(0.96); }
 .doc-pap-chip--rojo { background: var(--red-tint); color: var(--red-ink); }
+
+/* Cabecera en una sola línea (Documentos de flota de la API): el buscador se acorta y las acciones no se parten */
+.doc-cab--una-linea { flex-wrap: nowrap; }
+.doc-cab--una-linea .doc-cab__buscar { flex: 1 1 9rem; min-width: 7rem; max-width: 17rem; }
+.doc-cab--una-linea .doc-cab__acciones { flex-wrap: nowrap; flex-shrink: 0; white-space: nowrap; }
+.doc-cab--una-linea .doc-cab__sinc { white-space: nowrap; }
+@media (max-width: 1200px) { .doc-cab--una-linea { flex-wrap: wrap; } .doc-cab--una-linea .doc-cab__acciones { flex-wrap: wrap; } }
