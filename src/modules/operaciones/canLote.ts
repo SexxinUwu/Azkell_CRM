@@ -5,7 +5,6 @@
 import { CancelledError, useQueries, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
 import type { TelemetriaWialon } from './AnalisisViajes';
-import type { ResultadoRpm } from './rpmUtil';
 
 export interface ItemCan { viaje: string; placa: string; ini: string; fin: string }
 export type EstadoCan = 'cargando' | 'listo' | 'sin_datos' | 'error';
@@ -34,18 +33,22 @@ export function encolarCan<T>(signal: AbortSignal, tarea: () => Promise<T>): Pro
 
 /** Con `conRpm` (solo Marsisa) se pide también, en la misma vuelta de la cola, la conducción por RPM del mismo periodo */
 export async function pedirCan(i: ItemCan, conRpm = false): Promise<TelemetriaWialon> {
+  // Marsisa: una sola consulta al servidor que da CAN y RPM juntos. Si el viaje ya está guardado responde al instante; si no, el servidor
+  // pide ambos a Wialon en una sola sesión y lo guarda. Si esa ruta falla se sigue con el CAN de siempre.
+  if (conRpm) {
+    try {
+      const g = await api<{ ok?: boolean; data?: TelemetriaWialon | null; error?: string }>('/operaciones/conduccion-rpm/viaje', { method: 'POST', body: { viaje: i.viaje, placa: i.placa, ini: i.ini, fin: i.fin } });
+      if (g.ok && g.data) return g.data;
+      if (g.ok && !g.data) throw new SinDatosCan('Sin unidad en Wialon con esa placa o sin telemetría en el periodo');
+    } catch (e) {
+      if (e instanceof SinDatosCan) throw e;
+    }
+  }
   const p = new URLSearchParams({ placa: i.placa, fechaInicio: i.ini, fechaFin: i.fin });
   const r = await api<{ ok?: boolean; data?: TelemetriaWialon | null; error?: string }>(`/combustible/wialon-telemetria?${p.toString()}`);
   if (!r.ok) throw new Error(r.error || 'No se pudo consultar Wialon');
   if (!r.data) throw new SinDatosCan('Sin unidad en Wialon con esa placa o sin telemetría en el periodo');
-  if (!conRpm || !r.data.periodoDesdeUnix || !r.data.periodoHastaUnix) return r.data;
-  try {
-    const rpm = await api<ResultadoRpm>('/operaciones/conduccion-rpm/analizar', { method: 'POST', body: { placa: i.placa, desdeUnix: r.data.periodoDesdeUnix, hastaUnix: r.data.periodoHastaUnix } });
-    return { ...r.data, rpm: rpm.sin_datos ? null : rpm };
-  } catch (e) {
-    // Que falle el RPM no tira abajo el CAN del viaje
-    return { ...r.data, rpm: null, rpmError: e instanceof Error ? e.message : 'No se pudo calcular la conducción por RPM' };
-  }
+  return r.data;
 }
 
 export function useCanViajes(items: ItemCan[], activo: boolean, conRpm = false) {

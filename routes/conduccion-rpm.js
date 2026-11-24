@@ -10,11 +10,15 @@
 //   DELETE /rangos/:modelo    quita un modelo (vuelve a usar los rangos generales)
 //   PUT    /config            { meta: {bajo, verde, potencia, sobre}, generico: [4 límites] }
 //   POST   /analizar          { placa, desde, hasta } (hora de Lima, "AAAA-MM-DDTHH:mm") o { placa, desdeUnix, hastaUnix }
+//   POST   /viaje             { viaje, placa, ini, fin } CAN + RPM de un viaje: desde la base si ya está guardado; si no, Wialon (una sola sesión) y lo guarda
+//   POST   /precalcular       guarda ahora los viajes recientes terminados que falten (también corre solo cada 20 minutos)
+//   GET    /precalculo        estado del último precálculo
 const express = require('express');
 const { analizarRpm } = require('../services/wialon_rpm');
 const { cargarConfig, invalidar, rangosDe, limitesValidos, clave } = require('../services/rpm_rangos');
+const { obtenerTelemetriaViaje, precalcular, estadoPrecalculo } = require('../services/telemetria_viaje');
 
-module.exports = (db, logAudit) => {
+module.exports = (db, logAudit, ayudantes) => {
     const router = express.Router();
     const D = req => (req && req.db) ? req.db : db;
     const aviso = (msg, status = 400) => Object.assign(new Error(msg), { status });
@@ -60,7 +64,7 @@ module.exports = (db, logAudit) => {
             const modelo = String(req.params.modelo || '').trim().toUpperCase().slice(0, 60);
             if (!modelo) throw aviso('Indica el modelo del motor.');
             const limites = (req.body && Array.isArray(req.body.limites) ? req.body.limites : []).map(Number);
-            if (!limitesValidos(limites)) throw aviso('Los cuatro límites deben ser números enteros crecientes (ralentí < bajo torque < zona verde < potencia), hasta 6000 RPM.');
+            if (!limitesValidos(limites)) throw aviso('Los cuatro límites deben ser múltiplos de 10, crecientes (ralentí < bajo torque < zona verde < potencia) y de hasta 6000 RPM.');
             const usuario = usuarioDe(req);
             // Si ya existe con otra escritura (mayúsculas o espacios distintos), se actualiza esa misma fila
             const cfg = await cargarConfig(D(req));
@@ -95,7 +99,7 @@ module.exports = (db, logAudit) => {
             if (![meta.bajo, meta.verde, meta.potencia, meta.sobre].every(v => Number.isFinite(v) && v >= 0 && v <= 100)) throw aviso('La meta debe estar entre 0 y 100.');
             if (Math.round(meta.bajo + meta.verde + meta.potencia) !== 100) throw aviso('Bajo torque, zona verde y potencia deben sumar 100 %.');
             const generico = (Array.isArray(b.generico) ? b.generico : []).map(Number);
-            if (!limitesValidos(generico)) throw aviso('Los rangos generales deben ser cuatro enteros crecientes.');
+            if (!limitesValidos(generico)) throw aviso('Los rangos generales deben ser cuatro múltiplos de 10 crecientes.');
             const usuario = usuarioDe(req);
             const p = D(req).promise();
             const filas = [['meta_bajo', meta.bajo], ['meta_verde', meta.verde], ['meta_potencia', meta.potencia], ['meta_sobre', meta.sobre], ['rangos_generico', generico.join(',')]];
@@ -115,6 +119,24 @@ module.exports = (db, logAudit) => {
             res.json(r);
         } catch (err) { responder(res, err, 'analizar'); }
     });
+
+    router.post('/viaje', async (req, res) => {
+        try {
+            const { viaje, placa, ini, fin, forzar } = req.body || {};
+            if (!ayudantes) throw aviso('El módulo de combustible no está disponible.', 503);
+            const r = await obtenerTelemetriaViaje(D(req), ayudantes, { viaje, placa, ini, fin, forzar: forzar === true });
+            res.json({ ok: true, data: r.data });
+        } catch (err) { responder(res, err, 'viaje'); }
+    });
+
+    router.post('/precalcular', async (req, res) => {
+        try {
+            if (!ayudantes) throw aviso('El módulo de combustible no está disponible.', 503);
+            res.json(await precalcular(D(req), ayudantes, { dias: Math.min(60, Math.max(1, Number(req.body && req.body.dias) || 10)), maximo: Math.min(100, Math.max(1, Number(req.body && req.body.maximo) || 30)) }));
+        } catch (err) { responder(res, err, 'precalcular'); }
+    });
+
+    router.get('/precalculo', (req, res) => res.json({ ok: true, ...estadoPrecalculo() }));
 
     return router;
 };

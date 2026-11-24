@@ -19,7 +19,7 @@ interface RangosResp {
 
 const TITULOS = ['Ralentí hasta', 'Bajo torque hasta', 'Zona verde hasta', 'Potencia hasta'];
 const aNum = (v: string) => (v.trim() === '' ? NaN : Number(v));
-const crecientes = (l: number[]) => l.length === 4 && l.every(v => Number.isInteger(v) && v > 0 && v <= 6000) && l[0] < l[1] && l[1] < l[2] && l[2] < l[3];
+const crecientes = (l: number[]) => l.length === 4 && l.every(v => Number.isInteger(v) && v > 0 && v <= 6000 && v % 10 === 0) && l[0] < l[1] && l[1] < l[2] && l[2] < l[3];
 
 /** Fila editable de un modelo: cuatro límites; se guarda sola al pulsar Guardar cuando hay cambios válidos */
 function FilaModelo({ modelo, inicial, placas, puedeEditar, onGuardar, onQuitar, ocupado }: {
@@ -35,7 +35,7 @@ function FilaModelo({ modelo, inicial, placas, puedeEditar, onGuardar, onQuitar,
     <tr>
       <td className="rpm-rangos__modelo">{modelo}{placas > 0 && <small>{placas} {placas === 1 ? 'placa' : 'placas'}</small>}</td>
       {v.map((x, i) => (
-        <td key={i}><input className="rpm-rangos__in" type="number" inputMode="numeric" min={1} max={6000} value={x} disabled={!puedeEditar} aria-label={`${modelo}: ${TITULOS[i]}`}
+        <td key={i}><input className="rpm-rangos__in" type="number" inputMode="numeric" min={10} max={6000} step={10} value={x} disabled={!puedeEditar} aria-label={`${modelo}: ${TITULOS[i]}`}
           onChange={e => setV(prev => prev.map((p, k) => (k === i ? e.target.value : p)))} /></td>
       ))}
       <td className="rpm-rangos__acc">
@@ -92,7 +92,7 @@ export function RangosRpmSheet({ open, onClose, puedeEditar }: { open: boolean; 
   return (
     <Sheet open={open} onClose={onClose} title="Rangos de RPM por motor" ancho>
       <div className="rpm-rangos">
-        <p className="rpm-rangos__nota">Lo que se edite aquí es lo que usa el sistema (esta pantalla y el Análisis de combustible). Cada modelo se reparte así: ralentí hasta el primer límite, luego bajo torque, zona verde (económico), potencia y, por encima del último, sobrerrevolución.</p>
+        <p className="rpm-rangos__nota">Lo que se edite aquí es lo que usa el sistema (esta pantalla y el Análisis de combustible). Los límites van de 10 en 10 RPM. Cada modelo se reparte así: ralentí hasta el primer límite, luego bajo torque, zona verde (económico), potencia y, por encima del último, sobrerrevolución.</p>
         {q.isError && <Notice tone="error">{errorMessage(q.error)}</Notice>}
         {d?.origen === 'base' && <Notice tone="accent">Todavía no se aplicó la actualización de la base de datos: se muestran los rangos de respaldo y no se pueden guardar cambios.</Notice>}
         {d && d.sin_rangos.length > 0 && (
@@ -113,7 +113,7 @@ export function RangosRpmSheet({ open, onClose, puedeEditar }: { open: boolean; 
         </div>
         <div className="rpm-rangos__meta">
           {TITULOS.map((t, i) => (
-            <label key={t}><span>Generales: {t.toLowerCase()}</span><input className="rpm-rangos__in" type="number" min={1} max={6000} value={generico[i]} disabled={!puedeEditar}
+            <label key={t}><span>Generales: {t.toLowerCase()}</span><input className="rpm-rangos__in" type="number" min={10} max={6000} step={10} value={generico[i]} disabled={!puedeEditar}
               onChange={e => setGenerico(g => g.map((x, k) => (k === i ? e.target.value : x)))} /></label>
           ))}
           <small>Se usan con las placas que no tienen modelo de motor o cuyo modelo no está en la tabla.</small>
@@ -133,7 +133,7 @@ export function RangosRpmSheet({ open, onClose, puedeEditar }: { open: boolean; 
                 <tr className="rpm-rangos__nuevo">
                   <td><input className="rpm-rangos__in rpm-rangos__in--txt" placeholder="Modelo nuevo" value={nuevo.modelo} onChange={e => setNuevo(n => ({ ...n, modelo: e.target.value }))} aria-label="Modelo nuevo" /></td>
                   {nuevo.l.map((x, i) => (
-                    <td key={i}><input className="rpm-rangos__in" type="number" min={1} max={6000} value={x} aria-label={`Modelo nuevo: ${TITULOS[i]}`} onChange={e => setNuevo(n => ({ ...n, l: n.l.map((p, k) => (k === i ? e.target.value : p)) }))} /></td>
+                    <td key={i}><input className="rpm-rangos__in" type="number" min={10} max={6000} step={10} value={x} aria-label={`Modelo nuevo: ${TITULOS[i]}`} onChange={e => setNuevo(n => ({ ...n, l: n.l.map((p, k) => (k === i ? e.target.value : p)) }))} /></td>
                   ))}
                   <td className="rpm-rangos__acc"><Button size="sm" variant="secondary" icon={<Plus size={14} />} disabled={!nuevoOk || ocupado}
                     onClick={() => guardarModelo.mutate({ modelo: nuevo.modelo.trim(), limites: nuevoNums }, { onSuccess: () => setNuevo({ modelo: '', l: ['', '', '', ''] }) })}>Agregar</Button></td>
