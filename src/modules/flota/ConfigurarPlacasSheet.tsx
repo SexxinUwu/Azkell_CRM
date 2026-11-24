@@ -8,14 +8,14 @@ import { haptic } from '../../core/lib/haptics';
 const CLAVE = 'fleet_docs_placas_visibles';
 
 /** null = todas las placas */
-export function leerSeleccion(): Set<string> | null {
+export function leerSeleccion(clave: string = CLAVE): Set<string> | null {
   try {
-    const v = JSON.parse(localStorage.getItem(CLAVE) ?? 'null');
+    const v = JSON.parse(localStorage.getItem(clave) ?? 'null');
     return Array.isArray(v) ? new Set(v.map(String)) : null;
   } catch { return null; }
 }
-export function guardarSeleccion(s: Set<string> | null) {
-  try { if (s === null) localStorage.removeItem(CLAVE); else localStorage.setItem(CLAVE, JSON.stringify([...s])); } catch { /* sin almacenamiento */ }
+export function guardarSeleccion(s: Set<string> | null, clave: string = CLAVE) {
+  try { if (s === null) localStorage.removeItem(clave); else localStorage.setItem(clave, JSON.stringify([...s])); } catch { /* sin almacenamiento */ }
 }
 
 interface Opcion { placa: string; detalle: string }

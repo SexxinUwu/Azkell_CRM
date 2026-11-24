@@ -1,6 +1,7 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Briefcase, CircleAlert, Clock, Eye, FileText, FolderDown, RefreshCw, SearchX, SlidersHorizontal, Wrench } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Briefcase, CircleAlert, Clock, Eye, FileText, FolderDown, History, RefreshCw, SearchX, Settings2, SlidersHorizontal, Truck, Wrench } from 'lucide-react';
 import '../flota/flota.css';
 import '../mantenimiento/mant.css';
 import '../flota/disponibilidad.css';
@@ -8,34 +9,83 @@ import '../flota/documentos.css';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { Badge, EmptyState, Notice, Page } from '../../core/ui/Display';
+import { BotonTip } from '../../core/ui/BotonTip';
 import { SearchField } from '../../core/ui/Field';
 import { ChoiceChips } from '../../core/ui/Chips';
 import { Combobox } from '../../core/ui/Combobox';
 import { GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { LicensePlate } from '../../core/ui/LicensePlate';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { api, errorMessage } from '../../core/api/client';
 import { formatFechaPe } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
+import { spring } from '../../core/lib/motion';
 import { DocMetaVigentes } from '../flota/DocMetaVigentes';
-import { repartirPorcentajes } from '../flota/docsEstado';
+import { ConfigurarPlacasSheet, guardarSeleccion, leerSeleccion } from '../flota/ConfigurarPlacasSheet';
+import { colorDoc, repartirPorcentajes } from '../flota/docsEstado';
 
-// Operaciones Marsisa › Documentos de flota (API externa): copia de solo consulta de los documentos que entrega la API de Marsisa,
-// en su propia tabla (no se mezcla con los documentos propios de la flota). Se actualiza con «Sincronizar».
+// Operaciones Marsisa › Documentos de flota (API externa): los documentos que entrega la API de Marsisa con el mismo diseño de
+// Documentos de flota (expediente por unidad y matriz general), solo de consulta. Se actualiza con «Sincronizar».
+// Es una copia en su propia tabla: no se mezcla con los documentos propios de la flota.
 
+type EstadoDoc = 'vigente' | 'por_vencer' | 'vencido' | 'sin_vencimiento';
 interface DocExterno {
   id: number; id_remoto: number; placa: string; unidad_activa: boolean; tipo_codigo: string; tipo_nombre: string; numero: string | null; emisor: string | null;
   fecha_emision: string | null; fecha_vencimiento: string | null; tiene_archivo: boolean; archivo_guardado: boolean; actualizado_remoto: string | null; sincronizado_en: string;
-  estado: 'vigente' | 'por_vencer' | 'vencido' | 'sin_vencimiento'; dias: number | null;
+  estado: EstadoDoc; dias: number | null;
 }
 interface RespuestaLista { ok: boolean; data: DocExterno[]; ultima_sincronizacion: string | null; sinTabla?: boolean }
 
-type Grupo = 'todos' | 'vigente' | 'por_vencer' | 'vencido' | 'sin_archivo';
+// Las placas a mostrar se eligen aquí y quedan en este dispositivo (aparte de las de Documentos de flota)
+const CLAVE_PLACAS = 'fleet_docs_api_placas_visibles';
 
-// Todos los datos que entrega la API (más cuándo se sincronizó): id, unidad y si está activa, tipo (código y nombre), número, emisor, fechas, estado, días y archivo
-const COLUMNAS: ColumnaTabla[] = [
+type Vista = 'expediente' | 'matriz' | 'tabla';
+type Grupo = 'todos' | 'vigente' | 'alerta' | 'vencido';
+interface TipoDeUnidad { codigo: string; nombre: string; actual: DocExterno; anteriores: DocExterno[] }
+interface Unidad { placa: string; activa: boolean; tipos: TipoDeUnidad[]; grupo: Exclude<Grupo, 'todos'>; salud: number; registros: number }
+
+const VISTAS: Array<{ value: Vista; label: string }> = [{ value: 'expediente', label: 'Expediente' }, { value: 'matriz', label: 'Matriz general' }, { value: 'tabla', label: 'Tabla' }];
+
+const COLOR_ESTADO: Record<EstadoDoc, string> = { vigente: 'var(--green-ink)', por_vencer: 'var(--amber-ink)', vencido: 'var(--red-ink)', sin_vencimiento: 'var(--label-3)' };
+const COLOR_GRUPO: Record<Exclude<Grupo, 'todos'>, string> = { vigente: 'var(--green-ink)', alerta: 'var(--amber-ink)', vencido: 'var(--red-ink)' };
+const TONO: Record<EstadoDoc, 'green' | 'amber' | 'red' | 'gray'> = { vigente: 'green', por_vencer: 'amber', vencido: 'red', sin_vencimiento: 'gray' };
+const PESO: Record<EstadoDoc, number> = { vencido: 3, por_vencer: 2, vigente: 1, sin_vencimiento: 0 };
+
+const textoEstado = (d: Pick<DocExterno, 'estado' | 'dias'>) => {
+  if (d.estado === 'sin_vencimiento' || d.dias == null) return 'Sin vencimiento';
+  if (d.estado === 'vencido') return `Venció hace ${-d.dias} ${-d.dias === 1 ? 'día' : 'días'}`;
+  const t = d.dias === 0 ? 'Vence hoy' : `Faltan ${d.dias} ${d.dias === 1 ? 'día' : 'días'}`;
+  return `${t} (${d.estado === 'por_vencer' ? 'Por vencer' : 'Vigente'})`;
+};
+
+/** De varios documentos del mismo tipo, el vigente es el de vencimiento más lejano (y, si empatan, el más nuevo) */
+const masReciente = (a: DocExterno, b: DocExterno) => ((b.fecha_vencimiento ?? '').localeCompare(a.fecha_vencimiento ?? '') || b.id_remoto - a.id_remoto);
+
+function agruparPorUnidad(docs: DocExterno[]): Unidad[] {
+  const porPlaca = new Map<string, DocExterno[]>();
+  docs.forEach(d => { const a = porPlaca.get(d.placa) ?? []; a.push(d); porPlaca.set(d.placa, a); });
+  return [...porPlaca.entries()].map(([placa, lista]) => {
+    const porTipo = new Map<string, DocExterno[]>();
+    lista.forEach(d => { const a = porTipo.get(d.tipo_codigo) ?? []; a.push(d); porTipo.set(d.tipo_codigo, a); });
+    const tipos: TipoDeUnidad[] = [...porTipo.values()].map(ds => {
+      const orden = [...ds].sort(masReciente);
+      return { codigo: orden[0].tipo_codigo, nombre: orden[0].tipo_nombre, actual: orden[0], anteriores: orden.slice(1) };
+    }).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    const peor = tipos.reduce<EstadoDoc>((p, t) => (PESO[t.actual.estado] > PESO[p] ? t.actual.estado : p), 'sin_vencimiento');
+    const buenos = tipos.filter(t => t.actual.estado !== 'vencido').length;
+    const unidad: Unidad = {
+      placa, activa: lista.some(d => d.unidad_activa), tipos, registros: lista.length,
+      grupo: peor === 'vencido' ? 'vencido' : peor === 'por_vencer' ? 'alerta' : 'vigente',
+      salud: tipos.length ? Math.round((buenos / tipos.length) * 100) : 0,
+    };
+    return unidad;
+  }).sort((a, b) => a.placa.localeCompare(b.placa));
+}
+
+const COLUMNAS_TABLA: ColumnaTabla[] = [
   { id: 'id', titulo: 'ID API', ancho: 90, alinear: 'right' },
   { id: 'placa', titulo: 'Unidad', ancho: 130 },
   { id: 'activa', titulo: 'Unidad activa', ancho: 110, alinear: 'center' },
@@ -52,13 +102,6 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'sincronizado', titulo: 'Sincronizado', ancho: 150 },
 ];
 
-const TONO: Record<DocExterno['estado'], 'green' | 'amber' | 'red' | 'gray'> = { vigente: 'green', por_vencer: 'amber', vencido: 'red', sin_vencimiento: 'gray' };
-const textoEstado = (d: DocExterno) => {
-  if (d.estado === 'sin_vencimiento' || d.dias == null) return 'Sin vencimiento';
-  if (d.estado === 'vencido') return `Venció hace ${-d.dias} ${-d.dias === 1 ? 'día' : 'días'}`;
-  return d.dias === 0 ? 'Vence hoy' : `Faltan ${d.dias} ${d.dias === 1 ? 'día' : 'días'}`;
-};
-
 export function DocsMarsisaPage() {
   const { can } = useAuth();
   const qc = useQueryClient();
@@ -68,42 +111,50 @@ export function DocsMarsisaPage() {
     queryKey: ['operaciones', 'docs-marsisa'], staleTime: 30_000,
     queryFn: () => api<RespuestaLista>('/operaciones/docs-marsisa'),
   });
+  const [vista, setVista] = useState<Vista>('expediente');
   const [busqueda, setBusqueda] = useState('');
   const [tipo, setTipo] = useState('');
   const [grupo, setGrupo] = useState<Grupo>('todos');
   const [filtrando, setFiltrando] = useState(false);
+  const [placa, setPlaca] = useState<string | null>(null);
+  // Placas que se ven (null = todas)
+  const [seleccionPlacas, setSeleccionPlacas] = useState<Set<string> | null>(() => leerSeleccion(CLAVE_PLACAS));
+  const [configurando, setConfigurando] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
   const [guardando, setGuardando] = useState<string | null>(null);
   const [abriendo, setAbriendo] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const docs = useMemo(() => q.data?.data ?? [], [q.data]);
-  const tipos = useMemo(() => {
+  const todosLosDocs = useMemo(() => q.data?.data ?? [], [q.data]);
+  const docs = useMemo(() => (seleccionPlacas ? todosLosDocs.filter(d => seleccionPlacas.has(d.placa)) : todosLosDocs), [todosLosDocs, seleccionPlacas]);
+  const opcionesPlacas = useMemo(() => agruparPorUnidad(todosLosDocs).map(u => ({ placa: u.placa, detalle: `${u.tipos.length} tipos de documento · ${u.registros} registros` })), [todosLosDocs]);
+  const aplicarSeleccion = (s: Set<string> | null) => { setSeleccionPlacas(s); guardarSeleccion(s, CLAVE_PLACAS); };
+  const tiposCatalogo = useMemo(() => {
     const m = new Map<string, string>();
     docs.forEach(d => m.set(d.tipo_codigo, d.tipo_nombre));
     return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1], 'es')).map(([value, label]) => ({ value, label }));
   }, [docs]);
 
-  // Las tarjetas reaccionan a la búsqueda y al tipo; el estado no las recorta (ellas son ese estado)
-  const base = useMemo(() => {
+  // Documentos que cuentan: los del tipo elegido y los que coinciden con la búsqueda
+  const delFiltro = useMemo(() => {
     const t = busqueda.trim().toUpperCase();
     return docs.filter(d => (!tipo || d.tipo_codigo === tipo) && (!t || [d.placa, d.tipo_nombre, d.numero].some(x => String(x ?? '').toUpperCase().includes(t))));
   }, [docs, busqueda, tipo]);
+  // Las tarjetas son por unidad (como en Documentos de flota) y reaccionan a la búsqueda y al tipo; el estado no las recorta
+  const unidades = useMemo(() => agruparPorUnidad(delFiltro), [delFiltro]);
   const cifras = useMemo(() => ({
-    total: base.length,
-    vigente: base.filter(d => d.estado === 'vigente' || d.estado === 'sin_vencimiento').length,
-    por_vencer: base.filter(d => d.estado === 'por_vencer').length,
-    vencido: base.filter(d => d.estado === 'vencido').length,
-    sin_archivo: base.filter(d => !d.tiene_archivo).length,
-  }), [base]);
-  const filas = useMemo(() => base.filter(d => {
-    if (grupo === 'todos') return true;
-    if (grupo === 'sin_archivo') return !d.tiene_archivo;
-    if (grupo === 'vigente') return d.estado === 'vigente' || d.estado === 'sin_vencimiento';
-    return d.estado === grupo;
-  }), [base, grupo]);
-  const pcts = repartirPorcentajes([cifras.vigente, cifras.por_vencer, cifras.vencido], cifras.total);
-  const unidades = useMemo(() => new Set(base.map(d => d.placa)).size, [base]);
+    total: unidades.length,
+    vigente: unidades.filter(u => u.grupo === 'vigente').length,
+    alerta: unidades.filter(u => u.grupo === 'alerta').length,
+    vencido: unidades.filter(u => u.grupo === 'vencido').length,
+  }), [unidades]);
+  const filas = useMemo(() => unidades.filter(u => grupo === 'todos' || u.grupo === grupo), [unidades, grupo]);
+  const docsVisibles = useMemo(() => filas.flatMap(u => u.tipos.flatMap(t => [t.actual, ...t.anteriores])), [filas]);
+  const pcts = repartirPorcentajes([cifras.vigente, cifras.alerta, cifras.vencido], cifras.total);
+  const pctDe: Record<Grupo, number> = { todos: cifras.total ? 100 : 0, vigente: pcts[0], alerta: pcts[1], vencido: pcts[2] };
+  const seleccion = filas.find(u => u.placa === placa) ?? filas[0] ?? null;
+  const sinArchivosGuardados = todosLosDocs.filter(d => d.tiene_archivo && !d.archivo_guardado).length;
+  const filtrosActivos = (tipo ? 1 : 0) + (grupo !== 'todos' ? 1 : 0);
 
   async function sincronizar() {
     setSincronizando(true); setError(null);
@@ -116,7 +167,7 @@ export function DocsMarsisaPage() {
     finally { setSincronizando(false); }
   }
 
-  /** Baja y guarda los archivos que faltan, por tandas, hasta que no quede ninguno (o ya no avance) */
+  /** Copia a Azkell los archivos que faltan, por tandas, hasta que no quede ninguno (o ya no avance) */
   async function guardarArchivos() {
     setGuardando('Preparando…'); setError(null);
     try {
@@ -146,15 +197,11 @@ export function DocsMarsisaPage() {
   }
 
   const kpis: Array<{ clave: Grupo; label: string; valor: number; tono: string; icono: ReactNode }> = [
-    { clave: 'todos', label: 'Documentos', valor: cifras.total, tono: 'blue', icono: <Briefcase size={18} strokeWidth={1.9} /> },
+    { clave: 'todos', label: 'Unidades', valor: cifras.total, tono: 'blue', icono: <Briefcase size={18} strokeWidth={1.9} /> },
     { clave: 'vigente', label: 'Vigentes', valor: cifras.vigente, tono: 'green', icono: <Clock size={18} strokeWidth={1.9} /> },
-    { clave: 'por_vencer', label: 'Por vencer', valor: cifras.por_vencer, tono: 'amber', icono: <Wrench size={18} strokeWidth={1.9} /> },
+    { clave: 'alerta', label: 'En alerta', valor: cifras.alerta, tono: 'amber', icono: <Wrench size={18} strokeWidth={1.9} /> },
     { clave: 'vencido', label: 'Vencidos', valor: cifras.vencido, tono: 'red', icono: <CircleAlert size={18} strokeWidth={1.9} /> },
-    { clave: 'sin_archivo', label: 'Sin archivo', valor: cifras.sin_archivo, tono: 'ink', icono: <FileText size={18} strokeWidth={1.9} /> },
   ];
-  const pctDe = (k: Grupo) => (k === 'todos' ? (cifras.total ? 100 : 0) : k === 'vigente' ? pcts[0] : k === 'por_vencer' ? pcts[1] : k === 'vencido' ? pcts[2] : (cifras.total ? Math.round((cifras.sin_archivo / cifras.total) * 100) : 0));
-  const sinArchivosGuardados = docs.filter(d => d.tiene_archivo && !d.archivo_guardado).length;
-  const filtrosActivos = (tipo ? 1 : 0) + (grupo !== 'todos' ? 1 : 0);
 
   return (
     <Page wide fill>
@@ -164,6 +211,7 @@ export function DocsMarsisaPage() {
           <h1 className="doc-cab__h1">Documentos de flota (API)</h1>
         </div>
         <div className="doc-cab__buscar"><SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar placa, documento o número…" /></div>
+        <SegmentedControl label="Vista" value={vista} onChange={setVista} options={VISTAS} />
         <Button variant="secondary" icon={<SlidersHorizontal size={16} />} onClick={() => setFiltrando(true)} aria-label={filtrosActivos ? `Filtros, ${filtrosActivos} activos` : 'Filtros'}>
           <span className="placas-filtros__texto">Filtros</span>
           {filtrosActivos > 0 && <span className="placas-filtros__n t-numeric">{filtrosActivos}</span>}
@@ -171,10 +219,14 @@ export function DocsMarsisaPage() {
         <div className="doc-cab__acciones">
           {q.data?.ultima_sincronizacion && <span className="t-footnote c-secondary">Última sincronización: {q.data.ultima_sincronizacion}</span>}
           {puedeSincronizar && sinArchivosGuardados > 0 && (
-            <Button variant="secondary" icon={<FolderDown size={16} />} onClick={() => { void guardarArchivos(); }} loading={guardando !== null} disabled={sincronizando}>
+            <Button variant="secondary" icon={<FolderDown size={16} />} onClick={() => { void guardarArchivos(); }} loading={guardando !== null} disabled={sincronizando}
+              title="Copia a Azkell los archivos que aún solo están en la API, para que abran al instante">
               {guardando ?? `Guardar archivos (${sinArchivosGuardados})`}
             </Button>
           )}
+          <BotonTip tip={seleccionPlacas ? `Placas a mostrar: ${seleccionPlacas.size} de ${opcionesPlacas.length}` : 'Configurar placas a mostrar'} className="btn btn--plain btn--icono btn--icono-acento"
+            onClick={() => setConfigurando(true)}><Settings2 size={18} /></BotonTip>
+          {seleccionPlacas && <span className="doc-conf__insignia" title="Hay un filtro de placas activo">{seleccionPlacas.size}/{opcionesPlacas.length}</span>}
           {puedeSincronizar && <Button variant="primary" icon={<RefreshCw size={16} />} onClick={() => { void sincronizar(); }} loading={sincronizando} disabled={guardando !== null}>Sincronizar</Button>}
         </div>
       </header>
@@ -188,10 +240,9 @@ export function DocsMarsisaPage() {
         </EmptyState>
       ) : (
         <div className="doc-pagina">
-          <DocMetaVigentes vigentes={cifras.vigente} total={cifras.total} pct={pcts[0]} chips={[
-            { clave: 'docs', etiqueta: 'Documentos', n: cifras.total, activo: false, onClick: () => undefined },
-            { clave: 'unidades', etiqueta: 'Unidades', n: unidades, activo: false, onClick: () => undefined },
-            { clave: 'tipos', etiqueta: 'Tipos', n: new Set(base.map(d => d.tipo_codigo)).size, activo: false, onClick: () => undefined },
+          <DocMetaVigentes vigentes={cifras.vigente} total={cifras.total} pct={pctDe.vigente} chips={[
+            { clave: 'docs', etiqueta: 'Documentos', n: delFiltro.length, activo: false, onClick: () => undefined },
+            { clave: 'tipos', etiqueta: 'Tipos', n: new Set(delFiltro.map(d => d.tipo_codigo)).size, activo: false, onClick: () => undefined },
           ]}>
             {kpis.map(k => (
               <button key={k.clave} type="button" className={`doc-tile pressable disp-kpi--${k.tono}`} aria-pressed={grupo === k.clave}
@@ -199,30 +250,71 @@ export function DocsMarsisaPage() {
                 <span className="doc-tile__icono" aria-hidden>{k.icono}</span>
                 <span className="doc-tile__txt">
                   <span className="doc-tile__k">{k.label}</span>
-                  <span className="doc-tile__v"><AnimatedNumber value={k.valor} className="t-numeric" /><small>{pctDe(k.clave)}%</small></span>
+                  <span className="doc-tile__v"><AnimatedNumber value={k.valor} className="t-numeric" /><small>{pctDe[k.clave]}%{k.clave === 'vigente' ? ` · falta ${100 - pctDe.vigente}%` : ''}</small></span>
                 </span>
               </button>
             ))}
           </DocMetaVigentes>
 
-          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} onLimpiar={() => { setTipo(''); setGrupo('todos'); }} resultado={filas.length} unidad="documento">
+          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} onLimpiar={() => { setTipo(''); setGrupo('todos'); }} resultado={filas.length} unidad="unidad">
             <GrupoFiltro titulo="Tipo de documento">
-              <Combobox options={tipos} value={tipo || null} onChange={v => setTipo(v ?? '')} enHoja compacta placeholder="Todos los tipos" tituloHoja="Tipo de documento" />
+              <Combobox options={tiposCatalogo} value={tipo || null} onChange={v => setTipo(v ?? '')} enHoja compacta placeholder="Todos los tipos" tituloHoja="Tipo de documento" />
             </GrupoFiltro>
-            <GrupoFiltro titulo="Estado">
+            <GrupoFiltro titulo="Estado de la unidad">
               <ChoiceChips label="Estado" value={grupo} onChange={v => setGrupo(v as Grupo)} options={[
-                { value: 'todos', label: 'Todos' }, { value: 'vigente', label: 'Vigentes' }, { value: 'por_vencer', label: 'Por vencer' }, { value: 'vencido', label: 'Vencidos' }, { value: 'sin_archivo', label: 'Sin archivo' },
+                { value: 'todos', label: 'Todas' }, { value: 'vigente', label: 'Vigentes' }, { value: 'alerta', label: 'En alerta' }, { value: 'vencido', label: 'Vencidas' },
               ]} />
             </GrupoFiltro>
           </HojaFiltros>
 
           {filas.length === 0 ? (
-            <EmptyState icon={<SearchX size={22} />} title="Sin documentos para los filtros">
+            <EmptyState icon={<SearchX size={22} />} title="Sin unidades para los filtros">
               <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setTipo(''); setGrupo('todos'); }}>Quitar filtros</button>
             </EmptyState>
+          ) : vista === 'expediente' && seleccion ? (
+            <div className="doc-expediente">
+              <ul className="doc-lista" aria-label="Unidades">
+                {filas.map(u => {
+                  const activa = seleccion.placa === u.placa;
+                  return (
+                    <li key={u.placa}>
+                      <button type="button" className={`doc-unidad pressable${activa ? ' doc-unidad--activa' : ''}`} aria-current={activa} onClick={() => { haptic('selection'); setPlaca(u.placa); }}>
+                        <span className="doc-unidad__icono" style={{ background: `color-mix(in srgb, ${COLOR_GRUPO[u.grupo]} 12%, transparent)`, color: COLOR_GRUPO[u.grupo] }} aria-hidden><FileText size={17} strokeWidth={1.9} /></span>
+                        <LicensePlate plate={u.placa} size="sm" />
+                        {!u.activa && <span className="doc-unidad__alq" title="Unidad inactiva en la API">INACT.</span>}
+                        <span className="doc-punto" style={{ background: COLOR_GRUPO[u.grupo] }} aria-hidden />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <motion.section className="doc-ficha" key={seleccion.placa} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={spring} aria-label={`Documentos de ${seleccion.placa}`}>
+                <header className="doc-ficha__cab">
+                  <span className="doc-ficha__icono"><Truck size={22} strokeWidth={1.8} /></span>
+                  <div className="doc-ficha__titulo">
+                    <div className="doc-ficha__linea">
+                      <strong className="doc-ficha__placa">{seleccion.placa}</strong>
+                      <span className="doc-etiqueta">{seleccion.activa ? 'ACTIVA' : 'INACTIVA'}</span>
+                    </div>
+                    <span className="doc-ficha__sub">{seleccion.tipos.length} {seleccion.tipos.length === 1 ? 'tipo de documento' : 'tipos de documento'} · {seleccion.registros} {seleccion.registros === 1 ? 'registro' : 'registros'} en la API de Marsisa</span>
+                  </div>
+                  <div className="doc-salud" aria-label={`Salud de documentos ${seleccion.salud}%`}>
+                    <span className="doc-salud__texto">Salud</span>
+                    <span className="doc-salud__barra"><span style={{ width: `${seleccion.salud}%`, background: COLOR_GRUPO[seleccion.grupo] }} /></span>
+                    <strong>{seleccion.salud}%</strong>
+                  </div>
+                </header>
+                <div className="doc-tarjetas">
+                  {seleccion.tipos.map((t, i) => <TarjetaDoc key={t.codigo} num={i + 1} tipo={t} abriendo={abriendo} onVer={d => { void verArchivo(d); }} />)}
+                </div>
+              </motion.section>
+            </div>
+          ) : vista === 'matriz' ? (
+            <Matriz filas={filas} tipos={tiposCatalogo.filter(t => !tipo || t.value === tipo)} />
           ) : (
-            <TablaRedimensionable id="docs-marsisa-api-v2" ariaLabel="Documentos de flota de la API" altoMax="62vh" columnas={COLUMNAS}>
-              {filas.map(d => (
+            <TablaRedimensionable id="docs-marsisa-api-v2" ariaLabel="Documentos de flota de la API" altoMax="62vh" columnas={COLUMNAS_TABLA}>
+              {docsVisibles.map(d => (
                 <tr key={d.id}>
                   <Celda mono alinear="right">{d.id_remoto}</Celda>
                   <Celda><LicensePlate plate={d.placa} size="sm" /></Celda>
@@ -248,6 +340,89 @@ export function DocsMarsisaPage() {
           )}
         </div>
       )}
+      <ConfigurarPlacasSheet open={configurando} onClose={() => setConfigurando(false)} opciones={opcionesPlacas} seleccion={seleccionPlacas} onAplicar={aplicarSeleccion} />
     </Page>
+  );
+}
+
+/** Tarjeta de un tipo de documento de la unidad: el vigente y, si hay, el historial de los anteriores (mismo diseño que Documentos de flota) */
+function TarjetaDoc({ num, tipo, abriendo, onVer }: { num: number; tipo: TipoDeUnidad; abriendo: number | null; onVer: (d: DocExterno) => void }) {
+  const [historial, setHistorial] = useState(false);
+  const d = tipo.actual;
+  return (
+    <article className="doc-card" style={{ '--doc-color': colorDoc(num), '--estado-color': COLOR_ESTADO[d.estado] } as CSSProperties}>
+      <header className="doc-card__cab">
+        <span className="doc-card__num">{num}</span>
+        <span className="doc-card__titulo">{tipo.nombre}</span>
+      </header>
+      <dl className="doc-card__filas">
+        <div><dt>N°</dt><dd>{d.numero || '—'}</dd></div>
+        {d.emisor && <div><dt>Emisor</dt><dd>{d.emisor}</dd></div>}
+        <div><dt>Emisión</dt><dd>{d.fecha_emision ? formatFechaPe(d.fecha_emision) : '—'}</dd></div>
+        <div><dt>Vencimiento</dt><dd>{d.fecha_vencimiento ? formatFechaPe(d.fecha_vencimiento) : '—'}</dd></div>
+      </dl>
+      <footer className="doc-card__pie">
+        <span className="doc-card__estado-etiqueta">Estado</span>
+        <span className="doc-card__estado" style={{ color: COLOR_ESTADO[d.estado] }}>{textoEstado(d)}</span>
+      </footer>
+      <div className="doc-card__acciones">
+        {d.tiene_archivo && <Button variant="secondary" size="sm" icon={<Eye size={14} />} loading={abriendo === d.id} onClick={() => onVer(d)}>Ver archivo</Button>}
+        {tipo.anteriores.length > 0 && <Button variant="secondary" size="sm" icon={<History size={14} />} aria-expanded={historial} onClick={() => setHistorial(a => !a)}>Historial ({tipo.anteriores.length})</Button>}
+      </div>
+      {historial && (
+        <section className="doc-hist" aria-label={`Historial de ${tipo.nombre}`}>
+          <ul className="doc-hist__lista">
+            {tipo.anteriores.map(h => (
+              <li key={h.id} className="doc-hist__fila">
+                <span className="doc-hist__venc">{h.fecha_vencimiento ? `Vence ${formatFechaPe(h.fecha_vencimiento)}` : 'Sin vencimiento'}</span>
+                <span className="doc-hist__detalle">{[h.numero, textoEstado(h)].filter(Boolean).join(' · ')}</span>
+                {h.tiene_archivo && <button type="button" className="placas-limpiar" onClick={() => onVer(h)}>Ver</button>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </article>
+  );
+}
+
+/** Matriz general: una fila por unidad y, por cada tipo de documento, su número, su vencimiento y los días (mismo diseño que Flota) */
+function Matriz({ filas, tipos }: { filas: Unidad[]; tipos: Array<{ value: string; label: string }> }) {
+  return (
+    <div className="doc-matriz-caja">
+      <div className="doc-matriz-caja__cab"><span className="doc-matriz-caja__titulo">Matriz general de control documentario</span></div>
+      <div className="doc-matriz-wrap">
+        <table className="doc-matriz">
+          <thead>
+            <tr>
+              <th rowSpan={2}>N°</th>
+              <th rowSpan={2}>Placa</th>
+              {tipos.map((t, i) => <th key={t.value} colSpan={3} className="doc-matriz__grupo" style={{ '--grupo-color': colorDoc(i + 1) } as CSSProperties}>{t.label}</th>)}
+            </tr>
+            <tr>{tipos.flatMap(t => [<th key={`${t.value}-n`}>N°</th>, <th key={`${t.value}-v`}>F. venc.</th>, <th key={`${t.value}-d`}>Días</th>])}</tr>
+          </thead>
+          <tbody>
+            {filas.map((u, i) => (
+              <tr key={u.placa}>
+                <td className="doc-matriz__num">{i + 1}</td>
+                <td className="doc-matriz__placa">{u.placa}</td>
+                {tipos.flatMap(t => {
+                  const d = u.tipos.find(x => x.codigo === t.value)?.actual;
+                  return [
+                    <td key={`${u.placa}-${t.value}-n`} className="doc-matriz__mono">{d?.numero || '—'}</td>,
+                    <td key={`${u.placa}-${t.value}-v`} className="doc-matriz__mono">{d?.fecha_vencimiento ? formatFechaPe(d.fecha_vencimiento) : '—'}</td>,
+                    <td key={`${u.placa}-${t.value}-d`} title={d ? textoEstado(d) : ''}>
+                      {d && d.dias != null
+                        ? <span className="doc-dias" style={{ background: `color-mix(in srgb, ${COLOR_ESTADO[d.estado]} 13%, transparent)`, color: COLOR_ESTADO[d.estado] }}>{d.dias}</span>
+                        : <span className="doc-dias doc-dias--vacio">—</span>}
+                    </td>,
+                  ];
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
