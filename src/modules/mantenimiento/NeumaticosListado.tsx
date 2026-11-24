@@ -75,7 +75,7 @@ const TONO_SITUACION: Record<string, Tono> = {
   'Código provisional': 'gris',
 };
 
-const ENCABEZADOS_EXCEL = ['Neumático', 'Vida actual', 'Medida', 'Marca', 'Vehículo actual', 'Gastos de compra', 'Moneda', 'Orden de compra', 'Situación'];
+const ENCABEZADOS_EXCEL = ['Neumático', 'Vida actual', 'Medida', 'Marca', 'Modelo', 'Vehículo actual', 'Gastos de compra', 'Moneda', 'Orden de compra', 'Situación'];
 
 const COLUMNAS: ColumnaTabla[] = [
   { id: 'sel', titulo: '', ancho: 48, minimo: 44, alinear: 'center' },
@@ -83,6 +83,7 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'vida', titulo: 'Vida actual', ancho: 120 },
   { id: 'medida', titulo: 'Medida', ancho: 160 },
   { id: 'marca', titulo: 'Marca', ancho: 140 },
+  { id: 'modelo', titulo: 'Modelo', ancho: 150 },
   { id: 'vehiculo', titulo: 'Vehículo actual', ancho: 150 },
   { id: 'gastos', titulo: 'Gastos de compra', ancho: 160, alinear: 'right' },
   { id: 'orden', titulo: 'Orden de compra', ancho: 150 },
@@ -349,7 +350,7 @@ export function NeumaticosListado() {
     try {
       // Exporta lo que se ve: las filas actuales del listado (con el filtro y la búsqueda aplicados)
       await exportarExcel('Neumaticos', 'Neumáticos', ENCABEZADOS_EXCEL, filas.map(l => [
-        l.codigo, vidaTexto(l.vida), l.medida ?? '', l.marca ?? '', l.placa_actual ?? '', l.gastos_compra, l.moneda_compra ?? 'PEN', l.orden_compra ?? '', l.situacion,
+        l.codigo, vidaTexto(l.vida), l.medida ?? '', l.marca ?? '', l.modelo ?? '', l.placa_actual ?? '', l.gastos_compra, l.moneda_compra ?? 'PEN', l.orden_compra ?? '', l.situacion,
       ]));
     } catch (e) {
       setErrorExcel(`No se pudo exportar: ${String(e)}`);
@@ -396,7 +397,7 @@ export function NeumaticosListado() {
 
       <div className="nl-barra">
         <div className="nl-barra__buscar">
-          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Código, marca, medida o placa…" />
+          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Código, marca, modelo, medida o placa…" />
         </div>
         {!isLoading && !isError && (
           <span className="nl-conteo">{filas.length.toLocaleString('es-PE')} {filas.length === 1 ? 'neumático' : 'neumáticos'}</span>
@@ -464,6 +465,7 @@ export function NeumaticosListado() {
               <Celda>{vidaTexto(l.vida)}</Celda>
               <Celda mono>{l.medida || '—'}</Celda>
               <Celda>{l.marca || '—'}</Celda>
+              <Celda>{l.modelo || '—'}</Celda>
               <Celda mono>{l.placa_actual || '—'}</Celda>
               <Celda alinear="right" mono>{gastosTexto(l.gastos_compra, l.moneda_compra)}</Celda>
               <Celda mono>{l.orden_compra || '—'}</Celda>
