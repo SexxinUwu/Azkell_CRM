@@ -1,15 +1,16 @@
 import './NeumaticosListado.css';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Disc3, SearchX, Settings, Truck } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, Disc3, SearchX, Settings, Truck } from 'lucide-react';
 import { api, errorMessage } from '../../core/api/client';
 import { exportarExcel } from '../../core/lib/excel';
 import { formatMoneda } from '../../core/lib/format';
 import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { Field, SearchField, TextInput } from '../../core/ui/Field';
+import { Field, TextInput } from '../../core/ui/Field';
+import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../core/ui/FiltrosListado';
 import { Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
@@ -77,19 +78,25 @@ const TONO_SITUACION: Record<string, Tono> = {
 
 const ENCABEZADOS_EXCEL = ['Neumático', 'Vida actual', 'Medida', 'Marca', 'Modelo', 'Vehículo actual', 'Gastos de compra', 'Moneda', 'Orden de compra', 'Situación'];
 
-const COLUMNAS: ColumnaTabla[] = [
-  { id: 'sel', titulo: '', ancho: 48, minimo: 44, alinear: 'center' },
-  { id: 'codigo', titulo: 'Neumático', ancho: 170 },
-  { id: 'vida', titulo: 'Vida actual', ancho: 120 },
-  { id: 'medida', titulo: 'Medida', ancho: 160 },
-  { id: 'marca', titulo: 'Marca', ancho: 140 },
-  { id: 'modelo', titulo: 'Modelo', ancho: 150 },
-  { id: 'vehiculo', titulo: 'Vehículo actual', ancho: 150 },
-  { id: 'gastos', titulo: 'Gastos de compra', ancho: 160, alinear: 'right' },
-  { id: 'orden', titulo: 'Orden de compra', ancho: 150 },
-  { id: 'situacion', titulo: 'Situación', ancho: 200 },
-  { id: 'acciones', titulo: 'Acciones', ancho: 96, minimo: 80, alinear: 'center' },
+// Columnas de la tabla: título, cómo se ordena y cómo se mide su ancho según lo que contiene
+interface DefColumna { id: string; titulo: string; alinear?: 'right' | 'center'; mono?: boolean; extra?: number; minimo: number; maximo: number; valor?: (l: LlantaListado) => string | number; texto?: (l: LlantaListado) => string }
+const DEFINICION: DefColumna[] = [
+  { id: 'codigo', titulo: 'Neumático', mono: true, minimo: 110, maximo: 220, valor: l => l.codigo, texto: l => l.codigo },
+  { id: 'vida', titulo: 'Vida', minimo: 64, maximo: 90, valor: l => l.vida ?? -1, texto: l => vidaTexto(l.vida) },
+  { id: 'medida', titulo: 'Medida', mono: true, minimo: 90, maximo: 170, valor: l => l.medida ?? '', texto: l => l.medida ?? '' },
+  { id: 'marca', titulo: 'Marca', minimo: 80, maximo: 160, valor: l => l.marca ?? '', texto: l => l.marca ?? '' },
+  { id: 'modelo', titulo: 'Modelo', minimo: 80, maximo: 200, valor: l => l.modelo ?? '', texto: l => l.modelo ?? '' },
+  { id: 'vehiculo', titulo: 'Vehículo', mono: true, minimo: 84, maximo: 130, valor: l => l.placa_actual ?? '', texto: l => l.placa_actual ?? '' },
+  { id: 'gastos', titulo: 'Gastos de compra', alinear: 'right', mono: true, minimo: 110, maximo: 180, valor: l => Number(l.gastos_compra) || 0, texto: l => gastosTexto(l.gastos_compra, l.moneda_compra) },
+  { id: 'orden', titulo: 'Orden de compra', mono: true, minimo: 110, maximo: 190, valor: l => l.orden_compra ?? '', texto: l => l.orden_compra ?? '' },
+  { id: 'situacion', titulo: 'Situación', extra: 34, minimo: 110, maximo: 220, valor: l => l.situacion, texto: l => l.situacion },
 ];
+
+/** Ancho de una columna: el del texto más largo (o el del título) con un margen, dentro de un mínimo y un máximo */
+function anchoDe(d: DefColumna, filas: LlantaListado[]): number {
+  const largo = Math.max(d.titulo.length + 4, ...filas.map(l => (d.texto ? d.texto(l).length : 0)));
+  return Math.min(d.maximo, Math.max(d.minimo, Math.round(largo * (d.mono ? 7.8 : 7.1) + 26 + (d.extra ?? 0))));
+}
 
 const SIN_CODIGO = 'Sin código de fuego';
 
@@ -305,6 +312,14 @@ export function NeumaticosListado() {
   const [previaAbierta, setPreviaAbierta] = useState(false);
   const [configAbierta, setConfigAbierta] = useState(false);
   const [ordenAbierta, setOrdenAbierta] = useState(false);
+  const [filtrando, setFiltrando] = useState(false);
+  const [fMarca, setFMarca] = useState('');
+  const [fModelo, setFModelo] = useState('');
+  const [fMedida, setFMedida] = useState('');
+  const [fVida, setFVida] = useState('');
+  const [fPlaca, setFPlaca] = useState('');
+  const [fOrden, setFOrden] = useState('');
+  const [orden, setOrden] = useState<{ campo: string; dir: 'asc' | 'desc' } | null>(null);
   const [despachoAbierto, setDespachoAbierto] = useState(false);
   const { can } = useAuth();
   const puedeReforma = can('neumaticos.reencauche');
@@ -318,11 +333,47 @@ export function NeumaticosListado() {
   }, [busqueda]);
 
   // Al cambiar el filtro o la búsqueda, la selección vuelve a empezar
-  useEffect(() => { setSeleccion(new Set()); }, [filtro, q]);
+  useEffect(() => { setSeleccion(new Set()); }, [filtro, q, fMarca, fModelo, fMedida, fVida, fPlaca, fOrden]);
   const { data, isLoading, isError, error } = useListado(filtro, q);
-  const filas = data?.data ?? [];
+  const todas = useMemo(() => data?.data ?? [], [data]);
   const conteos = data?.conteos;
-  const hayFiltro = filtro !== 'TODOS' || q !== '';
+  const activos = [fMarca, fModelo, fMedida, fVida, fPlaca, fOrden].filter(Boolean).length;
+  const hayFiltro = filtro !== 'TODOS' || q !== '' || activos > 0;
+  const limpiarFiltros = () => { setFMarca(''); setFModelo(''); setFMedida(''); setFVida(''); setFPlaca(''); setFOrden(''); };
+
+  // Filtros del panel y orden por columna (se aplican sobre lo que ya trajo el servidor con la situación y la búsqueda)
+  const filas = useMemo(() => {
+    const base = todas.filter(l => (!fMarca || l.marca === fMarca) && (!fModelo || l.modelo === fModelo) && (!fMedida || l.medida === fMedida)
+      && (!fVida || String(l.vida) === fVida) && (!fPlaca || l.placa_actual === fPlaca) && (!fOrden || l.orden_compra === fOrden));
+    const def = orden ? DEFINICION.find(d => d.id === orden.campo) : undefined;
+    if (!def || !def.valor) return base;
+    const v = def.valor; const signo = orden!.dir === 'asc' ? 1 : -1;
+    return [...base].sort((a, b) => { const x = v(a); const y = v(b); return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'es', { numeric: true })) * signo; });
+  }, [todas, fMarca, fModelo, fMedida, fVida, fPlaca, fOrden, orden]);
+
+  const opcionesDe = (extraer: (l: LlantaListado) => string | null | undefined, todos: string) => {
+    const m = new Map<string, number>();
+    todas.forEach(l => { const v = extraer(l); if (v) m.set(v, (m.get(v) ?? 0) + 1); });
+    return [{ value: '', label: todos, count: todas.length }, ...[...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'es', { numeric: true })).map(([value, count]) => ({ value, label: value, count }))];
+  };
+  const opcionesVida = [{ value: '', label: 'Todas las vidas', count: todas.length }, ...[0, 1, 2, 3].map(v => ({ value: String(v), label: vidaTexto(v), count: todas.filter(l => l.vida === v).length })).filter(o => o.count > 0)];
+
+  function ordenarPor(campo: string) {
+    setOrden(o => (!o || o.campo !== campo ? { campo, dir: 'asc' } : o.dir === 'asc' ? { campo, dir: 'desc' } : null));
+  }
+  // Encabezado que ordena al tocarlo
+  const encabezado = (d: DefColumna): ReactNode => (
+    <button type="button" className={`nl-orden${orden?.campo === d.id ? ' is-activo' : ''}`} onClick={() => ordenarPor(d.id)} aria-label={`Ordenar por ${d.titulo}`}>
+      {d.titulo}
+      {orden?.campo !== d.id ? <ArrowUpDown size={12} aria-hidden /> : orden.dir === 'asc' ? <ArrowUp size={12} aria-hidden /> : <ArrowDown size={12} aria-hidden />}
+    </button>
+  );
+  const columnas: ColumnaTabla[] = useMemo(() => [
+    { id: 'sel', titulo: '', ancho: 44, minimo: 40, alinear: 'center' as const },
+    ...DEFINICION.map(d => ({ id: d.id, titulo: encabezado(d), ancho: anchoDe(d, filas), minimo: Math.min(d.minimo, 70), alinear: d.alinear })),
+    { id: 'acciones', titulo: '', ancho: 56, minimo: 48, alinear: 'center' as const },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [filas, orden]);
 
   // En el filtro «Enviar para reforma» la selección es para la orden de reencauche; en los demás, para el código de fuego
   const modoReforma = filtro === 'enviar_reforma';
@@ -395,14 +446,19 @@ export function NeumaticosListado() {
         ))}
       </div>
 
-      <div className="nl-barra">
-        <div className="nl-barra__buscar">
-          <SearchField value={busqueda} onChange={setBusqueda} placeholder="Código, marca, modelo, medida o placa…" />
-        </div>
+      <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="Código, marca, modelo, medida o placa…" activos={activos} onAbrirFiltros={() => setFiltrando(true)}>
         {!isLoading && !isError && (
           <span className="nl-conteo">{filas.length.toLocaleString('es-PE')} {filas.length === 1 ? 'neumático' : 'neumáticos'}</span>
         )}
-      </div>
+      </BarraFiltros>
+      <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={activos} onLimpiar={limpiarFiltros} resultado={filas.length} unidad="neumático">
+        <GrupoFiltro titulo="Marca"><ListaEleccion value={fMarca} onChange={setFMarca} opciones={opcionesDe(l => l.marca, 'Todas las marcas')} /></GrupoFiltro>
+        <GrupoFiltro titulo="Modelo"><ListaEleccion value={fModelo} onChange={setFModelo} opciones={opcionesDe(l => l.modelo, 'Todos los modelos')} /></GrupoFiltro>
+        <GrupoFiltro titulo="Medida"><ListaEleccion value={fMedida} onChange={setFMedida} opciones={opcionesDe(l => l.medida, 'Todas las medidas')} /></GrupoFiltro>
+        <GrupoFiltro titulo="Vida"><ListaEleccion value={fVida} onChange={setFVida} opciones={opcionesVida} /></GrupoFiltro>
+        <GrupoFiltro titulo="Vehículo"><ListaEleccion value={fPlaca} onChange={setFPlaca} opciones={opcionesDe(l => l.placa_actual, 'Todos los vehículos')} /></GrupoFiltro>
+        <GrupoFiltro titulo="Orden de compra"><ListaEleccion value={fOrden} onChange={setFOrden} opciones={opcionesDe(l => l.orden_compra, 'Todas las órdenes')} /></GrupoFiltro>
+      </HojaFiltros>
 
       {filas.length > 0 && (
         <div className="nl-barra">
@@ -455,7 +511,7 @@ export function NeumaticosListado() {
           ))}
         </ul>
       ) : (
-        <TablaRedimensionable id="neumaticos-listado" columnas={COLUMNAS} ariaLabel="Listado de neumáticos" altoMax="70vh">
+        <TablaRedimensionable id="neumaticos-listado-v2" columnas={columnas} ariaLabel="Listado de neumáticos" altoMax="72vh" className="tabla-redim--compacta">
           {filas.map(l => (
             <tr key={l.codigo} className="nl-fila" onClick={() => abrirFicha(l.codigo)}>
               <Celda alinear="center">
