@@ -41,6 +41,11 @@ export interface OpcionesMotor {
 
 interface Pose { pos: THREE.Vector3; objetivo: THREE.Vector3; fov: number }
 interface Animacion { t0: number; dur: number; desde: Pose; hasta: Pose }
+/** Pieza del camión que se arma o se pliega en la transformación Plano ⇄ Isometría */
+interface Parte { obj: THREE.Object3D; pos: THREE.Vector3; rot: THREE.Euler; esc: THREE.Vector3; inicio: number; salida: THREE.Vector3; giro: number }
+/** Duración de la transformación (la cámara y el armado van juntos) y parte de la línea de tiempo que usa cada pieza */
+const DURACION_TRANSFORMACION_MS = 1700;
+const VENTANA_PIEZA = 0.42;
 
 const DURACION_ANIM_MS = 800;
 /** Movimiento del dedo o del ratón a partir del cual un gesto ya no cuenta como toque */
@@ -88,6 +93,11 @@ export class MotorNeumaticos {
   private configActual = '';
   private rango: { zMin: number; zMax: number } | null = null;
   private modo: ModoVista = 'plano';
+  /** Plano 2D de líneas (lo dibuja React): en Plano el 3D está plegado y oculto, y al pasar a Isometría se arma por piezas */
+  private plano2d = false;
+  private armado = 1;
+  private armadoAnim: { t0: number; dur: number; desde: number; hasta: number } | null = null;
+  private partes: Parte[] = [];
   private activa: string | null = null;
   private sobre: string | null = null;
   private anim: Animacion | null = null;
@@ -228,8 +238,64 @@ export class MotorNeumaticos {
         this.encuadrarAhora();
       }
     }
+    this.capturarPartes();
+    if (this.plano2d) this.aplicarArmado(this.armado);
     this.aplicarMarcas();
     this.arrancar();
+  }
+
+  /** Activa o desactiva el plano 2D. Con él, la vista Plano deja la unidad plegada (el dibujo lo pone React) */
+  setPlano2d(activo: boolean) {
+    if (this.destruido || activo === this.plano2d) return;
+    this.plano2d = activo;
+    this.armadoAnim = null;
+    this.armado = activo && this.modo === 'plano' ? 0 : 1;
+    this.aplicarArmado(this.armado);
+    this.arrancar();
+  }
+
+  /** Guarda la pose de cada pieza y su turno de entrada: primero el bastidor, luego la cabina y por último las ruedas */
+  private capturarPartes() {
+    this.partes = [];
+    const grupo = this.camion?.grupo;
+    if (!grupo || !this.rango) return;
+    const zc = (this.rango.zMin + this.rango.zMax) / 2;
+    const hijos = grupo.children;
+    const n = hijos.length;
+    hijos.forEach((obj, i) => {
+      // El letrero gira según la vista (orientarLetrero): no se anima, solo aparece al final
+      if (obj === this.camion?.letrero) return;
+      const dx = obj.position.x, dz = obj.position.z - zc;
+      const largo = Math.hypot(dx, dz) || 1;
+      this.partes.push({
+        obj, pos: obj.position.clone(), rot: obj.rotation.clone(), esc: obj.scale.clone(),
+        inicio: n > 1 ? (1 - VENTANA_PIEZA) * (i / (n - 1)) : 0,
+        salida: new THREE.Vector3((dx / largo) * 7, 6 + (i % 3) * 1.5, (dz / largo) * 7),
+        giro: (i % 2 ? 1 : -1) * (0.9 + (i % 4) * 0.35),
+      });
+    });
+  }
+
+  /** Arma el camión según el avance a (0 = plegado, 1 = completo): cada pieza llega volando, girando y se asienta con un pequeño rebote */
+  private aplicarArmado(a: number) {
+    if (this.camion?.letrero) this.camion.letrero.visible = a >= 0.98;
+    for (const p of this.partes) {
+      const k = Math.min(1, Math.max(0, (a - p.inicio) / VENTANA_PIEZA));
+      if (k >= 1) {
+        p.obj.visible = true;
+        p.obj.position.copy(p.pos); p.obj.rotation.copy(p.rot); p.obj.scale.copy(p.esc);
+        continue;
+      }
+      if (k <= 0) { p.obj.visible = false; continue; }
+      const c1 = 1.70158, c3 = c1 + 1;
+      const rebote = 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2);
+      const llegada = 1 - Math.pow(1 - k, 3);
+      const resta = 1 - llegada;
+      p.obj.visible = true;
+      p.obj.position.set(p.pos.x + p.salida.x * resta, p.pos.y + p.salida.y * resta, p.pos.z + p.salida.z * resta);
+      p.obj.rotation.set(p.rot.x, p.rot.y + p.giro * resta, p.rot.z, p.rot.order);
+      p.obj.scale.set(p.esc.x * Math.max(0.0001, rebote), p.esc.y * Math.max(0.0001, rebote), p.esc.z * Math.max(0.0001, rebote));
+    }
   }
 
   /** El letrero del capó se lee de frente en isometría y queda como en el plano en la vista cenital */
@@ -263,7 +329,12 @@ export class MotorNeumaticos {
     this.orientarLetrero();
     this.controles.enabled = modo === 'isometria';
     this.canvas.style.touchAction = modo === 'isometria' ? 'none' : 'pan-y';
-    if (this.rango) this.irA(modo === 'plano' ? this.poseDePlano() : this.poseDeIsometria());
+    const dur = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : DURACION_TRANSFORMACION_MS;
+    if (this.plano2d) {
+      // Transformación: la cámara se inclina mientras las piezas se arman (a Isometría) o se pliegan (a Plano)
+      this.armadoAnim = { t0: performance.now(), dur, desde: this.armado, hasta: modo === 'isometria' ? 1 : 0 };
+    }
+    if (this.rango) this.irA(modo === 'plano' ? this.poseDePlano() : this.poseDeIsometria(), this.plano2d ? dur : DURACION_ANIM_MS);
     this.aplicarMarcas();
     this.arrancar();
   }
@@ -338,10 +409,10 @@ export class MotorNeumaticos {
   }
 
   /** Lleva la cámara a una pose con animación suave */
-  private irA(hasta: Pose) {
+  private irA(hasta: Pose, dur = DURACION_ANIM_MS) {
     this.anim = {
       t0: performance.now(),
-      dur: DURACION_ANIM_MS,
+      dur,
       desde: { pos: this.camara.position.clone(), objetivo: this.controles.target.clone(), fov: this.camara.fov },
       hasta,
     };
@@ -409,6 +480,14 @@ export class MotorNeumaticos {
       // Con inercia (damping) el control sigue moviéndose varios cuadros tras soltar; update() dice si hubo cambio
       if (this.controles.update()) seguir = true;
       this.limitarObjetivo();
+    }
+    if (this.armadoAnim) {
+      const a = this.armadoAnim;
+      const k = Math.min(1, (performance.now() - a.t0) / a.dur);
+      this.armado = a.desde + (a.hasta - a.desde) * suavizar(k);
+      this.aplicarArmado(this.armado);
+      if (k < 1) seguir = true;
+      else { this.armado = a.hasta; this.armadoAnim = null; this.aplicarArmado(this.armado); }
     }
     // Arrastre: la llanta levantada crece y sube; las que vuelven a su eje o van al destino se acomodan
     if (this.levantada) {
@@ -480,7 +559,9 @@ export class MotorNeumaticos {
   private aplicarMarcas() {
     const activa = this.llantaDe(this.activa);
     const enIsometria = this.modo === 'isometria';
-    this.marcoActivo.visible = !!activa && !enIsometria;
+    // Con el plano 2D, el marco de la llanta activa y del destino los dibuja React en Plano
+    const dibujaReact = this.plano2d && !enIsometria;
+    this.marcoActivo.visible = !!activa && !enIsometria && !dibujaReact;
     this.anillo.visible = !!activa && enIsometria;
     this.parpadeo = !!activa;
     if (activa) {
@@ -490,7 +571,7 @@ export class MotorNeumaticos {
       this.anillo.position.set(g.x + lado * (ANCHO_LLANTA / 2 + 0.03), g.y, g.z);
     }
     const sobre = this.llantaDe(this.sobre);
-    this.marcoSobre.visible = !!sobre;
+    this.marcoSobre.visible = !!sobre && !dibujaReact;
     if (sobre) {
       const g = sobre.grupo.position;
       this.marcoSobre.position.set(g.x, g.y + RADIO_LLANTA + 0.05, g.z);
@@ -501,6 +582,8 @@ export class MotorNeumaticos {
   /** Qué posición hay bajo un punto de la pantalla (o null) */
   private posicionBajo(x: number, y: number): string | null {
     if (!this.camion || this.destruido) return null;
+    // Con el plano 2D, en Plano las posiciones las dibuja React (data-ntb-pos): el 3D plegado no responde
+    if (this.plano2d && this.modo === 'plano') return null;
     const r = this.canvas.getBoundingClientRect();
     if (!r.width || x < r.left || x > r.right || y < r.top || y > r.bottom) return null;
     this.ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);

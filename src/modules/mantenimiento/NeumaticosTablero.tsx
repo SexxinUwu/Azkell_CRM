@@ -371,7 +371,7 @@ export function NeumaticosTablero() {
                     onSelect={l => { const m = montadas.find(x => x.posicion === l.posicion); if (m) elegirLlanta(m.llanta.codigo); }}
                     marca={(placas.data ?? []).find(p => p.placa === placa)?.marca ?? null}
                     camion={/^C/i.test(datos?.configuracion ?? '')}
-                    modo={modo} onModo={setModo}
+                    modo={modo} onModo={setModo} plano2d
                   />
                 </div>
               ) : (
