@@ -46,13 +46,13 @@ export function ConduccionRpmPage() {
   const [desde, setDesde] = useState(hace(7));
   const [hasta, setHasta] = useState(hace(0));
 
-  const placas = useQuery({ queryKey: ['conduccion-rpm', 'placas'], queryFn: () => api<{ ok: boolean; data: PlacaRpm[] }>('/api/operaciones/conduccion-rpm/placas') });
+  const placas = useQuery({ queryKey: ['conduccion-rpm', 'placas'], queryFn: () => api<{ ok: boolean; data: PlacaRpm[] }>('/operaciones/conduccion-rpm/placas') });
   const lista = placas.data?.data ?? [];
   const opciones = useMemo(() => lista.map(p => ({ value: p.placa, label: p.placa, description: [p.tipo, p.modelo_motor || 'sin modelo de motor'].filter(Boolean).join(' · ') })), [lista]);
   const elegida = lista.find(p => p.placa === placa) ?? null;
 
   const consulta = useMutation({
-    mutationFn: () => api<ResultadoRpm>('/api/operaciones/conduccion-rpm/analizar', { method: 'POST', body: { placa, desde, hasta } }),
+    mutationFn: () => api<ResultadoRpm>('/operaciones/conduccion-rpm/analizar', { method: 'POST', body: { placa, desde, hasta } }),
   });
   const r = consulta.data;
   const listo = !!placa && !!desde && !!hasta && desde < hasta;
@@ -80,6 +80,7 @@ export function ConduccionRpmPage() {
           {elegida.modelo_motor ? `El modelo «${elegida.modelo_motor}» no está en la tabla de rangos.` : 'Esta placa no tiene el modelo de motor en su ficha.'} Se usan los rangos generales (800 · 1150 · 1400 · 1900). Cárgalo en la ficha de la placa para ver sus rangos reales.
         </Notice>
       )}
+      {placas.isError && <Notice tone="error">{errorMessage(placas.error)}</Notice>}
       {desde >= hasta && <Notice tone="error">La fecha de fin debe ser posterior a la de inicio.</Notice>}
       {consulta.isError && <Notice tone="error">{errorMessage(consulta.error)}</Notice>}
 
