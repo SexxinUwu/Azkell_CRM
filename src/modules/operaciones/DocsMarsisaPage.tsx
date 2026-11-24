@@ -146,6 +146,7 @@ export function DocsMarsisaPage() {
   const [sincronizando, setSincronizando] = useState(false);
   const [guardando, setGuardando] = useState<string | null>(null);
   const [abriendo, setAbriendo] = useState<number | null>(null);
+  const [fallosArchivos, setFallosArchivos] = useState<Array<{ id: number; error: string }> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const todosLosDocs = useMemo(() => q.data?.data ?? [], [q.data]);
@@ -207,23 +208,27 @@ export function DocsMarsisaPage() {
 
   /** Copia a Azkell los archivos que faltan, por tandas, hasta que no quede ninguno (o ya no avance) */
   async function guardarArchivos() {
-    setGuardando('Preparando…'); setError(null);
+    setGuardando('Preparando…'); setError(null); setFallosArchivos(null);
     try {
+      // Los que fallan se apartan para seguir con los demás (y se muestran al final con su motivo)
+      const falloIds: number[] = []; const motivos: Array<{ id: number; error: string }> = [];
       let fallidos = 0;
       for (let vuelta = 0; vuelta < 400; vuelta++) {
         // Una tanda corta (el servidor devuelve lo avanzado). Si el proxy corta una (502/504), se reintenta: lo ya guardado se conserva
         let r: { ok?: boolean; error?: string; guardados: number; fallidos: unknown[]; pendientes: number; detener: boolean } | null = null;
         for (let intento = 0; intento < 4 && !r; intento++) {
-          try { r = await api<{ ok?: boolean; error?: string; guardados: number; fallidos: unknown[]; pendientes: number; detener: boolean }>('/operaciones/docs-marsisa/sincronizar-archivos?limite=4', { method: 'POST', body: {} }); }
+          try { r = await api<{ ok?: boolean; error?: string; guardados: number; fallidos: unknown[]; pendientes: number; detener: boolean }>(`/operaciones/docs-marsisa/sincronizar-archivos?limite=4${falloIds.length ? `&excluir=${falloIds.join(',')}` : ''}`, { method: 'POST', body: {} }); }
           catch (e) { if (intento === 3) throw e; setGuardando('Reintentando…'); await new Promise(x => setTimeout(x, 3000)); }
         }
         if (!r) break;
         if (r.ok === false) throw new Error(r.error || 'No se pudieron guardar los archivos');
         fallidos += r.fallidos.length;
+        for (const x of r.fallidos as Array<{ id: number; error: string }>) { falloIds.push(x.id); motivos.push(x); }
         setGuardando(r.pendientes > 0 ? `Guardando archivos… quedan ${r.pendientes}` : 'Terminando…');
-        if (r.pendientes === 0 || r.detener) break;
+        if (r.pendientes === 0) break;
       }
-      haptic('success'); toast(fallidos ? `Archivos guardados; ${fallidos} no se pudieron bajar` : 'Archivos guardados');
+      if (motivos.length) setFallosArchivos(motivos);
+      haptic(fallidos ? 'warning' : 'success'); toast(fallidos ? `Archivos guardados; ${fallidos} no se pudieron bajar (el motivo está arriba)` : 'Archivos guardados');
       await qc.invalidateQueries({ queryKey: ['operaciones', 'docs-marsisa'] });
     } catch (e) { setError(errorMessage(e)); haptic('warning'); }
     finally { setGuardando(null); }
@@ -279,6 +284,13 @@ export function DocsMarsisaPage() {
       </header>
 
       {error && <Notice tone="error">{error}</Notice>}
+      {fallosArchivos && fallosArchivos.length > 0 && (
+        <Notice tone="error">
+          {fallosArchivos.length} {fallosArchivos.length === 1 ? 'archivo no se pudo' : 'archivos no se pudieron'} bajar de la API:{' '}
+          {fallosArchivos.slice(0, 6).map(f => { const d = todosLosDocs.find(x => x.id_remoto === f.id); return `${d ? `${d.placa} · ${d.tipo_nombre}` : `ID ${f.id}`} (${f.error})`; }).join(' — ')}
+          {fallosArchivos.length > 6 ? ` — y ${fallosArchivos.length - 6} más` : ''}
+        </Notice>
+      )}
       {q.isLoading ? <PageLoader variante="camion" /> : q.isError ? <Notice tone="error">{errorMessage(q.error)}</Notice> : q.data?.sinTabla ? (
         <Notice tone="error">Falta aplicar la actualización de la base de datos de esta empresa para usar este módulo.</Notice>
       ) : docs.length === 0 ? (

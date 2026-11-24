@@ -185,13 +185,17 @@ module.exports = (db, logAudit) => {
             const PRESUPUESTO_MS = 25000;
             const limite = Math.min(10, Math.max(1, Number(req.query.limite) || 4));
             const cfg = await configuracion(req);
-            const [pend] = await P(req).query('SELECT id, id_remoto FROM marsisa_docs_flota_ext WHERE tiene_archivo = 1 AND eliminado_remoto = 0 AND archivo_url IS NULL ORDER BY id LIMIT ?', [limite]);
+            // Los que ya fallaron en esta pasada (ids remotos) se saltan: si no, los mismos de siempre bloquean a los demás
+            const excluir = String(req.query.excluir || '').split(',').map(Number).filter(n => Number.isInteger(n) && n > 0).slice(0, 500);
+            const filtroExcluir = excluir.length ? 'AND id_remoto NOT IN (?)' : '';
+            const par = excluir.length ? [excluir] : [];
+            const [pend] = await P(req).query(`SELECT id, id_remoto FROM marsisa_docs_flota_ext WHERE tiene_archivo = 1 AND eliminado_remoto = 0 AND archivo_url IS NULL ${filtroExcluir} ORDER BY id LIMIT ?`, [...par, limite]);
             let guardados = 0; const fallidos = [];
             for (const f of pend) {
                 if (Date.now() - inicio > PRESUPUESTO_MS) break;
                 try { await guardarArchivo(req, cfg, f); guardados++; } catch (e) { fallidos.push({ id: f.id_remoto, error: e && e.message ? String(e.message).slice(0, 120) : 'error' }); }
             }
-            const [[{ n }]] = await P(req).query('SELECT COUNT(*) AS n FROM marsisa_docs_flota_ext WHERE tiene_archivo = 1 AND eliminado_remoto = 0 AND archivo_url IS NULL');
+            const [[{ n }]] = await P(req).query(`SELECT COUNT(*) AS n FROM marsisa_docs_flota_ext WHERE tiene_archivo = 1 AND eliminado_remoto = 0 AND archivo_url IS NULL ${filtroExcluir}`, par);
             // Los que fallaron siguen pendientes: si en esta tanda no se guardó ninguno, se corta para no repetir sin fin
             res.json({ ok: true, guardados, fallidos, pendientes: Number(n), detener: pend.length > 0 && guardados === 0 });
         } catch (err) { responder(res, err, 'archivos'); }
