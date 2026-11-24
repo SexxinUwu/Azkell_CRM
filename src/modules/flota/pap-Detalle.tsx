@@ -196,9 +196,9 @@ export function PapDetalle({ id, onClose, onEditar, onPago }: {
                   {d.pagos.map(p => (
                     <li key={p.id}>
                       <div><strong className="t-numeric">{formatMoneda(p.monto, d.moneda)}</strong><span>{fechaTxt(p.fecha)} · {p.medio || 'Sin medio'}{p.nro_operacion ? ` · Op. ${p.nro_operacion}` : ''}{p.pagado_por ? ` · ${p.pagado_por}` : ''}</span></div>
-                      {p.caja_id && <span className="pap-chip pap-chip--azul">En Caja</span>}
+                      {p.caja_id && <span className="pap-chip pap-chip--azul">{String(p.caja_estado ?? '').toUpperCase() === 'ANULADO' ? 'Egreso anulado' : 'En Caja'}</span>}
                       {p.comprobante && <a className="pap-enlace" href={p.comprobante} target="_blank" rel="noreferrer">Comprobante</a>}
-                      {esAdmin && !p.caja_id && <BotonTip tip="Quitar pago" className="pap-icono pap-icono--rojo" onClick={() => { void ejecutar(() => quitarPago(d.id, p.id), 'Pago quitado'); }}><Trash2 size={14} /></BotonTip>}
+                      {esAdmin && (!p.caja_id || String(p.caja_estado ?? '').toUpperCase() === 'ANULADO') && <BotonTip tip="Quitar pago" className="pap-icono pap-icono--rojo" onClick={() => { void ejecutar(() => quitarPago(d.id, p.id), 'Pago quitado'); }}><Trash2 size={14} /></BotonTip>}
                     </li>
                   ))}
                 </ul>

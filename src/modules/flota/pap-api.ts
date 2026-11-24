@@ -70,7 +70,7 @@ export interface Papeleta {
 export interface EvidenciaPap { key: string; url: string; orden: number }
 export interface PagoPap {
   id: number; fecha: string; monto: number; medio: string | null; nro_operacion: string | null; comprobante: string | null;
-  pagado_por: string | null; caja_id: number | null; observacion: string | null; registrado_por: string | null;
+  pagado_por: string | null; caja_id: number | null; caja_estado?: string | null; observacion: string | null; registrado_por: string | null;
 }
 export interface EventoPap { id: number; accion: string; detalle: string | null; usuario: string | null; created_at: string }
 export interface PapeletaDetalle extends Papeleta { evidencias: EvidenciaPap[]; pagos: PagoPap[]; historial: EventoPap[] }

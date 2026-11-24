@@ -320,7 +320,7 @@ module.exports = (db, logAudit) => {
             if (!rows.length) throw aviso('Papeleta no encontrada.', 404);
             const [ev] = await p.query('SELECT evidencias_json FROM papeletas WHERE id = ?', [Number(req.params.id)]);
             const [pagos] = await p.query(
-                `SELECT id, DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha, monto, medio, nro_operacion, comprobante_url, pagado_por, caja_id, observacion, registrado_por, created_at
+                `SELECT id, DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha, monto, medio, nro_operacion, comprobante_url, pagado_por, caja_id, (SELECT c.estado FROM tesoreria_caja c WHERE c.id = papeletas_pagos.caja_id) AS caja_estado, observacion, registrado_por, created_at
                  FROM papeletas_pagos WHERE papeleta_id = ? ORDER BY fecha, id`, [Number(req.params.id)]);
             const [hist] = await p.query('SELECT id, accion, detalle, usuario, created_at FROM papeletas_historial WHERE papeleta_id = ? ORDER BY id DESC', [Number(req.params.id)]);
             const pagosFirmados = await Promise.all(pagos.map(async pg => {
@@ -663,9 +663,18 @@ module.exports = (db, logAudit) => {
             const id = Number(req.params.id);
             const [pg] = await p.query('SELECT * FROM papeletas_pagos WHERE id = ? AND papeleta_id = ?', [Number(req.params.pagoId), id]);
             if (!pg.length) throw aviso('Pago no encontrado.', 404);
-            if (pg[0].caja_id) throw aviso('Este pago tiene un egreso en Caja. Anula primero ese egreso en Tesorería.', 409);
+            // Con egreso en Caja solo se quita si ese egreso ya está anulado
+            if (pg[0].caja_id) {
+                const [cj] = await p.query('SELECT estado FROM tesoreria_caja WHERE id = ?', [pg[0].caja_id]);
+                if (cj.length && String(cj[0].estado || '').toUpperCase() !== 'ANULADO') throw aviso('Este pago tiene un egreso en Caja. Anula primero ese egreso en Tesorería.', 409);
+            }
             await p.query('DELETE FROM papeletas_pagos WHERE id = ?', [pg[0].id]);
-            await p.query("UPDATE papeletas SET estado = 'PENDIENTE' WHERE id = ? AND estado = 'PAGADA'", [id]);
+            // Si lo que queda pagado cubre el total con descuento (y el último pago fue dentro del plazo del descuento), la papeleta sigue pagada
+            const [[pap]] = await p.query('SELECT monto, recargos, descuento_monto, fecha_limite_descuento, estado FROM papeletas WHERE id = ?', [id]);
+            const [[rest]] = await p.query('SELECT COALESCE(SUM(monto), 0) AS total, MAX(fecha) AS ultima FROM papeletas_pagos WHERE papeleta_id = ?', [id]);
+            const conDescuento = num(pap.descuento_monto) > 0 && num(rest.total) >= redondear(num(pap.monto) + num(pap.recargos) - num(pap.descuento_monto)) - 0.01
+                && (!pap.fecha_limite_descuento || (rest.ultima && new Date(rest.ultima).toISOString().slice(0, 10) <= String(pap.fecha_limite_descuento).slice(0, 10)));
+            if (!conDescuento) await p.query("UPDATE papeletas SET estado = 'PENDIENTE' WHERE id = ? AND estado = 'PAGADA'", [id]);
             await historial(p, id, 'PAGO QUITADO', `Se quitó el pago de ${pg[0].monto}`, usuarioDe(req));
             res.json({ ok: true });
         } catch (err) { responder(res, err, 'pago-'); }
