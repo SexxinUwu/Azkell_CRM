@@ -8,6 +8,7 @@ import { remanenteDe, type LlantaDato } from './NeumaticosEsquema';
 import type { SondaPosicion } from './ntb-arrastre';
 import { MotorNeumaticos, type ArrastreLlanta, type ModoVista } from './nv3-motor';
 import { cargarFotoBanda } from './nv3-texturas';
+import { PlanoTecnico } from './nv3-plano';
 
 export interface Nv3VistaProps {
   configuracion: string;
@@ -30,6 +31,8 @@ export interface Nv3VistaProps {
   /** Vista controlada por el padre; si no se pasa, el control la guarda aquí */
   modo?: ModoVista;
   onModo?: (modo: ModoVista) => void;
+  /** Plano 2D de líneas en lugar del 3D cenital; al pasar a Isometría la unidad se arma por piezas */
+  plano2d?: boolean;
 }
 
 const normal = (p: string) => String(p).trim().toUpperCase();
@@ -42,7 +45,7 @@ const OPCIONES_VISTA: Array<{ valor: ModoVista; etiqueta: string }> = [
 /** Los controles sobre el lienzo no deben llegar al arrastre ni al toque de la unidad */
 const detener = (e: SyntheticEvent) => e.stopPropagation();
 
-export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSelect, sondaRef, arrastreRef, onPerdida, marca, camion = false, modo: modoPadre, onModo }: Nv3VistaProps) {
+export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSelect, sondaRef, arrastreRef, onPerdida, marca, camion = false, modo: modoPadre, onModo, plano2d = false }: Nv3VistaProps) {
   const lienzo = useRef<HTMLDivElement>(null);
   const motor = useRef<MotorNeumaticos | null>(null);
   // Últimos valores de las props para los oyentes que se montan una sola vez
@@ -103,6 +106,12 @@ export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSele
     motor.current?.setSeleccion(activa || null, sobre);
   }, [activa, sobre]);
 
+  // Plano 2D: se avisa antes de elegir el modo para que el 3D arranque plegado
+  useEffect(() => {
+    motor.current?.setPlano2d(plano2d);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plano2d, firma]);
+
   // Cenital o isometría
   useEffect(() => {
     motor.current?.setModo(modo);
@@ -119,8 +128,13 @@ export default function Nv3Vista({ configuracion, llantas, activa, sobre, onSele
   };
 
   return (
-    <div className="nv3-vista" data-nv3>
+    <div className={`nv3-vista${plano2d ? " nv3-vista--2d" : ""}`} data-nv3 data-modo={modo}>
       <div ref={lienzo} className="nv3-lienzo" role="img" aria-label={`Vista de la unidad, configuración ${configuracion}`} />
+      {plano2d && (
+        <div className="nv3-plano">
+          <PlanoTecnico configuracion={configuracion} llantas={llantas} activa={activa} sobre={sobre} camion={camion} />
+        </div>
+      )}
       <div className="nv3-modos" role="group" aria-label="Tipo de vista" onPointerDown={detener} onClick={detener}>
         {OPCIONES_VISTA.map(o => (
           <button

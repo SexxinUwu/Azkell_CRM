@@ -30,6 +30,8 @@ export interface NeumaticosCenitalProps {
   /** Vista activa (plano o isometría). Si el padre la controla, el control Plano / Isometría se maneja desde fuera */
   modo?: ModoVista;
   onModo?: (modo: ModoVista) => void;
+  /** Plano 2D de líneas con transformación a Isometría (tablero de movimientos) */
+  plano2d?: boolean;
 }
 
 /** Este equipo puede dibujar en WebGL */
@@ -50,7 +52,7 @@ class RespaldoSeguro extends Component<{ respaldo: ReactNode; children: ReactNod
   render() { return this.state.fallo ? this.props.respaldo : this.props.children; }
 }
 
-export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null, onSelect, sondaRef, arrastreRef, marca = null, camion = false, modo, onModo }: NeumaticosCenitalProps) {
+export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null, onSelect, sondaRef, arrastreRef, marca = null, camion = false, modo, onModo, plano2d = false }: NeumaticosCenitalProps) {
   const [soportaWebgl] = useState(webglDisponible);
   const [perdido, setPerdido] = useState(false);
 
@@ -66,7 +68,7 @@ export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null
       <Suspense fallback={respaldo}>
         <Nv3Vista
           configuracion={configuracion} llantas={llantas} activa={activa} sobre={sobre} onSelect={onSelect}
-          sondaRef={sondaRef} arrastreRef={arrastreRef} marca={marca} camion={camion} onPerdida={() => setPerdido(true)} modo={modo} onModo={onModo}
+          sondaRef={sondaRef} arrastreRef={arrastreRef} marca={marca} camion={camion} onPerdida={() => setPerdido(true)} modo={modo} onModo={onModo} plano2d={plano2d}
         />
       </Suspense>
     </RespaldoSeguro>
