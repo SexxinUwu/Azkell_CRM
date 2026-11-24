@@ -160,6 +160,7 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/usuarios-v2')) mod = 'usuarios';
     else if (path.startsWith('/integraciones')) mod = 'integraciones';
     else if (path.startsWith('/sire')) mod = ['integraciones', 'administracion'];
+    else if (path.startsWith('/docs-externos')) mod = ['integraciones', 'administracion'];
     else if (path.startsWith('/contabilidad')) mod = ['contabilidad_sire'];
     else if (path.startsWith('/auditoria') || path.startsWith('/audit')) mod = 'mod_auditoria';
     else if (path.startsWith('/notificaciones')) mod = ['administracion', 'cfg_empresa'];

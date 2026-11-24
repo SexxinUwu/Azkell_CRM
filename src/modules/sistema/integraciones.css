@@ -105,3 +105,9 @@
 @media (prefers-reduced-motion: reduce) {
   .int-chev, .int-card, .int-cab, .int-grupo { transition: none; }
 }
+
+/* Exploración de la API externa de documentos */
+.int-tabla { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+.int-tabla th { text-align: left; font-weight: 600; color: var(--label-2); padding: 6px 8px; border-bottom: 1px solid var(--separator); }
+.int-tabla td { padding: 6px 8px; border-bottom: 1px solid var(--separator); }
+.int-json { margin: 6px 0 0; padding: var(--s-3); max-height: 22rem; overflow: auto; border-radius: var(--r-md); background: var(--fill-subtle); font-family: var(--font-mono); font-size: 0.75rem; white-space: pre-wrap; word-break: break-word; }
