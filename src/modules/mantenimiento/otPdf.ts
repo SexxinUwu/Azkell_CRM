@@ -3,6 +3,7 @@
 import { generarPDF_OT } from './otPdfClasico';
 import { htmlPlantillaInspeccion, htmlPlantillaLlantas } from './otPlantillasClasico';
 import { apiFetch } from '../../core/api/client';
+import { cargarLogoEmpresa } from '../../core/lib/logoEmpresa';
 import { aObjeto, type MaterialSalida, type OrdenTrabajo, type TrabajoOT } from './api';
 
 /** Datos que el PDF toma de otras tablas: marca (placas), rampa (catálogo) y kilometraje */
@@ -31,23 +32,8 @@ function otConExtras(ot: OrdenTrabajo, extras: ExtrasPdf = {}): OrdenTrabajo {
   return { ...ot, detalles_json: det as OrdenTrabajo['detalles_json'] };
 }
 
-/** Logo de la empresa del subdominio como data URL. Los documentos clásicos lo leen de window._LOGO_BASE64
- *  y, sin él, caían al logo de Marsisa que está fijo en el código. */
-let logoCache: Promise<string> | null = null;
-async function ponerLogoEmpresa(): Promise<void> {
-  logoCache ??= (async () => {
-    try {
-      const res = await apiFetch('/tenant-logo');
-      if (!res.ok) return '';
-      const blob = await res.blob();
-      if (!blob.type.startsWith('image/')) return '';
-      return await new Promise<string>((ok, mal) => { const l = new FileReader(); l.onload = () => ok(String(l.result)); l.onerror = () => mal(l.error); l.readAsDataURL(blob); });
-    } catch { return ''; }
-  })();
-  const logo = await logoCache;
-  if (!logo) logoCache = null;
-  else (window as unknown as { _LOGO_BASE64?: string })._LOGO_BASE64 = logo;
-}
+/** El logo de la empresa se carga una vez (core/lib/logoEmpresa) y los documentos lo leen de window._LOGO_BASE64 */
+const ponerLogoEmpresa = async (): Promise<void> => { await cargarLogoEmpresa(); };
 
 /** Pide al servidor el PDF de un documento HTML. Usa la misma sesión que el resto de la app. */
 export async function pdfDeHtml(html: string, titulo: string, horizontal = false): Promise<Blob> {

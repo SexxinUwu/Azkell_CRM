@@ -448,7 +448,7 @@ export function generarPDF_OT(ot, trabajos, materiales, isPlantilla, _onHtmlRead
     container.style.left = '-9999px';
     container.style.top = '-9999px';
     
-    var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
+    var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || '';
     container.innerHTML = `
     <div class="page-container" style="width: 210mm; min-height: 296mm; background: white; padding: 6mm 10mm; box-sizing: border-box; position: relative; display: flex; flex-direction: column; overflow: hidden; font-family: 'Oswald', sans-serif; color: #000;">
         <style>
@@ -487,7 +487,7 @@ export function generarPDF_OT(ot, trabajos, materiales, isPlantilla, _onHtmlRead
         <table class="iso-header">
             <tr>
                 <td class="logo-cell" rowspan="3">
-                    <img src="${empLogoUrl}" alt="Logo Empresa" style="max-width: 100%; max-height: 45px; object-fit: contain;">
+                    ${empLogoUrl ? `<img src="${empLogoUrl}" alt="Logo Empresa" style="max-width: 100%; max-height: 45px; object-fit: contain;">` : ""}
                 </td>
                 <td class="title-cell" rowspan="3">
                     ORDEN DE TRABAJO<br>
