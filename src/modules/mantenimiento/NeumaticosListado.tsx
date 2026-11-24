@@ -351,7 +351,8 @@ export function NeumaticosListado() {
     const base = todas.filter(l => (!fMarca || l.marca === fMarca) && (!fModelo || l.modelo === fModelo) && (!fMedida || l.medida === fMedida)
       && (!fVida || String(l.vida) === fVida) && (!fPlaca || l.placa_actual === fPlaca) && (!fOrden || l.orden_compra === fOrden));
     const def = orden ? DEFINICION.find(d => d.id === orden.campo) : undefined;
-    if (!def || !def.valor) return base;
+    // Sin orden elegido: orden natural por código, así PROV-BDJ729-2 va antes que PROV-BDJ729-10
+    if (!def || !def.valor) return [...base].sort((x, y) => x.codigo.localeCompare(y.codigo, 'es', { numeric: true }));
     const v = def.valor; const signo = orden!.dir === 'asc' ? 1 : -1;
     return [...base].sort((a, b) => { const x = v(a); const y = v(b); return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'es', { numeric: true })) * signo; });
   }, [todas, fMarca, fModelo, fMedida, fVida, fPlaca, fOrden, orden]);
