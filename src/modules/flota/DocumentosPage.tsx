@@ -230,9 +230,14 @@ export function DocumentosPage() {
           )}
           <BotonTip tip="Actualizar" className="btn btn--plain btn--icono btn--icono-acento" disabled={isFetching}
             onClick={() => qc.invalidateQueries({ queryKey: ['flota', 'vehiculos'] })}><RefreshCw size={18} /></BotonTip>
-          <BotonTip tip={seleccion ? `Placas a mostrar: ${seleccion.size} de ${todas.length}` : 'Configurar placas a mostrar'} className="btn btn--plain btn--icono btn--icono-acento"
-            onClick={() => setConfigurando(true)}><Settings2 size={18} /></BotonTip>
-          {seleccion && <span className="doc-conf__insignia" title="Hay un filtro de placas activo">{seleccion.size}/{todas.length}</span>}
+          {/* Elegir qué placas se ven es de quien puede editar documentos (según su rol) */}
+          {puedeEditar && (
+            <>
+              <BotonTip tip={seleccion ? `Placas a mostrar: ${seleccion.size} de ${todas.length}` : 'Configurar placas a mostrar'} className="btn btn--plain btn--icono btn--icono-acento"
+                onClick={() => setConfigurando(true)}><Settings2 size={18} /></BotonTip>
+              {seleccion && <span className="doc-conf__insignia" title="Hay un filtro de placas activo">{seleccion.size}/{todas.length}</span>}
+            </>
+          )}
           <MenuFila etiqueta="Más acciones" acciones={[
             { label: 'Descargar plantilla Excel', icon: <FileSpreadsheet size={17} />, onSelect: () => { descargarPlantilla().catch(aviso); } },
             puedeEditar && { label: 'Importar documentos', icon: <FileSpreadsheet size={17} />, onSelect: () => setImportando(true) },
