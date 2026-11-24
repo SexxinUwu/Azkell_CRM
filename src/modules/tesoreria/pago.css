@@ -273,3 +273,11 @@
 .pp-copiar--ok { color: var(--green-ink); }
 .pp-editar { overflow: hidden; }
 @media (max-width: 560px) { .pp-fila { grid-template-columns: 1fr; gap: 4px; } }
+
+/* Filas compactas: una sola línea por fila (proveedor y RUC, vencimiento y estado en línea) */
+.pago-tabla tbody td { padding: 4px 10px; white-space: nowrap; font-size: 0.8125rem; }
+.pago-tabla .pago-prov, .pago-tabla .pago-venc, .pago-tabla .pago-estado { flex-direction: row; align-items: center; gap: 8px; }
+.pago-tabla .pago-prov__nombre { flex: 0 1 auto; min-width: 0; }
+.pago-tabla .pago-prov__ruc { flex-shrink: 0; }
+.pago-tabla .pago-cuenta { flex-wrap: nowrap; }
+.pago-tabla .btn { min-height: 26px; padding-block: 2px; }

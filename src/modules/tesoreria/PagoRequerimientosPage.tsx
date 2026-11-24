@@ -269,7 +269,7 @@ export function PagoRequerimientosPage() {
           })}
         </ul>
       ) : (
-        <TablaRedimensionable id="pago-requerimientos-v2" columnas={COLUMNAS} ariaLabel="Órdenes de compra para pagar" altoMax="68vh">
+        <TablaRedimensionable id="pago-requerimientos-v2" columnas={COLUMNAS} ariaLabel="Órdenes de compra para pagar" altoMax="68vh" className="pago-tabla">
           {visibles.map(oc => {
             const pendiente = esPendiente(oc);
             const usd = esUSD(oc.moneda);
