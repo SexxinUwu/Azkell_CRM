@@ -10,15 +10,12 @@ export interface ResultadoRpm {
   rpm_media: number; rpm_max: number; km_recorridos: number | null;
 }
 
-/** Puntuación de 0 a 100: qué tan cerca está el reparto de la meta (20 / 60 / 20 y cero sobrerrevoluciones).
- *  100 − (suma de las diferencias con la meta ÷ 2) − (% de sobrerrevolución × 5) */
+/** Puntuación de 0 a 100: qué tan cerca está el reparto de bajo torque, zona verde y potencia de la meta (20 / 60 / 20).
+ *  100 − (suma de las diferencias con la meta ÷ 2). La sobrerrevolución y el ralentí no entran: solo se muestran como número. */
 export function ajusteAMeta(r: ResultadoRpm) {
   const desvio = Math.abs(r.porcentajes.bajo - r.meta.bajo) + Math.abs(r.porcentajes.verde - r.meta.verde) + Math.abs(r.porcentajes.potencia - r.meta.potencia);
-  const sobre = r.con_motor > 0 ? (r.conteos.sobre / r.con_motor) * 100 : 0;
-  return Math.max(0, Math.round(100 - desvio / 2 - sobre * 5));
+  return Math.max(0, Math.round(100 - desvio / 2));
 }
 
 export const notaRpm = (p: number) => (p >= 85 ? { txt: 'Excelente', tono: 'ok', color: 'green' } : p >= 70 ? { txt: 'Buena', tono: 'ok', color: 'green' } : p >= 50 ? { txt: 'Regular', tono: 'medio', color: 'amber' } : { txt: 'A mejorar', tono: 'mal', color: 'red' });
 
-/** Porcentaje de sobrerrevolución sobre las lecturas con motor encendido */
-export const pctSobre = (r: ResultadoRpm) => (r.con_motor > 0 ? (r.conteos.sobre / r.con_motor) * 100 : 0);
