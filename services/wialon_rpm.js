@@ -70,7 +70,7 @@ async function buscarPlantilla(baseUrl, sid) {
 
 /**
  * Ejecuta el informe 10 en una sesión ya abierta y devuelve las mediciones crudas (sin rangos):
- * histograma de RPM por tramos de 10 (solo con el motor encendido), cuántas lecturas, RPM media y máxima, km y primera/última hora.
+ * histograma de RPM por tramos de 10 (toda lectura con RPM mayor a 0), cuántas lecturas, RPM media y máxima, km y primera/última hora.
  * Si Wialon dice que la sesión venció, lanza un error con .sesion = true para que quien llama vuelva a entrar.
  */
 async function medirRpm({ baseUrl, sid, unitId, from, to }) {
@@ -81,13 +81,13 @@ async function medirRpm({ baseUrl, sid, unitId, from, to }) {
     try {
         const tablas = (ejec.reportResult && ejec.reportResult.tables) || [];
         // La tabla del detalle es la que tiene la columna de RPM y más filas
-        let mejor = -1, mejorFilas = -1, colRpm = -1, colMotor = -1, colKm = -1, colFecha = -1;
+        let mejor = -1, mejorFilas = -1, colRpm = -1, colKm = -1, colFecha = -1;
         tablas.forEach((t, i) => {
             const cab = (t.header || []).map(limpiaCabecera);
             const iR = cab.findIndex(h => h === 'rpm');
             if (iR >= 0 && Number(t.rows) > mejorFilas) {
                 mejor = i; mejorFilas = Number(t.rows); colRpm = iR;
-                colMotor = cab.findIndex(h => h === 'motor'); colKm = cab.findIndex(h => h === 'kilometraje total'); colFecha = cab.findIndex(h => h.startsWith('fecha'));
+                colKm = cab.findIndex(h => h === 'kilometraje total'); colFecha = cab.findIndex(h => h.startsWith('fecha'));
             }
         });
         if (mejor < 0 || mejorFilas <= 0) return { sin_datos: true, plantilla: plantilla.nombre, filas_leidas: 0 };
@@ -105,8 +105,8 @@ async function medirRpm({ baseUrl, sid, unitId, from, to }) {
                 if (colFecha >= 0) { const t = textoCelda(celdas[colFecha]); if (!primera) primera = t; ultima = t; }
                 if (colKm >= 0) { const k = numero(celdas[colKm]); if (k != null) { if (kmIni == null) kmIni = k; kmFin = k; } }
                 const rpm = numero(celdas[colRpm]);
-                const motorOn = colMotor >= 0 ? /encendido/i.test(textoCelda(celdas[colMotor])) : true;
-                if (!(rpm > 0) || !motorOn) continue;
+                // Se cuenta toda lectura con RPM (en movimiento o detenido); solo se deja fuera la de RPM 0 (motor apagado)
+                if (!(rpm > 0)) continue;
                 conMotor++; sumaRpm += rpm; if (rpm > rpmMax) rpmMax = rpm;
                 const b = Math.floor(rpm / BIN);
                 hist[b] = (hist[b] || 0) + 1;
