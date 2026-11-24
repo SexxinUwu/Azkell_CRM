@@ -25,22 +25,22 @@ import {
 type FiltroMoneda = 'TODAS' | 'PEN' | 'USD';
 
 const COLUMNAS: ColumnaTabla[] = [
-  { id: 'accion', titulo: 'Acción', ancho: 130 },
+  { id: 'accion', titulo: 'Acción', ancho: 124, minimo: 124 },
   { id: 'importe', titulo: 'Monto a proceder', ancho: 150, alinear: 'right' },
   { id: 'oc', titulo: 'N° de orden', ancho: 150 },
-  { id: 'placa', titulo: 'Placa', ancho: 110 },
+  { id: 'placa', titulo: 'Placa', ancho: 120, minimo: 120 },
   { id: 'motivo', titulo: 'Motivo', ancho: 240 },
-  { id: 'tipo', titulo: 'Tipo', ancho: 150 },
+  { id: 'tipo', titulo: 'Tipo', ancho: 170, minimo: 170 },
   { id: 'prov', titulo: 'Proveedor', ancho: 240 },
   { id: 'solic', titulo: 'Solicitante', ancho: 150 },
   { id: 'creador', titulo: 'Usuario creación', ancho: 160 },
   { id: 'fecha', titulo: 'Fecha registro', ancho: 130 },
-  { id: 'venc', titulo: 'Días restantes', ancho: 140, alinear: 'center' },
+  { id: 'venc', titulo: 'Días restantes', ancho: 150, minimo: 150, alinear: 'center' },
   { id: 'aprobador', titulo: 'Usuario aprobación', ancho: 170 },
   { id: 'fechaAprob', titulo: 'Fecha aprobación', ancho: 150 },
   { id: 'cuenta', titulo: 'Cuenta destino (proveedor)', ancho: 280 },
   { id: 'origen', titulo: 'Cuenta origen (empresa)', ancho: 260 },
-  { id: 'estado', titulo: 'Estado', ancho: 170 },
+  { id: 'estado', titulo: 'Estado', ancho: 170, minimo: 150 },
 ];
 
 const ENCABEZADOS_EXCEL = [
@@ -269,7 +269,7 @@ export function PagoRequerimientosPage() {
           })}
         </ul>
       ) : (
-        <TablaRedimensionable id="pago-requerimientos-v2" columnas={COLUMNAS} ariaLabel="Órdenes de compra para pagar" altoMax="68vh" className="pago-tabla">
+        <TablaRedimensionable id="pago-requerimientos-v3" columnas={COLUMNAS} ariaLabel="Órdenes de compra para pagar" altoMax="68vh" className="pago-tabla">
           {visibles.map(oc => {
             const pendiente = esPendiente(oc);
             const usd = esUSD(oc.moneda);
