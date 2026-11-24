@@ -26,17 +26,17 @@ type FiltroMoneda = 'TODAS' | 'PEN' | 'USD';
 const COLUMNAS: ColumnaTabla[] = [
   { id: 'accion', titulo: 'Acción', ancho: 130 },
   { id: 'importe', titulo: 'Monto a proceder', ancho: 150, alinear: 'right' },
-  { id: 'solic', titulo: 'Solicitante', ancho: 150 },
+  { id: 'oc', titulo: 'N° de orden', ancho: 150 },
   { id: 'placa', titulo: 'Placa', ancho: 110 },
   { id: 'motivo', titulo: 'Motivo', ancho: 240 },
   { id: 'tipo', titulo: 'Tipo', ancho: 150 },
-  { id: 'oc', titulo: 'N° de documento', ancho: 150 },
+  { id: 'prov', titulo: 'Proveedor', ancho: 240 },
+  { id: 'solic', titulo: 'Solicitante', ancho: 150 },
   { id: 'creador', titulo: 'Usuario creación', ancho: 160 },
   { id: 'fecha', titulo: 'Fecha registro', ancho: 130 },
   { id: 'venc', titulo: 'Días restantes', ancho: 140, alinear: 'center' },
   { id: 'aprobador', titulo: 'Usuario aprobación', ancho: 170 },
   { id: 'fechaAprob', titulo: 'Fecha aprobación', ancho: 150 },
-  { id: 'prov', titulo: 'Proveedor', ancho: 240 },
   { id: 'cuenta', titulo: 'Cuenta destino (proveedor)', ancho: 280 },
   { id: 'origen', titulo: 'Cuenta origen (empresa)', ancho: 260 },
   { id: 'estado', titulo: 'Estado', ancho: 170 },
@@ -269,7 +269,7 @@ export function PagoRequerimientosPage() {
           })}
         </ul>
       ) : (
-        <TablaRedimensionable id="pago-requerimientos" columnas={COLUMNAS} ariaLabel="Órdenes de compra para pagar" altoMax="68vh">
+        <TablaRedimensionable id="pago-requerimientos-v2" columnas={COLUMNAS} ariaLabel="Órdenes de compra para pagar" altoMax="68vh">
           {visibles.map(oc => {
             const pendiente = esPendiente(oc);
             const usd = esUSD(oc.moneda);
@@ -287,22 +287,22 @@ export function PagoRequerimientosPage() {
                   ) : null}
                 </Celda>
                 <Celda alinear="right" mono>{importe > 0 ? formatMoneda(importe, usd ? 'USD' : 'PEN') : '—'}</Celda>
-                <Celda>{oc.solicitante || '—'}</Celda>
+                <Celda mono><span className="pago-codigo">{codigoOC(oc)}</span></Celda>
                 <Celda mono>{oc.placa || '—'}</Celda>
                 <Celda>{oc.motivo_entrada || oc.motivo || '—'}</Celda>
                 <Celda><TipoPago oc={oc} /></Celda>
-                <Celda mono><span className="pago-codigo">{codigoOC(oc)}</span></Celda>
+                <Celda>
+                  <span className="pago-prov">
+                    <span className="pago-prov__nombre">{oc.proveedor_nombre || '—'}</span>
+                    {oc.proveedor_ruc && <span className="pago-prov__ruc">{/^\d{8}$/.test(oc.proveedor_ruc.trim()) ? 'DNI' : 'RUC'} {oc.proveedor_ruc}</span>}
+                  </span>
+                </Celda>
+                <Celda>{oc.solicitante || '—'}</Celda>
                 <Celda>{oc.creador_nombre || oc.creado_por || '—'}</Celda>
                 <Celda mono>{formatFechaPe(oc.fecha)}</Celda>
                 <Celda alinear="center"><VencimientoCelda oc={oc} /></Celda>
                 <Celda>{oc.aprobador_nombre || oc.aprobado_por || '—'}</Celda>
                 <Celda mono>{formatFechaHoraPe(oc.fecha_aprobacion)}</Celda>
-                <Celda>
-                  <span className="pago-prov">
-                    <span className="pago-prov__nombre">{oc.proveedor_nombre || '—'}</span>
-                    {oc.proveedor_ruc && <span className="pago-prov__ruc">{/^d{8}$/.test(oc.proveedor_ruc.trim()) ? 'DNI' : 'RUC'} {oc.proveedor_ruc}</span>}
-                  </span>
-                </Celda>
                 <Celda><CuentaCelda texto={oc.cuenta_bancaria_proveedor} usd={usdDestino} /></Celda>
                 <Celda><CuentaCelda texto={oc.cuenta_bancaria_empresa} usd={usdOrigen} /></Celda>
                 <Celda>
