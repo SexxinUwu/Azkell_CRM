@@ -69,7 +69,7 @@ module.exports = (db, logAudit) => {
             const [rows] = await P(req).query(
                 `SELECT id, id_remoto, placa, unidad_activa, tipo_codigo, tipo_nombre, numero, emisor,
                         DATE_FORMAT(fecha_emision, '%Y-%m-%d') AS fecha_emision, DATE_FORMAT(fecha_vencimiento, '%Y-%m-%d') AS fecha_vencimiento,
-                        tiene_archivo, (archivo_url IS NOT NULL) AS archivo_guardado, DATE_FORMAT(sincronizado_en, '%Y-%m-%d %H:%i') AS sincronizado_en
+                        tiene_archivo, (archivo_url IS NOT NULL) AS archivo_guardado, DATE_FORMAT(actualizado_remoto, '%Y-%m-%d %H:%i') AS actualizado_remoto, DATE_FORMAT(sincronizado_en, '%Y-%m-%d %H:%i') AS sincronizado_en
                  FROM marsisa_docs_flota_ext WHERE eliminado_remoto = 0 ORDER BY placa, tipo_nombre, fecha_vencimiento DESC`);
             const [[u]] = await P(req).query("SELECT DATE_FORMAT(MAX(sincronizado_en), '%Y-%m-%d %H:%i') AS ultima FROM marsisa_docs_flota_ext");
             res.json({ ok: true, hoy, ultima_sincronizacion: u.ultima || null, data: rows.map(r => ({ ...r, unidad_activa: !!r.unidad_activa, tiene_archivo: !!r.tiene_archivo, archivo_guardado: !!r.archivo_guardado, ...estadoDe(r.fecha_vencimiento, hoy) })) });
