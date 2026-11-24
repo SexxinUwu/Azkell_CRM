@@ -439,6 +439,19 @@ export class Escena3D {
     this.invalidate();
   }
 
+  /** Lleva la cámara, con una animación suave, a mirar de cerca una rueda (isometría del tablero de neumáticos) */
+  enfocarRueda(obj: THREE.Object3D): void {
+    const cur = this.cur;
+    if (!cur) return;
+    const w = obj.getWorldPosition(new V());
+    const lado = w.z >= 0 ? 1 : -1;
+    const dist = Math.max(4.6, cur.len * 0.62);
+    const objetivo = new V(w.x * 0.85, Math.max(0.55, w.y), w.z * 0.35);
+    const pos = new V(w.x + dist * 0.35, w.y + dist * 0.42, lado * dist * 0.95);
+    this.flyTo(pos, objetivo, 0.95);
+    this.invalidate();
+  }
+
   /** Posición en píxeles del lienzo de un punto del modelo (por ejemplo, el centro de una llanta) */
   enPantalla(obj: THREE.Object3D): { x: number; y: number } {
     const v = new V();

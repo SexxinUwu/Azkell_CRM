@@ -47,6 +47,11 @@ export default function Placa3DVista({ placa, configuracion, llantas, activa, so
     return { plate: normal(placa), f, cat, search: '', placa: (p ?? {}) as Unidad['placa'] };
   }, [placas.isFetched, placas.data, placa, configuracion, camion]);
 
+  // La escena se rehace solo si cambia la unidad, la configuración o el tipo, nunca por un refresco de datos ni por elegir otra llanta
+  const unidadRef = useRef<Unidad | null>(null);
+  unidadRef.current = unidad;
+  const claveEscena = unidad ? `${normal(placa)}|${configuracion}|${camion ? 'C' : 'T'}` : '';
+
   const vista = useRef<HTMLDivElement>(null);
   const lienzo = useRef<HTMLCanvasElement>(null);
   const cabecera = useRef<HTMLDivElement>(null);
@@ -66,6 +71,7 @@ export default function Placa3DVista({ placa, configuracion, llantas, activa, so
 
   // Escena: se crea una vez por unidad
   useEffect(() => {
+    const unidad = unidadRef.current;
     if (!unidad || !config || !lienzo.current || !vista.current || !cabecera.current || !barra.current) return;
     let activo = true;
     let escena: Escena3D | null = null;
@@ -108,7 +114,7 @@ export default function Placa3DVista({ placa, configuracion, llantas, activa, so
       setListo(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unidad, configuracion]);
+  }, [claveEscena]);
 
   // Plano ⇄ Isometría: la unidad se arma (o se desarma) mientras la cámara sube o baja
   const modoAnterior = useRef<ModoVista | null>(null);
@@ -136,6 +142,13 @@ export default function Placa3DVista({ placa, configuracion, llantas, activa, so
   useEffect(() => { if (listo) modoAnterior.current = modo; }, [listo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { escenaRef.current?.aplicarTema(oscuro); }, [oscuro]);
+  // Isometría: al cambiar de llanta (flechas o toque) la cámara se desplaza con una animación y enfoca esa rueda
+  useEffect(() => {
+    const e = escenaRef.current;
+    if (!e || !listo || vivo.current.modo !== 'isometria' || !activa) return;
+    const r = ruedasRef.current?.find(x => x.pos === normal(activa));
+    if (r) e.enfocarRueda(r.obj);
+  }, [activa, listo]);
   // Con los marcadores ya montados, un cuadro para ubicarlos sobre las ruedas
   useEffect(() => { if (listo) escenaRef.current?.layout(); }, [listo]);
 
