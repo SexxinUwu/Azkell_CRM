@@ -107,7 +107,7 @@ function Resultado({ r }: { r: ResultadoRpm }) {
           <LicensePlate plate={r.placa} size="sm" />
           <div><strong>{r.modelo_motor || 'Sin modelo de motor'}</strong><small>{r.primera_lectura} → {r.ultima_lectura}</small></div>
         </div>
-        <div className="rpm-resumen__nota" data-tono={n.tono} title="Qué tan cerca está el reparto de la meta 20 / 60 / 20 sin sobrerrevoluciones">
+        <div className="rpm-resumen__nota" data-tono={n.tono} title="Qué tan cerca está el reparto de bajo torque, zona verde y potencia de la meta 20 / 60 / 20">
           <span className="rpm-resumen__valor t-numeric">{ajuste}</span>
           <span><strong>{n.txt}</strong><small>ajuste a la meta</small></span>
         </div>
