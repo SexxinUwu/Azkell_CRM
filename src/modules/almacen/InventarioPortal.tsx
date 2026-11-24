@@ -9,6 +9,8 @@ interface Props {
   almacenes: string[];
   /** null = inventario global; SIN_ALMACEN = artículos sin almacén válido */
   onElegir: (almacen: string | null) => void;
+  /** Almacenes que no se muestran como tarjeta (los del ciclo de vida de las llantas se ven desde Neumáticos); sus artículos siguen contando en el consolidado */
+  ocultos?: string[];
 }
 
 const ICONOS = [Building2, Truck, MapPin, Package, Warehouse];
@@ -76,7 +78,7 @@ function TarjetaAlmacen({ frente, dorso, tono = 'normal' }: { frente: ReactNode;
 }
 
 /** Pantalla de inicio del inventario: un almacén registrado por tarjeta, el inventario global y los artículos sin almacén válido */
-export function InventarioPortal({ items, almacenes, onElegir }: Props) {
+export function InventarioPortal({ items, almacenes, onElegir, ocultos = [] }: Props) {
   // Los servicios no van en almacén: la tarjeta de sin almacén cuenta solo los físicos, como la lista
   const activos = useMemo(() => items.filter(i => i.activo && !esServicio(i)), [items]);
   const { porAlmacen, sinAlmacen } = useMemo(() => repartirPorAlmacen(activos, almacenes), [activos, almacenes]);
@@ -100,6 +102,7 @@ export function InventarioPortal({ items, almacenes, onElegir }: Props) {
 
       <div className="inv-portal__grid">
         {almacenes.map((nombre, i) => {
+          if (ocultos.includes(nombre)) return null;
           const Icono = ICONOS[i % ICONOS.length];
           const lista = porAlmacen.get(nombre) ?? [];
           return (

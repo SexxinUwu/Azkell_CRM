@@ -29,6 +29,9 @@ import { ImportarInventario } from './ImportarInventario';
 import { descargarPlantilla, exportar } from './excelInventario';
 import './almacen.css';
 
+// Almacenes del ciclo de vida de las llantas: 1142 Reencauche, 1144 Reparadas, 1146 Retén y 1148 Scrap (el 100, Nuevas, sí es de Inventario)
+const ALMACENES_CICLO_LLANTAS = new Set([1142, 1144, 1146, 1148]);
+
 type Filtro = 'todos' | 'ok' | 'warning' | 'critical';
 type EstadoFiltro = 'todos' | ArticuloInv['estado_art'];
 type Pestana = 'fisicos' | 'servicios';
@@ -103,6 +106,8 @@ export function InventarioPage() {
   // Solo los almacenes registrados: el campo almacén de los artículos es texto libre y no cuenta como almacén
   const almacenes = useMemo(() => (almacenesQ.data ?? []).map(a => a.nombre), [almacenesQ.data]);
   const registrados = useMemo(() => new Set(almacenes.map(claveAlmacen)), [almacenes]);
+  // Reencauche, Reparadas, Retén y Scrap son lugares del ciclo de vida de las llantas: se ven desde Neumáticos, no como tarjeta de Inventario
+  const ocultosPortal = useMemo(() => (almacenesQ.data ?? []).filter(a => ALMACENES_CICLO_LLANTAS.has(Number(a.id))).map(a => a.nombre), [almacenesQ.data]);
 
   const enAlmacen = useCallback((i: ArticuloInv) => {
     if (!almacenSel) return true;
@@ -268,7 +273,7 @@ export function InventarioPage() {
             : 'Cuando almacén registre artículos, aparecerán aquí.'}
         </EmptyState>
       ) : enPortal ? (
-        <InventarioPortal items={items} almacenes={almacenes} onElegir={elegirAlmacen} />
+        <InventarioPortal items={items} almacenes={almacenes} ocultos={ocultosPortal} onElegir={elegirAlmacen} />
       ) : (
         <div className="inv-pagina">
           {/* ─── Encabezado ─── */}
