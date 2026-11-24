@@ -74,7 +74,9 @@ export function usePlacasLista() {
   return useQuery<PlacaLista[]>({
     queryKey: ['mant', 'placas-lista'],
     queryFn: () => api<{ ok?: boolean; data?: PlacaLista[] }>('/neumaticos/placas').then(r => r.data ?? []),
-    staleTime: 5 * 60_000,
+    // Corto: al dar de alta llantas a una unidad, debe aparecer en el selector sin esperar minutos
+    staleTime: 15_000,
+    refetchOnMount: 'always',
   });
 }
 
