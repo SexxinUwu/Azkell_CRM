@@ -16,8 +16,10 @@ import { PersonaDocumentos } from './PersonaDocumentos';
 type Pestana = 'ficha' | 'documentos';
 
 // RRHH › Personal: el detalle de la persona ES su ficha de registro (la misma que se imprime), con las acciones arriba a la derecha.
-export function PersonaFicha({ persona: p, onEditar, onEliminar, onVolver, verPagos }: {
+export function PersonaFicha({ persona: p, onEditar, onEliminar, onVolver, verPagos, embebida = false }: {
   persona: Persona;
+  /** Dentro del panel de la pantalla ancha: las acciones están en el encabezado de la página y aquí solo van las pestañas */
+  embebida?: boolean;
   onEditar?: () => void;
   onEliminar?: () => void;
   /** Solo en el celular: vuelve a la lista */
@@ -57,7 +59,7 @@ export function PersonaFicha({ persona: p, onEditar, onEliminar, onVolver, verPa
       transition={spring}
       aria-label={`Ficha de ${nombreCompleto(p)}`}
     >
-      <div className="tarjeta__barra">
+      {!embebida && <div className="tarjeta__barra">
         {onVolver ? (
           <button type="button" className="tarjeta__volver pressable" onClick={onVolver}><ChevronLeft size={22} /> Personal</button>
         ) : <span />}
@@ -68,7 +70,7 @@ export function PersonaFicha({ persona: p, onEditar, onEliminar, onVolver, verPa
           {onEditar && <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--ambar" data-tip="Editar" aria-label="Editar" icon={<Pencil size={17} />} onClick={onEditar} />}
           {onEliminar && <Button variant="plain" size="sm" iconOnly className="acciones-iconos__boton acciones-iconos__boton--rojo" data-tip="Eliminar" aria-label="Eliminar" icon={<Trash2 size={17} />} onClick={onEliminar} />}
         </div>
-      </div>
+      </div>}
       <div className="ficha-personal__pestanas">
         <SegmentedControl<Pestana> label="Ficha o documentos" value={pestana} onChange={elegir} options={[{ value: 'ficha', label: 'Ficha' }, { value: 'documentos', label: 'Documentos' }]} />
       </div>

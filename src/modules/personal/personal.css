@@ -247,3 +247,18 @@
 
 .doc-ficha__persona { font-size: 1.1rem; letter-spacing: -0.01em; }
 .docp .doc-ficha { box-shadow: none; padding: 0; background: none; }
+
+/* ─── Pantalla ancha: el panel de la persona con el diseño de Documentos de flota ─── */
+.pers-detalle {
+  min-width: 0; min-height: 0; display: flex; flex-direction: column;
+  border-radius: var(--r-xl); background: var(--surface); box-shadow: 0 0 0 1px var(--separator), 0 1px 2px rgba(0, 0, 0, 0.04);
+  max-height: calc(100dvh - 330px); overflow-y: auto; overscroll-behavior: contain;
+}
+@media (min-width: 1024px) {
+  .page--fill .pers-detalle { max-height: none; height: 100%; }
+}
+.pers-detalle .ficha-personal { flex: 1 1 auto; padding-top: var(--s-3); }
+.doc-unidad__persona { font-size: 0.875rem; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-unidad__persona strong { font-weight: 700; }
+.doc-unidad .foto-persona { flex-shrink: 0; }
+.doc-unidad__texto .doc-unidad__tipo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
