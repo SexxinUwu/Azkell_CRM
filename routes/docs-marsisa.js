@@ -72,7 +72,8 @@ module.exports = (db, logAudit) => {
                 `SELECT d.id, d.id_remoto, d.placa, d.unidad_activa, d.tipo_codigo, d.tipo_nombre, d.numero, d.emisor,
                         DATE_FORMAT(d.fecha_emision, '%Y-%m-%d') AS fecha_emision, DATE_FORMAT(d.fecha_vencimiento, '%Y-%m-%d') AS fecha_vencimiento,
                         d.tiene_archivo, (d.archivo_url IS NOT NULL) AS archivo_guardado, DATE_FORMAT(d.actualizado_remoto, '%Y-%m-%d %H:%i') AS actualizado_remoto, DATE_FORMAT(d.sincronizado_en, '%Y-%m-%d %H:%i') AS sincronizado_en,
-                        (p.placa IS NOT NULL AND (p.estado IS NULL OR p.estado NOT LIKE 'inactiv%')) AS en_flota, NULLIF(TRIM(COALESCE(p.alquilada_a, '')), '') AS alquilada_a, NULLIF(TRIM(COALESCE(p.cliente, '')), '') AS empresa
+                        (p.placa IS NOT NULL AND (p.estado IS NULL OR p.estado NOT LIKE 'inactiv%')) AS en_flota, NULLIF(TRIM(COALESCE(p.alquilada_a, '')), '') AS alquilada_a, NULLIF(TRIM(COALESCE(p.cliente, '')), '') AS empresa,
+                        p.tipo AS tipo_unidad, DATE_FORMAT(p.alquiler_desde, '%Y-%m-%d') AS alquiler_desde, p.alquiler_nota, p.docs_responsable
                  FROM marsisa_docs_flota_ext d LEFT JOIN placas p ON ${norm('p.placa')} = ${norm('d.placa')}
                  WHERE d.eliminado_remoto = 0 ORDER BY d.placa, d.tipo_nombre, d.fecha_vencimiento DESC`);
             const [[u]] = await P(req).query("SELECT DATE_FORMAT(MAX(sincronizado_en), '%Y-%m-%d %H:%i') AS ultima FROM marsisa_docs_flota_ext");
