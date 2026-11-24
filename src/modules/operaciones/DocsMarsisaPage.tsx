@@ -27,21 +27,29 @@ import { repartirPorcentajes } from '../flota/docsEstado';
 
 interface DocExterno {
   id: number; id_remoto: number; placa: string; unidad_activa: boolean; tipo_codigo: string; tipo_nombre: string; numero: string | null; emisor: string | null;
-  fecha_emision: string | null; fecha_vencimiento: string | null; tiene_archivo: boolean; archivo_guardado: boolean; sincronizado_en: string;
+  fecha_emision: string | null; fecha_vencimiento: string | null; tiene_archivo: boolean; archivo_guardado: boolean; actualizado_remoto: string | null; sincronizado_en: string;
   estado: 'vigente' | 'por_vencer' | 'vencido' | 'sin_vencimiento'; dias: number | null;
 }
 interface RespuestaLista { ok: boolean; data: DocExterno[]; ultima_sincronizacion: string | null; sinTabla?: boolean }
 
 type Grupo = 'todos' | 'vigente' | 'por_vencer' | 'vencido' | 'sin_archivo';
 
+// Todos los datos que entrega la API (más cuándo se sincronizó): id, unidad y si está activa, tipo (código y nombre), número, emisor, fechas, estado, días y archivo
 const COLUMNAS: ColumnaTabla[] = [
+  { id: 'id', titulo: 'ID API', ancho: 90, alinear: 'right' },
   { id: 'placa', titulo: 'Unidad', ancho: 130 },
+  { id: 'activa', titulo: 'Unidad activa', ancho: 110, alinear: 'center' },
   { id: 'tipo', titulo: 'Documento', ancho: 260, minimo: 160 },
+  { id: 'codigo', titulo: 'Código del tipo', ancho: 220, minimo: 120 },
   { id: 'numero', titulo: 'Número', ancho: 240, minimo: 120 },
+  { id: 'emisor', titulo: 'Emisor', ancho: 160 },
   { id: 'emision', titulo: 'Emisión', ancho: 110 },
   { id: 'vence', titulo: 'Vencimiento', ancho: 120 },
   { id: 'estado', titulo: 'Estado', ancho: 190 },
+  { id: 'dias', titulo: 'Días', ancho: 80, alinear: 'right' },
   { id: 'archivo', titulo: 'Archivo', ancho: 120, alinear: 'center' },
+  { id: 'actualizado', titulo: 'Actualizado en la API', ancho: 160 },
+  { id: 'sincronizado', titulo: 'Sincronizado', ancho: 150 },
 ];
 
 const TONO: Record<DocExterno['estado'], 'green' | 'amber' | 'red' | 'gray'> = { vigente: 'green', por_vencer: 'amber', vencido: 'red', sin_vencimiento: 'gray' };
@@ -213,20 +221,27 @@ export function DocsMarsisaPage() {
               <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setTipo(''); setGrupo('todos'); }}>Quitar filtros</button>
             </EmptyState>
           ) : (
-            <TablaRedimensionable id="docs-marsisa-api" ariaLabel="Documentos de flota de la API" altoMax="62vh" columnas={COLUMNAS}>
+            <TablaRedimensionable id="docs-marsisa-api-v2" ariaLabel="Documentos de flota de la API" altoMax="62vh" columnas={COLUMNAS}>
               {filas.map(d => (
                 <tr key={d.id}>
+                  <Celda mono alinear="right">{d.id_remoto}</Celda>
                   <Celda><LicensePlate plate={d.placa} size="sm" /></Celda>
+                  <Celda alinear="center">{d.unidad_activa ? 'Sí' : 'No'}</Celda>
                   <Celda>{d.tipo_nombre}</Celda>
+                  <Celda mono>{d.tipo_codigo}</Celda>
                   <Celda mono>{d.numero || '—'}</Celda>
+                  <Celda>{d.emisor || '—'}</Celda>
                   <Celda mono>{d.fecha_emision ? formatFechaPe(d.fecha_emision) : '—'}</Celda>
                   <Celda mono>{d.fecha_vencimiento ? formatFechaPe(d.fecha_vencimiento) : '—'}</Celda>
                   <Celda><Badge tone={TONO[d.estado]}>{textoEstado(d)}</Badge></Celda>
+                  <Celda mono alinear="right">{d.dias ?? '—'}</Celda>
                   <Celda alinear="center">
                     {d.tiene_archivo
                       ? <Button variant="plain" size="sm" icon={<Eye size={14} />} loading={abriendo === d.id} onClick={() => { void verArchivo(d); }}>Ver</Button>
                       : <span className="c-secondary">—</span>}
                   </Celda>
+                  <Celda mono>{d.actualizado_remoto ?? '—'}</Celda>
+                  <Celda mono>{d.sincronizado_en}</Celda>
                 </tr>
               ))}
             </TablaRedimensionable>
