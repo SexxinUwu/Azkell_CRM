@@ -5283,7 +5283,7 @@ app.use('/api/operaciones/vales', require('./routes/vales_viaje')(db, logAudit))
 // Documentos de flota de la API externa de Marsisa (copia de solo consulta en su propia tabla). Va antes de /api/operaciones.
 app.use('/api/operaciones/docs-marsisa', require('./routes/docs-marsisa')(db, logAudit));
 // Conducción por RPM (solo Marsisa): lecturas de RPM por rango y modelo de motor desde Wialon
-app.use('/api/operaciones/conduccion-rpm', require('./routes/conduccion-rpm')(db, logAudit));
+app.use('/api/operaciones/conduccion-rpm', require('./routes/conduccion-rpm')(db, logAudit, combustibleRouter.helpers));
 app.use('/api/operaciones/gre', require('./routes/gre_pdf')(db, logAudit));
 app.use('/api/operaciones/gre', require('./routes/gre')(db, logAudit));
 // Puntos de carga y descarga de cada cliente (catálogo para llenar las guías). Va antes de /api/operaciones.
@@ -5492,6 +5492,19 @@ function programarGpsNocturno() {
     }, prox - ahora);
 }
 programarGpsNocturno();
+
+// Telemetría de viajes de Marsisa (CAN y RPM): cada 20 minutos guarda los viajes recientes ya terminados, para que la pantalla los muestre al instante.
+// Se apaga con PRECALCULO_TELEMETRIA=0. Va de a un viaje por vez y entra por la misma cola que las consultas de la pantalla.
+if (process.env.PRECALCULO_TELEMETRIA !== '0') {
+    const vuelta = async () => {
+        try {
+            const { getAllActiveTenants } = require('./services/tenant_master');
+            const marsisa = (await getAllActiveTenants()).find(t => String(t.slug).toLowerCase() === 'marsisa');
+            if (marsisa) await require('./services/telemetria_viaje').precalcular(marsisa.pool, combustibleRouter.helpers);
+        } catch (e) { console.warn('Precálculo de telemetría:', e.message); }
+    };
+    setTimeout(() => { vuelta(); setInterval(vuelta, 20 * 60 * 1000); }, 3 * 60 * 1000);
+}
 
 // Notificaciones: resumen diario de documentos de flota por vencer o vencidos (7:00 hora de Lima, por empresa)
 require('./services/notificaciones_eventos').programarVencimientos(async () => {

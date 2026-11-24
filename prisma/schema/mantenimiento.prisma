@@ -571,3 +571,19 @@ model ConduccionRpmConfig {
 
   @@map("conduccion_rpm_config")
 }
+
+// Telemetría (CAN y RPM) de los viajes de Marsisa ya terminados, guardada para no volver a pedirla a Wialon
+model ViajeTelemetriaGps {
+  id           Int      @id @default(autoincrement())
+  viaje        String   @db.VarChar(60)
+  placa        String   @db.VarChar(20)
+  desde_unix   Int
+  hasta_unix   Int
+  can_json     String?  @db.MediumText
+  rpm_json     String?  @db.MediumText
+  calculado_en DateTime @default(now()) @db.Timestamp(0)
+
+  @@unique([viaje, placa], map: "uq_viaje_telemetria")
+  @@index([placa], map: "idx_viaje_telemetria_placa")
+  @@map("viaje_telemetria_gps")
+}

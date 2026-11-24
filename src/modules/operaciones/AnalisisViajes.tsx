@@ -584,6 +584,13 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
     return { viaje: x.viaje, placa: x.placa, ini: r.ini, fin: r.fin };
   }), [pagina_]);
   const gps = useCanViajes(itemsCan, canActivo && !urea, esMarsisa && !urea);
+  // Cuando la página ya cargó, se adelanta en silencio el principio de la siguiente (queda en caché y, en Marsisa, guardado en el servidor)
+  const paginaCargada = gps.total > 0 && gps.cargando === 0;
+  const itemsSiguiente = useMemo<ItemCan[]>(() => (paginaCargada ? visibles.slice(pagActual * tamano, pagActual * tamano + 8).filter(x => x.placa).map(x => {
+    const r = rangoViaje(x);
+    return { viaje: x.viaje, placa: x.placa, ini: r.ini, fin: r.fin };
+  }) : []), [paginaCargada, visibles, pagActual, tamano]);
+  useCanViajes(itemsSiguiente, canActivo && !urea && itemsSiguiente.length > 0, esMarsisa && !urea);
   const lote: LoteGps = gps.lote;
   // Como el clásico: el recorrido es el del bloque de diésel del viaje (urea, el general)
   const kmDelViaje = (t: Trip) => (urea ? n(t.recorridoKm) : n(bloqueD2(t)?.recorridoKm ?? t.recorridoKm));

@@ -73,18 +73,23 @@ function rangosDe(cfg, modelo) {
     return { modelo: String(modelo || '').trim(), conocido: !!r, limites: r ? r.limites : cfg.generico };
 }
 
-/** Clasifica una lectura de RPM (mayor que 0) en su rango */
-function categoria(rpm, l) {
-    if (rpm < l[0]) return 'ralenti';
-    if (rpm <= l[1]) return 'bajo';
-    if (rpm <= l[2]) return 'verde';
-    if (rpm <= l[3]) return 'potencia';
-    return 'sobre';
+// Las lecturas se guardan en un histograma por tramos de 10 RPM: así, si se cambian los rangos del motor, lo ya guardado se reparte de nuevo
+const BIN = 10;
+
+/** Reparte un histograma { tramo: lecturas } en los cinco rangos: ralentí < a ≤ bajo torque < b ≤ zona verde < c ≤ potencia < d ≤ sobrerrevolución */
+function clasificar(hist, l) {
+    const c = { ralenti: 0, bajo: 0, verde: 0, potencia: 0, sobre: 0 };
+    for (const [b, n] of Object.entries(hist || {})) {
+        const rpm = Number(b) * BIN;
+        const k = rpm < l[0] ? 'ralenti' : rpm < l[1] ? 'bajo' : rpm < l[2] ? 'verde' : rpm < l[3] ? 'potencia' : 'sobre';
+        c[k] += Number(n);
+    }
+    return c;
 }
 
 /** Valida cuatro límites de RPM crecientes */
 function limitesValidos(l) {
-    return Array.isArray(l) && l.length === 4 && l.every(v => Number.isInteger(v) && v > 0 && v <= 6000) && l[0] < l[1] && l[1] < l[2] && l[2] < l[3];
+    return Array.isArray(l) && l.length === 4 && l.every(v => Number.isInteger(v) && v > 0 && v <= 6000 && v % BIN === 0) && l[0] < l[1] && l[1] < l[2] && l[2] < l[3];
 }
 
-module.exports = { cargarConfig, invalidar, rangosDe, categoria, limitesValidos, clave };
+module.exports = { cargarConfig, invalidar, rangosDe, clasificar, BIN, limitesValidos, clave };

@@ -1191,7 +1191,7 @@ module.exports = function (db, broadcast, logAudit) {
         }
     });
 
-    router.get('/analisis-viajes', async (req, res) => {
+    const handlerAnalisisViajes = async (req, res) => {
         try {
             const tdb = getDb(req);
             const { combustible, placa, search, fecha_desde, fecha_hasta } = req.query;
@@ -1818,7 +1818,8 @@ module.exports = function (db, broadcast, logAudit) {
             console.error("Error en análisis dinámico de combustible:", err);
             res.status(500).json({ ok: false, error: err.message });
         }
-    });
+    };
+    router.get('/analisis-viajes', handlerAnalisisViajes);
 
     // ============================================================
     // 10. 🗂️ CATÁLOGOS ÚNICOS PARA FILTROS
@@ -1982,6 +1983,44 @@ module.exports = function (db, broadcast, logAudit) {
         };
 
         return { sid, baseUrl, cache: _wialonCache };
+    }
+
+    // Periodo (segundos unix) que se consulta en Wialon para las fechas de un viaje; null si no hay fechas utilizables.
+    // Es el mismo cálculo de la consulta CAN (un solo vale se amplía 12 h a cada lado); sirve para saber si un viaje ya está guardado.
+    function periodoUnix(fechaInicio, fechaFin) {
+        const parseToUnix = (dateStr) => {
+            if (!dateStr || dateStr === 'N/D' || dateStr === '---' || dateStr === '—') return null;
+            const str = String(dateStr).trim();
+            if (/^\d{10,13}$/.test(str)) {
+                const n = Number(str);
+                return n > 1e11 ? Math.floor(n / 1000) : n;
+            }
+            const ddmmyyyy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+            if (ddmmyyyy) {
+                const [, d, m, y, h, min, s] = ddmmyyyy;
+                const dateObj = new Date(Number(y), Number(m) - 1, Number(d), Number(h || 0), Number(min || 0), Number(s || 0));
+                return Math.floor(dateObj.getTime() / 1000);
+            }
+            const d = new Date(str.includes('T') || str.includes('Z') ? str : (str.replace(' ', 'T') + '-05:00'));
+            if (!isNaN(d.getTime())) return Math.floor(d.getTime() / 1000);
+            const fallback = new Date(str);
+            return isNaN(fallback.getTime()) ? null : Math.floor(fallback.getTime() / 1000);
+        };
+
+        let fromUnix = parseToUnix(fechaInicio);
+        let toUnix = parseToUnix(fechaFin);
+        if (!fromUnix && !toUnix) return null;
+        if (!fromUnix) fromUnix = toUnix;
+        if (!toUnix) toUnix = fromUnix;
+
+        // Si es un solo vale en el viaje (diferencia de tiempo <= 5 minutos o idéntica fecha)
+        if (toUnix - fromUnix < 300) {
+            fromUnix = fromUnix - (12 * 3600); // 12 horas antes
+            toUnix = toUnix + (12 * 3600);     // 12 horas después
+        }
+
+        if (toUnix <= fromUnix) return null;
+        return { from: fromUnix, to: toUnix };
     }
 
     async function consultarTelemetriaViajeWialon(baseUrl, sid, cache, placa, fechaInicio, fechaFin) {
@@ -2534,6 +2573,18 @@ module.exports = function (db, broadcast, logAudit) {
         return data ? data.recorridoKmGps : null;
     };
 
+    // Ayudantes que usa la telemetría guardada de Marsisa (routes/conduccion-rpm.js): misma sesión de Wialon, mismo periodo y mismo análisis
+    router.helpers = {
+        getWialonContext, consultarTelemetriaViajeWialon, periodoUnix,
+        analisisViajes: handlerAnalisisViajes,
+        invalidarSesion: () => { _wialonCache.sid = null; _wialonCache.expiresAt = 0; },
+        resolverUnidad: (cache, placa) => {
+            const limpia = String(placa).replace(/[^A-Z0-9]/gi, '').toUpperCase();
+            let unit = cache.unitsMap.get(limpia);
+            if (!unit) { for (const [k, u] of cache.unitsMap.entries()) { if (k.includes(limpia) || limpia.includes(k)) { unit = u; break; } } }
+            return unit || null;
+        },
+    };
     return router;
 };
 
