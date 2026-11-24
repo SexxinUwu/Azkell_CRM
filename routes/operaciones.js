@@ -1824,8 +1824,8 @@ module.exports = function (db, broadcast, logAudit, opciones = {}) {
             if (cliente && String(cliente).trim() && cliente !== 'TODOS') { sql += ` AND (os.cliente_nombre = ? OR os.cliente_id = ?)`; params.push(cliente, cliente); }
             if (q && String(q).trim()) {
                 const term = `%${String(q).trim()}%`;
-                sql += ` AND (os.codigo_orden LIKE ? OR os.cliente_nombre LIKE ? OR os.origen LIKE ? OR os.destino LIKE ? OR os.tipo_servicio LIKE ? OR b.viaje LIKE ? OR ov.conductor LIKE ? OR ov.placa_tracto LIKE ?)`;
-                params.push(term, term, term, term, term, term, term, term);
+                sql += ` AND (os.codigo_orden LIKE ? OR os.cliente_nombre LIKE ? OR os.origen LIKE ? OR os.destino LIKE ? OR os.tipo_servicio LIKE ? OR b.viaje LIKE ? OR ov.conductor LIKE ? OR ov.placa_tracto LIKE ? OR os.destinatario LIKE ? OR os.intermediario LIKE ?)`;
+                params.push(term, term, term, term, term, term, term, term, term, term);
             }
             sql += ` ORDER BY os.fecha DESC, os.id DESC LIMIT 1500`;
             const [rows] = await tdb.query(sql, params);

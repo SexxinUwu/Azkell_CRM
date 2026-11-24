@@ -34,6 +34,8 @@ interface Orden {
   peso_estimado: number | string | null; moneda: string | null; tipo_cambio: number | string | null; costo_flete: number | string | null; impuesto: string | null;
   destinatario: string | null; remitente_generador: string | null; observaciones: string | null;
   viaje: string | null; viajes_n: number; viaje_estado: string | null; conductor: string | null; placa_tracto: string | null; placa_carreta: string | null;
+  /** CLIENTE DIRECTO o INTERMEDIARIO; con intermediario, «intermediario» es la empresa que nos contrata */
+  tipo_contratacion?: string | null; intermediario?: string | null;
   ejecucion: string | null; tercero_nombre: string | null; ruta?: string | null; distancia_km?: number | string | null; peso_guias?: number | string | null; guias_n?: number;
 }
 interface GuiaDeServicio { id: number; numero_completo: string; tipo: string; peso_kg: number | string; estado: string; fecha_emision: string | null; remitente_nombre: string | null; destinatario_nombre: string | null }
@@ -79,6 +81,14 @@ const cerrado = (e: string) => e === 'ENTREGADO' || e === 'ANULADO';
 function Pastilla({ estado }: { estado: string }) {
   const t = TONO[estado] ?? 'gray';
   return <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, background: `var(--${t}-tint)`, color: `var(--${t}-ink)`, fontSize: '0.6875rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{ETIQUETA[estado] ?? estado}</span>;
+}
+
+/** El servicio es por intermediario: otra empresa nos contrata y el cliente es el de su carga */
+const esSubcontratado = (o: Orden) => String(o.tipo_contratacion ?? '').toUpperCase() === 'INTERMEDIARIO' && !!String(o.intermediario ?? '').trim();
+
+function PastillaContratacion({ subcontratado }: { subcontratado?: boolean }) {
+  const t = subcontratado ? 'amber' : 'gray';
+  return <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 999, background: `var(--${t}-tint)`, color: `var(--${t}-ink)`, fontSize: '0.6875rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{subcontratado ? 'Subcontratado' : 'Directo'}</span>;
 }
 
 // Elegir un viaje abierto para sumar el servicio
@@ -133,6 +143,9 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'codigo', titulo: 'Orden', ancho: 150, minimo: 120 },
   { id: 'fecha', titulo: 'Fecha', ancho: 110 },
   { id: 'cliente', titulo: 'Cliente', ancho: 220, minimo: 140 },
+  { id: 'destinatario', titulo: 'Destinatario', ancho: 220, minimo: 140 },
+  { id: 'contratacion', titulo: 'Contratación', ancho: 130 },
+  { id: 'contratante', titulo: 'Empresa que nos contrata', ancho: 210, minimo: 140 },
   { id: 'tramo', titulo: 'Tramo', ancho: 240, minimo: 150 },
   { id: 'km', titulo: 'Distancia', ancho: 100, alinear: 'right' },
   { id: 'peso', titulo: 'Peso', ancho: 100, alinear: 'right' },
@@ -231,8 +244,8 @@ export function OrdenesServicioPage() {
   async function exportar() {
     try {
       await exportarExcel('Ordenes-de-servicio', 'Órdenes',
-        ['Orden', 'Fecha', 'Cliente', 'Tipo', 'Sentido', 'Origen', 'Destino', 'Distancia (km)', 'Carga', 'Peso (kg)', 'Estado', 'Viaje', 'Conductor', 'Tracto', 'Moneda', 'Flete'],
-        visibles.map(x => [x.codigo_orden, x.fecha_fmt, x.cliente_nombre, x.tipo_servicio, x.es_retorno ? 'Retorno' : 'Ida', x.origen, x.destino, n(x.distancia_km) || '', x.descripcion_carga, n(x.peso_guias),
+        ['Orden', 'Fecha', 'Cliente', 'Destinatario', 'Contratación', 'Empresa que nos contrata', 'Tipo', 'Sentido', 'Origen', 'Destino', 'Distancia (km)', 'Carga', 'Peso (kg)', 'Estado', 'Viaje', 'Conductor', 'Tracto', 'Moneda', 'Flete'],
+        visibles.map(x => [x.codigo_orden, x.fecha_fmt, x.cliente_nombre, x.destinatario ?? '', esSubcontratado(x) ? 'Subcontratado' : 'Directo', esSubcontratado(x) ? x.intermediario : '', x.tipo_servicio, x.es_retorno ? 'Retorno' : 'Ida', x.origen, x.destino, n(x.distancia_km) || '', x.descripcion_carga, n(x.peso_guias),
           ETIQUETA[estadoDe(x)], x.viaje, x.conductor, x.placa_tracto, x.moneda, n(x.costo_flete)]));
       haptic('success');
     } catch (err) { toast(errorMessage(err), 'error'); }
@@ -265,7 +278,7 @@ export function OrdenesServicioPage() {
         onConfirm={async () => { if (entregar) { await cambiarEstado(entregar, 'ENTREGADO', 'Orden entregada'); setEntregar(null); } }} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-        <BarraFiltros busqueda={busqueda} placeholder="Orden, cliente, tramo, viaje, conductor o placa…" activos={filtrosActivos} onAbrirFiltros={() => setFiltrando(true)}
+        <BarraFiltros busqueda={busqueda} placeholder="Orden, cliente, destinatario, tramo, viaje o placa…" activos={filtrosActivos} onAbrirFiltros={() => setFiltrando(true)}
           onBusqueda={v => { setBusqueda(v); window.clearTimeout((window as unknown as { _osT?: number })._osT); (window as unknown as { _osT?: number })._osT = window.setTimeout(() => setQ(v.trim()), 350); }} />
 
         <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} onLimpiar={limpiarFiltros} resultado={visibles.length} unidad="orden">
@@ -320,6 +333,9 @@ export function OrdenesServicioPage() {
                   <Celda mono>{x.codigo_orden}{x.es_retorno ? ' · retorno' : ''}</Celda>
                   <Celda mono>{x.fecha_fmt || '—'}</Celda>
                   <Celda>{x.cliente_nombre || 'Sin cliente'}</Celda>
+                  <Celda>{x.destinatario || '—'}</Celda>
+                  <Celda>{esSubcontratado(x) ? <PastillaContratacion subcontratado /> : <PastillaContratacion />}</Celda>
+                  <Celda>{esSubcontratado(x) ? x.intermediario : '—'}</Celda>
                   <Celda>{[x.origen, x.destino].filter(Boolean).join(' → ') || '—'}</Celda>
                   <Celda alinear="right" mono>{n(x.distancia_km) ? `${n(x.distancia_km).toLocaleString('es-PE')} km` : '—'}</Celda>
                   <Celda alinear="right" mono>{n(x.peso_guias) ? `${n(x.peso_guias).toLocaleString('es-PE')} kg` : '—'}</Celda>
