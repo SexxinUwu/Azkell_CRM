@@ -19,3 +19,15 @@ export function ajusteAMeta(r: ResultadoRpm) {
 
 export const notaRpm = (p: number) => (p >= 85 ? { txt: 'Excelente', tono: 'ok', color: 'green' } : p >= 70 ? { txt: 'Buena', tono: 'ok', color: 'green' } : p >= 50 ? { txt: 'Regular', tono: 'medio', color: 'amber' } : { txt: 'A mejorar', tono: 'mal', color: 'red' });
 
+/** Porcentajes enteros de bajo torque, zona verde y potencia que suman exactamente 100 (se reparte el resto a los de mayor decimal) */
+export function porcentajesEnteros(r: ResultadoRpm) {
+  const c = [r.conteos.bajo, r.conteos.verde, r.conteos.potencia];
+  const total = c[0] + c[1] + c[2];
+  if (total <= 0) return { bajo: 0, verde: 0, potencia: 0 };
+  const exacto = c.map(n => (n / total) * 100);
+  const base = exacto.map(Math.floor);
+  let falta = 100 - base.reduce((a, b) => a + b, 0);
+  const orden = exacto.map((v, i) => ({ i, resto: v - base[i] })).sort((a, b) => b.resto - a.resto);
+  for (const o of orden) { if (falta <= 0) break; base[o.i]++; falta--; }
+  return { bajo: base[0], verde: base[1], potencia: base[2] };
+}
