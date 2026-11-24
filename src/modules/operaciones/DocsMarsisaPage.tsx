@@ -231,13 +231,18 @@ export function DocsMarsisaPage() {
       let fallidos = 0;
       for (let vuelta = 0; vuelta < 400; vuelta++) {
         // Una tanda corta (el servidor devuelve lo avanzado). Si el proxy corta una (502/504), se reintenta: lo ya guardado se conserva
-        let r: { ok?: boolean; error?: string; guardados: number; fallidos: unknown[]; pendientes: number; detener: boolean } | null = null;
+        let r: { ok?: boolean; error?: string; guardados: number; fallidos: unknown[]; pendientes: number; detener: boolean; limitado?: number } | null = null;
         for (let intento = 0; intento < 4 && !r; intento++) {
-          try { r = await api<{ ok?: boolean; error?: string; guardados: number; fallidos: unknown[]; pendientes: number; detener: boolean }>(`/operaciones/docs-marsisa/sincronizar-archivos?limite=4${falloIds.length ? `&excluir=${falloIds.join(',')}` : ''}`, { method: 'POST', body: {} }); }
+          try { r = await api<{ ok?: boolean; error?: string; guardados: number; fallidos: unknown[]; pendientes: number; detener: boolean; limitado?: number }>(`/operaciones/docs-marsisa/sincronizar-archivos?limite=4${falloIds.length ? `&excluir=${falloIds.join(',')}` : ''}`, { method: 'POST', body: {} }); }
           catch (e) { if (intento === 3) throw e; setGuardando('Reintentando…'); await new Promise(x => setTimeout(x, 3000)); }
         }
         if (!r) break;
         if (r.ok === false) throw new Error(r.error || 'No se pudieron guardar los archivos');
+        // La API de Marsisa limita las consultas por minuto: se espera lo que pide y se sigue (no cuenta como fallo)
+        if (r.limitado) {
+          for (let seg = r.limitado; seg > 0; seg--) { setGuardando(`La API pidió esperar… ${seg} s · quedan ${r.pendientes}`); await new Promise(x => setTimeout(x, 1000)); }
+          continue;
+        }
         fallidos += r.fallidos.length;
         for (const x of r.fallidos as Array<{ id: number; error: string }>) { falloIds.push(x.id); motivos.push(x); }
         setGuardando(r.pendientes > 0 ? `Guardando archivos… quedan ${r.pendientes}` : 'Terminando…');
