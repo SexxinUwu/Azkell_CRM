@@ -36,6 +36,7 @@ export interface LlantaListado {
   estado_ciclo: string | null;
   almacen: string | null;
   placa_actual: string | null;
+  posicion?: string | null;       // posición de la llanta en la unidad (1, 2, … R1); null si no está montada
   gastos_compra: number | '';     // '' = sin dato de compra
   moneda_compra?: string;         // moneda de la orden de compra (PEN o USD): el costo se muestra en esa moneda
   orden_compra?: string | null;   // OC de la recepción que dio de alta la llanta (si es de recepción)
@@ -77,12 +78,13 @@ const TONO_SITUACION: Record<string, Tono> = {
   'Código provisional': 'gris',
 };
 
-const ENCABEZADOS_EXCEL = ['Neumático', 'Vida actual', 'Medida', 'Marca', 'Modelo', 'Vehículo actual', 'Gastos de compra', 'Moneda', 'Orden de compra', 'Situación'];
+const ENCABEZADOS_EXCEL = ['Neumático', 'Posición', 'Vida actual', 'Medida', 'Marca', 'Modelo', 'Vehículo actual', 'Gastos de compra', 'Moneda', 'Orden de compra', 'Situación'];
 
 // Columnas de la tabla: título, cómo se ordena y cómo se mide su ancho según lo que contiene
 interface DefColumna { id: string; titulo: string; alinear?: 'right' | 'center'; mono?: boolean; extra?: number; minimo: number; maximo: number; valor?: (l: LlantaListado) => string | number; texto?: (l: LlantaListado) => string }
 const DEFINICION: DefColumna[] = [
   { id: 'codigo', titulo: 'Neumático', mono: true, minimo: 110, maximo: 220, valor: l => l.codigo, texto: l => l.codigo },
+  { id: 'posicion', titulo: 'Posición', alinear: 'center', mono: true, minimo: 78, maximo: 100, valor: l => (l.posicion ? (Number(l.posicion) || 1000) : 2000), texto: l => l.posicion ?? '—' },
   { id: 'vida', titulo: 'Vida', minimo: 64, maximo: 90, valor: l => l.vida ?? -1, texto: l => vidaTexto(l.vida) },
   { id: 'medida', titulo: 'Medida', mono: true, minimo: 90, maximo: 170, valor: l => l.medida ?? '', texto: l => l.medida ?? '' },
   { id: 'marca', titulo: 'Marca', minimo: 80, maximo: 160, valor: l => l.marca ?? '', texto: l => l.marca ?? '' },
@@ -404,7 +406,7 @@ export function NeumaticosListado() {
     try {
       // Exporta lo que se ve: las filas actuales del listado (con el filtro y la búsqueda aplicados)
       await exportarExcel('Neumaticos', 'Neumáticos', ENCABEZADOS_EXCEL, filas.map(l => [
-        l.codigo, vidaTexto(l.vida), l.medida ?? '', l.marca ?? '', l.modelo ?? '', l.placa_actual ?? '', l.gastos_compra, l.moneda_compra ?? 'PEN', l.orden_compra ?? '', l.situacion,
+        l.codigo, l.posicion ?? '', vidaTexto(l.vida), l.medida ?? '', l.marca ?? '', l.modelo ?? '', l.placa_actual ?? '', l.gastos_compra, l.moneda_compra ?? 'PEN', l.orden_compra ?? '', l.situacion,
       ]));
     } catch (e) {
       setErrorExcel(`No se pudo exportar: ${String(e)}`);
@@ -510,7 +512,7 @@ export function NeumaticosListado() {
                   </span>
                   <span className="nl-lista__sub">{[l.marca, l.modelo, l.medida].filter(Boolean).join(' · ') || 'Sin marca ni medida'}</span>
                   <span className="nl-lista__datos">
-                    Vida {vidaTexto(l.vida)} · Vehículo {l.placa_actual || '—'} · Compra {gastosTexto(l.gastos_compra, l.moneda_compra)}
+                    Vida {vidaTexto(l.vida)} · Vehículo {l.placa_actual || '—'}{l.posicion ? ` · Posición ${l.posicion}` : ''} · Compra {gastosTexto(l.gastos_compra, l.moneda_compra)}
                   </span>
                 </span>
                 <ChevronRight size={18} aria-hidden="true" className="nl-lista__flecha" />
@@ -519,13 +521,14 @@ export function NeumaticosListado() {
           ))}
         </ul>
       ) : (
-        <TablaRedimensionable id="neumaticos-listado-v2" columnas={columnas} ariaLabel="Listado de neumáticos" altoMax="72vh" className="nl-tabla tabla-redim--compacta">
+        <TablaRedimensionable id="neumaticos-listado-v3" columnas={columnas} ariaLabel="Listado de neumáticos" altoMax="72vh" className="nl-tabla tabla-redim--compacta">
           {filas.map(l => (
             <tr key={l.codigo} className="nl-fila" onClick={() => abrirFicha(l.codigo)}>
               <Celda alinear="center">
                 <CasillaSeleccion checked={seleccion.has(l.codigo)} onChange={() => alternar(l.codigo)} label={`Seleccionar ${l.codigo}`} />
               </Celda>
               <Celda mono><span className="nl-codigo">{l.codigo}</span></Celda>
+              <Celda alinear="center" mono>{l.posicion || '—'}</Celda>
               <Celda>{vidaTexto(l.vida)}</Celda>
               <Celda mono>{l.medida || '—'}</Celda>
               <Celda>{l.marca || '—'}</Celda>

@@ -1189,7 +1189,7 @@ module.exports = function (db) {
     async function cargarListado(p) {
         const [filas] = await p.query(`
             SELECT h.codigo_llanta, h.id_neumatico, h.marca, h.modelo, h.medida, h.estado_ciclo, h.vida,
-                   h.almacen_id, h.placa_actual, h.costo_compra, i.placa AS placa_montada
+                   h.almacen_id, h.placa_actual, h.posicion_actual, h.costo_compra, i.placa AS placa_montada, i.posicion AS posicion_montada
             FROM neumaticos_hoja_vida h
             LEFT JOIN neumaticos_instalaciones i ON i.id_neumatico = h.id_neumatico AND i.fecha_out IS NULL
             ORDER BY COALESCE(h.codigo_llanta, h.id_neumatico)`);
@@ -1225,6 +1225,8 @@ module.exports = function (db) {
                     estado_ciclo: r.estado_ciclo || null,
                     almacen: NOMBRE_ALMACEN[almacenId] || null,
                     placa_actual: r.placa_montada || r.placa_actual || null,
+                    // Dónde está montada en la unidad (solo si está instalada)
+                    posicion: r.placa_montada ? (r.posicion_montada || r.posicion_actual || null) : null,
                     gastos_compra: compra > 0 ? compra : '',
                     moneda_compra: (ordenCompra && monedaPorOc.get(ordenCompra)) || 'PEN',
                     orden_compra: ordenCompra,
