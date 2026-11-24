@@ -12,7 +12,9 @@ import { AnimatedNumber } from '../../core/ui/AnimatedNumber';
 import { Badge, EmptyState, Notice, Page } from '../../core/ui/Display';
 import { BotonTip } from '../../core/ui/BotonTip';
 import { SearchField } from '../../core/ui/Field';
-import { ChoiceChips } from '../../core/ui/Chips';
+import { ChoiceChips, ToggleChips } from '../../core/ui/Chips';
+import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
+import { exportarExcel } from '../../core/lib/excel';
 import { Combobox } from '../../core/ui/Combobox';
 import { GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { LicensePlate } from '../../core/ui/LicensePlate';
@@ -48,10 +50,13 @@ interface RespuestaLista { ok: boolean; data: DocExterno[]; ultima_sincronizacio
 // Las placas a mostrar se eligen aquí y quedan en este dispositivo (aparte de las de Documentos de flota)
 const CLAVE_PLACAS = 'fleet_docs_api_placas_visibles';
 
-type Vista = 'expediente' | 'matriz' | 'calendario' | 'alquiler' | 'tabla';
-type Grupo = 'todos' | 'vigente' | 'alerta' | 'vencido';
+type Vista = 'expediente' | 'matriz' | 'calendario' | 'alquiler' | 'documento' | 'tabla';
+type GrupoUnidad = 'vigente' | 'alerta' | 'vencido';
+/** «sin» = las unidades que no tienen el documento elegido en el filtro de tipo */
+type Grupo = 'todos' | GrupoUnidad | 'sin';
+type FiltroAlquiler = 'todas' | 'alquiladas' | 'propias' | 'externa';
 interface TipoDeUnidad { codigo: string; nombre: string; actual: DocExterno; anteriores: DocExterno[] }
-interface Unidad { placa: string; activa: boolean; enFlota: boolean; alquiladaA: string | null; empresa: string | null; tipoUnidad: string | null; alquilerDesde: string | null; alquilerNota: string | null; docsResponsable: string | null; tipos: TipoDeUnidad[]; grupo: Exclude<Grupo, 'todos'>; salud: number; registros: number }
+interface Unidad { placa: string; activa: boolean; enFlota: boolean; alquiladaA: string | null; empresa: string | null; tipoUnidad: string | null; alquilerDesde: string | null; alquilerNota: string | null; docsResponsable: string | null; tipos: TipoDeUnidad[]; grupo: GrupoUnidad; salud: number; registros: number }
 /** Atajos de la selección de placas: las de la empresa Marsisa según nuestra ficha de placas (por defecto, alquiladas o no), las alquiladas a otras, las de otras empresas de nuestra flota, las que no están en nuestra flota o todas */
 type Ambito = 'marsisa' | 'alquiladas' | 'otras' | 'fuera' | 'todas';
 const esDeMarsisa = (empresa: string | null) => /marsisa/i.test(empresa ?? '');
@@ -64,14 +69,14 @@ const recibimosEnAlquiler = (d: { empresa: string | null; alquilada_a: string | 
 /** Lo de Marsisa son sus unidades (alquiladas a otras o no) más las que le alquilan: todo suma al total de Marsisa */
 const esDeLaOperacionMarsisa = (d: { en_flota: boolean; empresa: string | null; alquilada_a: string | null }) => d.en_flota && (esDeMarsisa(d.empresa) || recibimosEnAlquiler(d));
 
-const VISTAS: Array<{ value: Vista; label: string }> = [{ value: 'expediente', label: 'Expediente' }, { value: 'matriz', label: 'Matriz general' }, { value: 'calendario', label: 'Calendario' }, { value: 'alquiler', label: 'Alquiler' }, { value: 'tabla', label: 'Tabla' }];
+const VISTAS: Array<{ value: Vista; label: string }> = [{ value: 'expediente', label: 'Expediente' }, { value: 'matriz', label: 'Matriz general' }, { value: 'calendario', label: 'Calendario' }, { value: 'alquiler', label: 'Alquiler' }, { value: 'documento', label: 'Por documento' }, { value: 'tabla', label: 'Tabla' }];
 
 /** Nombre corto de un tipo para el calendario */
 const CORTOS: Record<string, string> = { TARJETA_CIRCULACION: 'TUC', REVISION_TECNICA: 'CITV', SOAT: 'SOAT', TARJETA_PROPIEDAD: 'T. Propiedad', CONTRATO_ALQUILER_VEHICULO: 'Contrato alquiler', BONIFICACION_SUSPENSION_NEUMATICA: 'Bonif. MTC' };
 const cortoDe = (codigo: string, nombre: string) => CORTOS[codigo] ?? (nombre.length > 22 ? `${nombre.slice(0, 21)}…` : nombre);
 
 const COLOR_ESTADO: Record<EstadoDoc, string> = { vigente: 'var(--green-ink)', por_vencer: 'var(--amber-ink)', vencido: 'var(--red-ink)', sin_vencimiento: 'var(--label-3)' };
-const COLOR_GRUPO: Record<Exclude<Grupo, 'todos'>, string> = { vigente: 'var(--green-ink)', alerta: 'var(--amber-ink)', vencido: 'var(--red-ink)' };
+const COLOR_GRUPO: Record<GrupoUnidad, string> = { vigente: 'var(--green-ink)', alerta: 'var(--amber-ink)', vencido: 'var(--red-ink)' };
 const TONO: Record<EstadoDoc, 'green' | 'amber' | 'red' | 'gray'> = { vigente: 'green', por_vencer: 'amber', vencido: 'red', sin_vencimiento: 'gray' };
 const PESO: Record<EstadoDoc, number> = { vencido: 3, por_vencer: 2, vigente: 1, sin_vencimiento: 0 };
 
@@ -138,6 +143,9 @@ export function DocsMarsisaPage() {
   const [busqueda, setBusqueda] = useState('');
   const [tipo, setTipo] = useState('');
   const [grupo, setGrupo] = useState<Grupo>('todos');
+  // Los mismos filtros de Documentos de flota: empresa dueña y alquiler
+  const [empresaF, setEmpresaF] = useState('TODAS');
+  const [alquilerF, setAlquilerF] = useState<FiltroAlquiler>('todas');
   const [filtrando, setFiltrando] = useState(false);
   const [placa, setPlaca] = useState<string | null>(null);
   // Placas que eligió el administrador en este dispositivo (null = aún no eligió: se ven las de Marsisa)
@@ -168,23 +176,30 @@ export function DocsMarsisaPage() {
     return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1], 'es')).map(([value, label]) => ({ value, label }));
   }, [docs]);
 
-  // Documentos que cuentan: los de las placas seleccionadas, del tipo elegido y que coinciden con la búsqueda
-  const delFiltro = useMemo(() => {
+  const empresas = useMemo(() => agruparEmpresas(todosLosDocs.map(d => d.empresa)), [todosLosDocs]);
+  // Documentos de las placas seleccionadas que cumplen la empresa, el alquiler y la búsqueda (todavía sin el tipo)
+  const docsBase = useMemo(() => {
     const t = busqueda.trim().toUpperCase();
-    return docs.filter(d => (!tipo || d.tipo_codigo === tipo) && (!t || [d.placa, d.tipo_nombre, d.numero].some(x => String(x ?? '').toUpperCase().includes(t))));
-  }, [docs, busqueda, tipo]);
-  // Las tarjetas son por unidad (como en Documentos de flota) y reaccionan a la búsqueda y al tipo; el estado no las recorta
+    return docs.filter(d => (empresaF === 'TODAS' || claveEmpresa(d.empresa) === empresaF)
+      && (alquilerF === 'todas' || (alquilerF === 'alquiladas' ? !!d.alquilada_a : alquilerF === 'propias' ? !d.alquilada_a : !!d.alquilada_a && d.docs_responsable === 'ARRENDATARIA'))
+      && (!t || [d.placa, d.tipo_nombre, d.numero].some(x => String(x ?? '').toUpperCase().includes(t))));
+  }, [docs, busqueda, empresaF, alquilerF]);
+  // Los del tipo elegido
+  const delFiltro = useMemo(() => docsBase.filter(d => !tipo || d.tipo_codigo === tipo), [docsBase, tipo]);
+  const unidadesBase = useMemo(() => agruparPorUnidad(docsBase), [docsBase]);
+  // Las tarjetas son por unidad (como en Documentos de flota) y reaccionan a la búsqueda, a la empresa, al alquiler y al tipo; el estado no las recorta
   const unidades = useMemo(() => agruparPorUnidad(delFiltro), [delFiltro]);
+  const sinElTipo = useMemo(() => (tipo ? unidadesBase.filter(u => !u.tipos.some(t => t.codigo === tipo)) : []), [unidadesBase, tipo]);
   const cifras = useMemo(() => ({
     total: unidades.length,
     vigente: unidades.filter(u => u.grupo === 'vigente').length,
     alerta: unidades.filter(u => u.grupo === 'alerta').length,
     vencido: unidades.filter(u => u.grupo === 'vencido').length,
   }), [unidades]);
-  const filas = useMemo(() => unidades.filter(u => grupo === 'todos' || u.grupo === grupo), [unidades, grupo]);
+  const filas = useMemo(() => (grupo === 'sin' && tipo ? sinElTipo : unidades.filter(u => grupo === 'todos' || grupo === 'sin' || u.grupo === grupo)), [unidades, sinElTipo, grupo, tipo]);
   const docsVisibles = useMemo(() => filas.flatMap(u => u.tipos.flatMap(t => [t.actual, ...t.anteriores])), [filas]);
   const pcts = repartirPorcentajes([cifras.vigente, cifras.alerta, cifras.vencido], cifras.total);
-  const pctDe: Record<Grupo, number> = { todos: cifras.total ? 100 : 0, vigente: pcts[0], alerta: pcts[1], vencido: pcts[2] };
+  const pctDe: Record<Grupo, number> = { todos: cifras.total ? 100 : 0, vigente: pcts[0], alerta: pcts[1], vencido: pcts[2], sin: 0 };
   const seleccion = filas.find(u => u.placa === placa) ?? filas[0] ?? null;
   // Vencimientos del calendario: el documento vigente de cada tipo de cada unidad (sin los de años pasados)
   const eventosCal = useMemo<EventoCal[]>(() => filas.flatMap(u => u.tipos.filter(t => t.actual.fecha_vencimiento).map(t => ({
@@ -193,7 +208,8 @@ export function DocsMarsisaPage() {
     estado: t.actual.estado, dias: t.actual.dias, texto: textoEstado(t.actual),
   }))), [filas, tiposCatalogo]);
   const sinArchivosGuardados = todosLosDocs.filter(d => d.tiene_archivo && !d.archivo_guardado).length;
-  const filtrosActivos = (tipo ? 1 : 0) + (grupo !== 'todos' ? 1 : 0);
+  const filtrosActivos = (tipo ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (empresaF !== 'TODAS' ? 1 : 0) + (alquilerF !== 'todas' ? 1 : 0);
+  const limpiarFiltros = () => { setTipo(''); setGrupo('todos'); setEmpresaF('TODAS'); setAlquilerF('todas'); };
 
   async function sincronizar() {
     setSincronizando(true); setError(null);
@@ -316,20 +332,31 @@ export function DocsMarsisaPage() {
             ))}
           </DocMetaVigentes>
 
-          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} onLimpiar={() => { setTipo(''); setGrupo('todos'); }} resultado={filas.length} unidad="unidad">
-            <GrupoFiltro titulo="Tipo de documento">
-              <Combobox options={tiposCatalogo} value={tipo || null} onChange={v => setTipo(v ?? '')} enHoja compacta placeholder="Todos los tipos" tituloHoja="Tipo de documento" />
+          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} onLimpiar={limpiarFiltros} resultado={filas.length} unidad="unidad">
+            <GrupoFiltro titulo="Empresa">
+              <ChoiceChips label="Empresa" value={empresaF} onChange={setEmpresaF} options={[{ value: 'TODAS', label: 'Todas' }, ...empresas.map(e => ({ value: e.clave, label: e.nombre }))]} />
             </GrupoFiltro>
-            <GrupoFiltro titulo="Estado de la unidad">
-              <ChoiceChips label="Estado" value={grupo} onChange={v => setGrupo(v as Grupo)} options={[
-                { value: 'todos', label: 'Todas' }, { value: 'vigente', label: 'Vigentes' }, { value: 'alerta', label: 'En alerta' }, { value: 'vencido', label: 'Vencidas' },
+            <GrupoFiltro titulo="Alquiler">
+              <ChoiceChips label="Alquiler" value={alquilerF} onChange={v => setAlquilerF(v as FiltroAlquiler)} options={[
+                { value: 'todas', label: 'Todas' }, { value: 'alquiladas', label: 'Alquiladas' }, { value: 'propias', label: 'No alquiladas' }, { value: 'externa', label: 'Las actualiza otra empresa' },
+              ]} />
+            </GrupoFiltro>
+            <GrupoFiltro titulo="Tipo de documento">
+              <Combobox options={tiposCatalogo} value={tipo || null} onChange={v => { setTipo(v ?? ''); if (!v && grupo === 'sin') setGrupo('todos'); }} enHoja compacta placeholder="Todos los tipos" tituloHoja="Tipo de documento" />
+            </GrupoFiltro>
+            <GrupoFiltro titulo={tipo ? 'Estado de ese documento' : 'Estado del documento'}>
+              <ChoiceChips label="Estado del documento" value={grupo} onChange={v => setGrupo(v as Grupo)} options={[
+                { value: 'todos', label: 'Todos' }, { value: 'vigente', label: 'Vigentes' }, { value: 'alerta', label: 'En alerta' }, { value: 'vencido', label: 'Vencidos' },
+                ...(tipo ? [{ value: 'sin', label: 'Sin registrar' }] : []),
               ]} />
             </GrupoFiltro>
           </HojaFiltros>
 
-          {filas.length === 0 ? (
+          {vista === 'documento' ? (
+            <PorDocumento unidades={unidadesBase} tipos={tiposCatalogo} onVerDocumentos={p => { setPlaca(p); setVista('expediente'); }} />
+          ) : filas.length === 0 ? (
             <EmptyState icon={<SearchX size={22} />} title="Sin unidades para los filtros">
-              <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setTipo(''); setGrupo('todos'); }}>Quitar filtros</button>
+              <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); limpiarFiltros(); }}>Quitar filtros</button>
             </EmptyState>
           ) : vista === 'expediente' && seleccion ? (
             <div className="doc-expediente">
@@ -567,6 +594,90 @@ function Alquileres({ filas, onVerDocumentos }: { filas: Unidad[]; onVerDocument
             );
           })}
         </TablaRedimensionable>
+      )}
+    </div>
+  );
+}
+
+type ModoDoc = 'todas' | 'con' | 'faltan';
+const fechaCorta = (v: string | null) => (v ? formatFechaPe(v) : '—');
+
+/**
+ * Por documento: eliges uno o varios tipos de documento y ves, unidad por unidad, qué tiene y qué le falta de ellos.
+ * Con un solo tipo es la lista de placas que tienen (o no tienen) ese documento; con varios, quiénes los tienen todos y a quiénes les falta alguno.
+ */
+function PorDocumento({ unidades, tipos, onVerDocumentos }: { unidades: Unidad[]; tipos: Array<{ value: string; label: string }>; onVerDocumentos: (placa: string) => void }) {
+  const [elegidos, setElegidos] = useState<string[]>([]);
+  const [modo, setModo] = useState<ModoDoc>('todas');
+  const toast = useToast();
+
+  const filas = useMemo(() => unidades.map(u => {
+    const docs = elegidos.map(c => u.tipos.find(t => t.codigo === c)?.actual ?? null);
+    return { u, docs, completos: docs.every(d => d !== null) };
+  }), [unidades, elegidos]);
+  const visibles = useMemo(() => filas.filter(f => modo === 'todas' || (modo === 'con' ? f.completos : !f.completos)), [filas, modo]);
+  const conTodos = filas.filter(f => f.completos).length;
+  const nombres = (c: string) => tipos.find(t => t.value === c)?.label ?? c;
+
+  const columnas = useMemo<ColumnaTabla[]>(() => [
+    { id: 'placa', titulo: 'Unidad', ancho: 150 },
+    { id: 'empresa', titulo: 'Empresa dueña', ancho: 190 },
+    ...elegidos.map(c => ({ id: c, titulo: nombres(c), ancho: 210, minimo: 150 })),
+    { id: 'acc', titulo: '', ancho: 64, minimo: 56, alinear: 'center' as const },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [elegidos, tipos]);
+
+  const exportar = async () => {
+    try {
+      await exportarExcel('Documentos-por-tipo-API', 'Por documento',
+        ['Unidad', 'Empresa dueña', ...elegidos.flatMap(c => [`${nombres(c)} · N°`, `${nombres(c)} · Vence`, `${nombres(c)} · Estado`])],
+        visibles.map(f => [f.u.placa, f.u.empresa ?? '', ...f.docs.flatMap(d => (d ? [d.numero ?? '', d.fecha_vencimiento ?? '', textoEstado(d)] : ['', '', 'Falta']))]));
+    } catch (e) { toast(errorMessage(e), 'error'); }
+  };
+
+  return (
+    <div className="doc-alq">
+      <div className="doc-alq__resumen">
+        <div style={{ flex: '1 1 20rem', minWidth: 0 }}>
+          <p className="t-footnote c-secondary" style={{ margin: '0 0 6px' }}>Elige uno o varios documentos</p>
+          <ToggleChips label="Documentos a revisar" value={elegidos} onChange={setElegidos} options={tipos} />
+        </div>
+      </div>
+      {elegidos.length === 0 ? (
+        <EmptyState icon={<FileText size={22} />} title="Elige un documento">Marca uno o varios tipos de documento para ver qué unidades lo tienen y a cuáles les falta.</EmptyState>
+      ) : (
+        <>
+          <div className="doc-alq__resumen">
+            <div className="doc-alq__cifra"><strong>{conTodos}</strong><span>{elegidos.length === 1 ? 'Tienen el documento' : 'Tienen todos'}</span></div>
+            <div className="doc-alq__cifra"><strong>{filas.length - conTodos}</strong><span>{elegidos.length === 1 ? 'No lo tienen' : 'Les falta alguno'}</span></div>
+            <Button variant="secondary" size="sm" onClick={() => { void exportar(); }} disabled={!visibles.length}>Exportar a Excel</Button>
+            <SegmentedControl<ModoDoc> label="Qué unidades ver" value={modo} onChange={setModo}
+              options={[{ value: 'todas', label: `Todas (${filas.length})` }, { value: 'con', label: `${elegidos.length === 1 ? 'Con el documento' : 'Con todos'} (${conTodos})` }, { value: 'faltan', label: `${elegidos.length === 1 ? 'Sin el documento' : 'Les falta alguno'} (${filas.length - conTodos})` }]} />
+          </div>
+          {visibles.length === 0 ? (
+            <EmptyState icon={<SearchX size={22} />} title="Ninguna unidad coincide">Prueba con otra opción.</EmptyState>
+          ) : (
+            <TablaRedimensionable id={`docs-marsisa-por-documento-${elegidos.length}`} columnas={columnas} ariaLabel="Unidades por documento" altoMax="calc(100dvh - 470px)">
+              {visibles.map(({ u, docs }) => (
+                <tr key={u.placa}>
+                  <Celda><LicensePlate plate={u.placa} size="sm" />{u.alquiladaA && <span className="doc-unidad__alq" style={{ marginLeft: 6 }} title={`Alquilada a ${u.alquiladaA}`}>ALQ.</span>}</Celda>
+                  <Celda>{u.empresa || '—'}</Celda>
+                  {docs.map((d, i) => (
+                    <Celda key={elegidos[i]}>
+                      {d ? (
+                        <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <span><Badge tone={TONO[d.estado]}>{fechaCorta(d.fecha_vencimiento)}</Badge></span>
+                          <small className="c-secondary">{d.numero || 'Sin número'} · {textoEstado(d)}</small>
+                        </span>
+                      ) : <Badge tone="red">Falta</Badge>}
+                    </Celda>
+                  ))}
+                  <Celda alinear="center"><MenuFila etiqueta={`Acciones de ${u.placa}`} acciones={[{ label: 'Ver documentos', icon: <FileText size={17} />, onSelect: () => onVerDocumentos(u.placa) }]} /></Celda>
+                </tr>
+              ))}
+            </TablaRedimensionable>
+          )}
+        </>
       )}
     </div>
   );
