@@ -55,6 +55,14 @@ interface Unidad { placa: string; activa: boolean; enFlota: boolean; alquiladaA:
 /** Atajos de la selección de placas: las de la empresa Marsisa según nuestra ficha de placas (por defecto, alquiladas o no), las alquiladas a otras, las de otras empresas de nuestra flota, las que no están en nuestra flota o todas */
 type Ambito = 'marsisa' | 'alquiladas' | 'otras' | 'fuera' | 'todas';
 const esDeMarsisa = (empresa: string | null) => /marsisa/i.test(empresa ?? '');
+/** Los campos de una unidad que usan las reglas de alquiler */
+const u2d = (u: { empresa: string | null; alquiladaA: string | null }) => ({ empresa: u.empresa, alquilada_a: u.alquiladaA });
+/** Marsisa alquila a otra empresa una unidad suya (la da en alquiler) */
+const damosEnAlquiler = (d: { empresa: string | null; alquilada_a: string | null }) => esDeMarsisa(d.empresa) && !!d.alquilada_a && !esDeMarsisa(d.alquilada_a);
+/** Otra empresa le alquila a Marsisa una unidad suya (la recibe en alquiler) */
+const recibimosEnAlquiler = (d: { empresa: string | null; alquilada_a: string | null }) => !esDeMarsisa(d.empresa) && esDeMarsisa(d.alquilada_a);
+/** Lo de Marsisa son sus unidades (alquiladas a otras o no) más las que le alquilan: todo suma al total de Marsisa */
+const esDeLaOperacionMarsisa = (d: { en_flota: boolean; empresa: string | null; alquilada_a: string | null }) => d.en_flota && (esDeMarsisa(d.empresa) || recibimosEnAlquiler(d));
 
 const VISTAS: Array<{ value: Vista; label: string }> = [{ value: 'expediente', label: 'Expediente' }, { value: 'matriz', label: 'Matriz general' }, { value: 'calendario', label: 'Calendario' }, { value: 'alquiler', label: 'Alquiler' }, { value: 'tabla', label: 'Tabla' }];
 
@@ -145,7 +153,7 @@ export function DocsMarsisaPage() {
   // Conjuntos de placas de cada atajo, según nuestra ficha de placas
   const conjuntos = useMemo<Record<Ambito, Set<string>>>(() => {
     const por = (f: (d: DocExterno) => boolean) => new Set(todosLosDocs.filter(f).map(d => d.placa));
-    return { marsisa: por(d => d.en_flota && esDeMarsisa(d.empresa)), alquiladas: por(d => !!d.alquilada_a), otras: por(d => d.en_flota && !esDeMarsisa(d.empresa)), fuera: por(d => !d.en_flota), todas: por(() => true) };
+    return { marsisa: por(esDeLaOperacionMarsisa), alquiladas: por(d => damosEnAlquiler(d) || recibimosEnAlquiler(d)), otras: por(d => d.en_flota && !esDeLaOperacionMarsisa(d)), fuera: por(d => !d.en_flota), todas: por(() => true) };
   }, [todosLosDocs]);
   // Selección efectiva: la que eligió el administrador o, si no eligió, las de Marsisa. Lo que no está marcado aquí no se ve en ninguna vista.
   const placasVisibles = useMemo(() => (esAdmin && elegidas ? elegidas : conjuntos.marsisa), [esAdmin, elegidas, conjuntos]);
@@ -280,7 +288,7 @@ export function DocsMarsisaPage() {
       ) : (
         <div className="doc-pagina">
           <DocMetaVigentes vigentes={cifras.vigente} total={cifras.total} pct={pctDe.vigente} chips={(esAdmin
-            ? ([['marsisa', 'Marsisa'], ['alquiladas', 'Alquiladas a otras'], ['otras', 'Otras empresas'], ['fuera', 'Fuera de mi flota'], ['todas', 'Todas las de la API']] as const)
+            ? ([['marsisa', 'Marsisa'], ['alquiladas', 'Alquiladas'], ['otras', 'Otras empresas'], ['fuera', 'Fuera de mi flota'], ['todas', 'Todas las de la API']] as const)
             : ([['marsisa', 'Marsisa']] as const)
           ).map(([v, etiqueta]) => ({ clave: v, etiqueta, n: conjuntos[v].size, activo: mismoConjunto(placasVisibles, conjuntos[v]),
             onClick: () => { if (!esAdmin) return; haptic('selection'); aplicarSeleccion(v === 'todas' ? null : conjuntos[v]); } }))}>
@@ -321,7 +329,7 @@ export function DocsMarsisaPage() {
                       <button type="button" className={`doc-unidad pressable${activa ? ' doc-unidad--activa' : ''}`} aria-current={activa} onClick={() => { haptic('selection'); setPlaca(u.placa); }}>
                         <span className="doc-unidad__icono" style={{ background: `color-mix(in srgb, ${COLOR_GRUPO[u.grupo]} 12%, transparent)`, color: COLOR_GRUPO[u.grupo] }} aria-hidden><FileText size={17} strokeWidth={1.9} /></span>
                         <LicensePlate plate={u.placa} size="sm" />
-                        {u.alquiladaA && <span className="doc-unidad__alq" title={`Alquilada a ${u.alquiladaA}`}>ALQ.</span>}
+                        {u.alquiladaA && <span className="doc-unidad__alq" title={esDeMarsisa(u.empresa) ? `Alquilada a ${u.alquiladaA}` : `Nos la alquila ${u.empresa ?? 'otra empresa'}`}>ALQ.</span>}
                         {!u.activa && <span className="doc-unidad__alq" title="Unidad inactiva en la API">INACT.</span>}
                         <span className="doc-punto" style={{ background: COLOR_GRUPO[u.grupo] }} aria-hidden />
                       </button>
@@ -349,7 +357,7 @@ export function DocsMarsisaPage() {
                 <div className="doc-alquiler">
                   <div className="doc-alquiler__chips">
                     {seleccion.empresa && <span className="doc-alquiler__chip">Empresa: {seleccion.empresa}</span>}
-                    {seleccion.alquiladaA ? <span className="doc-alquiler__chip">Alquilada a {seleccion.alquiladaA}</span> : seleccion.enFlota ? <span className="doc-alquiler__chip">Unidad propia, sin alquiler</span> : <span className="doc-alquiler__chip doc-alquiler__chip--aviso">No está en mi flota</span>}
+                    {seleccion.alquiladaA ? <span className="doc-alquiler__chip">{esDeMarsisa(seleccion.empresa) ? `Marsisa la alquila a ${seleccion.alquiladaA}` : `${seleccion.empresa ?? 'Otra empresa'} se la alquila a ${seleccion.alquiladaA}`}</span> : seleccion.enFlota ? <span className="doc-alquiler__chip">Unidad propia, sin alquiler</span> : <span className="doc-alquiler__chip doc-alquiler__chip--aviso">No está en mi flota</span>}
                   </div>
                 </div>
                 <div className="doc-tarjetas">
@@ -478,7 +486,7 @@ function Matriz({ filas, tipos }: { filas: Unidad[]; tipos: Array<{ value: strin
   );
 }
 
-type FiltroAlq = 'todas' | 'alquiladas' | 'propias';
+type FiltroAlq = 'todas' | 'damos' | 'recibimos' | 'propias';
 const COLUMNAS_ALQ: ColumnaTabla[] = [
   { id: 'placa', titulo: 'Unidad', ancho: 140 },
   { id: 'tipo', titulo: 'Tipo', ancho: 130 },
@@ -497,21 +505,29 @@ const COLUMNAS_ALQ: ColumnaTabla[] = [
  *  Los datos del alquiler son los de nuestra ficha de placas; los documentos, los de la API. */
 function Alquileres({ filas, onVerDocumentos }: { filas: Unidad[]; onVerDocumentos: (placa: string) => void }) {
   const [filtro, setFiltro] = useState<FiltroAlq>('todas');
+  // Relación de cada unidad con Marsisa: la da en alquiler, la recibe en alquiler o es propia (sin alquiler)
+  const relacion = (u: Unidad): 'damos' | 'recibimos' | 'propia' | 'ajena' => damosEnAlquiler(u2d(u)) ? 'damos' : recibimosEnAlquiler(u2d(u)) ? 'recibimos' : esDeMarsisa(u.empresa) ? 'propia' : 'ajena';
   const cifras = useMemo(() => {
-    const alquiladas = filas.filter(u => u.alquiladaA).length;
-    return { total: filas.length, alquiladas, propias: filas.length - alquiladas, externa: filas.filter(u => u.alquiladaA && u.docsResponsable === 'ARRENDATARIA').length };
+    const de = (r: string) => filas.filter(u => relacion(u) === r).length;
+    return { total: filas.filter(u => relacion(u) !== 'ajena').length, damos: de('damos'), recibimos: de('recibimos'), propias: de('propia'), externa: filas.filter(u => u.alquiladaA && u.docsResponsable === 'ARRENDATARIA').length };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filas]);
-  const visibles = useMemo(() => filas.filter(u => filtro === 'todas' || (filtro === 'alquiladas' ? !!u.alquiladaA : !u.alquiladaA))
-    .sort((a, b) => Number(!!b.alquiladaA) - Number(!!a.alquiladaA) || a.placa.localeCompare(b.placa)), [filas, filtro]);
+  const orden: Record<string, number> = { damos: 0, recibimos: 1, propia: 2, ajena: 3 };
+  const visibles = useMemo(() => filas.filter(u => filtro === 'todas' || relacion(u) === (filtro === 'propias' ? 'propia' : filtro))
+    .sort((a, b) => orden[relacion(a)] - orden[relacion(b)] || a.placa.localeCompare(b.placa)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filas, filtro]);
 
   return (
     <div className="doc-alq">
       <div className="doc-alq__resumen">
-        <div className="doc-alq__cifra"><strong>{cifras.alquiladas}</strong><span>Alquiladas</span></div>
+        <div className="doc-alq__cifra"><strong>{cifras.total}</strong><span>Total de Marsisa</span></div>
         <div className="doc-alq__cifra"><strong>{cifras.propias}</strong><span>Propias, sin alquiler</span></div>
+        <div className="doc-alq__cifra"><strong>{cifras.damos}</strong><span>Alquilamos a otras</span></div>
+        <div className="doc-alq__cifra"><strong>{cifras.recibimos}</strong><span>Nos alquilan</span></div>
         <div className="doc-alq__cifra"><strong>{cifras.externa}</strong><span>Las actualiza otra empresa</span></div>
         <SegmentedControl<FiltroAlq> label="Qué unidades ver" value={filtro} onChange={setFiltro}
-          options={[{ value: 'todas', label: `Todas (${cifras.total})` }, { value: 'alquiladas', label: `Alquiladas (${cifras.alquiladas})` }, { value: 'propias', label: `Propias (${cifras.propias})` }]} />
+          options={[{ value: 'todas', label: `Todas (${cifras.total})` }, { value: 'damos', label: `Alquilamos (${cifras.damos})` }, { value: 'recibimos', label: `Nos alquilan (${cifras.recibimos})` }, { value: 'propias', label: `Propias (${cifras.propias})` }]} />
       </div>
       {visibles.length === 0 ? (
         <EmptyState icon={<SearchX size={22} />} title="Ninguna unidad coincide">Prueba con otro filtro.</EmptyState>
@@ -524,11 +540,11 @@ function Alquileres({ filas, onVerDocumentos }: { filas: Unidad[]; onVerDocument
               <tr key={u.placa}>
                 <Celda><LicensePlate plate={u.placa} size="sm" /></Celda>
                 <Celda>{u.tipoUnidad || '—'}</Celda>
-                <Celda alinear="center">{!u.enFlota ? <Badge tone="gray">Fuera de mi flota</Badge> : alq ? <Badge tone="accent">Alquilada</Badge> : <Badge>Propia</Badge>}</Celda>
+                <Celda alinear="center">{!u.enFlota ? <Badge tone="gray">Fuera de mi flota</Badge> : relacion(u) === 'damos' ? <Badge tone="accent">Alquilamos</Badge> : relacion(u) === 'recibimos' ? <Badge tone="amber">Nos alquilan</Badge> : <Badge>Propia</Badge>}</Celda>
                 <Celda>{u.empresa || '—'}</Celda>
                 <Celda>{alq ? <strong>{u.alquiladaA}</strong> : '—'}</Celda>
                 <Celda>{alq && u.alquilerDesde ? formatFechaPe(u.alquilerDesde) : '—'}</Celda>
-                <Celda>{alq ? (externo ? <Badge tone="amber">{u.alquiladaA}</Badge> : <Badge tone="green">Nosotros</Badge>) : '—'}</Celda>
+                <Celda>{alq ? (externo ? <Badge tone="amber">{relacion(u) === 'recibimos' ? 'Nosotros (arrendataria)' : u.alquiladaA}</Badge> : <Badge tone="green">{relacion(u) === 'recibimos' ? u.empresa : 'Nosotros'}</Badge>) : '—'}</Celda>
                 <Celda mono alinear="right">{u.tipos.length}</Celda>
                 <Celda alinear="center"><Badge tone={u.grupo === 'vencido' ? 'red' : u.grupo === 'alerta' ? 'amber' : 'green'}>{u.grupo === 'vencido' ? 'Vencidos' : u.grupo === 'alerta' ? 'Por vencer' : 'Vigentes'}</Badge></Celda>
                 <Celda><span className="c-secondary">{alq && u.alquilerNota ? u.alquilerNota : '—'}</span></Celda>
