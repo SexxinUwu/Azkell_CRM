@@ -42,3 +42,23 @@
 .rpm-celda--verde .rpm-celda__rango { background: color-mix(in srgb, var(--green, #2da44e) 30%, var(--surface)); }
 .rpm-celda--rojo .rpm-celda__n { color: var(--red-ink, #cf222e); }
 .rpm-pie { margin: var(--s-3) 0 0; color: var(--label-2); font-size: 0.75rem; }
+
+/* Hoja de rangos por motor */
+.rpm-rangos { display: flex; flex-direction: column; gap: var(--s-3); }
+.rpm-rangos__nota { margin: 0; color: var(--label-2); font-size: 0.8125rem; }
+.rpm-rangos__titulo { margin: var(--s-2) 0 0; font-size: 0.9375rem; }
+.rpm-rangos__meta { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--s-3); }
+.rpm-rangos__meta label { display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; font-weight: 600; color: var(--label-2); }
+.rpm-rangos__meta small { flex-basis: 100%; color: var(--label-2); }
+.rpm-rangos__mal { color: var(--red-ink, #cf222e) !important; font-weight: 600; }
+.rpm-rangos__in { width: 6.5rem; height: 34px; padding: 0 10px; border: 0; border-radius: 10px; background: var(--fill); color: var(--label); font: inherit; font-variant-numeric: tabular-nums; }
+.rpm-rangos__in--txt { width: 9rem; }
+.rpm-rangos__in:disabled { opacity: 0.7; }
+.rpm-rangos__tabla { overflow-x: auto; }
+.rpm-rangos table { width: 100%; border-collapse: collapse; }
+.rpm-rangos th { text-align: left; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--label-2); padding: 6px 8px; white-space: nowrap; }
+.rpm-rangos td { padding: 5px 8px; border-top: 1px solid var(--separator); white-space: nowrap; }
+.rpm-rangos__modelo { font-weight: 700; }
+.rpm-rangos__modelo small { display: block; font-weight: 400; color: var(--label-2); font-size: 0.6875rem; }
+.rpm-rangos__acc { display: flex; align-items: center; gap: 6px; border-top: 0 !important; }
+.rpm-rangos__chip { border: 0; background: var(--fill); color: var(--label); font: inherit; font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; margin: 0 4px 2px 0; cursor: pointer; }
