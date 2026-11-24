@@ -12,12 +12,14 @@ type FiltroAlq = 'todas' | 'alquiladas' | 'propias' | 'externa';
  * alquiladas a otras) y, abajo, las tarjetas de estado (`children`). Todo en un solo bloque para dejar el resto de la pantalla a la información.
  * Los porcentajes son enteros y se reparten para que sumen exactamente 100 %.
  */
-export function DocMetaVigentes({ vigentes, total, pct, conteo, alquiler, onAlquiler, children }: {
+export function DocMetaVigentes({ vigentes, total, pct, conteo, alquiler, onAlquiler, chips, children }: {
   vigentes: number; total: number; pct: number;
   /** Unidades de la empresa elegida, con y sin las que alquila a otras */
-  conteo: { total: number; alquiladas: number; propias: number };
-  alquiler: FiltroAlq;
-  onAlquiler: (a: FiltroAlq) => void;
+  conteo?: { total: number; alquiladas: number; propias: number };
+  alquiler?: FiltroAlq;
+  onAlquiler?: (a: FiltroAlq) => void;
+  /** Otras etiquetas en lugar de las de alquiler (por ejemplo, el personal por rol) */
+  chips?: Array<{ clave: string; etiqueta: string; n: number; activo: boolean; onClick: () => void }>;
   /** Tarjetas de estado (vigentes, alerta, vencidos…) */
   children?: ReactNode;
 }) {
@@ -30,11 +32,17 @@ export function DocMetaVigentes({ vigentes, total, pct, conteo, alquiler, onAlqu
         <span className="doc-meta__titulo">Vigentes <em>· avance hacia la meta</em></span>
         {/* Cuántas unidades se tienen: todas, las alquiladas a otras empresas y las que no (toca para filtrar) */}
         <div className="doc-meta__flota" role="group" aria-label="Unidades de la flota">
-          {([['todas', 'Unidades', conteo.total], ['alquiladas', 'Alquiladas a otras', conteo.alquiladas], ['propias', 'Sin alquilar', conteo.propias]] as const).map(([v, etiqueta, n]) => (
-            <button key={v} type="button" className="doc-meta__chip" aria-pressed={alquiler === v} onClick={() => onAlquiler(alquiler === v ? 'todas' : v)}>
-              <b className="t-numeric">{n}</b> {etiqueta}
-            </button>
-          ))}
+          {chips
+            ? chips.map(c => (
+              <button key={c.clave} type="button" className="doc-meta__chip" aria-pressed={c.activo} onClick={c.onClick}>
+                <b className="t-numeric">{c.n}</b> {c.etiqueta}
+              </button>
+            ))
+            : conteo && ([['todas', 'Unidades', conteo.total], ['alquiladas', 'Alquiladas a otras', conteo.alquiladas], ['propias', 'Sin alquilar', conteo.propias]] as const).map(([v, etiqueta, n]) => (
+              <button key={v} type="button" className="doc-meta__chip" aria-pressed={alquiler === v} onClick={() => onAlquiler?.(alquiler === v ? 'todas' : v)}>
+                <b className="t-numeric">{n}</b> {etiqueta}
+              </button>
+            ))}
         </div>
         <span className="doc-meta__resumen">
           <b className="t-numeric">{vigentes}</b> de <b className="t-numeric">{total}</b> vigentes · {faltan > 0 ? <>faltan <b className="t-numeric">{faltan}</b> ({100 - pct}%)</> : '¡meta cumplida!'}
