@@ -554,7 +554,24 @@ module.exports = function (db) {
                     const [ocupada] = await conn.query(
                         'SELECT id_neumatico FROM neumaticos_instalaciones WHERE placa = ? AND posicion = ? AND fecha_out IS NULL FOR UPDATE',
                         [placa, l.posicion]);
-                    if (ocupada.length) throw aviso(409, `La posición ${l.posicion} de ${placa} ya tiene una llanta montada (${ocupada[0].id_neumatico})`);
+                    if (ocupada.length) {
+                        // Llanta provisional (PROV-, creada por una inspección) sin código de fuego: es la misma llanta física;
+                        // se completa con los datos reales y recibe su código, sin duplicarla.
+                        const idOcupada = String(ocupada[0].id_neumatico);
+                        const [hv] = await conn.query('SELECT codigo_llanta FROM neumaticos_hoja_vida WHERE id_neumatico = ? FOR UPDATE', [idOcupada]);
+                        if (!idOcupada.startsWith('PROV-') || !hv.length || txt(hv[0].codigo_llanta)) {
+                            throw aviso(409, `La posición ${l.posicion} de ${placa} ya tiene una llanta montada (${idOcupada})`);
+                        }
+                        const [up] = await conn.query(
+                            `UPDATE neumaticos_hoja_vida SET marca = ?, modelo = ?, medida = ?, estado = 'NUEVA', remanente_inicial = ?, remanente_actual = ?, vida = 'R0', contador_reencauches = 0
+                             WHERE id_neumatico = ?`,
+                            [l.marca, l.modelo || '', l.medida, l.rem, l.rem, idOcupada]);
+                        if (up.affectedRows !== 1) throw aviso(500, 'No se pudo completar la llanta provisional');
+                        await registrarMovimiento(conn, { id_neumatico: idOcupada, tipo: MOV.ALTA, origen: null, destino: null, placa, posicion: l.posicion,
+                            km, fecha: ahoraLima(), usuario: usuarioDe(req), observacion: 'Datos completados con la unidad nueva (era provisional)' });
+                        creadas.push({ id_neumatico: idOcupada, posicion: l.posicion, codigo: null });
+                        continue;
+                    }
                     let id = `ALTA-${placa}-${l.posicion}`;
                     for (let k = 2; k < 50; k += 1) {
                         const [ya] = await conn.query('SELECT 1 FROM neumaticos_hoja_vida WHERE id_neumatico = ? LIMIT 1', [id]);
@@ -579,7 +596,7 @@ module.exports = function (db) {
                     creadas.push({ id_neumatico: id, posicion: l.posicion, codigo: null });
                 }
                 if (generarCodigo) {
-                    const asignados = await asignarCodigosFuego(conn, creadas.map(c => c.id_neumatico));
+                    const asignados = await asignarCodigosFuego(conn, creadas.map(c => c.id_neumatico), undefined, { permitirProvisional: true });
                     asignados.forEach((a, i) => { creadas[i].codigo = a.codigo; });
                 }
                 return creadas;
