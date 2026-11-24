@@ -887,6 +887,7 @@ function wheelKit(R: number) {
 type Kit = ReturnType<typeof wheelKit>;
 function makeWheel(parent: THREE.Object3D, x: number, z: number, side: number, kit: Kit, wide: boolean, showFace: boolean): THREE.Group {
   const g = new THREE.Group(); g.position.set(x, 0, z); parent.add(g);
+  g.userData.rueda = true; // el tablero de neumáticos ubica aquí el marcador de cada llanta
   const t = add(g, kit.tireGeo, kit.tireM); if (wide) t.scale.z = 1.25;
   const f = new THREE.Group(); f.rotation.y = side > 0 ? 0 : PI; if (wide) f.position.z = side * 0.035; g.add(f);
   add(f, kit.rimGeo, kit.rimM);
