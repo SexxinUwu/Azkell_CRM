@@ -35,7 +35,7 @@ async function leerLetra(conn) {
  * Asigna códigos consecutivos a las llantas indicadas. Debe correr dentro de una transacción:
  * la fila de la secuencia queda bloqueada hasta el commit, así dos usuarios nunca reciben el mismo número.
  */
-async function asignarCodigosFuego(conn, ids, anio = anioLima()) {
+async function asignarCodigosFuego(conn, ids, anio = anioLima(), { permitirProvisional = false } = {}) {
     const letra = await leerLetra(conn);
     await conn.query('INSERT IGNORE INTO neumaticos_codigo_fuego_secuencia (anio, ultimo) VALUES (?, 0)', [anio]);
     const [[seq]] = await conn.query('SELECT ultimo FROM neumaticos_codigo_fuego_secuencia WHERE anio = ? FOR UPDATE', [anio]);
@@ -46,7 +46,7 @@ async function asignarCodigosFuego(conn, ids, anio = anioLima()) {
         const [filas] = await conn.query(
             'SELECT id_neumatico, codigo_llanta FROM neumaticos_hoja_vida WHERE id_neumatico = ? FOR UPDATE', [id]);
         if (!filas.length) throw aviso(404, `No existe la llanta ${id}`);
-        if (String(id).startsWith(PREFIJO_PROVISIONAL)) {
+        if (!permitirProvisional && String(id).startsWith(PREFIJO_PROVISIONAL)) {
             throw aviso(409, `La llanta ${id} tiene código provisional y no recibe código de fuego`);
         }
         if (String(filas[0].codigo_llanta || '').trim()) {
