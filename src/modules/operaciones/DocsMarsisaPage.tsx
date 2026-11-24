@@ -36,6 +36,8 @@ type EstadoDoc = 'vigente' | 'por_vencer' | 'vencido' | 'sin_vencimiento';
 interface DocExterno {
   id: number; id_remoto: number; placa: string; unidad_activa: boolean; tipo_codigo: string; tipo_nombre: string; numero: string | null; emisor: string | null;
   fecha_emision: string | null; fecha_vencimiento: string | null; tiene_archivo: boolean; archivo_guardado: boolean; actualizado_remoto: string | null; sincronizado_en: string;
+  /** La placa está en nuestra flota (activa) y, si la tenemos alquilada a otra empresa, a quién */
+  en_flota: boolean; alquilada_a: string | null;
   estado: EstadoDoc; dias: number | null;
 }
 interface RespuestaLista { ok: boolean; data: DocExterno[]; ultima_sincronizacion: string | null; sinTabla?: boolean }
@@ -46,7 +48,9 @@ const CLAVE_PLACAS = 'fleet_docs_api_placas_visibles';
 type Vista = 'expediente' | 'matriz' | 'calendario' | 'tabla';
 type Grupo = 'todos' | 'vigente' | 'alerta' | 'vencido';
 interface TipoDeUnidad { codigo: string; nombre: string; actual: DocExterno; anteriores: DocExterno[] }
-interface Unidad { placa: string; activa: boolean; tipos: TipoDeUnidad[]; grupo: Exclude<Grupo, 'todos'>; salud: number; registros: number }
+interface Unidad { placa: string; activa: boolean; enFlota: boolean; alquiladaA: string | null; tipos: TipoDeUnidad[]; grupo: Exclude<Grupo, 'todos'>; salud: number; registros: number }
+/** Qué unidades se ven: las de nuestra flota (por defecto), las que tenemos alquiladas a otras, las que no están en nuestra flota o todas */
+type Ambito = 'flota' | 'alquiladas' | 'fuera' | 'todas';
 
 const VISTAS: Array<{ value: Vista; label: string }> = [{ value: 'expediente', label: 'Expediente' }, { value: 'matriz', label: 'Matriz general' }, { value: 'calendario', label: 'Calendario' }, { value: 'tabla', label: 'Tabla' }];
 
@@ -82,7 +86,7 @@ function agruparPorUnidad(docs: DocExterno[]): Unidad[] {
     const peor = tipos.reduce<EstadoDoc>((p, t) => (PESO[t.actual.estado] > PESO[p] ? t.actual.estado : p), 'sin_vencimiento');
     const buenos = tipos.filter(t => t.actual.estado !== 'vencido').length;
     const unidad: Unidad = {
-      placa, activa: lista.some(d => d.unidad_activa), tipos, registros: lista.length,
+      placa, activa: lista.some(d => d.unidad_activa), enFlota: lista[0].en_flota, alquiladaA: lista[0].alquilada_a, tipos, registros: lista.length,
       grupo: peor === 'vencido' ? 'vencido' : peor === 'por_vencer' ? 'alerta' : 'vigente',
       salud: tipos.length ? Math.round((buenos / tipos.length) * 100) : 0,
     };
@@ -120,6 +124,8 @@ export function DocsMarsisaPage() {
   const [busqueda, setBusqueda] = useState('');
   const [tipo, setTipo] = useState('');
   const [grupo, setGrupo] = useState<Grupo>('todos');
+  // Por defecto solo las unidades que también están en nuestra flota: las demás son de la API y no suman a nuestro conteo
+  const [ambito, setAmbito] = useState<Ambito>('flota');
   const [filtrando, setFiltrando] = useState(false);
   const [placa, setPlaca] = useState<string | null>(null);
   // Placas que se ven (null = todas)
@@ -141,10 +147,15 @@ export function DocsMarsisaPage() {
   }, [docs]);
 
   // Documentos que cuentan: los del tipo elegido y los que coinciden con la búsqueda
-  const delFiltro = useMemo(() => {
+  const sinAmbito = useMemo(() => {
     const t = busqueda.trim().toUpperCase();
     return docs.filter(d => (!tipo || d.tipo_codigo === tipo) && (!t || [d.placa, d.tipo_nombre, d.numero].some(x => String(x ?? '').toUpperCase().includes(t))));
   }, [docs, busqueda, tipo]);
+  const conteoAmbito = useMemo(() => {
+    const por = (f: (d: DocExterno) => boolean) => new Set(sinAmbito.filter(f).map(d => d.placa)).size;
+    return { todas: por(() => true), flota: por(d => d.en_flota), alquiladas: por(d => !!d.alquilada_a), fuera: por(d => !d.en_flota) };
+  }, [sinAmbito]);
+  const delFiltro = useMemo(() => sinAmbito.filter(d => ambito === 'todas' || (ambito === 'flota' ? d.en_flota : ambito === 'alquiladas' ? !!d.alquilada_a : !d.en_flota)), [sinAmbito, ambito]);
   // Las tarjetas son por unidad (como en Documentos de flota) y reaccionan a la búsqueda y al tipo; el estado no las recorta
   const unidades = useMemo(() => agruparPorUnidad(delFiltro), [delFiltro]);
   const cifras = useMemo(() => ({
@@ -165,7 +176,7 @@ export function DocsMarsisaPage() {
     estado: t.actual.estado, dias: t.actual.dias, texto: textoEstado(t.actual),
   }))), [filas, tiposCatalogo]);
   const sinArchivosGuardados = todosLosDocs.filter(d => d.tiene_archivo && !d.archivo_guardado).length;
-  const filtrosActivos = (tipo ? 1 : 0) + (grupo !== 'todos' ? 1 : 0);
+  const filtrosActivos = (tipo ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (ambito !== 'flota' ? 1 : 0);
 
   async function sincronizar() {
     setSincronizando(true); setError(null);
@@ -251,10 +262,10 @@ export function DocsMarsisaPage() {
         </EmptyState>
       ) : (
         <div className="doc-pagina">
-          <DocMetaVigentes vigentes={cifras.vigente} total={cifras.total} pct={pctDe.vigente} chips={[
-            { clave: 'docs', etiqueta: 'Documentos', n: delFiltro.length, activo: false, onClick: () => undefined },
-            { clave: 'tipos', etiqueta: 'Tipos', n: new Set(delFiltro.map(d => d.tipo_codigo)).size, activo: false, onClick: () => undefined },
-          ]}>
+          <DocMetaVigentes vigentes={cifras.vigente} total={cifras.total} pct={pctDe.vigente} chips={([
+            ['flota', 'En mi flota', conteoAmbito.flota], ['alquiladas', 'Alquiladas a otras', conteoAmbito.alquiladas],
+            ['fuera', 'Fuera de mi flota', conteoAmbito.fuera], ['todas', 'Todas las de la API', conteoAmbito.todas],
+          ] as const).map(([v, etiqueta, n]) => ({ clave: v, etiqueta, n, activo: ambito === v, onClick: () => { haptic('selection'); setAmbito(a => (a === v ? 'flota' : v)); } }))}>
             {kpis.map(k => (
               <button key={k.clave} type="button" className={`doc-tile pressable disp-kpi--${k.tono}`} aria-pressed={grupo === k.clave}
                 onClick={() => { haptic('selection'); setGrupo(g => (g === k.clave && k.clave !== 'todos' ? 'todos' : k.clave)); }}>
@@ -267,7 +278,12 @@ export function DocsMarsisaPage() {
             ))}
           </DocMetaVigentes>
 
-          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} onLimpiar={() => { setTipo(''); setGrupo('todos'); }} resultado={filas.length} unidad="unidad">
+          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} onLimpiar={() => { setTipo(''); setGrupo('todos'); setAmbito('flota'); }} resultado={filas.length} unidad="unidad">
+            <GrupoFiltro titulo="Unidades">
+              <ChoiceChips label="Unidades" value={ambito} onChange={v => setAmbito(v as Ambito)} options={[
+                { value: 'flota', label: 'En mi flota' }, { value: 'alquiladas', label: 'Alquiladas a otras' }, { value: 'fuera', label: 'Fuera de mi flota' }, { value: 'todas', label: 'Todas' },
+              ]} />
+            </GrupoFiltro>
             <GrupoFiltro titulo="Tipo de documento">
               <Combobox options={tiposCatalogo} value={tipo || null} onChange={v => setTipo(v ?? '')} enHoja compacta placeholder="Todos los tipos" tituloHoja="Tipo de documento" />
             </GrupoFiltro>
@@ -280,7 +296,7 @@ export function DocsMarsisaPage() {
 
           {filas.length === 0 ? (
             <EmptyState icon={<SearchX size={22} />} title="Sin unidades para los filtros">
-              <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setTipo(''); setGrupo('todos'); }}>Quitar filtros</button>
+              <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setTipo(''); setGrupo('todos'); setAmbito('flota'); }}>Quitar filtros</button>
             </EmptyState>
           ) : vista === 'expediente' && seleccion ? (
             <div className="doc-expediente">
@@ -292,6 +308,7 @@ export function DocsMarsisaPage() {
                       <button type="button" className={`doc-unidad pressable${activa ? ' doc-unidad--activa' : ''}`} aria-current={activa} onClick={() => { haptic('selection'); setPlaca(u.placa); }}>
                         <span className="doc-unidad__icono" style={{ background: `color-mix(in srgb, ${COLOR_GRUPO[u.grupo]} 12%, transparent)`, color: COLOR_GRUPO[u.grupo] }} aria-hidden><FileText size={17} strokeWidth={1.9} /></span>
                         <LicensePlate plate={u.placa} size="sm" />
+                        {u.alquiladaA && <span className="doc-unidad__alq" title={`Alquilada a ${u.alquiladaA}`}>ALQ.</span>}
                         {!u.activa && <span className="doc-unidad__alq" title="Unidad inactiva en la API">INACT.</span>}
                         <span className="doc-punto" style={{ background: COLOR_GRUPO[u.grupo] }} aria-hidden />
                       </button>
@@ -316,6 +333,11 @@ export function DocsMarsisaPage() {
                     <strong>{seleccion.salud}%</strong>
                   </div>
                 </header>
+                <div className="doc-alquiler">
+                  <div className="doc-alquiler__chips">
+                    {seleccion.alquiladaA ? <span className="doc-alquiler__chip">Alquilada a {seleccion.alquiladaA}</span> : seleccion.enFlota ? <span className="doc-alquiler__chip">Unidad propia, sin alquiler</span> : <span className="doc-alquiler__chip doc-alquiler__chip--aviso">No está en mi flota</span>}
+                  </div>
+                </div>
                 <div className="doc-tarjetas">
                   {seleccion.tipos.map((t, i) => <TarjetaDoc key={t.codigo} num={i + 1} tipo={t} abriendo={abriendo} onVer={d => { void verArchivo(d); }} />)}
                 </div>
@@ -418,7 +440,7 @@ function Matriz({ filas, tipos }: { filas: Unidad[]; tipos: Array<{ value: strin
             {filas.map((u, i) => (
               <tr key={u.placa}>
                 <td className="doc-matriz__num">{i + 1}</td>
-                <td className="doc-matriz__placa">{u.placa}</td>
+                <td className="doc-matriz__placa">{u.placa}{u.alquiladaA && <span className="doc-unidad__alq" title={`Alquilada a ${u.alquiladaA}`} style={{ marginLeft: 6 }}>ALQ.</span>}</td>
                 {tipos.flatMap(t => {
                   const d = u.tipos.find(x => x.codigo === t.value)?.actual;
                   return [

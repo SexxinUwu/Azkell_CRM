@@ -66,13 +66,17 @@ module.exports = (db, logAudit) => {
     router.get('/', async (req, res) => {
         try {
             const hoy = hoyLima();
+            // Cada placa se compara con la ficha de nuestra flota (placas): si está en ella (activa) y si la tenemos alquilada a otra empresa
+            const norm = c => `REPLACE(REPLACE(UPPER(${c}), '-', ''), ' ', '') COLLATE utf8mb4_unicode_ci`;
             const [rows] = await P(req).query(
-                `SELECT id, id_remoto, placa, unidad_activa, tipo_codigo, tipo_nombre, numero, emisor,
-                        DATE_FORMAT(fecha_emision, '%Y-%m-%d') AS fecha_emision, DATE_FORMAT(fecha_vencimiento, '%Y-%m-%d') AS fecha_vencimiento,
-                        tiene_archivo, (archivo_url IS NOT NULL) AS archivo_guardado, DATE_FORMAT(actualizado_remoto, '%Y-%m-%d %H:%i') AS actualizado_remoto, DATE_FORMAT(sincronizado_en, '%Y-%m-%d %H:%i') AS sincronizado_en
-                 FROM marsisa_docs_flota_ext WHERE eliminado_remoto = 0 ORDER BY placa, tipo_nombre, fecha_vencimiento DESC`);
+                `SELECT d.id, d.id_remoto, d.placa, d.unidad_activa, d.tipo_codigo, d.tipo_nombre, d.numero, d.emisor,
+                        DATE_FORMAT(d.fecha_emision, '%Y-%m-%d') AS fecha_emision, DATE_FORMAT(d.fecha_vencimiento, '%Y-%m-%d') AS fecha_vencimiento,
+                        d.tiene_archivo, (d.archivo_url IS NOT NULL) AS archivo_guardado, DATE_FORMAT(d.actualizado_remoto, '%Y-%m-%d %H:%i') AS actualizado_remoto, DATE_FORMAT(d.sincronizado_en, '%Y-%m-%d %H:%i') AS sincronizado_en,
+                        (p.placa IS NOT NULL AND (p.estado IS NULL OR p.estado NOT LIKE 'inactiv%')) AS en_flota, NULLIF(TRIM(COALESCE(p.alquilada_a, '')), '') AS alquilada_a
+                 FROM marsisa_docs_flota_ext d LEFT JOIN placas p ON ${norm('p.placa')} = ${norm('d.placa')}
+                 WHERE d.eliminado_remoto = 0 ORDER BY d.placa, d.tipo_nombre, d.fecha_vencimiento DESC`);
             const [[u]] = await P(req).query("SELECT DATE_FORMAT(MAX(sincronizado_en), '%Y-%m-%d %H:%i') AS ultima FROM marsisa_docs_flota_ext");
-            res.json({ ok: true, hoy, ultima_sincronizacion: u.ultima || null, data: rows.map(r => ({ ...r, unidad_activa: !!r.unidad_activa, tiene_archivo: !!r.tiene_archivo, archivo_guardado: !!r.archivo_guardado, ...estadoDe(r.fecha_vencimiento, hoy) })) });
+            res.json({ ok: true, hoy, ultima_sincronizacion: u.ultima || null, data: rows.map(r => ({ ...r, unidad_activa: !!r.unidad_activa, tiene_archivo: !!r.tiene_archivo, archivo_guardado: !!r.archivo_guardado, en_flota: !!r.en_flota, ...estadoDe(r.fecha_vencimiento, hoy) })) });
         } catch (err) {
             if (err && err.code === 'ER_NO_SUCH_TABLE') return res.json({ ok: true, data: [], sinTabla: true, ultima_sincronizacion: null });
             responder(res, err, 'lista');
