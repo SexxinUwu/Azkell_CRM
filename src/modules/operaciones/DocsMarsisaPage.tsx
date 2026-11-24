@@ -24,6 +24,7 @@ import { formatFechaPe } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
 import { spring } from '../../core/lib/motion';
 import { DocMetaVigentes } from '../flota/DocMetaVigentes';
+import { DocsMarsisaCalendario, type EventoCal } from './DocsMarsisaCalendario';
 import { ConfigurarPlacasSheet, guardarSeleccion, leerSeleccion } from '../flota/ConfigurarPlacasSheet';
 import { colorDoc, repartirPorcentajes } from '../flota/docsEstado';
 
@@ -42,12 +43,16 @@ interface RespuestaLista { ok: boolean; data: DocExterno[]; ultima_sincronizacio
 // Las placas a mostrar se eligen aquí y quedan en este dispositivo (aparte de las de Documentos de flota)
 const CLAVE_PLACAS = 'fleet_docs_api_placas_visibles';
 
-type Vista = 'expediente' | 'matriz' | 'tabla';
+type Vista = 'expediente' | 'matriz' | 'calendario' | 'tabla';
 type Grupo = 'todos' | 'vigente' | 'alerta' | 'vencido';
 interface TipoDeUnidad { codigo: string; nombre: string; actual: DocExterno; anteriores: DocExterno[] }
 interface Unidad { placa: string; activa: boolean; tipos: TipoDeUnidad[]; grupo: Exclude<Grupo, 'todos'>; salud: number; registros: number }
 
-const VISTAS: Array<{ value: Vista; label: string }> = [{ value: 'expediente', label: 'Expediente' }, { value: 'matriz', label: 'Matriz general' }, { value: 'tabla', label: 'Tabla' }];
+const VISTAS: Array<{ value: Vista; label: string }> = [{ value: 'expediente', label: 'Expediente' }, { value: 'matriz', label: 'Matriz general' }, { value: 'calendario', label: 'Calendario' }, { value: 'tabla', label: 'Tabla' }];
+
+/** Nombre corto de un tipo para el calendario */
+const CORTOS: Record<string, string> = { TARJETA_CIRCULACION: 'TUC', REVISION_TECNICA: 'CITV', SOAT: 'SOAT', TARJETA_PROPIEDAD: 'T. Propiedad', CONTRATO_ALQUILER_VEHICULO: 'Contrato alquiler', BONIFICACION_SUSPENSION_NEUMATICA: 'Bonif. MTC' };
+const cortoDe = (codigo: string, nombre: string) => CORTOS[codigo] ?? (nombre.length > 22 ? `${nombre.slice(0, 21)}…` : nombre);
 
 const COLOR_ESTADO: Record<EstadoDoc, string> = { vigente: 'var(--green-ink)', por_vencer: 'var(--amber-ink)', vencido: 'var(--red-ink)', sin_vencimiento: 'var(--label-3)' };
 const COLOR_GRUPO: Record<Exclude<Grupo, 'todos'>, string> = { vigente: 'var(--green-ink)', alerta: 'var(--amber-ink)', vencido: 'var(--red-ink)' };
@@ -153,6 +158,12 @@ export function DocsMarsisaPage() {
   const pcts = repartirPorcentajes([cifras.vigente, cifras.alerta, cifras.vencido], cifras.total);
   const pctDe: Record<Grupo, number> = { todos: cifras.total ? 100 : 0, vigente: pcts[0], alerta: pcts[1], vencido: pcts[2] };
   const seleccion = filas.find(u => u.placa === placa) ?? filas[0] ?? null;
+  // Vencimientos del calendario: el documento vigente de cada tipo de cada unidad (sin los de años pasados)
+  const eventosCal = useMemo<EventoCal[]>(() => filas.flatMap(u => u.tipos.filter(t => t.actual.fecha_vencimiento).map(t => ({
+    placa: u.placa, codigo: t.codigo, corto: cortoDe(t.codigo, t.nombre), titulo: t.nombre,
+    color: colorDoc(Math.max(1, tiposCatalogo.findIndex(x => x.value === t.codigo) + 1)), fecha: t.actual.fecha_vencimiento as string,
+    estado: t.actual.estado, dias: t.actual.dias, texto: textoEstado(t.actual),
+  }))), [filas, tiposCatalogo]);
   const sinArchivosGuardados = todosLosDocs.filter(d => d.tiene_archivo && !d.archivo_guardado).length;
   const filtrosActivos = (tipo ? 1 : 0) + (grupo !== 'todos' ? 1 : 0);
 
@@ -310,6 +321,8 @@ export function DocsMarsisaPage() {
                 </div>
               </motion.section>
             </div>
+          ) : vista === 'calendario' ? (
+            <DocsMarsisaCalendario eventos={eventosCal} tipos={tiposCatalogo.filter(t => !tipo || t.value === tipo)} onElegir={p => { setPlaca(p); setVista('expediente'); }} />
           ) : vista === 'matriz' ? (
             <Matriz filas={filas} tipos={tiposCatalogo.filter(t => !tipo || t.value === tipo)} />
           ) : (
