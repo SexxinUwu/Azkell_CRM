@@ -511,7 +511,7 @@ export function NeumaticosListado() {
           ))}
         </ul>
       ) : (
-        <TablaRedimensionable id="neumaticos-listado-v2" columnas={columnas} ariaLabel="Listado de neumáticos" altoMax="72vh" className="tabla-redim--compacta">
+        <TablaRedimensionable id="neumaticos-listado-v2" columnas={columnas} ariaLabel="Listado de neumáticos" altoMax="72vh" className="nl-tabla tabla-redim--compacta">
           {filas.map(l => (
             <tr key={l.codigo} className="nl-fila" onClick={() => abrirFicha(l.codigo)}>
               <Celda alinear="center">
