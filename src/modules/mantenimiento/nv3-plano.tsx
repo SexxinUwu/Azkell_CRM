@@ -1,7 +1,7 @@
 // Plano 2D de la unidad: vista superior vertical con el frente arriba, sin cabina ni carrocería (chasis, ejes y llantas).
 // Las llantas van grises con su banda dibujada y un aro con el color del semáforo de remanente.
 // Cada posición es un grupo con data-ntb-pos: el tablero lo usa para tocar y arrastrar llantas igual que en el resto de vistas.
-import { useRef, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { CONFIGURACIONES } from '../inspecciones/components/ChasisEsquemaVisual';
 import { remanenteDe, tonoMm, type LlantaDato } from './NeumaticosEsquema';
 
@@ -26,6 +26,16 @@ export function PlanoTecnico({ configuracion, llantas, activa, sobre, camion = f
   arrastrando?: { posicion: string; x: number; y: number } | null;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
+  // La animación de entrada solo corre al montarse: al reordenar o mover nodos del SVG el navegador reinicia las animaciones CSS
+  // y las llantas desaparecerían unos segundos. Por eso se quita al terminar la entrada o al empezar a arrastrar.
+  const [entrando, setEntrando] = useState(animar);
+  useEffect(() => {
+    if (!animar) return;
+    const t = window.setTimeout(() => setEntrando(false), 3400);
+    return () => window.clearTimeout(t);
+  }, [animar]);
+  useEffect(() => { if (arrastrando) setEntrando(false); }, [arrastrando]);
+  const anim = animar && entrando && !arrastrando;
   const config = CONFIGURACIONES[configuracion];
   if (!config) return null;
   const datos = new Map(llantas.map(l => [normal(l.posicion), l] as const));
@@ -51,11 +61,11 @@ export function PlanoTecnico({ configuracion, llantas, activa, sobre, camion = f
   const ancho = 100;
   const filo = '#3a3d42';
   // Cada elemento entra con un retraso propio (ms) sobre el retraso base de la transformación
-  const d = (ms: number) => (animar ? ({ '--d': `${ms}ms` } as CSSProperties) : undefined);
-  const cl = (nombre: string) => (animar ? `pt-${nombre}` : undefined);
+  const d = (ms: number) => (anim ? ({ '--d': `${ms}ms` } as CSSProperties) : undefined);
+  const cl = (nombre: string) => (anim ? `pt-${nombre}` : undefined);
 
   return (
-    <svg ref={svgRef} className={`nv3-plano__svg${animar ? ' nv3-plano__svg--anim' : ''}`} viewBox={`${-ancho} ${Y_PARACHOQUE - 14} ${ancho * 2} ${yMax - Y_PARACHOQUE + 22}`} preserveAspectRatio="xMidYMid meet"
+    <svg ref={svgRef} className={`nv3-plano__svg${anim ? ' nv3-plano__svg--anim' : ''}`} viewBox={`${-ancho} ${Y_PARACHOQUE - 14} ${ancho * 2} ${yMax - Y_PARACHOQUE + 22}`} preserveAspectRatio="xMidYMid meet"
       role="group" aria-label={`Plano de la unidad, configuración ${configuracion}`}>
       <defs>
         <linearGradient id="nv3-metal-v" x1="0" x2="1" y1="0" y2="0">
@@ -136,7 +146,7 @@ export function PlanoTecnico({ configuracion, llantas, activa, sobre, camion = f
             filter: llevada ? 'drop-shadow(0 4px 5px rgba(0,0,0,0.4))' : undefined,
             transformBox: 'fill-box', transformOrigin: 'center',
           }}>
-          <g data-ntb-pos={r.pos} className={`nv3-plano__llanta${esActiva ? ' nv3-plano__llanta--activa' : ''}${esDestino ? ' nv3-plano__llanta--destino' : ''}${animar ? ' pt-llanta' : ''}`} style={d(750 + idx * 70)}
+          <g data-ntb-pos={r.pos} className={`nv3-plano__llanta${esActiva ? ' nv3-plano__llanta--activa' : ''}${esDestino ? ' nv3-plano__llanta--destino' : ''}${anim ? ' pt-llanta' : ''}`} style={d(750 + idx * 70)}
             aria-label={`Llanta ${r.pos}: ${dato ? 'montada' : 'libre'}`} role="button" tabIndex={-1}>
             <rect className="nv3-plano__marco" x={r.x - w / 2 - 6} y={r.y - h / 2 - 6} width={w + 12} height={h + 12} rx={9} />
             {dato ? (
