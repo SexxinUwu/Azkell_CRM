@@ -30,8 +30,9 @@ export function PersonaFicha({ persona: p, onEditar, onEliminar, onVolver, verPa
   const marco = useRef<HTMLIFrameElement>(null);
   // La pestaña va en la dirección (?tab=documentos): así el tablero de vencimientos abre directo en Documentos y se conserva al cambiar de persona
   const [params, setParams] = useSearchParams();
-  const pestana: Pestana = params.get('tab') === 'documentos' ? 'documentos' : 'ficha';
-  const elegir = (v: Pestana) => setParams(v === 'documentos' ? { tab: 'documentos' } : {}, { replace: true });
+  // Al abrir a una persona se ven primero sus documentos (como en Documentos de flota); la ficha es la otra página
+  const pestana: Pestana = params.get('tab') === 'ficha' ? 'ficha' : 'documentos';
+  const elegir = (v: Pestana) => setParams(v === 'ficha' ? { tab: 'ficha' } : {}, { replace: true });
   const html = useMemo(() => fichaEnPantalla(p, verPagos), [p, verPagos]);
 
   // El marco crece hasta mostrar toda la hoja: el desplazamiento es el del panel, no el del marco
