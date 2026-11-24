@@ -552,7 +552,7 @@ export function NeumaticosListado() {
           void qc.invalidateQueries({ queryKey: ['mant', 'neumaticos'] });
         }} />
       <AltaUnidadNuevaSheet open={altaAbierta} onClose={() => setAltaAbierta(false)}
-        onHecho={m => { toast(m); void qc.invalidateQueries({ queryKey: ['mant', 'neumaticos'] }); }} />
+        onHecho={m => { toast(m); void qc.invalidateQueries({ queryKey: ['mant', 'neumaticos'] }); void qc.invalidateQueries({ queryKey: ['mant', 'placas-lista'] }); }} />
       <ConfigCodigoSheet open={configAbierta} onClose={() => setConfigAbierta(false)} />
       <GenerarOrdenReencaucheSheet open={ordenAbierta} onClose={() => setOrdenAbierta(false)}
         llantas={filas.filter(l => seleccion.has(l.codigo)).map(l => ({ codigo: l.codigo, medida: l.medida }))}
