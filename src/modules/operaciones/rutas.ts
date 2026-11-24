@@ -86,6 +86,12 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'analisis-combustible', label: 'Análisis de combustible', to: '/operaciones/analisis-combustible', icon: 'BarChart2', permisos: ['operaciones.ver', 'admin'] },
   },
   {
+    path: 'operaciones/conduccion-rpm/*',
+    permisos: ['combustible_analisis.ver', 'admin'],
+    Page: lazy(() => import('./ConduccionRpmPage').then(m => ({ default: m.ConduccionRpmPage }))),
+    nav: { key: 'marsisa-conduccion-rpm', label: 'Conducción por RPM', to: '/operaciones/conduccion-rpm', icon: 'Gauge', permisos: ['combustible_analisis.ver', 'admin'] },
+  },
+  {
     path: 'operaciones/matriz-combustible/*',
     permisos: ['combustible_analisis.ver', 'admin'],
     Page: lazy(() => import('./MatrizCombustiblePage').then(m => ({ default: m.MatrizCombustiblePage }))),
