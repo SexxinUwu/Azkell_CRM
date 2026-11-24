@@ -18,7 +18,7 @@
 
 /* ─── Ficha de registro de personal: el detalle es la hoja que se imprime ─── */
 .ficha-personal { display: flex; flex-direction: column; min-height: 100%; }
-.ficha-personal__pestanas { display: flex; justify-content: center; padding: var(--s-2) var(--s-4) var(--s-3); }
+.ficha-personal__pestanas { display: flex; justify-content: flex-start; padding: var(--s-1) var(--s-4) var(--s-3); }
 .ficha-personal__hoja { display: block; width: 100%; min-height: 60vh; border: 0; background: transparent; }
 
 /* ─── Distribución: lista + tarjeta ─── */
@@ -195,7 +195,8 @@
 }
 
 /* ─── Documentos del personal ─── */
-.docp { display: flex; flex-direction: column; gap: var(--s-4); padding: 0 var(--s-5) var(--s-8); max-width: 56rem; width: 100%; margin: 0 auto; box-sizing: border-box; }
+/* Igual que Documentos de flota: el expediente ocupa todo el ancho del panel (no una columna centrada) */
+.docp { display: flex; flex-direction: column; gap: var(--s-4); padding: 0 var(--s-4) var(--s-6); width: 100%; margin: 0; box-sizing: border-box; }
 .docp__resumen { margin: 0; text-align: center; color: var(--label-2); font-size: 0.875rem; }
 .docp__grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr)); gap: var(--s-3); }
 .docp-tarjeta {
