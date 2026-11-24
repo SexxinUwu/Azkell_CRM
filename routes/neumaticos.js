@@ -1,4 +1,5 @@
 const express = require('express');
+const { asegurarLlantasProvisionales, remanenteDeCocadas } = require('../services/neumaticos_provisionales');
 const { uploadToS3, getPresignedUrl } = require('../utils/s3');
 const { hoyLima } = require('../services/horaLima');
 
@@ -487,6 +488,15 @@ module.exports = function (db, broadcast, logAudit) {
                             String(it.posicion || '1').toUpperCase()
                         ]);
                     }
+                }
+
+                // Las llantas que el ciclo de vida aún no conoce nacen como provisionales (PROV-placa-posición), ya instaladas,
+                // para que Neumáticos liste todo lo instalado; las que ya están instaladas solo refrescan su remanente
+                const sinId = items.filter(it => !it.id_neumatico).map(it => ({
+                    posicion: it.posicion || '1', marca: it.marca, modelo: it.modelo, medida: it.medida, remanente: remanenteDeCocadas(it),
+                }));
+                if (sinId.length) {
+                    await asegurarLlantasProvisionales(tdb, { placa, fecha: String(fecha_inspeccion).slice(0, 10), km: km_vehiculo, idInspeccion: id_inspeccion, items: sinId });
                 }
 
                 await tdb.query('COMMIT');
