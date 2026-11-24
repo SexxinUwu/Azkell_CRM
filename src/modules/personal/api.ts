@@ -359,7 +359,7 @@ export interface TipoDocConfig {
 }
 
 export const TIPOS_DOC: TipoDocConfig[] = [
-  { tipo: 'DNI', titulo: 'DNI', corto: 'DNI', vence: false, obligatorio: true },
+  { tipo: 'DNI', titulo: 'DNI', corto: 'DNI', vence: true, obligatorio: true },
   { tipo: 'LICENCIA', titulo: 'Licencia de conducir', corto: 'Licencia', vence: true, obligatorio: true, soloConductor: true },
   { tipo: 'ANTECEDENTES', titulo: 'Certificado de antecedentes', corto: 'Antecedentes', vence: true, obligatorio: false },
   { tipo: 'EMO', titulo: 'Examen médico (EMO)', corto: 'EMO', vence: true, obligatorio: true },

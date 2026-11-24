@@ -43,7 +43,7 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'acc', titulo: '', ancho: 64, minimo: 56, alinear: 'center' },
   { id: 'cod', titulo: 'Código', ancho: 125 }, { id: 'fecha', titulo: 'Fecha', ancho: 105 }, { id: 'ent', titulo: 'Entidad', ancho: 130 }, { id: 'num', titulo: 'N° documento', ancho: 140 },
   { id: 'placa', titulo: 'Unidad', ancho: 130 }, { id: 'cond', titulo: 'Conductor', ancho: 200 }, { id: 'inf', titulo: 'Infracción', ancho: 300 },
-  { id: 'total', titulo: 'Total', ancho: 120, alinear: 'right' }, { id: 'pag', titulo: 'Pagado', ancho: 115, alinear: 'right' }, { id: 'saldo', titulo: 'Saldo', ancho: 120, alinear: 'right' },
+  { id: 'total', titulo: 'Total', ancho: 120, alinear: 'right' }, { id: 'pag', titulo: 'Pagado', ancho: 115, alinear: 'right' }, { id: 'aho', titulo: 'Ahorro dto.', ancho: 115, alinear: 'right' }, { id: 'saldo', titulo: 'Saldo', ancho: 120, alinear: 'right' },
   { id: 'plazo', titulo: 'Próximo plazo', ancho: 200 }, { id: 'estado', titulo: 'Estado', ancho: 125, alinear: 'center' }, { id: 'asume', titulo: 'Asume', ancho: 150 },
 ];
 const COL_UNIDAD: ColumnaTabla[] = [
@@ -114,6 +114,9 @@ export function PapeletasPage() {
       descargo: base.filter(p => p.estado === 'EN_DESCARGO').length,
       pagadas: { n: base.filter(p => p.estado === 'PAGADA').length, pen: suma(base.filter(p => p.estado === 'PAGADA'), p => p.pagado) },
       anuladas: base.filter(p => p.estado === 'ANULADA').length,
+      // Dinero pagado (incluye pagos parciales) y ahorrado por pagar con descuento, de lo que se ve con los filtros
+      pagado: { pen: suma(base, p => p.pagado), usd: sumaUsd(base, p => p.pagado) },
+      ahorro: { n: base.filter(p => p.ahorro_descuento > 0).length, pen: suma(base, p => p.ahorro_descuento), usd: sumaUsd(base, p => p.ahorro_descuento) },
     };
   }, [base]);
 
@@ -214,6 +217,17 @@ export function PapeletasPage() {
                   </button>
                 ))}
               </div>
+              <div className="pap-montos" aria-label="Monto pagado y ahorro por descuentos">
+                <div className="pap-monto pap-monto--pagado">
+                  <span className="pap-monto__k">Monto pagado</span>
+                  <strong className="t-numeric">{formatMoneda(cifras.pagado.pen, 'PEN')}{cifras.pagado.usd > 0 && <small> + {formatMoneda(cifras.pagado.usd, 'USD')}</small>}</strong>
+                </div>
+                <div className="pap-monto pap-monto--ahorro">
+                  <span className="pap-monto__k">Ahorrado por descuentos</span>
+                  <strong className="t-numeric">{formatMoneda(cifras.ahorro.pen, 'PEN')}{cifras.ahorro.usd > 0 && <small> + {formatMoneda(cifras.ahorro.usd, 'USD')}</small>}</strong>
+                  <small className="pap-monto__n">{cifras.ahorro.n} {cifras.ahorro.n === 1 ? 'papeleta pagada' : 'papeletas pagadas'} con descuento</small>
+                </div>
+              </div>
               {urgentes.length > 0 && (
                 <div className="pap-urgentes" role="status">
                   <AlertTriangle size={15} aria-hidden /><strong>Requieren atención</strong>
@@ -264,8 +278,9 @@ export function PapeletasPage() {
                     <Celda mono><strong>{p.codigo}</strong></Celda><Celda mono>{fechaTxt(p.fecha_infraccion)}</Celda><Celda>{entidadTexto(p)}</Celda><Celda mono>{p.numero}</Celda>
                     <Celda><LicensePlate plate={p.placa} size="sm" /></Celda><Celda>{p.conductor_nombre || '—'}</Celda>
                     <Celda><span className="pap-recorte" title={p.infraccion_desc ?? ''}>{[p.infraccion_codigo, p.infraccion_desc].filter(Boolean).join(' · ') || '—'}</span></Celda>
-                    <Celda alinear="right"><strong>{formatMoneda(p.total_vigente, p.moneda)}</strong>{p.descuento_vigente && <small className="pap-desc"> −dto.</small>}</Celda>
+                    <Celda alinear="right"><strong>{formatMoneda(p.total_vigente, p.moneda)}</strong>{(p.descuento_vigente || p.ahorro_descuento > 0) && <small className="pap-desc"> −dto.</small>}</Celda>
                     <Celda alinear="right">{formatMoneda(p.pagado, p.moneda)}</Celda>
+                    <Celda alinear="right">{p.ahorro_descuento > 0 ? <strong className="pap-verde">{formatMoneda(p.ahorro_descuento, p.moneda)}</strong> : <span className="pap-suave">—</span>}</Celda>
                     <Celda alinear="right"><strong className={p.saldo > 0 ? 'pap-ambar' : 'pap-suave'}>{formatMoneda(p.saldo, p.moneda)}</strong></Celda>
                     <Celda>{pl ? <span className={`pap-plazo${pl.dias < 0 ? ' pap-plazo--rojo' : pl.dias <= 3 ? ' pap-plazo--ambar' : ''}`}>{pl.texto} <small>({plazoTxt(pl.dias)})</small></span> : '—'}</Celda>
                     <Celda alinear="center"><span className={`pap-estado pap-estado--${ESTADO_TONO[p.estado_efectivo]}`}>{ESTADO_TXT[p.estado_efectivo]}</span></Celda>

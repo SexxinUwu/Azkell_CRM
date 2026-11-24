@@ -54,6 +54,8 @@ export interface Papeleta {
   pagado: number;
   n_pagos: number;
   total_sin_descuento: number;
+  /** Lo que se ahorró por pagar con descuento (solo papeletas canceladas) */
+  ahorro_descuento: number;
   total_vigente: number;
   saldo: number;
   descuento_vigente: boolean;

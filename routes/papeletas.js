@@ -54,8 +54,12 @@ function enriquecer(r, hoy = hoyLima()) {
     const monto = num(r.monto), recargos = num(r.recargos), descuento = num(r.descuento_monto), pagado = num(r.pagado);
     const descuentoVigente = descuento > 0 && !!r.fecha_limite_descuento && r.fecha_limite_descuento >= hoy;
     const totalSinDescuento = redondear(monto + recargos);
-    const totalVigente = redondear(totalSinDescuento - (descuentoVigente ? descuento : 0));
-    const saldo = r.estado === 'ANULADA' ? 0 : Math.max(0, redondear(totalVigente - pagado));
+    // Una papeleta pagada se muestra por lo que realmente se pagó (aunque su descuento ya haya vencido), sin saldo
+    const pagada = r.estado === 'PAGADA';
+    const totalVigente = pagada && pagado > 0 ? pagado : redondear(totalSinDescuento - (descuentoVigente ? descuento : 0));
+    const saldo = r.estado === 'ANULADA' || pagada ? 0 : Math.max(0, redondear(totalVigente - pagado));
+    // Ahorro por descuento: lo que se dejó de pagar respecto al total sin descuento, solo en papeletas canceladas
+    const ahorro = pagada ? Math.min(descuento, Math.max(0, redondear(totalSinDescuento - pagado))) : 0;
     const dias = f => (f ? Math.round((Date.parse(`${f}T00:00:00Z`) - Date.parse(`${hoy}T00:00:00Z`)) / 86400000) : null);
     const vencida = ['PENDIENTE', 'EN_DESCARGO'].includes(r.estado) && saldo > 0 && !!r.fecha_limite_pago && r.fecha_limite_pago < hoy;
     let efectivo = r.estado;
@@ -63,7 +67,7 @@ function enriquecer(r, hoy = hoyLima()) {
     return {
         ...r,
         monto, recargos, descuento_monto: descuento, pagado,
-        total_sin_descuento: totalSinDescuento, total_vigente: totalVigente, saldo,
+        total_sin_descuento: totalSinDescuento, total_vigente: totalVigente, saldo, ahorro_descuento: ahorro,
         descuento_vigente: descuentoVigente,
         dias_descuento: dias(r.fecha_limite_descuento), dias_descargo: dias(r.fecha_limite_descargo), dias_pago: dias(r.fecha_limite_pago),
         vencida, estado_efectivo: efectivo,
