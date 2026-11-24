@@ -9,6 +9,8 @@ import './nv3.css';
 
 // Three.js solo se descarga al abrir una pantalla con neumáticos; mientras tanto se ve el SVG
 const Nv3Vista = lazy(() => import('./nv3-vista'));
+// Tablero de movimientos: la isometría usa el modelo 3D de Placas (se descarga solo cuando se necesita)
+const Placa3DVista = lazy(() => import('./nv3-placa3d'));
 
 export interface NeumaticosCenitalProps {
   llantas: LlantaDato[];
@@ -32,6 +34,8 @@ export interface NeumaticosCenitalProps {
   onModo?: (modo: ModoVista) => void;
   /** Plano 2D de líneas con transformación a Isometría (tablero de movimientos) */
   plano2d?: boolean;
+  /** Placa de la unidad: con plano2d, la isometría usa el modelo 3D de esa unidad en Placas */
+  placa?: string;
 }
 
 /** Este equipo puede dibujar en WebGL */
@@ -52,9 +56,11 @@ class RespaldoSeguro extends Component<{ respaldo: ReactNode; children: ReactNod
   render() { return this.state.fallo ? this.props.respaldo : this.props.children; }
 }
 
-export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null, onSelect, sondaRef, arrastreRef, marca = null, camion = false, modo, onModo, plano2d = false }: NeumaticosCenitalProps) {
+export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null, onSelect, sondaRef, arrastreRef, marca = null, camion = false, modo, onModo, plano2d = false, placa }: NeumaticosCenitalProps) {
   const [soportaWebgl] = useState(webglDisponible);
   const [perdido, setPerdido] = useState(false);
+  // Si el modelo de Placas no encaja con la unidad, se usa la vista 3D propia del tablero
+  const [sinModeloPlacas, setSinModeloPlacas] = useState(false);
 
   const posicionesConfig = configuracion ? posicionesDeConfig(configuracion) : [];
   const encaja = !!configuracion && !!CONFIGURACIONES[configuracion]
@@ -62,6 +68,19 @@ export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null
   const respaldo = <EsquemaNeumaticos llantas={llantas} configuracion={configuracion} activa={activa} onSelect={onSelect} />;
 
   if (!configuracion || !encaja || !soportaWebgl || perdido) return respaldo;
+
+  if (plano2d && placa && modo && onModo && !sinModeloPlacas) {
+    return (
+      <RespaldoSeguro respaldo={respaldo}>
+        <Suspense fallback={respaldo}>
+          <Placa3DVista
+            placa={placa} configuracion={configuracion} llantas={llantas} activa={activa} sobre={sobre} camion={camion}
+            modo={modo} onModo={onModo} onSelect={onSelect} onFalla={() => setSinModeloPlacas(true)}
+          />
+        </Suspense>
+      </RespaldoSeguro>
+    );
+  }
 
   return (
     <RespaldoSeguro respaldo={respaldo}>

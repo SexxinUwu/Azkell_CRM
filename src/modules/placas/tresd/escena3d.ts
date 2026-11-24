@@ -394,6 +394,68 @@ export class Escena3D {
 
   private invalidate(): void { this.sucio = true; }
 
+  /* ---------------- Tablero de neumáticos ---------------- */
+
+  /** Se llama después de cada cuadro dibujado: el tablero de neumáticos reubica sus marcadores */
+  alDibujar: (() => void) | null = null;
+
+  /** Despiece a un valor dado (1 = como el interruptor); con animar = false se aplica de inmediato */
+  despiece(valor: number, animar: boolean): void {
+    this.objetivo.explode = valor;
+    if (!animar){ this.actual.explode = valor; this.applyState(); }
+    this.invalidate();
+  }
+
+  /** Posición en píxeles del lienzo de un punto del modelo (por ejemplo, el centro de una llanta) */
+  enPantalla(obj: THREE.Object3D): { x: number; y: number } {
+    const v = new V();
+    obj.getWorldPosition(v);
+    v.project(this.camera);
+    return { x: (v.x * 0.5 + 0.5) * this.canvas.clientWidth, y: (-v.y * 0.5 + 0.5) * this.canvas.clientHeight };
+  }
+
+  /**
+   * Asigna cada posición de llanta del tablero (1, 2, 3…) a la rueda del modelo. Los ejes se ordenan del frente hacia atrás;
+   * la izquierda y la derecha salen del sentido de la unidad; en un lado con llantas dobles la exterior va primero.
+   * Devuelve null si el modelo no tiene los mismos ejes y llantas que la configuración (el tablero usa entonces su vista de respaldo).
+   */
+  mapearRuedas(ejes: { izquierda: string[]; derecha: string[] }[]): Map<string, THREE.Object3D> | null {
+    const cur = this.cur;
+    if (!cur) return null;
+    cur.root.updateMatrixWorld(true);
+    const objs: THREE.Object3D[] = [];
+    cur.root.traverse(n => { if (n.userData.rueda) objs.push(n); });
+    const pts = objs.map(o => ({ o, v: o.getWorldPosition(new V()) }));
+    if (!pts.length) return null;
+    const redondo = (n: number): number => Math.round(n * 20) / 20;
+    const xs = [...new Set(pts.map(p => redondo(p.v.x)))];
+    if (xs.length !== ejes.length) return null;
+    const media = (a: number[]): number => a.reduce((s, n) => s + n, 0) / Math.max(1, a.length);
+    const descendiente = (o: THREE.Object3D, raiz: THREE.Object3D): boolean => { for (let p: THREE.Object3D | null = o; p; p = p.parent) if (p === raiz) return true; return false; };
+    let adelante: number;
+    const del = cur.byId.ejeDel?.group;
+    if (del){
+      const fr = pts.filter(p => descendiente(p.o, del));
+      const resto = pts.filter(p => !fr.includes(p));
+      adelante = Math.sign(media(fr.map(p => p.v.x)) - media(resto.map(p => p.v.x))) || 1;
+    } else {
+      const centro = new THREE.Box3().setFromObject(cur.root).getCenter(new V()).x;
+      adelante = Math.sign(centro - media(pts.map(p => p.v.x))) || 1;
+    }
+    const orden = xs.slice().sort((a, b) => adelante * (b - a));
+    const res = new Map<string, THREE.Object3D>();
+    for (let i = 0; i < ejes.length; i++){
+      const delEje = pts.filter(p => redondo(p.v.x) === orden[i]);
+      for (const [derecha, posiciones] of [[false, ejes[i].izquierda], [true, ejes[i].derecha]] as const){
+        const signo = adelante * (derecha ? 1 : -1);
+        const lado = delEje.filter(p => Math.sign(p.v.z) === signo).sort((a, b) => Math.abs(b.v.z) - Math.abs(a.v.z));
+        if (lado.length !== posiciones.length) return null;
+        posiciones.forEach((pos, k) => res.set(pos, lado[k].o));
+      }
+    }
+    return res;
+  }
+
   private textura(w: number, h: number, dibujar: (g: CanvasRenderingContext2D, w: number, h: number) => void, srgb = true): THREE.CanvasTexture {
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
@@ -687,6 +749,7 @@ export class Escena3D {
     this.renderer.render(this.scene, this.camera);
     this._renders++;
     this.sucio = false;
+    if (this.alDibujar) this.alDibujar();
     this.actualizarCalidadAutomatica(raw, moviendose);
   }
 }
