@@ -519,6 +519,78 @@ module.exports = function (db) {
     });
 
     // ============================================================
+    // 4b. ALTA DE LLANTAS DE UNIDAD NUEVA: llegan montadas con el vehículo (sin orden de compra).
+    // Crea cada llanta ya instalada en su posición (costo 0), con su código de fuego, y deja ALTA + INSTALACION en el kardex.
+    // ============================================================
+    router.post('/alta-unidad-nueva', async (req, res) => {
+        try {
+            if (!tienePermiso(req, PERMISO_MOVER, 'c')) throw aviso(403, `Sin permiso (${PERMISO_MOVER}) para dar de alta llantas`);
+            const b = req.body || {};
+            const placa = mayus(b.placa);
+            if (!placa) throw aviso(400, 'La placa es obligatoria');
+            const km = Math.trunc(numeroNoNegativo(b.km, 'Kilometraje', true));
+            const lista = Array.isArray(b.llantas) ? b.llantas : [];
+            if (!lista.length) throw aviso(400, 'Indica al menos una llanta');
+            if (lista.length > 30) throw aviso(400, 'Máximo 30 llantas por unidad');
+            const generarCodigo = b.generar_codigo !== false;
+
+            const llantas = lista.map((x, i) => {
+                const posicion = mayus(x.posicion);
+                const marca = txt(x.marca), modelo = txt(x.modelo), medida = txt(x.medida);
+                if (!posicion) throw aviso(400, `Llanta ${i + 1}: falta la posición`);
+                if (!marca || !medida) throw aviso(400, `Llanta ${i + 1} (posición ${posicion}): marca y medida son obligatorias`);
+                const rem = Number(x.remanente);
+                if (!Number.isFinite(rem) || rem < 0 || rem > 40) throw aviso(400, `Llanta ${i + 1} (posición ${posicion}): remanente no válido`);
+                return { posicion, marca, modelo, medida, rem };
+            });
+            if (new Set(llantas.map(l => l.posicion)).size !== llantas.length) throw aviso(400, 'Hay posiciones repetidas');
+
+            const resultado = await conTransaccion(pool(req), async (conn) => {
+                const [pl] = await conn.query('SELECT placa FROM placas WHERE UPPER(TRIM(placa)) = ? LIMIT 1', [placa]);
+                if (!pl.length) throw aviso(404, `La placa ${placa} no existe en la flota`);
+                const fecha = hoyLima();
+                const creadas = [];
+                for (const l of llantas) {
+                    const [ocupada] = await conn.query(
+                        'SELECT id_neumatico FROM neumaticos_instalaciones WHERE placa = ? AND posicion = ? AND fecha_out IS NULL FOR UPDATE',
+                        [placa, l.posicion]);
+                    if (ocupada.length) throw aviso(409, `La posición ${l.posicion} de ${placa} ya tiene una llanta montada (${ocupada[0].id_neumatico})`);
+                    let id = `ALTA-${placa}-${l.posicion}`;
+                    for (let k = 2; k < 50; k += 1) {
+                        const [ya] = await conn.query('SELECT 1 FROM neumaticos_hoja_vida WHERE id_neumatico = ? LIMIT 1', [id]);
+                        if (!ya.length) break;
+                        id = `ALTA-${placa}-${l.posicion}-${k}`;
+                    }
+                    const [ins] = await conn.query(
+                        `INSERT INTO neumaticos_hoja_vida
+                         (id_neumatico, marca, modelo, medida, estado, remanente_inicial, remanente_actual, costo_compra,
+                          km_acumulado, estado_ciclo, vida, contador_reencauches, costo_reencauches, almacen_id, estado_operativo,
+                          placa_actual, posicion_actual, fecha_instalacion)
+                         VALUES (?, ?, ?, ?, 'NUEVA', ?, ?, 0, 0, ?, 'R0', 0, 0, NULL, ?, ?, ?, ?)`,
+                        [id, l.marca, l.modelo || '', l.medida, l.rem, l.rem, ESTADO.MONTADA.ciclo, ESTADO.MONTADA.operativo, placa, l.posicion, fecha]);
+                    if (ins.affectedRows !== 1) throw aviso(500, 'No se pudo crear la llanta');
+                    await conn.query(
+                        `INSERT INTO neumaticos_instalaciones (id_neumatico, placa, posicion, fecha_in, km_in, usuario) VALUES (?, ?, ?, ?, ?, ?)`,
+                        [id, placa, l.posicion, fecha, km, usuarioDe(req)]);
+                    await registrarMovimiento(conn, { id_neumatico: id, tipo: MOV.ALTA, origen: null, destino: null, placa, posicion: l.posicion,
+                        km, fecha: ahoraLima(), usuario: usuarioDe(req), observacion: 'Alta con unidad nueva' });
+                    await registrarMovimiento(conn, { id_neumatico: id, tipo: MOV.INSTALACION, origen: null, destino: null, placa, posicion: l.posicion,
+                        km, fecha: ahoraLima(), usuario: usuarioDe(req), observacion: 'Instalada de fábrica' });
+                    creadas.push({ id_neumatico: id, posicion: l.posicion, codigo: null });
+                }
+                if (generarCodigo) {
+                    const asignados = await asignarCodigosFuego(conn, creadas.map(c => c.id_neumatico));
+                    asignados.forEach((a, i) => { creadas[i].codigo = a.codigo; });
+                }
+                return creadas;
+            });
+            res.json({ ok: true, data: { placa, llantas: resultado } });
+        } catch (err) {
+            responder(res, err);
+        }
+    });
+
+    // ============================================================
     // 5. RETIRAR: cierra la instalación, deja la posición libre y envía la llanta al Retén (almacén 1146).
     // destino: 'reten' (queda disponible), 'reforma' (enviar para reforma) o 'descarte' (esperando descarte).
     // Por compatibilidad, 'reencauche' equivale a 'reforma' y 'desecho' a 'descarte'.

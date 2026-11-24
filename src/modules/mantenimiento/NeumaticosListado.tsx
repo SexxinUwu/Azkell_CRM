@@ -17,6 +17,7 @@ import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/Ta
 import { LogoArchivo } from './NeumaticosRequerimiento';
 import { vidaTexto } from './ntb-api';
 import { useAuth } from '../../core/auth/AuthProvider';
+import { AltaUnidadNuevaSheet } from './NeumaticosAltaUnidad';
 import { DespacharReformadoraSheet, GenerarOrdenReencaucheSheet } from './NeumaticosReencauche';
 
 // Listado de neumáticos: GET /api/neumaticos/listado (contrato en routes/neumaticos-ciclo.js).
@@ -321,8 +322,10 @@ export function NeumaticosListado() {
   const [fOrden, setFOrden] = useState('');
   const [orden, setOrden] = useState<{ campo: string; dir: 'asc' | 'desc' } | null>(null);
   const [despachoAbierto, setDespachoAbierto] = useState(false);
+  const [altaAbierta, setAltaAbierta] = useState(false);
   const { can } = useAuth();
   const puedeReforma = can('neumaticos.reencauche');
+  const puedeAlta = can('neumaticos.mover');
   const qc = useQueryClient();
   const toast = useToast();
 
@@ -422,6 +425,11 @@ export function NeumaticosListado() {
                 Despachar a la reformadora
               </Button>
             )}
+            {puedeAlta && (
+              <Button variant="secondary" icon={<Disc3 size={16} />} onClick={() => setAltaAbierta(true)}>
+                Alta de unidad nueva
+              </Button>
+            )}
             <Button variant="secondary" icon={<Settings size={16} />} onClick={() => setConfigAbierta(true)}>
               Código de fuego
             </Button>
@@ -511,7 +519,7 @@ export function NeumaticosListado() {
           ))}
         </ul>
       ) : (
-        <TablaRedimensionable id="neumaticos-listado-v2" columnas={columnas} ariaLabel="Listado de neumáticos" altoMax="72vh" className="tabla-redim--compacta">
+        <TablaRedimensionable id="neumaticos-listado-v2" columnas={columnas} ariaLabel="Listado de neumáticos" altoMax="72vh" className="nl-tabla tabla-redim--compacta">
           {filas.map(l => (
             <tr key={l.codigo} className="nl-fila" onClick={() => abrirFicha(l.codigo)}>
               <Celda alinear="center">
@@ -543,6 +551,8 @@ export function NeumaticosListado() {
           toast('Códigos de fuego asignados');
           void qc.invalidateQueries({ queryKey: ['mant', 'neumaticos'] });
         }} />
+      <AltaUnidadNuevaSheet open={altaAbierta} onClose={() => setAltaAbierta(false)}
+        onHecho={m => { toast(m); void qc.invalidateQueries({ queryKey: ['mant', 'neumaticos'] }); }} />
       <ConfigCodigoSheet open={configAbierta} onClose={() => setConfigAbierta(false)} />
       <GenerarOrdenReencaucheSheet open={ordenAbierta} onClose={() => setOrdenAbierta(false)}
         llantas={filas.filter(l => seleccion.has(l.codigo)).map(l => ({ codigo: l.codigo, medida: l.medida }))}
