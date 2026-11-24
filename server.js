@@ -5285,6 +5285,8 @@ const combustibleRouter = require('./routes/combustible')(db, broadcast, logAudi
 app.use('/api/combustible', combustibleRouter);
 // Guías de remisión (Operaciones): registro de las GRE de los clientes y vínculo con el servicio. Va antes de /api/operaciones.
 app.use('/api/operaciones/vales', require('./routes/vales_viaje')(db, logAudit));
+// Documentos de flota de la API externa de Marsisa (copia de solo consulta en su propia tabla). Va antes de /api/operaciones.
+app.use('/api/operaciones/docs-marsisa', require('./routes/docs-marsisa')(db, logAudit));
 app.use('/api/operaciones/gre', require('./routes/gre_pdf')(db, logAudit));
 app.use('/api/operaciones/gre', require('./routes/gre')(db, logAudit));
 // Puntos de carga y descarga de cada cliente (catálogo para llenar las guías). Va antes de /api/operaciones.

@@ -523,3 +523,28 @@ model SiniestroMotivo {
 
   @@map("mantenimiento_siniestros_motivos")
 }
+
+// Documentos de flota traídos de la API externa de Marsisa (copia de solo consulta)
+model DocFlotaExterno {
+  id                 Int       @id @default(autoincrement())
+  id_remoto          Int       @unique(map: "uq_docs_ext_remoto")
+  placa              String    @db.VarChar(20)
+  unidad_activa      Int       @default(1) @db.TinyInt
+  tipo_codigo        String    @db.VarChar(80)
+  tipo_nombre        String    @db.VarChar(200)
+  numero             String?   @db.VarChar(255)
+  emisor             String?   @db.VarChar(200)
+  fecha_emision      DateTime? @db.Date
+  fecha_vencimiento  DateTime? @db.Date
+  tiene_archivo      Int       @default(0) @db.TinyInt
+  eliminado_remoto   Int       @default(0) @db.TinyInt
+  actualizado_remoto DateTime? @db.DateTime(0)
+  archivo_url        String?   @db.VarChar(500)
+  archivo_nombre     String?   @db.VarChar(255)
+  archivo_mime       String?   @db.VarChar(100)
+  sincronizado_en    DateTime  @default(now()) @db.Timestamp(0)
+
+  @@index([placa], map: "idx_docs_ext_placa")
+  @@index([tipo_codigo], map: "idx_docs_ext_tipo")
+  @@map("marsisa_docs_flota_ext")
+}
