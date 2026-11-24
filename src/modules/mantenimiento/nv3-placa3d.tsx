@@ -9,7 +9,7 @@ import { remanenteDe, tonoMm, type LlantaDato } from './NeumaticosEsquema';
 import { PlanoTecnico } from './nv3-plano';
 import type { ModoVista } from './nv3-motor';
 import { usePlacas } from '../placas/api';
-import { colorsOf, resolverModelo, unidadesDe } from '../placas/tresd/datos';
+import { colorsOf, resolverModelo, unidadesDe, type Cat, type Unidad } from '../placas/tresd/datos';
 import { useOscuro } from '../placas/tresd/useOscuro';
 import type { Escena3D } from '../placas/tresd/escena3d';
 import './nv3.css';
@@ -24,27 +24,39 @@ const OPCIONES: Array<{ valor: ModoVista; etiqueta: string }> = [
   { valor: 'isometria', etiqueta: 'Isometría' },
 ];
 
-export default function Placa3DVista({ placa, configuracion, llantas, activa, sobre, camion = false, modo, onModo, onSelect, onFalla }: {
+export default function Placa3DVista({ placa, configuracion, llantas, activa, sobre, camion = false, modo, onModo, onSelect }: {
   placa: string; configuracion: string; llantas: LlantaDato[]; activa: string; sobre: string | null; camion?: boolean;
-  modo: ModoVista; onModo: (m: ModoVista) => void; onSelect: (l: LlantaDato) => void; onFalla: () => void;
+  modo: ModoVista; onModo: (m: ModoVista) => void; onSelect: (l: LlantaDato) => void;
 }) {
   const { oscuro } = useOscuro();
   const placas = usePlacas();
-  const unidad = useMemo(() => {
+  // La unidad del modelo 3D sale de la ficha de la placa, pero con la configuración que el tablero dibuja: así el modelo
+  // siempre tiene los mismos ejes que el plano. Si la placa no está en la flota, se usa el modelo genérico de su tipo.
+  const unidad = useMemo<Unidad | null>(() => {
+    if (!placas.isFetched) return null;
     const p = placas.data?.find(x => normal(x.placa) === normal(placa));
-    return p ? unidadesDe([p]).rows[0] ?? null : null;
-  }, [placas.data, placa]);
+    const base = p ? unidadesDe([p]).rows[0] ?? null : null;
+    const remolque = /^[SR]/.test(configuracion);
+    const tracto = !camion;
+    const cfg = remolque ? configuracion : (configuracion === '4X2' ? (tracto ? 'T2' : 'C2') : (tracto ? 'T3' : 'C3'));
+    const cat: Cat = configuracion.startsWith('S') ? 'S' : configuracion.startsWith('R') ? 'R' : tracto ? 'T' : 'C';
+    const f: Record<string, string> = { ...(base?.f ?? { PLACA: placa, MARCA: '', MODELO: '', TIPO: '', COLOR: '' }), CONFIGURACION: cfg };
+    if (base && base.cat !== 'A') return { ...base, f, cat };
+    return { plate: normal(placa), f, cat, search: '', placa: (p ?? {}) as Unidad['placa'] };
+  }, [placas.isFetched, placas.data, placa, configuracion, camion]);
 
   const vista = useRef<HTMLDivElement>(null);
   const lienzo = useRef<HTMLCanvasElement>(null);
   const cabecera = useRef<HTMLDivElement>(null);
   const barra = useRef<HTMLDivElement>(null);
   const escenaRef = useRef<Escena3D | null>(null);
-  const ruedasRef = useRef<Map<string, import('three-r128').Object3D> | null>(null);
+  const ruedasRef = useRef<{ pos: string; obj: import('three-r128').Object3D; desvio: number }[] | null>(null);
   const marcadores = useRef<Map<string, HTMLElement>>(new Map());
   const [listo, setListo] = useState(false);
-  const vivo = useRef({ modo, onFalla });
-  vivo.current = { modo, onFalla };
+  // Solo si el equipo no puede dibujar en WebGL: queda el plano de líneas, sin isometría
+  const [sin3d, setSin3d] = useState(false);
+  const vivo = useRef({ modo });
+  vivo.current = { modo };
 
   const config = CONFIGURACIONES[configuracion];
   const posiciones = useMemo(() => posicionesDeConfig(configuracion), [configuracion]);
@@ -71,22 +83,21 @@ export default function Placa3DVista({ placa, configuracion, llantas, activa, so
       escena.layout();
       // La asignación de ruedas se hace con la unidad armada
       const mapa = escena.mapearRuedas(config.ejes);
-      if (!mapa) { vivo.current.onFalla(); return; }
       ruedasRef.current = mapa;
       escena.alDibujar = () => {
         const m = ruedasRef.current;
         if (!m || !escenaRef.current) return;
-        m.forEach((obj, pos) => {
+        m.forEach(({ pos, obj, desvio }) => {
           const el = marcadores.current.get(pos);
           if (!el) return;
           const p = escenaRef.current!.enPantalla(obj);
-          el.style.transform = `translate(${p.x - 14}px, ${p.y - 14}px)`;
+          el.style.transform = `translate(${p.x - 14 + desvio}px, ${p.y - 14}px)`;
         });
       };
       // Estado inicial según el modo: en Plano la unidad queda despiezada y vista desde arriba
       if (vivo.current.modo === 'plano') { escena.despiece(DESPIECE_PLANO, false); escena.vista('top', true); } else { escena.vista('v34', true); }
       setListo(true);
-    }).catch(() => { if (activo) vivo.current.onFalla(); });
+    }).catch(() => { if (activo) setSin3d(true); });
     return () => {
       activo = false;
       if (escena) escena.destruir();
@@ -96,12 +107,6 @@ export default function Placa3DVista({ placa, configuracion, llantas, activa, so
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unidad, configuracion]);
-
-  // Si la flota ya cargó y esta placa no está en ella, no hay modelo que mostrar
-  useEffect(() => {
-    if (placas.isSuccess && !unidad) onFalla();
-    if (placas.isError) onFalla();
-  }, [placas.isSuccess, placas.isError, unidad, onFalla]);
 
   // Plano ⇄ Isometría: la unidad se arma (o se desarma) mientras la cámara sube o baja
   const modoAnterior = useRef<ModoVista | null>(null);
@@ -136,7 +141,18 @@ export default function Placa3DVista({ placa, configuracion, llantas, activa, so
     onSelect(enOrden[i < 0 ? (paso > 0 ? 0 : n - 1) : (i + paso + n) % n]);
   };
 
-  const conMarcadores = [...(ruedasRef.current?.keys() ?? [])];
+  // Sin WebGL queda solo el plano de líneas
+  if (sin3d) {
+    return (
+      <div className="nv3-vista nv3-vista--2d nv3-vista--placa" data-nv3 data-modo="plano">
+        <div className="nv3-plano">
+          <PlanoTecnico configuracion={configuracion} llantas={llantas} activa={activa} sobre={sobre} camion={camion} />
+        </div>
+      </div>
+    );
+  }
+
+  const conMarcadores = (ruedasRef.current ?? []).map(r => r.pos);
 
   return (
     <div ref={vista} className="nv3-vista nv3-vista--2d nv3-vista--placa" data-nv3 data-modo={modo}>

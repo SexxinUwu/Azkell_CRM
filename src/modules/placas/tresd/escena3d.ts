@@ -415,27 +415,28 @@ export class Escena3D {
   }
 
   /**
-   * Asigna cada posición de llanta del tablero (1, 2, 3…) a la rueda del modelo. Los ejes se ordenan del frente hacia atrás;
+   * Asigna cada posición de llanta del tablero (1, 2, 3…) a una rueda del modelo. Los ejes se ordenan del frente hacia atrás;
    * la izquierda y la derecha salen del sentido de la unidad; en un lado con llantas dobles la exterior va primero.
-   * Devuelve null si el modelo no tiene los mismos ejes y llantas que la configuración (el tablero usa entonces su vista de respaldo).
+   * Siempre devuelve una asignación: si el modelo tiene menos ejes o ruedas que la configuración, las posiciones sobrantes
+   * comparten la rueda más cercana y llevan un desvío (px) para que sus marcadores no se tapen.
    */
-  mapearRuedas(ejes: { izquierda: string[]; derecha: string[] }[]): Map<string, THREE.Object3D> | null {
+  mapearRuedas(ejes: { izquierda: string[]; derecha: string[] }[]): { pos: string; obj: THREE.Object3D; desvio: number }[] {
     const cur = this.cur;
-    if (!cur) return null;
+    const res: { pos: string; obj: THREE.Object3D; desvio: number }[] = [];
+    if (!cur) return res;
     cur.root.updateMatrixWorld(true);
     const objs: THREE.Object3D[] = [];
     cur.root.traverse(n => { if (n.userData.rueda) objs.push(n); });
     const pts = objs.map(o => ({ o, v: o.getWorldPosition(new V()) }));
-    if (!pts.length) return null;
+    if (!pts.length) return res;
     const redondo = (n: number): number => Math.round(n * 20) / 20;
     const xs = [...new Set(pts.map(p => redondo(p.v.x)))];
-    if (xs.length !== ejes.length) return null;
     const media = (a: number[]): number => a.reduce((s, n) => s + n, 0) / Math.max(1, a.length);
     const descendiente = (o: THREE.Object3D, raiz: THREE.Object3D): boolean => { for (let p: THREE.Object3D | null = o; p; p = p.parent) if (p === raiz) return true; return false; };
     let adelante: number;
     const del = cur.byId.ejeDel?.group;
-    if (del){
-      const fr = pts.filter(p => descendiente(p.o, del));
+    const fr = del ? pts.filter(p => descendiente(p.o, del)) : [];
+    if (del && fr.length){
       const resto = pts.filter(p => !fr.includes(p));
       adelante = Math.sign(media(fr.map(p => p.v.x)) - media(resto.map(p => p.v.x))) || 1;
     } else {
@@ -443,16 +444,21 @@ export class Escena3D {
       adelante = Math.sign(centro - media(pts.map(p => p.v.x))) || 1;
     }
     const orden = xs.slice().sort((a, b) => adelante * (b - a));
-    const res = new Map<string, THREE.Object3D>();
-    for (let i = 0; i < ejes.length; i++){
-      const delEje = pts.filter(p => redondo(p.v.x) === orden[i]);
-      for (const [derecha, posiciones] of [[false, ejes[i].izquierda], [true, ejes[i].derecha]] as const){
+    ejes.forEach((eje, i) => {
+      // Si el modelo tiene otra cantidad de ejes, cada eje del tablero toma el que le corresponde en proporción
+      const idx = ejes.length > 1 ? Math.round(i * (orden.length - 1) / (ejes.length - 1)) : 0;
+      const delEje = pts.filter(p => redondo(p.v.x) === orden[Math.min(idx, orden.length - 1)]);
+      for (const [derecha, posiciones] of [[false, eje.izquierda], [true, eje.derecha]] as const){
         const signo = adelante * (derecha ? 1 : -1);
-        const lado = delEje.filter(p => Math.sign(p.v.z) === signo).sort((a, b) => Math.abs(b.v.z) - Math.abs(a.v.z));
-        if (lado.length !== posiciones.length) return null;
-        posiciones.forEach((pos, k) => res.set(pos, lado[k].o));
+        let lado = delEje.filter(p => Math.sign(p.v.z) === signo).sort((a, b) => Math.abs(b.v.z) - Math.abs(a.v.z));
+        if (!lado.length) lado = delEje.slice().sort((a, b) => Math.abs(b.v.z) - Math.abs(a.v.z));
+        if (!lado.length) return;
+        posiciones.forEach((pos, k) => {
+          const rueda = lado[Math.min(k, lado.length - 1)];
+          res.push({ pos, obj: rueda.o, desvio: k >= lado.length ? 18 * (k - lado.length + 1) : 0 });
+        });
       }
-    }
+    });
     return res;
   }
 

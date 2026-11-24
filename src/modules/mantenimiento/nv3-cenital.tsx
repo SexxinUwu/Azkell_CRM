@@ -59,28 +59,26 @@ class RespaldoSeguro extends Component<{ respaldo: ReactNode; children: ReactNod
 export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null, onSelect, sondaRef, arrastreRef, marca = null, camion = false, modo, onModo, plano2d = false, placa }: NeumaticosCenitalProps) {
   const [soportaWebgl] = useState(webglDisponible);
   const [perdido, setPerdido] = useState(false);
-  // Si el modelo de Placas no encaja con la unidad, se usa la vista 3D propia del tablero
-  const [sinModeloPlacas, setSinModeloPlacas] = useState(false);
 
   const posicionesConfig = configuracion ? posicionesDeConfig(configuracion) : [];
   const encaja = !!configuracion && !!CONFIGURACIONES[configuracion]
     && llantas.every(l => posicionesConfig.includes(String(l.posicion).trim().toUpperCase()));
   const respaldo = <EsquemaNeumaticos llantas={llantas} configuracion={configuracion} activa={activa} onSelect={onSelect} />;
 
-  if (!configuracion || !encaja || !soportaWebgl || perdido) return respaldo;
-
-  if (plano2d && placa && modo && onModo && !sinModeloPlacas) {
+  if (plano2d && placa && modo && onModo && configuracion && encaja) {
     return (
       <RespaldoSeguro respaldo={respaldo}>
         <Suspense fallback={respaldo}>
           <Placa3DVista
             placa={placa} configuracion={configuracion} llantas={llantas} activa={activa} sobre={sobre} camion={camion}
-            modo={modo} onModo={onModo} onSelect={onSelect} onFalla={() => setSinModeloPlacas(true)}
+            modo={modo} onModo={onModo} onSelect={onSelect}
           />
         </Suspense>
       </RespaldoSeguro>
     );
   }
+
+  if (!configuracion || !encaja || !soportaWebgl || perdido) return respaldo;
 
   return (
     <RespaldoSeguro respaldo={respaldo}>
