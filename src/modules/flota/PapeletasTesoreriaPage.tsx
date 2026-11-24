@@ -13,6 +13,7 @@ import { errorMessage } from '../../core/api/client';
 import { formatMoneda } from '../../core/lib/format';
 import { ESTADO_TONO, ESTADO_TXT, RAIZ_PAPELETAS, entidadTexto, fechaTxt, plazoTxt, proximoPlazo, usePapeletas, type Papeleta } from './pap-api';
 import { PapDetalle } from './pap-Detalle';
+import { PapFormulario } from './pap-Formulario';
 import { PagoSheet } from './pap-PagoSheet';
 
 type Vista = 'por_pagar' | 'pagadas';
@@ -30,6 +31,7 @@ export function PapeletasTesoreriaPage() {
   const [busqueda, setBusqueda] = useState('');
   const [pago, setPago] = useState<Papeleta | null>(null);
   const [detalleId, setDetalleId] = useState<number | null>(null);
+  const [editando, setEditando] = useState<Papeleta | null>(null);
   const refrescar = () => qc.invalidateQueries({ queryKey: RAIZ_PAPELETAS });
 
   const filas = useMemo(() => {
@@ -72,7 +74,8 @@ export function PapeletasTesoreriaPage() {
           )}
         </div>
       )}
-      <PapDetalle id={detalleId} onClose={() => setDetalleId(null)} onEditar={() => setDetalleId(null)} onPago={d => setPago(d)} />
+      <PapDetalle id={detalleId} onClose={() => setDetalleId(null)} onEditar={d => { setDetalleId(null); setEditando(d); }} onPago={d => setPago(d)} />
+      <PapFormulario abierto={!!editando} papeleta={editando} onClose={() => setEditando(null)} onHecho={() => { void refrescar(); }} />
       <PagoSheet papeleta={pago} egresoPorDefecto onClose={() => setPago(null)} onHecho={refrescar} />
     </Page>
   );
