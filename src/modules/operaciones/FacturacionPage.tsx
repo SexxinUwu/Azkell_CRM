@@ -5,10 +5,11 @@ import '../almacen/entradas.css';
 import '../gerencia/gerencia-oc.css';
 import '../tesoreria/pago.css';
 import './seguimiento.css';
-import { useEffect, useMemo, useState } from 'react';
+import './facturacion.css';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Check, CheckCircle2, CircleAlert, Coins, FilePlus2, FileCode2, FileText, Info, Package, ReceiptText, RefreshCw, Search, SearchX, Send, ShieldCheck, Trash2, Undo2, Users, Wallet } from 'lucide-react';
+import { Check, CheckCircle2, CircleAlert, Coins, Eye, FilePlus2, FileCode2, FileText, Info, Package, ReceiptText, RefreshCw, Search, SearchX, Send, ShieldCheck, Trash2, Undo2, Users, Wallet } from 'lucide-react';
 import { FilePdf, Pencil } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -395,6 +396,71 @@ function PastillaTono({ tono, texto }: { tono: TonoEstado; texto: string }) {
   return <span style={{ display: 'inline-block', padding: '1px 8px', borderRadius: 999, background: `var(--${tono}-tint)`, color: `var(--${tono}-ink)`, fontSize: '0.6875rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{texto}</span>;
 }
 
+/** Descripción de una línea: crece sola con el texto para verlo completo (y se puede agrandar a mano) */
+function DescripcionLinea({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const ajustar = () => { const el = ref.current; if (!el) return; el.style.height = 'auto'; el.style.height = `${el.scrollHeight + 2}px`; };
+  useLayoutEffect(ajustar, [value]);
+  // Al abrirse la ventana o cambiar su ancho, el texto se reparte distinto: se vuelve a medir
+  useEffect(() => {
+    const el = ref.current; if (!el || typeof ResizeObserver === 'undefined') return;
+    const obs = new ResizeObserver(ajustar); obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return <textarea ref={ref} className="input fac-linea__desc" aria-label="Descripción" rows={1} value={value} onChange={e => onChange(e.target.value)} />;
+}
+
+/** Cómo quedará el comprobante, con la descripción completa. El número lo asigna SUNAT al emitir; no es el documento oficial. */
+function VistaPreviaComprobante({ open, onClose, config, tipo, fecha, doc, nombre, direccion, moneda, lineas, base, igv, total, afecto, detraccion, pctDet, forma, dias, oc, referencia, obs }: {
+  open: boolean; onClose: () => void; config: Config; tipo: '01' | '03'; fecha: string; doc: string; nombre: string; direccion: string; moneda: 'PEN' | 'USD'; lineas: Linea[];
+  base: number; igv: number; total: number; afecto: boolean; detraccion: number; pctDet: number; forma: 'CONTADO' | 'CREDITO'; dias: string; oc: string; referencia: string; obs: string;
+}) {
+  const titulo = tipo === '01' ? 'FACTURA ELECTRÓNICA' : 'BOLETA DE VENTA ELECTRÓNICA';
+  return (
+    <Sheet ancho open={open} onClose={onClose} title="Vista previa" footer={<Button variant="secondary" onClick={onClose}>Cerrar</Button>}>
+      <div className="fac-prev">
+        <Notice tone="accent" icon={<Info size={16} />}>Así quedará el comprobante. El número lo asigna SUNAT al emitirlo y el documento oficial es el PDF que genera APISUNAT.</Notice>
+        <div className="fac-prev__hoja">
+          <div className="fac-prev__cab">
+            <div className="fac-prev__emisor"><strong>{config.razon_social || 'Emisor'}</strong>RUC {config.ruc_emisor}</div>
+            <div className="fac-prev__caja"><span>RUC {config.ruc_emisor}</span><b>{titulo}</b><span>{config.series[tipo]}-########</span></div>
+          </div>
+          <dl className="fac-prev__datos">
+            <dt>Fecha de emisión</dt><dd>{fechaCorta(fecha)}</dd>
+            <dt>{tipo === '01' ? 'Señor(es)' : 'Cliente'}</dt><dd>{nombre || '—'}</dd>
+            <dt>{tipo === '01' ? 'RUC' : 'DNI'}</dt><dd>{doc || '—'}</dd>
+            <dt>Dirección</dt><dd>{direccion || '—'}</dd>
+            <dt>Moneda</dt><dd>{moneda === 'USD' ? 'Dólares (US$)' : 'Soles (S/)'}</dd>
+            <dt>Condición de pago</dt><dd>{forma === 'CREDITO' ? `Crédito a ${dias || 0} días` : 'Contado'}</dd>
+            {oc.trim() && <><dt>Orden de compra</dt><dd>{oc}</dd></>}
+            {referencia.trim() && <><dt>Referencia</dt><dd>{referencia}</dd></>}
+          </dl>
+          <table className="fac-prev__tabla">
+            <thead><tr><th style={{ width: 52 }}>Cant.</th><th>Descripción</th><th className="num">V. unit.</th><th className="num">Importe</th></tr></thead>
+            <tbody>
+              {lineas.map((l, i) => (
+                <tr key={i}>
+                  <td>{l.cantidad}</td>
+                  <td style={{ whiteSpace: 'pre-wrap' }}>{l.descripcion || <span style={{ color: '#a33' }}>Sin descripción</span>}</td>
+                  <td className="num">{formatMoneda(n(l.valor_unitario), moneda)}</td>
+                  <td className="num">{formatMoneda(r2(n(l.cantidad) * n(l.valor_unitario)), moneda)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="fac-prev__totales">
+            <div><span>{afecto ? 'Op. gravada' : 'Op. inafecta'}</span><span>{formatMoneda(base, moneda)}</span></div>
+            <div><span>IGV 18 %</span><span>{formatMoneda(igv, moneda)}</span></div>
+            <div className="total"><span>Importe total</span><span>{formatMoneda(total, moneda)}</span></div>
+          </div>
+          {detraccion > 0 && <p style={{ margin: 0 }}>Operación sujeta a detracción: {pctDet} % = {formatMoneda(detraccion, 'PEN')} (en soles).</p>}
+          {obs.trim() && <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}><b>Observaciones:</b> {obs}</p>}
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
 /** Factura o boleta, con el mismo estilo de «Procesar pago»: datos en lectura con «Editar», detalle de líneas, resumen y confirmación */
 function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: boolean; servicios: ServicioPF[]; config: Config; onClose: () => void; onEmitido: () => void }) {
   const toast = useToast();
@@ -429,6 +495,7 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
   const [agrupar, setAgrupar] = useState(false);
   const [descEditada, setDescEditada] = useState(false);
   const [liquidacion, setLiquidacion] = useState('');
+  const [vistaPrevia, setVistaPrevia] = useState(false);
   const clientes = useQuery({ queryKey: ['facturacion', 'clientes'], enabled: open, staleTime: 120_000, queryFn: () => api<{ data: ClienteReg[] }>('/facturacion/clientes').then(r => r.data ?? []) });
 
   useEffect(() => {
@@ -559,6 +626,7 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
     <Sheet ancho open={open} onClose={() => !enviando && onClose()} title={libre ? 'Factura libre' : `Facturar ${servicios.length} ${servicios.length === 1 ? 'servicio' : 'servicios'}`}
       footer={<>
         <Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
+        <Button variant="secondary" icon={<Eye size={16} />} onClick={() => setVistaPrevia(true)} disabled={enviando}>Vista previa</Button>
         <Button variant="primary" icon={<Send size={16} />} loading={enviando} onClick={() => { void enviar(); }}>Emitir {nombreTipo}</Button>
       </>}>
       <div className="ga-det pp-hoja">
@@ -600,35 +668,30 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
           </section>
 
           <section className="ga-sec" aria-label="Detalle del comprobante">
-            {tituloSeccion(<Package size={16} aria-hidden />, 'Detalle del comprobante', <span className="ga-sec__cuenta">{lineas.length} {lineas.length === 1 ? 'línea' : 'líneas'} · valores sin IGV</span>)}
+            {tituloSeccion(<Package size={16} aria-hidden />, 'Detalle del comprobante', <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><span className="ga-sec__cuenta">{lineas.length} {lineas.length === 1 ? 'línea' : 'líneas'} · valores sin IGV</span><Button variant="plain" size="sm" icon={<Eye size={14} />} onClick={() => setVistaPrevia(true)}>Vista previa</Button></span>)}
             {servicios.length > 1 && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--s-3)' }}>
                 <div><div style={{ fontWeight: 600, fontSize: '0.875rem' }}>Agrupar en una sola línea</div><div className="t-footnote c-secondary">Una línea con el total de los {servicios.length} servicios y una descripción tuya, como en las facturas por liquidación</div></div>
                 <Switch label="Agrupar en una sola línea" checked={agrupar} onChange={cambiarAgrupar} />
               </div>
             )}
-            <div className="ga-tabla-wrap">
-              <table className="ga-tabla">
-                <thead><tr><th>Descripción</th><th className="num" style={{ width: 64 }}>Cant.</th><th className="num" style={{ width: 120 }}>Valor unit.</th><th className="num" style={{ width: 120 }}>Importe</th><th style={{ width: 36 }} aria-label="Quitar" /></tr></thead>
-                <tbody>
+            <div className="fac-lineas">
                   {lineas.map((l, i) => {
                     const s = servicios.find(x => x.codigo_orden === l.orden_servicio);
                     return (
-                      <tr key={i}>
-                        <td>
-                          <TextInput aria-label="Descripción" value={l.descripcion} onChange={e => { setLinea(i, { descripcion: e.target.value }); if (l.grupo) setDescEditada(true); }} />
+                      <div className="fac-linea" key={i}>
+                        <div className="fac-linea__cab"><span>Línea {i + 1}</span>{!s && !l.grupo && lineas.length > 1 && <Button variant="plain" size="sm" iconOnly icon={<Trash2 size={14} />} aria-label="Quitar línea" onClick={() => setLineas(x => x.filter((_, j) => j !== i))} />}</div>
+                        <DescripcionLinea value={l.descripcion} onChange={v => { setLinea(i, { descripcion: v }); if (l.grupo) setDescEditada(true); }} />
                           {l.grupo && <span className="t-footnote c-secondary" style={{ display: 'block', marginTop: 4 }}>Agrupa {servicios.length} servicios: {servicios.map(x => x.codigo_orden).join(', ')}</span>}
                           {s && <span className="t-footnote c-secondary" style={{ display: 'block', marginTop: 4 }}>Flete acordado {formatMoneda(n(s.costo_flete), moneda)} · {etiquetaIgv(s.modo_igv)}</span>}
-                        </td>
-                        <td className="num">{s || l.grupo ? l.cantidad : <TextInput aria-label="Cantidad" inputMode="decimal" value={l.cantidad} onChange={e => setLinea(i, { cantidad: e.target.value })} />}</td>
-                        <td className="num">{s || l.grupo ? formatMoneda(n(l.valor_unitario), moneda) : <TextInput aria-label="Valor unitario" inputMode="decimal" value={l.valor_unitario} onChange={e => setLinea(i, { valor_unitario: e.target.value })} />}</td>
-                        <td className="num">{formatMoneda(r2(n(l.cantidad) * n(l.valor_unitario)), moneda)}</td>
-                        <td>{!s && !l.grupo && lineas.length > 1 && <Button variant="plain" size="sm" iconOnly icon={<Trash2 size={14} />} aria-label="Quitar línea" onClick={() => setLineas(x => x.filter((_, j) => j !== i))} />}</td>
-                      </tr>
+                        <div className="fac-linea__nums">
+                          <label className="fac-linea__num"><span>Cant.</span>{s || l.grupo ? <span className="fac-linea__valor">{l.cantidad}</span> : <TextInput aria-label="Cantidad" inputMode="decimal" value={l.cantidad} onChange={e => setLinea(i, { cantidad: e.target.value })} />}</label>
+                          <label className="fac-linea__num"><span>Valor unit.</span>{s || l.grupo ? <span className="fac-linea__valor">{formatMoneda(n(l.valor_unitario), moneda)}</span> : <TextInput aria-label="Valor unitario" inputMode="decimal" value={l.valor_unitario} onChange={e => setLinea(i, { valor_unitario: e.target.value })} />}</label>
+                          <div className="fac-linea__num"><span>Importe</span><span className="fac-linea__valor">{formatMoneda(r2(n(l.cantidad) * n(l.valor_unitario)), moneda)}</span></div>
+                        </div>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', flexWrap: 'wrap' }}>
               <Button variant="plain" size="sm" onClick={() => setLineas(l => [...l, { orden_servicio: null, descripcion: '', cantidad: '1', valor_unitario: '' }])}>+ Agregar línea</Button>
@@ -695,6 +758,8 @@ function EmitirSheet({ open, servicios, config, onClose, onEmitido }: { open: bo
           </section>
         </div>
       </div>
+      <VistaPreviaComprobante open={vistaPrevia} onClose={() => setVistaPrevia(false)} config={config} tipo={tipo} fecha={fecha} doc={doc} nombre={nombre} direccion={direccion} moneda={moneda} lineas={lineas}
+        base={base} igv={igv} total={total} afecto={afecto} detraccion={detraccion} pctDet={pctDet} forma={forma} dias={dias} oc={oc} referencia={referencia} obs={obs} />
     </Sheet>
   );
 }
