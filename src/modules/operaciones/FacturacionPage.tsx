@@ -36,6 +36,8 @@ interface ServicioPF {
   id: number; codigo_orden: string; fecha: string; cliente_id: number | null; cliente_nombre: string; ruta: string | null; es_retorno: number | boolean | null;
   estado_servicio: string; moneda: string | null; tipo_cambio: number | string | null; costo_flete: number | string; impuesto: string | null; descripcion_carga: string | null;
   cliente_doc: string | null; cliente_direccion: string | null; viaje: string | null;
+  /** Si el servicio es por intermediario, cliente_nombre es la empresa que nos contrata (a quien se factura) y cliente_final es el cliente de la carga */
+  es_intermediario?: boolean; cliente_final?: string | null; tipo_contratacion?: string | null; intermediario?: string | null; ejecucion?: string | null;
   // IGV del servicio: Incluye IGV (valor de venta = flete ÷ 1.18), Más IGV (flete = valor de venta) o No aplica
   modo_igv: 'INCLUYE' | 'MAS' | 'NO'; valor_sin_igv: number; total_con_igv: number;
 }
@@ -59,7 +61,8 @@ const COL_PENDIENTES: ColumnaTabla[] = [
   { id: 'acciones', titulo: 'Acciones', ancho: 90, minimo: 80 },
   { id: 'codigo', titulo: 'Servicio', ancho: 130 },
   { id: 'fecha', titulo: 'Fecha', ancho: 105 },
-  { id: 'cliente', titulo: 'Cliente', ancho: 240, minimo: 140 },
+  { id: 'cliente', titulo: 'Facturar a', ancho: 240, minimo: 140 },
+  { id: 'contratacion', titulo: 'Contratación', ancho: 230, minimo: 150 },
   { id: 'ruta', titulo: 'Ruta', ancho: 220, minimo: 140 },
   { id: 'tramo', titulo: 'Ida / regreso', ancho: 110 },
   { id: 'estado', titulo: 'Estado', ancho: 120 },
@@ -146,7 +149,7 @@ export function FacturacionPage() {
   const pendientesVis = useMemo(() => {
     const t = sinTildes(busqueda.trim());
     return todosPend.filter(s => (!estadoSrv || s.estado_servicio === estadoSrv) && (!igvF || s.modo_igv === igvF)
-      && (!t || sinTildes(`${s.codigo_orden} ${s.cliente_nombre} ${s.ruta ?? ''} ${s.cliente_doc ?? ''}`).includes(t)));
+      && (!t || sinTildes(`${s.codigo_orden} ${s.cliente_nombre} ${s.cliente_final ?? ''} ${s.ruta ?? ''} ${s.cliente_doc ?? ''}`).includes(t)));
   }, [todosPend, busqueda, estadoSrv, igvF]);
   const comprobantesVis = useMemo(() => {
     const t = sinTildes(busqueda.trim());
@@ -286,7 +289,10 @@ export function FacturacionPage() {
                       <Celda>{puedeEmitir && <IconoFila texto="Facturar este servicio" tono="verde" icono={<FilePlus2 size={15} />} onClick={() => { if (cfg?.lista) setEmitir({ servicios: [s] }); }} />}</Celda>
                       <Celda mono>{s.codigo_orden}</Celda>
                       <Celda mono>{fechaCorta(s.fecha)}</Celda>
-                      <Celda>{s.cliente_nombre || '—'}{!s.cliente_doc && <span title="El cliente no tiene RUC registrado" style={{ marginLeft: 6, color: 'var(--red-ink)' }}><CircleAlert size={13} aria-label="Sin RUC" /></span>}</Celda>
+                      <Celda>{s.cliente_nombre || '—'}{!s.cliente_doc && <span title={s.es_intermediario ? 'La empresa que nos contrata no tiene RUC registrado en Clientes' : 'El cliente no tiene RUC registrado'} style={{ marginLeft: 6, color: 'var(--red-ink)' }}><CircleAlert size={13} aria-label="Sin RUC" /></span>}</Celda>
+                      <Celda>{s.es_intermediario
+                        ? <><PastillaTono tono="amber" texto="Subcontratado" /><span className="t-footnote c-secondary" style={{ display: 'block' }}>Cliente final: {s.cliente_final || '—'}</span></>
+                        : <PastillaTono tono="gray" texto="Directo" />}</Celda>
                       <Celda>{s.ruta || '—'}</Celda>
                       <Celda>{s.es_retorno ? 'Regreso' : 'Ida'}</Celda>
                       <Celda><PastillaTono tono={s.estado_servicio === 'ENTREGADO' ? 'green' : 'amber'} texto={s.estado_servicio === 'ENTREGADO' ? 'Entregado' : 'En ejecución'} /></Celda>
