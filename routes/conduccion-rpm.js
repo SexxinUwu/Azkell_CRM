@@ -38,8 +38,8 @@ module.exports = (db) => {
 
     router.post('/analizar', async (req, res) => {
         try {
-            const { placa, desde, hasta } = req.body || {};
-            const r = await analizarRpm(D(req), { placa, desde, hasta });
+            const { placa, desde, hasta, desdeUnix, hastaUnix } = req.body || {};
+            const r = await analizarRpm(D(req), { placa, desde, hasta, desdeUnix, hastaUnix });
             res.json(r);
         } catch (err) { responder(res, err, 'analizar'); }
     });
