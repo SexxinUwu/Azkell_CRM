@@ -290,3 +290,16 @@
 .pago-kpis--compacto .pago-kpi__etiqueta { font-size: 0.75rem; }
 .pago-barra { margin-bottom: var(--s-2); }
 .pago-tabla thead th { padding: 6px 10px; font-size: 0.625rem; }
+
+/* Tipografía armónica: una sola familia (la del sistema) con cifras tabulares, tamaños y pesos coherentes */
+.pago-tabla tbody td { padding: 8px 12px; font-size: 0.875rem; line-height: 1.3; }
+.pago-tabla .tabla-redim__celda--mono, .pago-tabla .pago-codigo, .pago-tabla .pago-prov__ruc,
+.pago-kpis--compacto .pago-kpi__valor { font-family: inherit; font-variant-numeric: tabular-nums; }
+.pago-tabla .pago-codigo { font-weight: 600; }
+.pago-tabla .pago-prov__nombre { font-weight: 600; }
+.pago-tabla .pago-prov__ruc { font-size: 0.75rem; letter-spacing: 0; }
+.pago-tabla .tabla-redim__celda--mono[style*="right"] { font-weight: 700; }
+.pago-tabla thead th { padding: 9px 12px; font-size: 0.6875rem; }
+.pago-tabla .btn { min-height: 28px; }
+.pago-kpis--compacto .pago-kpi__valor { font-size: 1.0625rem; font-weight: 700; }
+.pago-kpis--compacto .pago-kpi { padding: 8px 14px; }

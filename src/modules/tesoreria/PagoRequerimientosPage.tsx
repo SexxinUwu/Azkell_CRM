@@ -7,6 +7,7 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { BotonTip } from '../../core/ui/BotonTip';
+import { LicensePlate } from '../../core/ui/LicensePlate';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { useToast } from '../../core/ui/Toast';
@@ -287,7 +288,7 @@ export function PagoRequerimientosPage() {
                 </Celda>
                 <Celda alinear="right" mono>{importe > 0 ? formatMoneda(importe, usd ? 'USD' : 'PEN') : '—'}</Celda>
                 <Celda mono><span className="pago-codigo">{codigoOC(oc)}</span></Celda>
-                <Celda mono>{oc.placa || '—'}</Celda>
+                <Celda>{oc.placa ? <LicensePlate plate={oc.placa} size="sm" /> : <span className="c-secondary">—</span>}</Celda>
                 <Celda>{oc.motivo_entrada || oc.motivo || '—'}</Celda>
                 <Celda><TipoPago oc={oc} /></Celda>
                 <Celda>
