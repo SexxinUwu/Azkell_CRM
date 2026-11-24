@@ -3,6 +3,7 @@ import '../../core/ui/acciones-iconos.css';
 import '../almacen/almacen.css';
 import '../almacen/entradas.css';
 import './mov.css';
+import { LicensePlate } from '../../core/ui/LicensePlate';
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowDownLeft, ArrowUpRight, Banknote, Boxes, CircleCheck, ClipboardList, Coins, Eye, Plus, RefreshCw, SearchX, Upload, Wallet } from 'lucide-react';
@@ -62,7 +63,7 @@ const COLS: Col[] = [
   { id: 'tipo', titulo: 'Movimiento', min: 100, max: 120, texto: m => (m.tipo_movimiento === 'INGRESO' ? 'INGRESO' : 'EGRESO'), extra: 44, bold: true, px: 11 },
   { id: 'caja', titulo: 'N° caja', min: 110, max: 170, texto: m => numeroDoc(m), mono: true, bold: true, px: 15 },
   { id: 'estado', titulo: 'Estado', min: 110, max: 150, alinear: 'center', texto: m => estadoTexto(estadoDe(m)), extra: 26, bold: true, px: 11 },
-  { id: 'placa', titulo: 'Placa', min: 84, max: 110, texto: m => m.placa || '', mono: true },
+  { id: 'placa', titulo: 'Placa', min: 104, max: 130, texto: m => m.placa || '', extra: 40 },
   { id: 'motivo', titulo: 'Motivo', min: 120, max: 460, texto: m => [m.motivo, m.sub_motivo].filter(Boolean).join(' · ') },
   { id: 'persona', titulo: 'Persona / beneficiario', min: 150, max: 420, texto: m => m.persona || m.conductor || '' },
   { id: 'viaje', titulo: 'Orden de viaje', min: 120, max: 160, texto: m => m.orden_viaje || '', mono: true },
@@ -201,7 +202,7 @@ export function CajaPage() {
       <Celda key="estado" alinear="center"><span className={`badge ${estadoClase(est)}`} style={{ whiteSpace: 'nowrap' }}>{estadoTexto(est)}</span></Celda>,
       <Celda key="persona">{m.persona || m.conductor || '—'}</Celda>,
       <Celda key="motivo">{[m.motivo, m.sub_motivo].filter(Boolean).join(' · ') || '—'}</Celda>,
-      <Celda key="placa" mono>{m.placa || '—'}</Celda>,
+      <Celda key="placa">{m.placa ? <LicensePlate plate={m.placa} size="sm" /> : <span className="c-secondary">—</span>}</Celda>,
       <Celda key="viaje" mono>{m.orden_viaje || '—'}</Celda>,
       <Celda key="cc"><span className="oc-chip oc-chip--mono">{m.centro_costo || '—'}</span></Celda>,
       <Celda key="importe" alinear="right">
@@ -309,7 +310,7 @@ export function CajaPage() {
               })}
             </div>
           ) : (
-            <TablaRedimensionable id="tesoreria-caja-v2" columnas={columnas} ariaLabel="Movimientos de caja" altoMax="68vh">
+            <TablaRedimensionable id="tesoreria-caja-v2" columnas={columnas} ariaLabel="Movimientos de caja" altoMax="68vh" className="caja-tabla">
               {lista.map(m => <tr key={m.id} className={estadoDe(m) === 'ANULADO' ? 'mov-tabla-anulada' : undefined}>{celdas(m)}</tr>)}
             </TablaRedimensionable>
           )}
