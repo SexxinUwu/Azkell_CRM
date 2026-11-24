@@ -1,0 +1,28 @@
+/* Facturar: líneas del comprobante apiladas (la descripción se ve completa) y vista previa */
+.fac-lineas { display: flex; flex-direction: column; gap: var(--s-3); }
+.fac-linea { display: flex; flex-direction: column; gap: var(--s-2); padding: var(--s-3); border: 1px solid var(--separator); border-radius: var(--r-md); background: var(--surface); }
+.fac-linea__cab { display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; font-weight: 700; color: var(--label-2); }
+.fac-linea__desc { width: 100%; min-height: 2.75rem; padding: 0.65rem 0.9rem; line-height: 1.4; font-family: inherit; font-size: 0.9375rem; resize: vertical; overflow: hidden; }
+.fac-linea__nums { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr) minmax(0, 1fr); gap: var(--s-3); align-items: end; }
+.fac-linea__num { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.fac-linea__num > span:first-child { font-size: 0.75rem; font-weight: 600; color: var(--label-2); }
+.fac-linea__num .input { min-height: 2.5rem; font-size: 0.9375rem; padding: 0 0.75rem; }
+.fac-linea__valor { font-family: var(--font-mono); font-weight: 700; font-size: 0.9375rem; min-height: 2.5rem; display: flex; align-items: center; }
+
+/* Vista previa del comprobante (así se verá; el número lo asigna SUNAT al emitir) */
+.fac-prev { max-width: 46rem; margin: 0 auto; display: flex; flex-direction: column; gap: var(--s-4); }
+.fac-prev__hoja { background: #fff; color: #1b1b1f; border: 1px solid var(--separator); border-radius: var(--r-md); padding: var(--s-5); display: flex; flex-direction: column; gap: var(--s-4); font-size: 0.8125rem; box-shadow: var(--shadow-card); }
+.fac-prev__cab { display: flex; justify-content: space-between; gap: var(--s-4); flex-wrap: wrap; }
+.fac-prev__emisor strong { display: block; font-size: 1rem; }
+.fac-prev__caja { border: 2px solid #1b1b1f; border-radius: 6px; padding: var(--s-3) var(--s-4); text-align: center; min-width: 14rem; }
+.fac-prev__caja b { display: block; font-size: 0.9375rem; }
+.fac-prev__datos { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: 4px var(--s-3); }
+.fac-prev__datos dt { font-weight: 700; color: #555; }
+.fac-prev__datos dd { margin: 0; overflow-wrap: anywhere; }
+.fac-prev__tabla { width: 100%; border-collapse: collapse; }
+.fac-prev__tabla th { text-align: left; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.04em; color: #555; border-bottom: 2px solid #1b1b1f; padding: 6px 6px; }
+.fac-prev__tabla td { padding: 8px 6px; border-bottom: 1px solid #e3e3e8; vertical-align: top; overflow-wrap: anywhere; }
+.fac-prev__tabla .num { text-align: right; white-space: nowrap; font-family: var(--font-mono); }
+.fac-prev__totales { align-self: flex-end; min-width: 16rem; display: flex; flex-direction: column; gap: 4px; }
+.fac-prev__totales div { display: flex; justify-content: space-between; gap: var(--s-4); }
+.fac-prev__totales .total { font-size: 1rem; font-weight: 800; border-top: 2px solid #1b1b1f; padding-top: 6px; }
