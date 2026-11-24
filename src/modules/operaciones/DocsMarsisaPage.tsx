@@ -241,7 +241,7 @@ export function DocsMarsisaPage() {
 
   return (
     <Page wide fill>
-      <header className="doc-cab">
+      <header className="doc-cab doc-cab--una-linea">
         <div className="doc-cab__titulo">
           <span className="t-eyebrow">Operaciones Marsisa</span>
           <h1 className="doc-cab__h1">Documentos de flota (API)</h1>
@@ -253,7 +253,7 @@ export function DocsMarsisaPage() {
           {filtrosActivos > 0 && <span className="placas-filtros__n t-numeric">{filtrosActivos}</span>}
         </Button>
         <div className="doc-cab__acciones">
-          {q.data?.ultima_sincronizacion && <span className="t-footnote c-secondary">Última sincronización: {q.data.ultima_sincronizacion}</span>}
+          {q.data?.ultima_sincronizacion && <span className="t-footnote c-secondary doc-cab__sinc" title={`Última sincronización: ${q.data.ultima_sincronizacion}`}>Sinc. {q.data.ultima_sincronizacion.slice(5, 10).split('-').reverse().join('/')} {q.data.ultima_sincronizacion.slice(11)}</span>}
           {puedeSincronizar && sinArchivosGuardados > 0 && (
             <Button variant="secondary" icon={<FolderDown size={16} />} onClick={() => { void guardarArchivos(); }} loading={guardando !== null} disabled={sincronizando}
               title="Copia a Azkell los archivos que aún solo están en la API, para que abran al instante">
