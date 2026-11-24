@@ -944,6 +944,16 @@ module.exports = function (db) {
              WHERE h.estado_ciclo IN ('en_almacen', 'en_reencauche', 'desechado')
              ORDER BY codigo`);
 
+        // Reforma y descarte del tablero: solo las llantas que SALIERON de esta unidad (su último retiro fue de esta placa).
+        // Las que están en el Retén por otro motivo (p. ej. rechazo de reencauche) no pertenecen a la unidad y no se listan aquí.
+        const [retirosDeLaUnidad] = await p.query(
+            `SELECT m.id_neumatico FROM neumaticos_movimientos m
+             WHERE m.tipo IN ('RETIRO_REENCAUCHE', 'RETIRO_DESECHO') AND UPPER(TRIM(m.placa)) = ?
+               AND m.id = (SELECT MAX(m2.id) FROM neumaticos_movimientos m2
+                           WHERE m2.id_neumatico = m.id_neumatico AND m2.tipo IN ('RETIRO_REENCAUCHE', 'RETIRO_DESECHO'))`,
+            [placa]);
+        const salioDeLaUnidad = new Set(retirosDeLaUnidad.map(x => x.id_neumatico));
+
         const [configRows] = await p.query(
             'SELECT configuracion FROM placas WHERE UPPER(TRIM(placa)) = ? LIMIT 1',
             [placa]);
@@ -1046,8 +1056,8 @@ module.exports = function (db) {
                 // Solo las llantas con código de fuego pueden ir a una unidad; sin código están en su propia situación
                 .filter(f => f.estado_ciclo === 'en_almacen' && ALMACENES_INSTALAR.includes(Number(f.almacen_id)) && txt(f.codigo_fuego))
                 .map(aLlanta),
-            reforma: enStock.filter(f => f.estado_ciclo === 'en_reencauche').map(aLlanta),
-            descarte: enStock.filter(f => f.estado_ciclo === 'desechado').map(aLlanta),
+            reforma: enStock.filter(f => f.estado_ciclo === 'en_reencauche' && salioDeLaUnidad.has(f.id_neumatico)).map(aLlanta),
+            descarte: enStock.filter(f => f.estado_ciclo === 'desechado' && salioDeLaUnidad.has(f.id_neumatico)).map(aLlanta),
         };
         return { tablero, croquis: detalleMontadas };
     }
