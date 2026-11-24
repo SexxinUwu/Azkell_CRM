@@ -155,7 +155,7 @@ export function htmlOrdenParabrisas(e: RampaEntrada, ots: OrdenTrabajo[], ultima
   const notasArr = parsedP.notas;
 
   const w = window as unknown as { _LOGO_BASE64?: string; _EMPRESA_NOMBRE?: string; usuarioActual?: string };
-  const empLogoUrl = leerLS('fleet_empresa_logo') || w._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
+  const empLogoUrl = leerLS('fleet_empresa_logo') || w._LOGO_BASE64 || '';
   const empNombre = leerLS('fleet_empresa_nombre') || w._EMPRESA_NOMBRE || 'AZKELL FLEET';
   const plannerNombre = leerLS('fleet_user') || leerLS('fleet_nombre_usuario') || w.usuarioActual || 'Planner de Mantenimiento';
 
@@ -578,7 +578,7 @@ export function htmlOrdenParabrisas(e: RampaEntrada, ots: OrdenTrabajo[], ultima
                 <div class="header-top">
                     <div>
                         <div class="company-badge">
-                            <img src="${empLogoUrl}" alt="Logo" class="company-logo">
+                            ${empLogoUrl ? `<img src="${empLogoUrl}" alt="Logo" class="company-logo">` : ""}
                             <span class="company-name">${_srEsc(empNombre)}</span>
                         </div>
                         <div class="sub-header-left">ORDEN EN PARABRISAS</div>

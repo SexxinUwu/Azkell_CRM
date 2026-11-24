@@ -25,6 +25,7 @@ import { ThemeButton, ThemeSelector } from '../ui/ThemeToggle';
 import { ConnectionBanner } from './ConnectionBanner';
 import { AsistenteFab } from '../../modules/asistente/components/AsistenteFab';
 import { useLiveUpdates } from '../api/live';
+import { cargarLogoEmpresa } from '../lib/logoEmpresa';
 import { useNavBadges } from './useNavBadges';
 import { findNavItem, homePath, visibleSections, type NavItem, type NavSection } from './navigation';
 import './layout.css';
@@ -53,6 +54,8 @@ export function AppShell() {
   const location = useLocation();
   // Al cambiar de módulo no debe quedar la página bloqueada por una hoja que no llegó a cerrarse
   useEffect(() => { reiniciarBloqueos(); }, [location.pathname]);
+  // Logo de la empresa para los documentos imprimibles (OT, rampa, status de unidades)
+  useEffect(() => { void cargarLogoEmpresa(); }, []);
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false); // hoja de Ajustes
   const [moduloAbierto, setModuloAbierto] = useState<string | null>(null);

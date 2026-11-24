@@ -39,7 +39,7 @@ export function htmlPlantillaInspeccion(idOt, placa, fechaIng, km, rampa) {
                 }
             });
 
-            var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
+            var empLogoUrl = localStorage.getItem('fleet_empresa_logo') || window._LOGO_BASE64 || '';
             var html = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -228,7 +228,7 @@ export function htmlPlantillaInspeccion(idOt, placa, fechaIng, km, rampa) {
         <table class="iso-header">
             <tr>
                 <td class="logo-cell" rowspan="3">
-                    <img src="${empLogoUrl}" alt="Logo Empresa" style="max-width: 100%; max-height: 45px; object-fit: contain;">
+                    ${empLogoUrl ? `<img src="${empLogoUrl}" alt="Logo Empresa" style="max-width: 100%; max-height: 45px; object-fit: contain;">` : ""}
                 </td>
                 <td class="title-cell" rowspan="3">
                     INSPECCIÓN DE PRE USO DE UNIDAD<br>

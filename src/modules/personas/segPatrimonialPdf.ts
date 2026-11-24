@@ -165,7 +165,7 @@ export function abrirStatusUnidadesBase(items: UnidadBaseReporte[]): boolean {
   let logo = '';
   try { logo = localStorage.getItem('fleet_empresa_logo') || ''; } catch { /* sin almacenamiento */ }
   const w = window as unknown as { _LOGO_BASE64?: string };
-  const logoUrl = logo || w._LOGO_BASE64 || 'https://drive.google.com/thumbnail?id=1xIhoa-8y0L_VDbMouOdGEKtOA2eenvjt&sz=w500';
+  const logoUrl = logo || w._LOGO_BASE64 || '';
   const htmlFinal = htmlStatusUnidadesBase(items, fechaFiltro, 'TODAS', logoUrl);
 
   const ventana = window.open('', '_blank');
