@@ -4,7 +4,7 @@
 // Wialon permite una sola sesión por token: las consultas se hacen una tras otra (cola en este módulo).
 const { crearResolutorPlacas } = require('./wialon_placas');
 const { credenciales, limpiarPlaca } = require('./wialon_unidad');
-const { rangosDe, categoria, META } = require('./rpm_rangos');
+const { cargarConfig, rangosDe, categoria } = require('./rpm_rangos');
 
 const POR_TANDA = 4000;
 const MAX_FILAS = 120000;
@@ -69,7 +69,8 @@ function analizarRpm(db, { placa, desde, hasta, desdeUnix, hastaUnix }) {
         const filasPlacas = await consulta(db, 'SELECT placa, wialon_name, modelo_motor FROM placas', []);
         const fila = filasPlacas.find(p => limpiarPlaca(p.placa) === pl);
         if (!fila) throw aviso(`La placa ${pl} no está en la flota.`, 404);
-        const rangos = rangosDe(fila.modelo_motor);
+        const cfg = await cargarConfig(db);
+        const rangos = rangosDe(cfg, fila.modelo_motor);
 
         let sid = null;
         try {
@@ -139,7 +140,7 @@ function analizarRpm(db, { placa, desde, hasta, desdeUnix, hastaUnix }) {
                 desde, hasta, primera_lectura: aLima(primera), ultima_lectura: aLima(ultima),
                 filas_leidas: leidas, con_motor: conMotor, conteos: c, util,
                 porcentajes: { bajo: pct(c.bajo), verde: pct(c.verde), potencia: pct(c.potencia) },
-                meta: META,
+                meta: cfg.meta,
                 rpm_media: conMotor ? Math.round(sumaRpm / conMotor) : 0, rpm_max: Math.round(rpmMax),
                 km_recorridos: kmIni != null && kmFin != null ? Math.round((kmFin - kmIni) * 10) / 10 : null,
             };

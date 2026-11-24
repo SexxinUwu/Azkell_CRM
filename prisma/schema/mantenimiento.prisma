@@ -548,3 +548,26 @@ model DocFlotaExterno {
   @@index([tipo_codigo], map: "idx_docs_ext_tipo")
   @@map("marsisa_docs_flota_ext")
 }
+
+// Conducción por RPM (Operaciones Marsisa): rangos de RPM por modelo de motor, editables desde el sistema
+model ConduccionRpmRango {
+  modelo          String   @id @db.VarChar(60)
+  lim_ralenti     Int
+  lim_bajo        Int
+  lim_verde       Int
+  lim_potencia    Int
+  actualizado_por String?  @db.VarChar(150)
+  actualizado_en  DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("conduccion_rpm_rangos")
+}
+
+// Meta de reparto y rangos generales de la conducción por RPM (clave → valor)
+model ConduccionRpmConfig {
+  clave           String   @id @db.VarChar(60)
+  valor           String   @db.VarChar(255)
+  actualizado_por String?  @db.VarChar(150)
+  actualizado_en  DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("conduccion_rpm_config")
+}

@@ -1,8 +1,11 @@
 import './conduccion-rpm.css';
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Gauge, Info, Play } from 'lucide-react';
+import { Gauge, Info, Play, Settings2 } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
+import { BotonTip } from '../../core/ui/BotonTip';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { RangosRpmSheet } from './RangosRpmSheet';
 import { Combobox } from '../../core/ui/Combobox';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, TextInput } from '../../core/ui/Field';
@@ -26,6 +29,8 @@ const num = (n: number) => n.toLocaleString('es-PE');
 
 // Operaciones Marsisa › Combustible › Conducción por RPM
 export function ConduccionRpmPage() {
+  const { can } = useAuth();
+  const [verRangos, setVerRangos] = useState(false);
   const [placa, setPlaca] = useState<string | null>(null);
   const [desde, setDesde] = useState(hace(7));
   const [hasta, setHasta] = useState(hace(0));
@@ -44,7 +49,8 @@ export function ConduccionRpmPage() {
   return (
     <Page wide>
       <PageHeader eyebrow="Operaciones Marsisa · Combustible" title="Conducción por RPM"
-        subtitle="Cuántas lecturas de cada unidad caen en cada rango de RPM según su motor, desde el GPS (Wialon)" />
+        subtitle="Cuántas lecturas de cada unidad caen en cada rango de RPM según su motor, desde el GPS (Wialon)"
+        actions={<BotonTip tip="Rangos de RPM por motor" className="btn btn--plain btn--icono btn--icono-acento" onClick={() => setVerRangos(true)}><Settings2 size={18} /></BotonTip>} />
 
       <form className="rpm-filtros" onSubmit={e => { e.preventDefault(); if (listo && !consulta.isPending) { haptic('selection'); consulta.mutate(); } }}>
         <Field label="Placa">{p => (
@@ -77,6 +83,7 @@ export function ConduccionRpmPage() {
       ) : r.sin_datos ? (
         <EmptyState icon={<Gauge size={22} />} title="El GPS no trae lecturas en ese rango">Revisa las fechas o que la unidad haya reportado.</EmptyState>
       ) : <Resultado r={r} />}
+      <RangosRpmSheet open={verRangos} onClose={() => setVerRangos(false)} puedeEditar={can('combustible_analisis.editar')} />
     </Page>
   );
 }
