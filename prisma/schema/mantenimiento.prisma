@@ -501,6 +501,19 @@ model Siniestro {
   @@map("mantenimiento_siniestros")
 }
 
+// Fotos de los daños de un siniestro (el archivo vive en S3)
+model SiniestroFoto {
+  id           Int      @id @default(autoincrement())
+  siniestro_id Int
+  url          String   @db.VarChar(500)
+  nombre       String?  @db.VarChar(255)
+  subido_por   String?  @db.VarChar(150)
+  creado_en    DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([siniestro_id], map: "idx_siniestro_foto")
+  @@map("mantenimiento_siniestros_fotos")
+}
+
 // Motivos (tipos de incidencia) configurables del control de siniestros
 model SiniestroMotivo {
   id        Int      @id @default(autoincrement())

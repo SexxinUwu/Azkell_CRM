@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { BarChart3, FileDown, FileUp, Plus, RefreshCw, Settings2, TriangleAlert, Trash2 } from 'lucide-react';
+import { BarChart3, Camera, FileDown, FileUp, Plus, RefreshCw, Settings2, TriangleAlert, Trash2 } from 'lucide-react';
 import { FileSpreadsheet, Pencil } from '../../core/ui/IconosArchivo';
 import '../../core/ui/acciones-iconos.css';
 import './incidencias.css';
@@ -155,7 +155,7 @@ export function SiniestrosPage() {
             <TablaRedimensionable id="siniestros" ariaLabel="Siniestros y daños" altoMax="64vh" columnas={COLUMNAS}>
               {items.map(s => (
                 <tr key={s.id}>
-                  <Celda mono>{s.codigo}</Celda>
+                  <Celda mono>{s.codigo}{(s.n_fotos ?? 0) > 0 && <span className="sin-fotos__n" title={`${s.n_fotos} foto(s) de los daños`}><Camera size={12} aria-hidden /> {s.n_fotos}</span>}</Celda>
                   <Celda mono>{formatFechaPe(s.fecha)}</Celda>
                   <Celda><LicensePlate plate={s.placa} size="sm" /></Celda>
                   <Celda>{s.marca || '—'}</Celda>

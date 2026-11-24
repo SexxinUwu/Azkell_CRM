@@ -10,7 +10,9 @@ import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { formatSoles } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
-import { ESTADOS_SINIESTRO, guardarSiniestro, hoyIso, num, type CatalogoSiniestros, type Siniestro } from './siniestrosApi';
+import { useAuth } from '../../core/auth/AuthProvider';
+import { FotosSiniestro } from './FotosSiniestro';
+import { ESTADOS_SINIESTRO, guardarSiniestro, hoyIso, num, subirFotosSiniestro, type CatalogoSiniestros, type Siniestro } from './siniestrosApi';
 
 interface Form {
   fecha: string; placa: string; marca: string; conductor: string; ubicacion: string; tipo_incidencia: string; detalle: string; tecnico: string;
@@ -56,8 +58,11 @@ export function SiniestroSheet({ abierto, siniestro, catalogo, onClose }: { abie
   const [f, setF] = useState<Form>(VACIO);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const { can } = useAuth();
+  // Fotos nuevas por subir (las ya guardadas las muestra FotosSiniestro)
+  const [fotosNuevas, setFotosNuevas] = useState<File[]>([]);
 
-  useEffect(() => { if (abierto) { setF(siniestro ? desdeSiniestro(siniestro) : VACIO()); setError(null); } }, [abierto, siniestro]);
+  useEffect(() => { if (abierto) { setF(siniestro ? desdeSiniestro(siniestro) : VACIO()); setError(null); setFotosNuevas([]); } }, [abierto, siniestro]);
   const set = (p: Partial<Form>) => setF(x => ({ ...x, ...p }));
 
   const placas = useMemo<ComboboxOption[]>(() => {
@@ -82,6 +87,12 @@ export function SiniestroSheet({ abierto, siniestro, catalogo, onClose }: { abie
     try {
       const r = await guardarSiniestro(siniestro?.id ?? null, { ...f, costo_repuestos: f.costo_repuestos.replace(',', '.'), costo_mano_obra: f.costo_mano_obra.replace(',', '.') });
       if (r.ok === false) throw new Error(r.error || 'No se pudo guardar');
+      // Las fotos se suben con el id del siniestro (el nuevo, o el que se está corrigiendo)
+      const id = siniestro?.id ?? (r as { id?: number }).id ?? null;
+      if (fotosNuevas.length && id) {
+        const rf = await subirFotosSiniestro(id, fotosNuevas);
+        if (rf.ok === false) throw new Error(`El siniestro se guardó, pero las fotos no se subieron: ${rf.error || 'error al subir'}`);
+      }
       haptic('success'); toast(r.message || 'Guardado');
       await qc.invalidateQueries({ queryKey: ['mant', 'siniestros'] });
       onClose();
@@ -118,6 +129,13 @@ export function SiniestroSheet({ abierto, siniestro, catalogo, onClose }: { abie
             <Field label="Detalle de daños o causa">
               {p => <textarea className="input" id={p.id} aria-describedby={p['aria-describedby']} rows={3} value={f.detalle} placeholder="Qué se dañó y por qué" style={{ padding: '0.6rem 1rem', resize: 'vertical' }} onChange={e => set({ detalle: e.target.value })} />}
             </Field>
+          </div>
+        </section>
+
+        <section className="os-seccion">
+          <h3 className="os-seccion__titulo">Fotos de los daños</h3>
+          <div className="os-seccion__cuerpo">
+            <FotosSiniestro siniestroId={siniestro?.id ?? null} nuevas={fotosNuevas} onNuevas={setFotosNuevas} puedeQuitar={can('siniestros.editar')} disabled={guardando} />
           </div>
         </section>
 

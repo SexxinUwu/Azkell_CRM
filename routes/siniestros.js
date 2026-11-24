@@ -3,6 +3,10 @@
 // Registro, importación desde Excel y el resumen que alimenta las gráficas. Las horas de taller y el costo total
 // los calcula siempre el servidor, así un Excel o un formulario no pueden dejarlos inconsistentes.
 const express = require('express');
+const multer = require('multer');
+const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrlEstable } = require('../utils/s3');
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024, files: 20 } });
 
 const ESTADOS = ['Concluido', 'En Reparación', 'Pendiente Repuestos'];
 
@@ -108,7 +112,13 @@ module.exports = (db, logAudit) => {
                 par.push(t, t, t, t, t, t, t);
             }
             const [rows] = await P(req).query(`SELECT ${COLUMNAS} FROM mantenimiento_siniestros WHERE ${donde.join(' AND ')} ORDER BY fecha DESC, id DESC LIMIT 5000`, par);
-            res.json({ ok: true, data: rows });
+            // Cuántas fotos tiene cada siniestro (si la tabla de fotos aún no existe, todos quedan en 0)
+            const conteo = new Map();
+            try {
+                const [fotos] = await P(req).query('SELECT siniestro_id, COUNT(*) AS n FROM mantenimiento_siniestros_fotos GROUP BY siniestro_id');
+                fotos.forEach(f => conteo.set(Number(f.siniestro_id), Number(f.n)));
+            } catch (e) { /* sin tabla de fotos */ }
+            res.json({ ok: true, data: rows.map(r => ({ ...r, n_fotos: conteo.get(Number(r.id)) || 0 })) });
         } catch (err) {
             // Si la migración aún no se aplicó en esta empresa, la pantalla abre vacía en vez de fallar
             if (err && err.code === 'ER_NO_SUCH_TABLE') return res.json({ ok: true, data: [], sinTabla: true });
@@ -236,9 +246,71 @@ module.exports = (db, logAudit) => {
         try {
             const [r] = await P(req).query('DELETE FROM mantenimiento_siniestros WHERE id = ?', [req.params.id]);
             if (r.affectedRows !== 1) throw aviso('Siniestro no encontrado.', 404);
+            // Sus fotos también se borran (la fila y el archivo)
+            try {
+                const [fotos] = await P(req).query('SELECT url FROM mantenimiento_siniestros_fotos WHERE siniestro_id = ?', [req.params.id]);
+                await P(req).query('DELETE FROM mantenimiento_siniestros_fotos WHERE siniestro_id = ?', [req.params.id]);
+                for (const f of fotos) { const k = s3KeyFromUrl(f.url); if (k) await deleteFromS3(k).catch(() => { }); }
+            } catch (e) { /* sin tabla de fotos */ }
             if (logAudit) logAudit({ req, accion: 'ELIMINAR_SINIESTRO', modulo: 'MANTENIMIENTO', detalle: `Siniestro ${req.params.id}` });
             res.json({ ok: true, message: 'Siniestro eliminado.' });
         } catch (err) { responder(res, err, 'eliminar'); }
+    });
+
+    // ── Fotos de los daños ──
+    const firmarFoto = async f => {
+        const key = s3KeyFromUrl(f.url);
+        let url = f.url;
+        if (key) { try { url = await getPresignedUrlEstable(key); } catch (e) { /* queda la dirección guardada */ } }
+        return { id: f.id, url, nombre: f.nombre, subido_por: f.subido_por, creado_en: f.creado_en };
+    };
+    const listarFotos = async (p, id) => {
+        const [rows] = await p.query('SELECT id, url, nombre, subido_por, creado_en FROM mantenimiento_siniestros_fotos WHERE siniestro_id = ? ORDER BY id', [id]);
+        return Promise.all(rows.map(firmarFoto));
+    };
+    const sinTablaFotos = err => (err && err.code === 'ER_NO_SUCH_TABLE' ? aviso('Las fotos aún no están habilitadas en esta empresa (falta aplicar la actualización de la base).', 409) : err);
+
+    router.get('/:id/fotos', async (req, res) => {
+        try {
+            res.json({ ok: true, data: await listarFotos(P(req), Number(req.params.id)) });
+        } catch (err) {
+            if (err && err.code === 'ER_NO_SUCH_TABLE') return res.json({ ok: true, data: [], sinTabla: true });
+            responder(res, err, 'fotos');
+        }
+    });
+
+    router.post('/:id/fotos', upload.array('fotos', 20), async (req, res) => {
+        try {
+            const p = P(req);
+            const id = Number(req.params.id);
+            const archivos = (req.files || []).filter(f => /^image\//.test(f.mimetype));
+            if (!archivos.length) throw aviso('Adjunta al menos una foto.');
+            const [s] = await p.query('SELECT codigo FROM mantenimiento_siniestros WHERE id = ?', [id]);
+            if (!s.length) throw aviso('Siniestro no encontrado.', 404);
+            const marca = Date.now();
+            try {
+                for (let i = 0; i < archivos.length; i++) {
+                    const a = archivos[i];
+                    const ext = (String(a.originalname || '').split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+                    const url = await uploadToS3(a.buffer, `flota/siniestros/${id}/${marca}_${i + 1}.${ext}`, a.mimetype);
+                    await p.query('INSERT INTO mantenimiento_siniestros_fotos (siniestro_id, url, nombre, subido_por) VALUES (?, ?, ?, ?)', [id, url, texto(a.originalname, 255), usuarioDe(req)]);
+                }
+            } catch (e) { throw sinTablaFotos(e); }
+            if (logAudit) logAudit({ req, accion: 'FOTOS_SINIESTRO', modulo: 'MANTENIMIENTO', detalle: `${s[0].codigo}: +${archivos.length} foto(s)` });
+            res.json({ ok: true, data: await listarFotos(p, id) });
+        } catch (err) { responder(res, err, 'fotos+'); }
+    });
+
+    router.delete('/:id/fotos/:fotoId', async (req, res) => {
+        try {
+            const p = P(req);
+            const [f] = await p.query('SELECT id, url FROM mantenimiento_siniestros_fotos WHERE id = ? AND siniestro_id = ?', [Number(req.params.fotoId), Number(req.params.id)]);
+            if (!f.length) throw aviso('La foto no existe.', 404);
+            await p.query('DELETE FROM mantenimiento_siniestros_fotos WHERE id = ?', [f[0].id]);
+            const k = s3KeyFromUrl(f[0].url);
+            if (k) await deleteFromS3(k).catch(() => { });
+            res.json({ ok: true, data: await listarFotos(p, Number(req.params.id)) });
+        } catch (err) { responder(res, err, 'fotos-'); }
     });
 
     // ── Importar desde Excel: cada fila con su código se crea o, si ya existe, se actualiza ──
