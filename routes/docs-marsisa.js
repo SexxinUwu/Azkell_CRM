@@ -72,7 +72,7 @@ module.exports = (db, logAudit) => {
                 `SELECT d.id, d.id_remoto, d.placa, d.unidad_activa, d.tipo_codigo, d.tipo_nombre, d.numero, d.emisor,
                         DATE_FORMAT(d.fecha_emision, '%Y-%m-%d') AS fecha_emision, DATE_FORMAT(d.fecha_vencimiento, '%Y-%m-%d') AS fecha_vencimiento,
                         d.tiene_archivo, (d.archivo_url IS NOT NULL) AS archivo_guardado, DATE_FORMAT(d.actualizado_remoto, '%Y-%m-%d %H:%i') AS actualizado_remoto, DATE_FORMAT(d.sincronizado_en, '%Y-%m-%d %H:%i') AS sincronizado_en,
-                        (p.placa IS NOT NULL AND (p.estado IS NULL OR p.estado NOT LIKE 'inactiv%')) AS en_flota, NULLIF(TRIM(COALESCE(p.alquilada_a, '')), '') AS alquilada_a
+                        (p.placa IS NOT NULL AND (p.estado IS NULL OR p.estado NOT LIKE 'inactiv%')) AS en_flota, NULLIF(TRIM(COALESCE(p.alquilada_a, '')), '') AS alquilada_a, NULLIF(TRIM(COALESCE(p.cliente, '')), '') AS empresa
                  FROM marsisa_docs_flota_ext d LEFT JOIN placas p ON ${norm('p.placa')} = ${norm('d.placa')}
                  WHERE d.eliminado_remoto = 0 ORDER BY d.placa, d.tipo_nombre, d.fecha_vencimiento DESC`);
             const [[u]] = await P(req).query("SELECT DATE_FORMAT(MAX(sincronizado_en), '%Y-%m-%d %H:%i') AS ultima FROM marsisa_docs_flota_ext");
@@ -178,11 +178,16 @@ module.exports = (db, logAudit) => {
     // ── Descargar en lote los archivos que faltan (el cliente repite hasta que no queden) ──
     router.post('/sincronizar-archivos', async (req, res) => {
         try {
-            const limite = Math.min(25, Math.max(1, Number(req.query.limite) || 10));
+            // Cada solicitud tiene un presupuesto de tiempo: el proxy corta (502) las que tardan demasiado, así que se devuelve lo avanzado
+            // y el cliente sigue con otra tanda. Lo ya guardado se conserva.
+            const inicio = Date.now();
+            const PRESUPUESTO_MS = 25000;
+            const limite = Math.min(10, Math.max(1, Number(req.query.limite) || 4));
             const cfg = await configuracion(req);
             const [pend] = await P(req).query('SELECT id, id_remoto FROM marsisa_docs_flota_ext WHERE tiene_archivo = 1 AND eliminado_remoto = 0 AND archivo_url IS NULL ORDER BY id LIMIT ?', [limite]);
             let guardados = 0; const fallidos = [];
             for (const f of pend) {
+                if (Date.now() - inicio > PRESUPUESTO_MS) break;
                 try { await guardarArchivo(req, cfg, f); guardados++; } catch (e) { fallidos.push({ id: f.id_remoto, error: e && e.message ? String(e.message).slice(0, 120) : 'error' }); }
             }
             const [[{ n }]] = await P(req).query('SELECT COUNT(*) AS n FROM marsisa_docs_flota_ext WHERE tiene_archivo = 1 AND eliminado_remoto = 0 AND archivo_url IS NULL');
