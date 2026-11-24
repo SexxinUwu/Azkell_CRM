@@ -3,7 +3,7 @@ import './integraciones.css';
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { Building2, CheckCircle2, ChevronDown, CircleAlert, KeyRound, Landmark, ListOrdered, MapPin, ShieldCheck, UserRound, Zap } from 'lucide-react';
+import { Building2, CheckCircle2, ChevronDown, CircleAlert, FolderSearch, KeyRound, Landmark, ListOrdered, MapPin, ShieldCheck, UserRound, Zap } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice, Page, PageHeader } from '../../core/ui/Display';
 import { Field, PasswordInput, TextInput } from '../../core/ui/Field';
@@ -59,6 +59,7 @@ export function IntegracionesPage() {
           <Wialon filas={q.data ?? []} />
           <Apisunat filas={q.data ?? []} />
           <Sire filas={q.data ?? []} />
+          <DocsExternos filas={q.data ?? []} />
         </div>
       )}
     </Page>
@@ -189,6 +190,98 @@ function Wialon({ filas }: { filas: Fila[] }) {
         <Button variant="primary" icon={<MapPin size={16} />} onClick={conectar} loading={conectando} disabled={ocupado}>Conectar con Wialon</Button>
         <Button variant="secondary" onClick={() => guardarYProbar(false)} disabled={ocupado || conectando}>Guardar</Button>
         <Button variant="primary" icon={<Zap size={16} />} onClick={() => guardarYProbar(true)} loading={ocupado} disabled={conectando}>Guardar y probar conexión</Button>
+      </div>
+    </Tarjeta>
+  );
+}
+
+interface RespuestaApiExterna {
+  ok?: boolean; error?: string; base?: string; ruta?: string; status?: number; tipo?: string; ms?: number; exito?: boolean; archivo?: boolean; bytes?: number | null;
+  json?: unknown; texto?: string; recortado?: boolean;
+}
+
+// Documentos de flota de otra empresa por API externa (Marsisa): URL y token por empresa. Las consultas salen del servidor
+// (la API solo acepta la IP del servidor) y son solo de lectura.
+function DocsExternos({ filas }: { filas: Fila[] }) {
+  const toast = useToast();
+  const guardar = useGuardar();
+  const [url, setUrl] = useState('');
+  const [token, setToken] = useState('');
+  const [ocupado, setOcupado] = useState(false);
+  const [res, setRes] = useState<Resultado>(null);
+  const [rutas, setRutas] = useState<RespuestaApiExterna[] | null>(null);
+  const [ruta, setRuta] = useState('/documentos');
+  const [respuesta, setRespuesta] = useState<RespuestaApiExterna | null>(null);
+
+  useEffect(() => { setUrl(valorDe(filas, 'docs_ext_url')); setToken(valorDe(filas, 'docs_ext_token')); }, [filas]);
+
+  async function guardarDatos() {
+    setOcupado(true); setRes(null);
+    try { await guardar([['docs_ext_url', url], ['docs_ext_token', token]]); haptic('success'); toast('API de documentos guardada'); }
+    catch (err) { setRes({ ok: false, texto: errorMessage(err) }); haptic('warning'); }
+    finally { setOcupado(false); }
+  }
+
+  async function probar() {
+    setOcupado(true); setRes(null); setRutas(null); setRespuesta(null);
+    try {
+      await guardar([['docs_ext_url', url], ['docs_ext_token', token]]);
+      const r = await api<{ ok?: boolean; error?: string; resultados?: RespuestaApiExterna[] }>('/docs-externos/probar', { method: 'POST', body: {} });
+      if (r.ok === false) throw new Error(r.error || 'No se pudo consultar');
+      setRutas(r.resultados ?? []);
+      const buenas = (r.resultados ?? []).filter(x => x.exito).length;
+      setRes({ ok: buenas > 0, texto: buenas > 0 ? `La API respondió en ${buenas} ruta(s). Mira cuáles abajo.` : 'Ninguna ruta respondió con éxito. Revisa el estado de cada una abajo.' });
+    } catch (err) { setRes({ ok: false, texto: errorMessage(err) }); haptic('warning'); }
+    finally { setOcupado(false); }
+  }
+
+  async function consultar(r: string) {
+    setOcupado(true); setRespuesta(null);
+    try {
+      const x = await api<RespuestaApiExterna>('/docs-externos/explorar', { query: { ruta: r } });
+      setRespuesta(x);
+    } catch (err) { setRespuesta({ ok: false, error: errorMessage(err) }); }
+    finally { setOcupado(false); }
+  }
+
+  const cuerpo = respuesta?.json !== undefined ? JSON.stringify(respuesta.json, null, 2) : respuesta?.texto ?? '';
+  return (
+    <Tarjeta icono={<FolderSearch size={20} />} tono="gps" titulo="Documentos de flota · API externa (Marsisa)" estado={res && !res.ok ? 'error' : token ? 'ok' : 'pendiente'}
+      resumen={token ? `Token guardado · ${url || 'dirección predeterminada de Marsisa'}` : 'Aún sin token de acceso'} onGuardar={() => { void guardarDatos(); }}>
+      <div className="int-grid">
+        <Field label="Token de acceso" hint="Lo entrega Marsisa. Se guarda solo en esta empresa y no se muestra completo.">{p => <PasswordInput {...p} value={token} onChange={e => setToken(e.target.value)} autoComplete="off" />}</Field>
+        <Field label="Dirección de la API" hint="Déjala vacía para usar https://sistema.marsisa.com/api/externo/v1">{p => <TextInput {...p} value={url} onChange={e => setUrl(e.target.value)} placeholder="https://sistema.marsisa.com/api/externo/v1" />}</Field>
+      </div>
+      {res && <Notice tone={res.ok ? 'success' : 'error'} icon={res.ok ? <CheckCircle2 size={16} /> : <CircleAlert size={16} />}>{res.texto}</Notice>}
+      {rutas && (
+        <table className="int-tabla" aria-label="Rutas probadas">
+          <thead><tr><th>Ruta</th><th>Respuesta</th><th>Tipo</th><th /></tr></thead>
+          <tbody>
+            {rutas.map(r => (
+              <tr key={r.ruta}>
+                <td><code>{r.ruta}</code></td>
+                <td>{r.status ? r.status : (r.error ?? 'sin respuesta')} {r.exito ? '✓' : ''}</td>
+                <td>{r.tipo || '—'}</td>
+                <td>{r.exito && <button type="button" className="placas-limpiar" onClick={() => { setRuta(r.ruta ?? '/'); void consultar(r.ruta ?? '/'); }}>Ver</button>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <div className="int-grid">
+        <Field label="Consultar una ruta (solo lectura)" hint="Por ejemplo /documentos o /archivos">{p => <TextInput {...p} value={ruta} onChange={e => setRuta(e.target.value)} placeholder="/documentos" />}</Field>
+      </div>
+      {respuesta && (
+        <div>
+          <p className="int-acciones__meta">{respuesta.error ? respuesta.error : `Respuesta ${respuesta.status} · ${respuesta.tipo || 'sin tipo'} · ${respuesta.ms} ms${respuesta.archivo ? ` · archivo${respuesta.bytes ? ` de ${respuesta.bytes} bytes` : ''}` : ''}${respuesta.recortado ? ' · recortado' : ''}`}</p>
+          {cuerpo && <pre className="int-json">{cuerpo}</pre>}
+        </div>
+      )}
+      <div className="int-acciones">
+        <span className="int-acciones__meta">{metaDe(filas, 'docs_ext_token')}</span>
+        <Button variant="secondary" onClick={() => { void guardarDatos(); }} disabled={ocupado}>Guardar</Button>
+        <Button variant="secondary" icon={<FolderSearch size={16} />} onClick={() => { void consultar(ruta); }} disabled={ocupado || !token}>Consultar ruta</Button>
+        <Button variant="primary" icon={<Zap size={16} />} onClick={() => { void probar(); }} loading={ocupado} disabled={!token}>Guardar y probar</Button>
       </div>
     </Tarjeta>
   );

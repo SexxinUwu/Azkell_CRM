@@ -5243,7 +5243,7 @@ app.use('/api/almacen', almacenRoutes);
 
 // ── Integraciones API (GET / PUT) ────────────────────────────────
 // Secretos: la lista nunca trae el valor completo. Solo indica si está configurado y, si el valor es largo, los últimos 4 caracteres.
-const CLAVES_SECRETAS = ['wialon_token', 'sunat_clave_sol', 'sunat_client_secret', 'apisunat_persona_token', 'apisunat_prueba_persona_token', 'sire_clave_sol', 'sire_client_secret'];
+const CLAVES_SECRETAS = ['docs_ext_token', 'wialon_token', 'sunat_clave_sol', 'sunat_client_secret', 'apisunat_persona_token', 'apisunat_prueba_persona_token', 'sire_clave_sol', 'sire_client_secret'];
 const MASCARA = '••••';
 const enmascararSecreto = (v) => {
     const texto = v ? String(v) : '';
@@ -5320,6 +5320,8 @@ app.use('/api/rentabilidad', require('./routes/rentabilidad')(db));
 app.use('/api/facturacion', require('./routes/facturacion')(db, logAudit));
 // SIRE de SUNAT: credenciales (cifradas) y prueba de conexión directa con SUNAT
 app.use('/api/sire', require('./routes/sire')(db, logAudit));
+// Documentos de flota de otra empresa por API externa (Marsisa): solo lectura, configurada por empresa en Integraciones
+app.use('/api/docs-externos', require('./routes/docs-externos')(db, logAudit));
 // Contabilidad: copia local del SIRE de SUNAT (ventas y compras)
 app.use('/api/contabilidad', require('./routes/contabilidad')(db, logAudit));
 app.use('/api/tesoreria/caja-chica', require('./routes/caja_chica')(db, broadcast, logAudit));
