@@ -112,6 +112,7 @@ const SECCIONES_BASE: NavSection[] = [
     title: 'Operaciones Marsisa',
     items: [
       { key: 'marsisa-ordenes-viaje', label: 'Órdenes de viaje (Marsisa)', to: '/operaciones/marsisa-ordenes-viaje', icon: Route, permissions: ver('op_ordenes_viaje', 'op_programacion', 'op_guias_remision', 'op_guias_remision'), soloEmpresa: 'marsisa' },
+      { key: 'marsisa-docs-flota', label: 'Documentos de flota (API)', to: '/operaciones/docs-marsisa', icon: FileText, permissions: ver('docs_flota'), soloEmpresa: 'marsisa' },
       {
         key: 'marsisa-combustible-grupo', label: 'Combustible Marsisa', icon: Fuel, permissions: [], soloEmpresa: 'marsisa',
         children: [

@@ -74,6 +74,12 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'marsisa-vales', label: 'Vales de combustible Marsisa', to: '/operaciones/marsisa-vales', icon: 'Fuel', permisos: ['operaciones.ver', 'admin'] },
   },
   {
+    path: 'operaciones/docs-marsisa/*',
+    permisos: ['docs_flota.ver', 'admin'],
+    Page: lazy(() => import('./DocsMarsisaPage').then(m => ({ default: m.DocsMarsisaPage }))),
+    nav: { key: 'marsisa-docs-flota', label: 'Documentos de flota (API)', to: '/operaciones/docs-marsisa', icon: 'FileText', permisos: ['docs_flota.ver', 'admin'] },
+  },
+  {
     path: 'operaciones/analisis-combustible/*',
     permisos: ['combustible_analisis.ver', 'admin'],
     Page: lazy(() => import('./AnalisisCombustiblePage').then(m => ({ default: m.AnalisisCombustiblePage }))),
