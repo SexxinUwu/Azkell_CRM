@@ -194,3 +194,15 @@
   .pap-cat__acciones { margin-left: 0; width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .pap-tile { transition: none; } }
+
+/* Monto pagado y ahorro por descuentos, bajo las tarjetas de estado */
+.pap-montos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2); }
+.pap-monto { display: flex; flex-direction: column; gap: 2px; padding: var(--s-2) var(--s-3); border-radius: var(--r-lg); border: 1px solid var(--separator); background: var(--fill-subtle); min-width: 0; }
+.pap-monto__k { font-size: 0.75rem; font-weight: 600; color: var(--label-2); }
+.pap-monto strong { font-size: 1.25rem; line-height: 1.2; }
+.pap-monto strong small { font-size: 0.8125rem; font-weight: 600; color: var(--label-2); }
+.pap-monto__n { color: var(--label-2); font-size: 0.75rem; }
+.pap-monto--pagado strong { color: var(--green-ink); }
+.pap-monto--ahorro { background: var(--green-tint); border-color: var(--green-ink); }
+.pap-monto--ahorro strong { color: var(--green-ink); }
+@media (max-width: 760px) { .pap-montos { grid-template-columns: minmax(0, 1fr); } }

@@ -49,9 +49,9 @@ export async function descargarPlantillaPapeletas(entidades: EntidadPap[]) {
 export async function exportarPapeletasExcel(filas: Papeleta[]) {
   await exportarExcel('Papeletas', 'Papeletas',
     ['Código', 'Entidad', 'Tipo', 'N° documento', 'Fecha infracción', 'Placa', 'Empresa', 'Conductor', 'DNI', 'Infracción', 'Descripción', 'Gravedad', 'Puntos', 'Moneda', 'Monto', 'Descuento', 'Recargos', 'Total vigente',
-      'Pagado', 'Saldo', 'Fin del descuento', 'Límite de pago', 'Quién asume', 'Estado', 'Observaciones'],
+      'Pagado', 'Ahorro por descuento', 'Saldo', 'Fin del descuento', 'Límite de pago', 'Quién asume', 'Estado', 'Observaciones'],
     filas.map(p => [p.codigo, entidadTexto(p), TIPO_DOC_TXT[p.tipo_documento] || p.tipo_documento, p.numero, p.fecha_infraccion.replace('T', ' '), p.placa, p.empresa_unidad, p.conductor_nombre, p.conductor_dni,
-      p.infraccion_codigo, p.infraccion_desc, p.gravedad ? GRAVEDAD_TXT[p.gravedad] : '', p.puntos, p.moneda, p.monto, p.descuento_monto, p.recargos, p.total_vigente, p.pagado, p.saldo,
+      p.infraccion_codigo, p.infraccion_desc, p.gravedad ? GRAVEDAD_TXT[p.gravedad] : '', p.puntos, p.moneda, p.monto, p.descuento_monto, p.recargos, p.total_vigente, p.pagado, p.ahorro_descuento, p.saldo,
       p.fecha_limite_descuento, p.fecha_limite_pago, ASUME_TXT[p.quien_asume], ESTADO_TXT[p.estado_efectivo], p.observaciones]));
 }
 

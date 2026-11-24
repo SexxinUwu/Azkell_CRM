@@ -140,6 +140,7 @@ export function PapDetalle({ id, onClose, onEditar, onPago }: {
             <div className="pap-cifras">
               <div className="pap-cifra"><span className="pap-k">Total vigente</span><strong className="t-numeric">{formatMoneda(d.total_vigente, d.moneda)}</strong>{d.descuento_vigente && <small>con descuento</small>}</div>
               <div className="pap-cifra"><span className="pap-k">Pagado</span><strong className="t-numeric pap-verde">{formatMoneda(d.pagado, d.moneda)}</strong></div>
+              {d.ahorro_descuento > 0 && <div className="pap-cifra"><span className="pap-k">Ahorro por descuento</span><strong className="t-numeric pap-verde">{formatMoneda(d.ahorro_descuento, d.moneda)}</strong></div>}
               <div className="pap-cifra"><span className="pap-k">Saldo</span><strong className={`t-numeric${d.saldo > 0 ? ' pap-ambar' : ''}`}>{formatMoneda(d.saldo, d.moneda)}</strong></div>
               <div className="pap-cifra"><span className="pap-k">Sin descuento</span><strong className="t-numeric pap-suave">{formatMoneda(d.total_sin_descuento, d.moneda)}</strong></div>
             </div>

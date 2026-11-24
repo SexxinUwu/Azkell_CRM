@@ -1,7 +1,7 @@
 import '../flota/documentos.css';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, Contact, Eye, FileText, History, Plus, Trash2 } from 'lucide-react';
+import { CircleAlert, Contact, Eye, FileText, History, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
 import { ArchivoInput } from '../../core/ui/ArchivoInput';
@@ -23,10 +23,10 @@ const COLORES = ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#10b981', '#06b6d4
 const COLOR_ESTADO: Record<EstadoDoc, string> = { falta: 'var(--label-2)', vigente: 'var(--green-ink)', por_vencer: 'var(--amber-ink)', vencido: 'var(--red-ink)' };
 const esImagen = (d: Pick<DocumentoPersona, 'mime' | 'nombre_archivo'>) => /^image\//i.test(d.mime ?? '') || /\.(jpe?g|png|webp)$/i.test(d.nombre_archivo ?? '');
 
-/** «Faltan 19 días (Por vencer)», «Venció hace 3 días» o «No vence» */
+/** «Faltan 19 días (Por vencer)», «Venció hace 3 días» o «No vence» (si el documento debería vencer y no tiene fecha: «Falta registrar el vencimiento») */
 function textoEstado(d: DocumentoPersona): string {
   const { estado, dias } = estadoDoc(d);
-  if (dias == null) return 'No vence';
+  if (dias == null) return configDoc(d.tipo).vence ? 'Falta registrar el vencimiento' : 'No vence';
   if (dias < 0) return `Venció hace ${-dias} ${-dias === 1 ? 'día' : 'días'}`;
   if (dias === 0) return 'Vence hoy';
   return `Faltan ${dias} ${dias === 1 ? 'día' : 'días'} (${estado === 'por_vencer' ? 'Por vencer' : 'Vigente'})`;
@@ -151,7 +151,7 @@ function TarjetaPersonal({ num, titulo, color, doc, anteriores, puedeEditar, pue
       </footer>
       <div className="doc-card__acciones">
         {doc.url && <Button variant="secondary" size="sm" icon={<Eye size={14} />} onClick={() => onVer(doc)}>Ver archivo</Button>}
-        {puedeEditar && <Button variant="secondary" size="sm" icon={<FileText size={14} />} onClick={onActualizar}>Actualizar</Button>}
+        {puedeEditar && <Button variant="secondary" size="sm" icon={<Pencil size={14} />} onClick={onActualizar}>Editar</Button>}
         {anteriores.length > 0 && <Button variant="secondary" size="sm" icon={<History size={14} />} aria-expanded={historial} onClick={() => setHistorial(a => !a)}>Historial</Button>}
         {puedeEliminar && <Button variant="plain" size="sm" icon={<Trash2 size={14} />} className="doc-card__eliminar" onClick={onEliminar}>Eliminar</Button>}
       </div>
@@ -228,7 +228,7 @@ function DocumentoSheet({ personaId, nombresPropios, abierto, onClose }: { perso
   }
 
   return (
-    <Sheet open={!!abierto} onClose={() => !guardando && onClose()} title={doc ? `Actualizar · ${cfg.titulo}` : agregar ? 'Agregar documento' : cfg.titulo}
+    <Sheet open={!!abierto} onClose={() => !guardando && onClose()} title={doc ? `Editar · ${cfg.titulo}` : agregar ? 'Agregar documento' : cfg.titulo}
       footer={<><Button variant="secondary" onClick={onClose} disabled={guardando}>Cancelar</Button><Button variant="primary" onClick={guardar} loading={guardando}>Guardar</Button></>}>
       <div className="form-grid">
         {error && <div className="field field--wide"><Notice tone="error" icon={<CircleAlert size={16} />}>{error}</Notice></div>}
