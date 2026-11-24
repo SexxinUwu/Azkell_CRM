@@ -24,9 +24,11 @@ const OPCIONES: Array<{ valor: ModoVista; etiqueta: string }> = [
   { valor: 'isometria', etiqueta: 'Isometría' },
 ];
 
-export default function Placa3DVista({ placa, configuracion, llantas, activa, sobre, camion = false, modo, onModo, onSelect }: {
+export default function Placa3DVista({ placa, configuracion, llantas, activa, sobre, camion = false, modo, onModo, onSelect, arrastrando = null }: {
   placa: string; configuracion: string; llantas: LlantaDato[]; activa: string; sobre: string | null; camion?: boolean;
   modo: ModoVista; onModo: (m: ModoVista) => void; onSelect: (l: LlantaDato) => void;
+  /** Llanta de la unidad que se lleva con el puntero en el plano */
+  arrastrando?: { posicion: string; x: number; y: number } | null;
 }) {
   const { oscuro } = useOscuro();
   const placas = usePlacas();
@@ -44,6 +46,11 @@ export default function Placa3DVista({ placa, configuracion, llantas, activa, so
     if (base && base.cat !== 'A') return { ...base, f, cat };
     return { plate: normal(placa), f, cat, search: '', placa: (p ?? {}) as Unidad['placa'] };
   }, [placas.isFetched, placas.data, placa, configuracion, camion]);
+
+  // La escena se rehace solo si cambia la unidad, la configuración o el tipo, nunca por un refresco de datos ni por elegir otra llanta
+  const unidadRef = useRef<Unidad | null>(null);
+  unidadRef.current = unidad;
+  const claveEscena = unidad ? `${normal(placa)}|${configuracion}|${camion ? 'C' : 'T'}` : '';
 
   const vista = useRef<HTMLDivElement>(null);
   const lienzo = useRef<HTMLCanvasElement>(null);
@@ -64,6 +71,7 @@ export default function Placa3DVista({ placa, configuracion, llantas, activa, so
 
   // Escena: se crea una vez por unidad
   useEffect(() => {
+    const unidad = unidadRef.current;
     if (!unidad || !config || !lienzo.current || !vista.current || !cabecera.current || !barra.current) return;
     let activo = true;
     let escena: Escena3D | null = null;
@@ -95,7 +103,7 @@ export default function Placa3DVista({ placa, configuracion, llantas, activa, so
         });
       };
       // Estado inicial según el modo: en Plano la unidad queda despiezada y vista desde arriba
-      if (vivo.current.modo === 'plano') { escena.despiece(DESPIECE_PLANO, false); escena.vista('top', true); } else { escena.vista('v34', true); }
+      if (vivo.current.modo === 'plano') { escena.despiece(DESPIECE_PLANO, false); escena.vista('top', true); escena.disolver(1, 1); } else { escena.vista('v34', true); }
       setListo(true);
     }).catch(() => { if (activo) setSin3d(true); });
     return () => {
@@ -106,7 +114,7 @@ export default function Placa3DVista({ placa, configuracion, llantas, activa, so
       setListo(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unidad, configuracion]);
+  }, [claveEscena]);
 
   // Plano ⇄ Isometría: la unidad se arma (o se desarma) mientras la cámara sube o baja
   const modoAnterior = useRef<ModoVista | null>(null);
@@ -117,18 +125,30 @@ export default function Placa3DVista({ placa, configuracion, llantas, activa, so
     modoAnterior.current = modo;
     if (previo === null) return;
     if (modo === 'isometria') {
+      // Las piezas aparecen separadas y se materializan mientras se arman y la cámara baja
       e.despiece(DESPIECE_PLANO, false);
       e.vista('top', true);
+      e.disolver(1, 1);
       e.despiece(0, true);
       e.vista('v34', false);
+      e.disolver(0, 950);
     } else {
+      // Se separan y se desintegran mientras la cámara sube; después el plano se dibuja trazo a trazo
       e.despiece(DESPIECE_PLANO, true);
       e.vista('top', false);
+      e.disolver(1, 750, 200);
     }
   }, [modo, listo]);
   useEffect(() => { if (listo) modoAnterior.current = modo; }, [listo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { escenaRef.current?.aplicarTema(oscuro); }, [oscuro]);
+  // Isometría: al cambiar de llanta (flechas o toque) la cámara se desplaza con una animación y enfoca esa rueda
+  useEffect(() => {
+    const e = escenaRef.current;
+    if (!e || !listo || vivo.current.modo !== 'isometria' || !activa) return;
+    const r = ruedasRef.current?.find(x => x.pos === normal(activa));
+    if (r) e.enfocarRueda(r.obj);
+  }, [activa, listo]);
   // Con los marcadores ya montados, un cuadro para ubicarlos sobre las ruedas
   useEffect(() => { if (listo) escenaRef.current?.layout(); }, [listo]);
 
@@ -180,7 +200,7 @@ export default function Placa3DVista({ placa, configuracion, llantas, activa, so
       </div>
 
       <div className="nv3-plano">
-        <PlanoTecnico configuracion={configuracion} llantas={llantas} activa={activa} sobre={sobre} camion={camion} />
+        <PlanoTecnico key={modo} configuracion={configuracion} llantas={llantas} activa={activa} sobre={sobre} camion={camion} animar arrastrando={arrastrando} />
       </div>
 
       <div className="nv3-modos" role="group" aria-label="Tipo de vista" onPointerDown={detener} onClick={detener}>

@@ -254,6 +254,11 @@ export function NeumaticosTablero() {
   ]);
 
   const sobre = arrastre.sobre;
+  // Una llanta de la unidad que se arrastra en el plano se lleva ella misma con el puntero (no aparece otra encima)
+  const fantasmaUnidad = arrastre.fantasma && arrastre.fantasma.origen === 'unidad' && enPlano && configCodigo ? arrastre.fantasma : null;
+  const llevada = fantasmaUnidad
+    ? (() => { const m = montadas.find(x => x.llanta.codigo === fantasmaUnidad.codigo); return m ? { posicion: m.posicion, x: fantasmaUnidad.x, y: fantasmaUnidad.y } : null; })()
+    : null;
   const bannerTexto = arrastre.fantasma
     ? (sobre ? textoSobre(sobre, sobre.tipo === 'posicion' ? llantaEnPosicion(sobre.posicion) : null) : 'Suelta sobre una posición de la unidad o sobre una zona')
     : enMano
@@ -374,7 +379,7 @@ export function NeumaticosTablero() {
                     onSelect={l => { const m = montadas.find(x => x.posicion === l.posicion); if (m) elegirLlanta(m.llanta.codigo); }}
                     marca={(placas.data ?? []).find(p => p.placa === placa)?.marca ?? null}
                     camion={/^C/i.test(datos?.configuracion ?? '')}
-                    modo={modo} onModo={setModo} plano2d placa={placa}
+                    modo={modo} onModo={setModo} plano2d placa={placa} arrastrando={llevada}
                   />
                 </div>
               ) : (
@@ -498,7 +503,7 @@ export function NeumaticosTablero() {
         </div>
       )}
 
-      {arrastre.fantasma && (
+      {arrastre.fantasma && !llevada && (
         <div className="ntb-fantasma" style={{ left: arrastre.fantasma.x, top: arrastre.fantasma.y }} aria-hidden>
           <span className="ntb-fantasma__llanta" style={{ '--tono': COLOR_TONO[tonoFantasma] } as CSSProperties} />
           <span className="ntb-fantasma__codigo">{arrastre.fantasma.codigo}</span>

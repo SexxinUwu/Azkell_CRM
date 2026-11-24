@@ -254,6 +254,7 @@ export class Escena3D {
       this.liberarArbol(this.cur.root);
     }
     this.cur = nuevo;
+    this.matsOriginal.clear();
     this.ultimo = {M, cfg};
     for (const k of CLAVES){ this.objetivo[k] = 0; this.actual[k] = 0; }
     this.scene.add(nuevo.root);
@@ -266,6 +267,7 @@ export class Escena3D {
     const half = Math.max(nuevo.len / 2 + 2.5, s + 0.5);
     Object.assign(this.sun.shadow.camera, {left: -half, right: half, top: half, bottom: -half, near: 1, far: 50});
     this.sun.shadow.camera.updateProjectionMatrix();
+    if (this.disolverK > 0.001) this.aplicarDisolver(this.disolverK);
     this.vista('v34', !!instantanea);
     this.invalidate();
     return nuevo;
@@ -399,10 +401,54 @@ export class Escena3D {
   /** Se llama después de cada cuadro dibujado: el tablero de neumáticos reubica sus marcadores */
   alDibujar: (() => void) | null = null;
 
+  // Disolución de la unidad: 0 = sólida, 1 = invisible. Las piezas se desvanecen (y se pueden separar con despiece).
+  private disolverK = 0;
+  private disolverAnim: { desde: number; hasta: number; t0: number; dur: number } | null = null;
+  private readonly matsOriginal = new Map<THREE.Material, { op: number; tr: boolean; dw: boolean }>();
+
+  /** Lleva la disolución a 1 (se desvanece) o 0 (reaparece) en ms milisegundos, tras un retraso opcional */
+  disolver(valor: number, ms: number, retraso = 0): void {
+    if (this.reduce){ this.disolverK = valor; this.disolverAnim = null; this.aplicarDisolver(valor); this.invalidate(); return; }
+    this.disolverAnim = { desde: this.disolverK, hasta: valor, t0: performance.now() + retraso, dur: Math.max(1, ms) };
+    this.invalidate();
+  }
+
+  private aplicarDisolver(k: number): void {
+    const cur = this.cur;
+    if (!cur) return;
+    cur.root.traverse(n => {
+      const mesh = n as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      for (const m of mats){
+        let o = this.matsOriginal.get(m);
+        if (!o){ o = { op: m.opacity, tr: m.transparent, dw: m.depthWrite }; this.matsOriginal.set(m, o); }
+        const activo = k > 0.001;
+        m.opacity = o.op * (1 - k);
+        if (m.transparent !== (activo || o.tr)){ m.transparent = activo || o.tr; m.needsUpdate = true; }
+        m.depthWrite = activo ? false : o.dw;
+      }
+      mesh.castShadow = mesh.castShadow && k < 0.6;
+    });
+  }
+
   /** Despiece a un valor dado (1 = como el interruptor); con animar = false se aplica de inmediato */
   despiece(valor: number, animar: boolean): void {
     this.objetivo.explode = valor;
     if (!animar){ this.actual.explode = valor; this.applyState(); }
+    this.invalidate();
+  }
+
+  /** Lleva la cámara, con una animación suave, a mirar de cerca una rueda (isometría del tablero de neumáticos) */
+  enfocarRueda(obj: THREE.Object3D): void {
+    const cur = this.cur;
+    if (!cur) return;
+    const w = obj.getWorldPosition(new V());
+    const lado = w.z >= 0 ? 1 : -1;
+    const dist = Math.max(4.6, cur.len * 0.62);
+    const objetivo = new V(w.x * 0.85, Math.max(0.55, w.y), w.z * 0.35);
+    const pos = new V(w.x + dist * 0.35, w.y + dist * 0.42, lado * dist * 0.95);
+    this.flyTo(pos, objetivo, 0.95);
     this.invalidate();
   }
 
@@ -728,6 +774,16 @@ export class Escena3D {
       else if (d){ this.actual[key] = this.objetivo[key]; moviendose = true; }
     }
     if (moviendose) this.applyState();
+
+    const da = this.disolverAnim;
+    if (da){
+      const t = Math.min(1, Math.max(0, (performance.now() - da.t0) / da.dur));
+      const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      this.disolverK = da.desde + (da.hasta - da.desde) * e;
+      this.aplicarDisolver(this.disolverK);
+      moviendose = true;
+      if (t >= 1) this.disolverAnim = null;
+    }
 
     const f = this.fly;
     if (f){
