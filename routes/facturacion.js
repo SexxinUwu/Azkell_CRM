@@ -210,7 +210,7 @@ module.exports = (db, logAudit) => {
             const modoActual = (await config(req)).modo;
             const [rows] = await P(req).query(
                 `SELECT os.id, os.codigo_orden, DATE_FORMAT(os.fecha, '%Y-%m-%d') AS fecha, os.cliente_id, os.cliente_nombre, os.ruta, os.es_retorno, os.tipo_servicio, os.estado_servicio,
-                        os.moneda, os.tipo_cambio, os.costo_flete, os.impuesto, os.descripcion_carga,
+                        os.moneda, os.tipo_cambio, os.costo_flete, os.impuesto, os.descripcion_carga, os.tipo_contratacion, os.intermediario, os.ejecucion,
                         (SELECT c.ruc_dni FROM clientes c WHERE c.id = os.cliente_id OR c.razon_social ${COL} = os.cliente_nombre ${COL} ORDER BY (c.id = os.cliente_id) DESC LIMIT 1) AS cliente_doc,
                         (SELECT c.direccion FROM clientes c WHERE c.id = os.cliente_id OR c.razon_social ${COL} = os.cliente_nombre ${COL} ORDER BY (c.id = os.cliente_id) DESC LIMIT 1) AS cliente_direccion,
                         (SELECT r.viaje FROM operaciones_ordenes_viaje_rutas r WHERE r.orden ${COL} = os.codigo_orden ${COL} LIMIT 1) AS viaje
@@ -221,11 +221,22 @@ module.exports = (db, logAudit) => {
                  ORDER BY os.cliente_nombre, os.fecha DESC, os.id DESC LIMIT 800`, [modoActual]);
             const p = P(req);
             const norm = t => String(t || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[.,]/g, '').replace(/\s+/g, ' ').trim();
-            const faltan = rows.filter(r => !r.cliente_doc || !r.cliente_direccion);
+            // Catálogo de clientes por nombre normalizado (ignora puntos, comas y mayúsculas)
+            const [cls] = await p.query(`SELECT id, razon_social, TRIM(ruc_dni) AS doc, direccion FROM clientes`).catch(() => [[]]);
+            const porNombre = new Map(); cls.forEach(c => { const k = norm(c.razon_social); if (k && !porNombre.has(k)) porNombre.set(k, c); });
+            // Contratación por intermediario: el servicio se factura a la empresa que nos contrata, no al cliente final.
+            // cliente_nombre, cliente_doc y cliente_direccion pasan a ser los de esa empresa; el cliente final queda en cliente_final.
+            rows.forEach(r => {
+                const inter = String(r.intermediario || '').trim();
+                r.es_intermediario = String(r.tipo_contratacion || '').toUpperCase() === 'INTERMEDIARIO' && !!inter;
+                r.cliente_final = r.cliente_nombre;
+                if (!r.es_intermediario) return;
+                const c = porNombre.get(norm(inter));
+                r.cliente_nombre = inter; r.cliente_id = c ? c.id : null; r.cliente_doc = c ? c.doc : null; r.cliente_direccion = c ? c.direccion : null;
+            });
+            const faltan = rows.filter(r => !r.es_intermediario && (!r.cliente_doc || !r.cliente_direccion));
             if (faltan.length) {
-                // a) catálogo de clientes por nombre normalizado (ignora puntos, comas y mayúsculas)
-                const [cls] = await p.query(`SELECT id, razon_social, TRIM(ruc_dni) AS doc, direccion FROM clientes`).catch(() => [[]]);
-                const porNombre = new Map(); cls.forEach(c => { const k = norm(c.razon_social); if (k && !porNombre.has(k)) porNombre.set(k, c); });
+                // a) catálogo de clientes por nombre normalizado (ya cargado arriba)
                 // b) guías vinculadas al servicio: si el cliente es el remitente o el destinatario, de ahí salen su RUC y su dirección
                 const [gs] = await p.query(
                     `SELECT orden_servicio_codigo AS os, remitente_ruc, remitente_nombre, partida_direccion, destinatario_doc, destinatario_nombre, llegada_direccion
@@ -329,10 +340,12 @@ module.exports = (db, logAudit) => {
             });
             const codigos = [...new Set([...items.map(i => i.orden_servicio), ...(Array.isArray(b.servicios) ? b.servicios.map(x => texto(x, 40)) : [])].filter(Boolean))];
             if (codigos.length) {
-                const [os] = await p.query(`SELECT codigo_orden, cliente_nombre, moneda, estado_servicio FROM operaciones_ordenes_servicio WHERE codigo_orden IN (?)`, [codigos]);
+                const [os] = await p.query(`SELECT codigo_orden, cliente_nombre, tipo_contratacion, intermediario, moneda, estado_servicio FROM operaciones_ordenes_servicio WHERE codigo_orden IN (?)`, [codigos]);
                 if (os.length !== codigos.length) throw aviso('Alguno de los servicios elegidos no existe.', 404);
                 if (os.some(s => s.estado_servicio === 'ANULADO')) throw aviso('Hay un servicio anulado entre las líneas.', 409);
-                if (new Set(os.map(s => String(s.cliente_nombre || '').trim().toUpperCase())).size > 1) throw aviso('Una factura es de un solo cliente: los servicios elegidos son de clientes distintos.', 422);
+                // El receptor de cada servicio es la empresa que nos contrata (si es por intermediario) o el cliente
+                const receptorDe = s => String((String(s.tipo_contratacion || '').toUpperCase() === 'INTERMEDIARIO' && String(s.intermediario || '').trim()) ? s.intermediario : s.cliente_nombre || '').trim().toUpperCase();
+                if (new Set(os.map(receptorDe)).size > 1) throw aviso('Una factura es de un solo cliente: los servicios elegidos se facturan a empresas distintas.', 422);
                 const monedas = new Set(os.map(s => (/D[OÓ]L|USD/i.test(String(s.moneda || '')) ? 'USD' : 'PEN')));
                 if (monedas.size > 1 || (monedas.size === 1 && !monedas.has(moneda))) throw aviso(`Los servicios están en ${[...monedas].join('/')} y el comprobante en ${moneda}. Deben coincidir.`, 422);
                 const [ya] = await p.query(
