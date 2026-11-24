@@ -14,7 +14,8 @@ export interface Siniestro {
   n_fotos?: number;
 }
 
-export interface FotoSiniestro { id: number; url: string; nombre: string | null; subido_por: string | null; creado_en: string }
+/** Evidencia de un siniestro: foto, video o PDF */
+export interface FotoSiniestro { id: number; url: string; nombre: string | null; subido_por: string | null; creado_en: string; tipo: 'foto' | 'video' | 'pdf' }
 
 export interface FiltroSiniestros { desde: string; hasta: string; placa?: string; tipo?: string; estado?: string; q?: string }
 
@@ -74,10 +75,24 @@ export function useFotosSiniestro(id: number | null) {
   });
 }
 
-export function subirFotosSiniestro(id: number, archivos: File[]) {
-  const f = new FormData();
-  archivos.forEach(a => f.append('fotos', a));
-  return api<{ ok?: boolean; error?: string; data?: FotoSiniestro[] }>(`/mantenimiento/siniestros/${id}/fotos`, { method: 'POST', body: f });
+/**
+ * Sube las evidencias (fotos, videos y PDF) de a una por solicitud: un video grande no frena a las demás y se ve el avance.
+ * Devuelve los nombres de las que fallaron.
+ */
+export async function subirAdjuntosSiniestro(id: number, archivos: File[], alAvance?: (hechos: number, total: number) => void) {
+  const fallidos: string[] = [];
+  for (let i = 0; i < archivos.length; i++) {
+    try {
+      const f = new FormData();
+      f.append('fotos', archivos[i]);
+      const r = await api<{ ok?: boolean; error?: string }>(`/mantenimiento/siniestros/${id}/fotos`, { method: 'POST', body: f });
+      if (r.ok === false) fallidos.push(archivos[i].name);
+    } catch {
+      fallidos.push(archivos[i].name);
+    }
+    alAvance?.(i + 1, archivos.length);
+  }
+  return { fallidos };
 }
 
 export const quitarFotoSiniestro = (id: number, fotoId: number) =>

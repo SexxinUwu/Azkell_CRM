@@ -6,7 +6,16 @@ const express = require('express');
 const multer = require('multer');
 const { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrlEstable } = require('../utils/s3');
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024, files: 20 } });
+// Evidencias del daño: fotos, PDF y videos (el cliente sube de a uno por solicitud; el video puede pesar más)
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024, files: 10 } });
+const TIPO_POR_EXT = { jpg: 'foto', jpeg: 'foto', png: 'foto', webp: 'foto', gif: 'foto', heic: 'foto', heif: 'foto', pdf: 'pdf', mp4: 'video', mov: 'video', webm: 'video', m4v: 'video', '3gp': 'video', avi: 'video', mkv: 'video' };
+const tipoDeArchivo = (nombre, mime) => {
+    if (/^video\//.test(mime || '')) return 'video';
+    if (/^image\//.test(mime || '')) return 'foto';
+    if (mime === 'application/pdf') return 'pdf';
+    const ext = String(nombre || '').split('?')[0].split('.').pop().toLowerCase();
+    return TIPO_POR_EXT[ext] || 'foto';
+};
 
 const ESTADOS = ['Concluido', 'En Reparación', 'Pendiente Repuestos'];
 
@@ -262,7 +271,7 @@ module.exports = (db, logAudit) => {
         const key = s3KeyFromUrl(f.url);
         let url = f.url;
         if (key) { try { url = await getPresignedUrlEstable(key); } catch (e) { /* queda la dirección guardada */ } }
-        return { id: f.id, url, nombre: f.nombre, subido_por: f.subido_por, creado_en: f.creado_en };
+        return { id: f.id, url, nombre: f.nombre, subido_por: f.subido_por, creado_en: f.creado_en, tipo: tipoDeArchivo(f.nombre || f.url, '') };
     };
     const listarFotos = async (p, id) => {
         const [rows] = await p.query('SELECT id, url, nombre, subido_por, creado_en FROM mantenimiento_siniestros_fotos WHERE siniestro_id = ? ORDER BY id', [id]);
@@ -283,8 +292,8 @@ module.exports = (db, logAudit) => {
         try {
             const p = P(req);
             const id = Number(req.params.id);
-            const archivos = (req.files || []).filter(f => /^image\//.test(f.mimetype));
-            if (!archivos.length) throw aviso('Adjunta al menos una foto.');
+            const archivos = (req.files || []).filter(f => /^(image|video)\//.test(f.mimetype) || f.mimetype === 'application/pdf');
+            if (!archivos.length) throw aviso('Adjunta al menos una foto, un PDF o un video.');
             const [s] = await p.query('SELECT codigo FROM mantenimiento_siniestros WHERE id = ?', [id]);
             if (!s.length) throw aviso('Siniestro no encontrado.', 404);
             const marca = Date.now();
@@ -296,7 +305,7 @@ module.exports = (db, logAudit) => {
                     await p.query('INSERT INTO mantenimiento_siniestros_fotos (siniestro_id, url, nombre, subido_por) VALUES (?, ?, ?, ?)', [id, url, texto(a.originalname, 255), usuarioDe(req)]);
                 }
             } catch (e) { throw sinTablaFotos(e); }
-            if (logAudit) logAudit({ req, accion: 'FOTOS_SINIESTRO', modulo: 'MANTENIMIENTO', detalle: `${s[0].codigo}: +${archivos.length} foto(s)` });
+            if (logAudit) logAudit({ req, accion: 'FOTOS_SINIESTRO', modulo: 'MANTENIMIENTO', detalle: `${s[0].codigo}: +${archivos.length} archivo(s)` });
             res.json({ ok: true, data: await listarFotos(p, id) });
         } catch (err) { responder(res, err, 'fotos+'); }
     });
@@ -305,7 +314,7 @@ module.exports = (db, logAudit) => {
         try {
             const p = P(req);
             const [f] = await p.query('SELECT id, url FROM mantenimiento_siniestros_fotos WHERE id = ? AND siniestro_id = ?', [Number(req.params.fotoId), Number(req.params.id)]);
-            if (!f.length) throw aviso('La foto no existe.', 404);
+            if (!f.length) throw aviso('El archivo no existe.', 404);
             await p.query('DELETE FROM mantenimiento_siniestros_fotos WHERE id = ?', [f[0].id]);
             const k = s3KeyFromUrl(f[0].url);
             if (k) await deleteFromS3(k).catch(() => { });
