@@ -37,7 +37,7 @@ interface DocExterno {
   id: number; id_remoto: number; placa: string; unidad_activa: boolean; tipo_codigo: string; tipo_nombre: string; numero: string | null; emisor: string | null;
   fecha_emision: string | null; fecha_vencimiento: string | null; tiene_archivo: boolean; archivo_guardado: boolean; actualizado_remoto: string | null; sincronizado_en: string;
   /** La placa está en nuestra flota (activa) y, si la tenemos alquilada a otra empresa, a quién */
-  en_flota: boolean; alquilada_a: string | null;
+  en_flota: boolean; alquilada_a: string | null; empresa: string | null;
   estado: EstadoDoc; dias: number | null;
 }
 interface RespuestaLista { ok: boolean; data: DocExterno[]; ultima_sincronizacion: string | null; sinTabla?: boolean }
@@ -48,9 +48,10 @@ const CLAVE_PLACAS = 'fleet_docs_api_placas_visibles';
 type Vista = 'expediente' | 'matriz' | 'calendario' | 'tabla';
 type Grupo = 'todos' | 'vigente' | 'alerta' | 'vencido';
 interface TipoDeUnidad { codigo: string; nombre: string; actual: DocExterno; anteriores: DocExterno[] }
-interface Unidad { placa: string; activa: boolean; enFlota: boolean; alquiladaA: string | null; tipos: TipoDeUnidad[]; grupo: Exclude<Grupo, 'todos'>; salud: number; registros: number }
-/** Qué unidades se ven: las de nuestra flota (por defecto), las que tenemos alquiladas a otras, las que no están en nuestra flota o todas */
-type Ambito = 'flota' | 'alquiladas' | 'fuera' | 'todas';
+interface Unidad { placa: string; activa: boolean; enFlota: boolean; alquiladaA: string | null; empresa: string | null; tipos: TipoDeUnidad[]; grupo: Exclude<Grupo, 'todos'>; salud: number; registros: number }
+/** Qué unidades se ven: las de la empresa Marsisa según nuestra ficha de placas (por defecto, alquiladas o no), las de otras empresas de nuestra flota, las alquiladas a otras, las que no están en nuestra flota o todas */
+type Ambito = 'marsisa' | 'otras' | 'alquiladas' | 'fuera' | 'todas';
+const esDeMarsisa = (empresa: string | null) => /marsisa/i.test(empresa ?? '');
 
 const VISTAS: Array<{ value: Vista; label: string }> = [{ value: 'expediente', label: 'Expediente' }, { value: 'matriz', label: 'Matriz general' }, { value: 'calendario', label: 'Calendario' }, { value: 'tabla', label: 'Tabla' }];
 
@@ -86,7 +87,7 @@ function agruparPorUnidad(docs: DocExterno[]): Unidad[] {
     const peor = tipos.reduce<EstadoDoc>((p, t) => (PESO[t.actual.estado] > PESO[p] ? t.actual.estado : p), 'sin_vencimiento');
     const buenos = tipos.filter(t => t.actual.estado !== 'vencido').length;
     const unidad: Unidad = {
-      placa, activa: lista.some(d => d.unidad_activa), enFlota: lista[0].en_flota, alquiladaA: lista[0].alquilada_a, tipos, registros: lista.length,
+      placa, activa: lista.some(d => d.unidad_activa), enFlota: lista[0].en_flota, alquiladaA: lista[0].alquilada_a, empresa: lista[0].empresa, tipos, registros: lista.length,
       grupo: peor === 'vencido' ? 'vencido' : peor === 'por_vencer' ? 'alerta' : 'vigente',
       salud: tipos.length ? Math.round((buenos / tipos.length) * 100) : 0,
     };
@@ -124,8 +125,8 @@ export function DocsMarsisaPage() {
   const [busqueda, setBusqueda] = useState('');
   const [tipo, setTipo] = useState('');
   const [grupo, setGrupo] = useState<Grupo>('todos');
-  // Por defecto solo las unidades que también están en nuestra flota: las demás son de la API y no suman a nuestro conteo
-  const [ambito, setAmbito] = useState<Ambito>('flota');
+  // Por defecto, las unidades de Marsisa según nuestra ficha de placas (alquiladas o no); las de otras empresas y las ajenas a nuestra flota se ven con los chips
+  const [ambito, setAmbito] = useState<Ambito>('marsisa');
   const [filtrando, setFiltrando] = useState(false);
   const [placa, setPlaca] = useState<string | null>(null);
   // Placas que se ven (null = todas)
@@ -153,9 +154,9 @@ export function DocsMarsisaPage() {
   }, [docs, busqueda, tipo]);
   const conteoAmbito = useMemo(() => {
     const por = (f: (d: DocExterno) => boolean) => new Set(sinAmbito.filter(f).map(d => d.placa)).size;
-    return { todas: por(() => true), flota: por(d => d.en_flota), alquiladas: por(d => !!d.alquilada_a), fuera: por(d => !d.en_flota) };
+    return { todas: por(() => true), marsisa: por(d => d.en_flota && esDeMarsisa(d.empresa)), otras: por(d => d.en_flota && !esDeMarsisa(d.empresa)), alquiladas: por(d => !!d.alquilada_a), fuera: por(d => !d.en_flota) };
   }, [sinAmbito]);
-  const delFiltro = useMemo(() => sinAmbito.filter(d => ambito === 'todas' || (ambito === 'flota' ? d.en_flota : ambito === 'alquiladas' ? !!d.alquilada_a : !d.en_flota)), [sinAmbito, ambito]);
+  const delFiltro = useMemo(() => sinAmbito.filter(d => ambito === 'todas' || (ambito === 'marsisa' ? d.en_flota && esDeMarsisa(d.empresa) : ambito === 'otras' ? d.en_flota && !esDeMarsisa(d.empresa) : ambito === 'alquiladas' ? !!d.alquilada_a : !d.en_flota)), [sinAmbito, ambito]);
   // Las tarjetas son por unidad (como en Documentos de flota) y reaccionan a la búsqueda y al tipo; el estado no las recorta
   const unidades = useMemo(() => agruparPorUnidad(delFiltro), [delFiltro]);
   const cifras = useMemo(() => ({
@@ -176,7 +177,7 @@ export function DocsMarsisaPage() {
     estado: t.actual.estado, dias: t.actual.dias, texto: textoEstado(t.actual),
   }))), [filas, tiposCatalogo]);
   const sinArchivosGuardados = todosLosDocs.filter(d => d.tiene_archivo && !d.archivo_guardado).length;
-  const filtrosActivos = (tipo ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (ambito !== 'flota' ? 1 : 0);
+  const filtrosActivos = (tipo ? 1 : 0) + (grupo !== 'todos' ? 1 : 0) + (ambito !== 'marsisa' ? 1 : 0);
 
   async function sincronizar() {
     setSincronizando(true); setError(null);
@@ -194,8 +195,14 @@ export function DocsMarsisaPage() {
     setGuardando('Preparando…'); setError(null);
     try {
       let fallidos = 0;
-      for (let vuelta = 0; vuelta < 200; vuelta++) {
-        const r = await api<{ ok?: boolean; error?: string; guardados: number; fallidos: unknown[]; pendientes: number; detener: boolean }>('/operaciones/docs-marsisa/sincronizar-archivos?limite=10', { method: 'POST', body: {} });
+      for (let vuelta = 0; vuelta < 400; vuelta++) {
+        // Una tanda corta (el servidor devuelve lo avanzado). Si el proxy corta una (502/504), se reintenta: lo ya guardado se conserva
+        let r: { ok?: boolean; error?: string; guardados: number; fallidos: unknown[]; pendientes: number; detener: boolean } | null = null;
+        for (let intento = 0; intento < 4 && !r; intento++) {
+          try { r = await api<{ ok?: boolean; error?: string; guardados: number; fallidos: unknown[]; pendientes: number; detener: boolean }>('/operaciones/docs-marsisa/sincronizar-archivos?limite=4', { method: 'POST', body: {} }); }
+          catch (e) { if (intento === 3) throw e; setGuardando('Reintentando…'); await new Promise(x => setTimeout(x, 3000)); }
+        }
+        if (!r) break;
         if (r.ok === false) throw new Error(r.error || 'No se pudieron guardar los archivos');
         fallidos += r.fallidos.length;
         setGuardando(r.pendientes > 0 ? `Guardando archivos… quedan ${r.pendientes}` : 'Terminando…');
@@ -263,9 +270,9 @@ export function DocsMarsisaPage() {
       ) : (
         <div className="doc-pagina">
           <DocMetaVigentes vigentes={cifras.vigente} total={cifras.total} pct={pctDe.vigente} chips={([
-            ['flota', 'En mi flota', conteoAmbito.flota], ['alquiladas', 'Alquiladas a otras', conteoAmbito.alquiladas],
+            ['marsisa', 'Marsisa', conteoAmbito.marsisa], ['alquiladas', 'Alquiladas a otras', conteoAmbito.alquiladas], ['otras', 'Otras empresas', conteoAmbito.otras],
             ['fuera', 'Fuera de mi flota', conteoAmbito.fuera], ['todas', 'Todas las de la API', conteoAmbito.todas],
-          ] as const).map(([v, etiqueta, n]) => ({ clave: v, etiqueta, n, activo: ambito === v, onClick: () => { haptic('selection'); setAmbito(a => (a === v ? 'flota' : v)); } }))}>
+          ] as const).map(([v, etiqueta, n]) => ({ clave: v, etiqueta, n, activo: ambito === v, onClick: () => { haptic('selection'); setAmbito(a => (a === v ? 'marsisa' : v)); } }))}>
             {kpis.map(k => (
               <button key={k.clave} type="button" className={`doc-tile pressable disp-kpi--${k.tono}`} aria-pressed={grupo === k.clave}
                 onClick={() => { haptic('selection'); setGrupo(g => (g === k.clave && k.clave !== 'todos' ? 'todos' : k.clave)); }}>
@@ -278,10 +285,10 @@ export function DocsMarsisaPage() {
             ))}
           </DocMetaVigentes>
 
-          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} onLimpiar={() => { setTipo(''); setGrupo('todos'); setAmbito('flota'); }} resultado={filas.length} unidad="unidad">
+          <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} onLimpiar={() => { setTipo(''); setGrupo('todos'); setAmbito('marsisa'); }} resultado={filas.length} unidad="unidad">
             <GrupoFiltro titulo="Unidades">
               <ChoiceChips label="Unidades" value={ambito} onChange={v => setAmbito(v as Ambito)} options={[
-                { value: 'flota', label: 'En mi flota' }, { value: 'alquiladas', label: 'Alquiladas a otras' }, { value: 'fuera', label: 'Fuera de mi flota' }, { value: 'todas', label: 'Todas' },
+                { value: 'marsisa', label: 'Marsisa' }, { value: 'alquiladas', label: 'Alquiladas a otras' }, { value: 'otras', label: 'Otras empresas' }, { value: 'fuera', label: 'Fuera de mi flota' }, { value: 'todas', label: 'Todas' },
               ]} />
             </GrupoFiltro>
             <GrupoFiltro titulo="Tipo de documento">
@@ -296,7 +303,7 @@ export function DocsMarsisaPage() {
 
           {filas.length === 0 ? (
             <EmptyState icon={<SearchX size={22} />} title="Sin unidades para los filtros">
-              <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setTipo(''); setGrupo('todos'); setAmbito('flota'); }}>Quitar filtros</button>
+              <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setTipo(''); setGrupo('todos'); setAmbito('marsisa'); }}>Quitar filtros</button>
             </EmptyState>
           ) : vista === 'expediente' && seleccion ? (
             <div className="doc-expediente">
@@ -335,6 +342,7 @@ export function DocsMarsisaPage() {
                 </header>
                 <div className="doc-alquiler">
                   <div className="doc-alquiler__chips">
+                    {seleccion.empresa && <span className="doc-alquiler__chip">Empresa: {seleccion.empresa}</span>}
                     {seleccion.alquiladaA ? <span className="doc-alquiler__chip">Alquilada a {seleccion.alquiladaA}</span> : seleccion.enFlota ? <span className="doc-alquiler__chip">Unidad propia, sin alquiler</span> : <span className="doc-alquiler__chip doc-alquiler__chip--aviso">No está en mi flota</span>}
                   </div>
                 </div>
