@@ -20,7 +20,7 @@ import { MotivosAuditoriaSheet, motivoCorto, useMotivosAuditoria } from './Motiv
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { FILTROS_ANALISIS_VACIOS, FiltrosAnalisisSheet, cuentaFiltrosAnalisis, dentroDeRango, normalizarBusqueda, type FiltrosAnalisis, type OpcionesFiltro } from './FiltrosAnalisisSheet';
-import { ajusteAMeta, notaRpm, type ResultadoRpm } from './rpmUtil';
+import { ajusteAMeta, notaRpm, porcentajesEnteros, type ResultadoRpm } from './rpmUtil';
 import { analizarViaje, coincideCombustible, type AnalisisViaje, type MatrizCalc, type TramoCalc, type ViajeCalc } from './analisisCalculo';
 
 interface Stats { fechaInicio?: string; fechaFin?: string; vouchers?: Voucher[]; kmInicio: number; kmFin: number; recorridoKm: number; totalGalones: number; totalGasto: number; rendimiento: number }
@@ -94,15 +94,16 @@ function TelemetriaViaje({ trip, pedida, setPedida, q }: { trip: Trip; pedida: b
 /** Conducción por RPM del viaje (Marsisa): reparto por rangos, ralentí y puntuación */
 function DetalleRpm({ r }: { r: ResultadoRpm }) {
   const puntos = ajusteAMeta(r);
+  const ent = porcentajesEnteros(r);
   const dato = (label: string, valor: string) => <div className="dato"><span className="dato__label">{label}</span><span className="dato__valor dato__valor--mono">{valor}</span></div>;
   const [a, b, c, d] = r.rangos.limites;
   return (
     <div>
       <p className="tarjeta__grupo-titulo">Conducción por RPM · motor {r.modelo_motor || 'sin modelo'}</p>
       <div className="tarjeta__lista">
-        {dato(`Bajo torque (${a}–${b})`, `${fmt(r.porcentajes.bajo, 1)} % · ${r.conteos.bajo.toLocaleString('es-PE')}`)}
-        {dato(`Económico (${b + 1}–${c})`, `${fmt(r.porcentajes.verde, 1)} % · ${r.conteos.verde.toLocaleString('es-PE')}`)}
-        {dato(`Potencia (${c + 1}–${d})`, `${fmt(r.porcentajes.potencia, 1)} % · ${r.conteos.potencia.toLocaleString('es-PE')}`)}
+        {dato(`Bajo torque (${a}–${b})`, `${ent.bajo} % · ${r.conteos.bajo.toLocaleString('es-PE')}`)}
+        {dato(`Económico (${b + 1}–${c})`, `${ent.verde} % · ${r.conteos.verde.toLocaleString('es-PE')}`)}
+        {dato(`Potencia (${c + 1}–${d})`, `${ent.potencia} % · ${r.conteos.potencia.toLocaleString('es-PE')}`)}
         {dato(`Sobrerrevolución (>${d})`, r.conteos.sobre.toLocaleString('es-PE'))}
         {dato(`Ralentí (<${a})`, r.conteos.ralenti.toLocaleString('es-PE'))}
         {dato('Puntuación', `${puntos} · ${notaRpm(puntos).txt}`)}
@@ -953,10 +954,11 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
                       <span title={`${cant.toLocaleString('es-PE')} lecturas`} style={{ color, fontWeight: 700 }}>{fmt(v, d)} %</span>
                     );
                     const puntos = rpmR ? ajusteAMeta(rpmR) : 0;
+                    const ent = rpmR ? porcentajesEnteros(rpmR) : null;
                     celdas.push(
-                      <Celda key="rpm-bajo" alinear="right" mono>{rpmR ? pct(rpmR.porcentajes.bajo, 1, '#a16207', rpmR.conteos.bajo) : rpmEstado}</Celda>,
-                      <Celda key="rpm-verde" alinear="right" mono>{rpmR ? pct(rpmR.porcentajes.verde, 1, '#15803d', rpmR.conteos.verde) : rpmEstado}</Celda>,
-                      <Celda key="rpm-pot" alinear="right" mono>{rpmR ? pct(rpmR.porcentajes.potencia, 1, '#1e2a5a', rpmR.conteos.potencia) : rpmEstado}</Celda>,
+                      <Celda key="rpm-bajo" alinear="right" mono>{rpmR ? pct(ent!.bajo, 0, '#a16207', rpmR.conteos.bajo) : rpmEstado}</Celda>,
+                      <Celda key="rpm-verde" alinear="right" mono>{rpmR ? pct(ent!.verde, 0, '#15803d', rpmR.conteos.verde) : rpmEstado}</Celda>,
+                      <Celda key="rpm-pot" alinear="right" mono>{rpmR ? pct(ent!.potencia, 0, '#1e2a5a', rpmR.conteos.potencia) : rpmEstado}</Celda>,
                       <Celda key="rpm-sobre" alinear="right" mono>{rpmR ? <span title="Lecturas por encima del último rango del motor (no entran en el 100 %)" style={{ color: '#7f1d3a', fontWeight: 700 }}>{rpmR.conteos.sobre.toLocaleString('es-PE')}</span> : rpmEstado}</Celda>,
                       <Celda key="rpm-nota" alinear="center">{rpmR ? <span title={`${notaRpm(puntos).txt}: qué tan cerca está el reparto de la meta 20 / 60 / 20`}><Pastilla color={notaRpm(puntos).color}>{String(puntos)}</Pastilla></span> : rpmEstado}</Celda>,
                     );
