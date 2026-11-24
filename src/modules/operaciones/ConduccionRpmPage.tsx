@@ -11,18 +11,9 @@ import { CargadorCrow } from '../../core/ui/CargadorCrow';
 import '../../core/ui/cargador-crow.css';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
+import { ajusteAMeta, notaRpm as nota, type Conteos, type ResultadoRpm } from './rpmUtil';
 
 interface PlacaRpm { placa: string; tipo: string; sub_tipo: string; modelo_motor: string; modelo_conocido: boolean }
-interface Conteos { ralenti: number; bajo: number; verde: number; potencia: number; sobre: number }
-interface ResultadoRpm {
-  ok: boolean; placa: string; modelo_motor: string; sin_datos?: boolean; plantilla: string;
-  rangos: { modelo: string; conocido: boolean; limites: [number, number, number, number] };
-  desde: string; hasta: string; primera_lectura: string; ultima_lectura: string;
-  filas_leidas: number; con_motor: number; conteos: Conteos; util: number;
-  porcentajes: { bajo: number; verde: number; potencia: number };
-  meta: { bajo: number; verde: number; potencia: number; sobre: number };
-  rpm_media: number; rpm_max: number; km_recorridos: number | null;
-}
 
 /** Fecha y hora de Lima para un <input type="datetime-local"> */
 function aInput(d: Date) {
@@ -32,13 +23,6 @@ function aInput(d: Date) {
 const hace = (dias: number) => aInput(new Date(Date.now() - dias * 86400000));
 const num = (n: number) => n.toLocaleString('es-PE');
 
-/** Qué tan cerca está el reparto de la meta (20 / 60 / 20 y cero sobrerrevoluciones): 100 = justo en la meta */
-function ajusteAMeta(r: ResultadoRpm) {
-  const desvio = Math.abs(r.porcentajes.bajo - r.meta.bajo) + Math.abs(r.porcentajes.verde - r.meta.verde) + Math.abs(r.porcentajes.potencia - r.meta.potencia);
-  const sobre = r.con_motor > 0 ? (r.conteos.sobre / r.con_motor) * 100 : 0;
-  return Math.max(0, Math.round(100 - desvio / 2 - sobre * 5));
-}
-const nota = (p: number) => (p >= 85 ? { txt: 'Excelente', tono: 'ok' } : p >= 70 ? { txt: 'Buena', tono: 'ok' } : p >= 50 ? { txt: 'Regular', tono: 'medio' } : { txt: 'A mejorar', tono: 'mal' });
 
 // Operaciones Marsisa › Combustible › Conducción por RPM
 export function ConduccionRpmPage() {

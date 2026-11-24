@@ -2163,7 +2163,10 @@ module.exports = function (db, broadcast, logAudit) {
             rpmMaxGps,
             rpmMaxMaxGps,
             horasMotorGps,
-            consumoRalentiGps
+            consumoRalentiGps,
+            // Periodo realmente consultado (segundos unix): la conducción por RPM de Marsisa usa el mismo
+            periodoDesdeUnix: fromUnix,
+            periodoHastaUnix: toUnix
         };
     }
 

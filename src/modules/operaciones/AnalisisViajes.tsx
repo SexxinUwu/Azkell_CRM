@@ -20,6 +20,7 @@ import { MotivosAuditoriaSheet, motivoCorto, useMotivosAuditoria } from './Motiv
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { FILTROS_ANALISIS_VACIOS, FiltrosAnalisisSheet, cuentaFiltrosAnalisis, dentroDeRango, normalizarBusqueda, type FiltrosAnalisis, type OpcionesFiltro } from './FiltrosAnalisisSheet';
+import { ajusteAMeta, notaRpm, type ResultadoRpm } from './rpmUtil';
 import { analizarViaje, coincideCombustible, type AnalisisViaje, type MatrizCalc, type TramoCalc, type ViajeCalc } from './analisisCalculo';
 
 interface Stats { fechaInicio?: string; fechaFin?: string; vouchers?: Voucher[]; kmInicio: number; kmFin: number; recorridoKm: number; totalGalones: number; totalGasto: number; rendimiento: number }
@@ -46,17 +47,19 @@ const fechaExcel = (s?: string | null): Date | string => {
 export interface TelemetriaWialon {
   recorridoKmGps: number | null; combustibleConsumidoGps: number | null; rendimientoGps: number | null;
   velocidadMaxGps: number | null; rpmMediaGps: number | null; rpmMediaMaxGps?: number | null; rpmMaxGps: number | null; rpmMaxMaxGps?: number | null; horasMotorGps: string | number | null; consumoRalentiGps: number | null;
+  // Periodo consultado (unix) y, en Marsisa, la conducción por RPM de ese periodo
+  periodoDesdeUnix?: number; periodoHastaUnix?: number; rpm?: ResultadoRpm | null; rpmError?: string;
 }
 
 // Telemetría CAN Bus de Wialon para el periodo del viaje (de la primera a la última carga). Solo se consulta cuando se pide.
-function useTelemetriaViaje(trip: Trip | null, habilitada: boolean) {
+function useTelemetriaViaje(trip: Trip | null, habilitada: boolean, conRpm = false) {
   const { ini, fin } = useMemo(() => (trip ? rangoViaje(trip) : { ini: '', fin: '' }), [trip]);
   return useQuery({
     queryKey: ['operaciones', 'wialon', trip?.viaje, trip?.placa, ini, fin],
     enabled: habilitada && !!trip?.placa,
     retry: false,
     staleTime: 5 * 60_000,
-    queryFn: ({ signal }) => encolarCan(signal, () => pedirCan({ viaje: trip!.viaje, placa: trip!.placa, ini, fin })),
+    queryFn: ({ signal }) => encolarCan(signal, () => pedirCan({ viaje: trip!.viaje, placa: trip!.placa, ini, fin }, conRpm)),
   });
 }
 
@@ -82,6 +85,28 @@ function TelemetriaViaje({ trip, pedida, setPedida, q }: { trip: Trip; pedida: b
           {dato('Horas de motor', t.horasMotorGps, 'h')}
         </div>
       )}
+      {t?.rpm && <DetalleRpm r={t.rpm} />}
+      {t && !t.rpm && t.rpmError && <Notice tone="error">{t.rpmError}</Notice>}
+    </div>
+  );
+}
+
+/** Conducción por RPM del viaje (Marsisa): reparto por rangos, ralentí y puntuación */
+function DetalleRpm({ r }: { r: ResultadoRpm }) {
+  const puntos = ajusteAMeta(r);
+  const dato = (label: string, valor: string) => <div className="dato"><span className="dato__label">{label}</span><span className="dato__valor dato__valor--mono">{valor}</span></div>;
+  const [a, b, c, d] = r.rangos.limites;
+  return (
+    <div>
+      <p className="tarjeta__grupo-titulo">Conducción por RPM · motor {r.modelo_motor || 'sin modelo'}</p>
+      <div className="tarjeta__lista">
+        {dato(`Bajo torque (${a}–${b})`, `${fmt(r.porcentajes.bajo, 1)} % · ${r.conteos.bajo.toLocaleString('es-PE')}`)}
+        {dato(`Económico (${b + 1}–${c})`, `${fmt(r.porcentajes.verde, 1)} % · ${r.conteos.verde.toLocaleString('es-PE')}`)}
+        {dato(`Potencia (${c + 1}–${d})`, `${fmt(r.porcentajes.potencia, 1)} % · ${r.conteos.potencia.toLocaleString('es-PE')}`)}
+        {dato(`Sobrerrevolución (>${d})`, r.conteos.sobre.toLocaleString('es-PE'))}
+        {dato(`Ralentí (<${a})`, r.conteos.ralenti.toLocaleString('es-PE'))}
+        {dato('Puntuación', `${puntos} · ${notaRpm(puntos).txt}`)}
+      </div>
     </div>
   );
 }
@@ -253,6 +278,8 @@ function Pastilla({ color, children }: { color: string; children: string }) {
 const FONDO_BASE = '#1e293b';
 const FONDO_TEORICO = '#ea580c';
 const FONDO_GPS = '#0284c7';
+// Conducción por RPM: bajo torque amarillo, económico verde, potencia azul noche, sobrerrevolución rojo vino
+const RPM_COLOR = { bajo: '#ca8a04', verde: '#16a34a', potencia: '#1e2a5a', sobre: '#7f1d3a' };
 
 // Encabezados del Excel del clásico (mismo orden)
 const ENCABEZADOS_EXCEL = [
@@ -395,6 +422,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
   const urea = producto === 'urea';
   const { can, user, } = useAuth();
   const modulo = typeof window !== 'undefined' && window.location.hostname.toLowerCase().includes('marsisa') ? 'marsisa' : 'operaciones';
+  const esMarsisa = modulo === 'marsisa';
   const [busqueda, setBusqueda] = useState('');
   const [q, setQ] = useState('');
   // Por defecto el análisis muestra solo el día de hoy (hora de Lima); para otro periodo se cambian las fechas
@@ -555,7 +583,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
     const r = rangoViaje(x);
     return { viaje: x.viaje, placa: x.placa, ini: r.ini, fin: r.fin };
   }), [pagina_]);
-  const gps = useCanViajes(itemsCan, canActivo && !urea);
+  const gps = useCanViajes(itemsCan, canActivo && !urea, esMarsisa && !urea);
   const lote: LoteGps = gps.lote;
   // Como el clásico: el recorrido es el del bloque de diésel del viaje (urea, el general)
   const kmDelViaje = (t: Trip) => (urea ? n(t.recorridoKm) : n(bloqueD2(t)?.recorridoKm ?? t.recorridoKm));
@@ -633,6 +661,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
       <Celda key="gps-ral" alinear="right" mono>—</Celda>,
       <Celda key="gps-horas" alinear="right" mono>—</Celda>,
     );
+    if (esMarsisa) pieCeldas.push(<Celda key="rpm-bajo">—</Celda>, <Celda key="rpm-verde">—</Celda>, <Celda key="rpm-pot">—</Celda>, <Celda key="rpm-sobre">—</Celda>, <Celda key="rpm-nota" alinear="center">—</Celda>);
   }
 
   const t = trips.find(x => claveFila(x) === abierto) ?? null;
@@ -679,6 +708,16 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
       { id: 'gps-ral', titulo: 'Consumo ralentí', ancho: 130, alinear: 'right', fondo: FONDO_GPS },
       { id: 'gps-horas', titulo: 'Horas de motor', ancho: 130, alinear: 'right', fondo: FONDO_GPS },
     );
+    // Conducción por RPM (solo Marsisa): se calcula junto con el CAN
+    if (esMarsisa) {
+      columnas.push(
+        { id: 'rpm-bajo', titulo: 'Bajo torque', ancho: 115, alinear: 'right', fondo: RPM_COLOR.bajo },
+        { id: 'rpm-verde', titulo: 'Económico', ancho: 110, alinear: 'right', fondo: RPM_COLOR.verde },
+        { id: 'rpm-pot', titulo: 'Potencia', ancho: 105, alinear: 'right', fondo: RPM_COLOR.potencia },
+        { id: 'rpm-sobre', titulo: 'Sobrerrevolución', ancho: 150, alinear: 'right', fondo: RPM_COLOR.sobre },
+        { id: 'rpm-nota', titulo: 'Puntuación', ancho: 120, alinear: 'center', fondo: FONDO_BASE },
+      );
+    }
   }
 
   function onAlternarFila(viaje: string) {
@@ -828,6 +867,9 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
                 const abiertoFila = !urea && expandidos.has(claveFila(x));
                 const color = colorAudit(x.estadoAuditoria);
                 const gpsV = (campo: keyof TelemetriaWialon) => valorGps(canActivo, lote, claveFila(x), campo);
+                const rpmFila = canActivo ? lote[claveFila(x)] : undefined;
+                const rpmR = rpmFila?.data?.rpm ?? null;
+                const rpmEstado = !canActivo ? '—' : (!rpmFila || rpmFila.estado === 'cargando') ? '…' : rpmFila.estado === 'error' ? 'Error' : rpmR ? null : (rpmFila.data?.rpmError ? 'Error' : 'Sin datos');
                 const dif = a && a.galTeorico > 0 && c.galones > 0 ? c.galones - a.galTeorico : null;
                 const celdas: ReactNode[] = [
                   <Celda key="aud">
@@ -899,6 +941,20 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
                     <Celda key="gps-ral" alinear="right" mono>{gpsV('consumoRalentiGps')}</Celda>,
                     <Celda key="gps-horas" alinear="right" mono>{gpsV('horasMotorGps')}</Celda>,
                   );
+                  if (esMarsisa) {
+                    const pct = (v: number, d: number, color: string, cant: number) => (
+                      <span title={`${cant.toLocaleString('es-PE')} lecturas`} style={{ color, fontWeight: 700 }}>{fmt(v, d)} %</span>
+                    );
+                    const sobrePct = rpmR && rpmR.con_motor > 0 ? (rpmR.conteos.sobre / rpmR.con_motor) * 100 : 0;
+                    const puntos = rpmR ? ajusteAMeta(rpmR) : 0;
+                    celdas.push(
+                      <Celda key="rpm-bajo" alinear="right" mono>{rpmR ? pct(rpmR.porcentajes.bajo, 1, '#a16207', rpmR.conteos.bajo) : rpmEstado}</Celda>,
+                      <Celda key="rpm-verde" alinear="right" mono>{rpmR ? pct(rpmR.porcentajes.verde, 1, '#15803d', rpmR.conteos.verde) : rpmEstado}</Celda>,
+                      <Celda key="rpm-pot" alinear="right" mono>{rpmR ? pct(rpmR.porcentajes.potencia, 1, '#1e2a5a', rpmR.conteos.potencia) : rpmEstado}</Celda>,
+                      <Celda key="rpm-sobre" alinear="right" mono>{rpmR ? pct(sobrePct, 2, '#7f1d3a', rpmR.conteos.sobre) : rpmEstado}</Celda>,
+                      <Celda key="rpm-nota" alinear="center">{rpmR ? <span title={`${notaRpm(puntos).txt}: qué tan cerca está el reparto de la meta 20 / 60 / 20`}><Pastilla color={notaRpm(puntos).color}>{String(puntos)}</Pastilla></span> : rpmEstado}</Celda>,
+                    );
+                  }
                 }
                 return (
                   <FilaViaje key={`${x.viaje}|${x.placa}|${i}`} seleccionada={abierto === claveFila(x)} onAbrir={() => { haptic('selection'); setAbierto(claveFila(x)); }}
@@ -927,7 +983,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
       </div>
 
       {canActivo && !urea && <PanelCan filas={gps.filas} total={gps.total} listos={gps.listos} cargando={gps.cargando} sinDatos={gps.sinDatos} errores={gps.errores} reintentar={gps.reintentar} items={itemsCan} />}
-      <DetalleViaje trip={t} urea={urea} puedeAuditar={puedeAuditar} guardar={guardar} pedirMotivos={pedirMotivos} analisis={t ? analisis.get(claveFila(t)) : undefined} gpsLote={(t ? gps.lote[claveFila(t)] : undefined)?.data ?? null} onClose={() => setAbierto(null)} cifras={cifras} />
+      <DetalleViaje trip={t} urea={urea} puedeAuditar={puedeAuditar} guardar={guardar} pedirMotivos={pedirMotivos} analisis={t ? analisis.get(claveFila(t)) : undefined} gpsLote={(t ? gps.lote[claveFila(t)] : undefined)?.data ?? null} conRpm={esMarsisa && !urea} onClose={() => setAbierto(null)} cifras={cifras} />
       <MotivosAuditoriaSheet abierto={!!motivoPara} viaje={motivoPara?.viaje ?? ''} inicial={motivoPara?.inicial ?? []} onClose={() => setMotivoPara(null)}
         onGuardar={async motivos => { if (motivoPara) { await guardar(motivoPara.viaje, 'OBSERVADO', motivoPara.obs, motivos); setMostrarObs(true); haptic('success'); } }} />
       <FiltrosAnalisisSheet open={filtrando} onClose={() => setFiltrando(false)} filtros={filtros} onChange={setFiltros} opciones={opciones} resultado={visibles.length} urea={urea} />
@@ -976,16 +1032,16 @@ function FilaViaje({ abierta, onAbrir, seleccionada, celdas, tramos }: {
   );
 }
 
-function DetalleViaje({ trip: t, urea, puedeAuditar, guardar, pedirMotivos, analisis: a, gpsLote, onClose, cifras }: {
+function DetalleViaje({ trip: t, urea, puedeAuditar, guardar, pedirMotivos, analisis: a, gpsLote, conRpm, onClose, cifras }: {
   trip: Trip | null; urea: boolean; puedeAuditar: boolean; guardar: (viaje: string, estado: string, obs: string, motivos?: string[]) => Promise<unknown>; pedirMotivos: (t: Trip) => void;
-  analisis: AnalisisViaje | undefined; gpsLote: TelemetriaWialon | null; onClose: () => void;
+  analisis: AnalisisViaje | undefined; gpsLote: TelemetriaWialon | null; conRpm: boolean; onClose: () => void;
   cifras: (t: Trip) => { galones: number; gasto: number; rendimiento: number };
 }) {
   const [obs, setObs] = useState('');
   const [guardado, setGuardado] = useState(false);
   const [pedida, setPedida] = useState(false);
   useEffect(() => { if (t) { setObs(t.observacionAuditoria || ''); setGuardado(false); setPedida(false); } }, [t?.viaje]); // eslint-disable-line react-hooks/exhaustive-deps
-  const telQ = useTelemetriaViaje(t, pedida);
+  const telQ = useTelemetriaViaje(t, pedida, conRpm);
   const estado = t?.estadoAuditoria || 'PENDIENTE';
   const { permissions } = useAuth();
   const bloqueado = !puedeAuditar || (estado === 'CONFORME' && !permissions.has(ADMIN));

@@ -53,11 +53,12 @@ const limpiaCabecera = (h) => String(h || '').replace(/\*/g, '').trim().toLowerC
  * Analiza una placa entre dos fechas (hora de Lima). Devuelve los conteos por rango y los porcentajes.
  * Lanza errores con .status y un mensaje claro para la pantalla.
  */
-function analizarRpm(db, { placa, desde, hasta }) {
+function analizarRpm(db, { placa, desde, hasta, desdeUnix, hastaUnix }) {
     return enCola(async () => {
         const pl = limpiarPlaca(placa);
         if (pl.length < 5) throw aviso('Elige una placa.');
-        const from = aUnix(desde), to = aUnix(hasta);
+        const unix = v => (Number.isFinite(Number(v)) && Number(v) > 1e9 ? Math.floor(Number(v)) : null);
+        const from = unix(desdeUnix) || aUnix(desde), to = unix(hastaUnix) || aUnix(hasta);
         if (!from || !to) throw aviso('Indica la fecha y hora de inicio y de fin.');
         if (to <= from) throw aviso('La fecha de fin debe ser posterior a la de inicio.');
         if (to - from > 31 * 86400) throw aviso('El rango máximo es de 31 días por consulta.');

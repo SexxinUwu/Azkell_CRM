@@ -5,6 +5,7 @@
 import { CancelledError, useQueries, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
 import type { TelemetriaWialon } from './AnalisisViajes';
+import type { ResultadoRpm } from './rpmUtil';
 
 export interface ItemCan { viaje: string; placa: string; ini: string; fin: string }
 export type EstadoCan = 'cargando' | 'listo' | 'sin_datos' | 'error';
@@ -31,20 +32,28 @@ export function encolarCan<T>(signal: AbortSignal, tarea: () => Promise<T>): Pro
   return p;
 }
 
-export async function pedirCan(i: ItemCan): Promise<TelemetriaWialon> {
+/** Con `conRpm` (solo Marsisa) se pide también, en la misma vuelta de la cola, la conducción por RPM del mismo periodo */
+export async function pedirCan(i: ItemCan, conRpm = false): Promise<TelemetriaWialon> {
   const p = new URLSearchParams({ placa: i.placa, fechaInicio: i.ini, fechaFin: i.fin });
   const r = await api<{ ok?: boolean; data?: TelemetriaWialon | null; error?: string }>(`/combustible/wialon-telemetria?${p.toString()}`);
   if (!r.ok) throw new Error(r.error || 'No se pudo consultar Wialon');
   if (!r.data) throw new SinDatosCan('Sin unidad en Wialon con esa placa o sin telemetría en el periodo');
-  return r.data;
+  if (!conRpm || !r.data.periodoDesdeUnix || !r.data.periodoHastaUnix) return r.data;
+  try {
+    const rpm = await api<ResultadoRpm>('/operaciones/conduccion-rpm/analizar', { method: 'POST', body: { placa: i.placa, desdeUnix: r.data.periodoDesdeUnix, hastaUnix: r.data.periodoHastaUnix } });
+    return { ...r.data, rpm: rpm.sin_datos ? null : rpm };
+  } catch (e) {
+    // Que falle el RPM no tira abajo el CAN del viaje
+    return { ...r.data, rpm: null, rpmError: e instanceof Error ? e.message : 'No se pudo calcular la conducción por RPM' };
+  }
 }
 
-export function useCanViajes(items: ItemCan[], activo: boolean) {
+export function useCanViajes(items: ItemCan[], activo: boolean, conRpm = false) {
   const qc = useQueryClient();
   const queries = useQueries({
     queries: items.map(i => ({
       queryKey: claveCan(i),
-      queryFn: ({ signal }: { signal: AbortSignal }) => encolarCan(signal, () => pedirCan(i)),
+      queryFn: ({ signal }: { signal: AbortSignal }) => encolarCan(signal, () => pedirCan(i, conRpm)),
       enabled: activo,
       retry: false,
       staleTime: 30 * 60_000,
