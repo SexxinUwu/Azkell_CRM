@@ -1,6 +1,6 @@
 // Tablero de movimientos de neumáticos: bodega (izquierda), unidad con sus posiciones (centro) y zonas de
 // reforma y descarte (abajo); detalle de la llanta y su línea de tiempo (derecha). Arrastrar, o tocar y luego tocar el destino.
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, Disc3, Lock } from 'lucide-react';
@@ -23,15 +23,13 @@ import {
 } from './neumaticos-tablero-tipos';
 import { useArrastre, posicionDeEvento, type Destino, type ItemArrastre, type SondaPosicion } from './ntb-arrastre';
 import { tituloLlanta, useTablero, usePlacasLista, vidaTexto } from './ntb-api';
-import { LlantaTile, RemanenteChip, VidaChip, aLlantaDato } from './ntb-llanta';
+import { LlantaIcono, LlantaTile, RemanenteChip, VidaChip, aLlantaDato } from './ntb-llanta';
 import { LineaTiempo } from './ntb-linea-tiempo';
 import { MovimientoSheet, type Propuesta } from './ntb-movimiento-sheet';
 import './ntb.css';
 
 type Grupo = 'bodega' | 'unidad' | 'reforma' | 'descarte';
 
-/** Colores del semáforo para la llanta que se arrastra (mismos tonos que LeyendaSemaforo) */
-const COLOR_TONO: Record<Tono, string> = { green: '#10b981', amber: '#f59e0b', red: '#ef4444', gray: '#c7c7cc' };
 type Aviso = { tono: 'error' | 'accent'; texto: string };
 
 /** Posiciones con llanta montada, en el orden de la configuración */
@@ -71,7 +69,7 @@ function ZonaDrop({ zona, titulo, nota, llantas, seleccion, resaltada, permitido
       ) : (
         <p className="ntb-zona__vacia">Arrastra aquí una llanta montada en la unidad.</p>
       )}
-      {llantas.length > 0 && <p className="ntb-zona__nota">Arrastra una llanta a <b>Disponible para uso</b> o a una posición libre para regresarla.</p>}
+      {llantas.length > 0 && <p className="ntb-zona__nota ntb-zona__nota--texto">Arrastra una llanta a <b>Disponible para uso</b> o a una posición libre para regresarla.</p>}
     </div>
   );
 }
@@ -545,7 +543,7 @@ export function NeumaticosTablero() {
 
       {arrastre.fantasma && !llevada && (
         <div className="ntb-fantasma" style={{ left: arrastre.fantasma.x, top: arrastre.fantasma.y }} aria-hidden>
-          <span className="ntb-fantasma__llanta" style={{ '--tono': COLOR_TONO[tonoFantasma] } as CSSProperties} />
+          <LlantaIcono tono={tonoFantasma} activa />
           <span className="ntb-fantasma__codigo">{arrastre.fantasma.codigo}</span>
         </div>
       )}
