@@ -121,8 +121,8 @@ const COL_PLACAS: ColumnaTabla[] = [
 const COL_DIA: ColumnaTabla[] = [
   { id: 'placa', titulo: 'Placa', ancho: 110 },
   { id: 'fecha', titulo: 'Fecha de ingreso', ancho: 150 },
-  { id: 'n', titulo: 'Ingresos', ancho: 100, alinear: 'right' },
-  { id: 'motivo', titulo: 'Motivo de cada ingreso', ancho: 460, minimo: 200 },
+  { id: 'n', titulo: 'OT del día', ancho: 100, alinear: 'right' },
+  { id: 'motivo', titulo: 'Motivo de cada OT', ancho: 460, minimo: 200 },
 ];
 
 type Pestana = 'resumen' | 'ingresos';
