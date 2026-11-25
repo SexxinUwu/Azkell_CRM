@@ -2,8 +2,9 @@
 const esri = (import.meta.env.VITE_ESRI_KEY as string | undefined) || '';
 
 export const MAPA_URLS = {
-  vectores: 'https://tiles.openfreemap.org/planet',
-  tipografias: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
+  // Base vectorial y tipografías vía nuestro propio servidor (/mapa-ofm): hay navegadores que bloquean tiles.openfreemap.org
+  vectores: `${typeof location !== 'undefined' ? location.origin : ''}/mapa-ofm/planet`,
+  tipografias: `${typeof location !== 'undefined' ? location.origin : ''}/mapa-ofm/fonts/{fontstack}/{range}.pbf`,
   relieve: 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png',
   // Esri Clarity: imágenes más recientes y con más detalle; llega a los mismos zooms que la estándar (z19 en Lima, z17 en el campo)
   sateliteClarity: 'https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
