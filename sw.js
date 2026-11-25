@@ -1,5 +1,5 @@
 // v55: sale /app del service worker y descarta lo que quedó guardado (archivos de compilación que ya no existen)
-const CACHE_NAME = 'azkell-fleet-v62';
+const CACHE_NAME = 'azkell-fleet-v63';
 const STATIC_CACHE = 'azkell-libs-v2';
 // Fotos de artículos (S3): la URL firmada cambia en cada consulta, por eso se guardan por su ruta sin la firma
 const IMG_CACHE = 'azkell-img-v1';
@@ -154,6 +154,9 @@ self.addEventListener('fetch', event => {
   }
 
   if (url.origin !== self.location.origin) return;
+
+  // Mapa base (teselas y tipografías de /mapa-ofm): sin Service Worker; las guarda el caché normal del navegador
+  if (url.pathname.startsWith('/mapa-ofm/')) return;
 
   // 1. API → siempre red directa (nunca cachear)
   if (url.pathname.startsWith('/api/')) {

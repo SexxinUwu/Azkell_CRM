@@ -25,7 +25,7 @@
 | Empresas | marsisa, rosymarperu, yoguitransport, trahesa (`req.db` apunta a la base de la empresa) |
 | Esquema | Prisma en `prisma/schema/*.prisma` y migraciones SQL en `prisma/schema/migrations/` |
 | Deploy | Coolify, desde `main`. Tras cambiar variables de entorno: Redeploy |
-| PWA | `sw.js` (caché `azkell-fleet-v62`). Las llamadas `/api/` siempre van a la red |
+| PWA | `sw.js` (caché `azkell-fleet-v63`). Las llamadas `/api/` siempre van a la red |
 | IA | Gemini, en `routes/asistente*.js` |
 
 `Index.html`, `logica.js` y `Modulos/` ya no existen. No proponer editarlos.

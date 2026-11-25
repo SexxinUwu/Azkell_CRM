@@ -64,6 +64,36 @@ app.use(require('helmet')({
     strictTransportSecurity: { maxAge: 15552000, includeSubDomains: false }
 }));
 
+// ── Mapa: base vectorial de OpenFreeMap servida desde este mismo dominio ─────────────────────────
+// Hay navegadores (Brave, bloqueadores de anuncios) que bloquean tiles.openfreemap.org y el mapa queda sin calles ni límites.
+// Este puente pide las mismas teselas y tipografías y las entrega desde nuestro dominio. Solo habla con OpenFreeMap (ruta fija, sin
+// dirección elegida por quien llama) y no lleva datos de la empresa.
+const OFM = 'https://tiles.openfreemap.org';
+const OFM_RUTA = /^(planet\/[0-9A-Za-z_.-]+\/\d{1,2}\/\d{1,7}\/\d{1,7}\.pbf|fonts\/[0-9A-Za-z%_. -]+\/\d{1,6}-\d{1,6}\.pbf)$/;
+let ofmTileJson = { en: 0, json: null };
+app.get('/mapa-ofm/planet', async (req, res) => {
+    try {
+        if (!ofmTileJson.json || Date.now() - ofmTileJson.en > 6 * 3600 * 1000) {
+            const r = await fetch(OFM + '/planet', { signal: AbortSignal.timeout(15000) });
+            if (!r.ok) throw new Error('OpenFreeMap respondió ' + r.status);
+            ofmTileJson = { en: Date.now(), json: await r.json() };
+        }
+        const base = (req.headers['x-forwarded-proto'] || req.protocol) + '://' + req.get('host') + '/mapa-ofm';
+        const json = { ...ofmTileJson.json, tiles: (ofmTileJson.json.tiles || []).map(u => String(u).replace(OFM, base)) };
+        res.set('Cache-Control', 'public, max-age=3600').json(json);
+    } catch (err) { res.status(502).json({ error: 'No se pudo obtener el mapa base' }); }
+});
+app.get(/^\/mapa-ofm\/(.+)$/, async (req, res) => {
+    const ruta = String(req.params[0] || '');
+    if (!OFM_RUTA.test(ruta) || ruta.includes('..')) return res.status(404).end();
+    try {
+        const r = await fetch(OFM + '/' + ruta, { signal: AbortSignal.timeout(20000) });
+        if (!r.ok) return res.status(r.status === 404 ? 404 : 502).end();
+        res.set({ 'Content-Type': r.headers.get('content-type') || 'application/x-protobuf', 'Cache-Control': 'public, max-age=86400' });
+        res.send(Buffer.from(await r.arrayBuffer()));
+    } catch (err) { res.status(502).end(); }
+});
+
 // Receptor de reportes CSP (sin autenticación: el navegador los envía solo). Deja solo un resumen en consola.
 app.post('/csp-report', express.json({ type: ['application/csp-report', 'application/json'], limit: '10kb' }), (req, res) => {
     const r = (req.body && (req.body['csp-report'] || req.body)) || {};
