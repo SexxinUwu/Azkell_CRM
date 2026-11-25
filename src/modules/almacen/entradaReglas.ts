@@ -22,7 +22,7 @@ export const DIRECTIVOS = ['Marco Rosas', 'Janina Rosas', 'Leo Rosas', 'Saul Ros
 
 // ─── Estados ────────────────────────────────────────────────────────────────
 
-export type CategoriaEstado = 'registradas' | 'aprobadas' | 'procesadas' | 'anuladas';
+export type CategoriaEstado = 'registradas' | 'aprobadas' | 'procesadas' | 'recepcionadas' | 'anuladas';
 export type FiltroEstado = CategoriaEstado | 'todas';
 
 /** Mismo criterio que _entDeterminarCategoriaEstado del clásico. Lo no reconocido cuenta como registrada. */
@@ -34,7 +34,7 @@ export function categoriaEstado(estado: string | null | undefined): CategoriaEst
   return 'registradas';
 }
 
-export type TonoEstado = 'gray' | 'green' | 'sky' | 'amber' | 'red';
+export type TonoEstado = 'gray' | 'green' | 'sky' | 'teal' | 'amber' | 'red';
 
 /** Etiqueta y color del estado, como en el clásico (REGISTRADA, APROBADA, PROCESADA, OBSERVADA, ANULADA…) */
 export function etiquetaEstado(estado: string | null | undefined): { texto: string; tono: TonoEstado } {
@@ -46,6 +46,39 @@ export function etiquetaEstado(estado: string | null | undefined): { texto: stri
   if (st.includes('OBSERVAD')) return { texto: 'OBSERVADA', tono: 'amber' };
   if (['REGISTRADA', 'REGISTRADO', 'PENDIENTE'].includes(st)) return { texto: 'REGISTRADA', tono: 'gray' };
   return { texto: st, tono: 'gray' };
+}
+
+// ─── Recepción ──────────────────────────────────────────────────────────────
+
+export type EstadoRecepcion = 'SIN_ITEMS' | 'PENDIENTE' | 'PARCIAL' | 'COMPLETO';
+export interface AvanceRecepcion { pedido: number; recibido: number; estado: EstadoRecepcion }
+
+/** Cuánto se pidió recibir y cuánto llegó. Sin artículos a recibir (por ejemplo una orden de servicio) no hay recepción. */
+export function recepcionDe(o: { recepcion_pedido?: number | null; recepcion_recibido?: number | null }): AvanceRecepcion {
+  const pedido = Number(o.recepcion_pedido) || 0;
+  const recibido = Number(o.recepcion_recibido) || 0;
+  if (pedido <= 0) return { pedido: 0, recibido, estado: 'SIN_ITEMS' };
+  if (recibido <= 0) return { pedido, recibido: 0, estado: 'PENDIENTE' };
+  return { pedido, recibido, estado: recibido >= pedido ? 'COMPLETO' : 'PARCIAL' };
+}
+
+/** «3/5» (cantidades sin ceros sobrantes) */
+export function textoAvance(a: AvanceRecepcion): string {
+  const f = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, ''));
+  return a.estado === 'SIN_ITEMS' ? '—' : `${f(a.recibido)}/${f(a.pedido)}`;
+}
+
+type OrdenConEstado = { estado: string | null; recepcion_pedido?: number | null; recepcion_recibido?: number | null };
+
+/** Categoría de la orden: procesada (pagada) y recibida por completo pasa a «recepcionada» */
+export function categoriaOrden(o: OrdenConEstado): CategoriaEstado {
+  const cat = categoriaEstado(o.estado);
+  return cat === 'procesadas' && recepcionDe(o).estado === 'COMPLETO' ? 'recepcionadas' : cat;
+}
+
+/** Estado que se muestra: RECEPCIONADA cuando está pagada y recibida por completo; si no, el estado de siempre */
+export function etiquetaEstadoOrden(o: OrdenConEstado): { texto: string; tono: TonoEstado } {
+  return categoriaOrden(o) === 'recepcionadas' ? { texto: 'RECEPCIONADA', tono: 'teal' } : etiquetaEstado(o.estado);
 }
 
 /** Solo se puede editar mientras no esté aprobada, procesada, despachada o anulada */
@@ -123,6 +156,7 @@ export interface FiltrosOC { busqueda: string; desde: string; hasta: string; est
 /** Campos de la cabecera de una orden donde se busca (texto en minúsculas ya escrito por quien busca) */
 export interface OrdenBuscable {
   id: string; estado: string | null; fecha?: string | null; created_at?: string | null;
+  recepcion_pedido?: number | null; recepcion_recibido?: number | null;
   proveedor_nombre?: string | null; proveedor_ruc?: string | null; documento_referencia?: string | null;
   creado_por?: string | null; placa?: string | null; motivo_entrada?: string | null; centro_costo?: string | null;
   items?: Array<{ inventario_id: string | null; descripcion: string }>;
@@ -138,7 +172,7 @@ export function cabeceraCoincide(d: OrdenBuscable, q: string): boolean {
 export function filtrarOrdenes<T extends OrdenBuscable>(lista: T[], f: FiltrosOC): T[] {
   const q = f.busqueda.toLowerCase().trim();
   return lista.filter(d => {
-    if (f.estado !== 'todas' && categoriaEstado(d.estado) !== f.estado) return false;
+    if (f.estado !== 'todas' && categoriaOrden(d) !== f.estado) return false;
     if (q) {
       const enItems = (d.items ?? []).some(it => String(it.inventario_id ?? '').toLowerCase().includes(q) || String(it.descripcion ?? '').toLowerCase().includes(q));
       if (!cabeceraCoincide(d, q) && !enItems) return false;
