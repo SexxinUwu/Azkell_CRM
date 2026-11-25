@@ -1,13 +1,17 @@
 import { hoyLima } from '../../core/lib/format';
 import '../mantenimiento/mant.css';
+import '../flota/documentos.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarCheck, CalendarOff, CheckCheck, CircleAlert, RefreshCw } from 'lucide-react';
+import { CalendarCheck, CalendarOff, CheckCheck, ChevronLeft, ChevronRight, CircleAlert, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
-import { Notice, Page, PageHeader } from '../../core/ui/Display';
+import { Notice, Page } from '../../core/ui/Display';
 import { Field, SearchField, SelectInput, TextInput } from '../../core/ui/Field';
-import { MenuOtros } from '../../core/ui/MenuOtros';
+import { BotonTip } from '../../core/ui/BotonTip';
+import { ChoiceChips } from '../../core/ui/Chips';
+import { GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
+import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
@@ -20,11 +24,12 @@ interface Persona { id: number; numero_documento: string; nombres: string; apell
 interface RegistroDia { estado: string; minutos_tardanza?: number; observacion?: string | null }
 interface Matriz { ok: boolean; anio: number; mes: number; dias_mes: number; personal: Persona[]; tareo: Record<string, Record<string, RegistroDia>> }
 
-const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const CICLO = ['A', 'R', 'T', 'F', 'DM', 'V', 'D', 'FER'] as const;
 const LEYENDA: Record<string, string> = { A: 'Asistió', R: 'En ruta', T: 'Tardanza', F: 'Falta', DM: 'Descanso médico', V: 'Vacaciones', D: 'Descanso', FER: 'Feriado' };
 const ROLES = ['TODOS', 'CONDUCTOR', 'OPERATIVO', 'ADMINISTRATIVO', 'MECANICO', 'SEGURIDAD'];
 const DIAS = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
+type Vista = 'dia' | 'semana' | 'mes';
+const isoLocal = (f: Date) => `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
 
 const clave = (anio: number, mes: number, dia: number) => `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
 
@@ -34,13 +39,17 @@ export function AsistenciaPage() {
   const qc = useQueryClient();
   const toast = useToast();
   const { can } = useAuth();
-  const [anio, setAnio] = useState(hoy.getFullYear());
-  const [mes, setMes] = useState(hoy.getMonth() + 1);
+  const [ancla, setAncla] = useState(hoyLima());
+  const [vista, setVista] = useState<Vista>('mes');
+  const anio = Number(ancla.slice(0, 4));
+  const mes = Number(ancla.slice(5, 7));
+  const diaAncla = Number(ancla.slice(8, 10));
   const [rol, setRol] = useState('TODOS');
   const [busqueda, setBusqueda] = useState('');
   const [cambios, setCambios] = useState<Record<string, string>>({});   // "personaId|fecha" → estado (sin esperar al servidor)
   const [confirmarHoy, setConfirmarHoy] = useState(false);
   const [licencia, setLicencia] = useState(false);
+  const [filtrando, setFiltrando] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const puedeEditar = can('rrhh_asistencia.editar', 'rrhh_asistencia.crear');
 
@@ -59,6 +68,14 @@ export function AsistenciaPage() {
   }, [m, busqueda]);
 
   const estadoDe = (pid: number, fecha: string) => cambios[`${pid}|${fecha}`] ?? m?.tareo?.[pid]?.[fecha]?.estado ?? '';
+
+  // Anterior / siguiente según el periodo: un día, una semana o un mes
+  function mover(dir: 1 | -1) {
+    const f = new Date(anio, mes - 1, vista === 'mes' ? 1 : diaAncla);
+    if (vista === 'mes') f.setMonth(f.getMonth() + dir);
+    else f.setDate(f.getDate() + (vista === 'semana' ? 7 : 1) * dir);
+    setAncla(isoLocal(f));
+  }
 
   async function rotar(p: Persona, dia: number) {
     if (!puedeEditar) return;
@@ -117,38 +134,52 @@ export function AsistenciaPage() {
     } catch (err) { toast(errorMessage(err), 'error'); }
   }
 
-  const dias = m ? Array.from({ length: m.dias_mes }, (_, i) => i + 1) : [];
+  // Días que se ven: todo el mes, la semana (lunes a domingo, dentro del mes) o un solo día
+  const dias = useMemo(() => {
+    if (!m) return [];
+    const todos = Array.from({ length: m.dias_mes }, (_, i) => i + 1);
+    if (vista === 'mes') return todos;
+    if (vista === 'dia') return [Math.min(diaAncla, m.dias_mes)];
+    const lunes = diaAncla - ((new Date(anio, mes - 1, diaAncla).getDay() + 6) % 7);
+    return todos.filter(d => d >= lunes && d <= lunes + 6);
+  }, [m, vista, anio, mes, diaAncla]);
   const hoyClave = clave(hoy.getFullYear(), hoy.getMonth() + 1, hoy.getDate());
 
   return (
-    <Page>
-      <PageHeader
-        eyebrow="Personas y seguridad"
-        title="Asistencia"
-        subtitle={q.isLoading ? 'Cargando…' : `${MESES[mes - 1]} ${anio} · ${personal.length} colaboradores`}
-        actions={
-          <MenuOtros opciones={[
-            puedeEditar ? { label: 'Marcar asistencia de hoy', detalle: 'A para el personal y R para conductores', icon: <CheckCheck size={17} />, onSelect: () => setConfirmarHoy(true) } : null,
-            puedeEditar ? { label: 'Sincronizar con viajes', detalle: 'Conductores en ruta hoy', icon: <RefreshCw size={17} />, onSelect: sincronizar } : null,
-            puedeEditar ? { label: 'Registrar licencia o vacaciones', icon: <CalendarOff size={17} />, onSelect: () => setLicencia(true) } : null,
-            { label: 'Exportar Excel', detalle: `${MESES[mes - 1]} ${anio}`, icon: <FileSpreadsheet size={17} />, separado: true, onSelect: exportar },
-          ]} />
-        }
-      />
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-        <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
-          <SelectInput value={mes} onChange={e => setMes(Number(e.target.value))} aria-label="Mes" style={{ width: 'auto' }}>
-            {MESES.map((x, i) => <option key={x} value={i + 1}>{x}</option>)}
-          </SelectInput>
-          <SelectInput value={anio} onChange={e => setAnio(Number(e.target.value))} aria-label="Año" style={{ width: 'auto' }}>
-            {[hoy.getFullYear() - 1, hoy.getFullYear(), hoy.getFullYear() + 1].map(a => <option key={a} value={a}>{a}</option>)}
-          </SelectInput>
-          <SelectInput value={rol} onChange={e => setRol(e.target.value)} aria-label="Rol" style={{ width: 'auto' }}>
-            {ROLES.map(r => <option key={r} value={r}>{r === 'TODOS' ? 'Todos los roles' : r}</option>)}
-          </SelectInput>
+    <Page wide fill>
+      <header className="doc-cab asis-cab">
+        <div className="doc-cab__titulo">
+          <span className="t-eyebrow">Personas y seguridad{q.isLoading ? '' : ` · ${personal.length} colaboradores`}</span>
+          <h1 className="doc-cab__h1">Asistencia</h1>
         </div>
-        <SearchField value={busqueda} onChange={setBusqueda} placeholder="Nombre, documento o cargo…" />
+        <SegmentedControl label="Periodo" value={vista} onChange={v => setVista(v as Vista)}
+          options={[{ value: 'dia', label: 'Día' }, { value: 'semana', label: 'Semana' }, { value: 'mes', label: 'Mes' }]} />
+        <div className="asis-nav">
+          <BotonTip tip="Anterior" className="btn btn--plain btn--icono" onClick={() => mover(-1)}><ChevronLeft size={18} /></BotonTip>
+          <TextInput className="asis-nav__fecha" aria-label="Periodo" type={vista === 'mes' ? 'month' : 'date'}
+            value={vista === 'mes' ? ancla.slice(0, 7) : ancla} onChange={e => { const v = e.target.value; if (v) setAncla(v.length === 7 ? `${v}-01` : v); }} />
+          <BotonTip tip="Siguiente" className="btn btn--plain btn--icono" onClick={() => mover(1)}><ChevronRight size={18} /></BotonTip>
+        </div>
+        <div className="doc-cab__buscar"><SearchField value={busqueda} onChange={setBusqueda} placeholder="Nombre, documento o cargo…" /></div>
+        <Button variant="secondary" icon={<SlidersHorizontal size={16} />} onClick={() => setFiltrando(true)} aria-label={rol !== 'TODOS' ? 'Filtros, 1 activo' : 'Filtros'}>
+          <span className="placas-filtros__texto">Filtros</span>
+          {rol !== 'TODOS' && <span className="placas-filtros__n t-numeric">1</span>}
+        </Button>
+        <div className="doc-cab__acciones">
+          {puedeEditar && <BotonTip tip="Marcar asistencia de hoy" className="btn btn--plain btn--icono asis-ico--azul" onClick={() => setConfirmarHoy(true)}><CheckCheck size={18} /></BotonTip>}
+          {puedeEditar && <BotonTip tip="Sincronizar con viajes" className="btn btn--plain btn--icono btn--icono-acento" disabled={ocupado} onClick={sincronizar}><RefreshCw size={18} /></BotonTip>}
+          {puedeEditar && <BotonTip tip="Registrar licencia o vacaciones" className="btn btn--plain btn--icono asis-ico--morado" onClick={() => setLicencia(true)}><CalendarOff size={18} /></BotonTip>}
+          <BotonTip tip="Exportar Excel" className="btn btn--plain btn--icono btn--icono-excel" disabled={!m} onClick={exportar}><FileSpreadsheet size={18} /></BotonTip>
+        </div>
+      </header>
+
+      <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={rol !== 'TODOS' ? 1 : 0} onLimpiar={() => setRol('TODOS')} resultado={personal.length} unidad="colaborador">
+        <GrupoFiltro titulo="Rol">
+          <ChoiceChips label="Rol" value={rol} onChange={setRol} options={ROLES.map(r => ({ value: r, label: r === 'TODOS' ? 'Todos' : r }))} />
+        </GrupoFiltro>
+      </HojaFiltros>
+
+      <div className="asis-cuerpo">
 
         <div className="asis-leyenda">
           {CICLO.map(e => <span key={e} className={`asis-celda pressable asis-celda--${e}`} title={LEYENDA[e]}>{e}<small>{LEYENDA[e]}</small></span>)}
