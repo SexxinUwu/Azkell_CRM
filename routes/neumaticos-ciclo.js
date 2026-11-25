@@ -13,7 +13,7 @@
 const express = require('express');
 const { htmlAPdf } = require('../services/ot_pdf');
 const { htmlMapaPosiciones } = require('../services/neumaticos_mapa_pdf');
-const { armarPosicionesUnidad } = require('../services/neumaticos_unidad');
+const { armarPosicionesUnidad, normalizarPosicion } = require('../services/neumaticos_unidad');
 
 // Almacenes del ciclo de vida: cada uno guarda una sola cosa
 //   100  Nuevas      llantas nuevas listas
@@ -980,7 +980,7 @@ module.exports = function (db) {
         const hojasInspeccion = new Map();
         if (idsInspeccion.length) {
             const [hojas] = await p.query(
-                `SELECT h.id_neumatico, COALESCE(h.codigo_llanta, h.id_neumatico) AS codigo, h.marca, h.modelo, h.medida, h.vida
+                `SELECT h.id_neumatico, COALESCE(h.codigo_llanta, h.id_neumatico) AS codigo, h.marca, h.modelo, h.medida, h.vida, h.estado_ciclo
                  FROM neumaticos_hoja_vida h WHERE h.id_neumatico IN (?)`,
                 [idsInspeccion]);
             for (const h of hojas) hojasInspeccion.set(h.id_neumatico, h);
@@ -990,7 +990,26 @@ module.exports = function (db) {
         const { porLlanta, porLlantaPos } = await ultimasMediciones(p, ids);
         const kmActual = montadas.length ? await kmActualPlaca(p, placa) : null;
 
-        const posicionesUnidad = armarPosicionesUnidad({ fechaInspeccion, detalleInspeccion, instalaciones: montadas });
+        // Una llanta de la inspección que ya no está en la unidad (salió a reforma, descarte o almacén) deja su posición vacía:
+        // sin esto el croquis la seguía dibujando aunque ya estuviera en la lista de reforma o de descarte.
+        // También cuenta un retiro de esa posición hecho desde la fecha de la inspección (la inspección puede no ligar la llanta con su hoja).
+        const idsMontados = new Set(montadas.map(m => m.id_neumatico));
+        const posOcupadas = new Set(montadas.map(m => normalizarPosicion(m.posicion)));
+        const [retiros] = fechaInspeccion ? await p.query(
+            `SELECT m.posicion FROM neumaticos_movimientos m
+             WHERE m.tipo IN (?, ?, ?) AND UPPER(TRIM(m.placa)) = ? AND m.posicion IS NOT NULL AND DATE(m.fecha) >= ?`,
+            [MOV.RETIRO_RETEN, MOV.RETIRO_REENCAUCHE, MOV.RETIRO_DESECHO, placa, fechaInspeccion]) : [[]];
+        const posRetiradas = new Set(retiros.map(r => normalizarPosicion(r.posicion)));
+        const salieron = detalleInspeccion.filter(d => {
+            const h = d.id_neumatico ? hojasInspeccion.get(d.id_neumatico) : null;
+            const llantaFuera = !!h && ['en_almacen', 'en_reencauche', 'desechado'].includes(h.estado_ciclo) && !idsMontados.has(d.id_neumatico);
+            const retiroPosterior = posRetiradas.has(normalizarPosicion(d.posicion)) && !posOcupadas.has(normalizarPosicion(d.posicion));
+            return llantaFuera || retiroPosterior;
+        });
+        const detalleVigente = detalleInspeccion.filter(d => !salieron.includes(d));
+        const posicionesUnidad = armarPosicionesUnidad({ fechaInspeccion, detalleInspeccion: detalleVigente, instalaciones: montadas });
+        const ocupadas = new Set(posicionesUnidad.map(p => normalizarPosicion(p.posicion)));
+        const posicionesVacias = [...new Set(salieron.map(d => d.posicion))].filter(p => !ocupadas.has(normalizarPosicion(p)));
         const detalleMontadas = posicionesUnidad.map(({ posicion, fuente, instalacion, detalle }) => {
             const idLlanta = fuente === 'movimiento' ? instalacion.id_neumatico : (detalle.id_neumatico || (instalacion && instalacion.id_neumatico) || null);
             // Datos de la llanta: su hoja de vida; si la inspección no la liga, los de la instalación o los de la inspección
@@ -1051,7 +1070,8 @@ module.exports = function (db) {
             ok: true,
             placa,
             configuracion,
-            posiciones: detalleMontadas.map(({ posicion, llanta }) => ({ posicion, llanta })),
+            posiciones: [...detalleMontadas.map(({ posicion, llanta }) => ({ posicion, llanta })), ...posicionesVacias.map(posicion => ({ posicion, llanta: null }))]
+                .sort((a, b) => String(a.posicion).localeCompare(String(b.posicion), 'es', { numeric: true })),
             disponibles: enStock
                 // Solo las llantas con código de fuego pueden ir a una unidad; sin código están en su propia situación
                 .filter(f => f.estado_ciclo === 'en_almacen' && ALMACENES_INSTALAR.includes(Number(f.almacen_id)) && txt(f.codigo_fuego))

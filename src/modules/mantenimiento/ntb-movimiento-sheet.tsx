@@ -10,13 +10,15 @@ import { decimalInput, digitsInput, parseDecimal } from '../../core/ui/forms';
 import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import type { LlantaTablero } from './neumaticos-tablero-tipos';
-import { ejecutarIntercambio, ejecutarMovimiento, tituloLlanta, vidaSiguiente, vidaTexto, type DestinoRetiro, type ResultadoReencauche } from './ntb-api';
+import { ejecutarIntercambio, ejecutarMovimiento, ejecutarRegreso, tituloLlanta, vidaSiguiente, vidaTexto, type DestinoRetiro, type ResultadoReencauche } from './ntb-api';
 
 export type Propuesta =
   | { clase: 'instalar'; llanta: LlantaTablero; posicion: string }
   | { clase: 'intercambio'; entrante: LlantaTablero; saliente: LlantaTablero; posicion: string }
   | { clase: 'reforma' | 'descarte'; llanta: LlantaTablero; posicion: string }
-  | { clase: 'retorno'; llanta: LlantaTablero };
+  | { clase: 'retorno'; llanta: LlantaTablero }
+  | { clase: 'devolver'; llanta: LlantaTablero; desde: 'reforma' | 'descarte' }
+  | { clase: 'regreso'; llanta: LlantaTablero; desde: 'reforma' | 'descarte'; posicion: string };
 
 type Destino = DestinoRetiro;
 
@@ -45,6 +47,8 @@ const TITULOS: Record<Propuesta['clase'], string> = {
   reforma: 'Enviar a reforma',
   descarte: 'Enviar a descarte',
   retorno: 'Retorno de reencauche',
+  devolver: 'Regresar a disponible',
+  regreso: 'Regresar a la unidad',
 };
 
 /** Kilometraje entero de la unidad; si la llanta ya estuvo montada no puede ser menor a su montaje */
@@ -100,6 +104,13 @@ export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puede
           { codigo: propuesta.entrante.codigo, placa, posicion: propuesta.posicion, km: salienteKm },
         );
         mensaje = `${propuesta.entrante.codigo} ocupa ${propuesta.posicion}`;
+      } else if (propuesta.clase === 'devolver') {
+        await ejecutarMovimiento({ clase: 'devolver', codigo: propuesta.llanta.codigo });
+        mensaje = `${propuesta.llanta.codigo} volvió a estar disponible en el Retén`;
+      } else if (propuesta.clase === 'regreso') {
+        const k = kilometraje(km, null);
+        await ejecutarRegreso(propuesta.llanta, { placa, posicion: propuesta.posicion, km: k });
+        mensaje = `${propuesta.llanta.codigo} regresó a ${propuesta.posicion}`;
       } else if (propuesta.clase === 'reforma' || propuesta.clase === 'descarte') {
         const k = kilometraje(km, propuesta.llanta.km_montaje ?? null);
         const dest: Destino = propuesta.clase === 'reforma' ? 'reforma' : 'descarte';
@@ -167,6 +178,20 @@ export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puede
           </Resumen>
         )}
 
+        {propuesta.clase === 'devolver' && (
+          <Resumen>
+            <p>La llanta <b>{propuesta.llanta.codigo}</b> deja de estar {propuesta.desde === 'reforma' ? 'para reforma' : 'para descarte'} y vuelve a <b>Disponible para uso</b>.</p>
+            <p className="ntb-hoja__nota">Queda en el Retén, lista para instalar. Solo se puede mientras siga en el Retén.</p>
+          </Resumen>
+        )}
+
+        {propuesta.clase === 'regreso' && (
+          <Resumen>
+            <p>La llanta <b>{propuesta.llanta.codigo}</b> ({tituloLlanta(propuesta.llanta)}) deja de estar {propuesta.desde === 'reforma' ? 'para reforma' : 'para descarte'} y se monta de nuevo en la posición <b>{propuesta.posicion}</b> de <b>{placa}</b>.</p>
+            <p className="ntb-hoja__nota">Primero vuelve al Retén como disponible y luego se instala.</p>
+          </Resumen>
+        )}
+
         {propuesta.clase === 'reforma' && (
           <Resumen>
             <p>La llanta <b>{propuesta.llanta.codigo}</b> sale de <b>{propuesta.posicion}</b> de <b>{placa}</b> y se marca para reforma.</p>
@@ -181,9 +206,9 @@ export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puede
           </Resumen>
         )}
 
-        {(propuesta.clase === 'instalar' || propuesta.clase === 'intercambio' || propuesta.clase === 'reforma' || propuesta.clase === 'descarte') && (
+        {(propuesta.clase === 'instalar' || propuesta.clase === 'regreso' || propuesta.clase === 'intercambio' || propuesta.clase === 'reforma' || propuesta.clase === 'descarte') && (
           <Field label="Kilometraje actual de la unidad" hint={
-            propuesta.clase === 'instalar' ? undefined
+            propuesta.clase === 'instalar' || propuesta.clase === 'regreso' ? undefined
               : `Mínimo ${(propuesta.clase === 'intercambio' ? propuesta.saliente : propuesta.llanta).km_montaje?.toLocaleString('es-PE') ?? 0} km (km al montar)`
           }>
             {p => (
