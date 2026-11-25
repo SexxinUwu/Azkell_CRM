@@ -51,13 +51,14 @@ function ZonaDrop({ zona, titulo, nota, cantidad, resaltada, permitido, bloqueo 
 }) {
   return (
     <div role="group" aria-label={titulo} data-ntb-zona={zona}
+      title={nota}
       className={`ntb-zona ntb-zona--${zona}${resaltada ? ' ntb-zona--sobre' : ''}${permitido ? '' : ' ntb-zona--bloqueada'}`}>
       <div className="ntb-col__cab">
         <span className="ntb-zona__titulo">{titulo}</span>
         {cantidad > 0 && <span className="ntb-count" title="Llantas enviadas desde esta unidad">{cantidad}</span>}
       </div>
       <p className="ntb-zona__vacia ntb-zona__vacia--area">
-        {permitido ? nota : <><Lock size={13} aria-hidden /> {bloqueo}</>}
+        {permitido ? 'Suelta aquí la llanta' : <><Lock size={13} aria-hidden /> {bloqueo}</>}
       </p>
     </div>
   );
@@ -374,6 +375,7 @@ export function NeumaticosTablero() {
             )}
           </section>
 
+          <div className="ntb-zonas-par">
           <ZonaDrop
             zona="reforma" titulo="Enviar para reforma" nota="Arrastra aquí una llanta montada para enviarla a reencauche."
             cantidad={reforma.length} resaltada={sobre?.tipo === 'zona' && sobre.zona === 'reforma'}
@@ -384,6 +386,7 @@ export function NeumaticosTablero() {
             cantidad={descarte.length} resaltada={sobre?.tipo === 'zona' && sobre.zona === 'descarte'}
             permitido={puedeBaja && enPlano} bloqueo={bloqueoVista}
           />
+          </div>
           </div>
 
           {/* Centro: la unidad y sus zonas */}
