@@ -242,3 +242,8 @@ button.ntb-pos { cursor: pointer; }
 .ntb-tile__codigo { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; color: var(--label); }
 .ntb-tile__mm { font-size: 0.6875rem; color: var(--label-2); }
 .ntb-zona__vacia { padding: var(--s-4) var(--s-2); text-align: center; border: 1.5px dashed var(--separator-strong, var(--separator)); border-radius: var(--r-md); }
+
+/* La nota con texto en negrita va en un bloque (en la fila flex se partía en columnas) */
+.ntb-zona__nota--texto { display: block; }
+/* La llanta que se arrastra es el mismo neumático dibujado del plano, con una sombra */
+.ntb-fantasma .ntb-ico { filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35)); }
