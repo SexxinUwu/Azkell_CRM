@@ -228,6 +228,7 @@ module.exports = function globalRBAC(req, res, next) {
     }
     else if (path.startsWith('/operaciones/docs-marsisa')) mod = ['docs_flota'];
     else if (path.startsWith('/operaciones/conduccion-rpm')) mod = ['combustible_analisis'];
+    else if (path.startsWith('/operaciones/hojas-ruta')) mod = ['op_ordenes_viaje', 'op_programacion'];
     else if (path.startsWith('/operaciones') || path.includes('ordenes-viaje') || path.includes('guias-remision') || path.includes('viajes') || path.includes('programacion')) {
         mod = ['op_programacion', 'op_guias_remision', 'op_rutas', 'op_asignacion', 'op_monitoreo', 'combustible_analisis', 'combustible_vales', 'placas', 'fleet'];
     }

@@ -587,3 +587,36 @@ model ViajeTelemetriaGps {
   @@index([placa], map: "idx_viaje_telemetria_placa")
   @@map("viaje_telemetria_gps")
 }
+
+// Hojas de ruta de los conductores (Operaciones Marsisa): plantillas por cliente y tipo de unidad, con sus paradas
+model HojaRutaPlantilla {
+  id             Int      @id @default(autoincrement())
+  nombre         String   @unique(map: "uq_hoja_ruta_plantilla_nombre") @db.VarChar(150)
+  cliente        String   @db.VarChar(150)
+  tipo_unidad    String   @default("TRACTO") @db.VarChar(20)
+  choferes       Int      @default(1) @db.TinyInt
+  origen         String?  @db.VarChar(150)
+  destino        String?  @db.VarChar(150)
+  material       String?  @db.VarChar(150)
+  notas          String?  @db.Text
+  activa         Int      @default(1) @db.TinyInt
+  creado_por     String?  @db.VarChar(150)
+  creado_en      DateTime @default(now()) @db.Timestamp(0)
+  actualizado_en DateTime @default(now()) @updatedAt @db.Timestamp(0)
+
+  @@map("hoja_ruta_plantillas")
+}
+
+model HojaRutaParada {
+  id           Int    @id @default(autoincrement())
+  plantilla_id Int
+  orden        Int
+  dia          Int    @default(1) @db.TinyInt
+  tipo         String @default("CONDUCCION") @db.VarChar(20)
+  actividad    String @db.VarChar(250)
+  hora_inicio  String @db.Char(5)
+  hora_fin     String @db.Char(5)
+
+  @@index([plantilla_id, orden], map: "idx_hoja_ruta_paradas_plantilla")
+  @@map("hoja_ruta_paradas")
+}
