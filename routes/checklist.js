@@ -644,25 +644,44 @@ module.exports = function (db, broadcast, logAudit) {
         let kmFinalNum = parseInt(km_final, 10) || 0;
         const critica = [true, 1, '1', 'true'].includes(falla_critica) ? 1 : 0;
 
-        // Regla: una placa con reporte pendiente o en taller no admite otro reporte hasta que todos sus reportes estén finalizados
+        // Regla: una placa con reporte pendiente o en taller no admite otro reporte hasta que sus reportes estén finalizados.
+        // Se mira placa por placa: si un reporte tiene la OT de esa placa ya finalizada (aunque la OT de la otra placa siga en taller),
+        // esa placa queda libre para un reporte independiente.
         const placasNuevas = [placa_tracto, placa_remolque].map(p => String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, '')).filter(Boolean);
         if (placasNuevas.length) {
             try {
+                const norm = x => String(x || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                const FINALIZADOS = ['finalizado', 'finalizada', 'cerrada', 'cerrado', 'completada', 'completado', 'terminada', 'terminado', 'anulado', 'anulada'];
                 const [abiertos] = await tdb.promise().query(
-                    `SELECT folio, placa_tracto, placa_remolque, estado FROM reportes_fallas
+                    `SELECT id, folio, placa_tracto, placa_remolque, estado, ots_generadas_json FROM reportes_fallas
                      WHERE (estado IS NULL OR estado <> 'Finalizado')
                        AND (UPPER(REPLACE(REPLACE(placa_tracto, '-', ''), ' ', '')) IN (?) OR UPPER(REPLACE(REPLACE(placa_remolque, '-', ''), ' ', '')) IN (?))
-                     ORDER BY id DESC LIMIT 1`,
+                     ORDER BY id DESC`,
                     [placasNuevas, placasNuevas]
                 );
-                if (abiertos.length) {
-                    const f = abiertos[0];
-                    const norm = x => String(x || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-                    const placa = placasNuevas.find(p => p === norm(f.placa_tracto) || p === norm(f.placa_remolque));
-                    return res.status(409).json({
-                        ok: false,
-                        error: `La placa ${placa} tiene el reporte ${f.folio} (${f.estado || 'Pendiente'}). No se puede generar otro reporte hasta que todos los de esa placa estén finalizados.`,
-                    });
+                for (const rep of abiertos) {
+                    let ots = [];
+                    try { ots = typeof rep.ots_generadas_json === 'string' ? JSON.parse(rep.ots_generadas_json || '[]') : (rep.ots_generadas_json || []); } catch (e) { ots = []; }
+                    if (!Array.isArray(ots)) ots = [];
+                    for (const placa of placasNuevas.filter(p => p === norm(rep.placa_tracto) || p === norm(rep.placa_remolque))) {
+                        const idsDePlaca = ots.filter(o => norm(o.placa) === placa).map(o => String(o.idOt || o.ticket_entrada || '').trim()).filter(Boolean);
+                        const [otsPlaca] = await tdb.promise().query(
+                            "SELECT ticket_entrada, id_ot, estado, detalles_json FROM ordenes_trabajo WHERE UPPER(REPLACE(REPLACE(placa, '-', ''), ' ', '')) = ?", [placa]);
+                        const vinculadas = (otsPlaca || []).filter(o => {
+                            let d = {};
+                            try { d = typeof o.detalles_json === 'string' ? JSON.parse(o.detalles_json) : (o.detalles_json || {}); } catch (e) { d = {}; }
+                            const id = String(o.ticket_entrada || o.id_ot || '').trim();
+                            return idsDePlaca.includes(id) || (d.id_reporte_falla && String(d.id_reporte_falla) === String(rep.id)) || (d.folio_reporte && String(d.folio_reporte) === String(rep.folio));
+                        });
+                        // Sin OT para esa placa, el reporte sigue pendiente para ella; con OT, solo cuenta la que no terminó
+                        const pendiente = vinculadas.length === 0 ? null : vinculadas.find(o => !FINALIZADOS.includes(String(o.estado || '').toLowerCase().trim()));
+                        if (vinculadas.length === 0) {
+                            return res.status(409).json({ ok: false, error: `La placa ${placa} tiene el reporte ${rep.folio} (${rep.estado || 'Pendiente'}) sin orden de trabajo. No se puede generar otro reporte hasta que se atienda.` });
+                        }
+                        if (pendiente) {
+                            return res.status(409).json({ ok: false, error: `La placa ${placa} tiene la OT ${pendiente.ticket_entrada || pendiente.id_ot} (${pendiente.estado || 'en proceso'}) del reporte ${rep.folio}. No se puede generar otro reporte hasta que esa OT esté finalizada.` });
+                        }
+                    }
                 }
             } catch (e) {
                 return res.status(500).json({ ok: false, error: e.message });
