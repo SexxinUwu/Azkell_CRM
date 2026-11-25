@@ -3,7 +3,7 @@ import { ChevronDown, ExternalLink, Gauge, MapPin, Navigation, X } from 'lucide-
 import { Button } from '../../../core/ui/Button';
 import { LicensePlate } from '../../../core/ui/LicensePlate';
 import { fechaHora, type Historial } from '../UbicacionHistorial';
-import { enlaceCalle, puntoCardinal, useSensoresMensaje, useStreetView, type EstadoCalle } from './recorridoApi';
+import { enlaceCalle, puntoCardinal, useDireccion, useSensoresMensaje, useStreetView, type EstadoCalle } from './recorridoApi';
 
 // Reproductor del recorrido (como el "Track player" de Wialon): hora y velocidad del punto, foto de la calle y sensores de la unidad en ese instante.
 // Se abre al dar play en la barra de reproducción. Mientras corre, la foto y los sensores se refrescan cada 2 s para no gastar consultas de más.
@@ -41,6 +41,7 @@ export function TrackPlayer({ placa, unitId, historial, indice, reproduciendo, o
 
   const calle = useStreetView(visto?.lat ?? null, visto?.lng ?? null, visto?.curso ?? 0, !!visto);
   const sensores = useSensoresMensaje(unitId, visto?.tiempo ?? null, !!visto);
+  const direccion = useDireccion(visto?.lat ?? null, visto?.lng ?? null, !!visto);
   if (!p) return null;
   const errCalle = calle.error?.estado;
 
@@ -53,6 +54,7 @@ export function TrackPlayer({ placa, unitId, historial, indice, reproduciendo, o
       </header>
 
       <div className="tg-pp-dato">
+        <span className="tg-pp-dir"><MapPin size={13} aria-hidden />{direccion.data ?? (direccion.isLoading ? 'Buscando dirección…' : 'Dirección no disponible')}</span>
         <span className="tg-pp-hora">{fechaHora(p.tiempo)}</span>
         <span className="tg-pp-vel"><Gauge size={14} aria-hidden /><b className="t-numeric">{Math.round(p.velocidad)}</b> km/h</span>
         <span className="tg-pp-rumbo"><Navigation size={14} aria-hidden style={{ transform: `rotate(${p.curso - 45}deg)` }} />{puntoCardinal(p.curso)} · {Math.round(p.curso)}°</span>

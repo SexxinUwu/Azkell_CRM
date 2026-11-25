@@ -26,6 +26,8 @@ interface Props {
   /** Día elegido ('AAAA-MM-DD') o null */
   dia: string | null;
   onDia: (d: string | null) => void;
+  /** Rangos largos: días ya cargados y total (null en rangos cortos) */
+  progreso?: { hechos: number; total: number } | null;
   /** Rango libre 'AAAA-MM-DDTHH:mm' (hora local) o null */
   desde: string | null;
   hasta: string | null;
@@ -84,10 +86,12 @@ export function PanelHistorial(p: Props) {
     const a = new Date(borrDesde).getTime(), b = new Date(borrHasta).getTime();
     if (!borrDesde || !borrHasta || isNaN(a) || isNaN(b)) return setErrRango('Elige fecha y hora de inicio y de fin.');
     if (b <= a) return setErrRango('El fin debe ser después del inicio.');
-    if (b - a > 7 * 86400000) return setErrRango('El rango puede ser de máximo 7 días.');
+    if (b - a > 400 * 86400000) return setErrRango('El rango puede ser de máximo 400 días (lo que conserva Wialon).');
     setErrRango('');
     p.onRango(borrDesde, borrHasta);
   };
+  const esMes = !!(p.desde && p.hasta && Math.abs(new Date(p.hasta).getTime() - new Date(p.desde).getTime() - 30 * 86400000) < 3600000);
+  const mes = () => { const fin = new Date(), ini = new Date(fin.getTime() - 30 * 86400000); setBorrDesde(aLocal(ini)); setBorrHasta(aLocal(fin)); p.onRango(aLocal(ini), aLocal(fin)); };
   const semana = () => { const fin = new Date(), ini = new Date(fin.getTime() - 7 * 86400000); setBorrDesde(aLocal(ini)); setBorrHasta(aLocal(fin)); p.onRango(aLocal(ini), aLocal(fin)); };
 
   const h = p.historial;
@@ -111,10 +115,11 @@ export function PanelHistorial(p: Props) {
     puntos.forEach((q, i) => { const dd = Math.abs(q.tiempo - t); if (dd < d) { d = dd; mejor = i; } });
     p.onIndice(mejor);
   };
-  const etiqueta = p.desde && p.hasta ? (esSemana ? 'SEMANA' : 'RANGO') : p.dia
+  const etiqueta = p.desde && p.hasta ? (esSemana ? 'SEMANA' : esMes ? 'MES' : 'RANGO') : p.dia
     ? (p.dia === hoy ? 'HOY' : p.dia === ayer ? 'AYER' : new Date(`${p.dia}T12:00:00`).toLocaleDateString('es-PE', { weekday: 'short', day: '2-digit', month: 'short' }).toUpperCase())
     : `ÚLTIMAS ${p.horas} H`;
-  const subtitulo = p.cargando ? 'Cargando telemetría satelital…' : p.error ? p.error
+  const enCarga = !!p.progreso && p.progreso.hechos < p.progreso.total;
+  const subtitulo = enCarga ? `Cargando día ${Math.min(p.progreso!.total, p.progreso!.hechos + 1)} de ${p.progreso!.total}…${puntos.length ? ` (${puntos.length.toLocaleString('es-PE')} puntos hasta ahora)` : ''}` : p.cargando ? 'Cargando telemetría satelital…' : p.error ? p.error
     : puntos.length ? `${puntos.length.toLocaleString('es-PE')} puntos · ${fechaHora(t0)} a ${fechaHora(t1)}` : 'Sin recorrido en el rango elegido';
 
   return (
@@ -131,25 +136,26 @@ export function PanelHistorial(p: Props) {
 
       <section className="tg-h-sec">
         <h3>Periodo</h3>
-        <ChoiceChips label="Periodo" value={p.dia === hoy ? 'hoy' : p.dia === ayer ? 'ayer' : esSemana ? 'semana' : (!p.dia && !p.desde ? `h${p.horas}` : '')}
+        <ChoiceChips label="Periodo" value={p.dia === hoy ? 'hoy' : p.dia === ayer ? 'ayer' : esSemana ? 'semana' : esMes ? 'mes' : (!p.dia && !p.desde ? `h${p.horas}` : '')}
           onChange={v => {
-            if (v === 'hoy') p.onDia(hoy); else if (v === 'ayer') p.onDia(ayer); else if (v === 'semana') semana();
+            if (v === 'hoy') p.onDia(hoy); else if (v === 'ayer') p.onDia(ayer); else if (v === 'semana') semana(); else if (v === 'mes') mes();
             else { p.onDia(null); p.onRango(null, null); p.onHoras(Number(v.slice(1))); }
           }}
-          options={[{ value: 'hoy', label: 'Hoy' }, { value: 'ayer', label: 'Ayer' }, { value: 'semana', label: 'Semana' }, ...HORAS.map(x => ({ value: `h${x}`, label: `${x} h` }))]} />
+          options={[{ value: 'hoy', label: 'Hoy' }, { value: 'ayer', label: 'Ayer' }, { value: 'semana', label: 'Semana' }, { value: 'mes', label: 'Mes' }, ...HORAS.map(x => ({ value: `h${x}`, label: `${x} h` }))]} />
         <div className="tg-h-dia">
           <Button variant="secondary" iconOnly icon={<ChevronLeft size={18} />} aria-label="Día anterior" onClick={() => p.onDia(sumarDias(p.dia ?? hoy, -1))} />
           <label><CalendarDays size={14} aria-hidden /><input type="date" value={p.dia ?? ''} min={minimo} max={hoy} aria-label="Día del recorrido" onChange={e => p.onDia(e.target.value || null)} /></label>
           <Button variant="secondary" iconOnly icon={<ChevronRight size={18} />} aria-label="Día siguiente" disabled={!p.dia || p.dia >= hoy} onClick={() => p.onDia(p.dia && sumarDias(p.dia, 1) < hoy ? sumarDias(p.dia, 1) : null)} />
         </div>
         <button type="button" className="tg-h-acordeon" aria-expanded={rangoAbierto} onClick={() => setRangoAbierto(v => !v)}>
-          Rango personalizado <small>máx. 7 días</small><ChevronRight size={14} />
+          Rango personalizado <small>hasta 400 días</small><ChevronRight size={14} />
         </button>
         {rangoAbierto && (
           <div className="tg-h-rango">
             <label>Desde<input type="datetime-local" value={borrDesde} min={`${minimo}T00:00`} max={`${hoy}T23:59`} onChange={e => setBorrDesde(e.target.value)} /></label>
             <label>Hasta<input type="datetime-local" value={borrHasta} min={`${minimo}T00:00`} max={`${hoy}T23:59`} onChange={e => setBorrHasta(e.target.value)} /></label>
             <Button variant="primary" block onClick={verRango}>Ver rango</Button>
+            <p className="tg-h-nota">Los rangos de más de 7 días se cargan día por día y el recorrido se va dibujando.</p>
             {errRango && <p className="tg-h-error">{errRango}</p>}
           </div>
         )}

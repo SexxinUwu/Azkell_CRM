@@ -88,4 +88,45 @@ async function sensoresEnMensaje(db, unitId, t) {
   }
 }
 
-module.exports = { sensoresEnMensaje };
+// ── Dirección de un punto (geocodificador de Wialon, el mismo que muestra su Track player) ──
+const sesionGis = { gis: null, clave: '', en: 0 };
+const direcciones = new Map();
+
+async function gisSid(db, nueva) {
+  const { token, baseUrl } = await credenciales(db);
+  if (!token) return null;
+  const clave = baseUrl + '|' + token;
+  if (!nueva && sesionGis.gis && sesionGis.clave === clave && Date.now() - sesionGis.en < 10 * 60 * 1000) return { gis: sesionGis.gis, baseUrl };
+  const login = await llamar(baseUrl, 'token/login', { token });
+  if (!login || !login.gis_sid) return null;
+  sesionGis.gis = login.gis_sid; sesionGis.clave = clave; sesionGis.en = Date.now();
+  // Esta sesión solo se usó para obtener la clave del geocodificador
+  fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${login.eid}`).catch(() => { });
+  return { gis: login.gis_sid, baseUrl };
+}
+
+/** Dirección en texto de unas coordenadas, o null si no se pudo. Se guarda en memoria por punto (a ~10 m) */
+async function direccionDe(db, lat, lng) {
+  const la = Number(lat), lo = Number(lng);
+  if (!Number.isFinite(la) || !Number.isFinite(lo) || Math.abs(la) > 90 || Math.abs(lo) > 180) return null;
+  const clave = `${la.toFixed(4)}|${lo.toFixed(4)}`;
+  if (direcciones.has(clave)) return direcciones.get(clave);
+  try {
+    for (const nueva of [false, true]) {
+      const g = await gisSid(db, nueva);
+      if (!g) return null;
+      const host = new URL(g.baseUrl).hostname;
+      const coords = encodeURIComponent(JSON.stringify([{ lat: la, lon: lo }]));
+      const r = await (await fetch(`https://geocode-maps.wialon.com/${host}/gis_geocode?coords=${coords}&flags=1255211008&gis_sid=${g.gis}`, { signal: AbortSignal.timeout(6000) })).json();
+      if (Array.isArray(r) && typeof r[0] === 'string' && r[0].trim()) {
+        const texto = r[0].trim();
+        direcciones.set(clave, texto);
+        if (direcciones.size > 3000) direcciones.delete(direcciones.keys().next().value);
+        return texto;
+      }
+    }
+  } catch { /* sin dirección */ }
+  return null;
+}
+
+module.exports = { sensoresEnMensaje, direccionDe };

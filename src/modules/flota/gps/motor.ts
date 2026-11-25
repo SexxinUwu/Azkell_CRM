@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import maplibregl from 'maplibre-gl';
 import type { GeoJSONSource, Map as MapaGL } from 'maplibre-gl';
-import { buildStyle, F_BOLD, W, type TemaMapa } from './estilos';
+import { estiloMapa, F_BOLD, W, type TemaMapa } from './estilos';
 import { Camiones3D, ST, type ClaseEstado, type DescCamion, type VistaCamion } from './camiones';
 import { angLerp, distM, enAnillo, type LngLat } from './geo';
 import { claseEstado } from './estado';
@@ -175,7 +175,7 @@ export class MotorTelemetria {
 
     registrarEsri();
     this.mapa = new maplibregl.Map({
-      container: this.mapDiv, style: buildStyle(tema, false), center: [-75.4, -9.6], zoom: 4.6, pitch: 0, bearing: 0, maxPitch: 80,
+      container: this.mapDiv, style: estiloMapa(tema, false), center: [-75.4, -9.6], zoom: 4.6, pitch: 0, bearing: 0, maxPitch: 80,
       attributionControl: false, pixelRatio: Math.min(window.devicePixelRatio || 1, MOVIL() ? 1.5 : 2),
       canvasContextAttributes: { antialias: true },
     } as any);
@@ -366,7 +366,7 @@ export class MotorTelemetria {
     this.styleReady = false;
     // Sin esto, MapLibre 5.6 falla con "shaderPreludeCode" al cambiar de estilo con relieve
     this.mapa.setTerrain(null);
-    this.mapa.setStyle(buildStyle(t, this.opt.terrain), { diff: false });
+    this.mapa.setStyle(estiloMapa(t, this.opt.terrain), { diff: false });
   }
   private geoSel: string | null = null;
   private datosGeoSel() {

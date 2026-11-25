@@ -23,6 +23,20 @@ export function useSensoresMensaje(unitId: number | null, t: number | null, acti
   });
 }
 
+/** Dirección del punto (geocodificador de Wialon). Se pide al instante de cada punto visto; el servidor las guarda por zona */
+export function useDireccion(lat: number | null, lng: number | null, activo: boolean) {
+  const la = lat == null ? null : Number(lat.toFixed(4)), lo = lng == null ? null : Number(lng.toFixed(4));
+  return useQuery<string | null>({
+    queryKey: ['gps', 'direccion', la, lo],
+    enabled: activo && la != null && lo != null,
+    staleTime: Infinity,
+    gcTime: 30 * 60_000,
+    retry: false,
+    placeholderData: keepPreviousData,
+    queryFn: async () => (await api<{ direccion: string | null }>(`/telemetria/direccion?lat=${la}&lng=${lo}`)).direccion,
+  });
+}
+
 export type EstadoCalle = 'sin_clave' | 'sin_cobertura' | 'limite_diario' | 'error';
 export class ErrorCalle extends Error { constructor(public estado: EstadoCalle) { super(estado); } }
 
