@@ -147,8 +147,11 @@ export function PlantillaSheet({ abierta, plantilla, onClose }: { abierta: boole
         </div>
 
         <h3 className="hr-hoja__titulo">Itinerario</h3>
-        <p className="hr-hoja__nota">Cada parada va con su día y sus horas. Si la hora de fin es menor a la de inicio, termina al día siguiente. Al generar la hoja, todas las horas se corren según la llegada al cliente.</p>
+        <p className="hr-hoja__nota"><b>Día</b> es el día en que empieza la parada (Día 1, Día 2…). Si una parada cruza la medianoche (por ejemplo 22:00 a 11:00), la hoja la parte sola y la continuación sale en el día siguiente. Al generar la hoja, todas las horas se corren según la llegada al cliente.</p>
         <div className="hr-paradas">
+          <div className="hr-parada hr-parada--cab" aria-hidden>
+            <span>N°</span><span>Día</span><span>Tipo</span><span>Actividad</span><span>Inicio</span><span>Fin</span><span>Tiempo</span><span />
+          </div>
           {paradas.map((p, i) => (
             <div key={i} className="hr-parada">
               <span className="hr-parada__n">{i + 1}</span>

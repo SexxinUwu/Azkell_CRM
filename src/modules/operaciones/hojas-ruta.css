@@ -25,3 +25,6 @@
 .hr-parada__acc button { border: 0; background: var(--fill); color: var(--label); width: 26px; height: 26px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .hr-parada__acc button:disabled { opacity: 0.35; cursor: default; }
 .hr-parada input.input, .hr-parada select { height: 34px; }
+.hr-parada--cab { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--label-2); padding: 0 0 2px; }
+.hr-parada--cab span { text-align: left; }
+@media (max-width: 900px) { .hr-parada--cab { display: none; } }
