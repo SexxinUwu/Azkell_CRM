@@ -33,7 +33,7 @@ const GENERICO = [800, 1150, 1400, 1900];
 const META_BASE = { bajo: 20, verde: 60, potencia: 20, sobre: 0 };
 const TTL_MS = 30000;
 
-const clave = m => String(m || '').trim().toUpperCase().replace(/s+/g, '');
+const clave = m => String(m || '').trim().toUpperCase().replace(/\s+/g, '');
 
 const configBase = () => ({
     origen: 'base',
