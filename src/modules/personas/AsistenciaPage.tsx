@@ -169,7 +169,7 @@ export function AsistenciaPage() {
                     const finde = f.getDay() === 0 || f.getDay() === 6;
                     return <th key={d} className={finde ? 'asis-finde' : ''}><span>{DIAS[f.getDay()]}</span>{d}</th>;
                   })}
-                  <th title="Asistió">A</th><th title="En ruta">R</th><th title="Faltas">F</th><th title="Tardanzas">T</th>
+                  <th className="asis-th-tot" title="Días asistidos">Asist.</th><th className="asis-th-tot" title="Días en ruta">En ruta</th><th className="asis-th-tot" title="Faltas">Faltas</th><th className="asis-th-tot" title="Tardanzas">Tard.</th>
                 </tr>
               </thead>
               <tbody>
