@@ -574,3 +574,6 @@
 @media (max-width: 900px) {
   .tg-pp { left: 8px; right: 8px; top: auto; bottom: calc(var(--tg-dock, 0px) + 8px); width: auto; max-height: 46vh; }
 }
+.tg-pp-dir { grid-column: 1 / -1; display: flex; align-items: flex-start; gap: 6px; font-size: 12.5px; font-weight: 600; line-height: 1.3; color: var(--label); }
+.tg-pp-dir svg { flex: none; margin-top: 2px; color: var(--accent); }
+.tg-h-nota { margin: 6px 0 0; font-size: 11.5px; line-height: 1.35; color: var(--label-2); }

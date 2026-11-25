@@ -6,7 +6,7 @@
 const express = require('express');
 const { listarGeocercas } = require('../services/wialon_geocercas');
 const { hoyLima } = require('../services/horaLima');
-const { sensoresEnMensaje } = require('../services/wialon_mensaje');
+const { sensoresEnMensaje, direccionDe } = require('../services/wialon_mensaje');
 
 module.exports = function(db) {
     const router = express.Router();
@@ -25,6 +25,12 @@ module.exports = function(db) {
         const r = await sensoresEnMensaje(getDb(req), req.query.unitId, req.query.t);
         if (!r.ok) return res.status(502).json({ error: r.error });
         res.json(r);
+    });
+
+    // ── GET /api/telemetria/direccion?lat=&lng= — dirección del punto (debajo de la hora en el reproductor) ─
+    router.get('/direccion', async (req, res) => {
+        const d = await direccionDe(getDb(req), req.query.lat, req.query.lng);
+        res.json({ direccion: d });
     });
 
     // ── GET /api/telemetria/streetview?lat=&lng=&heading= — foto de la calle (Google Street View Static) ─

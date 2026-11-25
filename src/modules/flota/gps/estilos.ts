@@ -5,6 +5,11 @@ import { ATRIBUCION, MAPA_URLS, SAT_BASE_MAXZOOM, SAT_DETALLE_MAXZOOM, SAT_MAPBO
 
 export type TemaMapa = 'night' | 'day' | 'sat';
 
+/** Estilo "Liberty" de OpenFreeMap (nombres, íconos de lugares, edificios, escudos de ruta), servido por nuestro propio dominio */
+export const ESTILO_LIBERTY = () => `${typeof location !== 'undefined' ? location.origin : ''}/mapa-ofm/styles/liberty`;
+/** El mapa Día usa Liberty; Noche y Satélite siguen con nuestros estilos. Con relieve se usa el propio (trae la fuente de elevación). */
+export const estiloMapa = (t: TemaMapa, relieve: boolean): StyleSpecification | string => (t === 'day' && !relieve ? ESTILO_LIBERTY() : buildStyle(t, relieve));
+
 export const F_REG = ['Noto Sans Regular'], F_BOLD = ['Noto Sans Bold'];
 export const W = (pairs: Array<number>): any[] => ['interpolate', ['exponential', 1.6], ['zoom'], ...pairs];
 const isCls = (list: string[]) => ['match', ['get', 'class'], list, true, false];

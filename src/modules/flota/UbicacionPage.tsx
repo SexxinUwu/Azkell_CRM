@@ -441,7 +441,7 @@ export function UbicacionPage() {
                     {seleccion ? (
                     <PanelHistorial placa={seleccion.placa} horas={horas} analisis={analisis} tramos={tramos} viajeSel={viajeSel} onViaje={setViajeSel}
                       onHoras={setHoras} dia={dia} onDia={d => { setDia(d); setDesde(null); setHasta(null); }} desde={desde} hasta={hasta} onRango={(a, b) => { setDesde(a); setHasta(b); setDia(null); }} onIrA={(lat, lng) => motor?.irA(lat, lng)} historial={historial} cargando={historialQ.isFetching && !historial}
-                      error={errorHistorial} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
+                      error={errorHistorial} progreso={historialQ.progreso} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
                       reproduciendo={reproduciendo} onReproducir={() => setReproduciendo(r => !r)}
                       onReiniciar={() => { setIndice(0); setReproduciendo(false); }}
                       velocidad={velocidad} onVelocidad={setVelocidad}

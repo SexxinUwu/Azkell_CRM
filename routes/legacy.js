@@ -68,6 +68,20 @@ async function valorSensorUltimo(baseUrl, sid, unitId, sensor) {
     } catch (e) { /* sin lectura */ }
     return null;
 }
+// Sesión de Wialon que se reutiliza entre consultas seguidas del historial: se renueva sola a los 3 minutos sin uso o si Wialon la rechaza
+const sesionHistorial = { sid: null, clave: '', uso: 0 };
+async function sidHistorial(baseUrl, token, nueva) {
+    const clave = baseUrl + '|' + token;
+    if (!nueva && sesionHistorial.sid && sesionHistorial.clave === clave && Date.now() - sesionHistorial.uso < 3 * 60 * 1000) {
+        sesionHistorial.uso = Date.now();
+        return sesionHistorial.sid;
+    }
+    const login = await (await fetch(`${baseUrl}?svc=token/login&params=${encodeURIComponent(JSON.stringify({ token }))}`)).json();
+    if (!login || !login.eid) { sesionHistorial.sid = null; return null; }
+    sesionHistorial.sid = login.eid; sesionHistorial.clave = clave; sesionHistorial.uso = Date.now();
+    return login.eid;
+}
+
 async function elegirSensorValido(baseUrl, sid, unitId, sens) {
     const c = candidatosCombustible(sens);
     for (const sensor of c) {
@@ -1811,10 +1825,13 @@ router.post('/:metodo', async (req, res) => {
             const [token, baseUrl] = await Promise.all([obtenerToken(), obtenerUrl()]);
             if (!token) return res.json({ data: { error: 'Token Wialon no configurado.' } });
 
-            const loginRes = await fetch(`${baseUrl}?svc=token/login&params=${encodeURIComponent(JSON.stringify({token}))}`);
-            const loginData = await loginRes.json();
-            if (!loginData || !loginData.eid) return res.json({ data: { error: 'No se pudo iniciar sesión con Wialon.' } });
-            const sid = loginData.eid;
+            let sid = await sidHistorial(baseUrl, token);
+            if (!sid) return res.json({ data: { error: 'No se pudo iniciar sesión con Wialon.' } });
+            // Si la sesión guardada ya no sirve (Wialon responde error 1), se inicia una nueva
+            try {
+                const prueba = await (await fetch(`${baseUrl}?svc=core/search_item&params=${encodeURIComponent(JSON.stringify({ id: targetUnitId || 0, flags: 1 }))}&sid=${sid}`)).json();
+                if (prueba && prueba.error === 1) { sid = await sidHistorial(baseUrl, token, true); if (!sid) return res.json({ data: { error: 'No se pudo iniciar sesión con Wialon.' } }); }
+            } catch (e) { /* si falla la prueba, se intenta con la sesión que hay */ }
 
             // Si no tenemos unitId, buscar por placa
             if (!targetUnitId && placaParam) {
@@ -1827,7 +1844,6 @@ router.post('/:metodo', async (req, res) => {
             }
 
             if (!targetUnitId) {
-                fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(()=>{});
                 return res.json({ data: { error: `No se encontró la unidad satelital para la placa ${placaParam}.` } });
             }
 
@@ -1861,9 +1877,9 @@ router.post('/:metodo', async (req, res) => {
             if (!completo) {
                 rawMessages = await cargarVentana(fromSec, toSec, 2000);
             } else {
-                // Ventanas de 2 h (6 h si el rango pasa de 72 h) con tope de 5000 mensajes; si una ventana se satura se parte a la mitad (hasta 6 niveles).
+                // Ventanas de 6 h con tope de 5000 mensajes; si una ventana se satura se parte a la mitad (hasta 6 niveles).
                 // Topes de seguridad: 80 consultas, 150000 mensajes y 45 s.
-                const LOTE = 5000, VENTANA = (toSec - fromSec > 72 * 3600 ? 6 : 2) * 3600, MAX_LLAMADAS = 80, MAX_MENSAJES = 150000;
+                const LOTE = 5000, VENTANA = 6 * 3600, MAX_LLAMADAS = 80, MAX_MENSAJES = 150000;
                 const limite = Date.now() + 45000;
                 let llamadas = 0;
                 const cargar = async (desde, hasta, prof) => {
@@ -1885,7 +1901,7 @@ router.post('/:metodo', async (req, res) => {
                     await cargar(a, Math.min(a + VENTANA, toSec), 0);
                 }
             }
-            fetch(`${baseUrl}?svc=core/logout&params=%7B%7D&sid=${sid}`).catch(()=>{});
+            // La sesión no se cierra: la siguiente consulta del historial la reutiliza (vence sola a los 3 minutos)
 
             // Helper de distancia Haversine (km)
             const calcDist = (lat1, lon1, lat2, lon2) => {

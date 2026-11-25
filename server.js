@@ -69,7 +69,7 @@ app.use(require('helmet')({
 // Este puente pide las mismas teselas y tipografías y las entrega desde nuestro dominio. Solo habla con OpenFreeMap (ruta fija, sin
 // dirección elegida por quien llama) y no lleva datos de la empresa.
 const OFM = 'https://tiles.openfreemap.org';
-const OFM_RUTA = /^(planet\/[0-9A-Za-z_.-]+\/\d{1,2}\/\d{1,7}\/\d{1,7}\.pbf|fonts\/[0-9A-Za-z%_. -]+\/\d{1,6}-\d{1,6}\.pbf)$/;
+const OFM_RUTA = /^(planet\/[0-9A-Za-z_.-]+\/\d{1,2}\/\d{1,7}\/\d{1,7}\.pbf|fonts\/[0-9A-Za-z%_. -]+\/\d{1,6}-\d{1,6}\.pbf|sprites\/[0-9A-Za-z_.-]+\/[0-9A-Za-z_.@-]+\.(?:json|png)|natural_earth\/[0-9A-Za-z_-]+\/\d{1,2}\/\d{1,7}\/\d{1,7}\.(?:png|jpg|jpeg))$/;
 let ofmTileJson = { en: 0, json: null };
 app.get('/mapa-ofm/planet', async (req, res) => {
     try {
@@ -82,6 +82,26 @@ app.get('/mapa-ofm/planet', async (req, res) => {
         const json = { ...ofmTileJson.json, tiles: (ofmTileJson.json.tiles || []).map(u => String(u).replace(OFM, base)) };
         res.set('Cache-Control', 'public, max-age=3600').json(json);
     } catch (err) { res.status(502).json({ error: 'No se pudo obtener el mapa base' }); }
+});
+// Estilo "Liberty" de OpenFreeMap (calles, nombres, íconos de lugares): se entrega con las direcciones reescritas a este mismo dominio
+let ofmLiberty = { en: 0, json: null };
+app.get('/mapa-ofm/styles/liberty', async (req, res) => {
+    try {
+        if (!ofmLiberty.json || Date.now() - ofmLiberty.en > 6 * 3600 * 1000) {
+            const r = await fetch(OFM + '/styles/liberty', { signal: AbortSignal.timeout(15000) });
+            if (!r.ok) throw new Error('OpenFreeMap respondió ' + r.status);
+            ofmLiberty = { en: Date.now(), json: await r.json() };
+        }
+        const base = (req.headers['x-forwarded-proto'] || req.protocol) + '://' + req.get('host') + '/mapa-ofm';
+        const estilo = JSON.parse(JSON.stringify(ofmLiberty.json));
+        estilo.glyphs = base + '/fonts/{fontstack}/{range}.pbf';
+        if (estilo.sprite) estilo.sprite = String(estilo.sprite).replace(OFM, base);
+        for (const fuente of Object.values(estilo.sources || {})) {
+            if (fuente.type === 'vector') { delete fuente.url; fuente.url = base + '/planet'; }
+            if (Array.isArray(fuente.tiles)) fuente.tiles = fuente.tiles.map(u => String(u).replace(OFM, base));
+        }
+        res.set('Cache-Control', 'public, max-age=3600').json(estilo);
+    } catch (err) { res.status(502).json({ error: 'No se pudo obtener el estilo del mapa' }); }
 });
 app.get(/^\/mapa-ofm\/(.+)$/, async (req, res) => {
     const ruta = String(req.params[0] || '');
