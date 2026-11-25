@@ -34,21 +34,22 @@ const KPIS: Array<{ filtro: FiltroEstado; etiqueta: string; sub: string; icono: 
   { filtro: 'TODOS', etiqueta: 'Total órdenes', sub: 'Del filtro seleccionado', icono: <FileText size={18} /> },
   { filtro: 'PENDIENTE', etiqueta: 'Pendientes', sub: 'Sin recibir nada', icono: <Clock size={18} />, tono: 'warning' },
   { filtro: 'PARCIAL', etiqueta: 'En recepción', sub: 'Entregas incompletas', icono: <Hourglass size={18} />, tono: 'warning' },
-  { filtro: 'COMPLETO', etiqueta: 'Finalizadas', sub: 'Recibidas por completo', icono: <CircleCheck size={18} />, tono: 'ok' },
+  { filtro: 'COMPLETO', etiqueta: 'Recepcionadas', sub: 'Recibidas por completo', icono: <CircleCheck size={18} />, tono: 'ok' },
 ];
-const ETIQUETA_FILTRO: Record<FiltroEstado, string> = { TODOS: 'Todas', PENDIENTE: 'Pendientes', PARCIAL: 'En recepción', COMPLETO: 'Finalizadas' };
+const ETIQUETA_FILTRO: Record<FiltroEstado, string> = { TODOS: 'Todas', PENDIENTE: 'Pendientes', PARCIAL: 'En recepción', COMPLETO: 'Recepcionadas' };
 
 const TABLA_QUERY = '(min-width: 768px)';
 const COLUMNAS: ColumnaTabla[] = [
   { id: 'acciones', titulo: 'Acciones', ancho: 96, minimo: 84, alinear: 'center' },
   { id: 'fecha', titulo: 'Fecha', ancho: 110 },
   { id: 'orden', titulo: 'Orden de compra', ancho: 140 },
-  { id: 'estado', titulo: 'Recepción', ancho: 116, alinear: 'center' },
+  { id: 'avance', titulo: 'Recibido', ancho: 150 },
+  { id: 'estado', titulo: 'Recepción', ancho: 128, alinear: 'center' },
   { id: 'proveedor', titulo: 'Proveedor', ancho: 240 },
   { id: 'solicitante', titulo: 'Solicitante', ancho: 150 },
   { id: 'condicion', titulo: 'Condición', ancho: 120 },
+  { id: 'pago', titulo: 'Pago', ancho: 170 },
   { id: 'importe', titulo: 'Importe', ancho: 130, alinear: 'right' },
-  { id: 'avance', titulo: 'Avance', ancho: 150 },
   { id: 'sustentos', titulo: 'Evidencias', ancho: 130, alinear: 'center' },
 ];
 const COLUMNAS_ART: ColumnaTabla[] = [
@@ -64,7 +65,7 @@ const COLUMNAS_ART: ColumnaTabla[] = [
   { id: 'pendiente', titulo: 'Pendiente', ancho: 96, alinear: 'right' },
 ];
 const TONO_ESTADO: Record<string, Tono> = { PENDIENTE: 'red', PARCIAL: 'amber', COMPLETO: 'green' };
-const ETIQUETA_ESTADO: Record<string, string> = { PENDIENTE: 'Pendiente', PARCIAL: 'Parcial', COMPLETO: 'Completo' };
+const ETIQUETA_ESTADO: Record<string, string> = { PENDIENTE: 'Pendiente', PARCIAL: 'Parcial', COMPLETO: 'Recepcionado' };
 /** Evidencias de una OC: cuántos archivos tienen en total sus entregas */
 const totalEvidencias = (oc: RecepcionOC) => oc.historial_recepciones.reduce((s, h, i, a) => (a.findIndex(x => x.recepcion_id === h.recepcion_id) === i ? s + (h.sustentos?.length ?? (h.sustento_url_presigned ? 1 : 0)) : s), 0);
 
@@ -72,15 +73,23 @@ const fmt = (n: number) => (n % 1 === 0 ? String(n) : n.toFixed(2));
 const esCredito = (c: string | null | undefined) => /cr[eé]dito/i.test(c ?? '');
 const condicionTexto = (oc: RecepcionOC) =>
   esCredito(oc.condicion_pago) ? `Crédito${oc.dias_credito ? ` (${oc.dias_credito} días)` : ''}` : 'Contado';
-const estadoOcTexto = (e: string | null | undefined) => {
-  const s = String(e || 'REGISTRADO').toUpperCase();
-  return s === 'PROCESADA' ? 'PROCESADO' : s;
-};
 /** La fecha de la O/C llega del servidor ya formateada: si no se puede leer, se muestra tal cual (como el clásico) */
 const fechaTexto = (f: string | null | undefined) => {
   const t = formatFechaPe(f);
   return t === '—' && f ? f : t;
 };
+/** Lo que falta pagar: una orden aún no procesada (a crédito aprobada) debe su importe; una procesada ya está pagada */
+const estaPagada = (oc: RecepcionOC) => ['PROCESADO', 'PROCESADA', 'PAGADO', 'PAGADA'].includes(String(oc.estado_oc || '').toUpperCase());
+function PagoCelda({ oc }: { oc: RecepcionOC }) {
+  if (estaPagada(oc)) return <Badge tone="green">Pagada</Badge>;
+  const imp = importeOC(oc);
+  return (
+    <span className="rec-pago">
+      <Badge tone="amber">{`Por pagar ${imp.principal}`}</Badge>
+      {esCredito(oc.condicion_pago) && oc.dias_credito ? <small>A crédito · {oc.dias_credito} días</small> : null}
+    </span>
+  );
+}
 const avance = (oc: RecepcionOC) => ({
   rec: oc.total_recibido,
   ped: oc.total_pedido,
@@ -240,7 +249,7 @@ export function RecepcionComprasPage() {
               <button type="button" className="placas-limpiar" onClick={quitarFiltros}>Quitar filtros</button>
             </EmptyState>
           ) : esTabla && vista === 'ordenes' ? (
-            <TablaRedimensionable id="almacen-recepciones" columnas={COLUMNAS} ariaLabel="Recepción de compras" altoMax="68vh">
+            <TablaRedimensionable id="almacen-recepciones" columnas={COLUMNAS} ariaLabel="Recepción de compras" altoMax="68vh" className="rec-tabla">
               {visibles.map(oc => {
                 const tono = TONO_ESTADO[oc.estado_recepcion] ?? 'amber';
                 const av = avance(oc);
@@ -251,24 +260,25 @@ export function RecepcionComprasPage() {
                     <Celda alinear="center"><AccionesFila oc={oc} puedeRecibir={puedeRecibir} onVer={verDetalle} onRecepcionar={recepcionar} /></Celda>
                     <Celda>{fechaTexto(oc.fecha)}</Celda>
                     <Celda><button type="button" className="rec-codigo" onClick={() => verDetalle(oc.id)}>{String(oc.id)}</button></Celda>
-                    <Celda alinear="center"><span className={`rec-estado rec-estado--${tono}`}>{ETIQUETA_ESTADO[oc.estado_recepcion] ?? oc.estado_recepcion}</span></Celda>
-                    <Celda>{oc.proveedor}</Celda>
-                    <Celda>{oc.solicitante}</Celda>
-                    <Celda><Badge tone={esCredito(oc.condicion_pago) ? 'accent' : 'green'}>{condicionTexto(oc)}</Badge></Celda>
-                    <Celda alinear="right"><strong>{imp.principal}</strong></Celda>
                     <Celda>
                       <div className="rec-avance">
                         <span className="rec-avance__barra" aria-hidden><span style={{ width: `${av.pct}%` }} /></span>
                         <span className="rec-avance__texto" style={{ color: `var(--${tono}-ink)` }}>{fmt(av.rec)} / {fmt(av.ped)}</span>
                       </div>
                     </Celda>
+                    <Celda alinear="center"><span className={`rec-estado rec-estado--${tono}`}>{ETIQUETA_ESTADO[oc.estado_recepcion] ?? oc.estado_recepcion}</span></Celda>
+                    <Celda>{oc.proveedor}</Celda>
+                    <Celda>{oc.solicitante}</Celda>
+                    <Celda><Badge tone={esCredito(oc.condicion_pago) ? 'accent' : 'green'}>{condicionTexto(oc)}</Badge></Celda>
+                    <Celda><PagoCelda oc={oc} /></Celda>
+                    <Celda alinear="right"><strong>{imp.principal}</strong></Celda>
                     <Celda alinear="center">{ev > 0 ? <span className="rec-sustento"><ImageIcon size={13} /> {ev}</span> : <span className="rec-sustento rec-sustento--sin">{av.rec > 0 ? 'Sin archivos' : '—'}</span>}</Celda>
                   </tr>
                 );
               })}
             </TablaRedimensionable>
           ) : esTabla ? (
-            <TablaRedimensionable id="almacen-recepciones-articulos" columnas={COLUMNAS_ART} ariaLabel="Recepción de compras por artículo" altoMax="68vh">
+            <TablaRedimensionable id="almacen-recepciones-articulos" columnas={COLUMNAS_ART} ariaLabel="Recepción de compras por artículo" altoMax="68vh" className="rec-tabla">
               {filasArticulo.map(({ oc, it, k }) => {
                 const tono = TONO_ESTADO[oc.estado_recepcion] ?? 'amber';
                 return (
@@ -345,7 +355,7 @@ function FilaOC({ oc, puedeRecibir, onAbrir, onRecepcionar }: {
           <span className="rec-fila__sub">{oc.solicitante} · {fechaTexto(oc.fecha)}</span>
           <span className="rec-fila__etiquetas">
             <Badge tone={esCredito(oc.condicion_pago) ? 'accent' : 'green'}>{condicionTexto(oc)}</Badge>
-            <Badge>{estadoOcTexto(oc.estado_oc)}</Badge>
+            {estaPagada(oc) ? <Badge tone="green">Pagada</Badge> : <Badge tone="amber">{`Por pagar ${importeOC(oc).principal}`}</Badge>}
           </span>
         </span>
       </button>

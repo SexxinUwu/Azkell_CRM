@@ -1707,6 +1707,22 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                         });
                     }
                 } catch (eNc) { console.error('[entradas nc_aplicadas]', eNc.message); }
+                // Avance de recepción de cada orden: lo pedido de artículos a recibir (los servicios no se recepcionan, salvo el reencauche)
+                try {
+                    const ids = signedRows.map(r => r.id);
+                    const lineasReenc = new Set();
+                    if (ids.length) {
+                        try {
+                            const [rr] = await (typeof tdb.promise === 'function' ? tdb.promise() : tdb).query('SELECT DISTINCT oc_id, inventario_id FROM neumaticos_reencauche_oc WHERE oc_id IN (?)', [ids]);
+                            rr.forEach(x => lineasReenc.add(`${x.oc_id}|${x.inventario_id}`));
+                        } catch (eR) { /* sin órdenes de reencauche */ }
+                    }
+                    signedRows.forEach(r => {
+                        const aRecibir = (r.items || []).filter(it => !esLineaServicio(it.inventario_id) || lineasReenc.has(`${r.id}|${it.inventario_id}`));
+                        r.recepcion_pedido = aRecibir.reduce((s, it) => s + (parseFloat(it.cantidad) || 0), 0);
+                        r.recepcion_recibido = parseFloat(r.total_recibido) || 0;
+                    });
+                } catch (eRec) { console.error('[entradas recepcion]', eRec.message); }
                 res.json(signedRows);
             } catch (innerErr) {
                 console.error('[GET /api/almacen/entradas inner error]', innerErr);

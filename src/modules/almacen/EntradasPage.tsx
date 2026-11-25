@@ -16,6 +16,7 @@ import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { MenuOtros, type OpcionOtros } from '../../core/ui/MenuOtros';
 import { TablaRedimensionable, Celda, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
+import { LicensePlate } from '../../core/ui/LicensePlate';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -30,7 +31,7 @@ import {
   type EntradaInv, type ItemEntrada,
 } from './api';
 import {
-  categoriaEstado, codigoLimpio, descripcionArticulo, etiquetaEstado, esServicio, filtrarOrdenes, hoyLima, itemsVisibles, kpisOrdenes,
+  categoriaOrden, codigoLimpio, descripcionArticulo, etiquetaEstadoOrden, recepcionDe, textoAvance, esServicio, filtrarOrdenes, hoyLima, itemsVisibles, kpisOrdenes,
   cabeceraCoincide, estadoEditable, estadoPagable, esCredito, type FiltroEstado, type TonoEstado,
 } from './entradaReglas';
 import { EntradaFormulario } from './EntradaFormulario';
@@ -54,8 +55,9 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'fecha', titulo: 'Fecha', ancho: 110 },
   { id: 'tipo', titulo: 'Tipo de orden', ancho: 140 },
   { id: 'orden', titulo: 'Orden de compra', ancho: 130 },
-  { id: 'estado', titulo: 'Estado', ancho: 120, alinear: 'center' },
-  { id: 'placa', titulo: 'Placa', ancho: 96 },
+  { id: 'recepcion', titulo: 'Recepción', ancho: 104, alinear: 'center' },
+  { id: 'estado', titulo: 'Estado', ancho: 176, alinear: 'center' },
+  { id: 'placa', titulo: 'Placa', ancho: 120 },
   { id: 'motivo', titulo: 'Motivo', ancho: 180 },
   { id: 'proveedor', titulo: 'Proveedor', ancho: 210 },
   { id: 'codigo', titulo: 'Cód. art.', ancho: 104 },
@@ -72,11 +74,40 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'factura', titulo: 'Factura', ancho: 100, alinear: 'center' },
 ];
 
-const TONO_CLASE: Record<TonoEstado, string> = { gray: 'oc-estado--gris', green: 'oc-estado--verde', sky: 'oc-estado--azul', amber: 'badge--amber', red: 'badge--red' };
+const TONO_CLASE: Record<TonoEstado, string> = { gray: 'oc-estado--gris', green: 'oc-estado--verde', sky: 'oc-estado--azul', teal: 'oc-estado--turquesa', amber: 'badge--amber', red: 'badge--red' };
 
-function EstadoBadge({ estado }: { estado: string | null }) {
-  const e = etiquetaEstado(estado);
-  return <span className={`badge ${TONO_CLASE[e.tono]}`.trim()}>{e.texto}</span>;
+/** Lo que falta pagar de una orden ya aprobada (aún sin pagar), descontadas las notas de crédito aplicadas */
+function porPagarOrden(o: EntradaInv): number {
+  if (!estadoPagable(o.estado)) return 0;
+  return Math.max(0, Math.round((totalOrden(o) - (Number(o.nc_aplicado) || 0)) * 100) / 100);
+}
+
+/** Aviso bajo el estado cuando la orden es a crédito y todavía hay saldo: la recepción puede ir por delante del pago */
+function avisoPago(o: EntradaInv): string | null {
+  const por = porPagarOrden(o);
+  if (por <= 0 || !esCredito(o.condicion_pago)) return null;
+  const moneda = o.moneda === 'USD' ? 'USD' : 'PEN';
+  return `${recepcionDe(o).estado === 'COMPLETO' ? 'Recibida · ' : ''}Por pagar ${formatMoneda(por, moneda)}`;
+}
+
+function EstadoBadge({ orden }: { orden: EntradaInv }) {
+  const e = etiquetaEstadoOrden(orden);
+  const aviso = avisoPago(orden);
+  return (
+    <span className="oc-estado-celda">
+      <span className={`badge ${TONO_CLASE[e.tono]}`.trim()}>{e.texto}</span>
+      {aviso && <small className="oc-estado-celda__aviso">{aviso}</small>}
+    </span>
+  );
+}
+
+/** Avance de recepción «recibido/pedido» con color: 0 gris, parcial ámbar, completo verde */
+function RecepcionBadge({ orden }: { orden: EntradaInv }) {
+  const av = recepcionDe(orden);
+  if (av.estado === 'SIN_ITEMS') return <span className="c-secondary">—</span>;
+  const tono = av.estado === 'COMPLETO' ? 'verde' : av.estado === 'PARCIAL' ? 'ambar' : 'gris';
+  const tip = av.estado === 'COMPLETO' ? 'Recibido por completo' : av.estado === 'PARCIAL' ? 'Recepción parcial: falta recibir' : 'Aún no se recibe nada';
+  return <span className={`oc-recep oc-recep--${tono}`} title={tip}>{textoAvance(av)}</span>;
 }
 
 /** Mismo día del mes anterior (28/10 → 28/09); si el mes anterior es más corto, el último día de ese mes */
@@ -105,7 +136,8 @@ function textoColumna(id: string, o: EntradaInv, item: ItemEntrada | null, vista
     case 'fecha': return o.fecha ? formatFechaPe(String(o.fecha).split('T')[0]) : '—';
     case 'tipo': return esServicio(o.tipo_orden) ? 'ORDEN DE SERVICIO' : 'ORDEN DE COMPRA';
     case 'orden': return codigoLimpio(o.id);
-    case 'estado': return etiquetaEstado(o.estado).texto;
+    case 'recepcion': return textoAvance(recepcionDe(o));
+    case 'estado': return etiquetaEstadoOrden(o).texto;
     case 'placa': return o.placa || '—';
     case 'motivo': return o.motivo_entrada || '—';
     case 'proveedor': return o.proveedor_nombre || '—';
@@ -130,7 +162,7 @@ function textoColumna(id: string, o: EntradaInv, item: ItemEntrada | null, vista
 /** Cómo se dibuja cada columna (letra, negrita, chips) y hasta dónde puede crecer */
 const ESPEC_COLUMNA: Record<string, { mono?: boolean; bold?: boolean; px?: number; extra?: number; max?: number }> = {
   fecha: {}, tipo: { bold: true, px: 11, extra: 20, max: 190 }, orden: { mono: true, bold: true, px: 15, max: 170 },
-  estado: { bold: true, px: 11, extra: 26, max: 160 }, placa: { mono: true, max: 120 }, motivo: { max: 480 }, proveedor: { max: 420 },
+  recepcion: { bold: true, px: 11, extra: 24, max: 120 }, estado: { bold: true, px: 11, extra: 26, max: 160 }, placa: { mono: true, max: 120 }, motivo: { max: 480 }, proveedor: { max: 420 },
   codigo: { mono: true, max: 160 }, articulo: { max: 520 }, cant: { max: 120 }, costo: { max: 150 },
   total_oc: { bold: true, max: 170 }, total_soles: { bold: true, max: 170 }, nc: { bold: true, max: 170 }, pagado: { bold: true, max: 170 },
   cc: { mono: true, px: 11, extra: 20, max: 150 },
@@ -185,8 +217,9 @@ function FilaOC({ orden: o, item, vista, ...acciones }: FilaProps) {
     <Celda key="fecha">{fecha}</Celda>,
     <Celda key="tipo"><span className="oc-chip">{tipo}</span></Celda>,
     <Celda key="orden"><button type="button" className="oc-codigo" onClick={() => acciones.onVer(o)} title="Ver detalle">{codigo}</button></Celda>,
-    <Celda key="estado" alinear="center"><EstadoBadge estado={o.estado} /></Celda>,
-    <Celda key="placa" mono>{o.placa || '—'}</Celda>,
+    <Celda key="recepcion" alinear="center"><RecepcionBadge orden={o} /></Celda>,
+    <Celda key="estado" alinear="center"><EstadoBadge orden={o} /></Celda>,
+    <Celda key="placa">{o.placa ? <LicensePlate plate={o.placa} size="sm" /> : <span className="c-secondary">—</span>}</Celda>,
     <Celda key="motivo">{o.motivo_entrada || '—'}</Celda>,
     <Celda key="prov">{o.proveedor_nombre || '—'}</Celda>,
   ];
@@ -288,12 +321,13 @@ export function EntradasPage() {
   );
   const kpis = useMemo(() => kpisOrdenes(visibles), [visibles]);
   const conteo = useMemo(() => {
-    const c = { registradas: 0, aprobadas: 0, procesadas: 0, anuladas: 0 };
+    const c = { registradas: 0, aprobadas: 0, procesadas: 0, recepcionadas: 0, anuladas: 0 };
     for (const o of entradas) {
-      const cat = categoriaEstado(o.estado);
+      const cat = categoriaOrden(o);
       if (cat === 'registradas') c.registradas++;
       else if (cat === 'aprobadas') c.aprobadas++;
       else if (cat === 'procesadas') c.procesadas++;
+      else if (cat === 'recepcionadas') c.recepcionadas++;
       else if (cat === 'anuladas') c.anuladas++;
     }
     return { ...c, todas: entradas.length };
@@ -324,7 +358,7 @@ export function EntradasPage() {
 
   /** Columnas con el ancho que cabe a su texto (como en Caja): una columna con texto largo es más ancha */
   const columnas = useMemo(() => COLUMNAS.map(c => {
-    if (['acciones', 'voucher', 'cotizacion', 'factura'].includes(c.id)) return c;
+    if (['acciones', 'voucher', 'cotizacion', 'factura', 'placa', 'estado', 'recepcion'].includes(c.id)) return c;
     const textos = filas.map(f => textoColumna(c.id, f.orden, f.item, vista));
     const esp = ESPEC_COLUMNA[c.id] ?? {};
     const ancho = anchoAjustado({ titulo: String(c.titulo), textos, min: c.minimo ?? 72, max: esp.max ?? 460, ...esp });
@@ -488,7 +522,7 @@ export function EntradasPage() {
               <GrupoFiltro titulo="Estado de la orden">
                 <ChoiceChips label="Estado de la orden" value={estado} onChange={v => setEstado(v as FiltroEstado)} options={[
                   { value: 'todas', label: `Todas (${conteo.todas})` }, { value: 'registradas', label: `Registradas (${conteo.registradas})` },
-                  { value: 'aprobadas', label: `Aprobadas (${conteo.aprobadas})` }, { value: 'procesadas', label: `Procesadas (${conteo.procesadas})` },
+                  { value: 'aprobadas', label: `Aprobadas (${conteo.aprobadas})` }, { value: 'procesadas', label: `Procesadas (${conteo.procesadas})` }, { value: 'recepcionadas', label: `Recepcionadas (${conteo.recepcionadas})` },
                   { value: 'anuladas', label: `Anuladas (${conteo.anuladas})` },
                 ]} />
               </GrupoFiltro>
@@ -503,7 +537,7 @@ export function EntradasPage() {
             </EmptyState>
           ) : esTabla ? (
             <>
-              <TablaRedimensionable id="almacen-ordenes-compra-v2" columnas={columnas} ariaLabel="Órdenes de compra" altoMax="68vh">
+              <TablaRedimensionable id="almacen-ordenes-compra-v2" columnas={columnas} ariaLabel="Órdenes de compra" altoMax="68vh" className="oc-tabla">
                 {filas.map(f => (
                   <FilaOC key={f.key} orden={f.orden} item={f.item} vista={vista} {...acciones} />
                 ))}
@@ -613,9 +647,10 @@ function TarjetaOrden({ orden: o, acciones }: { orden: EntradaInv; acciones: Acc
     <article className="oc-tarjeta-orden">
       <div className="oc-tarjeta-orden__cab">
         <button type="button" className="oc-codigo" onClick={() => acciones.onVer(o)}>{codigoLimpio(o.id)}</button>
-        <EstadoBadge estado={o.estado} />
+        <EstadoBadge orden={o} />
       </div>
       <div className="oc-chips">
+        <RecepcionBadge orden={o} />
         <span className="oc-chip">{tipo}</span>
         <span className="oc-chip oc-chip--mono">{o.centro_costo || 'CC-100'}</span>
         {o.placa && <span className="oc-chip oc-chip--mono">{o.placa}</span>}

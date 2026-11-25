@@ -341,3 +341,16 @@ table[aria-label="Órdenes de compra"] tbody tr:hover td { background: color-mix
 
 /* Nota de crédito aplicada al pago de una orden */
 .oc-nc { color: var(--green-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Estado «Recepcionada» (pagada y recibida por completo) */
+.oc-estado--turquesa { background: rgba(48, 176, 199, 0.18); color: #0a6f80; }
+.oc-estado-celda { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.oc-estado-celda__aviso { font-size: 0.6875rem; font-weight: 600; color: var(--amber-ink); white-space: nowrap; }
+/* Avance de recepción recibido/pedido */
+.oc-recep { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: var(--r-full); font-size: 0.75rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.oc-recep--gris { background: rgba(142, 142, 147, 0.18); color: #636366; }
+.oc-recep--ambar { background: var(--amber-tint); color: var(--amber-ink); }
+.oc-recep--verde { background: rgba(52, 199, 89, 0.16); color: #1e7b34; }
+/* Órdenes de compra: filas compactas */
+.oc-tabla tbody td { padding: 4px 10px; font-size: 0.8125rem; }
+.oc-tabla thead th { padding: 7px 10px; }

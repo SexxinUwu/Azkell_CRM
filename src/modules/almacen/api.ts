@@ -195,6 +195,9 @@ export interface EntradaInv {
   url_voucher_presigned?: string | null;
   total_recibido?: number;
   cant_recepciones?: number;
+  /** Avance de recepción: lo pedido de artículos a recibir y lo ya recibido (servicios aparte) */
+  recepcion_pedido?: number | null;
+  recepcion_recibido?: number | null;
 }
 
 /** Ítem tal como se envía al servidor */

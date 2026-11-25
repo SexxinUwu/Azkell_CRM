@@ -52,3 +52,9 @@
 .rec-sustento { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; color: #0a64d6; background: color-mix(in srgb, #007aff 12%, transparent); text-decoration: none; }
 .rec-sustento--sin { color: var(--label-3); background: var(--fill); font-weight: 500; }
 @media (max-width: 480px) { .evid__botones { grid-template-columns: 1fr; } }
+
+/* Recepción de compras: filas compactas y pago */
+.rec-tabla tbody td { padding: 4px 10px; font-size: 0.8125rem; }
+.rec-tabla thead th { padding: 7px 10px; }
+.rec-pago { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.rec-pago small { font-size: 0.6875rem; color: var(--label-2); }

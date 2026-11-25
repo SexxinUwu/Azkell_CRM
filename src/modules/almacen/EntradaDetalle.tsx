@@ -5,7 +5,7 @@ import { FilePdf, Pencil } from '../../core/ui/IconosArchivo';
 import { formatFechaHoraPe, formatFechaPe, formatMoneda } from '../../core/lib/format';
 import { type EntradaInv } from './api';
 import {
-  codigoLimpio, descripcionArticulo, desgloseIgv, esCredito, estadoPagable, etiquetaEstado, esServicio,
+  codigoLimpio, descripcionArticulo, desgloseIgv, esCredito, estadoPagable, etiquetaEstadoOrden, esServicio,
   numeroALetras, type TonoEstado,
 } from './entradaReglas';
 import { motivoDeSubMotivo } from './motivosCatalogo';
@@ -31,7 +31,7 @@ interface Props {
 export type EstadoPaso = 'hecho' | 'actual' | 'alerta' | 'rojo' | 'pendiente';
 
 const TONO_BADGE: Record<TonoEstado, string> = {
-  gray: 'oc-estado--gris', green: 'oc-estado--verde', sky: 'oc-estado--azul', amber: 'badge--amber', red: 'badge--red',
+  gray: 'oc-estado--gris', green: 'oc-estado--verde', sky: 'oc-estado--azul', teal: 'oc-estado--turquesa', amber: 'badge--amber', red: 'badge--red',
 };
 
 /** Saca la nota de gerencia de una observación: "[Nota Gerencia: texto]" → "texto" */
@@ -71,7 +71,7 @@ export function EntradaDetalle({
   const aprobador = aprobadoReal
     ? (e.aprobador_nombre || e.aprobado_por || e.autoriza || 'Gerencia')
     : (observado || anulado ? (e.aprobador_nombre || e.aprobado_por || '') : '—');
-  const etiqueta = etiquetaEstado(e.estado);
+  const etiqueta = etiquetaEstadoOrden(e);
 
   // Al contado: la orden se paga antes de recepcionar. A crédito: se recepciona con V°B° y el pago va después.
   const contado = !esCredito(e.condicion_pago);
