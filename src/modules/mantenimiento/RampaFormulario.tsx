@@ -16,7 +16,7 @@ import { api } from '../../core/api/client';
 import { usePlacas } from '../placas/api';
 import { useUnidadesGps } from '../flota/api';
 import { telemetriaDe } from '../flota/telemetriaPlaca';
-import { usePersonalNombres } from './OTEditar';
+import { usePersonalNombres, useOpcionesTecnico } from './OTEditar';
 import { AlertaInspeccionRampa } from './RampaInspeccion';
 import { formatoTrabajosRampa, parseTrabajosRampa, type TrabajoRampa } from './trabajosRampa';
 import {
@@ -91,6 +91,7 @@ export function RampaFormulario({ entrada, usuario, open, onClose, rampaInicial 
   const rampas = cat.data?.rampas ?? [];
   const situaciones = (cat.data?.situaciones ?? []).map(s => s.descripcion ?? s.nombre ?? '').filter(Boolean);
   const opcionesPersonal = (personal.data ?? []).map(n => ({ value: n, label: n }));
+  const { opciones: opcionesTecnico } = useOpcionesTecnico();
   // Una rampa admite varias unidades a la vez: solo se muestra cuántas tiene ahora (sin contar la que se está editando)
   const unidadesEnRampa = new Map<string, number>();
   for (const e of todas.data ?? []) {
@@ -183,7 +184,7 @@ export function RampaFormulario({ entrada, usuario, open, onClose, rampaInicial 
               {p => <TextInput {...p} value={t.desc} onChange={e => editarTrabajo(t.key, { desc: e.target.value })} placeholder="Motivo o trabajo a realizar" />}
             </Field>
             <Field label="Técnico">
-              {p => <Combobox {...p} options={opcionesPersonal} value={t.tecnico || null} onChange={v => editarTrabajo(t.key, { tecnico: v ?? '' })} placeholder="Seleccione técnico…" />}
+              {p => <Combobox {...p} options={opcionesTecnico} value={t.tecnico || null} onChange={v => editarTrabajo(t.key, { tecnico: v ?? '' })} placeholder="Técnico o taller externo…" />}
             </Field>
             <Button variant="plain" iconOnly icon={<Trash2 size={16} />} aria-label={`Quitar trabajo ${i + 1}`} title="Quitar trabajo"
               onClick={() => setTrabajos(prev => prev.filter(x => x.key !== t.key))} disabled={trabajos.length <= 1} />

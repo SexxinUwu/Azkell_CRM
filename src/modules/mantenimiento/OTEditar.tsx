@@ -8,6 +8,7 @@ import { Combobox } from '../../core/ui/Combobox';
 import { Notice } from '../../core/ui/Display';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
+import { useProveedores } from '../almacen/api';
 import { useCatalogosTaller, ejecutarAccionOT, otDetalles, otId, type MaterialSalida, type OrdenTrabajo } from './api';
 
 type ItemSolicitud = MaterialSalida['items'][number] & { inventario_id?: string | number | null };
@@ -34,6 +35,22 @@ export function usePersonalNombres() {
       ((Array.isArray(r) ? r : []) as { nombre?: string }[]).map(c => String(c.nombre ?? '').trim()).filter(Boolean)),
     staleTime: 5 * 60_000,
   });
+}
+
+/** Opciones del técnico de un trabajo: el personal propio y, al final, los talleres/proveedores externos marcados "(Externo)" */
+export function useOpcionesTecnico() {
+  const personal = usePersonalNombres();
+  const provs = useProveedores();
+  const propios = (personal.data ?? []).map(n => ({ value: n, label: n }));
+  const vistos = new Set(propios.map(o => o.value.toUpperCase()));
+  const externos = (provs.data ?? [])
+    .filter(p => String(p.estado ?? 'Activo').toLowerCase() !== 'inactivo')
+    .map(p => String(p.razon_social || p.nombre || '').trim().toUpperCase())
+    .filter((n, i, a) => n && a.indexOf(n) === i)
+    .map(n => `${n} (Externo)`)
+    .filter(n => !vistos.has(n.toUpperCase()))
+    .map(n => ({ value: n, label: n }));
+  return { opciones: [...propios, ...externos], cargando: personal.isLoading || provs.isLoading };
 }
 
 const sinNumero = (s: string) => s.replace(/^(?:\d+[.)-]?\s*)+/, '').trim();
@@ -89,6 +106,7 @@ export function EditarOTSheet({ ot, open, onClose }: { ot: OrdenTrabajo; open: b
   }, [open, ot]);
 
   const opcionesPersonal = (personal.data ?? []).map(n => ({ value: n, label: n }));
+  const { opciones: opcionesTecnico } = useOpcionesTecnico();
   const situaciones = (catalogos.data?.situaciones ?? [])
     .map(s => String(s.descripcion ?? s.nombre ?? '').trim()).filter(Boolean);
   const listaSituaciones = situacion && !situaciones.includes(situacion) ? [...situaciones, situacion] : situaciones;
@@ -114,7 +132,7 @@ export function EditarOTSheet({ ot, open, onClose }: { ot: OrdenTrabajo; open: b
       if (!desc) continue;
       tareasFinales.push(desc);
       trabajosDet.push({ desc, tecnico: f.tecnico });
-      if (f.tecnico && !tecnicosFinales.includes(f.tecnico)) tecnicosFinales.push(f.tecnico);
+      if (f.tecnico && !/(Externo)$/i.test(f.tecnico) && !tecnicosFinales.includes(f.tecnico)) tecnicosFinales.push(f.tecnico);
     }
     const kmNum = km.trim() === '' ? null : Number(km);
     if (kmNum !== null && (!Number.isFinite(kmNum) || kmNum < 0)) { toast('Ingresa un kilometraje válido.', 'error'); return; }
@@ -189,7 +207,7 @@ export function EditarOTSheet({ ot, open, onClose }: { ot: OrdenTrabajo; open: b
                 {p => <TextInput {...p} value={f.desc} placeholder="DESCRIPCIÓN DEL TRABAJO…" onChange={e => editarFila(f.key, { desc: e.target.value })} />}
               </Field>
               <Field label="Técnico">
-                {p => <Combobox {...p} enHoja compacta tituloHoja={`Técnico · trabajo ${idx + 1}`} options={opcionesPersonal} value={f.tecnico || null} onChange={v => editarFila(f.key, { tecnico: v ?? '' })} placeholder="Seleccione técnico…" />}
+                {p => <Combobox {...p} enHoja compacta tituloHoja={`Técnico · trabajo ${idx + 1}`} options={opcionesTecnico} value={f.tecnico || null} onChange={v => editarFila(f.key, { tecnico: v ?? '' })} placeholder="Técnico o taller externo…" />}
               </Field>
               <Button variant="plain" iconOnly icon={<Trash2 size={16} />} aria-label={`Quitar trabajo ${idx + 1}`} title="Quitar trabajo"
                 onClick={() => setFilas(prev => prev.filter(x => x.key !== f.key))} disabled={filas.length <= 1} />
