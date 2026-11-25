@@ -26,6 +26,7 @@ import { ejecutarRegreso, tituloLlanta, useTablero, usePlacasLista, vidaTexto } 
 import { createPortal } from 'react-dom';
 import { LlantaPlano, LlantaTile, RemanenteChip, VidaChip, aLlantaDato, remanenteMinimo } from './ntb-llanta';
 import { LineaTiempo } from './ntb-linea-tiempo';
+import { Sheet } from '../../core/ui/Sheet';
 import { MovimientoSheet, type Propuesta } from './ntb-movimiento-sheet';
 import './ntb.css';
 
@@ -98,6 +99,8 @@ export function NeumaticosTablero() {
   // Lo último que se envió a reforma o descarte: durante unos minutos se puede deshacer desde un aviso
   const [ultimoEnvio, setUltimoEnvio] = useState<{ codigo: string; posicion: string; km: number; destino: 'reforma' | 'descarte'; venceEn: number } | null>(null);
   const [deshaciendo, setDeshaciendo] = useState(false);
+  // Historial completo de una llanta (el panel del tablero solo muestra lo último)
+  const [historial, setHistorial] = useState<string | null>(null);
   // Lo rellena el lienzo 3D de la unidad con la posición que hay bajo un punto (si la vista es 3D)
   const sondaRef = useRef<SondaPosicion | null>(null);
 
@@ -454,6 +457,7 @@ export function NeumaticosTablero() {
           </div>
 
           {/* Detalle y línea de tiempo */}
+          <div className="ntb-detalle-col">
           <aside className="card ntb-col ntb-detalle" aria-label="Detalles de neumático">
             <div className="ntb-col__cab">
               <h2 className="ntb-col__titulo">Detalles de neumático</h2>
@@ -538,10 +542,11 @@ export function NeumaticosTablero() {
                 {detalle.grupo === 'reforma' && <p className="ntb-det__ayuda">Vida {vidaTexto(detalle.llanta.vida)} en reencauche.</p>}
 
                 <h3 className="ntb-det__subtitulo">Línea de tiempo</h3>
-                <LineaTiempo codigo={detalle.llanta.codigo} />
+                <LineaTiempo codigo={detalle.llanta.codigo} limite={2} onVerTodo={() => setHistorial(detalle.llanta.codigo)} />
               </>
             )}
           </aside>
+          </div>
         </div>
       )}
 
@@ -552,6 +557,10 @@ export function NeumaticosTablero() {
         </div>,
         document.body,
       )}
+
+      <Sheet open={!!historial} onClose={() => setHistorial(null)} title={`Historial de ${historial ?? ''}`}>
+        {historial && <LineaTiempo codigo={historial} />}
+      </Sheet>
 
       {hoja.propuesta && (
         <MovimientoSheet
