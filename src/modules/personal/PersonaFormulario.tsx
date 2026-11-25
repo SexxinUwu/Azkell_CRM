@@ -12,7 +12,7 @@ import { errorMessage } from '../../core/api/client';
 import { spring } from '../../core/lib/motion';
 import { haptic } from '../../core/lib/haptics';
 import {
-  ASIGNACION_FAMILIAR, CENTRO_POR_AREA, comprimirFoto, datosPorDni, finDeContrato, guardarPersona, nombreCompleto, nuevaPersona, OPCIONES, type Persona,
+  ASIGNACION_FAMILIAR, comprimirFoto, datosPorDni, finDeContrato, guardarPersona, nombreCompleto, nuevaPersona, OPCIONES, type Persona,
 } from './api';
 import { FotoPersona } from './FotoPersona';
 import { formatSoles } from '../../core/lib/format';
@@ -283,10 +283,9 @@ export function PersonaFormulario({ open, persona, existentes, onClose, onGuarda
               <section className="form-section">
                 <h3 className="form-section__title">Puesto</h3>
                 <div className="form-grid">
-                  {texto('cargo', 'Cargo', { wide: true, mayus: true, max: 100, placeholder: 'CONDUCTOR DE TRACTO' })}
-                  {lista('area', 'Área', OPCIONES.area, { onChange: a => CENTRO_POR_AREA[a] && set('centro_costo_codigo', CENTRO_POR_AREA[a]) })}
+                  {texto('cargo', 'Cargo', { wide: true, mayus: true, max: 100, placeholder: 'CONDUCTOR' })}
+                  {lista('area', 'Área', OPCIONES.area)}
                   {lista('categoria_rol', 'Rol', OPCIONES.rol)}
-                  {lista('centro_costo_codigo', 'Centro de costos', OPCIONES.centroCosto)}
                   {texto('sede', 'Sede o base', { mayus: true, max: 100 })}
                   {texto('jefe_inmediato', 'Jefe inmediato', { mayus: true, max: 100 })}
                   {lista('estado', 'Estado', OPCIONES.estado)}
@@ -336,6 +335,7 @@ export function PersonaFormulario({ open, persona, existentes, onClose, onGuarda
                 <section className="form-section">
                   <h3 className="form-section__title">Pensión y bancos</h3>
                   <div className="form-grid">
+                    {lista('regimen_laboral', 'Régimen laboral', OPCIONES.regimenLaboral, { vacio: 'Sin dato' })}
                     {lista('regimen_pensionario', 'Régimen pensionario', OPCIONES.regimen)}
                     {p.regimen_pensionario.startsWith('AFP') && lista('tipo_comision_afp', 'Comisión AFP', OPCIONES.comisionAfp)}
                     {p.regimen_pensionario.startsWith('AFP') && texto('cuspp', 'CUSPP', { mono: true, mayus: true, max: 30 })}
@@ -368,6 +368,7 @@ export function PersonaFormulario({ open, persona, existentes, onClose, onGuarda
                   <div className="form-grid">
                     {texto('licencia_conducir', 'N° de brevete', { mono: true, mayus: true, max: 30, placeholder: 'Q12345678' })}
                     {lista('licencia_categoria', 'Categoría', OPCIONES.categoriaLicencia, { vacio: 'Sin brevete' })}
+                    {lista('licencia_categoria_2', 'Segunda categoría', OPCIONES.categoriaLicencia, { vacio: 'Ninguna' })}
                     {fecha('licencia_vencimiento', 'Vence el brevete')}
                   </div>
                 </section>

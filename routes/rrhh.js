@@ -158,6 +158,13 @@ router.get('/personal/:id', async (req, res) => {
 // Guardar nuevo colaborador
 // El personal que es conductor también debe existir en la tabla de conductores (Operaciones: viajes, vales, papeletas y el portal
 // se apoyan en ella). Se enlaza por DNI y se mantiene al día cada vez que se guarda la persona en RRHH.
+/** Régimen laboral y segunda categoría de la licencia. Se guardan aparte: si la empresa aún no tiene esas columnas, se omiten sin romper el guardado. */
+async function guardarExtrasPersonal(tdb, id, b) {
+    try {
+        await tdb.query('UPDATE rrhh_personal SET regimen_laboral = ?, licencia_categoria_2 = ? WHERE id = ?', [b.regimen_laboral || null, b.licencia_categoria_2 || null, id]);
+    } catch (e) { if (e && e.code !== 'ER_BAD_FIELD_ERROR') console.warn('rrhh: extras del personal:', e.message); }
+}
+
 async function sincronizarConductor(tdb, id) {
     try {
         const [filas] = await tdb.query('SELECT * FROM rrhh_personal WHERE id = ?', [id]);
@@ -216,14 +223,14 @@ router.post('/personal', upload.single('foto'), async (req, res) => {
                 nacionalidad, estado_civil, direccion, distrito, provincia, departamento,
                 telefono, email, contacto_emergencia_nombre, contacto_emergencia_parentesco,
                 contacto_emergencia_telefono, categoria_rol, cargo, area, sede,
-                centro_costo_codigo, jefe_inmediato, fecha_ingreso, fecha_cese, estado,
+                jefe_inmediato, fecha_ingreso, fecha_cese, estado,
                 tipo_contrato, fecha_inicio_contrato, fecha_fin_contrato, regimen_pensionario,
                 tipo_comision_afp, cuspp, tiene_asignacion_familiar, sueldo_basico, bono_fijo,
                 banco_haberes, cuenta_haberes, cci_haberes, banco_cts, cuenta_cts,
                 licencia_conducir, licencia_categoria, licencia_vencimiento, sctr_salud_vigente,
                 sctr_pension_vigente, emo_fecha_vencimiento, emo_condicion, grupo_sanguineo,
                 talla_polo, talla_pantalon, talla_calzado, talla_chaleco, foto_url
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         const params = [
@@ -248,7 +255,6 @@ router.post('/personal', upload.single('foto'), async (req, res) => {
             b.cargo.trim(),
             b.area || 'OPERACIONES',
             b.sede || 'BASE PRINCIPAL',
-            b.centro_costo_codigo || 'CC-100',
             b.jefe_inmediato || null,
             b.fecha_ingreso || hoyLima(),
             b.fecha_cese || null,
@@ -283,6 +289,7 @@ router.post('/personal', upload.single('foto'), async (req, res) => {
         ];
 
         const [resIns] = await tdb.query(query, params);
+        await guardarExtrasPersonal(tdb, resIns.insertId, b);
         await sincronizarConductor(tdb, resIns.insertId);
         res.json({ ok: true, id: resIns.insertId, message: 'Colaborador registrado con éxito' });
     } catch (err) {
@@ -321,7 +328,6 @@ router.put('/personal/:id', upload.single('foto'), async (req, res) => {
             b.cargo?.trim(),
             b.area || 'OPERACIONES',
             b.sede || 'BASE PRINCIPAL',
-            b.centro_costo_codigo || 'CC-100',
             b.jefe_inmediato || null,
             b.fecha_ingreso || null,
             b.fecha_cese || null,
@@ -371,7 +377,7 @@ router.put('/personal/:id', upload.single('foto'), async (req, res) => {
                 nacionalidad = ?, estado_civil = ?, direccion = ?, distrito = ?, provincia = ?, departamento = ?,
                 telefono = ?, email = ?, contacto_emergencia_nombre = ?, contacto_emergencia_parentesco = ?,
                 contacto_emergencia_telefono = ?, categoria_rol = ?, cargo = ?, area = ?, sede = ?,
-                centro_costo_codigo = ?, jefe_inmediato = ?, fecha_ingreso = ?, fecha_cese = ?, motivo_cese = ?, estado = ?,
+                jefe_inmediato = ?, fecha_ingreso = ?, fecha_cese = ?, motivo_cese = ?, estado = ?,
                 tipo_contrato = ?, fecha_inicio_contrato = ?, fecha_fin_contrato = ?, regimen_pensionario = ?,
                 tipo_comision_afp = ?, cuspp = ?, tiene_asignacion_familiar = ?, sueldo_basico = ?, bono_fijo = ?,
                 banco_haberes = ?, cuenta_haberes = ?, cci_haberes = ?, banco_cts = ?, cuenta_cts = ?,
@@ -382,6 +388,7 @@ router.put('/personal/:id', upload.single('foto'), async (req, res) => {
             WHERE id = ?
         `, params);
 
+        await guardarExtrasPersonal(tdb, id, b);
         await sincronizarConductor(tdb, id);
         res.json({ ok: true, message: 'Colaborador actualizado con éxito' });
     } catch (err) {
