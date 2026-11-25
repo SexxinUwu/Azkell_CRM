@@ -33,7 +33,6 @@ export interface Persona {
   cargo: string;
   area: string;
   sede: string;
-  centro_costo_codigo: string;
   jefe_inmediato: string;
   fecha_ingreso: string;
   fecha_cese: string;
@@ -42,6 +41,7 @@ export interface Persona {
   tipo_contrato: string;
   fecha_inicio_contrato: string;
   fecha_fin_contrato: string;
+  regimen_laboral: string;
   regimen_pensionario: string;
   tipo_comision_afp: string;
   cuspp: string;
@@ -55,6 +55,7 @@ export interface Persona {
   cuenta_cts: string;
   licencia_conducir: string;
   licencia_categoria: string;
+  licencia_categoria_2: string;
   licencia_vencimiento: string;
   sctr_salud_vigente: boolean;
   sctr_pension_vigente: boolean;
@@ -78,7 +79,7 @@ export const OPCIONES = {
   estadoCivil: op([['SOLTERO(A)', 'Soltero(a)'], ['CASADO(A)', 'Casado(a)'], ['CONVIVIENTE', 'Conviviente'], ['DIVORCIADO(A)', 'Divorciado(a)'], ['VIUDO(A)', 'Viudo(a)']]),
   area: op([['OPERACIONES', 'Operaciones'], ['FLOTA', 'Flota / Transporte'], ['MANTENIMIENTO', 'Mantenimiento / Taller'], ['ALMACEN', 'Almacén / Logística'], ['GERENCIA', 'Gerencia / Administración'], ['COMERCIAL', 'Comercial / Ventas']]),
   rol: op([['CONDUCTOR', 'Conductor / Operador'], ['MECANICO_TALLER', 'Mecánico / Taller'], ['ADMINISTRATIVO', 'Administrativo'], ['LIMPIEZA_SERVICIOS', 'Limpieza / Servicios'], ['SEGURIDAD_CONTROL', 'Seguridad / Control'], ['OTRO', 'Otro']]),
-  centroCosto: op([['CC-100', 'CC-100 Administración / Gerencia'], ['CC-200', 'CC-200 Comercial'], ['CC-300', 'CC-300 Operaciones / Flota'], ['CC-400', 'CC-400 Taller / Mantenimiento'], ['CC-500', 'CC-500 Almacén / Sistemas']]),
+  regimenLaboral: op([['MYPE', 'Régimen MYPE'], ['GENERAL', 'Régimen general'], ['OTRO', 'Otro']]),
   estado: op([['ACTIVO', 'Activo'], ['VACACIONES', 'Vacaciones'], ['SUSPENDIDO', 'Suspendido'], ['CESADO', 'Cesado']]),
   tipoContrato: op([['PLAZO_FIJO', 'Plazo fijo'], ['INDETERMINADO', 'Plazo indeterminado'], ['PERIODO_PRUEBA', 'Periodo de prueba'], ['LOCACION_SERVICIOS', 'Locación de servicios (RxH)'], ['PRACTICANTE', 'Convenio de prácticas']]),
   regimen: op([['ONP', 'ONP'], ['AFP_INTEGRA', 'AFP Integra'], ['AFP_PRIMA', 'AFP Prima'], ['AFP_PROFUTURO', 'AFP Profuturo'], ['AFP_HABITAT', 'AFP Habitat'], ['SIN_REGIMEN', 'Sin régimen / RxH']]),
@@ -97,11 +98,6 @@ export const OPCIONES = {
 /** Etiqueta de un valor guardado ("MECANICO_TALLER" → "Mecánico / Taller") */
 export const etiqueta = (lista: Opcion[], v: string) => lista.find(o => o.value === v)?.label ?? (v ? v.replace(/_/g, ' ') : '');
 
-/** Centro de costos que corresponde a cada área (como en la versión actual) */
-export const CENTRO_POR_AREA: Record<string, string> = {
-  GERENCIA: 'CC-100', COMERCIAL: 'CC-200', OPERACIONES: 'CC-300', FLOTA: 'CC-300', MANTENIMIENTO: 'CC-400', ALMACEN: 'CC-500',
-};
-
 /** Asignación familiar: 10 % de la remuneración mínima (S/ 1,130) */
 export const ASIGNACION_FAMILIAR = 113;
 
@@ -111,11 +107,11 @@ export const VACIA: Persona = {
   id: 0, tipo_documento: 'DNI', numero_documento: '', nombres: '', apellidos: '', sexo: 'M', fecha_nacimiento: '',
   nacionalidad: 'PERUANA', estado_civil: 'SOLTERO(A)', direccion: '', distrito: '', provincia: '', departamento: '',
   telefono: '', email: '', contacto_emergencia_nombre: '', contacto_emergencia_parentesco: '', contacto_emergencia_telefono: '',
-  categoria_rol: 'ADMINISTRATIVO', cargo: '', area: 'OPERACIONES', sede: 'BASE PRINCIPAL', centro_costo_codigo: 'CC-300',
+  categoria_rol: 'ADMINISTRATIVO', cargo: '', area: 'OPERACIONES', sede: 'BASE PRINCIPAL',
   jefe_inmediato: '', fecha_ingreso: '', fecha_cese: '', motivo_cese: '', estado: 'ACTIVO', tipo_contrato: 'PLAZO_FIJO',
-  fecha_inicio_contrato: '', fecha_fin_contrato: '', regimen_pensionario: 'ONP', tipo_comision_afp: 'FLUJO', cuspp: '',
+  fecha_inicio_contrato: '', fecha_fin_contrato: '', regimen_pensionario: 'ONP', regimen_laboral: '', tipo_comision_afp: 'FLUJO', cuspp: '',
   tiene_asignacion_familiar: false, sueldo_basico: '', bono_fijo: '', banco_haberes: 'BCP', cuenta_haberes: '', cci_haberes: '',
-  banco_cts: '', cuenta_cts: '', licencia_conducir: '', licencia_categoria: '', licencia_vencimiento: '',
+  banco_cts: '', cuenta_cts: '', licencia_conducir: '', licencia_categoria: '', licencia_categoria_2: '', licencia_vencimiento: '',
   sctr_salud_vigente: true, sctr_pension_vigente: true, emo_fecha_vencimiento: '', emo_condicion: 'APTO', grupo_sanguineo: '',
   talla_polo: '', talla_pantalon: '', talla_calzado: '', talla_chaleco: '', foto_url: '',
 };

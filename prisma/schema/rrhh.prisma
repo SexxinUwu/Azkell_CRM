@@ -63,6 +63,8 @@ model RrhhPersonal {
   cuenta_cts                     String?                         @db.VarChar(50)
   licencia_conducir              String?                         @db.VarChar(30)
   licencia_categoria             String?                         @db.VarChar(20)
+  licencia_categoria_2           String?                         @db.VarChar(20)
+  regimen_laboral                String?                         @db.VarChar(30)
   licencia_vencimiento           DateTime?                       @db.Date
   sctr_salud_vigente             Boolean?                        @default(true)
   sctr_pension_vigente           Boolean?                        @default(true)
