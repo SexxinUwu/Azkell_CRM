@@ -1463,11 +1463,21 @@ module.exports = function (db) {
                 const dia = String(i.fecha_out).slice(0, 10);
                 return [...medCron.filter(m => mismaUnidad(m, i))].reverse().find(m => String(m.fecha).slice(0, 10) <= dia) || null;
             };
-            const montajes = insts.map(i => ({
-                placa: i.placa, posicion: i.posicion, fecha_in: i.fecha_in, km_in: num(i.km_in), fecha_out: i.fecha_out, km_out: num(i.km_out),
-                cocada_montaje: alMontar(i), cocada_retiro: alRetirar(i),
-            }));
             const inicial = num(hv[0] && hv[0].remanente_inicial);
+            // Primer montaje: la cocada con la que entró es la del alta (la que se indicó al darla de alta); en los siguientes, la de la medición más cercana
+            const montajes = insts.map((i, idx) => ({
+                placa: i.placa, posicion: i.posicion, fecha_in: i.fecha_in, km_in: num(i.km_in), fecha_out: i.fecha_out, km_out: num(i.km_out),
+                cocada_montaje: idx === 0 && inicial != null
+                    ? { fecha: i.fecha_in, interno: null, central: null, externo: null, minimo: inicial, km: num(i.km_in), placa: i.placa, posicion: i.posicion, origen: 'Alta' }
+                    : alMontar(i),
+                cocada_retiro: alRetirar(i),
+            }));
+            // Historial: arranca con la cocada del alta (en la fecha del primer montaje) y sigue con las mediciones de las inspecciones
+            const primerMontaje = insts[0] || null;
+            const historial = [
+                ...(inicial != null && primerMontaje ? [{ fecha: primerMontaje.fecha_in, interno: null, central: null, externo: null, minimo: inicial, km: num(primerMontaje.km_in), placa: primerMontaje.placa, posicion: primerMontaje.posicion, origen: 'Alta' }] : []),
+                ...medCron.map(x => ({ ...x, origen: 'Inspección' })),
+            ];
             const primeraMin = medCron.length ? medCron[0].minimo : null;
             const ultimaMin = medCron.length ? medCron[medCron.length - 1].minimo : null;
             const puntoPartida = inicial != null ? inicial : primeraMin;
@@ -1481,7 +1491,7 @@ module.exports = function (db) {
                 inicial, actual: num(hv[0] && hv[0].remanente_actual), ultima_medicion: ultimaMin,
                 desgaste_mm: desgasteMm,
                 mm_por_1000km: desgasteMm != null && kmAcum ? Math.round((desgasteMm / kmAcum) * 1000 * 100) / 100 : null,
-                mediciones: medCron, montajes,
+                mediciones: historial, montajes,
             };
 
             res.json({

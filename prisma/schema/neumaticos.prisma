@@ -77,7 +77,7 @@ model NeumaticoHojaVida {
   modelo            String                             @db.VarChar(100)
   medida            String                             @db.VarChar(50)
   estado            String?                            @default("NUEVA") @db.VarChar(30)
-  remanente_inicial Int?                               @default(18)
+  remanente_inicial Decimal?                           @default(18.0) @db.Decimal(4, 1)
   remanente_actual  Decimal?                           @default(18.0) @db.Decimal(4, 1)
   costo_compra      Decimal?                           @default(0.00) @db.Decimal(10, 2)
   km_acumulado      Int?                               @default(0)

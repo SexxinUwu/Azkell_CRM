@@ -58,7 +58,7 @@ async function asegurarLlantasProvisionales(conn, { placa, fecha, km, idInspecci
               placa_actual, posicion_actual, estado_operativo, fecha_instalacion, vida, contador_reencauches, costo_reencauches, estado_ciclo, almacen_id)
              VALUES (?, ?, ?, ?, 'NUEVA', ?, ?, 0, 0, ?, ?, 'Montada', ?, 'R0', 0, 0, 'en_unidad', NULL)`,
             [id, String(it.marca || '').toUpperCase(), String(it.modelo || '').toUpperCase(), String(it.medida || '').toUpperCase(),
-             Math.round(rem), rem, placaMay, posicion, fecha]);
+             rem, rem, placaMay, posicion, fecha]);
         if (h.affectedRows !== 1) throw new Error(`No se pudo crear la llanta provisional ${id}`);
 
         const [i] = await conn.query(

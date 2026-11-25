@@ -41,7 +41,7 @@ export function NhvCocada({ c }: { c: Cocada }) {
             {[...c.montajes].reverse().map((m, i) => (
               <div key={`${m.fechaIn}-${i}`} className="nhv-coc__montaje">
                 <span className="nhv-coc__unidad">{m.placa ? <LicensePlate plate={m.placa} size="sm" /> : '—'}<b>{m.posicion ? `Pos. ${m.posicion}` : ''}</b></span>
-                <span>{dia(m.fechaIn)} → {m.fechaOut ? dia(m.fechaOut) : 'montada hoy'}</span>
+                <span>{dia(m.fechaIn)} → {m.fechaOut ? dia(m.fechaOut) : 'sigue montada'}</span>
                 <span>Montó con <b>{fmtMm(m.alMontar?.minimo ?? null)}</b>{m.kmIn != null ? ` · ${fmtKm(m.kmIn)}` : ''}</span>
                 <span>{m.fechaOut ? <>Retiró con <b>{fmtMm(m.alRetirar?.minimo ?? null)}</b>{m.kmOut != null ? ` · ${fmtKm(m.kmOut)}` : ''}</> : 'En uso'}</span>
               </div>
@@ -55,11 +55,11 @@ export function NhvCocada({ c }: { c: Cocada }) {
           <h4 className="nhv-coc__sub">Historial de mediciones</h4>
           <div className="nhv-coc__tabla-wrap">
             <table className="nhv-coc__tabla">
-              <thead><tr><th>Fecha</th><th>Interno</th><th>Central</th><th>Externo</th><th>Mínimo</th><th>Km</th><th>Unidad</th></tr></thead>
+              <thead><tr><th>Fecha</th><th>Origen</th><th>Interno</th><th>Central</th><th>Externo</th><th>Mínimo</th><th>Km</th><th>Unidad</th></tr></thead>
               <tbody>
                 {[...c.mediciones].reverse().map((m, i) => (
                   <tr key={`${m.fecha}-${i}`}>
-                    <td>{fecha(m.fecha)}</td><td>{fmtMm(m.interno)}</td><td>{fmtMm(m.central)}</td><td>{fmtMm(m.externo)}</td>
+                    <td>{fecha(m.fecha)}</td><td>{m.origen === 'Alta' ? 'Alta (montaje inicial)' : 'Inspección'}</td><td>{m.interno === null ? '—' : fmtMm(m.interno)}</td><td>{m.central === null ? '—' : fmtMm(m.central)}</td><td>{m.externo === null ? '—' : fmtMm(m.externo)}</td>
                     <td><b>{fmtMm(m.minimo)}</b></td><td>{m.km != null ? fmtKm(m.km) : '—'}</td><td>{m.placa ? `${m.placa}${m.posicion ? ` · ${m.posicion}` : ''}` : '—'}</td>
                   </tr>
                 ))}
