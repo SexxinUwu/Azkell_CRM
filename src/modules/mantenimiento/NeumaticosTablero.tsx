@@ -14,7 +14,7 @@ import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { formatFechaPe } from '../../core/lib/format';
 import { CONFIGURACIONES } from '../inspecciones/components/ChasisEsquemaVisual';
-import { LeyendaSemaforo, configParaPosiciones, configReconocida, tonoMm } from './NeumaticosEsquema';
+import { LeyendaSemaforo, configParaPosiciones, configReconocida } from './NeumaticosEsquema';
 import { NeumaticosCenital } from './nv3-cenital';
 import type { ModoVista } from './nv3-motor';
 import {
@@ -23,7 +23,8 @@ import {
 } from './neumaticos-tablero-tipos';
 import { useArrastre, posicionDeEvento, type Destino, type ItemArrastre, type SondaPosicion } from './ntb-arrastre';
 import { tituloLlanta, useTablero, usePlacasLista, vidaTexto } from './ntb-api';
-import { LlantaIcono, LlantaTile, RemanenteChip, VidaChip, aLlantaDato } from './ntb-llanta';
+import { createPortal } from 'react-dom';
+import { LlantaFicha, LlantaTile, RemanenteChip, VidaChip, aLlantaDato, remanenteMinimo } from './ntb-llanta';
 import { LineaTiempo } from './ntb-linea-tiempo';
 import { MovimientoSheet, type Propuesta } from './ntb-movimiento-sheet';
 import './ntb.css';
@@ -43,8 +44,8 @@ function textoSobre(d: Destino, ocupante: LlantaTablero | null): string {
   return ocupante ? `Suelta para cambiar la llanta de ${d.posicion}` : `Suelta para instalar en ${d.posicion}`;
 }
 
-function ZonaDrop({ zona, titulo, nota, llantas, seleccion, resaltada, permitido, bloqueo, onActivar, arrastrable, onArrastrar }: {
-  zona: 'reforma' | 'descarte'; titulo: string; nota: string; llantas: LlantaTablero[]; seleccion: string | null;
+function ZonaDrop({ zona, titulo, nota, llantas, seleccion, enMano, resaltada, permitido, bloqueo, onActivar, arrastrable, onArrastrar }: {
+  zona: 'reforma' | 'descarte'; titulo: string; nota: string; llantas: LlantaTablero[]; seleccion: string | null; enMano: string | null;
   resaltada: boolean; permitido: boolean; bloqueo: string; onActivar: (codigo: string) => void;
   /** Se puede arrastrar de vuelta (solo mientras la llanta siga en el Retén) */
   arrastrable: (l: LlantaTablero) => boolean; onArrastrar: (e: ReactPointerEvent, l: LlantaTablero) => void;
@@ -63,6 +64,7 @@ function ZonaDrop({ zona, titulo, nota, llantas, seleccion, resaltada, permitido
         <div className="ntb-grid">
           {llantas.map(l => (
             <LlantaTile key={l.codigo} llanta={l} activa={seleccion === l.codigo} arrastrable={arrastrable(l)}
+              enMano={enMano === l.codigo}
               onPointerDown={arrastrable(l) ? e => onArrastrar(e, l) : undefined} onActivar={() => onActivar(l.codigo)} />
           ))}
         </div>
@@ -304,11 +306,10 @@ export function NeumaticosTablero() {
   const opcionesPlaca = (placas.data ?? [])
     .filter(p => p.tiene_llantas || p.placa === placa)
     .map(p => ({ placa: p.placa, detalle: p.cliente }));
-  // Color del fantasma del arrastre: el del semáforo de la llanta que se lleva
+  // La llanta que se lleva con el puntero
   const llantaArrastrada = arrastre.fantasma
     ? [...montadas.map(m => m.llanta), ...bodega, ...reforma, ...descarte].find(l => l.codigo === arrastre.fantasma?.codigo)
     : undefined;
-  const tonoFantasma = tonoMm(llantaArrastrada?.remanente_mm ?? null);
 
   return (
     <Page wide>
@@ -357,6 +358,7 @@ export function NeumaticosTablero() {
                   key={l.codigo}
                   llanta={l}
                   activa={seleccion === l.codigo}
+                  enMano={arrastre.fantasma?.codigo === l.codigo}
                   arrastrable={puedeMoverAqui}
                   onPointerDown={puedeMoverAqui ? e => arrastre.iniciar(e, { codigo: l.codigo, origen: 'bodega' }) : undefined}
                   onActivar={() => tocarBodega(l.codigo)}
@@ -370,13 +372,13 @@ export function NeumaticosTablero() {
 
           <ZonaDrop
             zona="reforma" titulo="Enviar para reforma" nota="Arrastra aquí una llanta montada para enviarla a reencauche."
-            llantas={reforma} seleccion={seleccion} resaltada={sobre?.tipo === 'zona' && sobre.zona === 'reforma'}
+            llantas={reforma} seleccion={seleccion} enMano={arrastre.fantasma?.codigo ?? null} resaltada={sobre?.tipo === 'zona' && sobre.zona === 'reforma'}
             permitido={puedeReforma && enPlano} bloqueo={bloqueoVista} onActivar={elegirLlanta}
             arrastrable={l => puedeMover && enElReten(l)} onArrastrar={(e, l) => arrastre.iniciar(e, { codigo: l.codigo, origen: 'reforma' })}
           />
           <ZonaDrop
             zona="descarte" titulo="Enviar para descarte" nota="Arrastra aquí una llanta montada para darla de baja."
-            llantas={descarte} seleccion={seleccion} resaltada={sobre?.tipo === 'zona' && sobre.zona === 'descarte'}
+            llantas={descarte} seleccion={seleccion} enMano={arrastre.fantasma?.codigo ?? null} resaltada={sobre?.tipo === 'zona' && sobre.zona === 'descarte'}
             permitido={puedeBaja && enPlano} bloqueo={bloqueoVista} onActivar={elegirLlanta}
             arrastrable={l => puedeMover && enElReten(l)} onArrastrar={(e, l) => arrastre.iniciar(e, { codigo: l.codigo, origen: 'descarte' })}
           />
@@ -475,7 +477,12 @@ export function NeumaticosTablero() {
                 </div>
                 <dl className="ntb-det__datos">
                   <div><dt>Vida</dt><dd><VidaChip vida={detalle.llanta.vida} /></dd></div>
-                  <div><dt>Remanente promedio</dt><dd><RemanenteChip mm={detalle.llanta.remanente_mm} /></dd></div>
+                  <div><dt>Remanente (mínimo)</dt><dd><RemanenteChip mm={remanenteMinimo(detalle.llanta)} /></dd></div>
+                  <div className="ntb-det__erres"><dt>Medidas R1 · R2 · R3</dt><dd>
+                    {(['r1', 'r2', 'r3'] as const).map(k => (
+                      <span key={k} className="ntb-erre"><b>{k.toUpperCase()}</b><RemanenteChip mm={detalle.llanta[k] ?? null} /></span>
+                    ))}
+                  </dd></div>
                   <div><dt>Ubicación</dt><dd>{
                     detalle.grupo === 'unidad' ? `${placa} · ${detalle.posicion}`
                       : detalle.grupo === 'bodega' ? (detalle.llanta.almacen ?? 'Bodega')
@@ -541,11 +548,19 @@ export function NeumaticosTablero() {
         </div>
       )}
 
-      {arrastre.fantasma && !llevada && (
-        <div className="ntb-fantasma" style={{ left: arrastre.fantasma.x, top: arrastre.fantasma.y }} aria-hidden>
-          <LlantaIcono tono={tonoFantasma} activa />
-          <span className="ntb-fantasma__codigo">{arrastre.fantasma.codigo}</span>
-        </div>
+      {/* El neumático que se arrastra va en el cuerpo de la página (no dentro de contenedores con transformaciones) y se levanta justo desde donde se agarró */}
+      {arrastre.fantasma && !llevada && llantaArrastrada && createPortal(
+        arrastre.fantasma.ancla ? (
+          <div className="ntb-fantasma ntb-fantasma--ficha" aria-hidden
+            style={{ left: arrastre.fantasma.x - arrastre.fantasma.ancla.dx, top: arrastre.fantasma.y - arrastre.fantasma.ancla.dy, width: arrastre.fantasma.ancla.w, height: arrastre.fantasma.ancla.h }}>
+            <LlantaFicha llanta={llantaArrastrada} activa />
+          </div>
+        ) : (
+          <div className="ntb-fantasma" style={{ left: arrastre.fantasma.x, top: arrastre.fantasma.y }} aria-hidden>
+            <LlantaFicha llanta={llantaArrastrada} activa />
+          </div>
+        ),
+        document.body,
       )}
 
       {hoja.propuesta && (

@@ -881,8 +881,10 @@ module.exports = function (db) {
     // Una fila de inspección como medición: r1, r2 y r3 son las tres franjas de la banda (r2 = surco central)
     function medicionDe(f) {
         const num = v => (v == null ? null : Number(v));
+        // El remanente que manda es el MENOR de las tres medidas (la franja más gastada), no el promedio
+        const medidas = [f.r1, f.r2, f.r3].map(num).filter(v => v != null && Number.isFinite(v) && v > 0);
         return {
-            remanente: num(f.remanente_promedio),
+            remanente: medidas.length ? Math.min(...medidas) : num(f.remanente_promedio),
             surco_central: num(f.r2),
             r1: num(f.r1),
             r2: num(f.r2),
@@ -1060,6 +1062,9 @@ module.exports = function (db) {
                 placa_actual: null,
                 posicion_actual: null,
                 remanente_mm: medicion ? medicion.remanente : null,
+                r1: medicion ? medicion.r1 : null,
+                r2: medicion ? medicion.r2 : null,
+                r3: medicion ? medicion.r3 : null,
                 fecha_montaje: null,
                 km_montaje: null,
                 km_recorridos: null,

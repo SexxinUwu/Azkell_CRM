@@ -247,3 +247,15 @@ button.ntb-pos { cursor: pointer; }
 .ntb-zona__nota--texto { display: block; }
 /* La llanta que se arrastra es el mismo neumático dibujado del plano, con una sombra */
 .ntb-fantasma .ntb-ico { filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35)); }
+
+/* Neumático que se arrastra desde una ficha: la misma ficha, levantada desde el punto donde se agarró */
+.ntb-fantasma--ficha {
+  transform: none; align-items: center; justify-content: flex-start; gap: 3px;
+  padding: 8px 4px 6px; border-radius: var(--r-md); background: var(--surface);
+  box-shadow: var(--shadow-pop, 0 10px 28px rgba(0, 0, 0, 0.3)); opacity: 0.97; transform: scale(1.05); transform-origin: center;
+}
+.ntb-tile--en-mano { opacity: 0.3; }
+.ntb-det__erres { grid-column: 1 / -1; }
+.ntb-det__erres dd { display: flex; flex-wrap: wrap; gap: 8px; }
+.ntb-erre { display: inline-flex; align-items: center; gap: 4px; }
+.ntb-erre b { font-size: 0.6875rem; color: var(--label-2); }
