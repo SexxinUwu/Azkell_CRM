@@ -933,6 +933,14 @@ router.get('/nomina/resumen', async (req, res) => {
     }
     const aMin = (hhmm) => { const m = String(hhmm || '').match(/^(\d{1,2}):(\d{2})/); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
 
+    // Minutos de tardanza de un ingreso a `hora` (HH:MM) según el horario; 0 si llegó dentro de la tolerancia o no hay horario
+    function tardanzaDe(horario, hora) {
+        if (!horario) return 0;
+        let dif = aMin(hora) - aMin(horario.hora_ingreso);
+        dif = ((dif + 720) % 1440 + 1440) % 1440 - 720;     // diferencia más corta, también para turnos de noche
+        return dif > Number(horario.tolerancia_min || 0) ? dif : 0;
+    }
+
     async function registrarMarcacion(tdb, p, { origen, dispositivo, usuario }) {
         const ahora = ahoraLima();
         const hora = ahora.slice(11, 16);
@@ -957,12 +965,7 @@ router.get('/nomina/resumen', async (req, res) => {
             return { tipo: 'SALIDA', hora, fecha_turno: ult.fturno, horas_trabajadas: Math.round(trabajadas * 100) / 100, horas_extras: extras };
         }
         const fecha = ahora.slice(0, 10);
-        let tardanza = 0;
-        if (horario) {
-            let dif = aMin(hora) - aMin(horario.hora_ingreso);
-            dif = ((dif + 720) % 1440 + 1440) % 1440 - 720;     // diferencia más corta, también para turnos de noche
-            if (dif > Number(horario.tolerancia_min || 0)) tardanza = dif;
-        }
+        const tardanza = tardanzaDe(horario, hora);
         const estado = tardanza > 0 ? 'T' : 'A';
         await tdb.query('INSERT INTO rrhh_marcaciones (personal_id, tipo, marcado_en, fecha_turno, origen, dispositivo, usuario_registro) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [p.id, 'INGRESO', ahora, fecha, origen, dispositivo || null, usuario]);
@@ -1005,15 +1008,74 @@ router.get('/nomina/resumen', async (req, res) => {
         }
     });
 
+    // Registro manual (se olvidó de marcar): ingreso y/o salida de un día, con motivo. Queda con origen MANUAL.
+    router.post('/marcacion/manual', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const b = req.body || {};
+            const pid = parseInt(b.personal_id, 10);
+            const fecha = String(b.fecha || '');
+            const hIn = String(b.hora_entrada || '').trim(), hOut = String(b.hora_salida || '').trim();
+            const motivo = String(b.motivo || '').trim();
+            if (!pid) return res.status(400).json({ ok: false, error: 'Elige a la persona.' });
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return res.status(400).json({ ok: false, error: 'La fecha no es válida.' });
+            if (fecha > hoyLima()) return res.status(400).json({ ok: false, error: 'No se puede registrar en una fecha futura.' });
+            if (!hIn && !hOut) return res.status(400).json({ ok: false, error: 'Indica la hora de ingreso o la de salida.' });
+            if ((hIn && aMin(hIn) === null) || (hOut && aMin(hOut) === null)) return res.status(400).json({ ok: false, error: 'Las horas no son válidas.' });
+            if (motivo.length < 3) return res.status(400).json({ ok: false, error: 'Escribe el motivo (por ejemplo: olvidó marcar).' });
+            const [ps] = await tdb.query('SELECT id, cargo FROM rrhh_personal WHERE id = ?', [pid]);
+            if (!ps[0]) return res.status(404).json({ ok: false, error: 'Persona no encontrada.' });
+            const horario = await horarioDe(tdb, ps[0]);
+            const duracion = horario ? Number(horario.duracion_horas) : 9;
+            const usuario = (req.user && req.user.nombre) ? req.user.nombre : 'SISTEMA';
+            const [previas] = await tdb.query("SELECT id, tipo FROM rrhh_marcaciones WHERE personal_id = ? AND fecha_turno = ? ORDER BY marcado_en, id", [pid, fecha]);
+            let ingresoId = null, tipoRes = '';
+            if (hIn) {
+                if (previas.length) return res.status(409).json({ ok: false, error: 'Ese día ya tiene marcaciones. Si solo falta la salida, deja vacío el ingreso.' });
+                const [r] = await tdb.query('INSERT INTO rrhh_marcaciones (personal_id, tipo, marcado_en, fecha_turno, origen, usuario_registro, observacion) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    [pid, 'INGRESO', `${fecha} ${hIn.slice(0, 5)}:00`, fecha, 'MANUAL', usuario, motivo.slice(0, 250)]);
+                ingresoId = r.insertId; tipoRes = 'INGRESO';
+                const tard = tardanzaDe(horario, hIn.slice(0, 5));
+                await tdb.query(
+                    `INSERT INTO rrhh_tareo (personal_id, fecha, estado, hora_entrada, hora_salida, minutos_tardanza, horas_extras, observacion, usuario_registro)
+                     VALUES (?, ?, ?, ?, NULL, ?, 0, ?, ?)
+                     ON DUPLICATE KEY UPDATE estado = IF(estado = 'R', 'R', VALUES(estado)), hora_entrada = VALUES(hora_entrada), hora_salida = NULL,
+                         minutos_tardanza = VALUES(minutos_tardanza), horas_extras = 0, observacion = VALUES(observacion), usuario_registro = VALUES(usuario_registro)`,
+                    [pid, fecha, tard > 0 ? 'T' : 'A', hIn.slice(0, 5) + ':00', tard, ('Marcación manual: ' + motivo).slice(0, 250), usuario]);
+            }
+            if (hOut) {
+                if (!ingresoId) {
+                    const abierto = [...previas].reverse().find(x => x.tipo === 'INGRESO');
+                    const hayCierre = abierto && previas.some(x => x.tipo === 'SALIDA' && x.id > abierto.id);
+                    if (!abierto || hayCierre) return res.status(409).json({ ok: false, error: 'No hay un ingreso abierto ese día al que ponerle la salida.' });
+                    ingresoId = abierto.id;
+                }
+                const [ing] = await tdb.query("SELECT DATE_FORMAT(marcado_en, '%Y-%m-%d %H:%i:%s') AS en FROM rrhh_marcaciones WHERE id = ?", [ingresoId]);
+                let fechaSalida = fecha;
+                if (aMin(hOut.slice(0, 5)) <= aMin(String(ing[0].en).slice(11, 16))) {   // la salida es de madrugada: día siguiente
+                    const d = new Date(fecha + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + 1); fechaSalida = d.toISOString().slice(0, 10);
+                }
+                const salidaTs = `${fechaSalida} ${hOut.slice(0, 5)}:00`;
+                await tdb.query('INSERT INTO rrhh_marcaciones (personal_id, tipo, marcado_en, fecha_turno, turno_id, origen, usuario_registro, observacion) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                    [pid, 'SALIDA', salidaTs, fecha, ingresoId, 'MANUAL', usuario, motivo.slice(0, 250)]);
+                const [dm] = await tdb.query('SELECT TIMESTAMPDIFF(MINUTE, ?, ?) AS min', [ing[0].en, salidaTs]);
+                const sobra = horario ? Math.round(((dm[0].min / 60) - duracion) * 100) / 100 : 0;
+                await tdb.query('UPDATE rrhh_tareo SET hora_salida = ?, horas_extras = ? WHERE personal_id = ? AND fecha = ?', [hOut.slice(0, 5) + ':00', sobra >= 0.25 ? sobra : 0, pid, fecha]);
+                tipoRes = tipoRes ? 'INGRESO Y SALIDA' : 'SALIDA';
+            }
+            res.json({ ok: true, tipo: tipoRes });
+        } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+    });
+
     // Marcaciones de un día (por defecto, hoy)
     router.get('/marcaciones', async (req, res) => {
         try {
             const tdb = getDb(req);
             const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.fecha || '')) ? req.query.fecha : hoyLima();
             const [rows] = await tdb.query(
-                `SELECT m.id, m.tipo, DATE_FORMAT(m.marcado_en, '%H:%i') AS hora, DATE_FORMAT(m.marcado_en, '%Y-%m-%d') AS fecha, m.origen, p.id AS personal_id, p.nombres, p.apellidos, p.cargo
+                `SELECT m.id, m.tipo, DATE_FORMAT(m.marcado_en, '%H:%i') AS hora, DATE_FORMAT(m.marcado_en, '%Y-%m-%d') AS fecha, m.origen, m.observacion, m.usuario_registro, p.id AS personal_id, p.nombres, p.apellidos, p.cargo
                  FROM rrhh_marcaciones m JOIN rrhh_personal p ON p.id = m.personal_id
-                 WHERE DATE(m.marcado_en) = ? ORDER BY m.marcado_en DESC, m.id DESC LIMIT 300`, [fecha]);
+                 WHERE DATE(m.marcado_en) = ? ORDER BY m.marcado_en DESC, m.id DESC LIMIT 500`, [fecha]);
             res.json({ ok: true, fecha, marcaciones: rows });
         } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
     });
