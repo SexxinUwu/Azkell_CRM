@@ -5283,6 +5283,8 @@ app.use('/api/operaciones/vales', require('./routes/vales_viaje')(db, logAudit))
 // Documentos de flota de la API externa de Marsisa (copia de solo consulta en su propia tabla). Va antes de /api/operaciones.
 app.use('/api/operaciones/docs-marsisa', require('./routes/docs-marsisa')(db, logAudit));
 // Conducción por RPM (solo Marsisa): lecturas de RPM por rango y modelo de motor desde Wialon
+// Hojas de ruta de los conductores (solo Marsisa): plantillas por cliente y tipo de unidad, PDF por viaje
+app.use('/api/operaciones/hojas-ruta', require('./routes/hojas-ruta')(db, logAudit));
 app.use('/api/operaciones/conduccion-rpm', require('./routes/conduccion-rpm')(db, logAudit, combustibleRouter.helpers));
 app.use('/api/operaciones/gre', require('./routes/gre_pdf')(db, logAudit));
 app.use('/api/operaciones/gre', require('./routes/gre')(db, logAudit));
