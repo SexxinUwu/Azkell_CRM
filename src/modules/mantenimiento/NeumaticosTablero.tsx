@@ -14,7 +14,7 @@ import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { formatFechaPe } from '../../core/lib/format';
 import { CONFIGURACIONES } from '../inspecciones/components/ChasisEsquemaVisual';
-import { LeyendaSemaforo, configParaPosiciones, configReconocida, tonoMm, type Tono } from './NeumaticosEsquema';
+import { LeyendaSemaforo, configParaPosiciones, configReconocida, tonoMm } from './NeumaticosEsquema';
 import { NeumaticosCenital } from './nv3-cenital';
 import type { ModoVista } from './nv3-motor';
 import {

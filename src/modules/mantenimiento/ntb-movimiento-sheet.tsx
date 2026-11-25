@@ -24,7 +24,7 @@ type Destino = DestinoRetiro;
 
 /** Cómo se dice cada destino en el texto de la hoja */
 const TEXTO_DESTINO: Record<Destino, string> = {
-  reten: 'el Retén',
+  reten: 'el Retén, donde queda disponible para instalar',
   reforma: 'reforma (queda en el Retén para enviarla a la reformadora)',
   descarte: 'descarte (queda en el Retén esperando descarte)',
 };
@@ -67,7 +67,7 @@ function Resumen({ children }: { children: ReactNode }) {
 export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puedeBaja, onClose, onHecho }: Props) {
   // Toda llanta retirada pasa por el Retén: puede quedar ahí disponible, ir a reforma o esperar su descarte
   const opcionesDestino: Array<{ value: Destino; label: string }> = [
-    { value: 'reten', label: 'Retén' },
+    { value: 'reten', label: 'Retén (disponible)' },
     ...(puedeReencauche ? [{ value: 'reforma' as const, label: 'Enviar para reforma' }] : []),
     ...(puedeBaja ? [{ value: 'descarte' as const, label: 'Esperando descarte' }] : []),
   ];
