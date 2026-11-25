@@ -227,3 +227,38 @@ enum RrhhPersonalEmoCondicion {
   NO_APTO
   PENDIENTE
 }
+
+model RrhhMarcacion {
+  id               Int       @id @default(autoincrement())
+  personal_id      Int
+  tipo             String    @db.VarChar(10)
+  marcado_en       DateTime  @db.DateTime(0)
+  fecha_turno      DateTime  @db.Date
+  turno_id         Int?
+  origen           String    @default("QR") @db.VarChar(20)
+  dispositivo      String?   @db.VarChar(120)
+  usuario_registro String?   @db.VarChar(100)
+  observacion      String?   @db.VarChar(255)
+  creado_en        DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([personal_id, marcado_en], map: "idx_marc_persona")
+  @@index([fecha_turno], map: "idx_marc_turno")
+  @@map("rrhh_marcaciones")
+}
+
+model RrhhHorario {
+  id              Int       @id @default(autoincrement())
+  ambito          String    @db.VarChar(10)
+  cargo           String?   @db.VarChar(100)
+  personal_id     Int?
+  hora_ingreso    DateTime  @db.Time(0)
+  hora_salida     DateTime  @db.Time(0)
+  duracion_horas  Decimal   @default(9.0) @db.Decimal(4, 1)
+  tolerancia_min  Int       @default(10)
+  actualizado_por String?   @db.VarChar(100)
+  actualizado_en  DateTime? @default(now()) @updatedAt @db.Timestamp(0)
+
+  @@index([ambito, cargo], map: "idx_hor_cargo")
+  @@index([personal_id], map: "idx_hor_persona")
+  @@map("rrhh_horarios")
+}

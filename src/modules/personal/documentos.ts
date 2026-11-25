@@ -1,6 +1,7 @@
 // Documentos del directorio: fotocheck e impresión de la ficha (ventana aparte, como la versión actual),
 // tarjeta de contacto (.vcf) y exportación a Excel.
 import { qrSvg } from '../../core/ui/QrCode';
+import { api } from '../../core/api/client';
 import { LOGO_URL } from '../../core/layout/BrandMark';
 import { antiguedad, edad, etiqueta, nombreCompleto, OPCIONES, ASIGNACION_FAMILIAR, type Persona } from './api';
 
@@ -41,7 +42,9 @@ function escribir(w: Window, titulo: string, estilo: string, cuerpo: string) {
 /** Fotocheck tamaño CR80 (54 × 86 mm), con QR que identifica a la persona (mismo contenido que la versión actual) */
 export async function imprimirFotocheck(p: Persona) {
   const w = abrirVentana('Fotocheck');
-  const qr = await qrSvg(`AZKELL|DNI:${p.numero_documento}|COLABORADOR:${p.nombres} ${p.apellidos}|CARGO:${p.cargo}|VALIDO:${p.estado || 'ACTIVO'}`);
+  // QR firmado por el servidor (lo lee la marcación por QR); si no responde, el QR de siempre con el DNI, que el lector también acepta
+  const firmado = await api<{ token?: string }>(`/rrhh/personal/${p.id}/qr-token`).then(r => r.token).catch(() => undefined);
+  const qr = await qrSvg(firmado ?? `AZKELL|DNI:${p.numero_documento}|COLABORADOR:${p.nombres} ${p.apellidos}|CARGO:${p.cargo}|VALIDO:${p.estado || 'ACTIVO'}`);
   const logo = new URL(LOGO_URL, window.location.origin).href;
   const foto = p.foto_url
     ? `<img class="foto" src="${esc(p.foto_url)}" alt="">`

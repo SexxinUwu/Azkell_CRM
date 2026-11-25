@@ -3,7 +3,8 @@ import '../mantenimiento/mant.css';
 import '../flota/documentos.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarCheck, CalendarOff, CheckCheck, ChevronLeft, ChevronRight, CircleAlert, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { CalendarCheck, CalendarOff, CheckCheck, ChevronLeft, ChevronRight, CircleAlert, Clock3, QrCode, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice, Page } from '../../core/ui/Display';
@@ -19,9 +20,10 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import './asistencia.css';
+import { HorariosSheet } from './HorariosSheet';
 
 interface Persona { id: number; numero_documento: string; nombres: string; apellidos: string; categoria_rol: string; cargo: string | null }
-interface RegistroDia { estado: string; minutos_tardanza?: number; observacion?: string | null }
+interface RegistroDia { estado: string; minutos_tardanza?: number; observacion?: string | null; hora_entrada?: string | null; hora_salida?: string | null }
 interface Matriz { ok: boolean; anio: number; mes: number; dias_mes: number; personal: Persona[]; tareo: Record<string, Record<string, RegistroDia>> }
 
 const CICLO = ['A', 'R', 'T', 'F', 'DM', 'V', 'D', 'FER'] as const;
@@ -50,6 +52,8 @@ export function AsistenciaPage() {
   const [confirmarHoy, setConfirmarHoy] = useState(false);
   const [licencia, setLicencia] = useState(false);
   const [filtrando, setFiltrando] = useState(false);
+  const [horarios, setHorarios] = useState(false);
+  const navigate = useNavigate();
   const [ocupado, setOcupado] = useState(false);
   const puedeEditar = can('rrhh_asistencia.editar', 'rrhh_asistencia.crear');
 
@@ -166,6 +170,8 @@ export function AsistenciaPage() {
           {rol !== 'TODOS' && <span className="placas-filtros__n t-numeric">1</span>}
         </Button>
         <div className="doc-cab__acciones">
+          {puedeEditar && <BotonTip tip="Marcación por QR" className="btn btn--plain btn--icono btn--icono-acento" onClick={() => navigate('/personas/marcacion')}><QrCode size={18} /></BotonTip>}
+          {puedeEditar && <BotonTip tip="Horarios de trabajo" className="btn btn--plain btn--icono asis-ico--ambar" onClick={() => setHorarios(true)}><Clock3 size={18} /></BotonTip>}
           {puedeEditar && <BotonTip tip="Marcar asistencia de hoy" className="btn btn--plain btn--icono asis-ico--azul" onClick={() => setConfirmarHoy(true)}><CheckCheck size={18} /></BotonTip>}
           {puedeEditar && <BotonTip tip="Sincronizar con viajes" className="btn btn--plain btn--icono btn--icono-acento" disabled={ocupado} onClick={sincronizar}><RefreshCw size={18} /></BotonTip>}
           {puedeEditar && <BotonTip tip="Registrar licencia o vacaciones" className="btn btn--plain btn--icono asis-ico--morado" onClick={() => setLicencia(true)}><CalendarOff size={18} /></BotonTip>}
@@ -200,13 +206,16 @@ export function AsistenciaPage() {
                     const finde = f.getDay() === 0 || f.getDay() === 6;
                     return <th key={d} className={finde ? 'asis-finde' : ''}><span>{DIAS[f.getDay()]}</span>{d}</th>;
                   })}
-                  <th className="asis-th-tot" title="Días asistidos">Asist.</th><th className="asis-th-tot" title="Días en ruta">En ruta</th><th className="asis-th-tot" title="Faltas">Faltas</th><th className="asis-th-tot" title="Tardanzas">Tard.</th>
+                  <th className="asis-th-tot" title="Días asistidos">Asist.</th><th className="asis-th-tot" title="Días en ruta">En ruta</th><th className="asis-th-tot" title="Faltas">Faltas</th><th className="asis-th-tot" title="Tardanzas">Tard.</th><th className="asis-th-tot" title="Asistencia sobre los días esperados (sin descansos, feriados, vacaciones ni descansos médicos)">%</th>
                 </tr>
               </thead>
               <tbody>
                 {personal.map(p => {
                   const est = dias.map(d => estadoDe(p.id, clave(anio, mes, d)));
                   const c = (e: string) => est.filter(x => x === e).length;
+                  // % de asistencia: asistió, tardó o en ruta sobre los días esperados que ya pasaron
+                  const esperados = dias.filter((d, i) => clave(anio, mes, d) <= hoyClave && !['D', 'FER', 'V', 'DM'].includes(est[i])).length;
+                  const pct = esperados ? ((c('A') + c('T') + c('R')) / esperados) * 100 : null;
                   return (
                     <tr key={p.id}>
                       <td className="asis-col-nombre">
@@ -218,7 +227,7 @@ export function AsistenciaPage() {
                         return (
                           <td key={d} className={fecha === hoyClave ? 'asis-hoy' : ''}>
                             <button type="button" disabled={!puedeEditar} className={`asis-celda pressable asis-celda--${est[i] || 'VACIO'}`}
-                              title={`${fecha}: ${LEYENDA[est[i]] ?? 'Sin marcar'}`} onClick={() => rotar(p, d)}>
+                              title={`${fecha}: ${LEYENDA[est[i]] ?? 'Sin marcar'}${m?.tareo?.[p.id]?.[fecha]?.hora_entrada ? ` · ${m.tareo[p.id][fecha].hora_entrada}${m.tareo[p.id][fecha].hora_salida ? ` a ${m.tareo[p.id][fecha].hora_salida}` : ' (sin salida)'}` : ''}`} onClick={() => rotar(p, d)}>
                               {est[i] || '·'}
                             </button>
                           </td>
@@ -228,6 +237,7 @@ export function AsistenciaPage() {
                       <td className="asis-tot asis-tot--R">{c('R')}</td>
                       <td className="asis-tot asis-tot--F">{c('F')}</td>
                       <td className="asis-tot asis-tot--T">{c('T')}</td>
+                      <td className={`asis-pct${pct === null ? '' : pct >= 90 ? ' asis-pct--ok' : pct >= 75 ? ' asis-pct--med' : ' asis-pct--bajo'}`}>{pct === null ? '—' : `${pct.toFixed(1)} %`}</td>
                     </tr>
                   );
                 })}
@@ -240,6 +250,7 @@ export function AsistenciaPage() {
 
       <ConfirmSheet open={confirmarHoy} onClose={() => !ocupado && setConfirmarHoy(false)} onConfirm={autocompletarHoy} loading={ocupado}
         title="¿Marcar la asistencia de hoy?" message={`Se marcará "Asistió" (y "En ruta" a los conductores) para ${personal.length} colaboradores. Reemplaza lo que ya esté marcado hoy.`} confirmLabel="Marcar" />
+      <HorariosSheet open={horarios} personal={m?.personal ?? []} onClose={() => setHorarios(false)} />
       <LicenciaSheet open={licencia} personal={m?.personal ?? []} onClose={() => setLicencia(false)} />
     </Page>
   );
