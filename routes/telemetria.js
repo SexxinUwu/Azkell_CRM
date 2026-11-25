@@ -6,6 +6,7 @@
 const express = require('express');
 const { listarGeocercas } = require('../services/wialon_geocercas');
 const { hoyLima } = require('../services/horaLima');
+const { sensoresEnMensaje } = require('../services/wialon_mensaje');
 
 module.exports = function(db) {
     const router = express.Router();
@@ -17,6 +18,53 @@ module.exports = function(db) {
         const r = await listarGeocercas(getDb(req), req.tenantSlug || (req.tenantInfo && req.tenantInfo.db_name) || 'default');
         if (!r.ok) return res.status(502).json({ error: r.error });
         res.json({ geocercas: r.geocercas });
+    });
+
+    // ── GET /api/telemetria/sensores-mensaje?unitId=&t= — sensores de la unidad en un instante del recorrido (panel del Track player) ─
+    router.get('/sensores-mensaje', async (req, res) => {
+        const r = await sensoresEnMensaje(getDb(req), req.query.unitId, req.query.t);
+        if (!r.ok) return res.status(502).json({ error: r.error });
+        res.json(r);
+    });
+
+    // ── GET /api/telemetria/streetview?lat=&lng=&heading= — foto de la calle (Google Street View Static) ─
+    // La clave vive solo en el servidor (GOOGLE_MAPS_KEY). Antes de pedir la foto se consulta el metadato (gratis) para no pagar donde no hay
+    // cobertura; las fotos se guardan en memoria y hay un tope diario (STREETVIEW_LIMITE_DIARIO, 800 por defecto) para cuidar el gasto.
+    const svCache = new Map();           // clave → { tipo: 'img'|'no', buf }
+    let svDia = { dia: '', n: 0 };
+    router.get('/streetview', async (req, res) => {
+        const clave = process.env.GOOGLE_MAPS_KEY || '';
+        if (!clave) return res.status(501).json({ error: 'sin_clave' });
+        const lat = Number(req.query.lat), lng = Number(req.query.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return res.status(400).json({ error: 'Coordenadas no válidas' });
+        const rumbo = ((Math.round((Number(req.query.heading) || 0) / 15) * 15) % 360 + 360) % 360;
+        const ancho = Math.min(640, Math.max(200, parseInt(req.query.w, 10) || 480)), alto = Math.min(640, Math.max(150, parseInt(req.query.h, 10) || 300));
+        const k = `${lat.toFixed(5)}|${lng.toFixed(5)}|${rumbo}|${ancho}x${alto}`;
+        const guardada = svCache.get(k);
+        const enviar = (c) => {
+            if (c.tipo === 'no') return res.status(404).json({ error: 'sin_cobertura' });
+            res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'private, max-age=86400' }).send(c.buf);
+        };
+        if (guardada) return enviar(guardada);
+        const hoy = hoyLima();
+        if (svDia.dia !== hoy) svDia = { dia: hoy, n: 0 };
+        const tope = parseInt(process.env.STREETVIEW_LIMITE_DIARIO || '800', 10);
+        if (svDia.n >= tope) return res.status(429).json({ error: 'limite_diario' });
+        try {
+            const meta = await (await fetch(`https://maps.googleapis.com/maps/api/streetview/metadata?location=${lat},${lng}&radius=50&source=outdoor&key=${encodeURIComponent(clave)}`, { signal: AbortSignal.timeout(8000) })).json();
+            let c;
+            if (!meta || meta.status !== 'OK') {
+                c = { tipo: 'no' };
+            } else {
+                svDia.n++;
+                const r = await fetch(`https://maps.googleapis.com/maps/api/streetview?size=${ancho}x${alto}&location=${lat},${lng}&heading=${rumbo}&fov=90&pitch=0&radius=50&source=outdoor&key=${encodeURIComponent(clave)}`, { signal: AbortSignal.timeout(10000) });
+                if (!r.ok) return res.status(502).json({ error: 'Google no respondió' });
+                c = { tipo: 'img', buf: Buffer.from(await r.arrayBuffer()) };
+            }
+            svCache.set(k, c);
+            if (svCache.size > 400) svCache.delete(svCache.keys().next().value);
+            enviar(c);
+        } catch (err) { res.status(502).json({ error: 'No se pudo obtener la foto de la calle' }); }
     });
 
     // ── GET /api/telemetria — resumen de todas las placas (última entrada por placa) ─

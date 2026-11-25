@@ -1,12 +1,13 @@
 import './flota.css';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MapPin, RefreshCw, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Hexagon, MapPin, RefreshCw, Route as IconoRecorrido, Search, SlidersHorizontal, Truck, X } from 'lucide-react';
 import { Page } from '../../core/ui/Display';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { AnimatePresence } from 'motion/react';
 import { Notice } from '../../core/ui/Display';
 import { ChoiceChips } from '../../core/ui/Chips';
+import { Combobox } from '../../core/ui/Combobox';
 import { GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { errorMessage } from '../../core/api/client';
 import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
@@ -22,6 +23,7 @@ import { armarTramos } from './gps/viajes';
 import { BarraReproduccion } from './gps/BarraReproduccion';
 import { descripcionCamion } from './gps/tipoUnidad';
 import { FichaTelemetria } from './gps/FichaTelemetria';
+import { TrackPlayer } from './gps/TrackPlayer';
 import { AsaHoja, HojaGesto, ZonaArrastre } from './gps/HojaGesto';
 import { ST } from './gps/camiones';
 import type { TemaMapa } from './gps/estilos';
@@ -40,6 +42,12 @@ const SEGMENTOS: Array<{ value: Segmento; label: string }> = [
 ];
 const coincideSegmento = (u: UnidadMapa, s: Segmento, enReserva: Set<string>) =>
   s === 'todos' || (s === 'reserva' ? enReserva.has(u.placa) : s === 'senal' ? estadoUnidad(u) !== 'sin_senal' : estadoUnidad(u) === s);
+
+type VistaGps = 'unidades' | 'recorrido' | 'geocercas';
+function vistaGuardada(): VistaGps {
+  try { const v = localStorage.getItem('fleet_gps_vista'); if (v === 'recorrido' || v === 'geocercas') return v; } catch { /* sin almacenamiento */ }
+  return 'unidades';
+}
 
 type BaseMapa = 'mapa' | 'sat';
 function baseGuardada(): BaseMapa {
@@ -81,7 +89,10 @@ export function UbicacionPage() {
   const [busqueda, setBusqueda] = useState('');
   const [ocultas, setOcultas] = useState<Set<string>>(() => new Set());
   const [seleccionada, setSeleccionada] = useState<string | null>(null);
-  const [panel, setPanel] = useState<'ficha' | 'historial'>('ficha');
+  // Tres vistas: Unidades (en vivo), Recorrido (historial y reproductor de una unidad) y Geocercas (buscador)
+  const [vista, setVista] = useState<VistaGps>(vistaGuardada);
+  const [playerAbierto, setPlayerAbierto] = useState(false);
+  const panel = vista === 'recorrido' ? 'historial' : 'ficha';
   const [horas, setHoras] = useState(24);
   const [dia, setDia] = useState<string | null>(null);
   const [desde, setDesde] = useState<string | null>(null);
@@ -194,7 +205,8 @@ export function UbicacionPage() {
   const enLista = lista.length;
   const visiblesEnMapa = lista.filter(u => u.lat != null && !ocultas.has(u.placa)).length;
   const todasVisibles = lista.length > 0 && lista.every(u => !ocultas.has(u.placa));
-  const visibles = useMemo(() => new Set(lista.filter(u => !ocultas.has(u.placa)).map(u => u.placa)), [lista, ocultas]);
+  // En Recorrido el mapa muestra solo la unidad que se está revisando; en las otras vistas, la lista filtrada
+  const visibles = useMemo(() => (vista === 'recorrido' ? new Set(seleccionada ? [seleccionada] : []) : new Set(lista.filter(u => !ocultas.has(u.placa)).map(u => u.placa))), [vista, seleccionada, lista, ocultas]);
   const seleccion = unidades.find(u => u.placa === seleccionada) ?? null;
   // Con búsqueda, el mapa se acerca a lo encontrado (hasta 25 unidades)
   const encuadrarA = useMemo(() => (busqueda.trim() && lista.length <= 25 ? lista.map(u => u.placa) : []), [busqueda, lista]);
@@ -242,6 +254,17 @@ export function UbicacionPage() {
     return () => clearInterval(t);
   }, [reproduciendo, velocidad, historial]);
 
+  // El reproductor se abre al dar play y se cierra al salir de Recorrido o cambiar de unidad
+  useEffect(() => { if (reproduciendo) setPlayerAbierto(true); }, [reproduciendo]);
+  useEffect(() => { setPlayerAbierto(false); }, [vista, seleccionada]);
+
+  const cambiarVista = useCallback((v: VistaGps) => {
+    haptic('selection');
+    setVista(v);
+    setReproduciendo(false);
+    try { localStorage.setItem('fleet_gps_vista', v); } catch { /* sin almacenamiento */ }
+  }, []);
+
   const conductorDe = (placa: string) => conductorPorPlaca.get(placa) ?? null;
 
   // Alertas en pantalla (sin enviar nada fuera): se quitan solas a los 14 s
@@ -272,7 +295,6 @@ export function UbicacionPage() {
   const elegir = useCallback((placa: string | null) => {
     if (placa) haptic('selection');
     setSeleccionada(placa);
-    setPanel('ficha');
     setIndice(0);
     setReproduciendo(false);
     setHojaFicha(false);
@@ -292,6 +314,7 @@ export function UbicacionPage() {
     return () => document.removeEventListener('keydown', f);
   }, [piloto, seleccionada, motor, elegir]);
 
+  const opcionesUnidad = useMemo(() => [...unidades].sort((a, b) => a.placa.localeCompare(b.placa)).map(u => ({ value: u.placa, label: placaFmt(u.placa), description: [u.nombre, corta(u.empresa)].filter(Boolean).join(' · ') })), [unidades]);
   const activos = (empresa !== 'TODAS' ? 1 : 0) + (segmento !== 'todos' ? 1 : 0);
   const conteoSeg = (s: Segmento) => delEmpresa.filter(u => coincideSegmento(u, s, enReserva)).length;
 
@@ -331,13 +354,13 @@ export function UbicacionPage() {
       {isLoading ? <PageLoader variante="camion" /> : isError ? (
         <Notice tone="error">{errorMessage(error)}</Notice>
       ) : (
-        <div className="tg" ref={tgRef} data-tema={oscuro ? 'noche' : 'day'} data-ficha={seleccion ? 'si' : 'no'} data-piloto={piloto ? 'si' : 'no'}
+        <div className="tg" ref={tgRef} data-tema={oscuro ? 'noche' : 'day'} data-ficha={vista === 'unidades' && seleccion ? 'si' : 'no'} data-piloto={piloto ? 'si' : 'no'}
           data-hist={panel === 'historial' && seleccion ? 'si' : 'no'} data-hoja={hojaLista ? 'full' : ''} data-det={hojaFicha ? 'full' : ''}>
           <Suspense fallback={<div className="tg-cargando">Cargando mapa…</div>}>
             <UbicacionMapa unidades={unidades} descs={descs} visibles={visibles} seleccionada={seleccionada}
               hojaAbierta={!!seleccion} encuadreVersion={0} encuadrarA={encuadrarA}
               historial={historial ?? null} eventosHist={eventosHist} viajeSel={viajeSel} indice={indice} onElegir={elegir} onAlerta={nuevaAlerta} onPiloto={setPiloto}
-              tema={tema} base={base} onBase={cambiarBase} geocercas={geocercas.data ?? []}>
+              tema={tema} base={base} onBase={cambiarBase} geocercas={geocercas.data ?? []} vista={vista} onVista={cambiarVista}>
               <header className="tg-top">
                 <div className="tg-brand tg-glass">
                   <span className="tg-eyebrow">Flota · Telemetría</span>
@@ -346,7 +369,12 @@ export function UbicacionPage() {
                   <span className="tg-resumen">{cifras.total} unidades · {cifras.enMovimiento} en movimiento · {cifras.sinSenal} sin señal</span>
                   <Button variant="plain" iconOnly className="tg-refrescar" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar" disabled={isFetching} onClick={() => refetch()} />
                 </div>
-                <div className="tg-kpis" aria-label="Resumen de la flota">
+                <nav className="tg-tabs tg-glass" role="tablist" aria-label="Vistas de ubicación">
+                  {([['unidades', 'Unidades', <Truck key="u" size={16} />], ['recorrido', 'Recorrido', <IconoRecorrido key="r" size={16} />], ['geocercas', 'Geocercas', <Hexagon key="g" size={16} />]] as const).map(([v, nombre, icono]) => (
+                    <button key={v} type="button" role="tab" className="tg-tab" aria-selected={vista === v} onClick={() => cambiarVista(v)}>{icono}<span>{nombre}</span></button>
+                  ))}
+                </nav>
+                {vista === 'unidades' && <div className="tg-kpis" aria-label="Resumen de la flota">
                   {([['todos', 'Flota monitoreada', 'var(--cyan)'], ['movimiento', 'En movimiento', ST.mov.c], ['ralenti', 'Ralentí', ST.ral.c], ['detenido', 'Detenidas', ST.det.c], ['sin_senal', 'Sin señal', ST.off.c], ['reserva', 'En reserva', '#ff9f0a']] as const).map(([v, nombre, color]) => (
                     <button key={v} type="button" className="tg-kpi tg-glass" aria-pressed={segmento === v}
                       onClick={() => { haptic('selection'); setSegmento(s => (s === v && v !== 'todos' ? 'todos' : v)); }}>
@@ -354,10 +382,10 @@ export function UbicacionPage() {
                       <b>{conteoSeg(v)}</b>
                     </button>
                   ))}
-                </div>
+                </div>}
               </header>
 
-              <HojaGesto className="tg-side tg-glass" label="Unidades" snaps={SNAPS_LISTA} alto={ALTO_LISTA}
+              {vista === 'unidades' && <HojaGesto className="tg-side tg-glass" label="Unidades" snaps={SNAPS_LISTA} alto={ALTO_LISTA}
                 snap={seleccion || piloto ? -1 : hojaLista ? 1 : 0} onSnap={i => setHojaLista(i === 1)}>
                 <ZonaArrastre className="tg-side-h">
                   <AsaHoja />
@@ -388,27 +416,44 @@ export function UbicacionPage() {
                   {ordenada.map(filaUnidad)}
                   {!lista.length && <li><p className="tg-vacio">Sin unidades con ese filtro.</p></li>}
                 </ul>
-              </HojaGesto>
+              </HojaGesto>}
 
               <AnimatePresence>
-              {seleccion && (
+              {vista === 'unidades' && seleccion && (
                 <HojaGesto key="ficha" className="tg-detail tg-glass" label={panel === 'ficha' ? `Ficha de ${seleccion.placa}` : `Historial de ${seleccion.placa}`}
                   snaps={SNAPS_FICHA} alto={ALTO_FICHA} snap={piloto ? -1 : hojaFicha ? 1 : 0} onSnap={i => setHojaFicha(i === 1)}>
                   {panel === 'ficha' ? (
                     <FichaTelemetria u={seleccion} motor={motor} conductor={conductorDe(seleccion.placa)} piloto={piloto} capacidad={capacidadSel} rendimiento={rendimientos.data?.get(placaLimpia(seleccion.placa)) ?? null}
-                      onCerrar={cerrarPanel} onHistorial={() => { haptic('selection'); setHojaFicha(false); setPanel('historial'); }} />
-                  ) : (
+                      onCerrar={cerrarPanel} onHistorial={() => { setHojaFicha(false); cambiarVista('recorrido'); }} />
+                  ) : null}
+                </HojaGesto>
+              )}
+              </AnimatePresence>
+
+              {vista === 'recorrido' && (
+                <HojaGesto className="tg-side tg-side--rec tg-glass" label="Recorrido" snaps={SNAPS_LISTA} alto={ALTO_LISTA} snap={hojaLista ? 1 : 0} onSnap={i => setHojaLista(i === 1)}>
+                  <ZonaArrastre className="tg-side-h">
+                    <AsaHoja />
+                    <p className="tg-rec-titulo">Recorrido de una unidad</p>
+                    <Combobox options={opcionesUnidad} value={seleccionada} onChange={v => elegir(v)} placeholder="Elige la placa…" enHoja compacta tituloHoja="Unidad" />
+                  </ZonaArrastre>
+                  <div className="tg-rec-cuerpo">
+                    {seleccion ? (
                     <PanelHistorial placa={seleccion.placa} horas={horas} analisis={analisis} tramos={tramos} viajeSel={viajeSel} onViaje={setViajeSel}
                       onHoras={setHoras} dia={dia} onDia={d => { setDia(d); setDesde(null); setHasta(null); }} desde={desde} hasta={hasta} onRango={(a, b) => { setDesde(a); setHasta(b); setDia(null); }} onIrA={(lat, lng) => motor?.irA(lat, lng)} historial={historial} cargando={historialQ.isFetching && !historial}
                       error={errorHistorial} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
                       reproduciendo={reproduciendo} onReproducir={() => setReproduciendo(r => !r)}
                       onReiniciar={() => { setIndice(0); setReproduciendo(false); }}
                       velocidad={velocidad} onVelocidad={setVelocidad}
-                      onSalir={() => { setPanel('ficha'); setReproduciendo(false); }} />
-                  )}
+                      onSalir={() => cambiarVista('unidades')} />
+                    ) : <p className="tg-vacio">Elige una unidad para ver su recorrido: ruta, paradas, viajes y reproducción con la calle y los sensores.</p>}
+                  </div>
                 </HojaGesto>
               )}
-              </AnimatePresence>
+
+              {vista === 'recorrido' && playerAbierto && historial && seleccion && historial.puntos.length > 0 && (
+                <TrackPlayer placa={seleccion.placa} unitId={seleccion.id} historial={historial} indice={indice} reproduciendo={reproduciendo} onCerrar={() => setPlayerAbierto(false)} />
+              )}
 
               {panel === 'historial' && historial && historial.puntos.length > 0 && (
                 <BarraReproduccion historial={historial} analisis={analisis} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
