@@ -11,6 +11,7 @@ import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { usePersonalSolicitante } from '../almacen/SelectoresSalida';
+import { useProveedores } from '../almacen/api';
 import {
   aObjeto, crearTrabajo, otYaCerrada, editarTrabajo, eliminarTrabajo, estadoTrabajo, trabajoCosto, trabajoId,
   type OrdenTrabajo, type TrabajoOT,
@@ -47,6 +48,7 @@ export function TrabajoOTSheet({ ot, trabajo, motivo, motivosLibres = [], open, 
   const qc = useQueryClient();
   const toast = useToast();
   const personalQ = usePersonalSolicitante();
+  const proveedoresQ = useProveedores();
   const [desc, setDesc] = useState('');
   const [personal, setPersonal] = useState<string[]>([]);
   const [ini, setIni] = useState('');
@@ -72,8 +74,15 @@ export function TrabajoOTSheet({ ot, trabajo, motivo, motivosLibres = [], open, 
   }, [open, trabajo, motivo]);
 
   const opciones = useMemo(
-    () => [...new Set([...(personalQ.data ?? []), ...personal])].sort((a, b) => a.localeCompare(b, 'es')),
-    [personalQ.data, personal],
+    () => {
+      // Además del personal propio, los talleres/proveedores externos, marcados "(Externo)"
+      const externos = (proveedoresQ.data ?? [])
+        .filter(p => String(p.estado ?? 'Activo').toLowerCase() !== 'inactivo')
+        .map(p => String(p.razon_social || p.nombre || '').trim().toUpperCase())
+        .filter(Boolean).map(n => `${n} (Externo)`);
+      return [...new Set([...(personalQ.data ?? []), ...externos, ...personal])].sort((a, b) => a.localeCompare(b, 'es'));
+    },
+    [personalQ.data, proveedoresQ.data, personal],
   );
 
   const refrescar = () => Promise.all([
@@ -157,7 +166,7 @@ export function TrabajoOTSheet({ ot, trabajo, motivo, motivosLibres = [], open, 
             )}
           </Field>
           <Field label="Personal / Técnico(s) ejecutores" wide>
-            {p => <CampoMultiple id={p.id} titulo="Técnico(s) ejecutores" opciones={opciones} valor={personal} onChange={setPersonal} placeholder="Seleccionar técnico(s)…" vacio="No hay personal que coincida." />}
+            {p => <CampoMultiple id={p.id} titulo="Técnico(s) ejecutores" opciones={opciones} valor={personal} onChange={setPersonal} placeholder="Técnico(s) o taller externo…" vacio="No hay personal que coincida." />}
           </Field>
           <Field label="Fecha y hora inicio *">{p => <TextInput {...p} type="datetime-local" value={ini} onChange={e => setIni(e.target.value)} />}</Field>
           <Field label="Fecha y hora fin *">{p => <TextInput {...p} type="datetime-local" value={fin} min={ini || undefined} onChange={e => setFin(e.target.value)} />}</Field>
