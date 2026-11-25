@@ -4,7 +4,7 @@
 .asis-cab .doc-cab__acciones { flex-wrap: nowrap; flex-shrink: 0; }
 .asis-nav { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; }
 .asis-nav__fecha { width: 11.5rem; }
-.asis-ico--azul { color: #0284c7; } .asis-ico--morado { color: #9333ea; }
+.asis-ico--azul { color: #0284c7; } .asis-ico--morado { color: #9333ea; } .asis-ico--ambar { color: #d97706; }
 .asis-cuerpo { display: flex; flex-direction: column; gap: var(--s-3); }
 .asis-tabla-wrap { scrollbar-width: none; -ms-overflow-style: none; }
 .asis-tabla-wrap::-webkit-scrollbar { display: none; }
@@ -56,3 +56,66 @@
 .asis-tot { font-family: var(--font-mono); font-weight: 700; min-width: 48px; font-size: 0.875rem; }
 .asis-tabla thead .asis-th-tot { min-width: 56px; white-space: nowrap; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.02em; }
 .asis-tot--A { color: var(--green-ink); } .asis-tot--R { color: var(--accent-ink); } .asis-tot--F { color: var(--red-ink); } .asis-tot--T { color: var(--amber-ink); }
+
+/* ── Compacto: encabezado ≈20% de la pantalla y el resto para la tabla; nombres siempre por encima de las casillas ── */
+.asis-leyenda { gap: 6px; flex-wrap: nowrap; overflow: hidden; }
+.asis-leyenda .asis-celda { min-height: 26px; padding: 2px 10px; gap: 0.4rem; font-size: 0.75rem; }
+.asis-leyenda small { font-size: 0.75rem; }
+.asis-tabla { font-size: 0.75rem; }
+.asis-tabla th, .asis-tabla td { padding: 3px 2px; }
+.asis-tabla thead th { min-width: 34px; padding: 5px 2px; font-size: 0.6875rem; }
+.asis-tabla .asis-celda { width: 32px; height: 26px; border-radius: 7px; font-size: 0.6875rem; }
+.asis-col-nombre { min-width: 15rem; max-width: 19rem; z-index: 4; background-clip: padding-box; }
+.asis-tabla thead .asis-col-nombre { z-index: 6; }
+.asis-col-nombre strong { font-size: 0.8125rem; line-height: 1.2; }
+.asis-col-nombre small { margin-top: 1px; font-size: 0.6875rem; }
+.asis-tabla tbody tr:hover td { background: color-mix(in srgb, var(--surface), var(--label) 5%); }
+.asis-tabla tbody tr:hover .asis-col-nombre { background: color-mix(in srgb, var(--surface), var(--label) 5%); }
+.asis-tabla .asis-celda { position: relative; z-index: 0; }
+.asis-tot { min-width: 38px; font-size: 0.8125rem; }
+.asis-tabla thead .asis-th-tot { min-width: 44px; }
+.asis-pct { font-family: var(--font-mono); font-weight: 800; font-size: 0.8125rem; min-width: 64px; white-space: nowrap; }
+.asis-pct--ok { color: var(--green-ink); } .asis-pct--med { color: var(--amber-ink); } .asis-pct--bajo { color: var(--red-ink); }
+
+/* ── Marcación por QR ── */
+.marc-reloj { font-size: 1.5rem; font-weight: 800; letter-spacing: 0.02em; padding: 0 var(--s-2); }
+.marc-cuerpo { display: grid; gap: var(--s-4); grid-template-columns: 1fr; min-height: 0; }
+@media (min-width: 1024px) { .marc-cuerpo { grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.1fr); flex: 1 1 auto; } }
+.marc-camara { display: flex; flex-direction: column; gap: var(--s-2); min-height: 0; }
+.marc-video { flex: 1 1 auto; min-height: 320px; border-radius: var(--r-xl); overflow: hidden; background: #000; }
+.marc-video video { object-fit: cover; }
+.marc-pie { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.8125rem; color: var(--label-2); }
+.marc-pie--error { color: var(--red-ink); }
+.marc-lado { display: flex; flex-direction: column; gap: var(--s-3); min-height: 0; }
+.marc-resultado { border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-card); padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-3); min-height: 11rem; justify-content: center; transition: background 0.2s; }
+.marc-vacio { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--label-3); font-weight: 600; }
+.marc-persona { display: flex; align-items: center; gap: var(--s-3); }
+.marc-foto { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; flex: none; }
+.marc-foto--ini { display: grid; place-items: center; background: var(--fill); font-size: 1.75rem; font-weight: 800; color: var(--label-2); }
+.marc-nombre { display: flex; flex-direction: column; min-width: 0; }
+.marc-nombre strong { font-size: 1.375rem; line-height: 1.15; overflow-wrap: anywhere; }
+.marc-nombre small { font-size: 0.9375rem; color: var(--label-2); }
+.marc-estado { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) var(--s-4); border-radius: var(--r-lg); font-size: 1.125rem; }
+.marc-estado strong { display: block; font-size: 1.5rem; }
+.marc-estado small { display: block; font-size: 0.9375rem; opacity: 0.85; }
+.marc-resultado--ok-ingreso .marc-estado { background: var(--green-tint); color: var(--green-ink); }
+.marc-resultado--ok-salida .marc-estado { background: color-mix(in srgb, #0ea5e9 18%, transparent); color: #0284c7; }
+.marc-resultado--aviso .marc-estado { background: var(--amber-tint); color: var(--amber-ink); }
+.marc-resultado--error .marc-estado { background: var(--red-tint); color: var(--red-ink); }
+.marc-lista { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-card); overflow: hidden; }
+.marc-lista__titulo { margin: 0; padding: var(--s-3) var(--s-4); font-size: 0.875rem; font-weight: 700; display: flex; gap: 8px; align-items: baseline; border-bottom: 0.5px solid var(--separator); }
+.marc-lista__filas { overflow-y: auto; scrollbar-width: none; flex: 1 1 auto; min-height: 8rem; max-height: 40vh; padding: var(--s-2) var(--s-3); }
+.marc-lista__filas::-webkit-scrollbar { display: none; }
+@media (min-width: 1024px) { .marc-lista__filas { max-height: none; } }
+.marc-fila { display: grid; grid-template-columns: 3.2rem 5.2rem 1fr; align-items: center; gap: var(--s-2); padding: 6px 0; border-bottom: 0.5px solid var(--separator); font-size: 0.8125rem; }
+.marc-fila__nombre { display: flex; flex-direction: column; min-width: 0; }
+.marc-fila__nombre small { color: var(--label-2); font-size: 0.6875rem; }
+.marc-chip { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; text-align: center; }
+.marc-chip--in { background: var(--green-tint); color: var(--green-ink); }
+.marc-chip--out { background: color-mix(in srgb, #0ea5e9 18%, transparent); color: #0284c7; }
+
+/* ── Horarios ── */
+.hor-lista { display: flex; flex-direction: column; }
+.hor-fila { display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: var(--s-3); padding: 8px 0; border-bottom: 0.5px solid var(--separator); font-size: 0.8125rem; }
+.hor-fila__quien { display: flex; flex-direction: column; min-width: 0; }
+.hor-fila__quien small { color: var(--label-2); font-size: 0.6875rem; }

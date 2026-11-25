@@ -548,7 +548,7 @@ router.get('/tareo', async (req, res) => {
         const finMes = `${anio}-${String(mes).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
 
         const [tareoRows] = await tdb.query(`
-            SELECT personal_id, DATE_FORMAT(fecha, '%Y-%m-%d') as fecha, estado, minutos_tardanza, horas_extras, observacion, orden_viaje_codigo
+            SELECT personal_id, DATE_FORMAT(fecha, '%Y-%m-%d') as fecha, estado, minutos_tardanza, horas_extras, observacion, orden_viaje_codigo, TIME_FORMAT(hora_entrada, '%H:%i') as hora_entrada, TIME_FORMAT(hora_salida, '%H:%i') as hora_salida
             FROM rrhh_tareo
             WHERE fecha BETWEEN ? AND ?
         `, [inicioMes, finMes]);
@@ -896,6 +896,175 @@ router.get('/nomina/resumen', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+    // ═════════════════════════════════════════════════════════════════════
+    // 3. MARCACIÓN POR QR (ingreso y salida) Y HORARIOS
+    // ═════════════════════════════════════════════════════════════════════
+    // El QR del fotocheck puede ser el nuevo (AZK1.<id>.<firma>, firmado por el servidor) o el anterior (AZKELL|DNI:...).
+    // Regla: sin un ingreso abierto, la lectura es un INGRESO; con un ingreso abierto (dentro del tope del turno), es la SALIDA de ese turno.
+    // La asistencia cuenta en el día del ingreso, aunque la salida sea de madrugada.
+    const crypto = require('crypto');
+    const { ahoraLima } = require('../services/horaLima');
+    const firmaQr = (id) => crypto.createHmac('sha256', process.env.JWT_SECRET || '').update('azkell-qr|' + id).digest('base64url').slice(0, 16);
+    const tokenQr = (id) => 'AZK1.' + id + '.' + firmaQr(id);
+    const MIN_ENTRE_LECTURAS = 2;     // una segunda lectura casi seguida se ignora
+    const TOPE_MINIMO_HORAS = 16;     // tope del turno abierto: la duración del horario + 4 h, nunca menos de 16 h
+
+    function leerQr(texto) {
+        const t = String(texto || '').trim();
+        const nuevo = t.match(/^AZK1\.(\d+)\.([A-Za-z0-9_-]{16})$/);
+        if (nuevo) {
+            const esperado = Buffer.from(firmaQr(nuevo[1])); const recibido = Buffer.from(nuevo[2]);
+            if (esperado.length === recibido.length && crypto.timingSafeEqual(esperado, recibido)) return { id: Number(nuevo[1]) };
+            return { invalido: true };
+        }
+        const viejo = t.match(/^AZKELL\|DNI:([^|]+)/);
+        if (viejo) return { dni: viejo[1].trim() };
+        return null;
+    }
+
+    async function horarioDe(tdb, p) {
+        try {
+            const [h] = await tdb.query(
+                "SELECT hora_ingreso, hora_salida, duracion_horas, tolerancia_min FROM rrhh_horarios WHERE (ambito = 'PERSONA' AND personal_id = ?) OR (ambito = 'CARGO' AND UPPER(cargo) = UPPER(?)) ORDER BY (ambito = 'PERSONA') DESC LIMIT 1",
+                [p.id, p.cargo || '']);
+            return h[0] || null;
+        } catch (e) { return null; }
+    }
+    const aMin = (hhmm) => { const m = String(hhmm || '').match(/^(\d{1,2}):(\d{2})/); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+
+    async function registrarMarcacion(tdb, p, { origen, dispositivo, usuario }) {
+        const ahora = ahoraLima();
+        const hora = ahora.slice(11, 16);
+        const horario = await horarioDe(tdb, p);
+        const duracion = horario ? Number(horario.duracion_horas) : 9;
+        const tope = Math.max(TOPE_MINIMO_HORAS, duracion + 4);
+        const [ults] = await tdb.query(
+            "SELECT id, tipo, fecha_turno, DATE_FORMAT(fecha_turno, '%Y-%m-%d') AS fturno, TIMESTAMPDIFF(MINUTE, marcado_en, ?) AS min_desde FROM rrhh_marcaciones WHERE personal_id = ? ORDER BY marcado_en DESC, id DESC LIMIT 1",
+            [ahora, p.id]);
+        const ult = ults[0];
+        if (ult && ult.min_desde < MIN_ENTRE_LECTURAS) {
+            return { ignorada: true, tipo: ult.tipo, hora, mensaje: 'Ya marcaste hace un momento.' };
+        }
+        const abierto = ult && ult.tipo === 'INGRESO' && ult.min_desde <= tope * 60;
+        if (abierto) {
+            await tdb.query('INSERT INTO rrhh_marcaciones (personal_id, tipo, marcado_en, fecha_turno, turno_id, origen, dispositivo, usuario_registro) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                [p.id, 'SALIDA', ahora, ult.fturno, ult.id, origen, dispositivo || null, usuario]);
+            const trabajadas = ult.min_desde / 60;
+            const sobra = horario ? Math.round((trabajadas - duracion) * 100) / 100 : 0;
+            const extras = sobra >= 0.25 ? sobra : 0;      // menos de 15 minutos no cuenta como hora extra
+            await tdb.query('UPDATE rrhh_tareo SET hora_salida = ?, horas_extras = ? WHERE personal_id = ? AND fecha = ?', [hora + ':00', extras, p.id, ult.fturno]);
+            return { tipo: 'SALIDA', hora, fecha_turno: ult.fturno, horas_trabajadas: Math.round(trabajadas * 100) / 100, horas_extras: extras };
+        }
+        const fecha = ahora.slice(0, 10);
+        let tardanza = 0;
+        if (horario) {
+            let dif = aMin(hora) - aMin(horario.hora_ingreso);
+            dif = ((dif + 720) % 1440 + 1440) % 1440 - 720;     // diferencia más corta, también para turnos de noche
+            if (dif > Number(horario.tolerancia_min || 0)) tardanza = dif;
+        }
+        const estado = tardanza > 0 ? 'T' : 'A';
+        await tdb.query('INSERT INTO rrhh_marcaciones (personal_id, tipo, marcado_en, fecha_turno, origen, dispositivo, usuario_registro) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [p.id, 'INGRESO', ahora, fecha, origen, dispositivo || null, usuario]);
+        await tdb.query(
+            `INSERT INTO rrhh_tareo (personal_id, fecha, estado, hora_entrada, hora_salida, minutos_tardanza, horas_extras, usuario_registro)
+             VALUES (?, ?, ?, ?, NULL, ?, 0, ?)
+             ON DUPLICATE KEY UPDATE estado = IF(estado = 'R', 'R', VALUES(estado)), hora_entrada = VALUES(hora_entrada), hora_salida = NULL,
+                 minutos_tardanza = VALUES(minutos_tardanza), horas_extras = 0, usuario_registro = VALUES(usuario_registro)`,
+            [p.id, fecha, estado, hora + ':00', tardanza, usuario]);
+        return { tipo: 'INGRESO', hora, fecha_turno: fecha, tardanza_min: tardanza };
+    }
+
+    // QR firmado de una persona (lo usa el fotocheck)
+    router.get('/personal/:id/qr-token', (req, res) => {
+        const id = parseInt(req.params.id, 10);
+        if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Persona no válida' });
+        res.json({ ok: true, token: tokenQr(id) });
+    });
+
+    // Marcar con el QR del fotocheck
+    router.post('/marcacion/qr', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const b = req.body || {};
+            const leido = leerQr(b.codigo);
+            if (!leido || leido.invalido) return res.status(400).json({ ok: false, error: leido && leido.invalido ? 'El código no es válido (firma incorrecta).' : 'No reconozco este código. Usa el QR del fotocheck.' });
+            const cols = 'id, numero_documento, nombres, apellidos, cargo, categoria_rol, estado, foto_url';
+            const [filas] = leido.id
+                ? await tdb.query(`SELECT ${cols} FROM rrhh_personal WHERE id = ?`, [leido.id])
+                : await tdb.query(`SELECT ${cols} FROM rrhh_personal WHERE numero_documento = ?`, [leido.dni]);
+            const p = filas[0];
+            if (!p) return res.status(404).json({ ok: false, error: 'Esta persona no está registrada en esta empresa.' });
+            if (String(p.estado || '').toUpperCase() === 'CESADO') return res.status(409).json({ ok: false, error: 'Esta persona figura como cesada.' });
+            const usuario = (req.user && req.user.nombre) ? req.user.nombre : 'MARCACION_QR';
+            const r = await registrarMarcacion(tdb, p, { origen: 'QR', dispositivo: String(b.dispositivo || '').slice(0, 120), usuario });
+            res.json({ ok: true, ...r, persona: { id: p.id, nombres: p.nombres, apellidos: p.apellidos, cargo: p.cargo, categoria_rol: p.categoria_rol, foto_url: p.foto_url || null } });
+        } catch (err) {
+            console.error('Error en marcación QR:', err);
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
+
+    // Marcaciones de un día (por defecto, hoy)
+    router.get('/marcaciones', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.fecha || '')) ? req.query.fecha : hoyLima();
+            const [rows] = await tdb.query(
+                `SELECT m.id, m.tipo, DATE_FORMAT(m.marcado_en, '%H:%i') AS hora, DATE_FORMAT(m.marcado_en, '%Y-%m-%d') AS fecha, m.origen, p.id AS personal_id, p.nombres, p.apellidos, p.cargo
+                 FROM rrhh_marcaciones m JOIN rrhh_personal p ON p.id = m.personal_id
+                 WHERE DATE(m.marcado_en) = ? ORDER BY m.marcado_en DESC, m.id DESC LIMIT 300`, [fecha]);
+            res.json({ ok: true, fecha, marcaciones: rows });
+        } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+    });
+
+    // Horarios por cargo o por persona
+    router.get('/horarios', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const [rows] = await tdb.query(
+                `SELECT h.id, h.ambito, h.cargo, h.personal_id, TIME_FORMAT(h.hora_ingreso, '%H:%i') AS hora_ingreso, TIME_FORMAT(h.hora_salida, '%H:%i') AS hora_salida,
+                        h.duracion_horas, h.tolerancia_min, p.nombres, p.apellidos
+                 FROM rrhh_horarios h LEFT JOIN rrhh_personal p ON p.id = h.personal_id ORDER BY h.ambito, h.cargo, p.apellidos`);
+            res.json({ ok: true, horarios: rows });
+        } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+    });
+
+    router.post('/horarios', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            const b = req.body || {};
+            const ambito = b.ambito === 'PERSONA' ? 'PERSONA' : 'CARGO';
+            const cargo = ambito === 'CARGO' ? String(b.cargo || '').trim() : null;
+            const pid = ambito === 'PERSONA' ? parseInt(b.personal_id, 10) : null;
+            if (ambito === 'CARGO' && !cargo) return res.status(400).json({ ok: false, error: 'Indica el cargo.' });
+            if (ambito === 'PERSONA' && !pid) return res.status(400).json({ ok: false, error: 'Indica la persona.' });
+            if (aMin(b.hora_ingreso) === null || aMin(b.hora_salida) === null) return res.status(400).json({ ok: false, error: 'Las horas no son válidas.' });
+            const dur = Number(b.duracion_horas);
+            if (!Number.isFinite(dur) || dur <= 0 || dur > 48) return res.status(400).json({ ok: false, error: 'La duración del turno debe estar entre 1 y 48 horas.' });
+            const tol = Math.max(0, parseInt(b.tolerancia_min, 10) || 0);
+            const usuario = (req.user && req.user.nombre) ? req.user.nombre : 'SISTEMA';
+            const [ex] = ambito === 'CARGO'
+                ? await tdb.query("SELECT id FROM rrhh_horarios WHERE ambito = 'CARGO' AND UPPER(cargo) = UPPER(?) LIMIT 1", [cargo])
+                : await tdb.query("SELECT id FROM rrhh_horarios WHERE ambito = 'PERSONA' AND personal_id = ? LIMIT 1", [pid]);
+            if (ex[0]) {
+                await tdb.query('UPDATE rrhh_horarios SET hora_ingreso = ?, hora_salida = ?, duracion_horas = ?, tolerancia_min = ?, actualizado_por = ? WHERE id = ?',
+                    [b.hora_ingreso, b.hora_salida, dur, tol, usuario, ex[0].id]);
+            } else {
+                await tdb.query('INSERT INTO rrhh_horarios (ambito, cargo, personal_id, hora_ingreso, hora_salida, duracion_horas, tolerancia_min, actualizado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                    [ambito, cargo, pid, b.hora_ingreso, b.hora_salida, dur, tol, usuario]);
+            }
+            res.json({ ok: true });
+        } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+    });
+
+    router.delete('/horarios/:id', async (req, res) => {
+        try {
+            const tdb = getDb(req);
+            await tdb.query('DELETE FROM rrhh_horarios WHERE id = ?', [parseInt(req.params.id, 10) || 0]);
+            res.json({ ok: true });
+        } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+    });
 
     return router;
 };

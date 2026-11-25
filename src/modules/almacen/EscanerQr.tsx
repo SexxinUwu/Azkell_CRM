@@ -5,16 +5,16 @@ import { Notice } from '../../core/ui/Display';
 // Escáner de códigos QR y de barras con la misma librería del clásico (/libs/html5-qrcode.min.js).
 // La librería se carga solo al abrir el escáner y la cámara se apaga al cerrarlo.
 
-interface Html5QrcodeInstancia {
+export interface Html5QrcodeInstancia {
   start(camara: unknown, config: unknown, alLeer: (texto: string) => void, alFallar?: () => void): Promise<unknown>;
   stop(): Promise<void>;
   clear(): void;
 }
-type Html5QrcodeCtor = new (elementoId: string) => Html5QrcodeInstancia;
+export type Html5QrcodeCtor = new (elementoId: string) => Html5QrcodeInstancia;
 
 let cargaPendiente: Promise<void> | null = null;
 
-function cargarLibreria(): Promise<Html5QrcodeCtor> {
+export function cargarLibreria(): Promise<Html5QrcodeCtor> {
   const ventana = window as unknown as { Html5Qrcode?: Html5QrcodeCtor };
   if (ventana.Html5Qrcode) return Promise.resolve(ventana.Html5Qrcode);
   if (!cargaPendiente) {

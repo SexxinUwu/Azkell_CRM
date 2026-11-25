@@ -9,6 +9,11 @@ export const RUTAS: RutaModulo[] = [
     nav: { key: 'asistencia', label: 'Asistencia', to: '/personas/asistencia', icon: 'ClipboardCheck', permisos: ['rrhh_asistencia.ver'] },
   },
   {
+    path: 'personas/marcacion/*',
+    permisos: ['rrhh_asistencia.crear', 'admin'],
+    Page: lazy(() => import('./MarcacionQrPage').then(m => ({ default: m.MarcacionQrPage }))),
+  },
+  {
     path: 'personas/nomina/*',
     permisos: ['rrhh_nomina.ver', 'admin'],
     Page: lazy(() => import('./NominaPage').then(m => ({ default: m.NominaPage }))),
