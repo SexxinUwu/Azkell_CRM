@@ -64,19 +64,35 @@ export function LlantaItem({ llanta, posicion, activa, arrastrable, onPointerDow
   );
 }
 
-/** Neumático dibujado (de frente, vertical) con el aro del semáforo de remanente: el mismo que se ve en el plano de la unidad */
-export function LlantaIcono({ tono, activa = false }: { tono: Tono; activa?: boolean }) {
-  const aro = tono === 'gray' ? 'var(--label-3)' : `var(--${tono}-ink)`;
-  const surcos = [11, 18, 25, 32, 39, 46];
+/** El menor de las tres medidas (la franja más gastada); si no hay franjas, el remanente guardado */
+export function remanenteMinimo(l: Pick<LlantaTablero, 'r1' | 'r2' | 'r3' | 'remanente_mm'>): number | null {
+  const m = [l.r1, l.r2, l.r3].filter((v): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0);
+  return m.length ? Math.min(...m) : (l.remanente_mm ?? null);
+}
+
+const COLOR_BANDA: Record<Tono, string> = { green: 'var(--green-ink)', amber: 'var(--amber-ink)', red: 'var(--red-ink)', gray: '#8e8e93' };
+
+/**
+ * Neumático dibujado (de frente, vertical) con tres franjas de color, una por cada medida: R1 arriba, R2 al centro y R3 abajo,
+ * cada una con el semáforo de su remanente. El aro exterior toma el color de la franja más gastada (el mínimo).
+ */
+export function LlantaIcono({ llanta, activa = false }: { llanta: Pick<LlantaTablero, 'r1' | 'r2' | 'r3' | 'remanente_mm'>; activa?: boolean }) {
+  const min = remanenteMinimo(llanta);
+  const hayFranjas = [llanta.r1, llanta.r2, llanta.r3].some(v => typeof v === 'number' && v > 0);
+  // Sin franjas pero con un remanente conocido, las tres toman ese tono; sin dato, gris
+  const tonos: Tono[] = [llanta.r1, llanta.r2, llanta.r3].map(v => (hayFranjas ? tonoMm(typeof v === 'number' && v > 0 ? v : null) : tonoMm(min)));
+  const aro = COLOR_BANDA[tonoMm(min)];
   return (
     <svg className="ntb-ico" viewBox="0 0 40 62" width="40" height="62" aria-hidden focusable="false">
       <defs>
-        <linearGradient id="ntb-goma" x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0" stopColor="#4a4e55" /><stop offset="0.5" stopColor="#7d828a" /><stop offset="1" stopColor="#4a4e55" />
-        </linearGradient>
+        <clipPath id="ntb-recorte"><rect x="4" y="4" width="32" height="54" rx="9" /></clipPath>
       </defs>
-      <rect x="4" y="4" width="32" height="54" rx="9" fill="url(#ntb-goma)" stroke="#3a3d42" strokeWidth="1" />
-      {surcos.map(y => <line key={y} x1="6" x2="34" y1={y} y2={y} stroke="#2f3237" strokeWidth="1.6" opacity="0.55" />)}
+      <g clipPath="url(#ntb-recorte)">
+        {tonos.map((t, k) => <rect key={k} x="4" y={4 + k * 18} width="32" height="18" fill={COLOR_BANDA[t]} opacity="0.88" />)}
+        {[11, 18, 25, 32, 39, 46].map(y => <line key={y} x1="4" x2="36" y1={y} y2={y} stroke="#1f2125" strokeWidth="1.5" opacity="0.5" />)}
+        <rect x="4" y="4" width="10" height="54" fill="#000" opacity="0.14" /><rect x="26" y="4" width="10" height="54" fill="#000" opacity="0.2" />
+      </g>
+      <rect x="4" y="4" width="32" height="54" rx="9" fill="none" stroke="#3a3d42" strokeWidth="1" />
       <rect x="1.5" y="1.5" width="37" height="59" rx="11" fill="none" stroke={aro} strokeWidth={activa ? 3.4 : 2.6} />
     </svg>
   );
@@ -87,18 +103,31 @@ interface LlantaTileProps {
   activa?: boolean;
   /** Llanta que se puede arrastrar: se maneja con el gesto (no con clic) */
   arrastrable?: boolean;
+  /** Esta ficha es la que se está arrastrando: queda atenuada mientras el neumático va con el puntero */
+  enMano?: boolean;
   onPointerDown?: (e: ReactPointerEvent) => void;
   onActivar: () => void;
 }
 
+/** Contenido de una ficha de llanta: el neumático dibujado con su código y su remanente mínimo */
+export function LlantaFicha({ llanta, activa }: { llanta: LlantaTablero; activa?: boolean }) {
+  const min = remanenteMinimo(llanta);
+  return (
+    <>
+      <LlantaIcono llanta={llanta} activa={activa} />
+      <span className="ntb-tile__codigo">{llanta.codigo}</span>
+      <span className="ntb-tile__mm">{min == null ? 'Sin medir' : `${min.toFixed(1)} mm`}</span>
+    </>
+  );
+}
+
 /** Llanta como neumático dibujado, con su código y remanente debajo (bodega, reforma y descarte). Toque o Enter la selecciona. */
-export function LlantaTile({ llanta, activa, arrastrable, onPointerDown, onActivar }: LlantaTileProps) {
-  const tono: Tono = tonoMm(llanta.remanente_mm ?? null);
+export function LlantaTile({ llanta, activa, arrastrable, enMano, onPointerDown, onActivar }: LlantaTileProps) {
   return (
     <div
       role="button"
       tabIndex={0}
-      className={`ntb-tile${activa ? ' ntb-tile--activa' : ''}${arrastrable ? ' ntb-tile--arrastrable' : ''}`}
+      className={`ntb-tile${activa ? ' ntb-tile--activa' : ''}${arrastrable ? ' ntb-tile--arrastrable' : ''}${enMano ? ' ntb-tile--en-mano' : ''}`}
       title={`${llanta.codigo} · ${tituloLlanta(llanta)}`}
       aria-label={`Llanta ${llanta.codigo}, ${tituloLlanta(llanta)}`}
       aria-pressed={activa}
@@ -107,9 +136,7 @@ export function LlantaTile({ llanta, activa, arrastrable, onPointerDown, onActiv
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onActivar(); } }}
       style={arrastrable ? { userSelect: 'none', WebkitUserDrag: 'none' } as CSSProperties : undefined}
     >
-      <LlantaIcono tono={tono} activa={activa} />
-      <span className="ntb-tile__codigo">{llanta.codigo}</span>
-      <span className="ntb-tile__mm">{llanta.remanente_mm == null ? 'Sin medir' : `${llanta.remanente_mm.toFixed(1)} mm`}</span>
+      <LlantaFicha llanta={llanta} activa={activa} />
     </div>
   );
 }

@@ -60,7 +60,9 @@ interface Opciones {
   onCancelar?: (item: ItemArrastre) => void;
 }
 
-export interface Fantasma extends ItemArrastre { x: number; y: number }
+/** Dónde se agarró la llanta dentro de su ficha (y el tamaño de la ficha): el neumático que se arrastra la reemplaza justo ahí */
+export interface Ancla { dx: number; dy: number; w: number; h: number }
+export interface Fantasma extends ItemArrastre { x: number; y: number; ancla?: Ancla }
 
 export function useArrastre(opciones: Opciones) {
   const [fantasma, setFantasma] = useState<Fantasma | null>(null);
@@ -80,6 +82,13 @@ export function useArrastre(opciones: Opciones) {
       window.getSelection?.()?.removeAllRanges();
     }
     gestoRef.current?.limpiar();
+    // Si se agarra una ficha de llanta (bodega, reforma o descarte), se recuerda dónde para levantarla desde ese punto
+    let ancla: Ancla | undefined;
+    const ficha = e.currentTarget instanceof HTMLElement && e.currentTarget.classList.contains('ntb-tile') ? e.currentTarget : null;
+    if (ficha) {
+      const r = ficha.getBoundingClientRect();
+      ancla = { dx: e.clientX - r.left, dy: e.clientY - r.top, w: r.width, h: r.height };
+    }
     const x0 = e.clientX;
     const y0 = e.clientY;
     let movido = false;
@@ -99,7 +108,7 @@ export function useArrastre(opciones: Opciones) {
         movido = true;
         opcionesRef.current.onInicio?.(item);
       }
-      setFantasma({ ...item, x: ev.clientX, y: ev.clientY });
+      setFantasma({ ...item, x: ev.clientX, y: ev.clientY, ancla });
       setSobre(destinoBajo(ev.clientX, ev.clientY, opcionesRef.current.sondaRef?.current));
       opcionesRef.current.onMover?.(item, ev.clientX, ev.clientY);
     }
