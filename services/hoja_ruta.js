@@ -41,12 +41,22 @@ function calcular(paradas, salida) {
     const delta = base - orden[0].ini;
     const aFecha = min => { const d = new Date(min * 60000); return { fecha: `${p2(d.getUTCDate())}/${p2(d.getUTCMonth() + 1)}`, anio: d.getUTCFullYear(), dia: Math.floor(min / 1440), hora: hhmm(((min % 1440) + 1440) % 1440) }; };
     const primerDia = aFecha(orden[0].ini + delta).dia;
-    const filas = orden.map((p, i) => {
-        const a = aFecha(p.ini + delta), b = aFecha(p.fin + delta);
-        return {
-            n: i + 1, dia: a.dia - primerDia + 1, fecha: a.fecha, tipo: p.tipo, actividad: p.actividad,
-            inicio: a.hora, fin: b.hora, finDiaSiguiente: b.dia > a.dia, minutos: p.fin - p.ini,
-        };
+    // Una parada que cruza la medianoche se parte en dos filas: la primera hasta las 24:00 y su continuación en el día siguiente
+    // (así cada día sale con su número y su fecha, y la hoja no parece un solo día).
+    const filas = [];
+    orden.forEach((p, i) => {
+        let ini = p.ini + delta; const fin = p.fin + delta; let primera = true;
+        while (ini < fin) {
+            const medianoche = (Math.floor(ini / 1440) + 1) * 1440;
+            const hasta = Math.min(fin, medianoche);
+            const a = aFecha(ini);
+            filas.push({
+                n: i + 1, dia: a.dia - primerDia + 1, fecha: a.fecha, tipo: p.tipo,
+                actividad: primera ? p.actividad : `${p.actividad} (continuación)`,
+                inicio: a.hora, fin: hasta === medianoche ? '24:00' : aFecha(hasta).hora, minutos: hasta - ini, continuacion: !primera,
+            });
+            ini = hasta; primera = false;
+        }
     });
     const suma = tipos => filas.filter(f => tipos.includes(f.tipo)).reduce((s, f) => s + f.minutos, 0);
     const total = orden[orden.length - 1].fin - orden[0].ini;
@@ -116,8 +126,8 @@ function htmlHojaRuta({ empresa, plantilla, calc, datos }) {
     const vistos = new Set();
     const cuerpo = filas.map(f => {
         const celdaDia = vistos.has(f.dia) ? '' : (vistos.add(f.dia), `<td class="dia" rowspan="${dias.get(f.dia)}">DÍA ${f.dia}<br><span style="font-weight:600;font-size:7px">${esc(f.fecha)}</span></td>`);
-        return `<tr class="t-${esc(f.tipo)}">${celdaDia}<td class="n">${f.n}</td><td>${esc(f.actividad)}</td>`
-            + `<td class="c">${esc(f.inicio)}</td><td class="c">${esc(f.fin)}${f.finDiaSiguiente ? ' <small>(+1)</small>' : ''}</td><td class="c">${duracion(f.minutos)}</td>`
+        return `<tr class="t-${esc(f.tipo)}">${celdaDia}<td class="n">${f.continuacion ? '' : f.n}</td><td>${esc(f.actividad)}</td>`
+            + `<td class="c">${esc(f.inicio)}</td><td class="c">${esc(f.fin)}</td><td class="c">${duracion(f.minutos)}</td>`
             + `<td class="blanco"></td><td class="blanco"></td><td class="blanco"></td></tr>`;
     }).join('');
     const filasInt = [1, 2, 3, 4].map(i => {
