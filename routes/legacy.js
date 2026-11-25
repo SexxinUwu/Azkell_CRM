@@ -1,4 +1,5 @@
 const express = require('express');
+const zlib = require('zlib');
 const { normalizarTipo } = require('../utils/tipo_unidad');
 const { crearResolutorPlacas } = require('../services/wialon_placas');
 const { hoyLima } = require('../services/horaLima');
@@ -1810,6 +1811,23 @@ router.post('/:metodo', async (req, res) => {
             return res.json({ data: { error: 'El rango del historial completo debe ser mayor a 0 y de máximo 7 días.' } });
         }
 
+        // Día completo ya cerrado (de 00:00 a 00:00 hora de Lima): se lee de la copia guardada y, si no existe, se calcula y se guarda.
+        // El día de hoy nunca se guarda. Una copia vacía o truncada tampoco: se vuelve a pedir.
+        const pdb = (tdb && typeof tdb.promise === 'function') ? tdb.promise() : tdb;
+        const inicioHoyLima = Math.floor((Date.now() / 1000 - 18000) / 86400) * 86400 + 18000;
+        const diaCerrado = completo && placaParam && toSec - fromSec === 86400 && (fromSec - 18000) % 86400 === 0 && toSec <= inicioHoyLima;
+        const fechaDia = diaCerrado ? new Date(fromSec * 1000).toLocaleDateString('en-CA', { timeZone: 'America/Lima' }) : null;
+        if (diaCerrado) {
+            try {
+                const [guardado] = await pdb.query('SELECT datos FROM gps_recorrido_dia WHERE placa = ? AND fecha = ? LIMIT 1', [placaParam, fechaDia]);
+                if (guardado[0] && guardado[0].datos) {
+                    const obj = JSON.parse(zlib.gunzipSync(guardado[0].datos).toString('utf8'));
+                    obj.desdeCopia = true;
+                    return res.json({ data: obj });
+                }
+            } catch (e) { /* sin la tabla o copia ilegible: se calcula normal */ }
+        }
+
         try {
             const obtenerToken = () => new Promise((resolve) => {
                 tdb.query("SELECT valor FROM integraciones_api WHERE clave = 'wialon_token' LIMIT 1", (err, rows) => {
@@ -2030,7 +2048,7 @@ router.post('/:metodo', async (req, res) => {
                 extra = { completo: true, truncado, excesosEventos: eventos.length, puntosDevueltos: puntosOut.length };
             }
 
-            return res.json({
+            const salidaHist = {
                 data: Object.assign({
                     success: true,
                     placa: placaParam,
@@ -2051,7 +2069,16 @@ router.post('/:metodo', async (req, res) => {
                     sensorCombustible: sensorCombustible ? (sensorCombustible.n || 'Combustible') : null,
                     unidadCombustible: sensorCombustible ? (String(sensorCombustible.m || '%').trim() || '%') : null
                 }, extra)
-            });
+            };
+            if (diaCerrado && !truncado && puntos.length > 0) {
+                try {
+                    const datos = zlib.gzipSync(Buffer.from(JSON.stringify(salidaHist.data), 'utf8'));
+                    await pdb.query(
+                        'INSERT INTO gps_recorrido_dia (placa, fecha, unit_id, puntos, km, datos) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE unit_id = VALUES(unit_id), puntos = VALUES(puntos), km = VALUES(km), datos = VALUES(datos)',
+                        [placaParam, fechaDia, Number(targetUnitId) || null, puntos.length, Math.round(totalKm * 10) / 10, datos]);
+                } catch (e) { /* sin la tabla: no se guarda */ }
+            }
+            return res.json(salidaHist);
 
         } catch(histErr) {
             console.error('Error Historial GPS Wialon:', histErr);
@@ -2063,6 +2090,46 @@ router.post('/:metodo', async (req, res) => {
 });
 
     // Snapshot diario de km y precarga de Wialon para una empresa (lo llama server.js: cron nocturno y arranque)
+    // Precarga nocturna: guarda el recorrido de ayer (y de los 2 días anteriores que falten) de cada unidad con GPS, entrando por el mismo camino que la pantalla.
+    // Va de a una unidad por vez (Wialon atiende una consulta a la vez) y se corta a los 25 minutos por empresa.
+    router.precalcularRecorridos = async (tenantSlug, dias = 3) => {
+        const pdb = (db && typeof db.promise === 'function') ? db.promise() : db;
+        let placas = [];
+        try { [placas] = await pdb.query("SELECT placa FROM placas WHERE wialon_name IS NOT NULL AND TRIM(wialon_name) <> ''"); } catch (e) { return { ok: false, error: e.message }; }
+        const inicioHoy = Math.floor((Date.now() / 1000 - 18000) / 86400) * 86400 + 18000;
+        const limite = Date.now() + 25 * 60 * 1000;
+        let hechos = 0, yaEstaban = 0;
+        for (let d = 1; d <= dias; d++) {
+            const a = inicioHoy - d * 86400, b = a + 86400;
+            const fecha = new Date(a * 1000).toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+            for (const p of placas) {
+                if (Date.now() > limite) return { ok: true, hechos, yaEstaban, cortado: true };
+                const placa = String(p.placa || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
+                if (!placa) continue;
+                try {
+                    const [ya] = await pdb.query('SELECT 1 FROM gps_recorrido_dia WHERE placa = ? AND fecha = ? LIMIT 1', [placa, fecha]);
+                    if (ya.length) { yaEstaban++; continue; }
+                } catch (e) { return { ok: false, error: e.message }; }
+                await new Promise((resolve) => {
+                    const req = { method: 'POST', url: '/obtenerHistorialGPS', originalUrl: '/obtenerHistorialGPS', baseUrl: '', path: '/obtenerHistorialGPS', headers: {}, query: {}, params: {}, tenantSlug, body: { args: [{ placa, fechaInicio: new Date(a * 1000).toISOString(), fechaFin: new Date(b * 1000).toISOString(), completo: true }] } };
+                    let listo = false;
+                    const fin = () => { if (listo) return; listo = true; resolve(); };
+                    const res = {
+                        statusCode: 200, locals: {},
+                        status(c) { this.statusCode = c; return this; },
+                        json() { fin(); return this; }, send() { fin(); return this; }, end() { fin(); return this; },
+                        set() { return this; }, setHeader() {}, getHeader() {}, removeHeader() {}, writeHead() {}, write() {}, on() {}, once() {},
+                    };
+                    router.handle(req, res, () => fin());
+                    setTimeout(fin, 90000);
+                });
+                hechos++;
+                await new Promise(r => setTimeout(r, 300));
+            }
+        }
+        return { ok: true, hechos, yaEstaban };
+    };
+
     router.snapshotGpsEmpresa = (tenantSlug) => new Promise((resolve) => {
         const req = { method: 'POST', url: '/obtenerDatosWialon', originalUrl: '/obtenerDatosWialon', baseUrl: '', path: '/obtenerDatosWialon', headers: {}, query: {}, params: {}, body: { args: [] }, tenantSlug };
         let listo = false;
