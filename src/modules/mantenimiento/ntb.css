@@ -259,3 +259,7 @@ button.ntb-pos { cursor: pointer; }
 .ntb-det__erres dd { display: flex; flex-wrap: wrap; gap: 8px; }
 .ntb-erre { display: inline-flex; align-items: center; gap: 4px; }
 .ntb-erre b { font-size: 0.6875rem; color: var(--label-2); }
+
+/* Zonas de envío: solo un área para soltar */
+.ntb-zona__vacia--area { min-height: 72px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+.ntb-zona--sobre .ntb-zona__vacia--area { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }

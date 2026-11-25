@@ -2,7 +2,7 @@ import './NeumaticosListado.css';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, Disc3, SearchX, Settings, Truck } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, Disc3, SearchX, Settings, Truck, Undo2 } from 'lucide-react';
 import { api, errorMessage } from '../../core/api/client';
 import { exportarExcel } from '../../core/lib/excel';
 import { formatMoneda } from '../../core/lib/format';
@@ -17,6 +17,8 @@ import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/Ta
 import { LogoArchivo } from './NeumaticosRequerimiento';
 import { vidaTexto } from './ntb-api';
 import { useAuth } from '../../core/auth/AuthProvider';
+import { ADMIN } from '../../core/auth/permisos';
+import { CorregirEnvioSheet } from './ntl-corregir-envio-sheet';
 import { AltaUnidadNuevaSheet } from './NeumaticosAltaUnidad';
 import { DespacharReformadoraSheet, GenerarOrdenReencaucheSheet } from './NeumaticosReencauche';
 
@@ -325,7 +327,10 @@ export function NeumaticosListado() {
   const [orden, setOrden] = useState<{ campo: string; dir: 'asc' | 'desc' } | null>(null);
   const [despachoAbierto, setDespachoAbierto] = useState(false);
   const [altaAbierta, setAltaAbierta] = useState(false);
-  const { can } = useAuth();
+  const { can, permissions } = useAuth();
+  // Corregir un envío equivocado a reforma o descarte: solo administradores
+  const esAdmin = permissions.has(ADMIN);
+  const [corrigiendo, setCorrigiendo] = useState<{ codigo: string; situacion: string } | null>(null);
   const puedeReforma = can('neumaticos.reencauche');
   const puedeAlta = can('neumaticos.mover');
   const qc = useQueryClient();
@@ -539,6 +544,11 @@ export function NeumaticosListado() {
               <Celda mono>{l.orden_compra || '—'}</Celda>
               <Celda><SituacionChip texto={l.situacion} /></Celda>
               <Celda alinear="center">
+                {esAdmin && (l.situacion === 'Enviar para reforma' || l.situacion === 'Esperando descarte') && (
+                  <Button variant="plain" size="sm" iconOnly icon={<Undo2 size={16} />}
+                    title="Corregir envío (administrador)" aria-label={`Corregir el envío de ${l.codigo}`}
+                    onClick={e => { e.stopPropagation(); setCorrigiendo({ codigo: l.codigo, situacion: l.situacion }); }} />
+                )}
                 <Button variant="plain" size="sm" iconOnly icon={<ChevronRight size={16} />}
                   title="Ver ficha" aria-label={`Ver ficha del neumático ${l.codigo}`}
                   onClick={e => { e.stopPropagation(); abrirFicha(l.codigo); }} />
@@ -558,6 +568,8 @@ export function NeumaticosListado() {
       <AltaUnidadNuevaSheet open={altaAbierta} onClose={() => setAltaAbierta(false)}
         onHecho={m => { toast(m); void qc.invalidateQueries({ queryKey: ['mant', 'neumaticos'] }); void qc.invalidateQueries({ queryKey: ['mant', 'placas-lista'] }); }} />
       <ConfigCodigoSheet open={configAbierta} onClose={() => setConfigAbierta(false)} />
+      <CorregirEnvioSheet llanta={corrigiendo} onClose={() => setCorrigiendo(null)}
+        onHecho={m => { toast(m); void qc.invalidateQueries({ queryKey: ['mant', 'neumaticos'] }); void qc.invalidateQueries({ queryKey: ['mant', 'neumaticos-tablero'] }); }} />
       <GenerarOrdenReencaucheSheet open={ordenAbierta} onClose={() => setOrdenAbierta(false)}
         llantas={filas.filter(l => seleccion.has(l.codigo)).map(l => ({ codigo: l.codigo, medida: l.medida }))}
         onHecho={() => { setOrdenAbierta(false); setSeleccion(new Set()); }} />
