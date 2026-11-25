@@ -3,9 +3,9 @@
 // se marcan con data-ntb-zona / data-ntb-pos, y las posiciones del diagrama (NeumaticosEsquema) con su aria-label.
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 
-export type OrigenLlanta = 'bodega' | 'unidad';
+export type OrigenLlanta = 'bodega' | 'unidad' | 'reforma' | 'descarte';
 export interface ItemArrastre { codigo: string; origen: OrigenLlanta }
-export type Destino = { tipo: 'posicion'; posicion: string } | { tipo: 'zona'; zona: 'reforma' | 'descarte' };
+export type Destino = { tipo: 'posicion'; posicion: string } | { tipo: 'zona'; zona: 'reforma' | 'descarte' } | { tipo: 'bodega' };
 
 const UMBRAL_PX = 6;
 const PREFIJO_LABEL = 'Llanta ';
@@ -34,6 +34,7 @@ export function destinoBajo(x: number, y: number, sonda?: SondaPosicion | null):
   const el = document.elementFromPoint(x, y);
   if (!el) return null;
   const zona = el.closest<HTMLElement>('[data-ntb-zona]');
+  if (zona?.dataset.ntbZona === 'bodega') return { tipo: 'bodega' };
   if (zona?.dataset.ntbZona === 'reforma' || zona?.dataset.ntbZona === 'descarte') {
     return { tipo: 'zona', zona: zona.dataset.ntbZona };
   }

@@ -218,3 +218,27 @@ button.ntb-pos { cursor: pointer; }
   display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--s-4); align-items: start;
 }
 @media (max-width: 760px) { .ntb-placa__cuerpo { grid-template-columns: minmax(0, 1fr); } }
+
+/* ── Columna izquierda: disponibles, reforma y descarte (las llantas se ven como neumáticos) ── */
+.ntb-lateral { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
+.ntb-lateral .ntb-zona { padding: var(--s-4); }
+.ntb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 10px 8px; }
+.ntb-bodega .ntb-grid { max-height: 46vh; overflow-y: auto; padding: 4px 2px; }
+.ntb-bodega--sobre { box-shadow: 0 0 0 2px var(--accent), var(--shadow-card); }
+.ntb-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 8px 4px 6px; border-radius: var(--r-md);
+  background: var(--fill-subtle); cursor: pointer; text-align: center;
+  user-select: none; -webkit-user-select: none; outline: none;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.ntb-zona .ntb-tile { background: color-mix(in srgb, var(--surface) 70%, transparent); }
+.ntb-tile:hover { background: var(--fill); transform: translateY(-1px); }
+.ntb-tile:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+.ntb-tile--activa { background: var(--accent-tint); box-shadow: inset 0 0 0 2px var(--accent); }
+.ntb-tile--arrastrable { cursor: grab; touch-action: pan-y; }
+.ntb-tile--arrastrable:active { cursor: grabbing; }
+.ntb-ico { display: block; }
+.ntb-tile__codigo { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; color: var(--label); }
+.ntb-tile__mm { font-size: 0.6875rem; color: var(--label-2); }
+.ntb-zona__vacia { padding: var(--s-4) var(--s-2); text-align: center; border: 1.5px dashed var(--separator-strong, var(--separator)); border-radius: var(--r-md); }

@@ -89,6 +89,7 @@ export type ResultadoReencauche = 'aprobada' | 'rechazada';
 export type Movimiento =
   | { clase: 'instalar'; codigo: string; placa: string; posicion: string; km: number }
   | { clase: 'retirar'; codigo: string; placa: string; posicion: string; km: number; destino: DestinoRetiro }
+  | { clase: 'devolver'; codigo: string }
   | {
     clase: 'retorno'; codigo: string; proveedor: string; costo_servicio: number; disenio: string; remanente: number | null;
     resultado: ResultadoReencauche; observacion: string;
@@ -105,6 +106,10 @@ export function ejecutarMovimiento(m: Movimiento): Promise<void> {
   }
   if (m.clase === 'retirar') {
     return enviar('/neumaticos/retirar', { codigo: m.codigo, placa: m.placa, posicion: m.posicion, km: m.km, destino: m.destino });
+  }
+  if (m.clase === 'devolver') {
+    // Una llanta enviada a reforma o a descarte que sigue en el Retén vuelve a quedar disponible (por si el envío fue un error)
+    return enviar('/neumaticos/devolver-reten', { codigo: m.codigo });
   }
   return enviar('/neumaticos/retorno-reencauche', {
     codigo: m.codigo, proveedor: m.proveedor, costo_servicio: m.costo_servicio, disenio: m.disenio, remanente: m.remanente,
@@ -125,5 +130,15 @@ export async function ejecutarIntercambio(
     await ejecutarMovimiento({ clase: 'instalar', ...entrante });
   } catch (err) {
     throw new Error(`La llanta ${saliente.codigo} ya salió de ${saliente.posicion}, pero no se pudo instalar ${entrante.codigo}: ${errorMessage(err)}`);
+  }
+}
+
+/** Regresa una llanta de reforma o descarte a la unidad: primero queda disponible en el Retén y luego se instala en la posición */
+export async function ejecutarRegreso(llanta: { codigo: string }, destino: { placa: string; posicion: string; km: number }): Promise<void> {
+  await ejecutarMovimiento({ clase: 'devolver', codigo: llanta.codigo });
+  try {
+    await ejecutarMovimiento({ clase: 'instalar', codigo: llanta.codigo, ...destino });
+  } catch (err) {
+    throw new Error(`La llanta ${llanta.codigo} ya volvió a estar disponible en el Retén, pero no se pudo instalar en ${destino.posicion}: ${errorMessage(err)}`);
   }
 }

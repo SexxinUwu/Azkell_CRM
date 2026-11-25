@@ -63,3 +63,53 @@ export function LlantaItem({ llanta, posicion, activa, arrastrable, onPointerDow
     </div>
   );
 }
+
+/** Neumático dibujado (de frente, vertical) con el aro del semáforo de remanente: el mismo que se ve en el plano de la unidad */
+export function LlantaIcono({ tono, activa = false }: { tono: Tono; activa?: boolean }) {
+  const aro = tono === 'gray' ? 'var(--label-3)' : `var(--${tono}-ink)`;
+  const surcos = [11, 18, 25, 32, 39, 46];
+  return (
+    <svg className="ntb-ico" viewBox="0 0 40 62" width="40" height="62" aria-hidden focusable="false">
+      <defs>
+        <linearGradient id="ntb-goma" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stopColor="#4a4e55" /><stop offset="0.5" stopColor="#7d828a" /><stop offset="1" stopColor="#4a4e55" />
+        </linearGradient>
+      </defs>
+      <rect x="4" y="4" width="32" height="54" rx="9" fill="url(#ntb-goma)" stroke="#3a3d42" strokeWidth="1" />
+      {surcos.map(y => <line key={y} x1="6" x2="34" y1={y} y2={y} stroke="#2f3237" strokeWidth="1.6" opacity="0.55" />)}
+      <rect x="1.5" y="1.5" width="37" height="59" rx="11" fill="none" stroke={aro} strokeWidth={activa ? 3.4 : 2.6} />
+    </svg>
+  );
+}
+
+interface LlantaTileProps {
+  llanta: LlantaTablero;
+  activa?: boolean;
+  /** Llanta que se puede arrastrar: se maneja con el gesto (no con clic) */
+  arrastrable?: boolean;
+  onPointerDown?: (e: ReactPointerEvent) => void;
+  onActivar: () => void;
+}
+
+/** Llanta como neumático dibujado, con su código y remanente debajo (bodega, reforma y descarte). Toque o Enter la selecciona. */
+export function LlantaTile({ llanta, activa, arrastrable, onPointerDown, onActivar }: LlantaTileProps) {
+  const tono: Tono = tonoMm(llanta.remanente_mm ?? null);
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      className={`ntb-tile${activa ? ' ntb-tile--activa' : ''}${arrastrable ? ' ntb-tile--arrastrable' : ''}`}
+      title={`${llanta.codigo} · ${tituloLlanta(llanta)}`}
+      aria-label={`Llanta ${llanta.codigo}, ${tituloLlanta(llanta)}`}
+      aria-pressed={activa}
+      onPointerDown={onPointerDown}
+      onClick={arrastrable ? undefined : onActivar}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onActivar(); } }}
+      style={arrastrable ? { userSelect: 'none', WebkitUserDrag: 'none' } as CSSProperties : undefined}
+    >
+      <LlantaIcono tono={tono} activa={activa} />
+      <span className="ntb-tile__codigo">{llanta.codigo}</span>
+      <span className="ntb-tile__mm">{llanta.remanente_mm == null ? 'Sin medir' : `${llanta.remanente_mm.toFixed(1)} mm`}</span>
+    </div>
+  );
+}
