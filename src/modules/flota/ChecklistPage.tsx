@@ -16,6 +16,7 @@ import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { ConfirmSheet } from '../../core/ui/Sheet';
+import { LicensePlate } from '../../core/ui/LicensePlate';
 import { MenuOtros, type OpcionOtros } from '../../core/ui/MenuOtros';
 import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
 import { useToast } from '../../core/ui/Toast';
@@ -72,8 +73,8 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'acciones', titulo: 'Acciones', ancho: 72, minimo: 64, alinear: 'center' },
   { id: 'folio', titulo: 'Folio', ancho: 150 },
   { id: 'fecha', titulo: 'Fecha', ancho: 160 },
-  { id: 'tracto', titulo: 'Tracto', ancho: 110 },
-  { id: 'remolque', titulo: 'Remolque', ancho: 120 },
+  { id: 'tracto', titulo: 'Tracto', ancho: 130 },
+  { id: 'remolque', titulo: 'Remolque', ancho: 130 },
   { id: 'conductor', titulo: 'Conductor / Ruta', ancho: 240 },
   { id: 'estado', titulo: 'Estado', ancho: 120, alinear: 'center' },
   { id: 'ots', titulo: 'OTs generadas', ancho: 230 },
@@ -335,8 +336,8 @@ export function ChecklistPage() {
                 {f.orden_viaje && <span className="t-footnote c-secondary" style={{ display: 'block' }}>{f.orden_viaje}</span>}
               </Celda>
               <Celda>{formatFechaHoraPe(f.fecha_reporte)}</Celda>
-              <Celda mono>{f.placa_tracto || '—'}</Celda>
-              <Celda mono>{f.placa_remolque || '—'}</Celda>
+              <Celda>{f.placa_tracto ? <LicensePlate plate={f.placa_tracto} size="sm" /> : <span className="c-secondary">—</span>}</Celda>
+              <Celda>{f.placa_remolque ? <LicensePlate plate={f.placa_remolque} size="sm" /> : <span className="c-secondary">—</span>}</Celda>
               <Celda>
                 <span style={{ display: 'block', fontWeight: 600 }}>{f.conductor || 'Sin conductor'}</span>
                 <span className="t-footnote c-secondary"><MapPin size={12} /> {f.procedencia || 'En ruta'}</span>
@@ -416,8 +417,8 @@ function TarjetaFalla({ falla: f, opciones, pdfListo, onDetalle, onPdf }: {
         <EstadoBadge estado={estadoDe(f)} />
       </div>
       <div className="oc-chips">
-        <span className="oc-chip oc-chip--mono">{f.placa_tracto || '—'}</span>
-        {f.placa_remolque && <span className="oc-chip oc-chip--mono">{f.placa_remolque}</span>}
+        {f.placa_tracto ? <LicensePlate plate={f.placa_tracto} size="sm" /> : <span className="oc-chip oc-chip--mono">—</span>}
+        {f.placa_remolque && <LicensePlate plate={f.placa_remolque} size="sm" />}
       </div>
       <span style={{ fontWeight: 700, fontSize: '0.9375rem' }}>{f.conductor || 'Sin conductor'}</span>
       <span className="t-footnote c-secondary"><MapPin size={12} /> {f.procedencia || 'En ruta'}</span>
