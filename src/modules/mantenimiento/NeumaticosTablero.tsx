@@ -26,6 +26,7 @@ import { ejecutarRegreso, tituloLlanta, useTablero, usePlacasLista, vidaTexto } 
 import { createPortal } from 'react-dom';
 import { LlantaPlano, LlantaTile, RemanenteChip, VidaChip, aLlantaDato, remanenteMinimo } from './ntb-llanta';
 import { LineaTiempo } from './ntb-linea-tiempo';
+import { CocadaPanel } from './ntb-cocada';
 import { Sheet } from '../../core/ui/Sheet';
 import { MovimientoSheet, type Propuesta } from './ntb-movimiento-sheet';
 import './ntb.css';
@@ -492,6 +493,7 @@ export function NeumaticosTablero() {
                       <span key={k} className="ntb-erre"><b>{k.toUpperCase()}</b><RemanenteChip mm={detalle.llanta[k] ?? null} /></span>
                     ))}
                   </dd></div>
+                  <CocadaPanel codigo={detalle.llanta.codigo} />
                   <div><dt>Ubicación</dt><dd>{
                     detalle.grupo === 'unidad' ? `${placa} · ${detalle.posicion}`
                       : detalle.grupo === 'bodega' ? (detalle.llanta.almacen ?? 'Bodega')

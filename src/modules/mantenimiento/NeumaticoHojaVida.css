@@ -180,3 +180,17 @@
 
 /* Línea de tiempo: iconos en círculo azul como en la referencia */
 .nhv2-ev .nhv2-ev__icono { background: var(--accent); color: #fff; }
+
+/* Cocada */
+.nhv-coc { display: flex; flex-direction: column; gap: var(--s-3); }
+.nhv-coc__nota { display: block; margin-top: 2px; font-size: 0.75rem; color: var(--label-3); }
+.nhv-coc__sub { margin: var(--s-2) 0 0; font-size: 0.8125rem; font-weight: 700; color: var(--label-2); }
+.nhv-coc__montajes { display: flex; flex-direction: column; }
+.nhv-coc__montaje { display: grid; grid-template-columns: minmax(8rem, auto) 1fr 1fr 1fr; gap: var(--s-3); align-items: center; padding: 8px 0; border-bottom: 0.5px solid var(--separator); font-size: 0.8125rem; }
+.nhv-coc__unidad { display: inline-flex; align-items: center; gap: 8px; }
+@media (max-width: 800px) { .nhv-coc__montaje { grid-template-columns: 1fr 1fr; } }
+.nhv-coc__tabla-wrap { overflow-x: auto; scrollbar-width: none; }
+.nhv-coc__tabla-wrap::-webkit-scrollbar { display: none; }
+.nhv-coc__tabla { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+.nhv-coc__tabla th { text-align: left; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--label-2); padding: 6px 8px; border-bottom: 0.5px solid var(--separator); white-space: nowrap; }
+.nhv-coc__tabla td { padding: 6px 8px; border-bottom: 0.5px solid var(--separator); white-space: nowrap; font-variant-numeric: tabular-nums; }
