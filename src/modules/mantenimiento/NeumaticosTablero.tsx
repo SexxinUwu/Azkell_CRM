@@ -22,7 +22,7 @@ import {
   type LlantaTablero, type PosicionTablero,
 } from './neumaticos-tablero-tipos';
 import { useArrastre, posicionDeEvento, type Destino, type ItemArrastre, type SondaPosicion } from './ntb-arrastre';
-import { tituloLlanta, useTablero, usePlacasLista, vidaTexto } from './ntb-api';
+import { ejecutarRegreso, tituloLlanta, useTablero, usePlacasLista, vidaTexto } from './ntb-api';
 import { createPortal } from 'react-dom';
 import { LlantaFicha, LlantaTile, RemanenteChip, VidaChip, aLlantaDato, remanenteMinimo } from './ntb-llanta';
 import { LineaTiempo } from './ntb-linea-tiempo';
@@ -44,34 +44,22 @@ function textoSobre(d: Destino, ocupante: LlantaTablero | null): string {
   return ocupante ? `Suelta para cambiar la llanta de ${d.posicion}` : `Suelta para instalar en ${d.posicion}`;
 }
 
-function ZonaDrop({ zona, titulo, nota, llantas, seleccion, enMano, resaltada, permitido, bloqueo, onActivar, arrastrable, onArrastrar }: {
-  zona: 'reforma' | 'descarte'; titulo: string; nota: string; llantas: LlantaTablero[]; seleccion: string | null; enMano: string | null;
-  resaltada: boolean; permitido: boolean; bloqueo: string; onActivar: (codigo: string) => void;
-  /** Se puede arrastrar de vuelta (solo mientras la llanta siga en el Retén) */
-  arrastrable: (l: LlantaTablero) => boolean; onArrastrar: (e: ReactPointerEvent, l: LlantaTablero) => void;
+/** Zona de envío: solo un contenedor donde se suelta la llanta. No lista llantas ni se arrastra de vuelta: lo ya enviado se gestiona desde Neumáticos. */
+function ZonaDrop({ zona, titulo, nota, cantidad, resaltada, permitido, bloqueo }: {
+  zona: 'reforma' | 'descarte'; titulo: string; nota: string; cantidad: number;
+  resaltada: boolean; permitido: boolean; bloqueo: string;
 }) {
   return (
     <div role="group" aria-label={titulo} data-ntb-zona={zona}
+      title={nota}
       className={`ntb-zona ntb-zona--${zona}${resaltada ? ' ntb-zona--sobre' : ''}${permitido ? '' : ' ntb-zona--bloqueada'}`}>
       <div className="ntb-col__cab">
         <span className="ntb-zona__titulo">{titulo}</span>
-        <span className="ntb-count">{llantas.length}</span>
+        {cantidad > 0 && <span className="ntb-count" title="Llantas enviadas desde esta unidad">{cantidad}</span>}
       </div>
-      <p className="ntb-zona__nota">
-        {permitido ? nota : <><Lock size={13} aria-hidden /> {bloqueo}</>}
+      <p className="ntb-zona__vacia ntb-zona__vacia--area">
+        {permitido ? 'Suelta aquí la llanta' : <><Lock size={13} aria-hidden /> {bloqueo}</>}
       </p>
-      {llantas.length > 0 ? (
-        <div className="ntb-grid">
-          {llantas.map(l => (
-            <LlantaTile key={l.codigo} llanta={l} activa={seleccion === l.codigo} arrastrable={arrastrable(l)}
-              enMano={enMano === l.codigo}
-              onPointerDown={arrastrable(l) ? e => onArrastrar(e, l) : undefined} onActivar={() => onActivar(l.codigo)} />
-          ))}
-        </div>
-      ) : (
-        <p className="ntb-zona__vacia">Arrastra aquí una llanta montada en la unidad.</p>
-      )}
-      {llantas.length > 0 && <p className="ntb-zona__nota ntb-zona__nota--texto">Arrastra una llanta a <b>Disponible para uso</b> o a una posición libre para regresarla.</p>}
     </div>
   );
 }
@@ -107,6 +95,9 @@ export function NeumaticosTablero() {
   const [busqueda, setBusqueda] = useState('');
   const [aviso, setAviso] = useState<Aviso | null>(null);
   const [hoja, setHoja] = useState<{ id: number; abierta: boolean; propuesta: Propuesta | null }>({ id: 0, abierta: false, propuesta: null });
+  // Lo último que se envió a reforma o descarte: durante unos minutos se puede deshacer desde un aviso
+  const [ultimoEnvio, setUltimoEnvio] = useState<{ codigo: string; posicion: string; km: number; destino: 'reforma' | 'descarte'; venceEn: number } | null>(null);
+  const [deshaciendo, setDeshaciendo] = useState(false);
   // Lo rellena el lienzo 3D de la unidad con la posición que hay bajo un punto (si la vista es 3D)
   const sondaRef = useRef<SondaPosicion | null>(null);
 
@@ -116,7 +107,17 @@ export function NeumaticosTablero() {
     setPosLibre(null);
     setEnMano(null);
     setAviso(null);
+    setUltimoEnvio(null);
   }, [placa]);
+
+  // El aviso de deshacer dura 5 minutos
+  useEffect(() => {
+    if (!ultimoEnvio) return;
+    const falta = ultimoEnvio.venceEn - Date.now();
+    if (falta <= 0) { setUltimoEnvio(null); return; }
+    const t = window.setTimeout(() => setUltimoEnvio(null), falta);
+    return () => window.clearTimeout(t);
+  }, [ultimoEnvio]);
 
   const posiciones = useMemo(() => datos?.posiciones ?? [], [datos]);
   const bodega = useMemo(() => datos?.disponibles ?? [], [datos]);
@@ -142,8 +143,6 @@ export function NeumaticosTablero() {
   ), [bodega, buscada]);
 
   const llantaEnPosicion = (pos: string): LlantaTablero | null => posiciones.find(p => p.posicion === pos)?.llanta ?? null;
-  /** Una llanta enviada a reforma o descarte solo se puede regresar mientras siga en el Retén (aún no despachada ni desactivada) */
-  const enElReten = (l: LlantaTablero) => String(l.almacen ?? '').toLowerCase().startsWith('ret');
 
   /** Selecciona una llanta (en la unidad, en bodega o en una zona) y deja de mostrar una posición libre */
   function elegirLlanta(codigo: string) {
@@ -175,33 +174,12 @@ export function NeumaticosTablero() {
   /** Decide qué movimiento corresponde a soltar (o tocar) un ítem sobre un destino, y abre su confirmación */
   function proponer(item: ItemArrastre, destino: Destino) {
     setAviso(null);
-    const deZona = item.origen === 'reforma' || item.origen === 'descarte';
-    // Regresar una llanta de reforma o descarte a disponible (por si el envío fue un error); no depende de la vista
-    if (destino.tipo === 'bodega') {
-      if (!deZona) { setAviso({ tono: 'accent', texto: 'Esa llanta ya está disponible en bodega.' }); return; }
-      if (!puedeMover) { setAviso({ tono: 'error', texto: 'No tienes permiso para mover neumáticos.' }); return; }
-      const lz = (item.origen === 'reforma' ? reforma : descarte).find(l => l.codigo === item.codigo);
-      if (!lz) return;
-      if (!enElReten(lz)) { setAviso({ tono: 'accent', texto: 'Esa llanta ya salió del Retén: no se puede regresar desde aquí.' }); return; }
-      setEnMano(null);
-      abrirHoja({ clase: 'devolver', llanta: lz, desde: item.origen as 'reforma' | 'descarte' });
-      return;
-    }
+    if (destino.tipo === 'bodega') { setAviso({ tono: 'accent', texto: 'Esa llanta ya está disponible en bodega.' }); return; }
     if (!enPlano) {
       setAviso({ tono: 'accent', texto: 'En Isometría solo se ve la unidad. Cambia a Plano para mover neumáticos.' });
       return;
     }
     if (destino.tipo === 'posicion') {
-      if (deZona) {
-        if (!puedeMover) { setAviso({ tono: 'error', texto: 'No tienes permiso para mover neumáticos.' }); return; }
-        const lz = (item.origen === 'reforma' ? reforma : descarte).find(l => l.codigo === item.codigo);
-        if (!lz) return;
-        if (!enElReten(lz)) { setAviso({ tono: 'accent', texto: 'Esa llanta ya salió del Retén: no se puede regresar desde aquí.' }); return; }
-        if (llantaEnPosicion(destino.posicion)) { setAviso({ tono: 'accent', texto: `La posición ${destino.posicion} ya tiene una llanta. Elige una posición libre.` }); return; }
-        setEnMano(null);
-        abrirHoja({ clase: 'regreso', llanta: lz, desde: item.origen as 'reforma' | 'descarte', posicion: destino.posicion });
-        return;
-      }
       if (item.origen === 'unidad') {
         setAviso({ tono: 'accent', texto: 'Una llanta montada solo se envía a reforma o descarte. Para cambiarla de posición, primero envíala a reforma o descarte.' });
         return;
@@ -216,8 +194,8 @@ export function NeumaticosTablero() {
         : { clase: 'instalar', llanta, posicion: destino.posicion });
       return;
     }
-    if (item.origen === 'bodega' || deZona) {
-      setAviso({ tono: 'accent', texto: deZona ? 'Esa llanta ya está fuera de la unidad. Arrástrala a Disponible para uso o a una posición libre para regresarla.' : 'Solo las llantas montadas en la unidad se envían a reforma o descarte.' });
+    if (item.origen === 'bodega') {
+      setAviso({ tono: 'accent', texto: 'Solo las llantas montadas en la unidad se envían a reforma o descarte.' });
       return;
     }
     const montada = montadas.find(m => m.llanta.codigo === item.codigo);
@@ -274,6 +252,22 @@ export function NeumaticosTablero() {
     if (!enPlano) return;
     const pos = posicionDeEvento(e, sondaRef.current);
     if (pos) tocarPosicion(pos);
+  }
+
+  /** Vuelve a montar la llanta recién enviada en su posición (con el mismo kilometraje): primero queda disponible y luego se instala */
+  async function deshacerEnvio() {
+    if (!ultimoEnvio) return;
+    setDeshaciendo(true);
+    try {
+      await ejecutarRegreso({ codigo: ultimoEnvio.codigo }, { placa, posicion: ultimoEnvio.posicion, km: ultimoEnvio.km });
+      toast(`${ultimoEnvio.codigo} volvió a ${ultimoEnvio.posicion}`, 'success');
+      setUltimoEnvio(null);
+      void refrescar();
+    } catch (err) {
+      setAviso({ tono: 'error', texto: errorMessage(err) });
+    } finally {
+      setDeshaciendo(false);
+    }
   }
 
   const refrescar = () => Promise.all([
@@ -335,6 +329,17 @@ export function NeumaticosTablero() {
           {enMano && !arrastre.fantasma && <Button variant="plain" size="sm" onClick={() => setEnMano(null)}>Cancelar</Button>}
         </div>
       )}
+      {ultimoEnvio && puedeMover && (
+        <div className="ntb-banner" role="status">
+          <span>
+            {ultimoEnvio.codigo} se envió a {ultimoEnvio.destino === 'reforma' ? 'reforma' : 'descarte'}. ¿Fue un error? Puedes deshacerlo durante unos minutos y volverá a la posición {ultimoEnvio.posicion}.
+          </span>
+          <span style={{ display: 'inline-flex', gap: 'var(--s-2)' }}>
+            <Button variant="secondary" size="sm" loading={deshaciendo} onClick={() => { void deshacerEnvio(); }}>Deshacer</Button>
+            <Button variant="plain" size="sm" disabled={deshaciendo} onClick={() => setUltimoEnvio(null)}>Cerrar</Button>
+          </span>
+        </div>
+      )}
       {aviso && <Notice tone={aviso.tono === 'error' ? 'error' : 'accent'} icon={aviso.tono === 'error' ? <CircleAlert size={16} /> : undefined}>{aviso.texto}</Notice>}
 
       {!placa ? (
@@ -370,18 +375,18 @@ export function NeumaticosTablero() {
             )}
           </section>
 
+          <div className="ntb-zonas-par">
           <ZonaDrop
             zona="reforma" titulo="Enviar para reforma" nota="Arrastra aquí una llanta montada para enviarla a reencauche."
-            llantas={reforma} seleccion={seleccion} enMano={arrastre.fantasma?.codigo ?? null} resaltada={sobre?.tipo === 'zona' && sobre.zona === 'reforma'}
-            permitido={puedeReforma && enPlano} bloqueo={bloqueoVista} onActivar={elegirLlanta}
-            arrastrable={l => puedeMover && enElReten(l)} onArrastrar={(e, l) => arrastre.iniciar(e, { codigo: l.codigo, origen: 'reforma' })}
+            cantidad={reforma.length} resaltada={sobre?.tipo === 'zona' && sobre.zona === 'reforma'}
+            permitido={puedeReforma && enPlano} bloqueo={bloqueoVista}
           />
           <ZonaDrop
-            zona="descarte" titulo="Enviar para descarte" nota="Arrastra aquí una llanta montada para darla de baja."
-            llantas={descarte} seleccion={seleccion} enMano={arrastre.fantasma?.codigo ?? null} resaltada={sobre?.tipo === 'zona' && sobre.zona === 'descarte'}
-            permitido={puedeBaja && enPlano} bloqueo={bloqueoVista} onActivar={elegirLlanta}
-            arrastrable={l => puedeMover && enElReten(l)} onArrastrar={(e, l) => arrastre.iniciar(e, { codigo: l.codigo, origen: 'descarte' })}
+            zona="descarte" titulo="Enviar para descarte" nota="Arrastra aquí una llanta montada para darla de baja (no regresa)."
+            cantidad={descarte.length} resaltada={sobre?.tipo === 'zona' && sobre.zona === 'descarte'}
+            permitido={puedeBaja && enPlano} bloqueo={bloqueoVista}
           />
+          </div>
           </div>
 
           {/* Centro: la unidad y sus zonas */}
@@ -529,15 +534,7 @@ export function NeumaticosTablero() {
                     </Button>
                   </div>
                 )}
-                {(detalle.grupo === 'reforma' || detalle.grupo === 'descarte') && puedeMover && (
-                  <div className="ntb-det__acciones">
-                    <Button variant="secondary" disabled={!enElReten(detalle.llanta)}
-                      onClick={() => proponer({ codigo: detalle.llanta.codigo, origen: detalle.grupo as 'reforma' | 'descarte' }, { tipo: 'bodega' })}>
-                      Regresar a disponible
-                    </Button>
-                    {!enElReten(detalle.llanta) && <p className="ntb-det__ayuda">Ya salió del Retén: no se puede regresar desde aquí.</p>}
-                  </div>
-                )}
+
                 {detalle.grupo === 'reforma' && <p className="ntb-det__ayuda">Vida {vidaTexto(detalle.llanta.vida)} en reencauche.</p>}
 
                 <h3 className="ntb-det__subtitulo">Línea de tiempo</h3>
@@ -572,7 +569,11 @@ export function NeumaticosTablero() {
           puedeReencauche={puedeReforma}
           puedeBaja={puedeBaja}
           onClose={cerrarHoja}
-          onHecho={mensaje => { toast(mensaje, 'success'); void refrescar(); }}
+          onHecho={(mensaje, deshacer) => {
+            toast(mensaje, 'success');
+            if (deshacer) setUltimoEnvio({ ...deshacer, venceEn: Date.now() + 5 * 60_000 });
+            void refrescar();
+          }}
         />
       )}
     </Page>

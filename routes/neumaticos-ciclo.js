@@ -704,6 +704,27 @@ module.exports = function (db) {
         permiso: PERMISO_MOVER, desde: ['enviar_reforma', 'esperando_descarte'], accion: 'devolver al Retén', texto: 'devolver llantas al Retén',
         hacia: { almacen: ALMACEN.RETEN, estado: ESTADO.ALMACEN }, mov: MOV.DEVOLVER_RETEN,
     });
+    // Corrección de un envío equivocado (solo administradores, con motivo): la llanta vuelve a disponible en el Retén
+    // y el motivo queda en su kardex. Solo mientras siga en el Retén (aún no despachada a la reformadora ni desactivada).
+    router.post('/corregir-envio', async (req, res) => {
+        try {
+            if (!tienePermiso(req, '__solo_administradores__', 'c')) throw aviso(403, 'Solo un administrador puede corregir un envío');
+            const b = req.body || {};
+            const codigo = mayus(b.codigo);
+            const motivo = txt(b.motivo);
+            if (!codigo) throw aviso(400, 'El código de la llanta es obligatorio');
+            if (motivo.length < 8) throw aviso(400, 'Escribe el motivo de la corrección (mínimo 8 letras)');
+            await conTransaccion(pool(req), async (conn) => {
+                const llanta = await bloquearLlanta(conn, codigo);
+                exigirSituacion(llanta, ['enviar_reforma', 'esperando_descarte'], 'corregir su envío');
+                await pasarLlanta(conn, req, llanta, { almacen: ALMACEN.RETEN, estado: ESTADO.ALMACEN, mov: MOV.DEVOLVER_RETEN, observacion: `Corrección de envío: ${motivo}`.slice(0, 250) });
+            });
+            res.json({ ok: true, data: { codigo, almacen_id: ALMACEN.RETEN, estado: ESTADO.ALMACEN.ciclo } });
+        } catch (err) {
+            responder(res, err);
+        }
+    });
+
     // esperando_descarte → Scrap (desactivada de forma definitiva)
     rutaMovimiento('/desactivar', {
         permiso: PERMISO_BAJA, desde: ['esperando_descarte'], accion: 'desactivar', texto: 'desactivar llantas',

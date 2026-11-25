@@ -38,7 +38,8 @@ interface Props {
   /** Enviar a descarte permitido (descarte y el destino del intercambio) */
   puedeBaja: boolean;
   onClose: () => void;
-  onHecho: (mensaje: string) => void;
+  /** `deshacer`: solo cuando se envió una llanta a reforma o descarte (para ofrecer volver atrás) */
+  onHecho: (mensaje: string, deshacer?: { codigo: string; posicion: string; km: number; destino: 'reforma' | 'descarte' }) => void;
 }
 
 const TITULOS: Record<Propuesta['clase'], string> = {
@@ -133,7 +134,9 @@ export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puede
           : `${propuesta.llanta.codigo} rechazada: queda esperando descarte en el Retén`;
       }
       haptic('success');
-      onHecho(mensaje);
+      onHecho(mensaje, (propuesta.clase === 'reforma' || propuesta.clase === 'descarte')
+        ? { codigo: propuesta.llanta.codigo, posicion: propuesta.posicion, km: kilometraje(km, propuesta.llanta.km_montaje ?? null), destino: propuesta.clase }
+        : undefined);
       onClose();
     } catch (err) {
       setError(errorMessage(err));
