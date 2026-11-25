@@ -19,6 +19,15 @@ interface EventoRaw {
   fecha?: string | null; tipo?: string | null; titulo?: string | null; detalle?: string | null;
   placa?: string | null; posicion?: string | null; proveedor?: string | null; km?: Valor; valor?: Valor;
 }
+interface MedicionCocadaRaw { fecha?: string | null; interno?: Valor; central?: Valor; externo?: Valor; minimo?: Valor; km?: Valor; placa?: string | null; posicion?: string | null }
+interface MontajeRaw {
+  placa?: string | null; posicion?: string | null; fecha_in?: string | null; km_in?: Valor; fecha_out?: string | null; km_out?: Valor;
+  cocada_montaje?: MedicionCocadaRaw | null; cocada_retiro?: MedicionCocadaRaw | null;
+}
+interface CocadaRaw {
+  inicial?: Valor; actual?: Valor; ultima_medicion?: Valor; desgaste_mm?: Valor; mm_por_1000km?: Valor;
+  mediciones?: MedicionCocadaRaw[] | null; montajes?: MontajeRaw[] | null;
+}
 export interface FichaRaw {
   ok?: boolean; error?: string;
   llanta?: LlantaRaw | null;
@@ -27,6 +36,7 @@ export interface FichaRaw {
     fecha?: string | null; interno?: Valor; central?: Valor; externo?: Valor;
     desgaste_interno?: Valor; desgaste_central?: Valor; desgaste_externo?: Valor;
   } | null;
+  cocada?: CocadaRaw | null;
   timeline?: EventoRaw[] | null;
 }
 
@@ -43,7 +53,17 @@ export interface Evento {
   fecha: string | null; tipo: TipoEvento; titulo: string | null; detalle: string | null;
   placa: string | null; posicion: string | null; proveedor: string | null; km: number | null; valor: number | null;
 }
+export interface MedicionCocada { fecha: string | null; interno: number | null; central: number | null; externo: number | null; minimo: number | null; km: number | null; placa: string | null; posicion: string | null }
+export interface MontajeCocada {
+  placa: string | null; posicion: string | null; fechaIn: string | null; kmIn: number | null; fechaOut: string | null; kmOut: number | null;
+  alMontar: MedicionCocada | null; alRetirar: MedicionCocada | null;
+}
+export interface Cocada {
+  inicial: number | null; actual: number | null; ultima: number | null; desgasteMm: number | null; mmPor1000Km: number | null;
+  mediciones: MedicionCocada[]; montajes: MontajeCocada[];
+}
 export interface Ficha {
+  cocada: Cocada | null;
   llanta: Llanta | null;
   presionUltima: number | null; presionFecha: string | null;
   surcoFecha: string | null; surco: FilaSurco[];
@@ -65,6 +85,11 @@ export function aTexto(v: unknown): string | null {
   return s === '' ? null : s;
 }
 
+function medicionCocada(m: MedicionCocadaRaw | null | undefined): MedicionCocada | null {
+  if (!m) return null;
+  return { fecha: aTexto(m.fecha), interno: aNumero(m.interno), central: aNumero(m.central), externo: aNumero(m.externo), minimo: aNumero(m.minimo), km: aNumero(m.km), placa: aTexto(m.placa), posicion: aTexto(m.posicion) };
+}
+
 export function normalizarFicha(r: FichaRaw): Ficha {
   const l = r.llanta;
   const surco = r.surco ?? null;
@@ -76,7 +101,17 @@ export function normalizarFicha(r: FichaRaw): Ficha {
     km: aNumero(e.km), valor: aNumero(e.valor),
   })).sort((a, b) => (b.fecha ?? '').localeCompare(a.fecha ?? ''));
 
+  const c = r.cocada ?? null;
   return {
+    cocada: c ? {
+      inicial: aNumero(c.inicial), actual: aNumero(c.actual), ultima: aNumero(c.ultima_medicion),
+      desgasteMm: aNumero(c.desgaste_mm), mmPor1000Km: aNumero(c.mm_por_1000km),
+      mediciones: (c.mediciones ?? []).map(medicionCocada).filter((m): m is MedicionCocada => m !== null),
+      montajes: (c.montajes ?? []).map(m => ({
+        placa: aTexto(m.placa), posicion: aTexto(m.posicion), fechaIn: aTexto(m.fecha_in), kmIn: aNumero(m.km_in),
+        fechaOut: aTexto(m.fecha_out), kmOut: aNumero(m.km_out), alMontar: medicionCocada(m.cocada_montaje), alRetirar: medicionCocada(m.cocada_retiro),
+      })),
+    } : null,
     llanta: l ? {
       codigo: aTexto(l.codigo) ?? '—',
       marca: aTexto(l.marca), modelo: aTexto(l.modelo), medida: aTexto(l.medida),

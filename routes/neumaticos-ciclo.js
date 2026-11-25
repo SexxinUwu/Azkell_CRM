@@ -1440,6 +1440,50 @@ module.exports = function (db) {
                 }),
             ].sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
 
+            // Cocada (profundidad de surco): al ingreso, al montar cada vez, historial de mediciones y desgaste
+            const num = v => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
+            const minimoDe = m => { const v = [m.r1, m.r2, m.r3].map(num).filter(x => x != null && x > 0); return v.length ? Math.min(...v) : null; };
+            const [hv] = await p.query('SELECT remanente_inicial, remanente_actual FROM neumaticos_hoja_vida WHERE id_neumatico = ? LIMIT 1', [base.id_neumatico]);
+            const [insts] = await p.query(
+                `SELECT placa, posicion, DATE_FORMAT(fecha_in, '%Y-%m-%d %H:%i') AS fecha_in, km_in, DATE_FORMAT(fecha_out, '%Y-%m-%d %H:%i') AS fecha_out, km_out
+                 FROM neumaticos_instalaciones WHERE id_neumatico = ? ORDER BY fecha_in ASC, id ASC`, [base.id_neumatico]);
+            const medCron = mediciones.slice().reverse().map(m => ({
+                fecha: m.fecha_hora || m.fecha, interno: num(m.r1), central: num(m.r2), externo: num(m.r3), minimo: minimoDe(m),
+                km: num(m.km_vehiculo), placa: m.placa || null, posicion: m.posicion || null,
+            })).filter(m => m.minimo != null);
+            const mismaUnidad = (m, i) => !m.placa || String(m.placa).toUpperCase().trim() === String(i.placa || '').toUpperCase().trim();
+            // Cocada al montar: la primera medición desde el día del montaje en esa unidad; si no hay, la última anterior
+            const alMontar = i => {
+                const dia = String(i.fecha_in).slice(0, 10);
+                const lista = medCron.filter(m => mismaUnidad(m, i));
+                return lista.find(m => String(m.fecha).slice(0, 10) >= dia) || [...lista].reverse().find(m => String(m.fecha).slice(0, 10) < dia) || null;
+            };
+            const alRetirar = i => {
+                if (!i.fecha_out) return null;
+                const dia = String(i.fecha_out).slice(0, 10);
+                return [...medCron.filter(m => mismaUnidad(m, i))].reverse().find(m => String(m.fecha).slice(0, 10) <= dia) || null;
+            };
+            const montajes = insts.map(i => ({
+                placa: i.placa, posicion: i.posicion, fecha_in: i.fecha_in, km_in: num(i.km_in), fecha_out: i.fecha_out, km_out: num(i.km_out),
+                cocada_montaje: alMontar(i), cocada_retiro: alRetirar(i),
+            }));
+            const inicial = num(hv[0] && hv[0].remanente_inicial);
+            const primeraMin = medCron.length ? medCron[0].minimo : null;
+            const ultimaMin = medCron.length ? medCron[medCron.length - 1].minimo : null;
+            const puntoPartida = inicial != null ? inicial : primeraMin;
+            const desgasteMm = puntoPartida != null && ultimaMin != null ? Math.round((puntoPartida - ultimaMin) * 100) / 100 : null;
+            // Km del tramo medido: del vehículo en la primera y la última medición; si no hay, los km acumulados de la hoja de vida
+            const kmPrimera = medCron.length ? medCron[0].km : null;
+            const kmUltima = medCron.length ? medCron[medCron.length - 1].km : null;
+            const kmTramo = kmPrimera != null && kmUltima != null && kmUltima > kmPrimera ? kmUltima - kmPrimera : null;
+            const kmAcum = kmTramo || num(llanta.km_acumulado);
+            const cocada = {
+                inicial, actual: num(hv[0] && hv[0].remanente_actual), ultima_medicion: ultimaMin,
+                desgaste_mm: desgasteMm,
+                mm_por_1000km: desgasteMm != null && kmAcum ? Math.round((desgasteMm / kmAcum) * 1000 * 100) / 100 : null,
+                mediciones: medCron, montajes,
+            };
+
             res.json({
                 ok: true,
                 llanta: {
@@ -1460,6 +1504,7 @@ module.exports = function (db) {
                 },
                 presion,
                 surco,
+                cocada,
                 timeline: eventos,
             });
         } catch (err) {

@@ -283,7 +283,8 @@ button.ntb-pos { cursor: pointer; }
 
 /* Tamaño fijo: lo que se elija no cambia el tamaño de nada. El detalle ocupa el alto de la fila sin empujarla y sin barras. */
 .ntb-detalle-col { position: relative; min-width: 0; }
-.ntb-detalle-col > .ntb-detalle { position: absolute; inset: 0; overflow: hidden; align-self: auto; }
+.ntb-detalle-col > .ntb-detalle { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; align-self: auto; scrollbar-width: none; -ms-overflow-style: none; overscroll-behavior: contain; }
+.ntb-detalle-col > .ntb-detalle::-webkit-scrollbar { display: none; }
 @media (max-width: 1100px) {
   .ntb-detalle-col > .ntb-detalle { position: static; overflow: visible; }
 }
@@ -291,3 +292,4 @@ button.ntb-pos { cursor: pointer; }
 .ntb-centro .ntb-chasis .nv3-vista { height: clamp(440px, calc(100dvh - 470px), 640px); min-height: 440px; flex: none; }
 .ntb-linea__detalle { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ntb-linea__todo { align-self: flex-start; margin: 0 0 var(--s-2); padding: 0; border: 0; background: none; color: var(--accent-ink, var(--accent)); font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
+.ntb-det__nota { font-size: 0.75rem; color: var(--label-3); font-weight: 500; }

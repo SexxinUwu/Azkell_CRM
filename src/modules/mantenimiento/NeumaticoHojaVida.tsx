@@ -10,6 +10,7 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, Notice, Page } from '../../core/ui/Display';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Sheet } from '../../core/ui/Sheet';
+import { NhvCocada } from './nhv2-Cocada';
 import { NhvRanura } from './nhv2-Ranura';
 import { NhvTimeline } from './nhv2-Timeline';
 import {
@@ -45,7 +46,7 @@ function etiquetaEstado(estado: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function useFicha(codigo: string | null) {
+export function useFicha(codigo: string | null) {
   return useQuery<Ficha>({
     queryKey: ['mant', 'neumatico-ficha', codigo],
     enabled: codigo !== null && codigo !== '',
@@ -124,6 +125,11 @@ function PanelPresionSurco({ f }: { f: Ficha }) {
         </div>
         <AccionProximamente icono={<Gauge size={16} />}>Medición de presión</AccionProximamente>
       </Bloque>
+      {f.cocada && (
+        <Bloque titulo="Cocada: ingreso, montaje y desgaste">
+          <NhvCocada c={f.cocada} />
+        </Bloque>
+      )}
       <Bloque titulo="Ranura del neumático">
         {f.surcoFecha && <p className="nhv__nota nhv__nota--arriba">Último apunte: {formatFechaHoraPe(f.surcoFecha)}</p>}
         <NhvRanura filas={f.surco} />
