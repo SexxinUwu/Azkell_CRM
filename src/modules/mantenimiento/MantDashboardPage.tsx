@@ -1,6 +1,6 @@
 import './mant.css';
 import { useMemo, useState, type ReactNode } from 'react';
-import { CircleDollarSign, Clock, Truck, Wrench } from 'lucide-react';
+import { ChevronDown, ChevronRight, CircleDollarSign, Clock, Truck, Wrench } from 'lucide-react';
 import { Page, PageHeader, Notice, EmptyState } from '../../core/ui/Display';
 import { PageLoader } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
@@ -121,8 +121,8 @@ const COL_PLACAS: ColumnaTabla[] = [
 const COL_DIA: ColumnaTabla[] = [
   { id: 'placa', titulo: 'Placa', ancho: 110 },
   { id: 'fecha', titulo: 'Fecha de ingreso', ancho: 150 },
-  { id: 'n', titulo: 'Ingresos', ancho: 100, alinear: 'right' },
-  { id: 'motivo', titulo: 'Motivo de cada ingreso', ancho: 460, minimo: 200 },
+  { id: 'n', titulo: 'OT del día', ancho: 100, alinear: 'right' },
+  { id: 'motivo', titulo: 'Motivo de cada OT', ancho: 460, minimo: 200 },
 ];
 
 type Pestana = 'resumen' | 'ingresos';
@@ -151,6 +151,7 @@ export function MantDashboardPage() {
   const [hasta, setHasta] = useState(() => hoyLima(0));
   const [empresas, setEmpresas] = useState<string[]>([]);
   const [placaSel, setPlacaSel] = useState<string | null>(null);
+  const [diasAbiertos, setDiasAbiertos] = useState<Set<string>>(new Set());
 
   const placasQ = usePlacas();
   const otsQ = useOrdenesTrabajoData();
@@ -262,13 +263,16 @@ export function MantDashboardPage() {
   const placasIngreso = useMemo(() => {
     const m = new Map<string, OrdenTrabajo[]>();
     otsRango.forEach(o => m.set(o.placa, [...(m.get(o.placa) ?? []), o]));
-    return [...m.entries()].map(([placa, lista]) => ({
-      placa,
-      ots: [...lista].sort((a, b) => fechaIngreso(b).localeCompare(fechaIngreso(a)) || otId(b).localeCompare(otId(a))),
-      min: lista.reduce((s, o) => s + minutosOT(o), 0),
-    })).sort((a, b) => b.ots.length - a.ots.length || a.placa.localeCompare(b.placa));
+    // Un ingreso es una placa en un día: varias OT del mismo día son un solo ingreso
+    return [...m.entries()].map(([placa, lista]) => {
+      const ots = [...lista].sort((a, b) => fechaIngreso(b).localeCompare(fechaIngreso(a)) || otId(b).localeCompare(otId(a)));
+      const porFecha = new Map<string, OrdenTrabajo[]>();
+      ots.forEach(o => { const f = fechaIngreso(o); porFecha.set(f, [...(porFecha.get(f) ?? []), o]); });
+      const dias = [...porFecha.entries()].map(([fecha, lo]) => ({ fecha, ots: lo, min: lo.reduce((a, o) => a + minutosOT(o), 0) }));
+      return { placa, ots, dias, min: lista.reduce((a, o) => a + minutosOT(o), 0) };
+    }).sort((a, b) => b.dias.length - a.dias.length || a.placa.localeCompare(b.placa));
   }, [otsRango]);
-  const reingresos = placasIngreso.filter(p => p.ots.length > 1).length;
+  const reingresos = placasIngreso.filter(p => p.dias.length > 1).length;
   const minutosTotal = placasIngreso.reduce((s, p) => s + p.min, 0);
   const semanas = useMemo(() => {
     const m = new Map<string, number>();
@@ -431,8 +435,8 @@ export function MantDashboardPage() {
                     <tr key={p.placa} onClick={() => setPlacaSel(p.placa)} style={{ cursor: 'pointer' }}>
                       <Celda><LicensePlate plate={p.placa} size="sm" /></Celda>
                       <Celda alinear="right" mono>
-                        {p.ots.length}
-                        {p.ots.length > 1 && <span style={{ marginLeft: 6, fontSize: '0.7rem', color: 'var(--red-ink)' }}>reingreso</span>}
+                        {p.dias.length}
+                        {p.dias.length > 1 && <span style={{ marginLeft: 6, fontSize: '0.7rem', color: 'var(--red-ink)' }}>reingreso</span>}
                       </Celda>
                       <Celda alinear="right" mono>{p.min.toLocaleString('es-PE')}</Celda>
                     </tr>
@@ -443,9 +447,22 @@ export function MantDashboardPage() {
           </div>
 
           {detalle ? (
-            <Tarjeta titulo={<>Detalle de <LicensePlate plate={detalle.placa} size="sm" /> · {detalle.ots.length} ingresos · {detalle.min.toLocaleString('es-PE')} min</>} icono={<Clock size={15} />}>
+            <Tarjeta titulo={<>Detalle de <LicensePlate plate={detalle.placa} size="sm" /> · {detalle.dias.length} {detalle.dias.length === 1 ? 'ingreso' : 'ingresos'} ({detalle.ots.length} OT) · {detalle.min.toLocaleString('es-PE')} min</>} icono={<Clock size={15} />}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
-                {detalle.ots.map(o => (
+                {detalle.dias.map(d => {
+                  const clave = `${detalle.placa}|${d.fecha}`;
+                  const abierto = diasAbiertos.has(clave);
+                  return (
+                  <div key={clave} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}>
+                    <button type="button" aria-expanded={abierto}
+                      onClick={() => setDiasAbiertos(prev => { const n = new Set(prev); if (n.has(clave)) n.delete(clave); else n.add(clave); return n; })}
+                      style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', padding: 'var(--s-3)', borderRadius: 12, background: 'var(--fill-2)', border: 0, cursor: 'pointer', textAlign: 'left', font: 'inherit', color: 'inherit', width: '100%' }}>
+                      {abierto ? <ChevronDown size={16} aria-hidden /> : <ChevronRight size={16} aria-hidden />}
+                      <b>{fechaDMY(d.fecha)}</b>
+                      <span style={{ color: 'var(--label-2)', fontSize: '0.8125rem' }}>{d.ots.length} OT</span>
+                      <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: '0.8125rem' }}>{d.min.toLocaleString('es-PE')} min</span>
+                    </button>
+                    {abierto && d.ots.map(o => (
                   <div key={otId(o)} style={{ padding: 'var(--s-3)', borderRadius: 12, background: 'var(--fill-2)' }}>
                     <div style={{ display: 'flex', gap: 'var(--s-3)', flexWrap: 'wrap', alignItems: 'baseline', fontSize: '0.8125rem' }}>
                       <b style={{ fontFamily: 'var(--font-mono)' }}>{otId(o)}</b>
@@ -470,11 +487,14 @@ export function MantDashboardPage() {
                       </ul>
                     )}
                   </div>
-                ))}
+                    ))}
+                  </div>
+                  );
+                })}
               </div>
             </Tarjeta>
           ) : (
-            <div style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>Selecciona una placa en la tabla para ver el detalle de sus ingresos.</div>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--label-2)' }}>Selecciona una placa en la tabla para ver sus ingresos por día.</div>
           )}
 
           <Tarjeta titulo="Ingresos por placa y fecha" icono={<Wrench size={15} />}>
