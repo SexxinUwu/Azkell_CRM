@@ -128,7 +128,7 @@ export class MotorTelemetria {
   readonly root: HTMLDivElement;
   readonly mapa: MapaGL;
   tema: TemaMapa;
-  opt: OpcionesMapa = { traffic: false, terrain: false, buildings: true, trails: true, geo: true, smooth: true, models: true, buildingsSat: false, exacto: (() => { try { return localStorage.getItem('fleet_gps_exacto') !== '0'; } catch { return true; } })() };
+  opt: OpcionesMapa = { traffic: false, terrain: false, buildings: false, trails: false, geo: true, smooth: true, models: false, buildingsSat: false, exacto: (() => { try { return localStorage.getItem('fleet_gps_exacto') !== '0'; } catch { return true; } })() };
 
   private mapDiv: HTMLDivElement;
   private tagLayer: HTMLDivElement;
@@ -384,7 +384,7 @@ export class MotorTelemetria {
     this.setFollow(false);
     const b = new maplibregl.LngLatBounds(g.ring[0], g.ring[0]);
     g.ring.forEach(p => b.extend(p));
-    this.mapa.fitBounds(b, { padding: MOVIL() ? { top: 150, bottom: 190, left: 30, right: 30 } : 120, maxZoom: 17, duration: REDUCIR() ? 0 : 1400, pitch: Math.min(this.mapa.getPitch(), 50), essential: !REDUCIR() });
+    this.mapa.fitBounds(b, { padding: MOVIL() ? { top: 150, bottom: 190, left: 30, right: 30 } : 120, maxZoom: 17, duration: REDUCIR() ? 0 : 1400, pitch: 0, essential: !REDUCIR() });
   }
   /** Cuántas unidades hay dentro de cada geocerca ahora mismo */
   unidadesPorGeocerca(): Map<string, number> {
@@ -710,7 +710,7 @@ export class MotorTelemetria {
     if (avisar && cambia) this.cb.onSeleccion(placa);
     const u = placa ? this.units.get(placa) : null;
     const pad = this.relleno(!!u);
-    if (u && u.view && volar && cambia) this.mapa.flyTo({ center: u.b ? u.b.pos : u.view, zoom: Math.max(this.mapa.getZoom(), 15.8), pitch: 60, bearing: this.mapa.getBearing(), duration: REDUCIR() ? 0 : 2200, essential: !REDUCIR(), padding: pad });
+    if (u && u.view && volar && cambia) this.mapa.flyTo({ center: u.b ? u.b.pos : u.view, zoom: Math.max(this.mapa.getZoom(), 15.8), pitch: 0, bearing: 0, duration: REDUCIR() ? 0 : 2200, essential: !REDUCIR(), padding: pad });
     // Con un vuelo en curso no se toca el relleno (setPadding cancelaría el vuelo hacia la unidad)
     else if (!this.follow && !this.mapa.isMoving()) this.mapa.setPadding(pad);
     this.uiAcc = 1; this.sucioDatos = true; this.sucio = true; this.mapa.triggerRepaint();
@@ -730,7 +730,7 @@ export class MotorTelemetria {
   centrarSeleccion() {
     const u = this.sel ? this.units.get(this.sel) : null;
     // Va a la última posición recibida; si la unidad se movió, otro clic vuelve a centrarla donde está ahora
-    if (u?.view) this.mapa.flyTo({ center: u.b ? u.b.pos : u.view, zoom: Math.max(this.mapa.getZoom(), 16.5), pitch: Math.max(this.mapa.getPitch(), 55), bearing: u.hview, duration: REDUCIR() ? 0 : 1200, essential: !REDUCIR() });
+    if (u?.view) this.mapa.flyTo({ center: u.b ? u.b.pos : u.view, zoom: Math.max(this.mapa.getZoom(), 16.5), pitch: 0, bearing: 0, duration: REDUCIR() ? 0 : 1200, essential: !REDUCIR() });
   }
 
   /** Encuadra las unidades visibles con posición (o solo las placas indicadas) */
@@ -742,7 +742,7 @@ export class MotorTelemetria {
     this.setFollow(false);
     const b = new maplibregl.LngLatBounds(pts[0], pts[0]);
     pts.forEach(p => b.extend(p));
-    const opts: any = { padding: MOVIL() ? { top: 150, bottom: 190, left: 30, right: 30 } : 70, maxZoom: 15, duration: primera || REDUCIR() ? 0 : 1800, pitch: pts.length > 1 ? 48 : 58, bearing: -22 };
+    const opts: any = { padding: MOVIL() ? { top: 150, bottom: 190, left: 30, right: 30 } : 70, maxZoom: 15, duration: primera || REDUCIR() ? 0 : 1800, pitch: 0, bearing: 0 };
     this.mapa.fitBounds(b, opts);
   }
 

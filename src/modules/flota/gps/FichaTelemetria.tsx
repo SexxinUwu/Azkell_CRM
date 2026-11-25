@@ -1,6 +1,6 @@
 // Ficha de la unidad: velocímetro, brújula, velocidad de los últimos 2 minutos y solo los datos que existen.
 import { useEffect, useRef, useState } from 'react';
-import { MapPin, Navigation, Route, X } from 'lucide-react';
+import { Eye, MapPin, Navigation, Route, X } from 'lucide-react';
 import { MessageCircle } from '../../../core/ui/IconosArchivo';
 import { Button } from '../../../core/ui/Button';
 import { LicensePlate } from '../../../core/ui/LicensePlate';
@@ -11,6 +11,7 @@ import { factorCombustible } from './unidadCombustible';
 import { RESERVA_COMBUSTIBLE_PCT } from './mapaConfig';
 import { EXCESO_KMH } from './mapaConfig';
 import { useCombustible, type UnidadMapa } from '../api';
+import { enlaceCalle } from './recorridoApi';
 
 const CARDINALES = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
 
@@ -83,7 +84,7 @@ interface Props {
   onHistorial: () => void;
 }
 
-export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, rendimiento = null, onCerrar, onHistorial }: Props) {
+export function FichaTelemetria({ u, motor, conductor, capacidad, rendimiento = null, onCerrar, onHistorial }: Props) {
   const l = useLectura(motor, u.placa);
   const combustible = useCombustible(u.id).data;
   // En % directo, o en galones/litros convertidos con la capacidad del tanque; sin capacidad se muestra en galones
@@ -214,11 +215,11 @@ export function FichaTelemetria({ u, motor, conductor, piloto, capacidad, rendim
       </div>
 
       <div className="tg-actions">
-        {tienePos && <Button variant="primary" block aria-pressed={piloto} onClick={() => motor?.setFollow(!piloto)}>{piloto ? 'Salir de cámara piloto' : 'Cámara piloto'}</Button>}
         <Button variant="secondary" icon={<Route size={16} />} onClick={onHistorial}>Historial</Button>
         {tienePos && <Button variant="secondary" onClick={() => motor?.centrarSeleccion()}>Centrar</Button>}
         {tienePos && <a className="btn btn--secondary" href={waze} target="_blank" rel="noopener noreferrer"><Navigation size={16} />Waze</a>}
         {tienePos && <a className="btn btn--secondary" href={maps} target="_blank" rel="noopener noreferrer"><MapPin size={16} />Maps</a>}
+        {tienePos && <a className="btn btn--secondary" href={enlaceCalle(u.lat as number, u.lng as number, u.rumbo)} target="_blank" rel="noopener noreferrer"><Eye size={16} />Ver calle</a>}
         <a className="btn btn--secondary" href={whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle size={16} />WhatsApp</a>
       </div>
     </>
