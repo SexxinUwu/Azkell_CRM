@@ -24,7 +24,7 @@ import {
 import { useArrastre, posicionDeEvento, type Destino, type ItemArrastre, type SondaPosicion } from './ntb-arrastre';
 import { ejecutarRegreso, tituloLlanta, useTablero, usePlacasLista, vidaTexto } from './ntb-api';
 import { createPortal } from 'react-dom';
-import { LlantaFicha, LlantaTile, RemanenteChip, VidaChip, aLlantaDato, remanenteMinimo } from './ntb-llanta';
+import { LlantaPlano, LlantaTile, RemanenteChip, VidaChip, aLlantaDato, remanenteMinimo } from './ntb-llanta';
 import { LineaTiempo } from './ntb-linea-tiempo';
 import { MovimientoSheet, type Propuesta } from './ntb-movimiento-sheet';
 import './ntb.css';
@@ -545,18 +545,11 @@ export function NeumaticosTablero() {
         </div>
       )}
 
-      {/* El neumático que se arrastra va en el cuerpo de la página (no dentro de contenedores con transformaciones) y se levanta justo desde donde se agarró */}
+      {/* El neumático que se arrastra va en el cuerpo de la página y se ve igual que los del plano de la unidad */}
       {arrastre.fantasma && !llevada && llantaArrastrada && createPortal(
-        arrastre.fantasma.ancla ? (
-          <div className="ntb-fantasma ntb-fantasma--ficha" aria-hidden
-            style={{ left: arrastre.fantasma.x - arrastre.fantasma.ancla.dx, top: arrastre.fantasma.y - arrastre.fantasma.ancla.dy, width: arrastre.fantasma.ancla.w, height: arrastre.fantasma.ancla.h }}>
-            <LlantaFicha llanta={llantaArrastrada} activa />
-          </div>
-        ) : (
-          <div className="ntb-fantasma" style={{ left: arrastre.fantasma.x, top: arrastre.fantasma.y }} aria-hidden>
-            <LlantaFicha llanta={llantaArrastrada} activa />
-          </div>
-        ),
+        <div className="ntb-fantasma ntb-fantasma--plano" style={{ left: arrastre.fantasma.x, top: arrastre.fantasma.y }} aria-hidden>
+          <LlantaPlano llanta={llantaArrastrada} />
+        </div>,
         document.body,
       )}
 
