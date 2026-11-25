@@ -131,7 +131,7 @@ export function PlantillaSheet({ abierta, plantilla, onClose }: { abierta: boole
   }
 
   return (
-    <Sheet open={abierta} onClose={onClose} title={plantilla ? 'Editar plantilla' : 'Nueva plantilla'} ancho
+    <Sheet open={abierta} onClose={onClose} title={plantilla ? 'Editar plantilla' : 'Nueva plantilla'} ancho extra
       footer={<><Button variant="secondary" onClick={onClose} disabled={guardando}>Cancelar</Button><Button variant="primary" onClick={guardar} loading={guardando} disabled={!valido}>Guardar</Button></>}>
       <div className="hr-hoja">
         <Field label="Nombre de la plantilla">{p => <TextInput {...p} value={f.nombre} maxLength={150} placeholder="Ej.: Bimbo · Callao - Arequipa · Tracto" onChange={e => set('nombre', e.target.value)} />}</Field>

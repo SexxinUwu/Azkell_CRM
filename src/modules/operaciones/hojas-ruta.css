@@ -17,7 +17,7 @@
 .hr-hoja__nota { margin: 0; font-size: 0.8125rem; color: var(--label-2); }
 
 .hr-paradas { display: flex; flex-direction: column; gap: 6px; }
-.hr-parada { display: grid; grid-template-columns: 22px 54px 150px minmax(160px, 1fr) 104px 104px 52px auto; align-items: center; gap: 6px; }
+.hr-parada { display: grid; grid-template-columns: 24px 64px 170px minmax(220px, 1fr) 128px 128px 56px auto; align-items: center; gap: 6px; }
 @media (max-width: 900px) { .hr-parada { grid-template-columns: 22px 54px 1fr 1fr; } .hr-parada__act { grid-column: 3 / -1; } }
 .hr-parada__n { font-size: 0.75rem; font-weight: 700; color: var(--label-2); text-align: center; }
 .hr-parada__dur { font-size: 0.75rem; font-weight: 700; color: var(--label-2); font-variant-numeric: tabular-nums; text-align: center; }
