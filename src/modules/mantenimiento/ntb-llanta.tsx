@@ -140,3 +140,25 @@ export function LlantaTile({ llanta, activa, arrastrable, enMano, onPointerDown,
     </div>
   );
 }
+
+/**
+ * El neumático tal como se dibuja en el plano de la unidad (goma gris con su banda, aro del semáforo y el círculo blanco del número).
+ * Es lo que se lleva pegado al puntero al arrastrar una llanta desde las listas: así se ve igual que las demás al soltarla en su posición.
+ */
+export function LlantaPlano({ llanta }: { llanta: Pick<LlantaTablero, 'r1' | 'r2' | 'r3' | 'remanente_mm'> }) {
+  const aro = COLOR_BANDA[tonoMm(remanenteMinimo(llanta))];
+  const surcos = [14, 21, 28, 35, 42, 49, 56];
+  return (
+    <svg className="ntb-ico-plano" viewBox="0 0 34 72" width="34" height="72" aria-hidden focusable="false">
+      <defs>
+        <linearGradient id="ntb-goma-plano" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stopColor="#4a4e55" /><stop offset="0.5" stopColor="#7d828a" /><stop offset="1" stopColor="#4a4e55" />
+        </linearGradient>
+      </defs>
+      <rect x="5" y="6" width="24" height="60" rx="5" fill="url(#ntb-goma-plano)" stroke="#3a3d42" strokeWidth="1" />
+      {surcos.map(y => <line key={y} x1="7" x2="27" y1={y} y2={y} stroke="#2f3237" strokeWidth="1.3" opacity="0.55" />)}
+      <rect x="2.5" y="3.5" width="29" height="65" rx="7.5" fill="none" stroke={aro} strokeWidth="2.4" />
+      <circle cx="17" cy="36" r="8.5" fill="#ffffff" opacity="0.92" />
+    </svg>
+  );
+}
