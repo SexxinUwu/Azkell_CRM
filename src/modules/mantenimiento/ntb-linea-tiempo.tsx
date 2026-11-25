@@ -26,7 +26,8 @@ function ubicacion(e: EventoLlanta): string | null {
   return null;
 }
 
-export function LineaTiempo({ codigo }: { codigo: string }) {
+/** `limite`: muestra solo los últimos eventos y, si hay más, un botón «Ver historial completo» (el panel del tablero mantiene siempre el mismo tamaño) */
+export function LineaTiempo({ codigo, limite, onVerTodo }: { codigo: string; limite?: number; onVerTodo?: () => void }) {
   const { data, isLoading, error } = useLineaTiempo(codigo);
 
   if (isLoading) return <PageLoader />;
@@ -37,9 +38,15 @@ export function LineaTiempo({ codigo }: { codigo: string }) {
     return <EmptyState icon={<CircleAlert size={20} />} title="Sin movimientos">Esta llanta todavía no tiene eventos registrados.</EmptyState>;
   }
 
+  const visibles = limite && eventos.length > limite ? eventos.slice(-limite) : eventos;
+  const ocultos = eventos.length - visibles.length;
   return (
+    <>
+    {ocultos > 0 && onVerTodo && (
+      <button type="button" className="ntb-linea__todo" onClick={onVerTodo}>Ver historial completo ({eventos.length} movimientos)</button>
+    )}
     <ol className="ntb-linea" aria-label={`Línea de tiempo de ${codigo}`}>
-      {eventos.map((e, i) => {
+      {visibles.map((e, i) => {
         const et = etiquetaEvento(e.tipo);
         const ubi = ubicacion(e);
         return (
@@ -59,5 +66,6 @@ export function LineaTiempo({ codigo }: { codigo: string }) {
         );
       })}
     </ol>
+    </>
   );
 }
