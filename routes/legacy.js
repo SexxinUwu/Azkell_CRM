@@ -1808,6 +1808,8 @@ router.post('/:metodo', async (req, res) => {
         const fechaFin = payload.fechaFin || null;
         // completo:true (solo lo envía el mapa del viaje): recorre todo el rango por ventanas de tiempo y reduce los puntos en el servidor
         const completo = payload.completo === true;
+        // forzar:true (solo el regenerador de recorridos): ignora la copia guardada y la reemplaza con un cálculo nuevo
+        const forzar = payload.forzar === true;
         const tdb = req.db || db;
 
         if ((fechaInicio && isNaN(new Date(fechaInicio).getTime())) || (fechaFin && isNaN(new Date(fechaFin).getTime()))) {
@@ -1832,7 +1834,7 @@ router.post('/:metodo', async (req, res) => {
         const inicioHoyLima = Math.floor((Date.now() / 1000 - 18000) / 86400) * 86400 + 18000;
         const diaCerrado = completo && placaParam && toSec - fromSec === 86400 && (fromSec - 18000) % 86400 === 0 && toSec <= inicioHoyLima;
         const fechaDia = diaCerrado ? new Date(fromSec * 1000).toLocaleDateString('en-CA', { timeZone: 'America/Lima' }) : null;
-        if (diaCerrado) {
+        if (diaCerrado && !forzar) {
             try {
                 const [guardado] = await pdb.query('SELECT datos FROM gps_recorrido_dia WHERE placa = ? AND fecha = ? LIMIT 1', [placaParam, fechaDia]);
                 if (guardado[0] && guardado[0].datos) {
@@ -1888,15 +1890,19 @@ router.post('/:metodo', async (req, res) => {
 
             // Sensor de nivel de combustible (%) de la unidad, si lo tiene configurado
             let sensorCombustible = null;
+            // Odómetro de la unidad (sensor de tipo kilometraje, por lo general el CAN): Wialon mide el recorrido con él y no con la distancia entre puntos GPS
+            let sensorOdo = null;
             const cacheSensor = sensorCombustibleCache.get(String(targetUnitId));
             if (cacheSensor && Date.now() - cacheSensor.en < 30 * 60 * 1000) {
                 sensorCombustible = cacheSensor.sensor;
+                sensorOdo = cacheSensor.odo || null;
             } else {
                 try {
                     const itc = await (await fetch(`${baseUrl}?svc=core/search_item&params=${encodeURIComponent(JSON.stringify({ id: targetUnitId, flags: 4096 }))}&sid=${sid}`)).json();
                     sensorCombustible = (await elegirSensorValido(baseUrl, sid, targetUnitId, itc && itc.item && itc.item.sens)).sensor;
-                    sensorCombustibleCache.set(String(targetUnitId), { en: Date.now(), sensor: sensorCombustible });
-                } catch (e) { sensorCombustible = null; }
+                    sensorOdo = Object.values((itc && itc.item && itc.item.sens) || {}).find(x => x && x.t === 'mileage') || null;
+                    sensorCombustibleCache.set(String(targetUnitId), { en: Date.now(), sensor: sensorCombustible, odo: sensorOdo });
+                } catch (e) { sensorCombustible = null; sensorOdo = null; }
             }
 
             // Consultar mensajes / telemetría en el rango
@@ -1906,13 +1912,29 @@ router.post('/:metodo', async (req, res) => {
                 const msgRes = await fetch(`${baseUrl}?svc=messages/load_interval&params=${encodeURIComponent(JSON.stringify(msgParams))}&sid=${sid}`);
                 const msgData = await msgRes.json();
                 const msgs = (msgData && Array.isArray(msgData.messages)) ? msgData.messages : [];
-                // Nivel de combustible de cada mensaje de la ventana (calc_sensors usa los mensajes recién cargados)
-                if (sensorCombustible && msgs.length) {
+                // Combustible y odómetro de cada mensaje de la ventana (calc_sensors usa los mensajes recién cargados).
+                // Wialon devuelve un objeto { idSensor: valor } por mensaje (o un número, según la cuenta): se aceptan las dos formas.
+                const leerSensor = async (sensor) => {
                     try {
-                        const cp = { source: '', indexFrom: 0, indexTo: msgs.length - 1, unitId: targetUnitId, sensorId: sensorCombustible.id };
+                        const cp = { source: '', indexFrom: 0, indexTo: msgs.length - 1, unitId: targetUnitId, sensorId: sensor.id };
                         const arr = await (await fetch(`${baseUrl}?svc=unit/calc_sensors&params=${encodeURIComponent(JSON.stringify(cp))}&sid=${sid}`)).json();
-                        if (Array.isArray(arr)) msgs.forEach((m, i) => { const v = Array.isArray(arr[i]) ? arr[i][0] : arr[i]; if (typeof v === 'number' && isFinite(v) && v > -1e5) m.__f = String(sensorCombustible.m || '').trim() === '%' ? Math.max(0, Math.min(100, v)) : Math.max(0, v); });
-                    } catch (e) { /* sin nivel en esta ventana */ }
+                        if (!Array.isArray(arr)) return null;
+                        return arr.map(v => {
+                            let x = v;
+                            if (x && typeof x === 'object' && !Array.isArray(x)) x = x[sensor.id] != null ? x[sensor.id] : Object.values(x)[0];
+                            if (Array.isArray(x)) x = x[0];
+                            return (typeof x === 'number' && isFinite(x) && x > -1e5) ? x : null;
+                        });
+                    } catch (e) { return null; }
+                };
+                if (sensorCombustible && msgs.length) {
+                    const niveles = await leerSensor(sensorCombustible);
+                    if (niveles) msgs.forEach((m, i) => { const v = niveles[i]; if (v != null) m.__f = String(sensorCombustible.m || '').trim() === '%' ? Math.max(0, Math.min(100, v)) : Math.max(0, v); });
+                }
+                if (sensorOdo && msgs.length) {
+                    const odos = await leerSensor(sensorOdo);
+                    const aKm = String(sensorOdo.m || '').trim().toLowerCase() === 'm' ? 0.001 : 1;
+                    if (odos) msgs.forEach((m, i) => { const v = odos[i]; if (v != null && v > 0) m.__o = v * aKm; });
                 }
                 return msgs;
             };
@@ -1986,10 +2008,16 @@ router.post('/:metodo', async (req, res) => {
                 }
 
                 // Cálculo de distancia acumulada
+                // Con odómetro, el recorrido es lo que avanzó el odómetro (igual que Wialon); sin él, o si el odómetro no se movió en un tramo largo, la distancia entre puntos GPS
                 if (puntos.length > 0) {
                     const prev = puntos[puntos.length - 1];
                     const d = calcDist(prev.lat, prev.lng, lat, lng);
-                    if (d < 50) totalKm += d; // descartar saltos anómalos
+                    let paso = d < 50 ? d : 0; // descartar saltos anómalos
+                    if (prev.odo != null && m.__o != null) {
+                        const dO = m.__o - prev.odo;
+                        if (dO >= 0 && dO < 50 && !(dO === 0 && d > 0.3)) paso = dO;
+                    }
+                    totalKm += paso;
                 }
 
                 // Detección de paradas (> 3 minutos detenidos)
@@ -2022,6 +2050,7 @@ router.post('/:metodo', async (req, res) => {
                     curso: course,
                     altitud: alt,
                     tiempo: t,
+                    odo: m.__o != null ? Math.round(m.__o * 1000) / 1000 : null,
                     ignicion: isIgn ? 1 : 0,
                     // 0,00 con la unidad en marcha = sensor sin lectura, no un tanque vacío
                     combustible: (m.__f != null && !(m.__f === 0 && isIgn)) ? Math.round(m.__f * 10) / 10 : null
@@ -2078,6 +2107,7 @@ router.post('/:metodo', async (req, res) => {
             const salidaHist = {
                 data: Object.assign({
                     success: true,
+                    version: 2, // 2 = kilómetros por odómetro y nivel de combustible leído bien; las copias sin esto son del cálculo anterior
                     placa: placaParam,
                     unitId: targetUnitId,
                     totalPuntos: puntos.length,
@@ -2145,12 +2175,17 @@ router.post('/:metodo', async (req, res) => {
             for (const u of unidades) {
                 if (Date.now() > limite) return { ok: true, hechos, conDatos, yaEstaban, cortado: true, ultimoDia: fecha };
                 try {
-                    const [ya] = await pdb.query('SELECT 1 FROM gps_recorrido_dia WHERE placa = ? AND fecha = ? LIMIT 1', [u.placa, fecha]);
-                    if (ya.length) { yaEstaban++; continue; }
+                    const [ya] = await pdb.query(opciones.regenerar ? 'SELECT datos FROM gps_recorrido_dia WHERE placa = ? AND fecha = ? LIMIT 1' : 'SELECT 1 FROM gps_recorrido_dia WHERE placa = ? AND fecha = ? LIMIT 1', [u.placa, fecha]);
+                    if (ya.length) {
+                        // Regenerar: solo se vuelven a calcular las copias del cálculo anterior (sin version 2)
+                        let actual = !opciones.regenerar;
+                        if (!actual) { try { actual = JSON.parse(zlib.gunzipSync(ya[0].datos).toString('utf8')).version === 2; } catch (e) { actual = false; } }
+                        if (actual) { yaEstaban++; continue; }
+                    }
                 } catch (e) { return { ok: false, error: e.message }; }
                 await new Promise((resolve) => {
                     const req = { method: 'POST', url: '/obtenerHistorialGPS', originalUrl: '/obtenerHistorialGPS', baseUrl: '', path: '/obtenerHistorialGPS', headers: {}, query: {}, params: {}, tenantSlug,
-                        body: { args: [{ placa: u.placa, unitId: u.id, fechaInicio: new Date(a * 1000).toISOString(), fechaFin: new Date(b * 1000).toISOString(), completo: true }] } };
+                        body: { args: [{ placa: u.placa, unitId: u.id, fechaInicio: new Date(a * 1000).toISOString(), fechaFin: new Date(b * 1000).toISOString(), completo: true, forzar: !!opciones.regenerar }] } };
                     let listo = false;
                     const fin = (r) => { if (listo) return; listo = true; if (r && r.puntos && r.puntos.length) conDatos++; resolve(); };
                     const res = {
