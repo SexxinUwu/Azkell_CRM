@@ -354,3 +354,13 @@ table[aria-label="Órdenes de compra"] tbody tr:hover td { background: color-mix
 /* Órdenes de compra: filas compactas */
 .oc-tabla tbody td { padding: 4px 10px; font-size: 0.8125rem; }
 .oc-tabla thead th { padding: 7px 10px; }
+
+/* Lista compacta, como la de órdenes de trabajo: filas bajas y la tabla llena la pantalla hasta el final del menú lateral, sin barra de página */
+.tabla-redim.oc-lista tbody td { padding: 6px 10px; font-size: 0.8125rem; line-height: 1.25; }
+.tabla-redim.oc-lista thead th { padding-top: 7px; padding-bottom: 7px; }
+.oc-lista .btn--icon { width: 28px; height: 28px; min-height: 28px; padding: 0; }
+.oc-lista .oc-codigo { font-size: 0.8125rem; }
+.oc-lista .oc-chip, .oc-lista .badge { font-size: 0.6875rem; padding: 1px 8px; }
+.page--fill .oc-cuerpo { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.page--fill .oc-cuerpo > .tabla-redim { flex: 1 1 auto; min-height: 0; max-height: none !important; scrollbar-width: none; -ms-overflow-style: none; }
+.page--fill .oc-cuerpo > .tabla-redim::-webkit-scrollbar { display: none; }
