@@ -414,7 +414,7 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
                     <b className="sdt-item__nombre" title={f.it.descripcion || undefined}>{f.it.descripcion || f.it.inventario_id || '—'}</b>
                     <div className="sdt-item__chips">
                       {f.it.inventario_id && <span className="sdt-chip sdt-chip--mono">{f.it.inventario_id}</span>}
-                      {pendiente && (f.ubic ? <span className="sdt-chip sdt-chip--ubi"><MapPin size={11} /> {f.ubic}</span> : <span className="sdt-chip sdt-chip--sin">Sin ubicación</span>)}
+                      {pendiente && (f.ubic ? <span className="sdt-chip sdt-chip--ubi"><MapPin size={11} /> {f.ubic}</span> : <span className="sdt-chip sdt-chip--sin" title="Aviso: el artículo no tiene ubicación registrada; no bloquea el despacho">Sin ubicación</span>)}
                       {pendiente && f.stock !== null && <span className={`sdt-chip ${f.alcanza ? 'sdt-chip--ok' : 'sdt-chip--mal'}`}>{f.alcanza ? `Stock ${cantidad(f.stock)}` : `Stock insuficiente (${cantidad(f.stock)})`}</span>}
                     </div>
                     {pendiente && est && est.partes.length > 0 && (

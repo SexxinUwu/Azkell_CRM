@@ -14,7 +14,7 @@
 .sdt-chip b { color: var(--label); font-weight: 700; }
 .sdt-chip--mono { font-family: var(--font-mono); font-weight: 700; color: var(--label); }
 .sdt-chip--ubi { background: var(--accent-tint); color: var(--accent-ink, var(--accent)); font-weight: 700; }
-.sdt-chip--sin { color: var(--label-3); }
+.sdt-chip--sin { background: rgba(245, 158, 11, .16); color: #b45309; font-weight: 600; }
 .sdt-chip--ok { background: rgba(52, 199, 89, .16); color: #15803d; font-weight: 600; }
 .sdt-chip--mal { background: rgba(255, 59, 48, .14); color: #b4232a; font-weight: 700; }
 .sdt-espera { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 700; }
