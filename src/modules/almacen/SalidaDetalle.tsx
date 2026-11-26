@@ -170,7 +170,7 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
     const falta = destino.cant - destino.c.recogido;
     if (!m && falta > 1 + EPS) {
       pitido(true); haptic('selection');
-      setPregunta({ idx: destino.idx, lote, valor: '1' });
+      setPregunta({ idx: destino.idx, lote, valor: String(falta) });
       setAviso(null);
       return;
     }
@@ -302,12 +302,11 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
             const confirmar = () => { if (aplicar(pregunta.idx, pregunta.lote, parseFloat(pregunta.valor.replace(',', '.')))) setPregunta(null); };
             return (
               <div className="sdt-cant" role="dialog" aria-label="Cantidad">
-                <p><b>{f.it.descripcion || f.it.inventario_id}</b>{pregunta.lote != null ? ` · Lote ${pregunta.lote}` : ''}<br /><small>¿Cuántas unidades? Faltan {cantidad(falta)} de {cantidad(f.cant)}</small></p>
+                <p><b>{f.it.descripcion || f.it.inventario_id}</b>{pregunta.lote != null ? ` · Lote ${pregunta.lote}` : ''}<br /><small>Solicitado: {cantidad(f.cant)}{f.c.recogido > 0 ? ` · ya confirmado ${cantidad(f.c.recogido)}` : ''}. ¿Confirmas la cantidad?</small></p>
                 <form onSubmit={e => { e.preventDefault(); confirmar(); }}>
                   <input className="input sdt-cant__input" autoFocus inputMode="decimal" value={pregunta.valor} onFocus={e => e.currentTarget.select()}
                     onChange={e => setPregunta({ ...pregunta, valor: e.target.value })} aria-label="Cantidad" />
-                  <Button type="button" variant="secondary" size="sm" onClick={() => setPregunta({ ...pregunta, valor: String(falta) })}>Todo ({cantidad(falta)})</Button>
-                  <Button type="submit" variant="primary" size="sm" icon={<Check size={15} />}>Confirmar</Button>
+                                    <Button type="submit" variant="primary" size="sm" icon={<Check size={15} />}>Guardar</Button>
                   <Button type="button" variant="plain" size="sm" onClick={() => setPregunta(null)}>Cancelar</Button>
                 </form>
               </div>
