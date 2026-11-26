@@ -54,7 +54,7 @@ export function OTServiciosTerceros({ ot, puedeEditar, cerrada = false }: { ot: 
 
   const refrescar = async () => {
     await qc.invalidateQueries({ queryKey: ['mant', 'ot-servicios'] });
-    await qc.invalidateQueries({ queryKey: ['mant', 'ordenes-trabajo'] });
+    await qc.invalidateQueries({ queryKey: ['mant', 'ots'] });
   };
 
   async function agregar() {
