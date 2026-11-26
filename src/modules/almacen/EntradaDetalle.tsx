@@ -6,7 +6,7 @@ import { formatFechaHoraPe, formatFechaPe, formatMoneda } from '../../core/lib/f
 import { type EntradaInv } from './api';
 import {
   codigoLimpio, descripcionArticulo, desgloseIgv, esCredito, estadoPagable, etiquetaEstadoOrden, esServicio,
-  numeroALetras, type TonoEstado,
+  numeroALetras, situacionOt, type TonoEstado,
 } from './entradaReglas';
 import { motivoDeSubMotivo } from './motivosCatalogo';
 import { useMotivosGastos } from '../tesoreria/api';
@@ -185,6 +185,11 @@ export function EntradaDetalle({
         <Grupo titulo="Emisión y destino">
           <Dato etiqueta="Fecha de emisión" valor={fechaCorta(e.fecha)} />
           <Dato etiqueta={e.placa ? 'Placa' : 'Destino'} valor={e.placa || 'Almacén central'} />
+          {situacionOt(e) && (
+            <Dato etiqueta="Orden de trabajo"
+              valor={situacionOt(e) === 'asignada' ? `Asignada a ${e.ot_id}` : situacionOt(e) === 'vinculada' ? `Vinculada a ${e.ot_id}` : 'Sin OT asociada'}
+              extra={situacionOt(e) === 'asignada' ? 'El costo de este servicio suma en esa OT' : situacionOt(e) === 'vinculada' ? 'Se asignará sola a la OT al aprobarse' : 'No suma al costo de ninguna OT'} />
+          )}
           <Dato etiqueta="Centro de costos" valor={e.centro_costo || 'CC-100'} />
           <Dato etiqueta="Prioridad" valor={e.prioridad || 'Normal'} />
         </Grupo>

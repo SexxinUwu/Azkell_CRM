@@ -32,7 +32,7 @@ import {
 } from './api';
 import {
   categoriaOrden, codigoLimpio, descripcionArticulo, etiquetaEstadoOrden, recepcionDe, textoAvance, esServicio, filtrarOrdenes, hoyLima, itemsVisibles, kpisOrdenes,
-  cabeceraCoincide, estadoEditable, estadoPagable, esCredito, type FiltroEstado, type TonoEstado,
+  cabeceraCoincide, coincideOt, situacionOt, type FiltroOt, estadoEditable, estadoPagable, esCredito, type FiltroEstado, type TonoEstado,
 } from './entradaReglas';
 import { EntradaFormulario } from './EntradaFormulario';
 import { EntradaDetalle } from './EntradaDetalle';
@@ -58,6 +58,7 @@ const COLUMNAS: ColumnaTabla[] = [
   { id: 'recepcion', titulo: 'Recepción', ancho: 104, alinear: 'center' },
   { id: 'estado', titulo: 'Estado', ancho: 176, alinear: 'center' },
   { id: 'placa', titulo: 'Placa', ancho: 120 },
+  { id: 'ot', titulo: 'OT asignada', ancho: 140 },
   { id: 'motivo', titulo: 'Motivo', ancho: 180 },
   { id: 'proveedor', titulo: 'Proveedor', ancho: 210 },
   { id: 'codigo', titulo: 'Cód. art.', ancho: 104 },
@@ -139,6 +140,7 @@ function textoColumna(id: string, o: EntradaInv, item: ItemEntrada | null, vista
     case 'recepcion': return textoAvance(recepcionDe(o));
     case 'estado': return etiquetaEstadoOrden(o).texto;
     case 'placa': return o.placa || '—';
+    case 'ot': { const s = situacionOt(o); return s === 'asignada' ? String(o.ot_id) : s === 'vinculada' ? `${o.ot_id} (por asignar)` : '—'; }
     case 'motivo': return o.motivo_entrada || '—';
     case 'proveedor': return o.proveedor_nombre || '—';
     case 'codigo': return vista === 'ordenes' ? `${items.length} ítems` : (item?.inventario_id || '—');
@@ -220,6 +222,7 @@ function FilaOC({ orden: o, item, vista, ...acciones }: FilaProps) {
     <Celda key="recepcion" alinear="center"><RecepcionBadge orden={o} /></Celda>,
     <Celda key="estado" alinear="center"><EstadoBadge orden={o} /></Celda>,
     <Celda key="placa">{o.placa ? <LicensePlate plate={o.placa} size="sm" /> : <span className="c-secondary">—</span>}</Celda>,
+    <Celda key="ot">{(() => { const s = situacionOt(o); return s === 'asignada' ? <strong className="oc-codigo">{o.ot_id}</strong> : s === 'vinculada' ? <span className="c-secondary" title="Vinculada a esta OT; se asigna sola al aprobarse">{o.ot_id} · por asignar</span> : <span className="c-secondary">—</span>; })()}</Celda>,
     <Celda key="motivo">{o.motivo_entrada || '—'}</Celda>,
     <Celda key="prov">{o.proveedor_nombre || '—'}</Celda>,
   ];
@@ -287,8 +290,9 @@ export function EntradasPage() {
   const [desde, setDesde] = useState(() => mesAtras(hoyLima()));
   const [hasta, setHasta] = useState(() => hoyLima());
   const [estado, setEstado] = useState<FiltroEstado>('todas');
+  const [otFiltro, setOtFiltro] = useState<FiltroOt>('todas');
   const [filtrando, setFiltrando] = useState(false);
-  const filtrosActivos = (estado !== 'todas' ? 1 : 0) + (desde !== mesAtras(hoyLima()) || hasta !== hoyLima() ? 1 : 0);
+  const filtrosActivos = (otFiltro !== 'todas' ? 1 : 0) + (estado !== 'todas' ? 1 : 0) + (desde !== mesAtras(hoyLima()) || hasta !== hoyLima() ? 1 : 0);
   // Por defecto: una fila por orden de compra (sin duplicados); «Por artículo» muestra cada artículo
   const [vista, setVista] = useState<Vista>('ordenes');
   const [pagina, setPagina] = useState(1);
@@ -316,10 +320,15 @@ export function EntradasPage() {
   useEffect(() => { setPagina(1); }, [busqueda, desde, hasta, estado, vista]);
 
   const visibles = useMemo(
-    () => filtrarOrdenes(entradas, { busqueda, desde, hasta, estado }),
-    [entradas, busqueda, desde, hasta, estado],
+    () => filtrarOrdenes(entradas, { busqueda, desde, hasta, estado }).filter(o => coincideOt(o, otFiltro)),
+    [entradas, busqueda, desde, hasta, estado, otFiltro],
   );
   const kpis = useMemo(() => kpisOrdenes(visibles), [visibles]);
+  // Cuántas órdenes de servicio hay con y sin OT asignada (dentro del periodo y la búsqueda actuales)
+  const conteoOt = useMemo(() => {
+    const base = filtrarOrdenes(entradas, { busqueda, desde, hasta, estado });
+    return { sinAsignar: base.filter(o => coincideOt(o, 'sin-asignar')).length, asignadas: base.filter(o => coincideOt(o, 'asignadas')).length };
+  }, [entradas, busqueda, desde, hasta, estado]);
   const conteo = useMemo(() => {
     const c = { registradas: 0, aprobadas: 0, procesadas: 0, recepcionadas: 0, anuladas: 0 };
     for (const o of entradas) {
@@ -509,7 +518,7 @@ export function EntradasPage() {
               <span className="badge">{visibles.length} {visibles.length === 1 ? 'registro' : 'registros'}</span>
             </BarraFiltros>
             <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} resultado={visibles.length} unidad="registro"
-              onLimpiar={() => { setEstado('todas'); setDesde(mesAtras(hoyLima())); setHasta(hoyLima()); }}>
+              onLimpiar={() => { setEstado('todas'); setOtFiltro('todas'); setDesde(mesAtras(hoyLima())); setHasta(hoyLima()); }}>
               <GrupoFiltro titulo="Fechas">
                 <div className="oc-fechas">
                   <TextInput type="date" aria-label="Desde" value={desde} onChange={ev => setDesde(ev.target.value)} />
@@ -518,6 +527,13 @@ export function EntradasPage() {
                   <button type="button" className="oc-cotizacion__quitar" aria-label="Quitar fechas"
                     onClick={() => { setDesde(''); setHasta(''); }}>×</button>
                 </div>
+              </GrupoFiltro>
+              <GrupoFiltro titulo="Órdenes de servicio y OT">
+                <ChoiceChips label="Órdenes de servicio y OT" value={otFiltro} onChange={v => setOtFiltro(v as FiltroOt)} options={[
+                  { value: 'todas', label: 'Todas' },
+                  { value: 'sin-asignar', label: `Servicios sin OT asignada (${conteoOt.sinAsignar})` },
+                  { value: 'asignadas', label: `Servicios asignados a una OT (${conteoOt.asignadas})` },
+                ]} />
               </GrupoFiltro>
               <GrupoFiltro titulo="Estado de la orden">
                 <ChoiceChips label="Estado de la orden" value={estado} onChange={v => setEstado(v as FiltroEstado)} options={[
@@ -531,7 +547,7 @@ export function EntradasPage() {
 
           {visibles.length === 0 ? (
             <EmptyState icon={<SearchX size={22} />} title="Ninguna orden coincide">
-              <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setDesde(mesAtras(hoyLima())); setHasta(hoyLima()); setEstado('todas'); }}>
+              <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setDesde(mesAtras(hoyLima())); setHasta(hoyLima()); setEstado('todas'); setOtFiltro('todas'); }}>
                 Quitar filtros
               </button>
             </EmptyState>

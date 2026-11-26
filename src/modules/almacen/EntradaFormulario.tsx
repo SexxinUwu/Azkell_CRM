@@ -115,7 +115,9 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
 
   const [tipoOrden, setTipoOrden] = useState<string>('Orden de compra');
   const [moneda, setMoneda] = useState<'PEN' | 'USD'>('PEN');
-  const [confirmar, setConfirmar] = useState<{ aviso: string | null } | null>(null);
+  const [confirmar, setConfirmar] = useState<{ aviso: string | null; sinOt: boolean } | null>(null);
+  // Orden de servicio: con OT (por defecto, la OT es obligatoria) o sin OT (servicio general, sin placa)
+  const [conOt, setConOt] = useState(true);
   const [tipoCambio, setTipoCambio] = useState('');
   const [placa, setPlaca] = useState('');
   const [otId, setOtId] = useState<string | null>(null);
@@ -190,6 +192,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       tcAutoRef.current = true;
       setPlaca(esServicio(e.tipo_orden) ? '' : (e.placa ?? ''));
       setOtId(e.ot_id ?? null);
+      setConOt(!esServicio(e.tipo_orden) || !!e.ot_id);
       setOtPlaca(esServicio(e.tipo_orden) ? (e.placa ?? '') : '');
       setMotivo(e.motivo_entrada ?? '');
       setObservaciones(e.observaciones ?? '');
@@ -222,7 +225,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
     } else {
       setTipoOrden(otPreset ? 'Orden de servicio' : 'Orden de compra');
       setMoneda('PEN'); setTipoCambio('');
-      setPlaca(''); setOtId(otPreset?.ot ?? null); setOtPlaca(otPreset?.placa ?? '');
+      setPlaca(''); setOtId(otPreset?.ot ?? null); setOtPlaca(otPreset?.placa ?? ''); setConOt(true);
       setMotivo(''); setObservaciones(''); setAutoriza('');
       setCentroCosto('CC-100'); setMotivoGasto('');
       setSubMotivo('');
@@ -304,6 +307,12 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       setCentroCosto('CC-400');
       cambiarMotivo('Mantenimiento y Auxilio');
     }
+  }
+
+  /** Con OT: se elige la OT y de ella sale la placa. Sin OT: el servicio es general, sin OT y sin placa. */
+  function cambiarConOt(v: 'con' | 'sin') {
+    setConOt(v === 'con');
+    if (v === 'sin') { setOtId(null); setOtPlaca(''); setPlaca(''); }
   }
 
   function elegirOt(id: string | null) {
@@ -435,6 +444,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
     proveedor: !proveedorId ? 'Elige el proveedor de la lista.' : undefined,
     tc: moneda === 'USD' && !(tc > 0) ? 'Indica el tipo de cambio del día.' : undefined,
     dias: condicion === 'A crédito' && !(num(diasCredito) > 0) ? 'Indica los días de crédito.' : undefined,
+    ot: servicio && conOt && !otId ? 'Debes registrar la OT asociada a este servicio. Si es un pago a un tercero que no tiene relación con una placa, cambia a «Sin OT».' : undefined,
     articulos: usados.length === 0 ? (servicio ? 'Agrega al menos un servicio o artículo.' : 'Agrega al menos un artículo o servicio.') : undefined,
   };
   const hayErrores = Object.values(errorCab).some(Boolean) || lineas.some(l => errorLinea(l) !== null);
@@ -473,11 +483,17 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
   /** Valida y pide confirmar la moneda antes de generar la orden */
   function guardar() {
     setIntento(true);
-    if (hayErrores) { haptic('warning'); return; }
+    if (hayErrores) {
+      haptic('warning');
+      // Servicio con OT sin OT elegida: alerta aparte para que no pase desapercibida
+      if (errorCab.ot) toast('Debes registrar la OT asociada al servicio.', 'error');
+      return;
+    }
     const aviso = advertenciaMoneda();
     // Al editar solo se pregunta si hay una incoherencia; al generar una orden nueva siempre se confirma la moneda
-    if (e && !aviso) { void enviar(); return; }
-    setConfirmar({ aviso });
+    const sinOt = servicio && !conOt;
+    if (e && !aviso && !sinOt) { void enviar(); return; }
+    setConfirmar({ aviso, sinOt });
   }
 
   async function enviar() {
@@ -497,8 +513,8 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       centro_costo: centroCosto,
       sub_motivo: subMotivo,
       motivo_entrada: motivo,
-      placa: (servicio ? otPlaca : placa) || null,
-      ot_id: servicio ? (otId || null) : null,
+      placa: (servicio ? (conOt ? otPlaca : '') : placa) || null,
+      ot_id: servicio && conOt ? (otId || null) : null,
       documento_referencia: e?.documento_referencia ?? null,
       nc_sugeridas: ncMarcadas.filter(id => notasFavor.some(n => n.id === id)),
       estado_factura: e?.estado_factura ?? 'Factura Pendiente',
@@ -582,6 +598,12 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
         </div>
       }>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
+        {confirmar?.sinOt && (
+          <div role="alert" style={{ padding: 'var(--s-4)', borderRadius: 12, background: 'color-mix(in srgb, var(--accent) 12%, transparent)' }}>
+            <strong style={{ display: 'block', marginBottom: 4 }}>Este servicio se está generando sin OT asociada</strong>
+            <span>No quedará ligado a ninguna OT ni a ninguna placa, y no sumará al costo de ninguna OT. Si después hace falta, se puede asignar a una OT desde la pestaña Servicios de la OT.</span>
+          </div>
+        )}
         {confirmar?.aviso && (
           <div role="alert" style={{ padding: 'var(--s-4)', borderRadius: 12, background: 'color-mix(in srgb, var(--amber-ink) 14%, transparent)' }}>
             <strong style={{ display: 'block', marginBottom: 4 }}>Revisa la moneda</strong>
@@ -591,7 +613,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
         <p className="t-callout" style={{ margin: 0 }}>
           La orden se está generando en <strong>{NOMBRE_MONEDA[moneda]}</strong> por un total de <strong>{dinero(total)}</strong>.
         </p>
-        <p className="t-callout c-secondary" style={{ margin: 0 }}>¿Deseas continuar?</p>
+        <p className="t-callout c-secondary" style={{ margin: 0 }}>{confirmar?.sinOt ? '¿Desea continuar sin OT asociada?' : '¿Deseas continuar?'}</p>
       </div>
     </Sheet>
   );
@@ -635,16 +657,28 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
             <div className="oc-grid">
               {servicio ? (
                 <>
-                  <Field label="OT asociada (opcional)">
-                    {p => (
-                      <Combobox id={p.id} enHoja tituloHoja="Buscar OT" options={otsOpciones} value={otId} onChange={elegirOt} placeholder="Busca la OT…" loading={otsQ.isLoading} />
+                  <Field label="Orden de trabajo" wide>
+                    {() => (
+                      <SegmentedControl<'con' | 'sin'> label="Orden de trabajo" value={conOt ? 'con' : 'sin'} onChange={cambiarConOt}
+                        options={[{ value: 'con', label: 'Con OT' }, { value: 'sin', label: 'Sin OT' }]} />
                     )}
                   </Field>
-                  <Field label="Placa de la OT">
-                    {p => (
-                      <PlacaPicker id={p.id} value={otPlaca} onChange={setOtPlaca} opciones={placas} placeholder="Elige la placa…" />
-                    )}
-                  </Field>
+                  {conOt ? (
+                    <>
+                      <Field label="OT asociada" error={mostrar(errorCab.ot)}>
+                        {p => (
+                          <Combobox id={p.id} enHoja tituloHoja="Buscar OT" options={otsOpciones} value={otId} onChange={elegirOt} placeholder="Busca la OT…" loading={otsQ.isLoading} />
+                        )}
+                      </Field>
+                      <Field label="Placa de la OT">
+                        {p => <TextInput id={p.id} value={otPlaca || ''} placeholder="Se llena al elegir la OT" disabled readOnly />}
+                      </Field>
+                    </>
+                  ) : (
+                    <Field label="Placa">
+                      {p => <TextInput id={p.id} value="Sin placa" disabled readOnly />}
+                    </Field>
+                  )}
                 </>
               ) : (
                 <Field label="Vehículo / placa" wide>

@@ -234,6 +234,7 @@ function urlsDeSustento(valor) {
 
 module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     const { audit: auditar, actorFrom: actorDe, diff } = require('../services/auditoria');
+const { asignarServicioAOT } = require('../services/ot_servicios');
 
     function getDb(req) {
         return (req && req.db) ? req.db : db;
@@ -2250,6 +2251,8 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 
             // Aviso en el teléfono a Tesorería cuando la orden queda aprobada (monto y cuenta)
             if (esAprob) eventosNotif.avisarOcPagar(tdb, id);
+            // Orden de servicio con OT: al aprobarse se asigna sola a esa OT (su costo suma en la OT)
+            const asignacion = esAprob ? asignarServicioAOT(tdb, id, actorDe(req)) : Promise.resolve(null);
 
             // Sincronizar en ordenes_compra y notificar por WhatsApp
             (async () => {
@@ -2381,7 +2384,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
                 }
             })();
 
-            res.json({ ok: true, estado, aprobado_por: aprobadorVal });
+            asignacion.then(asig => res.json({ ok: true, estado, aprobado_por: aprobadorVal, asignacion: asig }));
         });
     });
 
