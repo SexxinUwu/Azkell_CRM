@@ -115,6 +115,7 @@ export function SalidasPage() {
   const [despachando, setDespachando] = useState(false);
   const [picking, setPicking] = useState(false);
   const [tiempos, setTiempos] = useState(false);
+  const [pickingSalida, setPickingSalida] = useState<SalidaInv | null>(null);
   const [sinStock, setSinStock] = useState<ArticuloSinStock[] | null>(null);
   const [anulandoId, setAnulandoId] = useState<number | null>(null);
   const [anulando, setAnulando] = useState(false);
@@ -504,6 +505,7 @@ export function SalidasPage() {
           puedeEditar={puedeEditar}
           puedeEliminar={puedeEliminar}
           onDespachar={sel => { setDespacho({ id: sel.id, itemIds: sel.itemIds, mensaje: sel.mensaje }); setDetalleAbierto(false); }}
+          onPicking={sal => { setDetalleAbierto(false); setPickingSalida(sal); setPicking(true); }}
           onPdf={() => pdf(detalle, false)}
           onVistaPrevia={() => pdf(detalle, true)}
           onEditar={() => { setDetalleAbierto(false); setFormulario({ salida: detalle }); }}
@@ -523,7 +525,7 @@ export function SalidasPage() {
       />
 
       <ControlSalidasSheet open={tiempos} onClose={() => setTiempos(false)} />
-      <PickingSheet open={picking} onClose={() => setPicking(false)} salidas={salidas} inventario={inventario ?? []} usuario={usuario} onTerminado={() => { void refrescar(); }} />
+      <PickingSheet open={picking} inicial={pickingSalida} onClose={() => { setPicking(false); setPickingSalida(null); }} salidas={salidas} inventario={inventario ?? []} usuario={usuario} onTerminado={() => { void refrescar(); }} />
 
       <DespacharDialogo
         open={!!despacho}

@@ -952,6 +952,7 @@ export function useLotes(inventarioId: string | null, verAgotados = false) {
     queryFn: () => api(`/almacen/inventario/${encodeURIComponent(String(inventarioId))}/lotes${verAgotados ? '?agotados=1' : ''}`),
     staleTime: 15_000,
   });
+}
 
 // ─── Control de tiempos de las salidas ──────────────────────────────────────
 export interface TiemposSalidas {

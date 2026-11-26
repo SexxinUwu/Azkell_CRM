@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { FileText, PackageCheck, Trash2 } from 'lucide-react';
+import { useQueries } from '@tanstack/react-query';
+import { Check, Clock, FileText, Layers, MapPin, PackageCheck, ScanLine, Trash2 } from 'lucide-react';
 import { FilePdf, Pencil } from '../../core/ui/IconosArchivo';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Badge } from '../../core/ui/Display';
+import { LicensePlate } from '../../core/ui/LicensePlate';
+import { api } from '../../core/api/client';
 import { formatFechaHoraPe, formatSoles } from '../../core/lib/format';
-import { ETIQUETA_DESTINO, estadoSalida, type ArticuloInv, type ItemSalida, type SalidaInv } from './api';
+import { ETIQUETA_DESTINO, estadoSalida, type ArticuloInv, type ItemSalida, type LoteInv, type SalidaInv } from './api';
+import { duracion, tonoEspera } from './ControlSalidasSheet';
+import './salidaDetalle.css';
 
-// Ficha de una salida (clásico: panel de detalle). Pendiente: se marcan los repuestos a despachar
-// (los que no tienen stock aparecen sin marcar) y se despacha la selección. El stock lo descuenta el servidor.
+// Detalle de una salida. Pendiente: lista vertical de artículos con su ubicación, stock y el lote del que saldrían (con su costo);
+// el botón principal abre el picking de esta salida. También se puede despachar directo, sin escanear. El stock lo descuenta el servidor.
 
 /** Artículo del inventario de un ítem de la salida (por código, o por descripción como el clásico) */
 function articuloDeItem(it: ItemSalida, inventario: ArticuloInv[]): ArticuloInv | undefined {
@@ -29,7 +34,21 @@ export function nombreSolicitante(v: string | null | undefined): string {
 
 const cantidad = (n: number) => n.toLocaleString('es-PE', { maximumFractionDigits: 3 });
 
-export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, puedeEliminar, onDespachar, onPdf, onVistaPrevia, onEditar, onAnular, onEliminar }: {
+/** De qué lotes saldría una cantidad por PEPS (el más antiguo primero) y cuánto costaría */
+function pepsEstimado(lotes: LoteInv[], cant: number) {
+  let resto = cant;
+  const partes: Array<{ numero: number; cantidad: number; costo: number }> = [];
+  for (const l of [...lotes].sort((a, b) => a.numero - b.numero)) {
+    if (resto <= 1e-9) break;
+    if (l.saldo <= 1e-9) continue;
+    const toma = Math.min(l.saldo, resto);
+    partes.push({ numero: l.numero, cantidad: toma, costo: l.costo_unitario });
+    resto -= toma;
+  }
+  return { partes, faltante: resto > 1e-9 ? resto : 0, importe: partes.reduce((s, p) => s + p.cantidad * p.costo, 0) };
+}
+
+export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, puedeEliminar, onDespachar, onPicking, onPdf, onVistaPrevia, onEditar, onAnular, onEliminar }: {
   open: boolean;
   onClose: () => void;
   salida: SalidaInv;
@@ -38,6 +57,8 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
   puedeEliminar: boolean;
   /** Recibe los ítems marcados y el texto de confirmación; la página abre el diálogo */
   onDespachar: (sel: { id: number; itemIds: number[]; mensaje: ReactNode }) => void;
+  /** Abre el picking de esta salida (escanear artículo y lote, y despachar) */
+  onPicking: (salida: SalidaInv) => void;
   onPdf: () => void;
   onVistaPrevia: () => void;
   onEditar: () => void;
@@ -48,21 +69,38 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
   const pendiente = estado === 'Pendiente';
   const items = salida.items ?? [];
 
-  // Stock de cada ítem y si alcanza para lo pedido
+  // Lotes de cada artículo (misma consulta que usa la ficha del artículo)
+  const idsArt = useMemo(() => [...new Set(items.map(i => i.inventario_id).filter((x): x is string => !!x && !/^SERV/i.test(x)))], [items]);
+  const consultas = useQueries({
+    queries: idsArt.map(id => ({
+      queryKey: ['almacen', 'lotes', id, false],
+      enabled: open && pendiente,
+      staleTime: 15_000,
+      queryFn: () => api<{ lotes: LoteInv[]; agotados: number }>(`/almacen/inventario/${encodeURIComponent(id)}/lotes`),
+    })),
+  });
+  const lotesDe = useMemo(() => { const m = new Map<string, LoteInv[]>(); idsArt.forEach((id, i) => { const d = consultas[i]?.data; if (d) m.set(id, d.lotes); }); return m; }, [idsArt, consultas]);
+
+  // Stock de cada ítem, y de qué lotes saldría con su costo
   const filas = useMemo(() => items.map((it, idx) => {
     const art = articuloDeItem(it, inventario);
     const cant = Number(it.cantidad) || 0;
     const cu = Number(it.costo_unitario) || 0;
-    const imp = Number(it.importe) || cant * cu;
     const stock = art ? Number(art.stock_actual) : null;
-    return { it, idx, art, cant, cu, imp, stock, alcanza: stock === null || stock >= cant };
-  }), [items, inventario]);
+    const lotes = it.inventario_id ? lotesDe.get(it.inventario_id) : undefined;
+    const peps = pendiente && lotes && lotes.length ? pepsEstimado(lotes, cant) : null;
+    const imp = Number(it.importe) || cant * cu;
+    return { it, idx, art, cant, cu, imp, stock, alcanza: stock === null || stock >= cant, peps, ubic: [art?.ubicacion, art?.anaquel].filter(Boolean).join(' · ') };
+  }), [items, inventario, lotesDe, pendiente]);
 
   const totalCant = filas.reduce((a, f) => a + f.cant, 0);
   const totalImp = filas.reduce((a, f) => a + f.imp, 0);
   const montoFinal = Number(salida.total_pen) > 0 ? Number(salida.total_pen) : totalImp;
+  // Costo estimado por lotes (si ya llegaron los lotes de todos los artículos con inventario)
+  const conLotes = filas.filter(f => f.it.inventario_id && !/^SERV/i.test(f.it.inventario_id));
+  const costoLotes = pendiente && conLotes.length > 0 && conLotes.every(f => f.peps) ? filas.reduce((s, f) => s + (f.peps ? f.peps.importe + f.peps.faltante * f.cu : f.imp), 0) : null;
 
-  // Selección de despacho: al abrir, los ítems con stock quedan marcados (como el clásico)
+  // Selección para el despacho directo: al abrir, los ítems con stock quedan marcados
   const [marcados, setMarcados] = useState<Set<number>>(new Set());
   useEffect(() => {
     if (!open) return;
@@ -73,45 +111,41 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
 
   const seleccionadas = filas.filter(f => marcados.has(f.idx));
   const selImp = seleccionadas.reduce((a, f) => a + f.imp, 0);
-  const selCant = seleccionadas.reduce((a, f) => a + f.cant, 0);
   const parcial = pendiente && items.length > 1 && seleccionadas.length > 0 && seleccionadas.length < items.length;
-  const todas = items.length > 0 && seleccionadas.length === items.length;
 
-  function alternar(idx: number, on: boolean) {
-    setMarcados(prev => { const n = new Set(prev); if (on) n.add(idx); else n.delete(idx); return n; });
+  function alternar(idx: number) {
+    setMarcados(prev => { const n = new Set(prev); if (n.has(idx)) n.delete(idx); else n.add(idx); return n; });
   }
 
-  function despachar() {
+  function despacharDirecto() {
     const elegidas = seleccionadas.filter(f => f.it.id != null);
     if (!elegidas.length) return;
     // El stock lo valida el servidor al despachar: si falta, avisa qué artículos y qué compras faltan recepcionar
     const mensaje = parcial
       ? <>¿Despachar <strong>{elegidas.length} de {items.length}</strong> repuestos seleccionados de la salida <strong>{salida.id}</strong>?<br /><span style={{ color: 'var(--accent-ink)', fontWeight: 600 }}>El resto de repuestos quedará como pendiente en una nueva salida.</span></>
-      : <>¿Despachar los repuestos de la salida <strong>{salida.id}</strong>?<br />El stock del inventario de almacén será descontado inmediatamente.</>;
+      : <>¿Despachar los repuestos de la salida <strong>{salida.id}</strong>?<br />El stock del inventario de almacén será descontado inmediatamente. Sin escanear lotes, sale del lote más antiguo.</>;
     onDespachar({ id: salida.id, itemIds: elegidas.map(f => f.it.id as number), mensaje });
   }
 
-  const etiquetaDespacho = seleccionadas.length === 0
-    ? 'Selecciona repuestos para despachar'
-    : parcial
-      ? `Despachar selección (${seleccionadas.length} de ${items.length} ítems · ${formatSoles(selImp)})`
-      : 'Despachar salida';
-
   const puedeDespachar = pendiente && puedeEditar;
   const tono = estado === 'Despachado' ? 'green' : estado === 'Anulado' ? 'red' : 'amber';
+  const espera = pendiente ? Math.max(0, Math.round((Date.now() - (Date.parse(salida.created_at) || Date.now())) / 60000)) : null;
 
   const acciones = (
-    <div className="sal-acciones">
+    <div className="sdt-pie">
       {puedeDespachar ? (
-        <Button variant="primary" size="lg" block icon={<PackageCheck size={18} />} disabled={seleccionadas.length === 0} onClick={despachar}>
-          {etiquetaDespacho}
+        <Button variant="primary" size="lg" block icon={<ScanLine size={18} />} disabled={items.length === 0} onClick={() => onPicking(salida)}>
+          Despachar con picking
         </Button>
       ) : (
-        <Button variant="primary" size="lg" block icon={<FileText size={18} />} onClick={onPdf}>
-          Descargar documento PDF
-        </Button>
+        <Button variant="primary" size="lg" block icon={<FileText size={18} />} onClick={onPdf}>Descargar documento PDF</Button>
       )}
-      <div className="sal-acciones__fila">
+      <div className="sdt-pie__fila">
+        {puedeDespachar && (
+          <Button variant="secondary" icon={<PackageCheck size={16} />} disabled={seleccionadas.length === 0} onClick={despacharDirecto}>
+            {parcial ? `Despachar ${seleccionadas.length} de ${items.length} sin escanear` : 'Despachar sin escanear'}
+          </Button>
+        )}
         <Button variant="secondary" icon={<FileText size={16} />} onClick={onVistaPrevia}>Vista previa</Button>
         {puedeEditar && <Button variant="secondary" icon={<Pencil size={15} />} onClick={onEditar}>Editar</Button>}
         {puedeEliminar && (estado !== 'Anulado'
@@ -123,99 +157,82 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
 
   return (
     <Sheet open={open} onClose={onClose} title={`Salida ${salida.id}`} ancho footer={acciones}>
-      <div className="sal-detalle">
-        <div className="sal-detalle__cabecera">
-          <div>
-            <span className="sal-detalle__folio-k">Folio de salida</span>
-            <span className="sal-detalle__folio">{salida.id}</span>
-          </div>
-          <Badge tone={tono}>{estado}</Badge>
-          {/* Acciones como íconos de color; el nombre aparece al pasar el mouse */}
-          <div className="sal-detalle__menu oc-acciones oc-acciones--sinfondo">
-            <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Descargar PDF" aria-label="Descargar PDF" onClick={onPdf}><FilePdf size={17} /></button>
-            {puedeEditar && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--azul" data-tip="Editar" aria-label="Editar" onClick={onEditar}><Pencil size={17} /></button>}
-            {puedeEliminar && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--rojo" data-tip="Eliminar" aria-label="Eliminar" onClick={onEliminar}><Trash2 size={17} /></button>}
-          </div>
-        </div>
-
-        <div className="tarjeta__lista">
-          {salida.tipo_orden && <Dato k="Tipo de orden" v={salida.tipo_orden} />}
-          <Dato k="N° OT" v={salida.ticket_ot || '—'} mono />
-          <Dato k="Placa / destino" v={salida.placa || ETIQUETA_DESTINO[salida.tipo_destino ?? ''] || salida.tipo_destino || '—'} mono={!!salida.placa} />
-          <Dato k="Fecha de registro" v={formatFechaHoraPe(salida.created_at || salida.fecha)} />
-          <Dato k="Responsable" v={salida.responsable || '—'} />
-          <Dato k="Solicitante" v={nombreSolicitante(salida.creado_por)} />
-          {salida.observaciones && <Dato k="Observaciones / motivo" v={salida.observaciones} />}
-          {estado === 'Anulado' && salida.motivo_anulacion && <Dato k="Motivo de anulación" v={salida.motivo_anulacion} />}
-        </div>
-
-        <div className="sal-detalle__articulos">
-          <div className="sal-detalle__cabeza">
-            <span className="sal-detalle__titulo">Artículos ({items.length})</span>
-            <div className="sal-detalle__cabeza-acc">
-              {pendiente && items.length > 1 && (
-                <label className="sal-todos">
-                  <input type="checkbox" checked={todas} onChange={e => setMarcados(e.target.checked ? new Set(filas.map(f => f.idx)) : new Set())} />
-                  Todos
-                </label>
-              )}
-              <span className="badge">
-                {parcial
-                  ? <><b style={{ color: 'var(--accent-ink)' }}>{cantidad(selCant)}</b> / {cantidad(totalCant)} unidades</>
-                  : `${cantidad(totalCant)} unidades`}
-              </span>
+      <div className="sdt">
+        {/* Encabezado: quién, para qué unidad y cuánto lleva esperando */}
+        <header className="sdt-hero">
+          <div className="sdt-hero__fila">
+            <span className="sdt-hero__folio">{salida.id}</span>
+            <Badge tone={tono}>{estado}</Badge>
+            {espera != null && <span className={`sdt-espera sdt-espera--${tonoEspera(espera)}`}><Clock size={12} /> Hace {duracion(espera)}</span>}
+            <div className="sdt-hero__acciones oc-acciones oc-acciones--sinfondo">
+              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Descargar PDF" aria-label="Descargar PDF" onClick={onPdf}><FilePdf size={17} /></button>
+              {puedeEditar && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--azul" data-tip="Editar" aria-label="Editar" onClick={onEditar}><Pencil size={17} /></button>}
+              {puedeEliminar && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--rojo" data-tip="Eliminar" aria-label="Eliminar" onClick={onEliminar}><Trash2 size={17} /></button>}
             </div>
           </div>
+          <div className="sdt-hero__meta">
+            {salida.placa ? <LicensePlate plate={salida.placa} size="sm" /> : <span className="sdt-chip">{ETIQUETA_DESTINO[salida.tipo_destino ?? ''] || salida.tipo_destino || 'Sin destino'}</span>}
+            {salida.ticket_ot && <span className="sdt-chip sdt-chip--mono">{salida.ticket_ot}</span>}
+            {salida.responsable && <span className="sdt-chip">Responsable: <b>{salida.responsable}</b></span>}
+            <span className="sdt-chip">Solicita: <b>{nombreSolicitante(salida.creado_por)}</b></span>
+          </div>
+          {salida.observaciones && <p className="sdt-nota">{salida.observaciones}</p>}
+          <small className="sdt-hero__pie">{salida.tipo_orden || 'Orden de salida'} · registrada el {formatFechaHoraPe(salida.created_at || salida.fecha)}</small>
+          {estado === 'Anulado' && salida.motivo_anulacion && <p className="sdt-nota sdt-nota--rojo">Motivo de anulación: {salida.motivo_anulacion}</p>}
+        </header>
 
-          {items.length === 0 && <p className="t-footnote" style={{ margin: 0, padding: 'var(--s-3) 0' }}>No hay ítems registrados en esta salida.</p>}
-
-          <div className="sal-items">
+        {/* Artículos, uno debajo del otro */}
+        <section>
+          <div className="sdt-titulo">
+            <span>Artículos ({items.length})</span>
+            <span className="sdt-titulo__n">{cantidad(totalCant)} unidades</span>
+          </div>
+          {items.length === 0 && <p className="sdt-vacio">No hay ítems registrados en esta salida.</p>}
+          <ul className="sdt-items">
             {filas.map(f => {
               const marcado = marcados.has(f.idx);
-              const stockTxt = f.stock === null ? null : `Stock: ${cantidad(f.stock)} u. (${f.alcanza ? 'Disponible' : 'Insuficiente'})`;
               return (
-                <div key={f.it.id ?? f.idx} className={`sal-item${f.alcanza ? '' : ' sal-item--sin-stock'}`}>
+                <li key={f.it.id ?? f.idx} className={`sdt-item${f.alcanza ? '' : ' sdt-item--sin-stock'}`}>
                   {pendiente && (
-                    <input type="checkbox" className="sal-item__check" checked={marcado} disabled={f.it.id == null}
-                      onChange={e => alternar(f.idx, e.target.checked)} aria-label={`Despachar ${f.it.descripcion || f.it.inventario_id}`} />
+                    <button type="button" className={`sdt-check${marcado ? ' sdt-check--on' : ''}`} disabled={f.it.id == null} aria-pressed={marcado}
+                      aria-label={`Incluir ${f.it.descripcion || f.it.inventario_id} en el despacho sin escanear`} title="Incluir en el despacho sin escanear" onClick={() => alternar(f.idx)}>
+                      {marcado && <Check size={15} strokeWidth={3} />}
+                    </button>
                   )}
-                  <div className="sal-item__cuerpo">
-                    <span className="sal-item__nombre" title={f.it.descripcion || undefined}>{f.it.descripcion || f.it.inventario_id || '—'}</span>
-                    <span className="sal-item__meta">
-                      {f.it.inventario_id && <span className="badge sal-item__codigo">{f.it.inventario_id}</span>}
-                      <b>{cantidad(f.cant)} u.</b> · {formatSoles(f.cu)} c/u
-                      {stockTxt && <span className={`badge ${f.alcanza ? 'badge--green' : 'badge--red'}`}>{stockTxt}</span>}
-                    </span>
+                  <div className="sdt-item__cuerpo">
+                    <b className="sdt-item__nombre" title={f.it.descripcion || undefined}>{f.it.descripcion || f.it.inventario_id || '—'}</b>
+                    <div className="sdt-item__chips">
+                      {f.it.inventario_id && <span className="sdt-chip sdt-chip--mono">{f.it.inventario_id}</span>}
+                      {pendiente && (f.ubic ? <span className="sdt-chip sdt-chip--ubi"><MapPin size={11} /> {f.ubic}</span> : <span className="sdt-chip sdt-chip--sin">Sin ubicación</span>)}
+                      {f.stock !== null && <span className={`sdt-chip ${f.alcanza ? 'sdt-chip--ok' : 'sdt-chip--mal'}`}>{f.alcanza ? `Stock ${cantidad(f.stock)}` : `Stock insuficiente (${cantidad(f.stock)})`}</span>}
+                    </div>
+                    {f.peps && f.peps.partes.length > 0 && (
+                      <div className="sdt-item__lotes">
+                        <Layers size={12} />
+                        {f.peps.partes.map(p => <span key={p.numero} className="sdt-lote">Lote {p.numero} · {cantidad(p.cantidad)} u. a {formatSoles(p.costo)}</span>)}
+                        {f.peps.faltante > 0 && <span className="sdt-chip sdt-chip--mal">Faltan {cantidad(f.peps.faltante)} en lotes</span>}
+                      </div>
+                    )}
                   </div>
-                  <div className="sal-item__importe">
-                    <span className="sal-item__importe-k">Subtotal</span>
-                    <span className="sal-item__importe-v">{formatSoles(f.imp)}</span>
+                  <div className="sdt-item__cant">
+                    <b>{cantidad(f.cant)}</b><small>unid.</small>
+                    <span className="sdt-item__imp">{formatSoles(f.peps ? f.peps.importe + f.peps.faltante * f.cu : f.imp)}</span>
                   </div>
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
 
-          <div className="sal-total">
+          <div className="sdt-total">
             <div>
-              <span className="sal-total__label">{parcial ? 'Monto a despachar' : 'Monto total solicitud'}</span>
-              {parcial && (
-                <div><span className="badge badge--amber">Pendiente restante: {formatSoles(Math.max(0, totalImp - selImp))} ({cantidad(Math.max(0, totalCant - selCant))} u.)</span></div>
-              )}
+              <span>{costoLotes != null ? 'Costo por lotes (PEPS)' : 'Monto de la solicitud'}</span>
+              {costoLotes != null && Math.abs(costoLotes - totalImp) > 0.005 && <small>Antes se estimaba en {formatSoles(totalImp)}; se costea con el lote real al despachar.</small>}
+              {parcial && <small>Sin escanear se despachan {seleccionadas.length} de {items.length} ítems ({formatSoles(selImp)}).</small>}
             </div>
-            <span className="sal-total__valor">{formatSoles(pendiente ? (parcial ? selImp : totalImp) : montoFinal)}</span>
+            <b>{formatSoles(pendiente ? (costoLotes ?? totalImp) : montoFinal)}</b>
           </div>
-        </div>
+        </section>
       </div>
     </Sheet>
-  );
-}
-
-function Dato({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
-  return (
-    <div className="dato">
-      <span className="dato__label">{k}</span>
-      <span className={`dato__valor${mono ? ' dato__valor--mono' : ''}`}>{v}</span>
-    </div>
   );
 }
