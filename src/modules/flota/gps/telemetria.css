@@ -613,3 +613,20 @@
 
 /* Fondo del espacio detrás del globo cuando el mapa está alejado */
 .tg-host { background: radial-gradient(circle at 50% 42%, #10213f 0%, #070d1a 60%, #03060d 100%); }
+
+/* ═══ Sin tarjetas de resumen ni casillas de estado (ya están en Filtros); controles del mapa en horizontal en el celular ═══ */
+.tg-kpis, .tg-estados { display: none !important; }
+@media (max-width: 900px) {
+  /* Herramientas y estilo del mapa: una sola fila horizontal bajo el encabezado. Si no caben, se desplazan de lado sin barra y el borde se desvanece */
+  .tg .tg-ctrl { left: 8px; right: 8px; top: calc(env(safe-area-inset-top) + 124px); bottom: auto; transform: none; flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px;
+    overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none; padding: 2px 0 6px; overscroll-behavior-x: contain; scroll-snap-type: x proximity;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+  .tg .tg-ctrl::-webkit-scrollbar { display: none; }
+  .tg .tg-ctrl > * { flex: none; scroll-snap-align: start; }
+  .tg .tg-tools { flex-direction: row; border-radius: 16px; }
+  .tg .tg-seg { flex-direction: row; border-radius: 16px; }
+  .tg .tg-seg .segmented { flex-direction: row; }
+  .tg .tg-seg .segmented__item { min-height: 40px; padding: 0 14px; }
+  .tg .tg-tool { width: 40px; height: 40px; min-height: 40px; }
+  .tg .tg-alerts { top: calc(env(safe-area-inset-top) + 180px); }
+}

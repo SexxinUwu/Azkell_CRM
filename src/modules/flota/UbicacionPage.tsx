@@ -6,7 +6,6 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { AnimatePresence } from 'motion/react';
 import { Notice } from '../../core/ui/Display';
-import { ChoiceChips } from '../../core/ui/Chips';
 import { Combobox } from '../../core/ui/Combobox';
 import { GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { errorMessage } from '../../core/api/client';
@@ -402,15 +401,6 @@ export function UbicacionPage() {
                     <button key={v} type="button" role="tab" className="tg-tab" aria-selected={vista === v} onClick={() => cambiarVista(v)}>{icono}<span>{nombre}</span></button>
                   ))}
                 </nav>
-                {vista === 'unidades' && <div className="tg-kpis" aria-label="Resumen de la flota">
-                  {([['todos', 'Flota monitoreada', 'var(--cyan)'], ['movimiento', 'En movimiento', ST.mov.c], ['ralenti', 'Ralentí', ST.ral.c], ['detenido', 'Detenidas', ST.det.c], ['sin_senal', 'Sin señal', ST.off.c], ['reserva', 'En reserva', '#ff9f0a']] as const).map(([v, nombre, color]) => (
-                    <button key={v} type="button" className="tg-kpi tg-glass" aria-pressed={segmento === v}
-                      onClick={() => { haptic('selection'); setSegmento(s => (s === v && v !== 'todos' ? 'todos' : v)); }}>
-                      <span><i style={{ background: color }} />{nombre}</span>
-                      <b>{conteoSeg(v)}</b>
-                    </button>
-                  ))}
-                </div>}
               </header>
 
               {vista === 'unidades' && <HojaGesto className="tg-side tg-glass" label="Unidades" snaps={SNAPS_LISTA} alto={ALTO_LISTA}
@@ -424,11 +414,6 @@ export function UbicacionPage() {
                       onFocus={() => { if (matchMedia('(max-width:900px)').matches) setHojaLista(true); }} />
                     {busqueda && <Button variant="plain" size="sm" iconOnly className="tg-search__x" icon={<X size={16} />} aria-label="Borrar búsqueda" onClick={() => setBusqueda('')} />}
                   </label>
-                  <div className="tg-estados">
-                    <ChoiceChips label="Filtrar por estado" value={segmento === 'senal' ? 'todos' : segmento}
-                      onChange={v => { haptic('selection'); setSegmento(s => (s === v && v !== 'todos' ? 'todos' : (v as Segmento))); }}
-                      options={([['todos', 'Todas'], ['movimiento', 'Movimiento'], ['ralenti', 'Ralentí'], ['detenido', 'Detenidas'], ['sin_senal', 'Sin señal'], ['reserva', 'Reserva']] as const).map(([v, etiqueta]) => ({ value: v, label: <>{etiqueta} <em>{conteoSeg(v)}</em></> }))} />
-                  </div>
                   {q && <p className="tg-resultados" aria-live="polite">{lista.length === 1 ? '1 resultado' : `${lista.length} resultados`}</p>}
                   <div className="tg-chips">
                     <Button variant="secondary" size="sm" aria-pressed={activos > 0} icon={<SlidersHorizontal size={15} aria-hidden />} onClick={() => setFiltrando(true)}>
@@ -516,11 +501,12 @@ export function UbicacionPage() {
           <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={activos}
             onLimpiar={() => { setEmpresa('TODAS'); setSegmento('todos'); }} resultado={lista.length} unidad="unidad">
             <GrupoFiltro titulo="Empresa">
-              <ChoiceChips label="Empresa" value={empresa} onChange={setEmpresa} options={[{ value: 'TODAS', label: 'Todas' }, ...empresas.map(e => ({ value: e.clave, label: e.nombre }))]} />
+              <Combobox enHoja compacta tituloHoja="Empresa" placeholder="Todas las empresas" value={empresa} onChange={v => setEmpresa(v ?? 'TODAS')}
+                options={[{ value: 'TODAS', label: 'Todas las empresas' }, ...empresas.map(e => ({ value: e.clave, label: e.nombre }))]} />
             </GrupoFiltro>
             <GrupoFiltro titulo="Estado">
-              <ChoiceChips label="Estado" value={segmento} onChange={v => setSegmento(v as Segmento)}
-                options={SEGMENTOS.map(s => ({ ...s, label: `${s.label} (${conteoSeg(s.value)})` }))} />
+              <Combobox enHoja compacta tituloHoja="Estado" placeholder="Todas" value={segmento} onChange={v => setSegmento((v ?? 'todos') as Segmento)}
+                options={SEGMENTOS.map(s => ({ value: s.value, label: s.label, description: `${conteoSeg(s.value)} ${conteoSeg(s.value) === 1 ? 'unidad' : 'unidades'}` }))} />
             </GrupoFiltro>
           </HojaFiltros>
         </div>
