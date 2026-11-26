@@ -252,7 +252,7 @@
 .otd-falla-item:first-child .otd-falla-item__n { background: var(--accent); color: #fff; }
 .otd-falla-item__txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; font-size: 0.8125rem; line-height: 1.35; overflow-wrap: anywhere; }
 .otd-falla-item__txt strong { font-size: 0.8125rem; font-weight: 700; }
-.otd-falla-item__txt span { color: var(--label-2); }
+.otd-falla-item__txt span { color: var(--label); font-weight: 500; }
 .otd-falla-item__principal { flex: none; font-size: 0.625rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: var(--accent-tint); color: var(--accent-ink, var(--accent)); }
 .otd-falla-pie { margin: 2px 4px 0; font-size: 0.6875rem; color: var(--label-3); line-height: 1.35; }
 
