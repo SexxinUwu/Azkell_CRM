@@ -444,7 +444,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
     proveedor: !proveedorId ? 'Elige el proveedor de la lista.' : undefined,
     tc: moneda === 'USD' && !(tc > 0) ? 'Indica el tipo de cambio del día.' : undefined,
     dias: condicion === 'A crédito' && !(num(diasCredito) > 0) ? 'Indica los días de crédito.' : undefined,
-    ot: servicio && conOt && !otId ? 'Elige la OT, o cambia a «Sin OT» si el servicio no es de una OT.' : undefined,
+    ot: servicio && conOt && !otId ? 'Debes registrar la OT asociada a este servicio. Si es un pago a un tercero que no tiene relación con una placa, cambia a «Sin OT».' : undefined,
     articulos: usados.length === 0 ? (servicio ? 'Agrega al menos un servicio o artículo.' : 'Agrega al menos un artículo o servicio.') : undefined,
   };
   const hayErrores = Object.values(errorCab).some(Boolean) || lineas.some(l => errorLinea(l) !== null);
@@ -483,7 +483,12 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
   /** Valida y pide confirmar la moneda antes de generar la orden */
   function guardar() {
     setIntento(true);
-    if (hayErrores) { haptic('warning'); return; }
+    if (hayErrores) {
+      haptic('warning');
+      // Servicio con OT sin OT elegida: alerta aparte para que no pase desapercibida
+      if (errorCab.ot) toast('Debes registrar la OT asociada al servicio.', 'error');
+      return;
+    }
     const aviso = advertenciaMoneda();
     // Al editar solo se pregunta si hay una incoherencia; al generar una orden nueva siempre se confirma la moneda
     const sinOt = servicio && !conOt;
@@ -595,8 +600,8 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
         {confirmar?.sinOt && (
           <div role="alert" style={{ padding: 'var(--s-4)', borderRadius: 12, background: 'color-mix(in srgb, var(--accent) 12%, transparent)' }}>
-            <strong style={{ display: 'block', marginBottom: 4 }}>Este servicio se está generando sin orden de trabajo</strong>
-            <span>No quedará ligado a ninguna OT ni a ninguna placa. Después se podrá asignar a una OT desde la pestaña Servicios de la OT.</span>
+            <strong style={{ display: 'block', marginBottom: 4 }}>Este servicio se está generando sin OT asociada</strong>
+            <span>No quedará ligado a ninguna OT ni a ninguna placa, y no sumará al costo de ninguna OT. Si después hace falta, se puede asignar a una OT desde la pestaña Servicios de la OT.</span>
           </div>
         )}
         {confirmar?.aviso && (
@@ -608,7 +613,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
         <p className="t-callout" style={{ margin: 0 }}>
           La orden se está generando en <strong>{NOMBRE_MONEDA[moneda]}</strong> por un total de <strong>{dinero(total)}</strong>.
         </p>
-        <p className="t-callout c-secondary" style={{ margin: 0 }}>¿Deseas continuar?</p>
+        <p className="t-callout c-secondary" style={{ margin: 0 }}>{confirmar?.sinOt ? '¿Desea continuar sin OT asociada?' : '¿Deseas continuar?'}</p>
       </div>
     </Sheet>
   );
