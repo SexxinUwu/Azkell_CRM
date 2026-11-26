@@ -2,7 +2,7 @@ import { mantenerUrl } from '../../core/lib/blobUrl';
 import '../../core/ui/acciones-iconos.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleCheck, ClipboardList, Coins, Eye, PackageCheck, PackageMinus, Plus, RefreshCw, ScanLine, SearchX, Trash2 } from 'lucide-react';
+import { CircleCheck, ClipboardList, Coins, Eye, PackageCheck, PackageMinus, Plus, RefreshCw, ScanLine, Timer, SearchX, Trash2 } from 'lucide-react';
 import { FileSpreadsheet, FilePdf } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -30,6 +30,7 @@ import {
 } from './api';
 import { SalidaFormulario } from './SalidaFormulario';
 import { PickingSheet } from './PickingSheet';
+import { ControlSalidasSheet } from './ControlSalidasSheet';
 import { SinStockDialogo, sinStockDe, type ArticuloSinStock } from './SinStockDialogo';
 import { nombreSolicitante, SalidaDetalle } from './SalidaDetalle';
 import { AnularDialogo, DespacharDialogo } from './SalidaDialogos';
@@ -113,6 +114,7 @@ export function SalidasPage() {
   const [despacho, setDespacho] = useState<{ id: number; itemIds: number[]; mensaje: ReactNode } | null>(null);
   const [despachando, setDespachando] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [tiempos, setTiempos] = useState(false);
   const [sinStock, setSinStock] = useState<ArticuloSinStock[] | null>(null);
   const [anulandoId, setAnulandoId] = useState<number | null>(null);
   const [anulando, setAnulando] = useState(false);
@@ -319,6 +321,9 @@ export function SalidasPage() {
               <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--verde" data-tip="Exportar a Excel" aria-label="Exportar a Excel" onClick={exportar}>
                 <FileSpreadsheet size={17} />
               </button>
+              <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--violeta" data-tip="Tiempos de despacho" aria-label="Tiempos de despacho" onClick={() => setTiempos(true)}>
+                <Timer size={17} />
+              </button>
               <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--celeste" data-tip="Actualizar" aria-label="Actualizar" onClick={() => { void refetch(); }}>
                 <RefreshCw size={17} />
               </button>
@@ -517,6 +522,7 @@ export function SalidasPage() {
         }}
       />
 
+      <ControlSalidasSheet open={tiempos} onClose={() => setTiempos(false)} />
       <PickingSheet open={picking} onClose={() => setPicking(false)} salidas={salidas} inventario={inventario ?? []} usuario={usuario} onTerminado={() => { void refrescar(); }} />
 
       <DespacharDialogo

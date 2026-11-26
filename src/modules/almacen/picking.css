@@ -47,3 +47,8 @@
 .pk-res small { font-size: 0.75rem; color: var(--label-2); }
 .pk-res--ok > svg { color: var(--green, #22a06b); }
 .pk-res--error > svg { color: var(--red, #e5484d); }
+.pk-salida__n { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.pk-espera { font-style: normal; padding: 1px 8px; border-radius: 99px; font-size: 0.6875rem; font-weight: 700; white-space: nowrap; }
+.pk-espera--verde { background: rgba(52, 199, 89, .16); color: #15803d; }
+.pk-espera--ambar { background: rgba(245, 158, 11, .18); color: #b45309; }
+.pk-espera--rojo { background: rgba(255, 59, 48, .14); color: #b4232a; }

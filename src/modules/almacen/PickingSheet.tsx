@@ -9,6 +9,7 @@ import { despacharSalida, estadoSalida, type ArticuloInv, type SalidaInv } from 
 import { sinStockDe } from './SinStockDialogo';
 import { EscanerContinuo } from './EscanerContinuo';
 import { pitido } from './pitido';
+import { duracion, tonoEspera } from './ControlSalidasSheet';
 import './picking.css';
 
 interface Linea {
@@ -41,7 +42,10 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
   usuario: string;
   onTerminado: () => void;
 }) {
-  const pendientes = useMemo(() => salidas.filter(s => estadoSalida(s) === 'Pendiente' && (s.items ?? []).some(i => i.id != null)), [salidas]);
+  // Las que más llevan esperando, primero (el tiempo corre desde que se pidió)
+  const pendientes = useMemo(() => salidas.filter(s => estadoSalida(s) === 'Pendiente' && (s.items ?? []).some(i => i.id != null))
+    .sort((a, b) => (Date.parse(a.created_at) || 0) - (Date.parse(b.created_at) || 0)), [salidas]);
+  const esperaMin = (s: SalidaInv) => { const t = Date.parse(s.created_at); return Number.isFinite(t) ? Math.max(0, Math.round((Date.now() - t) / 60000)) : null; };
   const porId = useMemo(() => new Map(inventario.map(a => [a.id.toUpperCase(), a])), [inventario]);
   const porCodigo = useMemo(() => {
     const m = new Map<string, ArticuloInv>();
@@ -210,7 +214,9 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
                             <small>{[s.placa, s.ticket_ot, s.responsable].filter(Boolean).join(' · ') || 'Sin destino'}</small>
                             <small className="pk-salida__items">{its.slice(0, 3).map(i => i.descripcion).join(' · ')}{its.length > 3 ? ` · +${its.length - 3} más` : ''}</small>
                           </span>
-                          <span className="pk-salida__n">{its.length} {its.length === 1 ? 'ítem' : 'ítems'}</span>
+                          <span className="pk-salida__n">{its.length} {its.length === 1 ? 'ítem' : 'ítems'}
+                            {esperaMin(s) != null && <em className={`pk-espera pk-espera--${tonoEspera(esperaMin(s) as number)}`}>Hace {duracion(esperaMin(s))}</em>}
+                          </span>
                         </label>
                       </li>
                     );

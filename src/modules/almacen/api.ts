@@ -940,3 +940,14 @@ export function valorEnStock(a: ArticuloInv): number {
   const stock = Number(a.stock_actual);
   return stock > 0 ? stock * costoUnitarioSoles(a) : 0;
 }
+
+// ─── Control de tiempos de las salidas ──────────────────────────────────────
+export interface TiemposSalidas {
+  dias: number;
+  resumen: { medidas: number; mediana_min: number | null; promedio_min: number | null; p90_min: number | null; hasta_30m: number; hasta_2h: number; hasta_1d: number; hasta_3d: number; mas_3d: number };
+  semanas: Array<{ semana: string; salidas: number; mediana: number }>;
+  pendientes: Array<{ id: string; placa: string | null; ot: string | null; responsable: string | null; creada: string; espera_min: number; items: number }>;
+}
+export function useTiemposSalidas(dias: number, activo: boolean) {
+  return useQuery<TiemposSalidas>({ queryKey: ['almacen', 'salidas-tiempos', dias], enabled: activo, queryFn: () => api(`/almacen/salidas/tiempos?dias=${dias}`), staleTime: 60_000 });
+}
