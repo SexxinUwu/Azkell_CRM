@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Boxes, Download, DollarSign, LayoutGrid, Package, PackageMinus, PackagePlus, PackageX, Plus, Printer, RefreshCw, SearchX, CheckSquare, TriangleAlert, Upload } from 'lucide-react';
+import { Boxes, Download, DollarSign, LayoutGrid, Package, PackageMinus, PackagePlus, MapPin, PackageX, Plus, Printer, RefreshCw, SearchX, CheckSquare, TriangleAlert, Upload } from 'lucide-react';
 import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page } from '../../core/ui/Display';
@@ -12,6 +12,7 @@ import { Combobox } from '../../core/ui/Combobox';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { EtiquetasMasivasSheet } from './EtiquetasMasivasSheet';
+import { UbicacionLoteSheet } from './UbicacionLoteSheet';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -101,6 +102,7 @@ export function InventarioPage() {
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   const [aplicando, setAplicando] = useState(false);
   const [etiquetando, setEtiquetando] = useState(false);
+  const [ubicando, setUbicando] = useState(false);
 
   const puedeCrear = can('inv.crear');
   const puedeEditar = can('inv.editar');
@@ -368,6 +370,11 @@ export function InventarioPage() {
                 <Button variant="primary" icon={<Printer size={16} />} disabled={!marcados.size} onClick={() => setEtiquetando(true)}>
                   Imprimir etiquetas{marcados.size ? ` (${marcados.size})` : ''}
                 </Button>
+                {puedeEditar && (
+                  <Button variant="secondary" icon={<MapPin size={16} />} disabled={!marcados.size} onClick={() => setUbicando(true)}>
+                    Asignar ubicación{marcados.size ? ` (${marcados.size})` : ''}
+                  </Button>
+                )}
                 {puedeEditar && (['Activo', 'Inactivo', 'Descontinuado'] as const).map(e => (
                   <Button key={e} variant="secondary" disabled={!marcados.size || aplicando} loading={aplicando}
                     onClick={() => marcarEstado(e)}>
@@ -425,6 +432,9 @@ export function InventarioPage() {
             ]} />
         </GrupoFiltro>
       </HojaFiltros>
+
+      <UbicacionLoteSheet open={ubicando} articulos={visibles.filter(a => marcados.has(a.id))} anaquelesEnUso={[...new Set(items.map(i => (i.anaquel ?? '').trim()).filter(Boolean))].sort((x, y) => x.localeCompare(y, 'es', { numeric: true }))}
+        onClose={() => setUbicando(false)} onListo={() => { setUbicando(false); setMarcados(new Set()); }} />
 
       <EtiquetasMasivasSheet open={etiquetando} articulos={visibles.filter(a => marcados.has(a.id))} onClose={() => setEtiquetando(false)}
         onQuitar={id => setMarcados(prev => { const n = new Set(prev); n.delete(id); return n; })} />

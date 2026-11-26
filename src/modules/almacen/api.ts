@@ -111,6 +111,11 @@ export async function cambiarEstadoMasivo(ids: string[], estado_art: ArticuloInv
   return api('/almacen/inventario/bulk-estado', { method: 'POST', body: { ids, estado_art } });
 }
 
+/** Asigna anaquel y/o ubicación a varios artículos a la vez (solo cambia lo que se indica) */
+export async function asignarUbicacionMasiva(ids: string[], datos: { anaquel?: string; ubicacion?: string }) {
+  return api<{ ok: boolean; actualizados: number }>('/almacen/inventario/bulk-ubicacion', { method: 'POST', body: { ids, ...datos } });
+}
+
 export async function regularizarStock(id: string, stock_fisico: number, motivo: string) {
   return api(`/almacen/inventario/${id}/regularizar`, { method: 'POST', body: { stock_fisico, motivo } });
 }

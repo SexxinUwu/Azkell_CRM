@@ -8,6 +8,7 @@ import { haptic } from '../../core/lib/haptics';
 import { despacharSalida, estadoSalida, type ArticuloInv, type SalidaInv } from './api';
 import { sinStockDe } from './SinStockDialogo';
 import { EscanerContinuo } from './EscanerContinuo';
+import { pitido } from './pitido';
 import './picking.css';
 
 interface Linea {
@@ -27,19 +28,6 @@ interface Resultado { folio: string; ok: boolean; texto: string }
 
 const cant = (n: number) => n.toLocaleString('es-PE', { maximumFractionDigits: 3 });
 const clave = (s: string) => s.trim().toUpperCase();
-
-// Pitidos cortos al escanear (sin archivos de sonido): agudo = bien, grave = error
-let audio: AudioContext | null = null;
-function pitido(ok: boolean) {
-  try {
-    audio = audio ?? new AudioContext();
-    const o = audio.createOscillator(), g = audio.createGain();
-    o.frequency.value = ok ? 1100 : 220;
-    o.connect(g); g.connect(audio.destination);
-    g.gain.setValueAtTime(0.18, audio.currentTime);
-    o.start(); o.stop(audio.currentTime + (ok ? 0.09 : 0.28));
-  } catch { /* sin audio */ }
-}
 
 /**
  * Picking de salidas pendientes: se eligen varias, sale una hoja ordenada por ubicación y se va escaneando cada artículo
@@ -111,7 +99,11 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
   const completar = (key: string) => setLineas(prev => prev.map(l => (l.key === key ? { ...l, recogido: completa(l) ? 0 : l.cantidad } : l)));
 
   /** Un código leído (cámara, pistola o escrito): suma 1 a la primera línea de ese artículo que aún no esté completa */
-  function leer(codigoCrudo: string) {
+  function leer(entrada: string) {
+    // «5*INV-0212» (o «5x INV-0212»): suma 5 unidades de una vez; sin cantidad, suma 1
+    const m = /^s*(d+(?:[.,]d+)?)s*[*xX]s*(S.*)$/.exec(entrada);
+    const cuantas = m ? Math.max(1, parseFloat(m[1].replace(',', '.')) || 1) : 1;
+    const codigoCrudo = (m ? m[2] : entrada).trim();
     const codigo = clave(codigoCrudo);
     if (!codigo) return;
     const art = porCodigo.get(codigo);
@@ -129,8 +121,18 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
       return;
     }
     pitido(true); haptic('success');
-    setLineas(prev => prev.map(l => (l.key === falta.key ? { ...l, recogido: Math.min(l.cantidad, l.recogido + 1) } : l)));
-    setAviso({ ok: true, texto: `${falta.descripcion} · ${cant(Math.min(falta.cantidad, falta.recogido + 1))} de ${cant(falta.cantidad)}` });
+    // Con varias unidades, se reparte entre las líneas de ese artículo (de las salidas que lo piden) hasta completar cada una
+    let resto = cuantas;
+    const nuevos = new Map<string, number>();
+    for (const l of candidatas) {
+      if (resto <= 0) break;
+      const cabe = Math.max(0, l.cantidad - l.recogido);
+      const toma = Math.min(cabe, resto);
+      if (toma > 0) { nuevos.set(l.key, l.recogido + toma); resto -= toma; }
+    }
+    setLineas(prev => prev.map(l => (nuevos.has(l.key) ? { ...l, recogido: nuevos.get(l.key) as number } : l)));
+    const total = cuantas - Math.max(0, resto);
+    setAviso({ ok: true, texto: `${falta.descripcion} · +${cant(total)}${resto > 0 ? ` (sobraron ${cant(resto)}: ya estaba completo)` : ''}` });
   }
 
   // Lo que se despachará: de cada salida, las líneas completas
@@ -228,7 +230,7 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
               <p className="pk-progreso__texto"><b>{cant(unidadesHechas)}</b> de {cant(unidadesTotal)} unidades · <b>{lineasHechas}</b> de {lineas.length} líneas</p>
               <EscanerContinuo activo={camara} onLeido={leer} />
               <form className="pk-entrada" onSubmit={e => { e.preventDefault(); leer(manual); setManual(''); entrada.current?.focus(); }}>
-                <input ref={entrada} className="input" value={manual} onChange={e => setManual(e.target.value)} placeholder="Código del artículo (o pistola)" autoCapitalize="characters" autoCorrect="off" inputMode="text" />
+                <input ref={entrada} className="input" value={manual} onChange={e => setManual(e.target.value)} placeholder="Código (o 5*código para 5 unidades)" autoCapitalize="characters" autoCorrect="off" inputMode="text" />
                 <Button type="submit" variant="secondary" disabled={!manual.trim()}>Usar</Button>
                 <Button type="button" variant={camara ? 'primary' : 'secondary'} iconOnly icon={<Camera size={18} />} aria-label={camara ? 'Apagar la cámara' : 'Encender la cámara'} onClick={() => setCamara(v => !v)} />
               </form>

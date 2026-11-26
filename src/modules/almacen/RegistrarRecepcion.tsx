@@ -1,7 +1,7 @@
 import './recepcion.css';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, ClipboardCheck, Camera, PackageCheck, Wallet } from 'lucide-react';
+import { CircleAlert, ClipboardCheck, Camera, PackageCheck, ScanLine, Wallet } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
@@ -12,7 +12,10 @@ import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { formatDolares, formatSoles } from '../../core/lib/format';
-import { registrarRecepcion, useAlmacenesLista, useTipoCambioSunat, type ItemRecepcion, type LlantaReencauche, type RecepcionOC } from './api';
+import { EscanerContinuo } from './EscanerContinuo';
+import { pitido } from './pitido';
+import './picking.css';
+import { registrarRecepcion, useAlmacenesLista, useInventario, useTipoCambioSunat, type ItemRecepcion, type LlantaReencauche, type RecepcionOC } from './api';
 
 /** Tipo de cambio de referencia si SUNAT no responde (igual que el clásico) */
 const TC_REFERENCIA = 3.75;
@@ -61,6 +64,11 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
   const qc = useQueryClient();
   const toast = useToast();
   const { data: almacenes } = useAlmacenesLista();
+  const { data: inventario } = useInventario();
+  // Escaneo de lo que llega: cada lectura suma 1 (o «5*código», 5) a la cantidad recibida de ese artículo
+  const [escaneando, setEscaneando] = useState(false);
+  const [manualEsc, setManualEsc] = useState('');
+  const [avisoEsc, setAvisoEsc] = useState<{ ok: boolean; texto: string } | null>(null);
   const [cant, setCant] = useState<Record<number, string>>({});
   const [alm, setAlm] = useState<Record<number, string>>({});
   const [fecha, setFecha] = useState(ahoraLocal);
@@ -92,6 +100,29 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
 
   const items = oc?.items ?? [];
   const pendientes = items.map((it, i) => ({ it, i })).filter(x => x.it.pendiente > 0);
+
+  /** Un código leído (cámara, pistola o escrito). Si el artículo no está en esta orden, avisa: puede ser mercadería equivocada. */
+  function leerCodigo(entrada: string) {
+    const m = /^\s*(\d+(?:[.,]\d+)?)\s*[*xX]\s*(\S.*)$/.exec(entrada);
+    const cuantas = m ? Math.max(1, parseFloat(m[1].replace(',', '.')) || 1) : 1;
+    const codigo = (m ? m[2] : entrada).trim().toUpperCase();
+    if (!codigo) return;
+    const art = (inventario ?? []).find(a => [a.id, a.codigo_barras, a.codigo_articulo].some(c => String(c ?? '').trim().toUpperCase() === codigo));
+    const idArt = (art?.id ?? codigo).toUpperCase();
+    const linea = pendientes.find(({ it }) => !esReencauche(it) && String(it.inventario_id ?? '').toUpperCase() === idArt);
+    if (!linea) {
+      pitido(false); haptic('warning');
+      const yaCompleto = items.some(it => !esReencauche(it) && String(it.inventario_id ?? '').toUpperCase() === idArt);
+      setAvisoEsc({ ok: false, texto: yaCompleto ? `${art?.descripcion || idArt} ya está completo en esta orden.` : `${art ? art.descripcion || art.articulo : codigo} NO está en esta orden: revisa la mercadería.` });
+      return;
+    }
+    const { it, i } = linea;
+    const actual = num(cant[i]);
+    const nuevo = Math.min(it.pendiente, actual + cuantas);
+    pitido(true); haptic('success');
+    setCant(c => ({ ...c, [i]: String(nuevo) }));
+    setAvisoEsc({ ok: true, texto: `${it.descripcion} · recibido ${fmt(nuevo)} de ${fmt(it.pendiente)}${actual + cuantas > it.pendiente ? ' (llegó más de lo pendiente)' : ''}` });
+  }
   // Solo los almacenes registrados; por defecto Principal (el de la orden si es uno de ellos)
   const nombresAlm = useMemo(() => {
     const n = (almacenes ?? []).map(a => a.nombre);
@@ -206,6 +237,21 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
           </div>
 
           <Seccion icono={<PackageCheck size={16} />} titulo="Qué llegó" nota="Indica lo que llegó físicamente. El saldo que no llegue queda pendiente en la orden.">
+            <div className="rec2-escaneo">
+              <Button variant={escaneando ? 'primary' : 'secondary'} size="sm" icon={<ScanLine size={15} />} onClick={() => { setEscaneando(v => !v); setAvisoEsc(null); }}>
+                {escaneando ? 'Cerrar escáner' : 'Escanear lo que llega'}
+              </Button>
+              {escaneando && (
+                <>
+                  <EscanerContinuo activo={escaneando} onLeido={leerCodigo} />
+                  <form className="pk-entrada" onSubmit={e => { e.preventDefault(); leerCodigo(manualEsc); setManualEsc(''); }}>
+                    <input className="input" value={manualEsc} onChange={e => setManualEsc(e.target.value)} placeholder="Código (o 5*código para 5 unidades)" autoCapitalize="characters" autoCorrect="off" />
+                    <Button type="submit" variant="secondary" disabled={!manualEsc.trim()}>Usar</Button>
+                  </form>
+                </>
+              )}
+              {avisoEsc && <p className={`pk-aviso ${avisoEsc.ok ? 'pk-aviso--ok' : 'pk-aviso--error'}`} role="status">{avisoEsc.texto}</p>}
+            </div>
             <div className="rec2-items">
               {items.map((it, i) => it.pendiente > 0 ? (
                 <div key={i} className="rec2-item">
