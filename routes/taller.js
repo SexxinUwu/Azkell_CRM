@@ -194,8 +194,8 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 `SELECT id, fecha, proveedor_nombre, moneda, total_pen, estado, ot_id
                  FROM entradas_inv
                  WHERE LOWER(tipo_orden) = 'orden de servicio' AND LOWER(estado) IN (?)
-                   AND (ot_id IS NULL OR ot_id = '' OR (ot_id = ? AND ot_servicio_agregado = 0))
-                 ORDER BY fecha DESC LIMIT 200`, [ESTADOS_PROCESADO, req.query.ot || '']);
+                   AND (ot_id IS NULL OR ot_id = '' OR ot_servicio_agregado = 0)
+                 ORDER BY fecha DESC LIMIT 200`, [ESTADOS_PROCESADO]);
             res.json({ ok: true, data: rows });
         } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
     });
@@ -207,7 +207,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             const [r] = await (req.db || db).promise().query(
                 `UPDATE entradas_inv SET ot_id = ?, ot_servicio_agregado = 1
                  WHERE id IN (?) AND LOWER(tipo_orden) = 'orden de servicio'
-                   AND LOWER(estado) IN (?) AND (ot_id IS NULL OR ot_id = '' OR (ot_id = ? AND ot_servicio_agregado = 0))`, [ot, ids, ESTADOS_PROCESADO, ot]);
+                   AND LOWER(estado) IN (?) AND (ot_id IS NULL OR ot_id = '' OR ot_servicio_agregado = 0)`, [ot, ids, ESTADOS_PROCESADO]);
             if (logAudit) logAudit(req, 'TALLER', 'AGREGAR_SERVICIO_OT', `Agregó ${r.affectedRows} OC de servicio a la OT ${ot}`);
             res.json({ ok: true, agregados: r.affectedRows });
         } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
