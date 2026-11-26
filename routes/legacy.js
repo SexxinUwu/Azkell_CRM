@@ -69,6 +69,15 @@ async function valorSensorUltimo(baseUrl, sid, unitId, sensor) {
     } catch (e) { /* sin lectura */ }
     return null;
 }
+// Una sola consulta del historial a la vez sobre la sesión compartida: calc_sensors usa los mensajes que dejó cargados la última consulta de esa sesión
+let colaHistorial = Promise.resolve();
+function tomarTurnoHistorial() {
+    let liberar;
+    const anterior = colaHistorial;
+    colaHistorial = new Promise(r => { liberar = r; });
+    return anterior.then(() => liberar);
+}
+
 // Sesión de Wialon que se reutiliza entre consultas seguidas del historial: se renueva sola a los 3 minutos sin uso o si Wialon la rechaza
 const sesionHistorial = { sid: null, clave: '', uso: 0 };
 async function sidHistorial(baseUrl, token, nueva) {
@@ -1828,6 +1837,7 @@ router.post('/:metodo', async (req, res) => {
             } catch (e) { /* sin la tabla o copia ilegible: se calcula normal */ }
         }
 
+        let liberarTurno = null;
         try {
             const obtenerToken = () => new Promise((resolve) => {
                 tdb.query("SELECT valor FROM integraciones_api WHERE clave = 'wialon_token' LIMIT 1", (err, rows) => {
@@ -1843,6 +1853,7 @@ router.post('/:metodo', async (req, res) => {
             const [token, baseUrl] = await Promise.all([obtenerToken(), obtenerUrl()]);
             if (!token) return res.json({ data: { error: 'Token Wialon no configurado.' } });
 
+            liberarTurno = await tomarTurnoHistorial();
             let sid = await sidHistorial(baseUrl, token);
             if (!sid) return res.json({ data: { error: 'No se pudo iniciar sesión con Wialon.' } });
             // Si la sesión guardada ya no sirve (Wialon responde error 1), se inicia una nueva
@@ -2083,6 +2094,8 @@ router.post('/:metodo', async (req, res) => {
         } catch(histErr) {
             console.error('Error Historial GPS Wialon:', histErr);
             return res.json({ data: { error: 'Fallo al procesar historial GPS: ' + histErr.message } });
+        } finally {
+            if (liberarTurno) liberarTurno();
         }
     }
 
@@ -2090,44 +2103,54 @@ router.post('/:metodo', async (req, res) => {
 });
 
     // Snapshot diario de km y precarga de Wialon para una empresa (lo llama server.js: cron nocturno y arranque)
-    // Precarga nocturna: guarda el recorrido de ayer (y de los 2 días anteriores que falten) de cada unidad con GPS, entrando por el mismo camino que la pantalla.
-    // Va de a una unidad por vez (Wialon atiende una consulta a la vez) y se corta a los 25 minutos por empresa.
-    router.precalcularRecorridos = async (tenantSlug, dias = 3) => {
+    // Precarga de recorridos: guarda el recorrido de cada día cerrado de cada unidad con GPS (de Wialon), entrando por el mismo camino que la pantalla.
+    // Por defecto (noche): ayer y los 2 días anteriores que falten. Con { desde, hasta } ('AAAA-MM-DD') recorre ese rango del más reciente al más antiguo.
+    // Va de a una unidad por vez (Wialon atiende una consulta a la vez por sesión) y se puede repartir entre procesos con { reparto: [n, de] }.
+    router.precalcularRecorridos = async (tenantSlug, opciones = {}) => {
+        const { listarUnidadesGps } = require('../services/wialon_unidades');
         const pdb = (db && typeof db.promise === 'function') ? db.promise() : db;
-        let placas = [];
-        try { [placas] = await pdb.query("SELECT placa FROM placas WHERE wialon_name IS NOT NULL AND TRIM(wialon_name) <> ''"); } catch (e) { return { ok: false, error: e.message }; }
+        let unidades = await listarUnidadesGps(db);
+        if (!unidades.length) return { ok: false, error: 'Sin unidades con GPS' };
+        if (opciones.reparto) { const [n, de] = opciones.reparto; unidades = unidades.filter((_, i) => i % de === n); }
         const inicioHoy = Math.floor((Date.now() / 1000 - 18000) / 86400) * 86400 + 18000;
-        const limite = Date.now() + 25 * 60 * 1000;
-        let hechos = 0, yaEstaban = 0;
-        for (let d = 1; d <= dias; d++) {
-            const a = inicioHoy - d * 86400, b = a + 86400;
-            const fecha = new Date(a * 1000).toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
-            for (const p of placas) {
-                if (Date.now() > limite) return { ok: true, hechos, yaEstaban, cortado: true };
-                const placa = String(p.placa || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
-                if (!placa) continue;
+        const limite = Date.now() + (opciones.limiteMs || 25 * 60 * 1000);
+        const diaLima = (seg) => new Date(seg * 1000).toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+        const inicioDeFecha = (f) => Math.floor(new Date(f + 'T05:00:00Z').getTime() / 1000);   // 00:00 de Lima = 05:00 UTC
+        const dias = [];
+        if (opciones.desde) {
+            const fin = opciones.hasta ? inicioDeFecha(opciones.hasta) : inicioHoy - 86400;
+            for (let a = Math.min(fin, inicioHoy - 86400); a >= inicioDeFecha(opciones.desde); a -= 86400) dias.push(a);
+        } else {
+            for (let d = 1; d <= (opciones.dias || 3); d++) dias.push(inicioHoy - d * 86400);
+        }
+        let hechos = 0, yaEstaban = 0, conDatos = 0;
+        for (const a of dias) {
+            const b = a + 86400, fecha = diaLima(a);
+            for (const u of unidades) {
+                if (Date.now() > limite) return { ok: true, hechos, conDatos, yaEstaban, cortado: true, ultimoDia: fecha };
                 try {
-                    const [ya] = await pdb.query('SELECT 1 FROM gps_recorrido_dia WHERE placa = ? AND fecha = ? LIMIT 1', [placa, fecha]);
+                    const [ya] = await pdb.query('SELECT 1 FROM gps_recorrido_dia WHERE placa = ? AND fecha = ? LIMIT 1', [u.placa, fecha]);
                     if (ya.length) { yaEstaban++; continue; }
                 } catch (e) { return { ok: false, error: e.message }; }
                 await new Promise((resolve) => {
-                    const req = { method: 'POST', url: '/obtenerHistorialGPS', originalUrl: '/obtenerHistorialGPS', baseUrl: '', path: '/obtenerHistorialGPS', headers: {}, query: {}, params: {}, tenantSlug, body: { args: [{ placa, fechaInicio: new Date(a * 1000).toISOString(), fechaFin: new Date(b * 1000).toISOString(), completo: true }] } };
+                    const req = { method: 'POST', url: '/obtenerHistorialGPS', originalUrl: '/obtenerHistorialGPS', baseUrl: '', path: '/obtenerHistorialGPS', headers: {}, query: {}, params: {}, tenantSlug,
+                        body: { args: [{ placa: u.placa, unitId: u.id, fechaInicio: new Date(a * 1000).toISOString(), fechaFin: new Date(b * 1000).toISOString(), completo: true }] } };
                     let listo = false;
-                    const fin = () => { if (listo) return; listo = true; resolve(); };
+                    const fin = (r) => { if (listo) return; listo = true; if (r && r.puntos && r.puntos.length) conDatos++; resolve(); };
                     const res = {
                         statusCode: 200, locals: {},
                         status(c) { this.statusCode = c; return this; },
-                        json() { fin(); return this; }, send() { fin(); return this; }, end() { fin(); return this; },
+                        json(o) { fin(o && o.data); return this; }, send() { fin(); return this; }, end() { fin(); return this; },
                         set() { return this; }, setHeader() {}, getHeader() {}, removeHeader() {}, writeHead() {}, write() {}, on() {}, once() {},
                     };
                     router.handle(req, res, () => fin());
-                    setTimeout(fin, 90000);
+                    setTimeout(() => fin(), 90000);
                 });
                 hechos++;
-                await new Promise(r => setTimeout(r, 300));
+                if (opciones.alAvanzar && hechos % 25 === 0) opciones.alAvanzar({ hechos, conDatos, yaEstaban, fecha, placa: u.placa });
             }
         }
-        return { ok: true, hechos, yaEstaban };
+        return { ok: true, hechos, conDatos, yaEstaban };
     };
 
     router.snapshotGpsEmpresa = (tenantSlug) => new Promise((resolve) => {
