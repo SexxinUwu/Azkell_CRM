@@ -22,3 +22,7 @@
 .ot-cols__fila--fija { opacity: .6; cursor: default; }
 .ot-cols__fila input { width: 18px; height: 18px; accent-color: var(--accent); }
 .ot-cols__fila small { margin-left: auto; color: var(--label-3); font-size: 0.75rem; }
+.ot-barra { max-width: 34rem; }
+.ot-barra .placas-toolbar { padding: 0; }
+.ot-rango { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
+.ot-rango label { display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; font-weight: 600; color: var(--label-2); }

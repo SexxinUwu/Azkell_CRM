@@ -4,16 +4,16 @@ import '../almacen/almacen.css'; // estilos de tabla (.inv-kardex) que usa la li
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, CheckCircle2, Columns3, Eye, Filter, Lock, Pause, Play, Plus, ScrollText, SearchX, Trash2, XCircle, ZoomIn, ZoomOut } from 'lucide-react';
+import { BookOpen, CheckCircle2, Columns3, Eye, Lock, Pause, Play, Plus, ScrollText, SearchX, XCircle, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField, TextInput } from '../../core/ui/Field';
+import { TextInput } from '../../core/ui/Field';
 import { BarraFiltros, GrupoFiltro, HojaFiltros, ListaEleccion } from '../../core/ui/FiltrosListado';
 import { ListaMultiple } from '../../core/ui/ListaMultiple';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import '../../core/ui/listado.css';
-import { ChoiceChips } from '../../core/ui/Chips';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
+import { Combobox } from '../../core/ui/Combobox';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import './otLista.css';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
@@ -308,6 +308,8 @@ export function OrdenesTrabajoPage() {
     }
   }
 
+  const filtrosActivosOT = (filtroEstado !== 'Todas' ? 1 : 0) + (fOT ? 1 : 0) + (fPlaca ? 1 : 0) + (fMes ? 1 : 0) + (fDesde ? 1 : 0) + (fHasta ? 1 : 0);
+  const limpiarFiltrosOT = () => { setFiltroEstado('Todas'); setFOT(''); setFPlaca(''); setFMes(''); setFDesde(''); setFHasta(''); };
   const [ocultasOT, setOcultasOT] = useState<Set<string>>(leerOcultasOT);
   const [tamanoOT, setTamanoOT] = useState<0 | 1 | 2>(leerTamanoOT);
   const [eligiendoCols, setEligiendoCols] = useState(false);
@@ -394,37 +396,32 @@ export function OrdenesTrabajoPage() {
 
           {tab === 'OTs' ? (
             <>
-              <SearchField value={busqueda} onChange={setBusqueda} placeholder="OT, placa, técnico…" />
-
-              <div style={{ display: 'flex', gap: 'var(--s-2)', flexWrap: 'wrap', alignItems: 'center' }}>
-                <ChoiceChips<string>
-                  label="Estado de la OT"
-                  value={filtroEstado}
-                  onChange={setFiltroEstado}
-                  options={PESTANAS_OT.map(p => ({ value: p.clave, label: p.etiqueta }))}
-                />
-                <Button variant={panelFiltros ? 'primary' : 'secondary'} size="sm" icon={<Filter size={14} />} onClick={() => setPanelFiltros(v => !v)}>Filtros</Button>
+              {/* Buscador corto con su botón Filtros al lado; todos los filtros van dentro de la hoja */}
+              <div className="ot-barra">
+                <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="OT, placa, técnico…" activos={filtrosActivosOT} onAbrirFiltros={() => setPanelFiltros(true)} />
               </div>
-              {panelFiltros && (
-                <div className="card" style={{ padding: 'var(--s-3)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(10rem, 1fr))', gap: 'var(--s-2)', alignItems: 'end' }}>
-                  <label style={{ display: 'grid', gap: 4, fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)' }}>N° ORDEN
-                    <input value={fOT} onChange={e => setFOT(e.target.value)} placeholder="Ej. OT-2026-0001" style={{ minHeight: 44, padding: '0 10px', borderRadius: 10, border: '1px solid var(--separator)' }} />
-                  </label>
-                  <label style={{ display: 'grid', gap: 4, fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)' }}>PLACA
-                    <input value={fPlaca} onChange={e => setFPlaca(e.target.value.toUpperCase())} placeholder="Ej. A1B-234" style={{ minHeight: 44, padding: '0 10px', borderRadius: 10, border: '1px solid var(--separator)' }} />
-                  </label>
-                  <label style={{ display: 'grid', gap: 4, fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)' }}>MES
-                    <input type="month" value={fMes} onChange={e => { setFMes(e.target.value); setFDesde(''); setFHasta(''); }} style={{ minHeight: 44, padding: '0 10px', borderRadius: 10, border: '1px solid var(--separator)' }} />
-                  </label>
-                  <label style={{ display: 'grid', gap: 4, fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)' }}>DESDE
-                    <input type="date" value={fDesde || rango.desde} onChange={e => { setFDesde(e.target.value); setFMes(''); }} style={{ minHeight: 44, padding: '0 10px', borderRadius: 10, border: '1px solid var(--separator)' }} />
-                  </label>
-                  <label style={{ display: 'grid', gap: 4, fontSize: '0.75rem', fontWeight: 700, color: 'var(--label-2)' }}>HASTA
-                    <input type="date" value={fHasta || rango.hasta} onChange={e => { setFHasta(e.target.value); setFMes(''); }} style={{ minHeight: 44, padding: '0 10px', borderRadius: 10, border: '1px solid var(--separator)' }} />
-                  </label>
-                  <Button variant="secondary" icon={<Trash2 size={14} />} onClick={() => { setFOT(''); setFPlaca(''); setFMes(''); setFDesde(''); setFHasta(''); }}>Limpiar filtros</Button>
-                </div>
-              )}
+              <HojaFiltros open={panelFiltros} onClose={() => setPanelFiltros(false)} activos={filtrosActivosOT} onLimpiar={limpiarFiltrosOT} resultado={visibles.length} unidad="orden">
+                <GrupoFiltro titulo="Estado">
+                  <Combobox enHoja compacta tituloHoja="Estado de la OT" placeholder="Elegir estado" value={filtroEstado} onChange={v => setFiltroEstado(v ?? 'Todas')}
+                    options={PESTANAS_OT.map(x => ({ value: x.clave, label: x.etiqueta }))} />
+                </GrupoFiltro>
+                <GrupoFiltro titulo="N° de orden">
+                  <TextInput value={fOT} onChange={e => setFOT(e.target.value)} placeholder="Ej. OT-2026-0001" />
+                </GrupoFiltro>
+                <GrupoFiltro titulo="Placa">
+                  <Combobox enHoja compacta tituloHoja="Placa" placeholder="Elegir placa" value={fPlaca || null} onChange={v => setFPlaca((v ?? '').toUpperCase())}
+                    options={(placas ?? []).map(x => ({ value: x, label: x }))} />
+                </GrupoFiltro>
+                <GrupoFiltro titulo="Mes">
+                  <TextInput type="month" value={fMes} onChange={e => { setFMes(e.target.value); setFDesde(''); setFHasta(''); }} />
+                </GrupoFiltro>
+                <GrupoFiltro titulo="Rango de fechas">
+                  <div className="ot-rango">
+                    <label><span>Desde</span><TextInput type="date" value={fDesde || rango.desde} onChange={e => { setFDesde(e.target.value); setFMes(''); }} /></label>
+                    <label><span>Hasta</span><TextInput type="date" value={fHasta || rango.hasta} onChange={e => { setFHasta(e.target.value); setFMes(''); }} /></label>
+                  </div>
+                </GrupoFiltro>
+              </HojaFiltros>
 
               {visibles.length === 0 ? (
                 <EmptyState icon={busqueda || filtroEstado !== 'Todas' ? <SearchX size={22} /> : <ScrollText size={22} />}
