@@ -222,6 +222,7 @@ export function UbicacionPage() {
   const abiertoHistorial = panel === 'historial' && seleccion && consultar ? seleccion : null;
   const historialQ = useHistorial(abiertoHistorial?.placa ?? null, abiertoHistorial?.id ?? null, { horas, dia, desde, hasta });
   const historial = abiertoHistorial ? historialQ.data : undefined;
+  const claveActiva = abiertoHistorial ? `${abiertoHistorial.placa}|${dia ?? (desde && hasta ? `${desde}>${hasta}` : `h${horas}`)}` : null;
   const capacidadSel = (seleccion && capacidades.get(placaLimpia(seleccion.placa))) || null;
   // Sensor en % directo, o en galones/litros pasados a % con la capacidad del tanque de la placa (sin capacidad: en galones)
   const fc = factorCombustible(historial?.unidadCombustible, capacidadSel);
@@ -461,8 +462,8 @@ export function UbicacionPage() {
                     <PanelHistorial placa={seleccion.placa} horas={horas} analisis={analisis} tramos={tramos} viajeSel={viajeSel} onViaje={setViajeSel}
                       onHoras={setHoras} dia={dia} onDia={d => { setDia(d); setDesde(null); setHasta(null); setConsultar(true); }} desde={desde} hasta={hasta} onRango={(a, b) => { setDesde(a); setHasta(b); setDia(null); setConsultar(true); }} onIrA={(lat, lng) => motor?.irA(lat, lng)} historial={historial} cargando={historialQ.isFetching && !historial}
                       error={errorHistorial} progreso={historialQ.progreso}
-                      recientes={recientes} recienteActiva={abiertoHistorial ? `${abiertoHistorial.placa}|${dia ?? (desde && hasta ? `${desde}>${hasta}` : `h${horas}`)}` : null}
-                      onReciente={aplicarReciente} onReproducirReciente={r => { aplicarReciente(r); setAutoplay(true); }} onQuitarReciente={k => setRecientes(prev => prev.filter(r => r.clave !== k))} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
+                      recientes={recientes} recienteActiva={claveActiva}
+                      onReciente={aplicarReciente} onReproducirReciente={r => { aplicarReciente(r); setAutoplay(true); }} onQuitarReciente={k => { setRecientes(prev => prev.filter(r => r.clave !== k)); if (k === claveActiva) { setConsultar(false); setReproduciendo(false); setPlayerAbierto(false); } }} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
                       reproduciendo={reproduciendo} onReproducir={() => setReproduciendo(r => !r)}
                       onReiniciar={() => { setIndice(0); setReproduciendo(false); }}
                       velocidad={velocidad} onVelocidad={setVelocidad}
