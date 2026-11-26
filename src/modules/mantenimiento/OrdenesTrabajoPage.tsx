@@ -323,7 +323,7 @@ export function OrdenesTrabajoPage() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <Page fill={soloDetalle}>
+    <Page fill={soloDetalle || (!esMovil && tab === 'OTs')}>
       {!soloDetalle && (
         <PageHeader
           eyebrow="Mantenimiento"
@@ -364,7 +364,7 @@ export function OrdenesTrabajoPage() {
           onEliminar={() => setEliminando(otActual)}
         />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+        <div className="otl-cuerpo" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
           {/* Resumen del listado (como el clásico): total, correctivos, preventivos y costo */}
           {tab === 'OTs' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(10rem, 1fr))', gap: 'var(--s-2)' }}>
