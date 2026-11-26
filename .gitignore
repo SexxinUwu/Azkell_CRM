@@ -22,3 +22,5 @@ assets/3d/scania_s730_web.glb
 
 # Etiquetadora: configuración local con la llave de API (no se sube)
 agente-etiquetas/config.json
+agente-etiquetas/build/
+agente-etiquetas/dist/
