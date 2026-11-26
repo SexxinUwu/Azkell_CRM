@@ -47,6 +47,7 @@ const PERMISOS: { value: string; label: string }[] = [
   { value: 'ot:read', label: 'Órdenes de trabajo' },
   { value: 'inventario:read', label: 'Stock de almacén' },
   { value: 'guias:read', label: 'Guías de remisión' },
+  { value: 'etiquetas:imprimir', label: 'Etiquetadora del almacén' },
 ];
 
 const ESTADO_LABEL: Record<LlaveApi['estado'], string> = { activo: 'Activa', inactivo: 'Pausada', revocado: 'Revocada' };
