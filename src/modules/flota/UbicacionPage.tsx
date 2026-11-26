@@ -93,6 +93,8 @@ export function UbicacionPage() {
   const [playerAbierto, setPlayerAbierto] = useState(false);
   const [recientes, setRecientes] = useState<Reciente[]>([]);
   const [autoplay, setAutoplay] = useState(false);
+  // El recorrido solo se pide y se muestra después de «Ver recorrido» (o de elegir uno de la lista); la X lo quita
+  const [consultar, setConsultar] = useState(false);
   const colorSiguiente = useRef(0);
   const panel = vista === 'recorrido' ? 'historial' : 'ficha';
   const [horas, setHoras] = useState(24);
@@ -214,7 +216,7 @@ export function UbicacionPage() {
   const encuadrarA = useMemo(() => (busqueda.trim() && lista.length <= 25 ? lista.map(u => u.placa) : []), [busqueda, lista]);
 
   // Historial: solo se pide cuando el panel de historial está abierto
-  const abiertoHistorial = panel === 'historial' && seleccion ? seleccion : null;
+  const abiertoHistorial = panel === 'historial' && seleccion && consultar ? seleccion : null;
   const historialQ = useHistorial(abiertoHistorial?.placa ?? null, abiertoHistorial?.id ?? null, { horas, dia, desde, hasta });
   const historial = abiertoHistorial ? historialQ.data : undefined;
   const capacidadSel = (seleccion && capacidades.get(placaLimpia(seleccion.placa))) || null;
@@ -274,7 +276,7 @@ export function UbicacionPage() {
   }, [abiertoHistorial, historial, dia, desde, hasta, horas]);
   const aplicarReciente = useCallback((r: Reciente) => {
     if (r.placa !== seleccionada) { setSeleccionada(r.placa); setIndice(0); setReproduciendo(false); }
-    setHoras(r.horas); setDia(r.dia); setDesde(r.desde); setHasta(r.hasta);
+    setHoras(r.horas); setDia(r.dia); setDesde(r.desde); setHasta(r.hasta); setConsultar(true);
   }, [seleccionada]);
   // "Reproducir" en la lista: carga ese recorrido y, cuando está listo, arranca
   useEffect(() => {
@@ -288,6 +290,7 @@ export function UbicacionPage() {
   const cambiarVista = useCallback((v: VistaGps) => {
     haptic('selection');
     setVista(v);
+    setConsultar(false);
     setReproduciendo(false);
     try { localStorage.setItem('fleet_gps_vista', v); } catch { /* sin almacenamiento */ }
   }, []);
@@ -322,6 +325,7 @@ export function UbicacionPage() {
   const elegir = useCallback((placa: string | null) => {
     if (placa) haptic('selection');
     setSeleccionada(placa);
+    setConsultar(false);
     setIndice(0);
     setReproduciendo(false);
     setHojaFicha(false);
@@ -453,14 +457,14 @@ export function UbicacionPage() {
                   <div className="tg-rec-cuerpo">
                     {seleccion ? (
                     <PanelHistorial placa={seleccion.placa} horas={horas} analisis={analisis} tramos={tramos} viajeSel={viajeSel} onViaje={setViajeSel}
-                      onHoras={setHoras} dia={dia} onDia={d => { setDia(d); setDesde(null); setHasta(null); }} desde={desde} hasta={hasta} onRango={(a, b) => { setDesde(a); setHasta(b); setDia(null); }} onIrA={(lat, lng) => motor?.irA(lat, lng)} historial={historial} cargando={historialQ.isFetching && !historial}
+                      onHoras={setHoras} dia={dia} onDia={d => { setDia(d); setDesde(null); setHasta(null); setConsultar(true); }} desde={desde} hasta={hasta} onRango={(a, b) => { setDesde(a); setHasta(b); setDia(null); setConsultar(true); }} onIrA={(lat, lng) => motor?.irA(lat, lng)} historial={historial} cargando={historialQ.isFetching && !historial}
                       error={errorHistorial} progreso={historialQ.progreso}
                       recientes={recientes} recienteActiva={abiertoHistorial ? `${abiertoHistorial.placa}|${dia ?? (desde && hasta ? `${desde}>${hasta}` : `h${horas}`)}` : null}
                       onReciente={aplicarReciente} onReproducirReciente={r => { aplicarReciente(r); setAutoplay(true); }} onQuitarReciente={k => setRecientes(prev => prev.filter(r => r.clave !== k))} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
                       reproduciendo={reproduciendo} onReproducir={() => setReproduciendo(r => !r)}
                       onReiniciar={() => { setIndice(0); setReproduciendo(false); }}
                       velocidad={velocidad} onVelocidad={setVelocidad}
-                      onSalir={() => cambiarVista('unidades')} />
+                      onSalir={() => { setConsultar(false); setReproduciendo(false); setPlayerAbierto(false); }} activo={!!abiertoHistorial} />
                     ) : <p className="tg-vacio">Elige una unidad para ver su recorrido: ruta, paradas, viajes y reproducción con la calle y los sensores.</p>}
                   </div>
                 </HojaGesto>
