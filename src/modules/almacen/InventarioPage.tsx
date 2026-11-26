@@ -35,6 +35,8 @@ const ALMACENES_CICLO_LLANTAS = new Set([1142, 1144, 1146, 1148]);
 
 type Filtro = 'todos' | 'ok' | 'warning' | 'critical';
 type EstadoFiltro = 'todos' | ArticuloInv['estado_art'];
+/** Artículos a los que les falta un dato para trabajar con escáner: código de barras propio o ubicación en el almacén */
+type DatosFiltro = 'todos' | 'sin-barras' | 'sin-ubicacion';
 type Pestana = 'fisicos' | 'servicios';
 type Orden = 'relevancia' | 'nombre' | 'stock' | 'valor';
 /** Tarjetas por tanda: el resto se carga con "Cargar más" */
@@ -94,6 +96,7 @@ export function InventarioPage() {
   const [importando, setImportando] = useState(false);
   const [filtrando, setFiltrando] = useState(false);
   const [estadoArt, setEstadoArt] = useState<EstadoFiltro>('todos');
+  const [datos, setDatos] = useState<DatosFiltro>('todos');
   const [seleccionando, setSeleccionando] = useState(false);
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   const [aplicando, setAplicando] = useState(false);
@@ -125,10 +128,11 @@ export function InventarioPage() {
   const filtrados = useMemo(() => base.filter(i =>
     coincideFiltro(i, filtro) &&
     (estadoArt === 'todos' || i.estado_art === estadoArt) &&
+    (datos === 'todos' || (datos === 'sin-barras' ? !(i.codigo_barras ?? '').trim() : !((i.ubicacion ?? '').trim() || (i.anaquel ?? '').trim()))) &&
     (!familia || i.familia === familia) &&
     (!anaquel.trim() || (i.anaquel ?? '').toUpperCase().includes(anaquel.trim().toUpperCase())) &&
     coincideInv(i, busqueda),
-  ), [base, filtro, estadoArt, familia, anaquel, busqueda]);
+  ), [base, filtro, estadoArt, datos, familia, anaquel, busqueda]);
 
   // Orden: primero lo que hay que reponer (sin stock, bajo) y luego por nombre
   const visibles = useMemo(() => {
@@ -142,8 +146,8 @@ export function InventarioPage() {
     }
   }, [filtrados, orden]);
 
-  const nFiltros = Number(!!anaquel.trim()) + Number(filtro !== 'todos') + Number(!!familia) + Number(estadoArt !== 'todos');
-  const hayFiltros = !!busqueda || !!anaquel.trim() || filtro !== 'todos' || !!familia || estadoArt !== 'todos';
+  const nFiltros = Number(!!anaquel.trim()) + Number(filtro !== 'todos') + Number(!!familia) + Number(estadoArt !== 'todos') + Number(datos !== 'todos');
+  const hayFiltros = !!busqueda || !!anaquel.trim() || filtro !== 'todos' || !!familia || estadoArt !== 'todos' || datos !== 'todos';
 
   // Con búsqueda o filtros, los indicadores son de lo filtrado; sin ellos, los totales de la pestaña.
   // Activos y alertas solo cuentan artículos vigentes (estado Activo): los inactivos o descontinuados no piden compra.
@@ -377,7 +381,7 @@ export function InventarioPage() {
       )}
 
       <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={nFiltros} resultado={visibles.length} unidad="artículo"
-        onLimpiar={() => { setAnaquel(''); setFiltro('todos'); setFamilia(''); setEstadoArt('todos'); }}>
+        onLimpiar={() => { setAnaquel(''); setFiltro('todos'); setFamilia(''); setEstadoArt('todos'); setDatos('todos'); }}>
         <GrupoFiltro titulo="Estado del artículo">
           <ChoiceChips<EstadoFiltro> label="Estado del artículo" value={estadoArt} onChange={setEstadoArt}
             options={[
@@ -394,6 +398,14 @@ export function InventarioPage() {
               { value: 'warning', label: 'Bajo' },
               { value: 'critical', label: 'Sin stock' },
               { value: 'ok', label: 'OK' },
+            ]} />
+        </GrupoFiltro>
+        <GrupoFiltro titulo="Datos por completar">
+          <ChoiceChips<DatosFiltro> label="Datos por completar" value={datos} onChange={setDatos}
+            options={[
+              { value: 'todos', label: 'Todos' },
+              { value: 'sin-barras', label: 'Sin código de barras' },
+              { value: 'sin-ubicacion', label: 'Sin ubicación' },
             ]} />
         </GrupoFiltro>
         <GrupoFiltro titulo="Familia">

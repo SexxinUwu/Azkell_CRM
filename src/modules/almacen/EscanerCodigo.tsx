@@ -7,16 +7,16 @@ import { Notice } from '../../core/ui/Display';
 // Se carga al primer uso. Si la cámara no está disponible, se puede escribir o pegar el código.
 
 type Formatos = Record<string, number>;
-interface LectorInstancia {
+export interface LectorInstancia {
   start(camara: unknown, config: unknown, alLeer: (texto: string) => void, alFallar?: () => void): Promise<unknown>;
   stop(): Promise<void>;
   clear?: () => void;
 }
-type LectorClase = new (elemento: string, config?: unknown) => LectorInstancia;
-type VentanaLector = Window & { Html5Qrcode?: LectorClase; Html5QrcodeSupportedFormats?: Formatos };
+export type LectorClase = new (elemento: string, config?: unknown) => LectorInstancia;
+export type VentanaLector = Window & { Html5Qrcode?: LectorClase; Html5QrcodeSupportedFormats?: Formatos };
 
 let cargaLector: Promise<void> | null = null;
-function cargarLector(): Promise<void> {
+export function cargarLector(): Promise<void> {
   const w = window as VentanaLector;
   if (w.Html5Qrcode) return Promise.resolve();
   if (!cargaLector) {
@@ -33,7 +33,7 @@ function cargarLector(): Promise<void> {
 }
 
 const ID_LECTOR = 'salidas-escaner-lector';
-const FORMATOS = ['QR_CODE', 'EAN_13', 'EAN_8', 'CODE_128', 'CODE_39', 'CODE_93', 'CODABAR', 'UPC_A', 'UPC_E', 'ITF', 'PDF_417', 'DATA_MATRIX'];
+export const FORMATOS = ['QR_CODE', 'EAN_13', 'EAN_8', 'CODE_128', 'CODE_39', 'CODE_93', 'CODABAR', 'UPC_A', 'UPC_E', 'ITF', 'PDF_417', 'DATA_MATRIX'];
 
 export function EscanerCodigo({ open, onClose, onLeido, titulo = 'Escanear código' }: {
   open: boolean;
