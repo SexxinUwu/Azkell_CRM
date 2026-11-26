@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Boxes, Download, DollarSign, LayoutGrid, Package, PackageMinus, PackagePlus, PackageX, Plus, RefreshCw, SearchX, CheckSquare, TriangleAlert, Upload } from 'lucide-react';
+import { Boxes, Download, DollarSign, LayoutGrid, Package, PackageMinus, PackagePlus, PackageX, Plus, Printer, RefreshCw, SearchX, CheckSquare, TriangleAlert, Upload } from 'lucide-react';
 import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page } from '../../core/ui/Display';
@@ -11,6 +11,7 @@ import { ChoiceChips } from '../../core/ui/Chips';
 import { Combobox } from '../../core/ui/Combobox';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
+import { EtiquetasMasivasSheet } from './EtiquetasMasivasSheet';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -96,6 +97,7 @@ export function InventarioPage() {
   const [seleccionando, setSeleccionando] = useState(false);
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   const [aplicando, setAplicando] = useState(false);
+  const [etiquetando, setEtiquetando] = useState(false);
 
   const puedeCrear = can('inv.crear');
   const puedeEditar = can('inv.editar');
@@ -287,12 +289,10 @@ export function InventarioPage() {
             </div>
             <div className="inv-head__acciones">
               <Button variant="secondary" icon={<LayoutGrid size={16} />} onClick={() => setEnPortal(true)}>Almacenes</Button>
-              {puedeEditar && (
-                <Button variant={seleccionando ? 'primary' : 'secondary'} icon={<CheckSquare size={16} />}
-                  onClick={() => { setSeleccionando(v => !v); setMarcados(new Set()); }}>
-                  {seleccionando ? 'Terminar selección' : 'Seleccionar'}
-                </Button>
-              )}
+              <Button variant={seleccionando ? 'primary' : 'secondary'} icon={<CheckSquare size={16} />}
+                onClick={() => { setSeleccionando(v => !v); setMarcados(new Set()); }}>
+                {seleccionando ? 'Terminar selección' : 'Seleccionar'}
+              </Button>
               {botonesAcciones}
               {puedeCrear && (
                 <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ articulo: null, servicio: pestana === 'servicios' })}>
@@ -361,7 +361,10 @@ export function InventarioPage() {
                   Seleccionar lo filtrado ({visibles.length})
                 </Button>
                 <Button variant="plain" disabled={!marcados.size} onClick={() => setMarcados(new Set())}>Limpiar</Button>
-                {(['Activo', 'Inactivo', 'Descontinuado'] as const).map(e => (
+                <Button variant="primary" icon={<Printer size={16} />} disabled={!marcados.size} onClick={() => setEtiquetando(true)}>
+                  Imprimir etiquetas{marcados.size ? ` (${marcados.size})` : ''}
+                </Button>
+                {puedeEditar && (['Activo', 'Inactivo', 'Descontinuado'] as const).map(e => (
                   <Button key={e} variant="secondary" disabled={!marcados.size || aplicando} loading={aplicando}
                     onClick={() => marcarEstado(e)}>
                     Marcar {e.toLowerCase()}
@@ -410,6 +413,9 @@ export function InventarioPage() {
             ]} />
         </GrupoFiltro>
       </HojaFiltros>
+
+      <EtiquetasMasivasSheet open={etiquetando} articulos={visibles.filter(a => marcados.has(a.id))} onClose={() => setEtiquetando(false)}
+        onQuitar={id => setMarcados(prev => { const n = new Set(prev); n.delete(id); return n; })} />
 
       {/* Ficha del artículo: ventana sobre la lista */}
       <Sheet open={abierto && !!seleccionado && !enPortal} onClose={() => setAbierto(false)} title="Artículo" ancho ligera>
