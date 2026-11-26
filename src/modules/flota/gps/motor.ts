@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import maplibregl from 'maplibre-gl';
 import type { GeoJSONSource, Map as MapaGL } from 'maplibre-gl';
+import { ICONOS_LUGARES } from './lugaresIconos';
 import { estiloMapa, F_BOLD, F_REG, W, type TemaMapa } from './estilos';
 import { Camiones3D, ST, type ClaseEstado, type DescCamion, type VistaCamion } from './camiones';
 import { angLerp, distM, enAnillo, type LngLat } from './geo';
@@ -290,20 +291,26 @@ export class MotorTelemetria {
   private capaLugares() {
     const m = this.mapa;
     m.addSource('lugares', { type: 'vector', tiles: [`${location.origin}/mapa-lugares/{z}/{x}/{y}.pbf`], minzoom: 12, maxzoom: 16, attribution: 'Lugares © Overture Maps' });
-    const color = ['match', ['get', 'g'],
-      'combustible', '#f59e0b', 'salud', '#e5484d', 'educacion', '#3b82f6', 'comida', '#f97316', 'alojamiento', '#8b5cf6', 'finanzas', '#0ea5a4',
-      'gobierno', '#64748b', 'culto', '#a16207', 'naturaleza', '#22a06b', 'transporte', '#0891b2', 'automotriz', '#6366f1', '#94a3b8'];
+    const COLORES: Record<string, string> = { combustible: '#f59e0b', salud: '#e5484d', educacion: '#3b82f6', comida: '#f97316', alojamiento: '#8b5cf6', finanzas: '#0ea5a4', gobierno: '#64748b', culto: '#a16207', naturaleza: '#22a06b', transporte: '#0891b2', automotriz: '#6366f1', comercio: '#d946ef' };
     const dia = this.tema === 'day';
+    // Cada grupo es una insignia redonda de color con su ícono (surtidor, cama, cubiertos, bus…), dibujada una sola vez
+    for (const [g, c] of Object.entries(COLORES)) {
+      const id = `lug-${g}`;
+      if (m.hasImage(id)) continue;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56"><circle cx="28" cy="28" r="25" fill="${c}" stroke="#ffffff" stroke-width="3"/><g transform="translate(14 14) scale(1.17)" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONOS_LUGARES[g] ?? ''}</g></svg>`;
+      const img = new Image(56, 56);
+      img.onload = () => { if (!m.hasImage(id)) m.addImage(id, img, { pixelRatio: 2 }); };
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    }
     // Tres niveles: confianza alta desde zoom 13.5, media desde 15 y el resto desde 16
     const niveles: Array<{ id: string; desde: number; min: number; max: number }> = [
       { id: 'a', desde: 13.5, min: 85, max: 101 }, { id: 'b', desde: 15, min: 65, max: 85 }, { id: 'c', desde: 16, min: 0, max: 65 },
     ];
     for (const n of niveles) {
-      const filtro: any = ['all', ['>=', ['get', 'q'], n.min], ['<', ['get', 'q'], n.max]];
-      m.addLayer({ id: `lugares-punto-${n.id}`, type: 'circle', source: 'lugares', 'source-layer': 'lugares', minzoom: n.desde, filter: filtro,
-        paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 13.5, 2.6, 17, 5], 'circle-color': color as any, 'circle-stroke-color': dia ? '#ffffff' : '#0b1220', 'circle-stroke-width': 1, 'circle-opacity': .95 } });
-      m.addLayer({ id: `lugares-nombre-${n.id}`, type: 'symbol', source: 'lugares', 'source-layer': 'lugares', minzoom: n.desde + 0.6, filter: filtro,
-        layout: { 'text-field': ['get', 'n'], 'text-font': F_REG, 'text-size': ['interpolate', ['linear'], ['zoom'], 14, 10, 18, 12.5], 'text-anchor': 'top', 'text-offset': [0, .7], 'text-max-width': 7, 'text-optional': true, 'symbol-sort-key': ['-', 100, ['get', 'q']] },
+      m.addLayer({ id: `lugares-${n.id}`, type: 'symbol', source: 'lugares', 'source-layer': 'lugares', minzoom: n.desde, filter: ['all', ['>=', ['get', 'q'], n.min], ['<', ['get', 'q'], n.max]] as any,
+        layout: { 'icon-image': ['concat', 'lug-', ['get', 'g']], 'icon-size': ['interpolate', ['linear'], ['zoom'], 13.5, .5, 17, .82], 'icon-padding': 2,
+          'text-field': ['step', ['zoom'], '', n.desde + 0.8, ['get', 'n']], 'text-font': F_REG, 'text-size': ['interpolate', ['linear'], ['zoom'], 14, 10, 18, 12.5], 'text-anchor': 'top', 'text-offset': [0, 1.05], 'text-max-width': 7, 'text-optional': true,
+          'symbol-sort-key': ['-', 100, ['get', 'q']] },
         paint: { 'text-color': dia ? '#3d4658' : '#c8d3e6', 'text-halo-color': dia ? '#ffffff' : '#05070c', 'text-halo-width': 1.4 } });
     }
   }
