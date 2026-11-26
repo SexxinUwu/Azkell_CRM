@@ -6,7 +6,10 @@ import { CircleCheck, ClipboardList, Coins, Eye, PackageCheck, PackageMinus, Plu
 import { FileSpreadsheet, FilePdf } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
-import { SearchField, SelectInput, TextInput } from '../../core/ui/Field';
+import { TextInput } from '../../core/ui/Field';
+import { Combobox } from '../../core/ui/Combobox';
+import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
+import { LicensePlate } from '../../core/ui/LicensePlate';
 import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
 import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/TablaRedimensionable';
 import { ConfirmSheet } from '../../core/ui/Sheet';
@@ -45,13 +48,13 @@ const POR_PAGINA = 20;
 const ESTADO_DE_PESTANA: Record<Pestana, EstadoSalida> = { pend: 'Pendiente', desp: 'Despachado', anulado: 'Anulado' };
 
 const COLUMNAS: ColumnaTabla[] = [
-  { id: 'acciones', titulo: 'Acciones', ancho: 72, minimo: 64, alinear: 'center' },
+  { id: 'acciones', titulo: 'Acciones', ancho: 96, minimo: 92, alinear: 'center' },
   { id: 'fecha', titulo: 'Fecha', ancho: 110 },
   { id: 'tipo', titulo: 'Tipo de orden', ancho: 140 },
   { id: 'folio', titulo: 'N° de salida', ancho: 140 },
   { id: 'estado', titulo: 'Estado', ancho: 120, alinear: 'center' },
   { id: 'ot', titulo: 'N° OT', ancho: 130 },
-  { id: 'placa', titulo: 'Placa', ancho: 96 },
+  { id: 'placa', titulo: 'Placa', ancho: 118, minimo: 110 },
   { id: 'responsable', titulo: 'Responsable', ancho: 210 },
   { id: 'codigo', titulo: 'Cód. art.', ancho: 104 },
   { id: 'articulo', titulo: 'Artículo', ancho: 260 },
@@ -189,6 +192,9 @@ export function SalidasPage() {
     setPagina(1);
   }
 
+  const [panelFiltros, setPanelFiltros] = useState(false);
+  const filtrosActivos = (estadoFiltro !== 'todas' ? 1 : 0) + (desde ? 1 : 0) + (hasta ? 1 : 0);
+
   function limpiarFiltros() {
     setBusqueda(''); setDesde(''); setHasta(''); setEstadoFiltro('todas'); setPagina(1);
   }
@@ -300,7 +306,7 @@ export function SalidasPage() {
   const subtitulo = isLoading ? 'Cargando…' : `${salidas.length} salidas registradas${conteoRango.pend ? ` · ${conteoRango.pend} pendientes` : ''}`;
 
   return (
-    <Page>
+    <Page fill={!movil}>
       <PageHeader
         eyebrow="Almacén"
         title="Salidas"
@@ -331,7 +337,7 @@ export function SalidasPage() {
           {puedeCrear ? <>Registra la primera salida con <strong>Nueva salida</strong>.</> : 'Cuando se registren salidas, aparecerán aquí.'}
         </EmptyState>
       ) : (
-        <div>
+        <div className="sal-cuerpo">
           {/* Totales del filtro */}
           <div className="inv-kpis" style={{ marginBottom: 'var(--s-4)' }}>
             <KpiTarjeta etiqueta="Salidas" valor={String(kpis.total)} sub="Del filtro seleccionado" icono={<ClipboardList size={18} />} />
@@ -341,29 +347,31 @@ export function SalidasPage() {
             <KpiTarjeta etiqueta="OTs atendidas" valor={String(kpis.ots)} sub="En el filtro" icono={<PackageCheck size={18} />} />
           </div>
 
-          {/* Filtros: todo en una sola fila, igual que Órdenes de compra */}
-          <div className="oc-filtros" style={{ marginBottom: 'var(--s-4)' }}>
-            <SearchField value={busqueda} onChange={v => { setBusqueda(v); setPagina(1); }} placeholder="Folio, placa, OT, responsable o artículo" />
-            <div className="oc-filtros__fila">
-              <div className="oc-fechas">
-                <TextInput type="date" aria-label="Desde" value={desde} onChange={ev => { setDesde(ev.target.value); setPagina(1); }} />
-                <span className="t-footnote c-secondary">a</span>
-                <TextInput type="date" aria-label="Hasta" value={hasta} onChange={ev => { setHasta(ev.target.value); setPagina(1); }} />
-                <button type="button" className="oc-cotizacion__quitar" aria-label="Quitar fechas" onClick={() => { setDesde(''); setHasta(''); setPagina(1); }}>×</button>
-              </div>
+          {/* Una sola fila: buscador corto + vista + botón Filtros (todo lo demás va en la hoja) */}
+          <div style={{ marginBottom: 'var(--s-3)' }}>
+            <BarraFiltros busqueda={busqueda} onBusqueda={v => { setBusqueda(v); setPagina(1); }} placeholder="Folio, placa, OT, responsable o artículo" activos={filtrosActivos} onAbrirFiltros={() => setPanelFiltros(true)}>
               <SegmentedControl<Vista> label="Ver por" value={vista} onChange={v => { setVista(v); setPagina(1); }}
                 options={[{ value: 'salidas', label: 'Por salida' }, { value: 'articulos', label: 'Por artículo' }]} />
-              <SelectInput aria-label="Estado de la salida" value={estadoFiltro} onChange={ev => cambiarEstado(ev.target.value as FiltroEstado)} style={{ width: 'auto' }}>
-                <option value="todas">Todas ({conteoRango.todas})</option>
-                <option value="pend">Pendientes ({conteoRango.pend})</option>
-                <option value="desp">Despachadas ({conteoRango.desp})</option>
-                <option value="anulado">Anuladas ({conteoRango.anulado})</option>
-              </SelectInput>
-              <span className="badge" style={{ marginLeft: 'auto' }}>
-                {filtradas.length} {filtradas.length === 1 ? 'registro' : 'registros'}
-              </span>
-            </div>
+              <span className="badge">{filtradas.length} {filtradas.length === 1 ? 'registro' : 'registros'}</span>
+            </BarraFiltros>
           </div>
+          <HojaFiltros open={panelFiltros} onClose={() => setPanelFiltros(false)} activos={filtrosActivos} onLimpiar={limpiarFiltros} resultado={filtradas.length} unidad="salida">
+            <GrupoFiltro titulo="Estado">
+              <Combobox enHoja compacta tituloHoja="Estado de la salida" placeholder="Elegir estado" value={estadoFiltro} onChange={v => cambiarEstado((v ?? 'todas') as FiltroEstado)}
+                options={[
+                  { value: 'todas', label: `Todas (${conteoRango.todas})` },
+                  { value: 'pend', label: `Pendientes (${conteoRango.pend})` },
+                  { value: 'desp', label: `Despachadas (${conteoRango.desp})` },
+                  { value: 'anulado', label: `Anuladas (${conteoRango.anulado})` },
+                ]} />
+            </GrupoFiltro>
+            <GrupoFiltro titulo="Rango de fechas">
+              <div className="sal-rango">
+                <label><span>Desde</span><TextInput type="date" value={desde} onChange={ev => { setDesde(ev.target.value); setPagina(1); }} /></label>
+                <label><span>Hasta</span><TextInput type="date" value={hasta} onChange={ev => { setHasta(ev.target.value); setPagina(1); }} /></label>
+              </div>
+            </GrupoFiltro>
+          </HojaFiltros>
 
           {filtradas.length === 0 ? (
             <EmptyState icon={<SearchX size={22} />} title="Ninguna salida coincide">
@@ -384,7 +392,7 @@ export function SalidasPage() {
                         <EstadoBadge estado={estado} />
                       </div>
                       <div className="sal-tarjeta__chips">
-                        {s.placa && <span className="badge">{s.placa}</span>}
+                        {s.placa && <LicensePlate plate={s.placa} size="sm" />}
                         {s.ticket_ot && <span className="badge badge--accent">{s.ticket_ot}</span>}
                         <TipoOrdenBadge tipo={s.tipo_orden} />
                       </div>
@@ -407,7 +415,7 @@ export function SalidasPage() {
               })}
             </div>
           ) : (
-            <TablaRedimensionable id="almacen-salidas" columnas={COLUMNAS} ariaLabel="Salidas de almacén" altoMax="68vh">
+            <TablaRedimensionable id="almacen-salidas" columnas={COLUMNAS} ariaLabel="Salidas de almacén" altoMax="68vh" className="tabla-redim--compacta">
               {visiblesPagina.flatMap(s => {
                 const estado = estadoSalida(s);
                 const items = itemsVisibles(s);
@@ -420,8 +428,8 @@ export function SalidasPage() {
                   <Celda key="folio"><button type="button" className="oc-codigo" onClick={() => abrirDetalle(s)} title="Ver detalle">{s.id}</button></Celda>,
                   <Celda key="estado" alinear="center"><EstadoBadge estado={estado} /></Celda>,
                   <Celda key="ot" mono>{s.ticket_ot || '—'}</Celda>,
-                  <Celda key="placa" mono>{s.placa || '—'}</Celda>,
-                  <Celda key="resp"><span className="sal-resp">{s.responsable || '—'}</span><span className="sal-sub">{nombreSolicitante(s.creado_por)}</span></Celda>,
+                  <Celda key="placa">{s.placa ? <LicensePlate plate={s.placa} size="sm" /> : '—'}</Celda>,
+                  <Celda key="resp"><span className="sal-resp">{s.responsable || '—'}</span></Celda>,
                 ];
                 const total = <Celda key="total" alinear="right"><strong className="oc-importe">{formatSoles(s.total_pen ?? 0)}</strong></Celda>;
 
