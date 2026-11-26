@@ -4,7 +4,7 @@ import '../almacen/almacen.css'; // estilos de tabla (.inv-kardex) que usa la li
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, CheckCircle2, Columns3, Eye, Lock, Pause, Play, Plus, ScrollText, SearchX, XCircle, ZoomIn, ZoomOut } from 'lucide-react';
+import { BookOpen, CheckCircle2, Columns3, Eye, Lock, Pause, Play, Plus, ScrollText, SearchX, XCircle } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { TextInput } from '../../core/ui/Field';
@@ -44,12 +44,8 @@ const COLUMNAS_OT: Array<ColumnaTabla & { fija?: boolean }> = [
   { id: 'ver', titulo: 'Ver', ancho: 48, minimo: 44, alinear: 'center', fija: true },
 ];
 const CLAVE_COLS_OT = 'fleet_ot_columnas_ocultas';
-const CLAVE_TAM_OT = 'fleet_ot_tamano';
 function leerOcultasOT(): Set<string> {
   try { return new Set(JSON.parse(localStorage.getItem(CLAVE_COLS_OT) || '[]') as string[]); } catch { return new Set(); }
-}
-function leerTamanoOT(): 0 | 1 | 2 {
-  try { const v = Number(localStorage.getItem(CLAVE_TAM_OT)); return v === 0 || v === 2 ? v : 1; } catch { return 1; }
 }
 
 // ─── Tipos adicionales ────────────────────────────────────────────────────────
@@ -311,17 +307,11 @@ export function OrdenesTrabajoPage() {
   const filtrosActivosOT = (filtroEstado !== 'Todas' ? 1 : 0) + (fOT ? 1 : 0) + (fPlaca ? 1 : 0) + (fMes ? 1 : 0) + (fDesde ? 1 : 0) + (fHasta ? 1 : 0);
   const limpiarFiltrosOT = () => { setFiltroEstado('Todas'); setFOT(''); setFPlaca(''); setFMes(''); setFDesde(''); setFHasta(''); };
   const [ocultasOT, setOcultasOT] = useState<Set<string>>(leerOcultasOT);
-  const [tamanoOT, setTamanoOT] = useState<0 | 1 | 2>(leerTamanoOT);
   const [eligiendoCols, setEligiendoCols] = useState(false);
   const columnasOT = useMemo(() => COLUMNAS_OT.filter(c => !ocultasOT.has(c.id)), [ocultasOT]);
   const alternarColOT = (id: string) => setOcultasOT(prev => {
     const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id);
     try { localStorage.setItem(CLAVE_COLS_OT, JSON.stringify([...n])); } catch { /* sin almacenamiento */ }
-    return n;
-  });
-  const cambiarTamanoOT = (d: -1 | 1) => setTamanoOT(prev => {
-    const n = Math.max(0, Math.min(2, prev + d)) as 0 | 1 | 2;
-    try { localStorage.setItem(CLAVE_TAM_OT, String(n)); } catch { /* sin almacenamiento */ }
     return n;
   });
   const puedeEditar  = can('reportes_ot.editar') || can('reportes_ot.editar');
@@ -349,8 +339,6 @@ export function OrdenesTrabajoPage() {
               {tab === 'OTs' && !esMovil && (
                 <>
                   <Button variant="secondary" iconOnly icon={<Columns3 size={18} />} aria-label="Elegir columnas" title="Elegir columnas" style={{ minHeight: 44, minWidth: 44 }} onClick={() => setEligiendoCols(true)} />
-                  <Button variant="secondary" iconOnly icon={<ZoomOut size={18} />} aria-label="Reducir el tamaño de la tabla" title="Reducir el tamaño de la tabla" disabled={tamanoOT === 0} style={{ minHeight: 44, minWidth: 44 }} onClick={() => cambiarTamanoOT(-1)} />
-                  <Button variant="secondary" iconOnly icon={<ZoomIn size={18} />} aria-label="Agrandar el tamaño de la tabla" title="Agrandar el tamaño de la tabla" disabled={tamanoOT === 2} style={{ minHeight: 44, minWidth: 44 }} onClick={() => cambiarTamanoOT(1)} />
                 </>
               )}
               <Button variant="secondary" iconOnly icon={<LogoArchivo tipo="excel" />} disabled={visibles.length === 0}
@@ -464,7 +452,7 @@ export function OrdenesTrabajoPage() {
                     })}
                   </div>
                 ) : (
-                <TablaRedimensionable id="ot-lista-v2" columnas={columnasOT} ariaLabel="Órdenes de trabajo" altoMax="70vh" className={`tabla-redim--compacta ot-tabla ot-tabla--t${tamanoOT}`}>
+                <TablaRedimensionable id="ot-lista-v2" columnas={columnasOT} ariaLabel="Órdenes de trabajo" altoMax="70vh" className={`tabla-redim--compacta ot-tabla ot-tabla--t1`}>
                   {visibles.map(o => {
                     const det = otDetalles(o);
                     const obs = String(det.motivo ?? o.observaciones ?? '')
