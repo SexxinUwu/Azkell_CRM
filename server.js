@@ -5590,7 +5590,7 @@ async function historicoRecorridosTodas() {
         const [empresas] = await getMasterPool().promise().query("SELECT slug, db_name FROM empresas WHERE estado = 'activo'").catch(() => [[]]);
         const lista = empresas || [];
         const correr = (e) => tenantStorage.run(getTenantPool(e.db_name), () => legacyRoutes.precalcularRecorridos(e.slug, {
-            desde, limiteMs: 72 * 3600 * 1000,
+            desde, limiteMs: 72 * 3600 * 1000, regenerar: process.env.RECORRIDOS_REGENERAR === '1',
             alAvanzar: p => console.log(`[histórico recorridos] ${e.slug}: ${p.hechos} consultados (con datos ${p.conDatos}, ya estaban ${p.yaEstaban}) · va por ${p.fecha}`),
         })).then(r => console.log('[histórico recorridos]', e.slug, 'FIN', JSON.stringify(r))).catch(err => console.warn('[histórico recorridos]', e.slug, err.message));
         const marsisa = lista.find(e => e.slug === 'marsisa');

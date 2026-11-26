@@ -1,5 +1,6 @@
 // Guarda los recorridos de días cerrados de las unidades con GPS (tabla gps_recorrido_dia), del más reciente al más antiguo.
-// Uso: node scripts/recorridos_historico.js --solo marsisa --desde 2026-01-01 [--hasta 2026-11-25] [--reparto 0/3] [--listar]
+// Uso: node scripts/recorridos_historico.js --solo marsisa --desde 2026-01-01 [--hasta 2026-11-25] [--reparto 0/3] [--listar] [--regenerar]
+// --regenerar: vuelve a calcular los días guardados con el cálculo anterior (sin odómetro ni nivel de combustible); los ya nuevos se saltan.
 // Retoma solo: los días ya guardados se saltan. Va de a una consulta por vez por proceso; se puede repartir entre procesos con --reparto n/de.
 require('dotenv').config({ quiet: true });
 const mysql = require('mysql2');
@@ -25,7 +26,7 @@ const pool = mysql.createPool({
     return process.exit(0);
   }
   const r = await legacy.precalcularRecorridos(slug, {
-    desde, hasta: hasta || undefined, limiteMs: 48 * 3600 * 1000,
+    desde, hasta: hasta || undefined, limiteMs: 48 * 3600 * 1000, regenerar: arg('regenerar', false) !== false,
     reparto: reparto ? [Number(reparto[1]), Number(reparto[2])] : undefined,
     alAvanzar: p => console.log(`[${slug}${reparto ? ' ' + reparto[0] : ''}] ${Math.round((Date.now() - t0) / 60000)} min · ${p.fecha} ${p.placa} · consultados ${p.hechos} (con datos ${p.conDatos}, ya estaban ${p.yaEstaban})`),
   });

@@ -53,7 +53,14 @@ export function armarTramos(h: Historial | undefined, a: AnalisisCombustible): T
     for (let i = pts.length - 1; i >= 0; i--) if (pts[i].tiempo <= t1) { i1 = i; break; }
     if (i0 >= 0 && i1 > i0) {
       let d = 0;
-      for (let i = i0 + 1; i <= i1; i++) { const s = km(pts[i - 1], pts[i]); if (s < 50) d += s; }
+      for (let i = i0 + 1; i <= i1; i++) {
+        const s = km(pts[i - 1], pts[i]);
+        // Con odómetro, lo que avanzó el odómetro (como Wialon); si no hay o no se movió en un tramo largo, la distancia entre puntos
+        const o0 = pts[i - 1].odo, o1 = pts[i].odo;
+        const dO = o0 != null && o1 != null ? o1 - o0 : null;
+        if (dO != null && dO >= 0 && dO < 50 && !(dO === 0 && s > 0.3)) d += dO;
+        else if (s < 50) d += s;
+      }
       const durMin = Math.max(1, Math.round((pts[i1].tiempo - pts[i0].tiempo) / 60));
       if (d >= 0.3) {
         nViaje++;

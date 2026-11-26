@@ -15,6 +15,8 @@ export interface PuntoHistorial {
   altitud: number;
   /** Nivel de combustible (%) si la unidad tiene sensor */
   combustible: number | null;
+  /** Odómetro de la unidad (km) si tiene sensor de kilometraje; con él los km salen igual que en Wialon */
+  odo?: number | null;
   /** Segundos desde 1970 (como en Wialon) */
   tiempo: number;
 }
@@ -64,6 +66,7 @@ async function consultar(args: Record<string, unknown>): Promise<Historial> {
         lat: num(p.lat), lng: num(p.lng), velocidad: num(p.velocidad), curso: num(p.curso),
         ignicion: p.ignicion === true || Number(p.ignicion) === 1, altitud: num(p.altitud), tiempo: num(p.tiempo),
         combustible: p.combustible == null ? null : num(p.combustible),
+        odo: p.odo == null ? null : num(p.odo),
       }))
       .filter(p => p.lat !== 0 && p.lng !== 0),
     paradas: paradas.map(s => ({ lat: num(s.lat), lng: num(s.lng), durMin: num(s.durMin), startT: num(s.startT), endT: num(s.endT) })),
