@@ -8,6 +8,7 @@ import { useToast } from '../../core/ui/Toast';
 import { formatSoles } from '../../core/lib/format';
 import { costoSolesArticulo, type ArticuloInv } from './api';
 import { EscanerCodigo } from './EscanerCodigo';
+import { separarLote } from './codigosLote';
 import './selectorArticulo.css';
 
 // Selectores buscables de la Solicitud de Salida: calcados de los del clásico (solicitante con buscador,
@@ -173,7 +174,8 @@ export function ArticuloSelector({ value, articulos, onSelect, invalido, id, con
 
   function alEscanear(codigo: string) {
     setEscaneando(false);
-    const c = codigo.trim().toUpperCase();
+    // La etiqueta de un lote («INV-0212-L2») también encuentra su artículo
+    const c = separarLote(codigo).codigo.toUpperCase();
     const hallado = articulos.find(a => a.id.toUpperCase() === c || (a.codigo_barras ?? '').trim().toUpperCase() === c);
     if (!hallado) { toast(`Artículo no encontrado: ${codigo}`, 'error'); return; }
     onSelect(hallado);

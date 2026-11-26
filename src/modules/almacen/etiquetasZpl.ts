@@ -13,6 +13,8 @@ export interface EtiquetaArticulo {
   id: string;
   /** Ubicación o anaquel, en letra chica al pie */
   ubicacion?: string;
+  /** Número de lote: la etiqueta lleva un QR con «INV-0212-L2» (el lote no cabe en un código de barras angosto) y el nombre del lote en grande */
+  lote?: number;
 }
 
 /** Medidas en puntos (203 dpi = 8 puntos por mm). Se ajustan aquí si cambia el rollo. */
@@ -52,6 +54,16 @@ function formatoFila(fila: EtiquetaArticulo[]): string {
   fila.forEach((e, k) => {
     const x = inicioX + k * paso + margen;
     const xt = inicioX + k * paso + margenTexto;
+    if (e.lote != null) {
+      // Etiqueta de lote: descripción arriba, QR a la izquierda y a la derecha el lote, el código y el anaquel
+      const qr = limpio(`${e.id}-L${e.lote}`, 30);
+      l.push(`^FO${xt},12^A0N,24,22^FB${utilTexto},2,0,L,0^FD${limpio(e.descripcion, 44)}^FS`);
+      l.push(`^FO${xt},72^BQN,2,4^FDQA,${qr}^FS`);
+      l.push(`^FO${xt + 118},78^A0N,40,36^FB${utilTexto - 118},1,0,L,0^FDLOTE ${e.lote}^FS`);
+      l.push(`^FO${xt + 118},124^A0N,24,22^FB${utilTexto - 118},1,0,L,0^FD${limpio(e.id, 24)}^FS`);
+      if (e.ubicacion) l.push(`^FO${xt + 118},156^A0N,20,18^FB${utilTexto - 118},1,0,L,0^FD${limpio(e.ubicacion, 28)}^FS`);
+      return;
+    }
     const codigo = limpio(e.codigo, 24) || limpio(e.id, 24);
     // Barra lo más ancha posible sin pasarse de la etiqueta (2 puntos es lo ideal para leer bien; 1 solo si el código es largo)
     const ancha = Math.max(1, Math.min(3, Math.floor(util / modulosCode128(codigo))));

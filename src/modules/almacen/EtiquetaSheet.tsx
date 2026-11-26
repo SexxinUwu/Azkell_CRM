@@ -3,16 +3,18 @@ import { Printer } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
-import { Field, TextInput } from '../../core/ui/Field';
+import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { useToast } from '../../core/ui/Toast';
 import { haptic } from '../../core/lib/haptics';
-import type { ArticuloInv } from './api';
+import { useLotes, type ArticuloInv } from './api';
+import { formatSoles } from '../../core/lib/format';
 import { zplEtiquetas, type EtiquetaArticulo } from './etiquetasZpl';
 import { estadoEtiquetadora, imprimirZpl, type EstadoEtiquetadora } from './impresoraEtiquetas';
 import { imprimirEtiqueta } from './etiquetaArticulo';
 
-export const etiquetaDe = (a: ArticuloInv): EtiquetaArticulo => ({
+export const etiquetaDe = (a: ArticuloInv, lote?: number | null): EtiquetaArticulo => ({
   codigo: a.codigo_barras?.trim() || a.id,
+  lote: lote ?? undefined,
   descripcion: a.descripcion || a.articulo || '',
   id: a.id,
   ubicacion: [a.ubicacion, a.anaquel ? `Anq: ${a.anaquel}` : ''].filter(Boolean).join(' '),
@@ -24,6 +26,11 @@ export function EtiquetaSheet({ open, articulo: a, onClose }: { open: boolean; a
   const [copias, setCopias] = useState('3');
   const [estado, setEstado] = useState<EstadoEtiquetadora | 'buscando'>('buscando');
   const [imprimiendo, setImprimiendo] = useState(false);
+  // Lotes con saldo (los agotados no se pueden imprimir): se elige de cuál es la etiqueta
+  const { data: dataLotes } = useLotes(open ? a.id : null);
+  const lotes = dataLotes?.lotes ?? [];
+  const [loteSel, setLoteSel] = useState<string>('');
+  const loteElegido = lotes.find(l => String(l.numero) === loteSel) ?? lotes[0] ?? null;
 
   useEffect(() => {
     if (!open) return;
@@ -39,7 +46,7 @@ export function EtiquetaSheet({ open, articulo: a, onClose }: { open: boolean; a
   async function imprimir() {
     setImprimiendo(true);
     try {
-      await imprimirZpl(zplEtiquetas([etiquetaDe(a)], n));
+      await imprimirZpl(zplEtiquetas([etiquetaDe(a, loteElegido?.numero)], n));
       haptic('success');
       toast(`${n} ${n === 1 ? 'etiqueta impresa' : 'etiquetas impresas'}`);
       onClose();
@@ -64,6 +71,16 @@ export function EtiquetaSheet({ open, articulo: a, onClose }: { open: boolean; a
           <strong>{a.descripcion || a.articulo}</strong>
           <div style={{ color: 'var(--label-2)', fontSize: '0.875rem' }}>{a.id} · código de barras {a.codigo_barras?.trim() || a.id}</div>
         </div>
+
+        {lotes.length > 0 && (
+          <Field label="Lote" hint={loteElegido ? `Quedan ${loteElegido.saldo.toLocaleString('es-PE', { maximumFractionDigits: 2 })} unidades en este lote. La etiqueta lleva un QR con el lote; su costo no se imprime.` : undefined}>
+            {p => (
+              <SelectInput {...p} value={String(loteElegido?.numero ?? '')} onChange={ev => setLoteSel(ev.target.value)}>
+                {lotes.map(l => <option key={l.id} value={l.numero}>{`Lote ${l.numero} · quedan ${l.saldo.toLocaleString('es-PE', { maximumFractionDigits: 2 })} · ${formatSoles(l.costo_unitario)} c/u`}</option>)}
+              </SelectInput>
+            )}
+          </Field>
+        )}
 
         <Field label="Cantidad de etiquetas" hint={`Salen de 3 en 3: ${filas} ${filas === 1 ? 'fila' : 'filas'} del rollo.`}>
           {p => <TextInput {...p} type="number" min={1} max={99} inputMode="numeric" value={copias} onChange={e => setCopias(e.target.value)} />}
