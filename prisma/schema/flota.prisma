@@ -205,3 +205,18 @@ model VehiculoFlota {
 
   @@map("vehiculos_flota")
 }
+
+model GpsRecorridoDia {
+  id             Int       @id @default(autoincrement())
+  placa          String    @db.VarChar(20)
+  fecha          DateTime  @db.Date
+  unit_id        Int?
+  puntos         Int       @default(0)
+  km             Decimal   @default(0) @db.Decimal(8, 1)
+  datos          Bytes     @db.LongBlob
+  creado_en      DateTime? @default(now()) @db.Timestamp(0)
+  actualizado_en DateTime? @default(now()) @updatedAt @db.Timestamp(0)
+
+  @@unique([placa, fecha], map: "uq_gps_recorrido_placa_fecha")
+  @@map("gps_recorrido_dia")
+}

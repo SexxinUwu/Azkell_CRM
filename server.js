@@ -5545,6 +5545,26 @@ function programarGpsNocturno() {
 }
 programarGpsNocturno();
 
+// Recorridos del día anterior de cada unidad: 03:30 hora de Lima (08:30 UTC). Se apaga con PRECALCULO_RECORRIDOS=0.
+async function recorridosDeTodasLasEmpresas() {
+    const [empresas] = await getMasterPool().promise().query("SELECT slug, db_name FROM empresas WHERE estado = 'activo'").catch(() => [[]]);
+    for (const e of empresas || []) {
+        try {
+            const r = await tenantStorage.run(getTenantPool(e.db_name), () => legacyRoutes.precalcularRecorridos(e.slug));
+            console.log('[recorridos]', e.slug, JSON.stringify(r));
+        } catch (err) { console.warn('[recorridos]', e.slug, err.message); }
+    }
+}
+if (process.env.PRECALCULO_RECORRIDOS !== '0') {
+    const ahora = new Date();
+    const prox = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate(), 8, 30));
+    if (prox <= ahora) prox.setUTCDate(prox.getUTCDate() + 1);
+    setTimeout(() => {
+        recorridosDeTodasLasEmpresas();
+        setInterval(recorridosDeTodasLasEmpresas, 24 * 60 * 60 * 1000);
+    }, prox - ahora);
+}
+
 // Telemetría de viajes de Marsisa (CAN y RPM): cada 20 minutos guarda los viajes recientes ya terminados, para que la pantalla los muestre al instante.
 // Se apaga con PRECALCULO_TELEMETRIA=0. Va de a un viaje por vez y entra por la misma cola que las consultas de la pantalla.
 if (process.env.PRECALCULO_TELEMETRIA !== '0') {

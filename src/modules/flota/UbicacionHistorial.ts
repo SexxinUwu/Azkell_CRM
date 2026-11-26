@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
+import { guardarLocal, leerLocal } from '../../core/lib/cacheLocal';
 
 export interface PuntoHistorial {
   lat: number;
@@ -72,6 +73,25 @@ async function consultar(args: Record<string, unknown>): Promise<Historial> {
       tiempoMovMin: num(m.tiempoMovMin), paradasTotal: num(m.paradasTotal),
     },
   };
+}
+
+const aISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/**
+ * Un tramo de 00:00 a 00:00 de un día que ya pasó no vuelve a cambiar: se guarda una copia en este navegador y, la próxima vez
+ * (incluso tras recargar la página), sale al instante. El servidor guarda otra copia para todos los usuarios.
+ */
+async function consultarTramo(placa: string | null, unitId: number | null, a: Date, b: Date): Promise<Historial> {
+  const args = { placa, unitId, fechaInicio: a.toISOString(), fechaFin: b.toISOString(), completo: true };
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const diaPasado = !!placa && a.getHours() === 0 && a.getMinutes() === 0 && Math.abs(b.getTime() - a.getTime() - 86400000) < 3600000 && b.getTime() <= hoy.getTime();
+  if (!diaPasado) return consultar(args);
+  const clave = `recorrido|v1|${placa}|${aISO(a)}`;
+  const guardado = await leerLocal<Historial>(clave);
+  if (guardado && Array.isArray(guardado.puntos)) return guardado;
+  const h = await consultar(args);
+  if (!h.truncado && h.puntos.length > 0) void guardarLocal(clave, h);
+  return h;
 }
 
 function argumentos(placa: string | null, unitId: number | null, r: RangoHistorial): Record<string, unknown> {
@@ -145,7 +165,7 @@ export function useHistorial(placa: string | null, unitId: number | null, rango:
     queryKey: ['flota', 'historial', placa, unitId, horas, dia, desde, hasta],
     enabled: !!placa && !largo,
     staleTime: 60_000,
-    queryFn: () => consultar(argumentos(placa, unitId, { horas, dia, desde, hasta })),
+    queryFn: () => (dia && !desde && !hasta ? consultarTramo(placa, unitId, inicioDia(dia), new Date(inicioDia(dia).getFullYear(), inicioDia(dia).getMonth(), inicioDia(dia).getDate() + 1)) : consultar(argumentos(placa, unitId, { horas, dia, desde, hasta }))),
   });
 
   const [estado, setEstado] = useState<{ partes: Historial[]; hechos: number; total: number; fin: boolean; error: unknown }>({ partes: [], hechos: 0, total: 0, fin: true, error: null });
@@ -164,7 +184,7 @@ export function useHistorial(placa: string | null, unitId: number | null, rango:
           const h = await qc.fetchQuery({
             queryKey: ['flota', 'historial-tramo', placa, unitId, a.toISOString(), b.toISOString()],
             staleTime: 10 * 60_000,
-            queryFn: () => consultar({ placa, unitId, fechaInicio: a.toISOString(), fechaFin: b.toISOString(), completo: true }),
+            queryFn: () => consultarTramo(placa, unitId, a, b),
           });
           partes.push(h);
         } catch (e) { fallos++; ultimoError = e; }
