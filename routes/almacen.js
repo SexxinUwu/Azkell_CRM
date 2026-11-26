@@ -1235,7 +1235,7 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
 
                     // La foto recién subida ya queda lista en el servidor: se ve al instante
                     const fotos = require('../services/fotos_cache');
-                    await fotos.asegurar(s3Key, req.file.buffer).catch(e => console.warn('[Foto caché]', e.message));
+                    await fotos.guardarNueva(s3Key, req.file.buffer).catch(e => console.warn('[Foto caché]', e.message));
                     res.json({ ok: true, imagen_url: fotos.urlFoto(s3Key) });
                 });
             });

@@ -969,3 +969,6 @@ export interface TiemposSalidas {
 export function useTiemposSalidas(dias: number, activo: boolean) {
   return useQuery<TiemposSalidas>({ queryKey: ['almacen', 'salidas-tiempos', dias], enabled: activo, queryFn: () => api(`/almacen/salidas/tiempos?dias=${dias}`), staleTime: 60_000 });
 }
+
+/** Foto pequeña (320 px) de un artículo para listas y cuadrículas; la ficha usa la grande */
+export const fotoMini = (url: string | null | undefined): string | null | undefined => (url ? url.replace(/\.960\.webp$/, '.320.webp') : url);

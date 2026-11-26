@@ -138,3 +138,10 @@ async function descargarDeS3(key) {
     return Buffer.concat(partes);
 }
 module.exports.descargarDeS3 = descargarDeS3;
+
+/** Lee un objeto de S3 si existe; devuelve null si no está (para las miniaturas guardadas) */
+async function leerDeS3SiExiste(key) {
+    try { return await descargarDeS3(key); }
+    catch (e) { if (e && (e.name === 'NoSuchKey' || e.Code === 'NoSuchKey' || (e.$metadata && e.$metadata.httpStatusCode === 404))) return null; throw e; }
+}
+module.exports.leerDeS3SiExiste = leerDeS3SiExiste;

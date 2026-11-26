@@ -1,7 +1,7 @@
 import { memo, type KeyboardEvent } from 'react';
 import { Check, MapPin, Package, Plus } from 'lucide-react';
 import { formatSoles } from '../../core/lib/format';
-import { costoUnitarioSoles, stockTono, valorEnStock, type ArticuloInv } from './api';
+import { costoUnitarioSoles, fotoMini, stockTono, valorEnStock, type ArticuloInv } from './api';
 
 const ESTADO_TEXTO = { ok: 'En stock', warning: 'Reponer', critical: 'Sin stock' } as const;
 
@@ -68,7 +68,7 @@ export const ProductoCard = memo(function ProductoCard({ a, onAbrir, seleccionan
             </span>
           )}
           {a.imagen_url
-            ? <img src={a.imagen_url} alt="" loading="lazy" />
+            ? <img src={fotoMini(a.imagen_url) ?? undefined} alt="" loading="lazy" decoding="async" />
             : <Package size={48} strokeWidth={1.3} />}
           {a.codigo_articulo && <span className="prod__oem">Cód. Int.: {a.codigo_articulo}</span>}
         </div>

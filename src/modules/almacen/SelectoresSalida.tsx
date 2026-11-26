@@ -6,7 +6,7 @@ import { api } from '../../core/api/client';
 import { Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { formatSoles } from '../../core/lib/format';
-import { costoSolesArticulo, type ArticuloInv } from './api';
+import { costoSolesArticulo, fotoMini, type ArticuloInv } from './api';
 import { EscanerCodigo } from './EscanerCodigo';
 import { separarLote } from './codigosLote';
 import './selectorArticulo.css';
@@ -222,7 +222,7 @@ export function ArticuloSelector({ value, articulos, onSelect, invalido, id, con
               return (
                 <button key={a.id} type="button" role="option" aria-selected={(a.descripcion || a.articulo) === value}
                   onClick={() => elegir(a)} className="sal-art-opcion" data-seleccionado={(a.descripcion || a.articulo) === value || undefined}>
-                  <Miniatura url={a.imagen_url} nombre={a.articulo} />
+                  <Miniatura url={fotoMini(a.imagen_url) ?? null} nombre={a.articulo} />
                   <span className="sal-art-opcion__texto">
                     <span className="sal-art-opcion__nombre">{a.descripcion || a.articulo}</span>
                     <span className="sal-art-opcion__meta">
