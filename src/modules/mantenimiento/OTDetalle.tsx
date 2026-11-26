@@ -27,7 +27,7 @@ import { CerrarOTSheet, PausarOTSheet } from './OTAcciones';
 import '../../core/ui/botonesIcono.css';
 import './ot-detalle.css';
 import { TrabajoOTSheet } from './TrabajoOTSheet';
-import { OTServiciosTerceros } from './OTServiciosTerceros';
+import { OTServiciosTerceros, type ServicioOt } from './OTServiciosTerceros';
 import { EditarFechasSheet, EditarKmSheet, EditarOTSheet, EditarSolicitudSheet } from './OTEditar';
 import { SalidaFormulario } from '../almacen/SalidaFormulario';
 import { pdfOt, pdfPlantillaInspeccion, pdfPlantillaLlantas, pdfPlantillaOt } from './otPdf';
@@ -341,7 +341,16 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
       const items = serviciosSalida(s);
       return { id: s.id, fecha: s.fecha, items, total: items.reduce((n, it) => n + (Number(it.importe) || 0), 0) };
     });
-  const costos = costosOT(ot, trabajosTodos ?? [], materiales ?? []);
+  const costosBase = costosOT(ot, trabajosTodos ?? [], materiales ?? []);
+  // Servicios de terceros agregados a la OT (misma consulta que la pestaña Servicios, así comparten caché)
+  const { data: serviciosOT } = useQuery<ServicioOt[]>({
+    queryKey: ['mant', 'ot-servicios', ot.ticket_entrada || ot.id_ot],
+    enabled: !!(ot.ticket_entrada || ot.id_ot),
+    queryFn: () => api<{ data: ServicioOt[] }>(`/taller/ot-servicios?ot=${encodeURIComponent(ot.ticket_entrada || ot.id_ot)}`).then(r => r.data ?? []),
+    staleTime: 20_000,
+  });
+  const servicios = (serviciosOT ?? []).reduce((a, x) => a + (Number(x.total_pen) || 0), 0);
+  const costos = { ...costosBase, servicios, otros: Math.max(0, costosBase.total - costosBase.manoObra - costosBase.repuestos - servicios) };
   const pausas = pausasDe(ot);
   const pausaActiva = pausas.find(p => !p.fin) ?? null;
   const limitePausas = pausas.length >= 3;
@@ -869,11 +878,16 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
             <span className="ot-bento__valor t-numeric">{soles(costos.manoObra)}</span>
             <span className="ot-bento__pie">{trabajos.length} trabajo{trabajos.length === 1 ? '' : 's'}</span>
           </div>
+          <div className="ot-bento__card">
+            <span className="ot-bento__etiqueta">Servicios de terceros</span>
+            <span className="ot-bento__valor t-numeric">{soles(costos.servicios)}</span>
+            <span className="ot-bento__pie">{(serviciosOT ?? []).length} servicio{(serviciosOT ?? []).length === 1 ? '' : 's'}</span>
+          </div>
           <div className="ot-bento__card ot-bento__card--total">
             <span className="ot-bento__etiqueta">Costo total de la OT</span>
             <span className="ot-bento__valor ot-bento__valor--total t-numeric">{soles(costos.total)}</span>
             <span className="ot-bento__pie">
-              Repuestos {soles(costos.repuestos)} + Mano de obra {soles(costos.manoObra)}
+              Repuestos {soles(costos.repuestos)} + Mano de obra {soles(costos.manoObra)} + Servicios {soles(costos.servicios)}
               {costos.otros > 0 ? ` + Otros ${soles(costos.otros)}` : ''}
             </span>
           </div>
