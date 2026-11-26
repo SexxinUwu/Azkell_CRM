@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { FileText, PackageCheck, Trash2 } from 'lucide-react';
-import { Pencil } from '../../core/ui/IconosArchivo';
+import { FilePdf, Pencil } from '../../core/ui/IconosArchivo';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Badge } from '../../core/ui/Display';
-import { MenuOtros } from '../../core/ui/MenuOtros';
 import { formatFechaHoraPe, formatSoles } from '../../core/lib/format';
 import { ETIQUETA_DESTINO, estadoSalida, type ArticuloInv, type ItemSalida, type SalidaInv } from './api';
 
@@ -131,12 +130,11 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
             <span className="sal-detalle__folio">{salida.id}</span>
           </div>
           <Badge tone={tono}>{estado}</Badge>
-          <div className="sal-detalle__menu">
-            <MenuOtros opciones={[
-              { label: 'Descargar PDF', onSelect: onPdf },
-              puedeEditar && { label: 'Editar', onSelect: onEditar },
-              puedeEliminar && { label: 'Eliminar', destructiva: true, separado: true, onSelect: onEliminar },
-            ]} />
+          {/* Acciones como íconos de color; el nombre aparece al pasar el mouse */}
+          <div className="sal-detalle__menu oc-acciones oc-acciones--sinfondo">
+            <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Descargar PDF" aria-label="Descargar PDF" onClick={onPdf}><FilePdf size={17} /></button>
+            {puedeEditar && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--azul" data-tip="Editar" aria-label="Editar" onClick={onEditar}><Pencil size={17} /></button>}
+            {puedeEliminar && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton oc-acciones__boton--rojo" data-tip="Eliminar" aria-label="Eliminar" onClick={onEliminar}><Trash2 size={17} /></button>}
           </div>
         </div>
 

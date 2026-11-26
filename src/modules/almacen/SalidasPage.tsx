@@ -2,7 +2,7 @@ import { mantenerUrl } from '../../core/lib/blobUrl';
 import '../../core/ui/acciones-iconos.css';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleCheck, ClipboardList, Coins, Eye, PackageCheck, PackageMinus, Plus, RefreshCw, SearchX, Trash2 } from 'lucide-react';
+import { CircleCheck, ClipboardList, Coins, Eye, PackageCheck, PackageMinus, Plus, RefreshCw, ScanLine, SearchX, Trash2 } from 'lucide-react';
 import { FileSpreadsheet, FilePdf } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
@@ -29,6 +29,7 @@ import {
   useInventario, useSalidas, type EstadoSalida, type ItemSalida, type SalidaInv,
 } from './api';
 import { SalidaFormulario } from './SalidaFormulario';
+import { PickingSheet } from './PickingSheet';
 import { SinStockDialogo, sinStockDe, type ArticuloSinStock } from './SinStockDialogo';
 import { nombreSolicitante, SalidaDetalle } from './SalidaDetalle';
 import { AnularDialogo, DespacharDialogo } from './SalidaDialogos';
@@ -111,6 +112,7 @@ export function SalidasPage() {
   const [formulario, setFormulario] = useState<{ salida: SalidaInv | null } | null>(null);
   const [despacho, setDespacho] = useState<{ id: number; itemIds: number[]; mensaje: ReactNode } | null>(null);
   const [despachando, setDespachando] = useState(false);
+  const [picking, setPicking] = useState(false);
   const [sinStock, setSinStock] = useState<ArticuloSinStock[] | null>(null);
   const [anulandoId, setAnulandoId] = useState<number | null>(null);
   const [anulando, setAnulando] = useState(false);
@@ -321,6 +323,9 @@ export function SalidasPage() {
                 <RefreshCw size={17} />
               </button>
             </div>
+            {puedeEditar && salidas.some(s => estadoSalida(s) === 'Pendiente') && (
+              <Button variant="secondary" icon={<ScanLine size={16} />} onClick={() => setPicking(true)}>Picking</Button>
+            )}
             {puedeCrear && (
               <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ salida: null })}>
                 Nueva salida
@@ -511,6 +516,8 @@ export function SalidasPage() {
           void refrescar();
         }}
       />
+
+      <PickingSheet open={picking} onClose={() => setPicking(false)} salidas={salidas} inventario={inventario ?? []} usuario={usuario} onTerminado={() => { void refrescar(); }} />
 
       <DespacharDialogo
         open={!!despacho}
