@@ -6,3 +6,17 @@
 .ots-mono { font-family: var(--font-mono); white-space: nowrap; }
 .ots-num { text-align: right; font-weight: 700; white-space: nowrap; }
 .ots-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* Elegir servicios para agregar: tabla con la casilla en la misma fila */
+.ots-tabla-wrap--elegir { max-height: min(60vh, 28rem); overflow: auto; scrollbar-width: none; }
+.ots-tabla-wrap--elegir::-webkit-scrollbar { display: none; }
+.ots-tabla--elegir { min-width: 520px; }
+.ots-tabla--elegir thead th { position: sticky; top: 0; z-index: 1; }
+.ots-tabla--elegir tbody tr { cursor: pointer; transition: background .12s; }
+.ots-tabla--elegir tbody tr:hover { background: var(--fill-subtle); }
+.ots-tabla--elegir .ots-fila--on, .ots-tabla--elegir .ots-fila--on:hover { background: var(--accent-tint); }
+.ots-check { width: 40px; text-align: center; }
+.ots-check input { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; }
+.ots-prov { display: flex; flex-direction: column; gap: 1px; }
+.ots-prov strong { font-size: 0.8125rem; line-height: 1.25; }
+.ots-prov small { font-size: 0.6875rem; color: var(--label-2); }

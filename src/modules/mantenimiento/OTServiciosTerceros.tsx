@@ -40,6 +40,8 @@ export function OTServiciosTerceros({ ot, puedeEditar }: { ot: string; puedeEdit
     staleTime: 0,
   });
 
+  const todasMarcadas = (disponibles.data ?? []).length > 0 && seleccion.length === (disponibles.data ?? []).length;
+
   const refrescar = async () => {
     await qc.invalidateQueries({ queryKey: ['mant', 'ot-servicios'] });
     await qc.invalidateQueries({ queryKey: ['mant', 'ordenes-trabajo'] });
@@ -110,26 +112,40 @@ export function OTServiciosTerceros({ ot, puedeEditar }: { ot: string; puedeEdit
         </div>
       )}
 
-      <Sheet open={agregando} onClose={() => !ocupado && setAgregando(false)} title={`Agregar servicios a la OT ${ot}`}
+      <Sheet open={agregando} onClose={() => !ocupado && setAgregando(false)} title={`Agregar servicios a la OT ${ot}`} ancho
         footer={<><Button variant="secondary" onClick={() => setAgregando(false)} disabled={ocupado}>Cancelar</Button>
           <Button variant="primary" icon={<Check size={15} />} onClick={agregar} loading={ocupado} disabled={seleccion.length === 0}>Agregar {seleccion.length || ''}</Button></>}>
         {disponibles.isLoading ? <PageLoader /> : disponibles.isError ? <Notice tone="error">{errorMessage(disponibles.error)}</Notice> : (disponibles.data ?? []).length === 0 ? (
           <EmptyState icon={<ScrollText size={22} />} title="Nada para agregar">No hay OC de servicio procesadas sin agregar a una OT.</EmptyState>
         ) : (
-          <div className="tarjeta__lista">
-            {(disponibles.data ?? []).map(s => {
-              const marcado = seleccion.includes(s.id);
-              return (
-                <label key={s.id} className="dato" style={{ alignItems: 'center', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={marcado} onChange={() => setSeleccion(prev => (marcado ? prev.filter(x => x !== s.id) : [...prev, s.id]))} style={{ width: 18, height: 18, accentColor: 'var(--accent)' }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.875rem' }}>{s.proveedor_nombre || 'Sin proveedor'}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>OC {s.id} · {dia(s.fecha)} · {s.estado}{s.ot_id ? ` · sugerida para ${s.ot_id}` : ''}</div>
-                  </div>
-                  <span className="t-numeric">{monto(s)}</span>
-                </label>
-              );
-            })}
+          <div className="ots-tabla-wrap ots-tabla-wrap--elegir">
+            <table className="ots-tabla ots-tabla--elegir">
+              <thead>
+                <tr>
+                  <th className="ots-check">
+                    <input type="checkbox" aria-label="Elegir todas" checked={todasMarcadas} ref={el => { if (el) el.indeterminate = seleccion.length > 0 && !todasMarcadas; }}
+                      onChange={() => setSeleccion(todasMarcadas ? [] : (disponibles.data ?? []).map(s => s.id))} />
+                  </th>
+                  <th>Proveedor</th><th>OC</th><th>Fecha</th><th>Estado</th><th className="ots-num">Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(disponibles.data ?? []).map(s => {
+                  const marcado = seleccion.includes(s.id);
+                  const alternar = () => setSeleccion(prev => (marcado ? prev.filter(x => x !== s.id) : [...prev, s.id]));
+                  return (
+                    <tr key={s.id} className={marcado ? 'ots-fila--on' : undefined} onClick={alternar}>
+                      <td className="ots-check"><input type="checkbox" aria-label={`Elegir ${s.id}`} checked={marcado} onChange={alternar} onClick={e => e.stopPropagation()} /></td>
+                      <td className="ots-prov"><strong>{s.proveedor_nombre || 'Sin proveedor'}</strong>{s.ot_id ? <small>Sugerida para {s.ot_id}</small> : null}</td>
+                      <td className="ots-mono">{s.id}</td>
+                      <td className="ots-mono">{dia(s.fecha)}</td>
+                      <td>{s.estado}</td>
+                      <td className="ots-num ots-mono">{monto(s)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </Sheet>
