@@ -33,3 +33,8 @@
 .ots-asignada { display: flex; flex-direction: column; gap: 1px; font-size: 0.75rem; font-weight: 700; color: var(--red-ink, #b4232a); text-decoration: none; }
 .ots-asignada small { font-size: 0.6875rem; font-weight: 500; color: var(--label-2); }
 .ots-tabla--elegir { min-width: 760px; }
+.ots-placa { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap; font-size: 0.8125rem; color: var(--label-2); }
+.ots-placa b { color: var(--label); }
+.ots-placa__otras { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--label-2); cursor: pointer; }
+.ots-placa__otras input { width: 16px; height: 16px; accent-color: var(--accent); }
+.ots-otra { color: var(--orange-ink, #b45309) !important; font-weight: 700; }
