@@ -636,7 +636,7 @@
 @media (min-width: 901px) { .tg-side, .tg-geo { top: 156px; } }
 
 /* Celular: los paneles de Recorrido y de Geocercas ocupan todo el ancho, sin dejar espacio a la derecha */
-@media (max-width: 900px) { .tg .tg-side--rec, .tg .tg-geo { left: 8px; right: 8px; width: auto; max-width: none; } }
+@media (max-width: 900px) { .tg .tg-side--rec, .tg .tg-geo { left: 0; right: 0; width: auto; max-width: none; } }
 
 /* ═══ Celular: hojas que llegan hasta el borde de la pantalla, filas de unidades compactas y sin avisos flotantes ═══ */
 @media (max-width: 900px) {
