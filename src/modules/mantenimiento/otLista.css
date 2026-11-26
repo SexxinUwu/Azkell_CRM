@@ -1,28 +1,28 @@
 /* Lista de órdenes de trabajo: tabla compacta con tres tamaños (reducir / agrandar) */
-.ot-tabla .tabla-redim__celda { vertical-align: middle; }
-.ot-tabla--t0 { font-size: 0.75rem; }
-.ot-tabla--t0 .tabla-redim__celda { padding-top: 3px; padding-bottom: 3px; }
-.ot-tabla--t1 { font-size: 0.8125rem; }
-.ot-tabla--t1 .tabla-redim__celda { padding-top: 6px; padding-bottom: 6px; }
-.ot-tabla--t2 { font-size: 0.9375rem; }
-.ot-tabla--t2 .tabla-redim__celda { padding-top: 11px; padding-bottom: 11px; }
-.ot-fila { cursor: pointer; }
-.ot-fila:hover td { background: var(--fill-subtle); }
-.ot-celda-ot { font-weight: 700; color: var(--accent); white-space: nowrap; }
-.ot-celda-fecha { color: var(--label-2); white-space: nowrap; }
-.ot-celda-tipo { font-weight: 600; }
-.ot-celda-motivo { color: var(--label-2); }
-.ot-celda-costo { font-weight: 700; color: var(--green-ink); white-space: nowrap; }
-.ot-acciones { display: inline-flex; gap: 4px; align-items: center; }
-.ot-tabla--t0 .ot-acciones .btn { min-height: 26px; padding: 0 8px; font-size: 0.6875rem; }
-.ot-ver { background: none; border: 0; cursor: pointer; color: var(--accent); display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; }
-.ot-ver:hover { background: var(--accent-tint); }
-.ot-cols { display: flex; flex-direction: column; }
-.ot-cols__fila { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 0.5px solid var(--separator); cursor: pointer; font-size: 0.9375rem; }
-.ot-cols__fila--fija { opacity: .6; cursor: default; }
-.ot-cols__fila input { width: 18px; height: 18px; accent-color: var(--accent); }
-.ot-cols__fila small { margin-left: auto; color: var(--label-3); font-size: 0.75rem; }
-.ot-barra { max-width: 34rem; }
-.ot-barra .placas-toolbar { padding: 0; }
-.ot-rango { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
-.ot-rango label { display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; font-weight: 600; color: var(--label-2); }
+.otl-tabla .tabla-redim__celda { vertical-align: middle; }
+.otl-tabla--t0 { font-size: 0.75rem; }
+.otl-tabla--t0 .tabla-redim__celda { padding-top: 3px; padding-bottom: 3px; }
+.otl-tabla--t1 { font-size: 0.8125rem; }
+.otl-tabla--t1 .tabla-redim__celda { padding-top: 6px; padding-bottom: 6px; }
+.otl-tabla--t2 { font-size: 0.9375rem; }
+.otl-tabla--t2 .tabla-redim__celda { padding-top: 11px; padding-bottom: 11px; }
+.otl-fila { cursor: pointer; }
+.otl-fila:hover td { background: var(--fill-subtle); }
+.otl-celda-ot { font-weight: 700; color: var(--accent); white-space: nowrap; }
+.otl-celda-fecha { color: var(--label-2); white-space: nowrap; }
+.otl-celda-tipo { font-weight: 600; }
+.otl-celda-motivo { color: var(--label-2); }
+.otl-celda-costo { font-weight: 700; color: var(--green-ink); white-space: nowrap; }
+.otl-acciones { display: inline-flex; gap: 4px; align-items: center; }
+.otl-tabla--t0 .otl-acciones .btn { min-height: 26px; padding: 0 8px; font-size: 0.6875rem; }
+.otl-ver { background: none; border: 0; cursor: pointer; color: var(--accent); display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; }
+.otl-ver:hover { background: var(--accent-tint); }
+.otl-cols { display: flex; flex-direction: column; }
+.otl-cols__fila { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 0.5px solid var(--separator); cursor: pointer; font-size: 0.9375rem; }
+.otl-cols__fila--fija { opacity: .6; cursor: default; }
+.otl-cols__fila input { width: 18px; height: 18px; accent-color: var(--accent); }
+.otl-cols__fila small { margin-left: auto; color: var(--label-3); font-size: 0.75rem; }
+.otl-barra { max-width: 34rem; }
+.otl-barra .placas-toolbar { padding: 0; }
+.otl-rango { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
+.otl-rango label { display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; font-weight: 600; color: var(--label-2); }
