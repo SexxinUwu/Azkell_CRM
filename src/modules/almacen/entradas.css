@@ -365,3 +365,8 @@ table[aria-label="Órdenes de compra"] tbody tr:hover td { background: color-mix
 .page--fill .oc-cuerpo { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 .page--fill .oc-cuerpo > .tabla-redim { flex: 1 1 auto; min-height: 0; max-height: none !important; scrollbar-width: none; -ms-overflow-style: none; }
 .page--fill .oc-cuerpo > .tabla-redim::-webkit-scrollbar { display: none; }
+
+/* Orden de servicio: dos interruptores, «Con OT» y «Sin OT», con su nombre debajo */
+.oc-ot-switches { display: flex; align-items: flex-start; gap: var(--s-8, 32px); padding: 4px 2px; }
+.oc-ot-switch { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
+.oc-ot-switch > span { font-size: 0.8125rem; font-weight: 600; color: var(--label); }

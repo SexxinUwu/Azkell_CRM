@@ -8,6 +8,7 @@ import { Field, TextInput } from '../../core/ui/Field';
 import { Combobox, type ComboboxOption } from '../../core/ui/Combobox';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
+import { Switch } from '../../core/ui/Switch';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
@@ -659,8 +660,17 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
                 <>
                   <Field label="Orden de trabajo" wide>
                     {() => (
-                      <SegmentedControl<'con' | 'sin'> label="Orden de trabajo" value={conOt ? 'con' : 'sin'} onChange={cambiarConOt}
-                        options={[{ value: 'con', label: 'Con OT' }, { value: 'sin', label: 'Sin OT' }]} />
+                      // Dos interruptores: siempre hay uno encendido. Encender uno apaga el otro, y apagar el encendido enciende el otro.
+                      <div className="oc-ot-switches" role="group" aria-label="Orden de trabajo">
+                        <label className="oc-ot-switch">
+                          <Switch label="Con OT" checked={conOt} onChange={on => cambiarConOt(on ? 'con' : 'sin')} />
+                          <span>Con OT</span>
+                        </label>
+                        <label className="oc-ot-switch">
+                          <Switch label="Sin OT" checked={!conOt} onChange={on => cambiarConOt(on ? 'sin' : 'con')} />
+                          <span>Sin OT</span>
+                        </label>
+                      </div>
                     )}
                   </Field>
                   {conOt ? (
