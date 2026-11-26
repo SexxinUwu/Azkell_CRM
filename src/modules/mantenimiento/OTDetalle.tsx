@@ -834,7 +834,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
 
       {seccion === 'terceros' && (
         <>
-          <OTServiciosTerceros ot={ot.ticket_entrada || ot.id_ot} puedeEditar={puedeEditar} />
+          <OTServiciosTerceros ot={ot.ticket_entrada || ot.id_ot} puedeEditar={puedeEditar} cerrada={['finalizado', 'cerrada', 'cerrado'].includes(String(ot.estado ?? '').toLowerCase())} />
           {valesServicio.length > 0 && (
             <div>
               <p className="tarjeta__grupo-titulo">Servicios registrados en vales ({valesServicio.length})</p>

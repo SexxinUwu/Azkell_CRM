@@ -194,8 +194,8 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 `SELECT id, fecha, proveedor_nombre, moneda, total_pen, estado, ot_id
                  FROM entradas_inv
                  WHERE LOWER(tipo_orden) = 'orden de servicio' AND LOWER(estado) IN (?)
-                   AND (ot_id IS NULL OR ot_id = '' OR (ot_id = ? AND ot_servicio_agregado = 0))
-                 ORDER BY fecha DESC LIMIT 200`, [ESTADOS_PROCESADO, req.query.ot || '']);
+                   AND (ot_id IS NULL OR ot_id = '' OR ot_servicio_agregado = 0)
+                 ORDER BY fecha DESC LIMIT 200`, [ESTADOS_PROCESADO]);
             res.json({ ok: true, data: rows });
         } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
     });
@@ -207,7 +207,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             const [r] = await (req.db || db).promise().query(
                 `UPDATE entradas_inv SET ot_id = ?, ot_servicio_agregado = 1
                  WHERE id IN (?) AND LOWER(tipo_orden) = 'orden de servicio'
-                   AND LOWER(estado) IN (?) AND (ot_id IS NULL OR ot_id = '' OR (ot_id = ? AND ot_servicio_agregado = 0))`, [ot, ids, ESTADOS_PROCESADO, ot]);
+                   AND LOWER(estado) IN (?) AND (ot_id IS NULL OR ot_id = '' OR ot_servicio_agregado = 0)`, [ot, ids, ESTADOS_PROCESADO]);
             if (logAudit) logAudit(req, 'TALLER', 'AGREGAR_SERVICIO_OT', `Agregó ${r.affectedRows} OC de servicio a la OT ${ot}`);
             res.json({ ok: true, agregados: r.affectedRows });
         } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
@@ -216,6 +216,11 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         const ot = String(req.query.ot || '').trim();
         if (!ot) return res.status(400).json({ ok: false, error: 'Indica la OT' });
         try {
+            // En una OT cerrada no se quita ningún servicio: el costo ya quedó firmado
+            const [ots] = await (req.db || db).promise().query('SELECT estado FROM ordenes_trabajo WHERE id_ot = ? OR ticket_entrada = ? LIMIT 1', [ot, ot]);
+            if (ots[0] && ['finalizado', 'cerrada', 'cerrado'].includes(String(ots[0].estado || '').toLowerCase())) {
+                return res.status(409).json({ ok: false, error: 'La OT está cerrada: no se pueden quitar sus servicios' });
+            }
             const [r] = await (req.db || db).promise().query(
                 `UPDATE entradas_inv SET ot_servicio_agregado = 0
                  WHERE id = ? AND ot_id = ? AND LOWER(tipo_orden) = 'orden de servicio'`, [req.params.id, ot]);

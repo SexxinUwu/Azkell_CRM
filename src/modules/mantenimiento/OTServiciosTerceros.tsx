@@ -20,7 +20,7 @@ const n = (v: unknown) => Number(v) || 0;
 const monto = (s: ServicioOt) => `${/DOL/i.test(String(s.moneda ?? '')) ? 'US$' : 'S/'} ${n(s.total_pen).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const dia = (f: string | null) => (f ? String(f).slice(0, 10) : '—');
 
-export function OTServiciosTerceros({ ot, puedeEditar }: { ot: string; puedeEditar: boolean }) {
+export function OTServiciosTerceros({ ot, puedeEditar, cerrada = false }: { ot: string; puedeEditar: boolean; cerrada?: boolean }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [agregando, setAgregando] = useState(false);
@@ -113,7 +113,7 @@ export function OTServiciosTerceros({ ot, puedeEditar }: { ot: string; puedeEdit
                   <td className="ots-mono">{s.numero_operacion || '—'}</td>
                   <td className="ots-num ots-mono">{monto(s)}</td>
                   <td>
-                    {puedeEditar && <Button variant="plain" iconOnly icon={<Trash2 size={14} />} aria-label={`Quitar ${s.id}`} title="Quitar de la OT" onClick={() => setQuitar(s)} />}
+                    {puedeEditar && !cerrada && <Button variant="plain" iconOnly icon={<Trash2 size={14} />} aria-label={`Quitar ${s.id}`} title="Quitar de la OT" onClick={() => setQuitar(s)} />}
                   </td>
                 </tr>
               ))}
@@ -165,7 +165,7 @@ export function OTServiciosTerceros({ ot, puedeEditar }: { ot: string; puedeEdit
       </Sheet>
 
       <ConfirmSheet open={!!quitar} onClose={() => !ocupado && setQuitar(null)} loading={ocupado} onConfirm={confirmarQuitar}
-        title={`¿Quitar la OC ${quitar?.id ?? ''} de la OT?`} message="Deja de sumar al costo de la OT. Puedes volver a agregarla cuando quieras." confirmLabel="Quitar" />
+        title={`¿Quitar la OC ${quitar?.id ?? ''} de la OT?`} message="Deja de sumar al costo de la OT y queda libre para agregarla a otra OT." confirmLabel="Quitar" />
     </div>
   );
 }
