@@ -89,3 +89,25 @@
 .sdt-pie__icono { width: 40px; height: 40px; border-radius: 12px; border: 0; display: grid; place-items: center; cursor: pointer; background: var(--fill); }
 .sdt-pie__icono--rojo { color: #dc2626; background: rgba(255, 59, 48, .12); }
 .sdt-pie__icono--verde { color: #16a34a; background: rgba(52, 199, 89, .16); }
+
+/* Cantidad al escanear */
+.sdt-cant { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; padding: 12px 14px; border-radius: var(--r-lg); background: var(--accent-tint); border: 1.5px solid var(--accent); }
+.sdt-cant p { margin: 0; font-size: 0.875rem; line-height: 1.3; }
+.sdt-cant small { color: var(--label-2); }
+.sdt-cant form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sdt-cant__input { width: 5.5rem; text-align: center; font-size: 1.25rem; font-weight: 800; }
+
+/* Teléfono: nombre a todo el ancho; cantidad y conformidad en la segunda fila */
+@media (max-width: 639px) {
+  .sdt-item { display: grid; grid-template-columns: 1.6rem minmax(0, 1fr) auto; grid-template-areas: "n cuerpo cuerpo" ". cant conf"; align-items: center; gap: 8px 8px; padding: 12px; }
+  .sdt-item__n { grid-area: n; align-self: start; }
+  .sdt-item__cuerpo { grid-area: cuerpo; }
+  .sdt-item__nombre { overflow-wrap: break-word; word-break: normal; }
+  .sdt-item__cant { grid-area: cant; flex-direction: row; align-items: baseline; gap: 6px; min-width: 0; }
+  .sdt-item__cant b { font-size: 1.25rem; }
+  .sdt-item__imp { margin: 0 0 0 auto; }
+  .sdt-conf { grid-area: conf; border-left: 0; padding-left: 0; }
+  .sdt-scan__barra { flex-wrap: nowrap; }
+  .sdt-pie__fila { flex-wrap: nowrap; gap: 6px; }
+  .sdt-pie__fila .btn { padding-inline: 12px; white-space: nowrap; }
+}

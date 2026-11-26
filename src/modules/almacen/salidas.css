@@ -185,3 +185,11 @@
 .sal-lista .oc-codigo { font-size: 0.8125rem; }
 .sal-lista .badge { font-size: 0.6875rem; padding: 1px 8px; }
 .sal-lista .sal-resp { font-size: 0.8125rem; }
+
+/* Teléfono: encabezado y barra de filtros en una sola línea */
+@media (max-width: 639px) {
+  .page-header__actions { flex-wrap: nowrap; justify-content: flex-start; width: 100%; gap: 6px; }
+  .page-header__actions .btn { white-space: nowrap; }
+  .page-header__actions .oc-acciones { flex: none; }
+  .sal-registros { display: none; }
+}

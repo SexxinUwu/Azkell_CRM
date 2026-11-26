@@ -363,7 +363,7 @@ export function SalidasPage() {
             <BarraFiltros busqueda={busqueda} onBusqueda={v => { setBusqueda(v); setPagina(1); }} placeholder="Folio, placa, OT, responsable o artículo" activos={filtrosActivos} onAbrirFiltros={() => setPanelFiltros(true)}>
               <SegmentedControl<Vista> label="Ver por" value={vista} onChange={v => { setVista(v); setPagina(1); }}
                 options={[{ value: 'salidas', label: 'Por salida' }, { value: 'articulos', label: 'Por artículo' }]} />
-              <span className="badge">{filtradas.length} {filtradas.length === 1 ? 'registro' : 'registros'}</span>
+              <span className="badge sal-registros">{filtradas.length} {filtradas.length === 1 ? 'registro' : 'registros'}</span>
             </BarraFiltros>
           </div>
           <HojaFiltros open={panelFiltros} onClose={() => setPanelFiltros(false)} activos={filtrosActivos} onLimpiar={limpiarFiltros} resultado={filtradas.length} unidad="salida">

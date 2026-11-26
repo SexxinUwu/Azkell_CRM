@@ -29,11 +29,12 @@ export function EscanerContinuo({ activo, onLeido }: { activo: boolean; onLeido:
         const formatos = w.Html5QrcodeSupportedFormats
           ? FORMATOS.map(f => w.Html5QrcodeSupportedFormats?.[f]).filter((f): f is number => typeof f === 'number')
           : undefined;
-        const lector = new w.Html5Qrcode(ID_LECTOR, { formatsToSupport: formatos, verbose: false });
+        const lector = new w.Html5Qrcode(ID_LECTOR, { formatsToSupport: formatos, verbose: false, experimentalFeatures: { useBarCodeDetector: true } });
         instancia.current = lector;
         await lector.start(
           { facingMode: 'environment' },
-          { fps: 15, qrbox: (ancho: number, alto: number) => ({ width: Math.min(ancho * 0.9, 420), height: Math.min(alto * 0.7, 150) }) },
+          // Sin cuadro de lectura: se lee en todo el encuadre (el código se puede poner en cualquier parte, no solo en una franja)
+          { fps: 15 },
           texto => {
             const codigo = texto.trim();
             const t = Date.now();

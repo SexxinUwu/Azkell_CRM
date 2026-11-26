@@ -19,7 +19,8 @@
 .pk-progreso__barra { height: 100%; border-radius: 99px; background: var(--green, #22a06b); transition: width .25s ease; }
 .pk-progreso__texto { margin: 0; font-size: 0.8125rem; color: var(--label-2); }
 .pk-camara { position: relative; border-radius: var(--r-lg); overflow: hidden; background: #000; }
-.pk-camara__video { width: 100%; min-height: 150px; max-height: 200px; }
+.pk-camara__video { width: 100%; min-height: 150px; }
+.pk-camara__video video { width: 100% !important; height: auto !important; max-height: 60vh; object-fit: cover; display: block; }
 .pk-camara__aviso { position: absolute; inset: auto 8px 8px 8px; margin: 0; padding: 6px 10px; border-radius: 8px; font-size: 0.75rem; background: rgba(0, 0, 0, .6); color: #fff; }
 .pk-camara__aviso--error { background: rgba(185, 28, 28, .85); }
 .pk-entrada { display: flex; gap: 8px; }

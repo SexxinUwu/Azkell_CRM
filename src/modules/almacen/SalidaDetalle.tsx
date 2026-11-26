@@ -96,8 +96,10 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
   const [manual, setManual] = useState('');
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null);
   const entrada = useRef<HTMLInputElement>(null);
+  /** Artículo recién escaneado esperando que se escriba la cantidad (como en caja: se escanea una vez y se teclea cuántos) */
+  const [pregunta, setPregunta] = useState<{ idx: number; lote: number | null; valor: string } | null>(null);
   useEffect(() => {
-    if (open) { setConf({}); setCamara(false); setLineaActiva(null); setAviso(null); setManual(''); }
+    if (open) { setConf({}); setCamara(false); setLineaActiva(null); setAviso(null); setManual(''); setPregunta(null); }
   }, [open, salida.id]);
 
   const filas = useMemo(() => items.map((it, idx) => {
@@ -164,19 +166,37 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
     const destino = lineaActiva != null ? filas[lineaActiva] : delArticulo.find(f => !f.completa);
     if (!destino) return error(`${delArticulo[0].it.descripcion || idArt} ya tiene conformidad.`);
     if (destino.completa) return error('Esa línea ya tiene conformidad.');
+    if (pregunta) return; // hay una cantidad por confirmar: se ignora la lectura
+    const falta = destino.cant - destino.c.recogido;
+    if (!m && falta > 1 + EPS) {
+      pitido(true); haptic('selection');
+      setPregunta({ idx: destino.idx, lote, valor: '1' });
+      setAviso(null);
+      return;
+    }
+    aplicar(destino.idx, lote, Math.min(cuantas, falta));
+  }
+
+  /** Suma unidades confirmadas a una línea (y a su lote si se escaneó etiqueta de lote) */
+  function aplicar(idx: number, lote: number | null, toma: number): boolean {
+    const destino = filas[idx];
+    const error = (t: string) => { pitido(false); haptic('warning'); setAviso({ ok: false, texto: t }); return false; };
+    if (!(toma > 0)) return error('Escribe una cantidad mayor que cero.');
+    const falta = destino.cant - destino.c.recogido;
+    if (toma > falta + EPS) return error(`Solo faltan ${cantidad(falta)} de este artículo.`);
     if (lote != null) {
       const l = destino.lotes?.find(x => x.numero === lote);
-      const usado = delArticulo.reduce((s, f) => s + (f.c.lotes[lote] || 0), 0);
+      const usado = filas.filter(f => f.it.inventario_id === destino.it.inventario_id).reduce((s, f) => s + (f.c.lotes[lote] || 0), 0);
       if (!l || l.saldo <= EPS) return error(`El lote ${lote} está agotado: no se puede usar.`);
-      if (usado + cuantas > l.saldo + EPS) return error(`El lote ${lote} solo tiene ${cantidad(Math.max(0, l.saldo - usado))} unidades disponibles.`);
+      if (usado + toma > l.saldo + EPS) return error(`El lote ${lote} solo tiene ${cantidad(Math.max(0, l.saldo - usado))} unidades disponibles.`);
     }
-    const toma = Math.min(cuantas, destino.cant - destino.c.recogido);
     pitido(true); haptic('success');
     setConf(prev => {
-      const c = prev[destino.idx] ?? { recogido: 0, lotes: {} };
-      return { ...prev, [destino.idx]: { recogido: c.recogido + toma, lotes: lote != null ? { ...c.lotes, [lote]: (c.lotes[lote] || 0) + toma } : c.lotes } };
+      const c = prev[idx] ?? { recogido: 0, lotes: {} };
+      return { ...prev, [idx]: { recogido: c.recogido + toma, lotes: lote != null ? { ...c.lotes, [lote]: (c.lotes[lote] || 0) + toma } : c.lotes } };
     });
-    setAviso({ ok: true, texto: `${destino.it.descripcion || idArt}${lote != null ? ` · Lote ${lote}` : ''} · ${cantidad(destino.c.recogido + toma)} de ${cantidad(destino.cant)}` });
+    setAviso({ ok: true, texto: `${destino.it.descripcion || destino.it.inventario_id}${lote != null ? ` · Lote ${lote}` : ''} · ${cantidad(destino.c.recogido + toma)} de ${cantidad(destino.cant)}` });
+    return true;
   }
 
   function despachar() {
@@ -275,6 +295,24 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
               {aviso && <p className={`sdt-aviso ${aviso.ok ? 'sdt-aviso--ok' : 'sdt-aviso--error'}`} role="status">{aviso.texto}</p>}
             </div>
           )}
+
+          {pregunta && (() => {
+            const f = filas[pregunta.idx];
+            const falta = f.cant - f.c.recogido;
+            const confirmar = () => { if (aplicar(pregunta.idx, pregunta.lote, parseFloat(pregunta.valor.replace(',', '.')))) setPregunta(null); };
+            return (
+              <div className="sdt-cant" role="dialog" aria-label="Cantidad">
+                <p><b>{f.it.descripcion || f.it.inventario_id}</b>{pregunta.lote != null ? ` · Lote ${pregunta.lote}` : ''}<br /><small>¿Cuántas unidades? Faltan {cantidad(falta)} de {cantidad(f.cant)}</small></p>
+                <form onSubmit={e => { e.preventDefault(); confirmar(); }}>
+                  <input className="input sdt-cant__input" autoFocus inputMode="decimal" value={pregunta.valor} onFocus={e => e.currentTarget.select()}
+                    onChange={e => setPregunta({ ...pregunta, valor: e.target.value })} aria-label="Cantidad" />
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setPregunta({ ...pregunta, valor: String(falta) })}>Todo ({cantidad(falta)})</Button>
+                  <Button type="submit" variant="primary" size="sm" icon={<Check size={15} />}>Confirmar</Button>
+                  <Button type="button" variant="plain" size="sm" onClick={() => setPregunta(null)}>Cancelar</Button>
+                </form>
+              </div>
+            );
+          })()}
 
           {items.length === 0 && <p className="sdt-vacio">No hay ítems registrados en esta salida.</p>}
           <ol className="sdt-items">
