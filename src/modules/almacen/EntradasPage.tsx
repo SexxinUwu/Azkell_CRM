@@ -449,7 +449,7 @@ export function EntradasPage() {
   const soloDetalle = !!seleccionada;
 
   return (
-    <Page>
+    <Page fill={esTabla && !soloDetalle}>
       {!soloDetalle && (
         <PageHeader
           eyebrow="Almacén"
@@ -490,7 +490,7 @@ export function EntradasPage() {
           {puedeCrear ? <>Registra la primera con <strong>Nueva orden</strong>.</> : 'Cuando almacén registre compras, aparecerán aquí.'}
         </EmptyState>
       ) : (
-        <div>
+        <div className="oc-cuerpo">
           {/* Totales del filtro */}
           {/* Totales del filtro */}
           <div className="inv-kpis" style={{ marginBottom: 'var(--s-4)' }}>
@@ -537,7 +537,7 @@ export function EntradasPage() {
             </EmptyState>
           ) : esTabla ? (
             <>
-              <TablaRedimensionable id="almacen-ordenes-compra-v2" columnas={columnas} ariaLabel="Órdenes de compra" altoMax="68vh" className="oc-tabla">
+              <TablaRedimensionable id="almacen-ordenes-compra-v2" columnas={columnas} ariaLabel="Órdenes de compra" altoMax="68vh" className="oc-tabla tabla-redim--compacta oc-lista">
                 {filas.map(f => (
                   <FilaOC key={f.key} orden={f.orden} item={f.item} vista={vista} {...acciones} />
                 ))}
