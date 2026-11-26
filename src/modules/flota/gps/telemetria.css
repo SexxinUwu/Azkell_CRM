@@ -630,3 +630,6 @@
   .tg .tg-tool { width: 40px; height: 40px; min-height: 40px; }
   .tg .tg-alerts { top: calc(env(safe-area-inset-top) + 180px); }
 }
+
+/* Los paneles de la izquierda empiezan debajo de la tarjeta de título (ya no hay fila de tarjetas de resumen que los separe) */
+@media (min-width: 901px) { .tg-side, .tg-geo { top: 156px; } }
