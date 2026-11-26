@@ -237,6 +237,8 @@ function urlsDeSustento(valor) {
 module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     const { audit: auditar, actorFrom: actorDe, diff } = require('../services/auditoria');
 const { asignarServicioAOT } = require('../services/ot_servicios');
+const lotesInv = require('../services/almacen_lotes');
+const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
 
     function getDb(req) {
         return (req && req.db) ? req.db : db;
@@ -1046,6 +1048,43 @@ const { asignarServicioAOT } = require('../services/ot_servicios');
         });
     });
 
+    /** Deja los lotes de los artículos iguales a su stock real (crea el Lote 1 si no tienen; abre un lote de ajuste si falta o descuenta si sobra) */
+    async function sincronizarLotesDe(tdb, ids) {
+        const resumen = { inicial: 0, ajuste_mas: 0, ajuste_menos: 0, igual: 0, sin_stock: 0 };
+        try {
+            const p = promesa(tdb);
+            const lista = [...new Set((ids || []).map(String).filter(i => i && !/^SERV/i.test(i)))];
+            for (let k = 0; k < lista.length; k += 200) {
+                const sql = _stockSQL.replace(/WHERE i\.activo=1\s*ORDER BY i\.id\s*$/, 'WHERE i.activo=1 AND i.id IN (?) ORDER BY i.id');
+                const [filas] = await p.query(sql, [lista.slice(k, k + 200)]);
+                for (const f of filas) {
+                    const r = await lotesInv.sincronizarLotes(p, { inventario_id: f.id, stock: Number(f.stock_actual) || 0, costo: Number(f.costo_soles) || Number(f.costo_referencial) || 0 });
+                    resumen[r.accion] = (resumen[r.accion] || 0) + 1;
+                }
+            }
+        } catch (e) { console.error('[lotes sincronizar]', e.message); }
+        return resumen;
+    }
+
+    // Lotes de un artículo (los agotados solo con ?agotados=1)
+    router.get('/inventario/:id/lotes', async (req, res) => {
+        try {
+            const p = promesa(getDb(req));
+            const todos = await lotesInv.lotesDe(p, req.params.id);
+            const verAgotados = req.query.agotados === '1';
+            res.json({ ok: true, lotes: todos.filter(l => verAgotados || l.saldo > 0), agotados: todos.filter(l => l.saldo <= 0).length });
+        } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    // Sincronizar lotes con el stock (crea el Lote 1 de lo que aún no tiene lotes). Sin ids, recorre todo el inventario con stock.
+    router.post('/inventario/lotes/sincronizar', async (req, res) => {
+        try {
+            let ids = Array.isArray(req.body.ids) ? req.body.ids : null;
+            if (!ids) { const [r] = await promesa(getDb(req)).query("SELECT id FROM inventario WHERE activo = 1 AND id NOT LIKE 'SERV%'"); ids = r.map(x => x.id); }
+            res.json({ ok: true, articulos: ids.length, resumen: await sincronizarLotesDe(getDb(req), ids) });
+        } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
     // Asignar anaquel (y, si se indica, ubicación) a varios artículos a la vez. Solo cambia lo que se manda; no borra nada.
     router.post('/inventario/bulk-ubicacion', (req, res) => {
         const ids = Array.isArray(req.body.ids) ? [...new Set(req.body.ids.map(String).filter(Boolean))] : [];
@@ -1122,11 +1161,11 @@ const { asignarServicioAOT } = require('../services/ot_servicios');
                         logAudit(usuario, 'almacen', 'REGULARIZÓ', `Stock ajustado a ${stockFisico} (Motivo: ${motivo || 'Regularización física'}) para ${id}`);
                     }
 
-                    res.json({
+                    sincronizarLotesDe(targetDb, [id]).then(() => res.json({
                         ok: true,
                         stock_regularizado: stockFisico,
                         fecha_regularizacion: peruNow
-                    });
+                    }));
                 }
             );
         });
@@ -2170,7 +2209,7 @@ const { asignarServicioAOT } = require('../services/ot_servicios');
         // 0. Llantas que dieron de alta las recepciones de esta OC: se quitan solo si ninguna se ha movido
         try {
             const [recsOc] = await (typeof tdb.promise === 'function' ? tdb.promise() : tdb).query('SELECT id FROM recepciones_oc WHERE oc_id = ?', [id]);
-            for (const r of recsOc) await borrarLlantasDeRecepcion(tdb, r.id);
+            for (const r of recsOc) { await borrarLlantasDeRecepcion(tdb, r.id); try { await lotesInv.quitarRecepcion(promesa(tdb), r.id); } catch (eLote) { console.error('[lotes]', eLote.message); } }
         } catch (errLl) {
             return res.status(409).json({ error: errLl.message });
         }
@@ -2224,7 +2263,7 @@ const { asignarServicioAOT } = require('../services/ot_servicios');
         if (String(estado).toLowerCase().startsWith('anul')) {
             try {
                 const [recsAnul] = await (typeof tdb.promise === 'function' ? tdb.promise() : tdb).query('SELECT id FROM recepciones_oc WHERE oc_id = ?', [id]);
-                for (const r of recsAnul) await borrarLlantasDeRecepcion(tdb, r.id);
+                for (const r of recsAnul) { await borrarLlantasDeRecepcion(tdb, r.id); try { await lotesInv.quitarRecepcion(promesa(tdb), r.id); } catch (eLote) { console.error('[lotes]', eLote.message); } }
             } catch (errLl) {
                 return res.status(409).json({ error: errLl.message });
             }
@@ -2867,6 +2906,7 @@ const { asignarServicioAOT } = require('../services/ot_servicios');
                 ['Anulado', motivoFinal, id], (err, result) => {
                     if (err) return res.status(500).json({ error: err.message });
                     if (!result.affectedRows) return res.status(404).json({ error: 'No encontrado' });
+                    lotesInv.devolverSalida(promesa(targetDb), id).catch(eLote => console.error('[lotes anular salida]', eLote.message));
                     if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 });
         } else if (accion === 'despachar') {
@@ -2949,6 +2989,19 @@ const { asignarServicioAOT } = require('../services/ot_servicios');
                     return conId.length ? ocsPorRecibir(targetDb, conId, responder) : responder();
                 }
 
+                // Lotes elegidos en el picking (los que se escanearon): se validan antes de despachar
+                const lotesElegidos = (req.body && req.body.lotes && typeof req.body.lotes === 'object') ? req.body.lotes : {};
+                const detallesLotes = aDespachar.map(r => ({ detalle_id: r.detalle_id, inventario_id: r.inv_id || r.inventario_id, cantidad: Number(r.cantidad) || 0, descripcion: r.descripcion }));
+                // Costea con lotes lo despachado y recién entonces responde; si los lotes fallan, el despacho ya hecho se respeta
+                const costearYResponder = (respuesta) => lotesInv.aplicarDespacho(promesa(targetDb), id, detallesLotes, lotesElegidos)
+                    .catch(eLote => console.error('[lotes despacho]', id, eLote.message))
+                    .then(() => respuesta());
+                return lotesInv.validarElegidos(promesa(targetDb), detallesLotes, lotesElegidos).then(errLote => {
+                    if (errLote) return res.status(400).json({ error: errLote });
+                    return continuarDespacho();
+                }).catch(eLote => res.status(500).json({ error: eLote.message }));
+
+                function continuarDespacho() {
                 // Proceder con el despacho
                 if (quedanPendientes.length > 0) {
                     // Despacho parcial: Consultar cabecera original
@@ -2997,8 +3050,10 @@ const { asignarServicioAOT } = require('../services/ot_servicios');
                                             if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { 
                                                 logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); 
                                             }
+                                            costearYResponder(() => {
                                             abrirOcPorQuiebreSalida(getDb(req), id);
                                             res.json({ ok: true, parcial: true, nuevo_pendiente_id: nuevoId, despachado_id: id });
+                                            });
                                         });
                                     });
                                 }
@@ -3023,9 +3078,12 @@ const { asignarServicioAOT } = require('../services/ot_servicios');
                         if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { 
                             logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); 
                         }
+                        costearYResponder(() => {
                         abrirOcPorQuiebreSalida(getDb(req), id);
                         res.json({ ok: true, parcial: false });
+                        });
                     });
+                }
                 }
             });
         } else if (accion === 'editar') {
@@ -3036,6 +3094,7 @@ const { asignarServicioAOT } = require('../services/ot_servicios');
             return validarStockSalida(getDb(req), items, id, (errStk, faltan) => {
               if (errStk) return res.status(500).json({ error: errStk.message });
               if (faltan.length) return res.status(400).json(respuestaSinStock(faltan));
+              const lotesDevueltos = lotesInv.devolverSalida(promesa(getDb(req)), id).catch(eLote => console.error('[lotes editar salida]', eLote.message));
             getDb(req).query(`UPDATE salidas_inv SET fecha=?, tipo_destino=?, placa=?, responsable=?, ticket_ot=?, observaciones=?, moneda=?, tipo_cambio=?, total_pen=? WHERE id=?`,
                 [fecha || null, tipo_destino || null, placa || null, responsable || null, ticket_ot || null, observaciones || null, moneda || 'PEN', tc, total_pen, id],
                 (err) => {
@@ -3054,7 +3113,7 @@ const { asignarServicioAOT } = require('../services/ot_servicios');
                         getDb(req).query('INSERT INTO detalle_salidas_inv (salida_id,inventario_id,descripcion,cantidad,costo_unitario,moneda,importe) VALUES ?', [dVals], (err3) => {
                             if (err3) return res.status(500).json({ error: err3.message });
                             if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path); }
-                            res.json({ ok: true, id });
+                            lotesDevueltos.then(() => lotesInv.reaplicarSiDespachada(promesa(getDb(req)), id)).catch(eLote => console.error('[lotes editar salida]', eLote.message)).then(() => res.json({ ok: true, id }));
                         });
                     });
                 });
@@ -3065,6 +3124,7 @@ const { asignarServicioAOT } = require('../services/ot_servicios');
     });
     router.delete('/salidas/:id', (req, res) => {
         const { id } = req.params;
+        lotesInv.devolverSalida(promesa(getDb(req)), id).catch(eLote => console.error('[lotes eliminar salida]', eLote.message));
         getDb(req).query('DELETE FROM detalle_salidas_inv WHERE salida_id=?', [id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             getDb(req).query('DELETE FROM salidas_inv WHERE id=?', [id], (err2) => {
@@ -3528,6 +3588,17 @@ const { asignarServicioAOT } = require('../services/ot_servicios');
                     [detalleVals]
                 );
 
+                // 2a. Lotes: cada línea recepcionada abre un lote NUEVO con su costo en soles (Lote 1, Lote 2…)
+                for (const it of items) {
+                    try {
+                        const cantLote = parseFloat(it.cantidad_recibida) || 0;
+                        if (!it.inventario_id || !(cantLote > 0)) continue;
+                        const monLote = String(it.moneda || (oc && oc.moneda) || 'PEN').toUpperCase();
+                        const unitLote = (parseFloat(it.costo_unitario) || 0) * (monLote === 'USD' ? tipoCambio : 1);
+                        await lotesInv.crearLote(conn, { inventario_id: it.inventario_id, cantidad: cantLote, costo_unitario: unitLote, origen: 'RECEPCION', recepcion_id: recepcionId, entrada_id: oc_id, fecha: fechaHoraSQL });
+                    } catch (eLote) { console.error('[lotes recepción]', eLote.message); }
+                }
+
                 // 2b. Orden de servicio de reencauche: cada llanta vuelve aprobada (R+1 a Reencauche, con el costo de la línea) o rechazada
                 await resolverReencaucheDeRecepcion(conn, {
                     ocId: oc_id, recepcionId, items, usuario: usuario || 'Almacén Central', fecha: fechaHoraSQL, tipoRecepcion,
@@ -3601,6 +3672,7 @@ const { asignarServicioAOT } = require('../services/ot_servicios');
                 } catch (errLl) {
                     return res.status(409).json({ error: errLl.message });
                 }
+                try { await lotesInv.quitarRecepcion(promesa(targetDb), rec.id); } catch (eLote) { console.error('[lotes revertir recepción]', eLote.message); }
 
                 // Borrar foto de S3 si existe
                 if (rec.sustento_url) {
