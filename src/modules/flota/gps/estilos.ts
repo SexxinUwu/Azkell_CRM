@@ -86,7 +86,7 @@ export function buildStyle(t: TemaMapa, relieve: boolean): StyleSpecification {
   const style: any = {version:8, glyphs:MAPA_URLS.tipografias,
     sources:{omt:{type:'vector', url:MAPA_URLS.vectores, attribution:ATRIBUCION.vectores},
       dem:{type:'raster-dem', tiles:[MAPA_URLS.relieve], encoding:'terrarium', tileSize:256, maxzoom:14, attribution:ATRIBUCION.relieve}},
-    projection:{type:'mercator'}, sky, light:{anchor:'viewport', color:night ? '#a9c8ff' : '#ffffff', intensity:night ? .38 : .3, position:[1.2, 200, 35]}, layers:L};
+    projection:{type:'globe'}, sky, light:{anchor:'viewport', color:night ? '#a9c8ff' : '#ffffff', intensity:night ? .38 : .3, position:[1.2, 200, 35]}, layers:L};
   if (relieve) style.terrain = {source:'dem', exaggeration:1.35};
   if (sat) {
     if (SAT_MAPBOX) {

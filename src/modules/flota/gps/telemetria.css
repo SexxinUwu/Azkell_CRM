@@ -610,3 +610,6 @@
 .tg-geo__lista { flex: 1; min-height: 0; scrollbar-width: none; }
 .tg-geo__lista::-webkit-scrollbar { display: none; }
 @media (max-width: 900px) { .tg-geo { left: 8px; right: 8px; top: auto; bottom: calc(var(--tg-dock, 0px) + 8px); width: auto; max-height: 55%; } }
+
+/* Fondo del espacio detrás del globo cuando el mapa está alejado */
+.tg-host { background: radial-gradient(circle at 50% 42%, #10213f 0%, #070d1a 60%, #03060d 100%); }

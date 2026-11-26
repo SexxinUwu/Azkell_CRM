@@ -182,7 +182,7 @@ export class MotorTelemetria {
     this.mapa.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
     // En celular la atribución empieza plegada (botón "i"): no tapa la hoja inferior
     if (MOVIL()) this.mapa.once('load', () => this.root.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'));
-    this.mapa.on('style.load', () => { protegerTeselas(this.mapa); this.prepararCapas(); });
+    this.mapa.on('style.load', () => { protegerTeselas(this.mapa); this.activarGlobo(); this.prepararCapas(); });
     // Errores de teselas de tráfico: 401, 403 o 429 (o varios seguidos) apagan la capa; sin repetir errores en la consola
     this.mapa.on('error', e => {
       const ev = e as unknown as { sourceId?: string; error?: { status?: number } };
@@ -358,6 +358,18 @@ export class MotorTelemetria {
     if (k === 'buildings' && this.tema === 'sat') { this.opt.buildingsSat = v; this.opt.buildings = true; }
     if (this.styleReady) this.aplicarOpciones(k === 'terrain');
     if (k === 'smooth') this.units.forEach(u => { if (u.b) { u.a = u.b; u.view = u.b.pos.slice() as LngLat; u.hview = u.b.hdg; } });
+  }
+  /** Al alejarse el mapa se curva como un globo terráqueo; al acercarse pasa solo a plano. Si el navegador no lo soporta, queda plano. */
+  private activarGlobo() {
+    const m = this.mapa;
+    try {
+      m.setProjection({ type: 'globe' } as never);
+      // El estilo Día (Liberty) no trae cielo: se le da una atmósfera suave que se desvanece al acercarse
+      if (this.tema === 'day') {
+        m.setSky({ 'sky-color': '#7db4f2', 'sky-horizon-blend': 0.5, 'horizon-color': '#eaf2fb', 'horizon-fog-blend': 0.5, 'fog-color': '#dfe9f5', 'fog-ground-blend': 0.5,
+          'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 1, 5, 1, 7, 0] } as never);
+      }
+    } catch { /* sin globo: mapa plano */ }
   }
   setTema(t: TemaMapa) {
     if (t === this.tema) return;
