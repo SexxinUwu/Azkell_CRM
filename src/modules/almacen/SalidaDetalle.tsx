@@ -298,7 +298,6 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
 
           {pregunta && (() => {
             const f = filas[pregunta.idx];
-            const falta = f.cant - f.c.recogido;
             const confirmar = () => { if (aplicar(pregunta.idx, pregunta.lote, parseFloat(pregunta.valor.replace(',', '.')))) setPregunta(null); };
             return (
               <div className="sdt-cant" role="dialog" aria-label="Cantidad">
