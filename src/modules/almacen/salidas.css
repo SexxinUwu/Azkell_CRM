@@ -177,3 +177,12 @@
 .page--fill .sal-cuerpo { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 .page--fill .sal-cuerpo > .tabla-redim { flex: 1 1 auto; min-height: 0; max-height: none !important; scrollbar-width: none; -ms-overflow-style: none; }
 .page--fill .sal-cuerpo > .tabla-redim::-webkit-scrollbar { display: none; }
+
+/* Filas compactas de la lista: botón de acciones, placa y etiquetas más pequeños */
+.tabla-redim.sal-tabla tbody td { padding: 3px 10px; font-size: 0.8125rem; line-height: 1.25; }
+.tabla-redim.sal-tabla thead th { padding-top: 7px; padding-bottom: 7px; }
+.sal-tabla .btn--icon { width: 28px; height: 28px; min-height: 28px; padding: 0; }
+.sal-tabla .plate { --plate-size: 0.52rem; }
+.sal-tabla .oc-codigo { font-size: 0.8125rem; }
+.sal-tabla .badge { font-size: 0.6875rem; padding: 1px 8px; }
+.sal-tabla .sal-resp { font-size: 0.8125rem; }

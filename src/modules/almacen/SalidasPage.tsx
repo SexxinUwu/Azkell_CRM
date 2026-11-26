@@ -415,7 +415,7 @@ export function SalidasPage() {
               })}
             </div>
           ) : (
-            <TablaRedimensionable id="almacen-salidas" columnas={COLUMNAS} ariaLabel="Salidas de almacén" altoMax="68vh" className="tabla-redim--compacta">
+            <TablaRedimensionable id="almacen-salidas" columnas={COLUMNAS} ariaLabel="Salidas de almacén" altoMax="68vh" className="tabla-redim--compacta sal-tabla">
               {visiblesPagina.flatMap(s => {
                 const estado = estadoSalida(s);
                 const items = itemsVisibles(s);
