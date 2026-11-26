@@ -157,6 +157,8 @@ export interface EntradaInv {
   solicitante: string | null;
   placa: string | null;
   ot_id?: string | null;
+  /** Orden de servicio: 1 = ya suma al costo de la OT que dice ot_id */
+  ot_servicio_agregado?: number | null;
   observaciones: string | null;
   creado_por: string | null;
   creador_nombre?: string | null;

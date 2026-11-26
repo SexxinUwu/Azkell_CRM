@@ -421,3 +421,24 @@ export function numeroALetras(num: number): string {
   if (enteros === 0) return `CERO CON ${cents}/100`;
   return `${millones(enteros).replace(/\s+/g, ' ').trim()} CON ${cents}/100`;
 }
+
+/**
+ * Dónde está una orden de servicio respecto a las órdenes de trabajo:
+ *  · asignada: ya suma al costo de su OT · vinculada: eligió una OT pero aún no se asigna (se asigna sola al aprobarse) · sin-ot: no tiene OT.
+ * Las órdenes de compra devuelven null.
+ */
+export type SituacionOt = 'asignada' | 'vinculada' | 'sin-ot';
+export function situacionOt(o: { tipo_orden?: string | null; ot_id?: string | null; ot_servicio_agregado?: number | null }): SituacionOt | null {
+  if (!esServicio(o.tipo_orden)) return null;
+  if (!String(o.ot_id ?? '').trim()) return 'sin-ot';
+  return Number(o.ot_servicio_agregado) === 1 ? 'asignada' : 'vinculada';
+}
+
+/** Filtro de la lista: solo mira órdenes de servicio. «Sin OT asignada» incluye las sin OT y las vinculadas que aún no suman a una OT. */
+export type FiltroOt = 'todas' | 'sin-asignar' | 'asignadas';
+export function coincideOt(o: Parameters<typeof situacionOt>[0], f: FiltroOt): boolean {
+  if (f === 'todas') return true;
+  const s = situacionOt(o);
+  if (s === null) return false;
+  return f === 'asignadas' ? s === 'asignada' : s !== 'asignada';
+}
