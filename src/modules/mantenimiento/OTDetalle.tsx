@@ -443,8 +443,8 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
               <li key={i} className="otd-falla-item">
                 <span className="otd-falla-item__n" aria-hidden>{i + 1}</span>
                 <span className="otd-falla-item__txt">
-                  {f.cat && <strong>{f.cat}</strong>}
-                  <span>{f.detalle}</span>
+                  {/* Solo la falla reportada: el sistema ("Puerta, Chapas y Asientos") se omite para ahorrar espacio */}
+                  <span>{f.detalle || f.cat}</span>
                 </span>
                 {i === 0 && fallas.items.length > 1 && <span className="otd-falla-item__principal" title="Es la primera falla reportada">Principal</span>}
               </li>
