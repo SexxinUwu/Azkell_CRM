@@ -48,7 +48,7 @@ app.use(require('helmet')({
             styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net', 'https://unpkg.com'],
             fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com', 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net'],
             imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
-            connectSrc: ["'self'", 'https:', 'wss:'],
+            connectSrc: ["'self'", 'https:', 'wss:', 'http://127.0.0.1:9101'],
             frameSrc: ["'self'", 'blob:', 'https:'],
             objectSrc: ["'none'"],
             baseUri: ["'self'"],

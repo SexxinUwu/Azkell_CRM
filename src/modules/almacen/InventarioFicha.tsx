@@ -8,8 +8,7 @@ import { MenuOtros } from '../../core/ui/MenuOtros';
 import { costoUnitarioSoles, stockTono, useKardex, valorEnStock, type ArticuloInv } from './api';
 import { RegularizarSheet } from './RegularizarSheet';
 import { api } from '../../core/api/client';
-import { useToast } from '../../core/ui/Toast';
-import { imprimirEtiqueta } from './etiquetaArticulo';
+import { EtiquetaSheet } from './EtiquetaSheet';
 import { formatMoneda, formatSoles } from '../../core/lib/format';
 import { KardexMovimientos } from './KardexMovimientos';
 import { marcasCompatibles } from './InventarioGrid';
@@ -53,8 +52,8 @@ function CodigoBarras({ valor }: { valor: string }) {
 }
 
 export function InventarioFicha({ articulo: a, onEditar, onEliminar, onActualizado }: Props) {
-  const toast = useToast();
   const [regularizando, setRegularizando] = useState(false);
+  const [etiquetando, setEtiquetando] = useState(false);
   const [pestana, setPestana] = useState<Pestana>('especificaciones');
 
   // Llantas (familia NEUMATICOS): medida, modelo y cocada viven en neumaticos_articulo
@@ -95,7 +94,7 @@ export function InventarioFicha({ articulo: a, onEditar, onEliminar, onActualiza
         </div>
         <div className="ficha__acciones">
           <Button variant="secondary" size="sm" icon={<Printer size={15} />}
-            onClick={() => { if (!imprimirEtiqueta(a)) toast('No se pudo abrir la etiqueta. Permite las ventanas emergentes para este sitio.', 'error'); }}>
+            onClick={() => setEtiquetando(true)}>
             Imprimir
           </Button>
           <Button variant="secondary" size="sm" icon={<RefreshCw size={15} />} onClick={() => setRegularizando(true)}>Regularizar</Button>
@@ -234,6 +233,7 @@ export function InventarioFicha({ articulo: a, onEditar, onEliminar, onActualiza
         </section>
       </div>
 
+      <EtiquetaSheet open={etiquetando} articulo={a} onClose={() => setEtiquetando(false)} />
       <RegularizarSheet
         open={regularizando}
         articulo={a}
