@@ -10,7 +10,7 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { TextInput } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
-import { ChoiceChips } from '../../core/ui/Chips';
+import { Combobox } from '../../core/ui/Combobox';
 import { BarraFiltros, GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { KpiTarjeta } from '../../core/ui/KpiTarjeta';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
@@ -32,7 +32,7 @@ import {
 } from './api';
 import {
   categoriaOrden, codigoLimpio, descripcionArticulo, etiquetaEstadoOrden, recepcionDe, textoAvance, esServicio, filtrarOrdenes, hoyLima, itemsVisibles, kpisOrdenes,
-  cabeceraCoincide, coincideOt, situacionOt, type FiltroOt, estadoEditable, estadoPagable, esCredito, type FiltroEstado, type TonoEstado,
+  cabeceraCoincide, coincideTipo, situacionOt, type FiltroTipo, estadoEditable, estadoPagable, esCredito, type FiltroEstado, type TonoEstado,
 } from './entradaReglas';
 import { EntradaFormulario } from './EntradaFormulario';
 import { EntradaDetalle } from './EntradaDetalle';
@@ -290,9 +290,9 @@ export function EntradasPage() {
   const [desde, setDesde] = useState(() => mesAtras(hoyLima()));
   const [hasta, setHasta] = useState(() => hoyLima());
   const [estado, setEstado] = useState<FiltroEstado>('todas');
-  const [otFiltro, setOtFiltro] = useState<FiltroOt>('todas');
+  const [tipoFiltro, setTipoFiltro] = useState<FiltroTipo>('todas');
   const [filtrando, setFiltrando] = useState(false);
-  const filtrosActivos = (otFiltro !== 'todas' ? 1 : 0) + (estado !== 'todas' ? 1 : 0) + (desde !== mesAtras(hoyLima()) || hasta !== hoyLima() ? 1 : 0);
+  const filtrosActivos = (tipoFiltro !== 'todas' ? 1 : 0) + (estado !== 'todas' ? 1 : 0) + (desde !== mesAtras(hoyLima()) || hasta !== hoyLima() ? 1 : 0);
   // Por defecto: una fila por orden de compra (sin duplicados); «Por artículo» muestra cada artículo
   const [vista, setVista] = useState<Vista>('ordenes');
   const [pagina, setPagina] = useState(1);
@@ -320,14 +320,15 @@ export function EntradasPage() {
   useEffect(() => { setPagina(1); }, [busqueda, desde, hasta, estado, vista]);
 
   const visibles = useMemo(
-    () => filtrarOrdenes(entradas, { busqueda, desde, hasta, estado }).filter(o => coincideOt(o, otFiltro)),
-    [entradas, busqueda, desde, hasta, estado, otFiltro],
+    () => filtrarOrdenes(entradas, { busqueda, desde, hasta, estado }).filter(o => coincideTipo(o, tipoFiltro)),
+    [entradas, busqueda, desde, hasta, estado, tipoFiltro],
   );
   const kpis = useMemo(() => kpisOrdenes(visibles), [visibles]);
-  // Cuántas órdenes de servicio hay con y sin OT asignada (dentro del periodo y la búsqueda actuales)
-  const conteoOt = useMemo(() => {
+  // Cuántas órdenes hay de cada tipo (dentro del periodo, el estado y la búsqueda actuales)
+  const conteoTipo = useMemo(() => {
     const base = filtrarOrdenes(entradas, { busqueda, desde, hasta, estado });
-    return { sinAsignar: base.filter(o => coincideOt(o, 'sin-asignar')).length, asignadas: base.filter(o => coincideOt(o, 'asignadas')).length };
+    const n = (f: FiltroTipo) => base.filter(o => coincideTipo(o, f)).length;
+    return { todas: base.length, oc: n('oc'), os: n('os'), sinOt: n('os-sin-ot'), conOt: n('os-con-ot') };
   }, [entradas, busqueda, desde, hasta, estado]);
   const conteo = useMemo(() => {
     const c = { registradas: 0, aprobadas: 0, procesadas: 0, recepcionadas: 0, anuladas: 0 };
@@ -518,7 +519,7 @@ export function EntradasPage() {
               <span className="badge">{visibles.length} {visibles.length === 1 ? 'registro' : 'registros'}</span>
             </BarraFiltros>
             <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={filtrosActivos} resultado={visibles.length} unidad="registro"
-              onLimpiar={() => { setEstado('todas'); setOtFiltro('todas'); setDesde(mesAtras(hoyLima())); setHasta(hoyLima()); }}>
+              onLimpiar={() => { setEstado('todas'); setTipoFiltro('todas'); setDesde(mesAtras(hoyLima())); setHasta(hoyLima()); }}>
               <GrupoFiltro titulo="Fechas">
                 <div className="oc-fechas">
                   <TextInput type="date" aria-label="Desde" value={desde} onChange={ev => setDesde(ev.target.value)} />
@@ -528,26 +529,30 @@ export function EntradasPage() {
                     onClick={() => { setDesde(''); setHasta(''); }}>×</button>
                 </div>
               </GrupoFiltro>
-              <GrupoFiltro titulo="Órdenes de servicio y OT">
-                <ChoiceChips label="Órdenes de servicio y OT" value={otFiltro} onChange={v => setOtFiltro(v as FiltroOt)} options={[
-                  { value: 'todas', label: 'Todas' },
-                  { value: 'sin-asignar', label: `Servicios sin OT asignada (${conteoOt.sinAsignar})` },
-                  { value: 'asignadas', label: `Servicios asignados a una OT (${conteoOt.asignadas})` },
-                ]} />
+              <GrupoFiltro titulo="Tipo de orden">
+                <Combobox enHoja compacta tituloHoja="Tipo de orden" placeholder="Elegir tipo" value={tipoFiltro} onChange={v => setTipoFiltro((v ?? 'todas') as FiltroTipo)}
+                  options={[
+                    { value: 'todas', label: `Todas (${conteoTipo.todas})` },
+                    { value: 'oc', label: `Órdenes de compra (${conteoTipo.oc})` },
+                    { value: 'os', label: `Órdenes de servicio (${conteoTipo.os})` },
+                    { value: 'os-sin-ot', label: `OS sin OT asignada (${conteoTipo.sinOt})` },
+                    { value: 'os-con-ot', label: `OS asignadas a una OT (${conteoTipo.conOt})` },
+                  ]} />
               </GrupoFiltro>
               <GrupoFiltro titulo="Estado de la orden">
-                <ChoiceChips label="Estado de la orden" value={estado} onChange={v => setEstado(v as FiltroEstado)} options={[
-                  { value: 'todas', label: `Todas (${conteo.todas})` }, { value: 'registradas', label: `Registradas (${conteo.registradas})` },
-                  { value: 'aprobadas', label: `Aprobadas (${conteo.aprobadas})` }, { value: 'procesadas', label: `Procesadas (${conteo.procesadas})` }, { value: 'recepcionadas', label: `Recepcionadas (${conteo.recepcionadas})` },
-                  { value: 'anuladas', label: `Anuladas (${conteo.anuladas})` },
-                ]} />
+                <Combobox enHoja compacta tituloHoja="Estado de la orden" placeholder="Elegir estado" value={estado} onChange={v => setEstado((v ?? 'todas') as FiltroEstado)}
+                  options={[
+                    { value: 'todas', label: `Todas (${conteo.todas})` }, { value: 'registradas', label: `Registradas (${conteo.registradas})` },
+                    { value: 'aprobadas', label: `Aprobadas (${conteo.aprobadas})` }, { value: 'procesadas', label: `Procesadas (${conteo.procesadas})` },
+                    { value: 'recepcionadas', label: `Recepcionadas (${conteo.recepcionadas})` }, { value: 'anuladas', label: `Anuladas (${conteo.anuladas})` },
+                  ]} />
               </GrupoFiltro>
             </HojaFiltros>
           </div>
 
           {visibles.length === 0 ? (
             <EmptyState icon={<SearchX size={22} />} title="Ninguna orden coincide">
-              <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setDesde(mesAtras(hoyLima())); setHasta(hoyLima()); setEstado('todas'); setOtFiltro('todas'); }}>
+              <button type="button" className="placas-limpiar" onClick={() => { setBusqueda(''); setDesde(mesAtras(hoyLima())); setHasta(hoyLima()); setEstado('todas'); setTipoFiltro('todas'); }}>
                 Quitar filtros
               </button>
             </EmptyState>

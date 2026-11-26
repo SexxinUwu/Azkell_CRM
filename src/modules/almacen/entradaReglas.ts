@@ -442,3 +442,15 @@ export function coincideOt(o: Parameters<typeof situacionOt>[0], f: FiltroOt): b
   if (s === null) return false;
   return f === 'asignadas' ? s === 'asignada' : s !== 'asignada';
 }
+
+/** Tipo de orden para filtrar la lista: compras, servicios, y los atajos de servicios sin OT asignada o ya asignados */
+export type FiltroTipo = 'todas' | 'oc' | 'os' | 'os-sin-ot' | 'os-con-ot';
+export function coincideTipo(o: Parameters<typeof situacionOt>[0], f: FiltroTipo): boolean {
+  switch (f) {
+    case 'oc': return !esServicio(o.tipo_orden);
+    case 'os': return esServicio(o.tipo_orden);
+    case 'os-sin-ot': return coincideOt(o, 'sin-asignar');
+    case 'os-con-ot': return coincideOt(o, 'asignadas');
+    default: return true;
+  }
+}

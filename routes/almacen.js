@@ -221,6 +221,8 @@ function repartirRecibidoPorLinea(items, historial) {
 
 /** Una línea de servicio (SERV-…) no se recepciona: no entra al almacén y se asigna en la orden de trabajo. */
 const esLineaServicio = (inventarioId) => /^SERV/i.test(String(inventarioId || ''));
+/** Una orden de servicio tampoco se recepciona, tenga o no líneas de artículos. La única excepción es la de reencauche, que recibe llantas. */
+const esOrdenServicio = (tipoOrden) => /servicio/i.test(String(tipoOrden || ''));
 
 /** El sustento de una recepción: una URL (recepciones antiguas) o una lista JSON de URLs (varias fotos o documentos) */
 function urlsDeSustento(valor) {
@@ -1719,9 +1721,10 @@ const { asignarServicioAOT } = require('../services/ot_servicios');
                         } catch (eR) { /* sin órdenes de reencauche */ }
                     }
                     signedRows.forEach(r => {
-                        const aRecibir = (r.items || []).filter(it => !esLineaServicio(it.inventario_id) || lineasReenc.has(`${r.id}|${it.inventario_id}`));
+                        // Orden de servicio: solo se recibe la línea de reencauche; el resto (servicios y artículos) no se recepciona
+                        const aRecibir = (r.items || []).filter(it => esOrdenServicio(r.tipo_orden) ? lineasReenc.has(`${r.id}|${it.inventario_id}`) : (!esLineaServicio(it.inventario_id) || lineasReenc.has(`${r.id}|${it.inventario_id}`)));
                         r.recepcion_pedido = aRecibir.reduce((s, it) => s + (parseFloat(it.cantidad) || 0), 0);
-                        r.recepcion_recibido = parseFloat(r.total_recibido) || 0;
+                        r.recepcion_recibido = esOrdenServicio(r.tipo_orden) && !aRecibir.length ? 0 : (parseFloat(r.total_recibido) || 0);
                     });
                 } catch (eRec) { console.error('[entradas recepcion]', eRec.message); }
                 res.json(signedRows);
@@ -3140,6 +3143,16 @@ const { asignarServicioAOT } = require('../services/ot_servicios');
 
             targetDb.query(sqlOCs, async (errOC, ocs) => {
                 if (errOC) return res.status(500).json({ error: errOC.message });
+                // Las órdenes de servicio no se recepcionan: solo quedan las de reencauche (que reciben llantas)
+                const idsServ = (ocs || []).filter(o => esOrdenServicio(o.tipo_orden)).map(o => o.id);
+                if (idsServ.length) {
+                    const conReenc = new Set();
+                    try {
+                        const [rr] = await (typeof targetDb.promise === 'function' ? targetDb.promise() : targetDb).query('SELECT DISTINCT oc_id FROM neumaticos_reencauche_oc WHERE oc_id IN (?)', [idsServ]);
+                        rr.forEach(x => conReenc.add(x.oc_id));
+                    } catch (eR) { /* sin órdenes de reencauche */ }
+                    ocs = ocs.filter(o => !esOrdenServicio(o.tipo_orden) || conReenc.has(o.id));
+                }
                 const idsOC = (ocs || []).map(o => o.id);
                 if (!idsOC.length) return res.json([]);
 
@@ -3338,6 +3351,13 @@ const { asignarServicioAOT } = require('../services/ot_servicios');
 
             const targetDb = req.db || db;
 
+            // Una orden de servicio no se recepciona (aunque lleve artículos): solo la de reencauche, con sus llantas
+            {
+                const [[ocFila]] = await (typeof targetDb.promise === 'function' ? targetDb.promise() : targetDb).query('SELECT tipo_orden FROM entradas_inv WHERE id = ? LIMIT 1', [oc_id]).catch(() => [[null]]);
+                if (ocFila && esOrdenServicio(ocFila.tipo_orden) && !items.some(it => Array.isArray(it.llantas_reencauche) && it.llantas_reencauche.length)) {
+                    return res.status(400).json({ error: 'Las órdenes de servicio no se recepcionan: el servicio se asigna a su orden de trabajo.' });
+                }
+            }
             // Los servicios (SERV-…) no se recepcionan; solo la línea de reencauche (con sus llantas) entra en esta pantalla
             const servicios = items.filter(it => esLineaServicio(it.inventario_id) && !(Array.isArray(it.llantas_reencauche) && it.llantas_reencauche.length));
             if (servicios.length) {
