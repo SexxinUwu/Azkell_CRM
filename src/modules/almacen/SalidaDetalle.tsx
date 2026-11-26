@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useQueries } from '@tanstack/react-query';
+import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { Camera, Check, CheckCheck, FileText, Layers, MapPin, PackageCheck, ScanLine, Trash2, X } from 'lucide-react';
 import { FilePdf, Pencil } from '../../core/ui/IconosArchivo';
 import { Sheet } from '../../core/ui/Sheet';
@@ -9,7 +9,7 @@ import { LicensePlate } from '../../core/ui/LicensePlate';
 import { api } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { formatFechaHoraPe, formatSoles } from '../../core/lib/format';
-import { ETIQUETA_DESTINO, estadoSalida, type ArticuloInv, type ItemSalida, type LoteInv, type SalidaInv } from './api';
+import { ETIQUETA_DESTINO, asociarCodigoBarras, estadoSalida, type ArticuloInv, type ItemSalida, type LoteInv, type SalidaInv } from './api';
 import { duracion, tonoEspera } from './ControlSalidasSheet';
 import { EscanerContinuo } from './EscanerContinuo';
 import { separarLote } from './codigosLote';
@@ -66,7 +66,7 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
   puedeEditar: boolean;
   puedeEliminar: boolean;
   /** Ítems conformes (y los lotes escaneados) más el texto de confirmación; la página abre el diálogo y despacha */
-  onDespachar: (sel: { id: number; itemIds: number[]; mensaje: ReactNode; lotes?: Record<string, Array<{ numero: number; cantidad: number }>> }) => void;
+  onDespachar: (sel: { id: number; itemIds: number[]; mensaje: ReactNode; lotes?: Record<string, Array<{ numero: number; cantidad: number }>>; cantidades?: Record<string, number> }) => void;
   onPdf: () => void;
   onVistaPrevia: () => void;
   onEditar: () => void;
@@ -94,13 +94,60 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
   const [camara, setCamara] = useState(false);
   const [lineaActiva, setLineaActiva] = useState<number | null>(null);
   const [manual, setManual] = useState('');
-  const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null);
+  const [aviso, setAviso] = useState<{ ok: boolean; texto: string; warn?: boolean } | null>(null);
   const entrada = useRef<HTMLInputElement>(null);
   /** Artículo recién escaneado esperando que se escriba la cantidad (como en caja: se escanea una vez y se teclea cuántos) */
   const [pregunta, setPregunta] = useState<{ idx: number; lote: number | null; valor: string } | null>(null);
+  /** Código leído que no es de ningún artículo: se pregunta a cuál de la salida pertenece para guardarlo */
+  const [desconocido, setDesconocido] = useState<{ codigo: string; texto: string } | null>(null);
+  const [extras, setExtras] = useState<Record<string, string>>({});
+  const [reintentar, setReintentar] = useState<string | null>(null);
+  const qc = useQueryClient();
+  // Lo que identifica el contenido de la salida: si cambia (la editaron) mientras se escanea, la conformidad ya no sirve
+  const firma = items.map(i => `${i.id}:${i.cantidad}`).join('|');
+  const claveGuardado = `fleet_despacho_${salida.id}`;
   useEffect(() => {
-    if (open) { setConf({}); setCamara(false); setLineaActiva(null); setAviso(null); setManual(''); setPregunta(null); }
+    if (!open) return;
+    let previo: Record<number, Conf> = {};
+    // La conformidad se guarda en el teléfono: si se cierra la pantalla o se cae el internet, se retoma donde quedó
+    try {
+      const raw = localStorage.getItem(claveGuardado);
+      if (raw) { const d = JSON.parse(raw); if (d && d.firma === firma) previo = d.conf ?? {}; else localStorage.removeItem(claveGuardado); }
+    } catch { /* sin almacenamiento: se empieza de cero */ }
+    setConf(previo); setCamara(false); setLineaActiva(null); setAviso(null); setManual(''); setPregunta(null); setDesconocido(null);
   }, [open, salida.id]);
+  useEffect(() => {
+    if (!open) return;
+    try {
+      if (!pendiente || Object.keys(conf).length === 0) localStorage.removeItem(claveGuardado);
+      else localStorage.setItem(claveGuardado, JSON.stringify({ firma, conf }));
+    } catch { /* nada */ }
+  }, [conf, open, pendiente]);
+  const firmaPrevia = useRef({ id: salida.id, firma });
+  useEffect(() => {
+    const p = firmaPrevia.current;
+    if (open && p.id === salida.id && p.firma !== firma) { setConf({}); setPregunta(null); setAviso({ ok: false, texto: 'La salida cambió mientras se escaneaba: se reinició la conformidad.' }); }
+    firmaPrevia.current = { id: salida.id, firma };
+  }, [firma, salida.id]);
+  // Al cerrar el cuadro de cantidad o de código nuevo, el cursor vuelve al campo para seguir con la pistola
+  const bloqueado = !!pregunta || !!desconocido;
+  const bloqueadoAntes = useRef(false);
+  useEffect(() => {
+    if (bloqueadoAntes.current && !bloqueado && !camara) entrada.current?.focus();
+    bloqueadoAntes.current = bloqueado;
+  }, [bloqueado, camara]);
+  // La pistola de teclado escribe donde esté el foco: si no hay un campo activo, lo que se teclea va al campo de código
+  useEffect(() => {
+    if (!open || !pendiente || !puedeEditar) return;
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+      entrada.current?.focus();
+    };
+    window.addEventListener('keydown', alTeclear);
+    return () => window.removeEventListener('keydown', alTeclear);
+  }, [open, pendiente, puedeEditar]);
 
   const filas = useMemo(() => items.map((it, idx) => {
     const art = articuloDeItem(it, inventario);
@@ -117,7 +164,9 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
   const totalCant = filas.reduce((a, f) => a + f.cant, 0);
   const totalImp = filas.reduce((a, f) => a + f.imp, 0);
   const montoFinal = Number(salida.total_pen) > 0 ? Number(salida.total_pen) : totalImp;
-  const conformes = filas.filter(f => f.completa && f.it.id != null);
+  // Con entrega = lo que se despacha: líneas completas y líneas parciales (se entrega lo confirmado; el resto queda pendiente)
+  const conformes = filas.filter(f => f.c.recogido > EPS && f.it.id != null);
+  const todoCompleto = conformes.length === items.length && conformes.every(f => f.completa);
   const hechasUnid = filas.reduce((a, f) => a + Math.min(f.c.recogido, f.cant), 0);
 
   /** Costo estimado de una línea: lo escaneado sale de su lote; el resto, del más antiguo con saldo */
@@ -129,7 +178,7 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
       const l = f.lotes.find(x => x.numero === Number(n));
       if (l && cant > 0) { partes.push({ numero: l.numero, cantidad: cant, costo: l.costo_unitario }); tomado += cant; }
     }
-    const resto = Math.max(0, f.cant - tomado);
+    const resto = Math.max(0, (f.c.recogido > EPS ? Math.min(f.c.recogido, f.cant) : f.cant) - tomado);
     const extra = pepsEstimado(f.lotes, resto, Object.fromEntries(partes.map(p => [p.numero, p.cantidad])));
     const todas = [...partes, ...extra.partes];
     return { partes: todas, faltante: extra.faltante, importe: todas.reduce((s, p) => s + p.cantidad * p.costo, 0) + extra.faltante * f.cu };
@@ -156,18 +205,22 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
     const { codigo: cod, lote } = separarLote((m ? m[2] : texto).trim());
     const codigo = cod.trim().toUpperCase();
     if (!codigo) return;
-    const art = inventario.find(a => [a.id, a.codigo_barras, a.codigo_articulo].some(c => String(c ?? '').trim().toUpperCase() === codigo));
-    const idArt = (art?.id ?? codigo).toUpperCase();
+    if (pregunta || desconocido) return; // hay algo por confirmar: se ignora la lectura
+    const idExtra = extras[codigo];
+    const art = inventario.find(a => [a.id, a.codigo_barras, a.codigo_articulo].some(c => String(c ?? '').trim().toUpperCase() === codigo)) ?? (idExtra ? inventario.find(a => a.id === idExtra) : undefined);
+    const idArt = (art?.id ?? idExtra ?? codigo).toUpperCase();
     const delArticulo = filas.filter(f => String(f.it.inventario_id ?? '').toUpperCase() === idArt);
     const error = (t: string) => { pitido(false); haptic('warning'); setAviso({ ok: false, texto: t }); };
+    if (!delArticulo.length && !art && !idExtra) { pitido(false); haptic('warning'); setAviso(null); setDesconocido({ codigo, texto }); return; }
     if (!delArticulo.length) return error(art ? `${art.descripcion || art.articulo} no está en esta salida.` : `El código ${cod} no es de ningún artículo.`);
     // Si se escaneó desde la línea de un artículo, el código tiene que ser de ese artículo
     if (lineaActiva != null && !delArticulo.some(f => f.idx === lineaActiva)) return error(`Ese código no es de «${filas[lineaActiva].it.descripcion || filas[lineaActiva].it.inventario_id}».`);
     const destino = lineaActiva != null ? filas[lineaActiva] : delArticulo.find(f => !f.completa);
     if (!destino) return error(`${delArticulo[0].it.descripcion || idArt} ya tiene conformidad.`);
     if (destino.completa) return error('Esa línea ya tiene conformidad.');
-    if (pregunta) return; // hay una cantidad por confirmar: se ignora la lectura
-    const falta = destino.cant - destino.c.recogido;
+    // Lo máximo que se puede confirmar en la línea: lo pedido, o lo que hay en el sistema si es menos
+    const falta = Math.min(destino.cant, destino.stock ?? Infinity) - destino.c.recogido;
+    if (falta <= EPS) return error(`${destino.it.descripcion || idArt}: no hay más unidades disponibles en el sistema (stock ${cantidad(destino.stock ?? 0)}).`);
     if (!m && falta > 1 + EPS) {
       pitido(true); haptic('selection');
       setPregunta({ idx: destino.idx, lote, valor: String(falta) });
@@ -182,8 +235,8 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
     const destino = filas[idx];
     const error = (t: string) => { pitido(false); haptic('warning'); setAviso({ ok: false, texto: t }); return false; };
     if (!(toma > 0)) return error('Escribe una cantidad mayor que cero.');
-    const falta = destino.cant - destino.c.recogido;
-    if (toma > falta + EPS) return error(`Solo faltan ${cantidad(falta)} de este artículo.`);
+    const falta = Math.min(destino.cant, destino.stock ?? Infinity) - destino.c.recogido;
+    if (toma > falta + EPS) return error(falta < destino.cant - destino.c.recogido - EPS ? `Solo hay ${cantidad(Math.max(0, falta))} más en el sistema.` : `Solo faltan ${cantidad(falta)} de este artículo.`);
     if (lote != null) {
       const l = destino.lotes?.find(x => x.numero === lote);
       const usado = filas.filter(f => f.it.inventario_id === destino.it.inventario_id).reduce((s, f) => s + (f.c.lotes[lote] || 0), 0);
@@ -195,9 +248,27 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
       const c = prev[idx] ?? { recogido: 0, lotes: {} };
       return { ...prev, [idx]: { recogido: c.recogido + toma, lotes: lote != null ? { ...c.lotes, [lote]: (c.lotes[lote] || 0) + toma } : c.lotes } };
     });
-    setAviso({ ok: true, texto: `${destino.it.descripcion || destino.it.inventario_id}${lote != null ? ` · Lote ${lote}` : ''} · ${cantidad(destino.c.recogido + toma)} de ${cantidad(destino.cant)}` });
+    // PEPS: si se toma un lote más nuevo habiendo uno más antiguo con saldo, se acepta pero se avisa
+    const masAntiguo = lote != null ? [...(destino.lotes ?? [])].filter(l => l.saldo > EPS).sort((a, b) => a.numero - b.numero)[0] : undefined;
+    const noPeps = lote != null && !!masAntiguo && masAntiguo.numero < lote;
+    setAviso({ ok: true, warn: noPeps, texto: `${destino.it.descripcion || destino.it.inventario_id}${lote != null ? ` · Lote ${lote}` : ''} · ${cantidad(destino.c.recogido + toma)} de ${cantidad(destino.cant)}${noPeps && masAntiguo ? ` · Ojo: el lote ${masAntiguo.numero} es más antiguo y aún tiene saldo (sale primero lo más antiguo)` : ''}` });
     return true;
   }
+
+  async function asociar(f: (typeof filas)[number]) {
+    if (!desconocido || !f.it.inventario_id) return;
+    try {
+      await asociarCodigoBarras(f.it.inventario_id, desconocido.codigo);
+      setExtras(p => ({ ...p, [desconocido.codigo]: f.it.inventario_id as string }));
+      void qc.invalidateQueries({ queryKey: ['almacen'] });
+      const t = desconocido.texto;
+      setDesconocido(null);
+      setReintentar(t);
+    } catch (err) { setAviso({ ok: false, texto: err instanceof Error ? err.message : 'No se pudo guardar el código.' }); setDesconocido(null); }
+  }
+  useEffect(() => {
+    if (reintentar && !desconocido) { const t = reintentar; setReintentar(null); leer(t); }
+  }, [reintentar, extras]);
 
   function despachar() {
     if (!conformes.length) return;
@@ -206,11 +277,16 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
       const ls = Object.entries(f.c.lotes).map(([n, c]) => ({ numero: Number(n), cantidad: c })).filter(z => z.cantidad > 0);
       if (ls.length) lotes[String(f.it.id)] = ls;
     }
-    const pendientes = items.length - conformes.length;
-    const mensaje = pendientes > 0
-      ? <>¿Despachar <strong>{conformes.length} de {items.length}</strong> artículos con conformidad de la salida <strong>{salida.id}</strong>?<br /><span style={{ color: 'var(--accent-ink)', fontWeight: 600 }}>Los {pendientes} sin conformidad quedarán pendientes en una nueva salida.</span></>
+    const parciales = conformes.filter(f => !f.completa);
+    const cantidades: Record<string, number> = {};
+    for (const f of parciales) cantidades[String(f.it.id)] = f.c.recogido;
+    const sinEntrega = items.length - conformes.length;
+    const mensaje = !todoCompleto
+      ? <>¿Despachar <strong>{conformes.length} de {items.length}</strong> artículos de la salida <strong>{salida.id}</strong>?<br />
+        {parciales.length > 0 && <span>{parciales.map(f => `${f.it.descripcion || f.it.inventario_id}: ${cantidad(f.c.recogido)} de ${cantidad(f.cant)}`).join(' · ')}<br /></span>}
+        <span style={{ color: 'var(--accent-ink)', fontWeight: 600 }}>{sinEntrega > 0 ? `${sinEntrega} sin entrega` : ''}{sinEntrega > 0 && parciales.length > 0 ? ' y ' : ''}{parciales.length > 0 ? `${parciales.length} entregados a medias` : ''}: lo que falta quedará pendiente en una nueva salida.</span></>
       : <>¿Despachar todos los artículos de la salida <strong>{salida.id}</strong>?<br />El stock se descuenta ahora y el costo sale de los lotes.</>;
-    onDespachar({ id: salida.id, itemIds: conformes.map(f => f.it.id as number), mensaje, lotes });
+    onDespachar({ id: salida.id, itemIds: conformes.map(f => f.it.id as number), mensaje, lotes, cantidades });
   }
 
   const puedeDespachar = pendiente && puedeEditar;
@@ -229,7 +305,7 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
         )}
         {puedeDespachar ? (
           <Button variant="primary" size="lg" icon={<PackageCheck size={18} />} disabled={conformes.length === 0} onClick={despachar}>
-            {conformes.length === 0 || conformes.length === items.length ? 'Despachar' : `Despachar ${conformes.length} de ${items.length}`}
+            {conformes.length === 0 || todoCompleto ? 'Despachar' : `Despachar ${conformes.length} de ${items.length}`}
           </Button>
         ) : (
           <Button variant="primary" size="lg" icon={<FileText size={18} />} onClick={onPdf}>Descargar PDF</Button>
@@ -292,16 +368,21 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
                   <EscanerContinuo activo={camara} onLeido={leer} />
                 </>
               )}
-              {aviso && <p className={`sdt-aviso ${aviso.ok ? 'sdt-aviso--ok' : 'sdt-aviso--error'}`} role="status">{aviso.texto}</p>}
+              {aviso && <p className={`sdt-aviso ${aviso.warn ? 'sdt-aviso--warn' : aviso.ok ? 'sdt-aviso--ok' : 'sdt-aviso--error'}`} role="status">{aviso.texto}</p>}
             </div>
           )}
 
           {pregunta && (() => {
             const f = filas[pregunta.idx];
+            const falta = Math.min(f.cant, f.stock ?? Infinity) - f.c.recogido;
+            const valorNum = parseFloat(pregunta.valor.replace(',', '.'));
+            const hermanas = filas.filter(x => x.it.inventario_id === f.it.inventario_id && !x.completa);
             const confirmar = () => { if (aplicar(pregunta.idx, pregunta.lote, parseFloat(pregunta.valor.replace(',', '.')))) setPregunta(null); };
             return (
               <div className="sdt-cant" role="dialog" aria-label="Cantidad">
-                <p><b>{f.it.descripcion || f.it.inventario_id}</b>{pregunta.lote != null ? ` · Lote ${pregunta.lote}` : ''}<br /><small>Solicitado: {cantidad(f.cant)}{f.c.recogido > 0 ? ` · ya confirmado ${cantidad(f.c.recogido)}` : ''}. ¿Confirmas la cantidad?</small></p>
+                <p><b>{f.it.descripcion || f.it.inventario_id}</b>{pregunta.lote != null ? ` · Lote ${pregunta.lote}` : ''}<br /><small>Solicitado: {cantidad(f.cant)}{f.c.recogido > 0 ? ` · ya confirmado ${cantidad(f.c.recogido)}` : ''}{falta < f.cant - f.c.recogido - EPS ? ` · en el sistema solo hay ${cantidad(Math.max(0, f.stock ?? 0))}` : ''}. ¿Confirmas la cantidad?</small></p>
+                {hermanas.length > 1 && <div className="sdt-cant__lineas">{hermanas.map(x => <button key={x.idx} type="button" className={`sdt-cant__linea${x.idx === pregunta.idx ? ' sdt-cant__linea--on' : ''}`} onClick={() => setPregunta({ ...pregunta, idx: x.idx, valor: String(Math.max(0, Math.min(x.cant, x.stock ?? Infinity) - x.c.recogido)) })}>Línea {x.idx + 1} · faltan {cantidad(x.cant - x.c.recogido)}</button>)}</div>}
+                {Number.isFinite(valorNum) && valorNum > 0 && valorNum < f.cant - f.c.recogido - EPS && <p className="sdt-cant__resto">Quedarán {cantidad(f.cant - f.c.recogido - valorNum)} pendientes de esta línea.</p>}
                 <form onSubmit={e => { e.preventDefault(); confirmar(); }}>
                   <input className="input sdt-cant__input" autoFocus inputMode="decimal" value={pregunta.valor} onFocus={e => e.currentTarget.select()}
                     onChange={e => setPregunta({ ...pregunta, valor: e.target.value })} aria-label="Cantidad" />
@@ -312,12 +393,22 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
             );
           })()}
 
+          {desconocido && (
+            <div className="sdt-cant" role="dialog" aria-label="Código nuevo">
+              <p><b>El código {desconocido.codigo} no está registrado.</b><br /><small>¿A qué artículo de esta salida pertenece? Se guarda para reconocerlo la próxima vez.</small></p>
+              <div className="sdt-cant__lineas">
+                {filas.filter(f => f.it.inventario_id && f.it.id != null && !/^SERV/i.test(f.it.inventario_id)).map(f => <button key={f.idx} type="button" className="sdt-cant__linea" onClick={() => { void asociar(f); }}>{f.idx + 1}. {f.it.descripcion || f.it.inventario_id}</button>)}
+                <Button type="button" variant="plain" size="sm" onClick={() => setDesconocido(null)}>Cancelar</Button>
+              </div>
+            </div>
+          )}
+
           {items.length === 0 && <p className="sdt-vacio">No hay ítems registrados en esta salida.</p>}
           <ol className="sdt-items">
             {filas.map((f, i) => {
               const est = estimados[i];
               return (
-                <li key={f.it.id ?? f.idx} className={`sdt-item${f.completa ? ' sdt-item--ok' : ''}${f.alcanza || !pendiente ? '' : ' sdt-item--sin-stock'}`}>
+                <li key={f.it.id ?? f.idx} className={`sdt-item${f.completa ? ' sdt-item--ok' : f.c.recogido > 0 ? ' sdt-item--parcial' : ''}${f.alcanza || !pendiente ? '' : ' sdt-item--sin-stock'}`}>
                   <span className="sdt-item__n">{i + 1}.</span>
                   <div className="sdt-item__cuerpo">
                     <b className="sdt-item__nombre" title={f.it.descripcion || undefined}>{f.it.descripcion || f.it.inventario_id || '—'}</b>

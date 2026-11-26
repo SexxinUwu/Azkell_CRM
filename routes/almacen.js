@@ -1066,6 +1066,21 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
         return resumen;
     }
 
+    // Asocia un código de barras (el del proveedor) a un artículo, desde el despacho: sin tocar el resto de su ficha
+    router.put('/inventario/:id/codigo-barras', async (req, res) => {
+        try {
+            const codigo = String((req.body && req.body.codigo) || '').trim();
+            if (!codigo || codigo.length > 60) return res.status(400).json({ error: 'Código inválido.' });
+            const p = promesa(getDb(req));
+            const [dup] = await p.query('SELECT id FROM inventario WHERE codigo_barras = ? AND id <> ? AND activo = 1 LIMIT 1', [codigo, req.params.id]);
+            if (dup.length) return res.status(409).json({ error: `Ese código ya pertenece al artículo ${dup[0].id}.` });
+            const [r] = await p.query('UPDATE inventario SET codigo_barras = ? WHERE id = ? AND activo = 1', [codigo, req.params.id]);
+            if (!r.affectedRows) return res.status(404).json({ error: 'Artículo no encontrado.' });
+            if (typeof logAudit === 'function' && req.body && req.body.usuario) logAudit(req.body.usuario, 'almacen', 'MODIFICÓ', req.path);
+            res.json({ ok: true });
+        } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
     // Lotes de un artículo (los agotados solo con ?agotados=1)
     router.get('/inventario/:id/lotes', async (req, res) => {
         try {
@@ -2995,6 +3010,11 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
                 WHERE d.salida_id = ?
             `;
 
+            // Solo se despacha lo que sigue pendiente: si otra persona ya lo despachó (o lo anuló) no se vuelve a descontar ni a costear
+            targetDb.query('SELECT estado FROM salidas_inv WHERE id = ?', [id], (errEst, rowsEst) => {
+            if (errEst) return res.status(500).json({ error: errEst.message });
+            if (!rowsEst || !rowsEst.length) return res.status(404).json({ error: 'La salida no existe' });
+            if (String(rowsEst[0].estado || '') !== 'Pendiente') return res.status(409).json({ error: `La salida ${id} ya está ${String(rowsEst[0].estado || '').toLowerCase()}. Actualiza la lista.` });
             targetDb.query(sqlDetalleConStock, [id], (errStk, rowsStk) => {
                 if (errStk) return res.status(500).json({ error: errStk.message });
                 if (!rowsStk || !rowsStk.length) return res.status(404).json({ error: 'La salida no tiene artículos para despachar' });
@@ -3010,6 +3030,21 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
 
                     if (aDespachar.length === 0) {
                         return res.status(400).json({ error: 'Debes seleccionar al menos un repuesto para despachar.' });
+                    }
+                }
+
+                // Despacho parcial de una línea: se entrega menos de lo pedido y el resto queda pendiente en una salida nueva
+                const cantidadesParciales = (req.body && req.body.cantidades && typeof req.body.cantidades === 'object') ? req.body.cantidades : {};
+                const restos = [];
+                for (const r of aDespachar) {
+                    const q = Number(cantidadesParciales[r.detalle_id]);
+                    if (cantidadesParciales[r.detalle_id] === undefined) continue;
+                    const orig = parseFloat(r.cantidad) || 0;
+                    if (!Number.isFinite(q) || q <= 0 || q > orig + 1e-9) return res.status(400).json({ error: 'Cantidad parcial inválida.' });
+                    if (q < orig - 1e-9) {
+                        const cu = parseFloat(r.costo_unitario) || 0;
+                        restos.push({ detalle_id: r.detalle_id, entregada: q, importeEntregada: q * cu, resto: orig - q, importeResto: (orig - q) * cu });
+                        r.cantidad = q; r.importe = q * cu;
                     }
                 }
 
@@ -3044,7 +3079,7 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
 
                 function continuarDespacho() {
                 // Proceder con el despacho
-                if (quedanPendientes.length > 0) {
+                if (quedanPendientes.length > 0 || restos.length > 0) {
                     // Despacho parcial: Consultar cabecera original
                     targetDb.query('SELECT * FROM salidas_inv WHERE id = ?', [id], (errCab, rowsCab) => {
                         if (errCab || !rowsCab.length) return res.status(500).json({ error: 'Error al obtener cabecera de salida' });
@@ -3055,7 +3090,7 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
                             if (errCod) return res.status(500).json({ error: 'Error al generar folio para ítems pendientes' });
 
                             const tc = parseFloat(cab.tipo_cambio) || 1;
-                            const totalPendientePen = quedanPendientes.reduce((acc, it) => acc + ((parseFloat(it.importe) || (parseFloat(it.cantidad || 0) * parseFloat(it.costo_unitario || 0)))), 0);
+                            const totalPendientePen = quedanPendientes.reduce((acc, it) => acc + ((parseFloat(it.importe) || (parseFloat(it.cantidad || 0) * parseFloat(it.costo_unitario || 0)))), 0) + restos.reduce((a, x) => a + x.importeResto, 0);
                             const totalDespachadoPen = aDespachar.reduce((acc, it) => acc + ((parseFloat(it.importe) || (parseFloat(it.cantidad || 0) * parseFloat(it.costo_unitario || 0)))), 0);
 
                             // Insertar nueva salida con estado 'Pendiente' para los ítems restantes
@@ -3072,8 +3107,16 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
 
                                     // Mover los registros de detalle no despachados a la nueva salida
                                     const idsMover = quedanPendientes.map(r => r.detalle_id);
-                                    targetDb.query('UPDATE detalle_salidas_inv SET salida_id = ? WHERE id IN (?)', [nuevoId, idsMover], (errUpdDet) => {
+                                    const moverDetalles = (cb) => idsMover.length ? targetDb.query('UPDATE detalle_salidas_inv SET salida_id = ? WHERE id IN (?)', [nuevoId, idsMover], cb) : cb(null);
+                                    moverDetalles((errUpdDet) => {
                                         if (errUpdDet) console.error('Error moviendo detalles:', errUpdDet);
+                                        const pr = promesa(targetDb);
+                                        (async () => {
+                                            for (const x of restos) {
+                                                await pr.query('UPDATE detalle_salidas_inv SET cantidad = ?, importe = ? WHERE id = ?', [x.entregada, x.importeEntregada, x.detalle_id]);
+                                                await pr.query('INSERT INTO detalle_salidas_inv (salida_id, inventario_id, descripcion, cantidad, costo_unitario, moneda, importe) SELECT ?, inventario_id, descripcion, ?, costo_unitario, moneda, ? FROM detalle_salidas_inv WHERE id = ?', [nuevoId, x.resto, x.importeResto, x.detalle_id]);
+                                            }
+                                        })().catch(e => { console.error('[despacho parcial de línea]', id, e.message); }).then(() => {
 
                                         // Marcar la salida original como Despachada y actualizar su total
                                         targetDb.query("UPDATE salidas_inv SET estado='Despachado', total_pen=? WHERE id=?", [totalDespachadoPen, id], (errFinal) => {
@@ -3095,6 +3138,7 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
                                             abrirOcPorQuiebreSalida(getDb(req), id);
                                             res.json({ ok: true, parcial: true, nuevo_pendiente_id: nuevoId, despachado_id: id });
                                             });
+                                        });
                                         });
                                     });
                                 }
@@ -3126,6 +3170,7 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
                     });
                 }
                 }
+            });
             });
         } else if (accion === 'editar') {
             const { fecha, tipo_destino, placa, responsable, ticket_ot, observaciones, items, moneda, tipo_cambio } = req.body;

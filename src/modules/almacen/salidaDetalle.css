@@ -111,3 +111,10 @@
   .sdt-pie__fila { flex-wrap: nowrap; gap: 6px; }
   .sdt-pie__fila .btn { padding-inline: 12px; white-space: nowrap; }
 }
+
+.sdt-aviso--warn { background: rgba(245, 158, 11, .18); color: #b45309; }
+.sdt-item--parcial { border-color: rgba(245, 158, 11, .6); background: rgba(245, 158, 11, .06); }
+.sdt-cant__lineas { display: flex; flex-wrap: wrap; gap: 6px; }
+.sdt-cant__linea { padding: 6px 12px; border-radius: 99px; border: 1.5px solid var(--separator); background: var(--surface); font-size: 0.8125rem; font-weight: 600; cursor: pointer; color: var(--label); text-align: left; }
+.sdt-cant__linea--on { border-color: var(--accent); background: var(--accent-tint); color: var(--accent-ink, var(--accent)); }
+.sdt-cant__resto { margin: 0; font-size: 0.8125rem; font-weight: 600; color: #b45309; }

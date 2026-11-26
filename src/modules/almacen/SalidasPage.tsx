@@ -111,7 +111,7 @@ export function SalidasPage() {
   const [detalleId, setDetalleId] = useState<number | null>(null);
   const [detalleAbierto, setDetalleAbierto] = useState(false);
   const [formulario, setFormulario] = useState<{ salida: SalidaInv | null } | null>(null);
-  const [despacho, setDespacho] = useState<{ id: number; itemIds: number[]; mensaje: ReactNode; lotes?: Record<string, Array<{ numero: number; cantidad: number }>> } | null>(null);
+  const [despacho, setDespacho] = useState<{ id: number; itemIds: number[]; mensaje: ReactNode; lotes?: Record<string, Array<{ numero: number; cantidad: number }>>; cantidades?: Record<string, number> } | null>(null);
   const [despachando, setDespachando] = useState(false);
   const [picking, setPicking] = useState(false);
   const [tiempos, setTiempos] = useState(false);
@@ -219,7 +219,7 @@ export function SalidasPage() {
     if (!despacho) return;
     setDespachando(true);
     try {
-      const r = await despacharSalida(despacho.id, despacho.itemIds, usuario, despacho.lotes);
+      const r = await despacharSalida(despacho.id, despacho.itemIds, usuario, despacho.lotes, despacho.cantidades);
       toast(r.parcial && r.nuevo_pendiente_id
         ? `Salida ${despacho.id} despachada. Los ítems pendientes quedaron en la salida ${r.nuevo_pendiente_id}.`
         : `Salida ${despacho.id} despachada con éxito — stock descontado.`);
@@ -504,7 +504,7 @@ export function SalidasPage() {
           inventario={articulos}
           puedeEditar={puedeEditar}
           puedeEliminar={puedeEliminar}
-          onDespachar={sel => { setDespacho({ id: sel.id, itemIds: sel.itemIds, mensaje: sel.mensaje, lotes: sel.lotes }); setDetalleAbierto(false); }}
+          onDespachar={sel => { setDespacho({ id: sel.id, itemIds: sel.itemIds, mensaje: sel.mensaje, lotes: sel.lotes, cantidades: sel.cantidades }); setDetalleAbierto(false); }}
           onPdf={() => pdf(detalle, false)}
           onVistaPrevia={() => pdf(detalle, true)}
           onEditar={() => { setDetalleAbierto(false); setFormulario({ salida: detalle }); }}
