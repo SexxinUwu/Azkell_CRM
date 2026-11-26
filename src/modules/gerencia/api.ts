@@ -115,7 +115,7 @@ export function useOrdenesCompra() {
 
 /** Aprobar, rechazar u observar. El servidor copia el comentario en observaciones y avisa a Tesorería si se aprueba. */
 export function decidirOrden(id: string, estado: DecisionOc, comentario: string) {
-  return api<{ ok: boolean; estado: string }>(`/almacen/entradas/${encodeURIComponent(id)}/estado`, {
+  return api<{ ok: boolean; estado: string; asignacion?: { asignada: boolean; ot: string; otCerrada?: boolean; motivo?: string } | null }>(`/almacen/entradas/${encodeURIComponent(id)}/estado`, {
     method: 'PUT',
     body: { estado, comentario, usuario: localStorage.getItem('fleet_user') ?? 'Gerencia' },
   });

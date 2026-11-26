@@ -258,8 +258,11 @@ export function AprobacionesOCPage() {
     setProcesando(true);
     setErrAccion(null);
     try {
-      await decidirOrden(orden.id, DECISION[tipo], texto);
-      setMsg({ tipo: 'ok', texto: `Orden ${orden.id} ${PASADO[tipo]} correctamente.` });
+      const r = await decidirOrden(orden.id, DECISION[tipo], texto);
+      // Orden de servicio con OT: al aprobarse se asigna sola a la OT (o se avisa por qué no)
+      const a = r.asignacion;
+      const extra = !a ? '' : a.asignada ? ` Se asignó automáticamente a la OT ${a.ot}${a.otCerrada ? ' (que ya estaba cerrada)' : ''}.` : ` ${a.motivo ?? ''}`;
+      setMsg({ tipo: 'ok', texto: `Orden ${orden.id} ${PASADO[tipo]} correctamente.${extra}` });
       haptic(tipo === 'aprobar' ? 'success' : 'warning');
       setDetalleId(null);
       cerrarAccion();

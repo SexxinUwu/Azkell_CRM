@@ -5,6 +5,7 @@ const { uploadToS3, getPresignedUrl, s3KeyFromUrl } = require('../utils/s3');
 const { createApprovalToken } = require('../services/ocApprovalService');
 const { normalizarCondicion } = require('../services/condicion_oc');
 const { audit: auditar } = require('../services/auditoria');
+const { asignarServicioAOT } = require('../services/ot_servicios');
 const eventosNotif = require('../services/notificaciones_eventos');
 const { sendApprovalWhatsapp, sendDecisionConfirmationWhatsapp, sendTreasuryNotificationWhatsapp } = require('../services/whatsappService');
 
@@ -400,6 +401,8 @@ module.exports = function (db, broadcast, logAudit) {
             await tdb.query('COMMIT');
             // Aviso en el teléfono a Tesorería si la orden quedó aprobada por el enlace de WhatsApp
             if (newOcStatus === 'APROBADA') eventosNotif.avisarOcPagar(getDb(req), tok.codigo);
+            // Si es una orden de servicio con OT, al aprobarse por el enlace también se asigna sola a su OT
+            if (newOcStatus === 'APROBADA') asignarServicioAOT(getDb(req), tok.codigo, { userName: aprobador });
             auditar(tdb, { userName: aprobador }, { action: newOcStatus === 'APROBADA' ? 'APPROVE' : 'REJECT', entity: 'purchase-order', entityId: tok.codigo, summary: `${newOcStatus === 'APROBADA' ? 'Aprobó' : 'Rechazó'} la orden ${tok.codigo} por WhatsApp (${aprobador})` });
 
             const tenantSlug = req.tenantSlug || (req.headers.host ? req.headers.host.split('.')[0] : null);
