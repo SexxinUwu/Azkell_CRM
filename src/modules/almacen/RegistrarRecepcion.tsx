@@ -14,6 +14,7 @@ import { haptic } from '../../core/lib/haptics';
 import { formatDolares, formatSoles } from '../../core/lib/format';
 import { EscanerContinuo } from './EscanerContinuo';
 import { pitido } from './pitido';
+import { separarLote } from './codigosLote';
 import './picking.css';
 import { registrarRecepcion, useAlmacenesLista, useInventario, useTipoCambioSunat, type ItemRecepcion, type LlantaReencauche, type RecepcionOC } from './api';
 
@@ -105,7 +106,7 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
   function leerCodigo(entrada: string) {
     const m = /^\s*(\d+(?:[.,]\d+)?)\s*[*xX]\s*(\S.*)$/.exec(entrada);
     const cuantas = m ? Math.max(1, parseFloat(m[1].replace(',', '.')) || 1) : 1;
-    const codigo = (m ? m[2] : entrada).trim().toUpperCase();
+    const codigo = separarLote((m ? m[2] : entrada).trim()).codigo.toUpperCase();
     if (!codigo) return;
     const art = (inventario ?? []).find(a => [a.id, a.codigo_barras, a.codigo_articulo].some(c => String(c ?? '').trim().toUpperCase() === codigo));
     const idArt = (art?.id ?? codigo).toUpperCase();

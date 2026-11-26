@@ -3,9 +3,10 @@ import { Camera, Check, CircleAlert, Minus, PackageCheck, Plus, ScanLine } from 
 import { Sheet, ConfirmSheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
-import { ApiError, errorMessage } from '../../core/api/client';
+import { api, ApiError, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
-import { despacharSalida, estadoSalida, type ArticuloInv, type SalidaInv } from './api';
+import { despacharSalida, estadoSalida, type ArticuloInv, type LoteInv, type SalidaInv } from './api';
+import { separarLote } from './codigosLote';
 import { sinStockDe } from './SinStockDialogo';
 import { EscanerContinuo } from './EscanerContinuo';
 import { pitido } from './pitido';
@@ -22,6 +23,8 @@ interface Linea {
   cantidad: number;
   ubicacion: string;
   recogido: number;
+  /** Lotes escaneados en esta línea: { número de lote: unidades } */
+  lotes: Record<number, number>;
 }
 type Paso = 'elegir' | 'picking' | 'resultado';
 interface Resultado { folio: string; ok: boolean; texto: string }
@@ -79,7 +82,7 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
         ls.push({
           key: `${s.id}-${it.id}`, salidaId: s.id, folio: String(s.id), destino: [s.placa, s.ticket_ot].filter(Boolean).join(' · '),
           itemId: it.id, inventarioId: it.inventario_id ?? '', descripcion: it.descripcion || art?.descripcion || art?.articulo || '(sin descripción)',
-          cantidad: Number(it.cantidad) || 0, ubicacion: [art?.ubicacion, art?.anaquel].filter(Boolean).join(' ').trim(), recogido: 0,
+          cantidad: Number(it.cantidad) || 0, ubicacion: [art?.ubicacion, art?.anaquel].filter(Boolean).join(' ').trim(), recogido: 0, lotes: {},
         });
       }
     }
@@ -93,17 +96,45 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
   const unidadesHechas = lineas.reduce((a, l) => a + Math.min(l.recogido, l.cantidad), 0);
   const lineasHechas = lineas.filter(completa).length;
 
+  /** Si se baja la cantidad a mano, los lotes escaneados se recortan (primero los de número más alto) para que no sumen más que lo recogido */
+  const recortarLotes = (lotes: Record<number, number>, recogido: number) => {
+    const r = { ...lotes };
+    let exceso = Object.values(r).reduce((s, x) => s + x, 0) - recogido;
+    for (const n of Object.keys(r).map(Number).sort((a, b) => b - a)) {
+      if (exceso <= 1e-9) break;
+      const quita = Math.min(r[n], exceso);
+      r[n] -= quita; exceso -= quita;
+      if (r[n] <= 1e-9) delete r[n];
+    }
+    return r;
+  };
   function sumar(key: string, delta: number) {
-    setLineas(prev => prev.map(l => (l.key === key ? { ...l, recogido: Math.max(0, Math.min(l.cantidad, l.recogido + delta)) } : l)));
+    setLineas(prev => prev.map(l => {
+      if (l.key !== key) return l;
+      const recogido = Math.max(0, Math.min(l.cantidad, l.recogido + delta));
+      return { ...l, recogido, lotes: recortarLotes(l.lotes, recogido) };
+    }));
   }
-  const completar = (key: string) => setLineas(prev => prev.map(l => (l.key === key ? { ...l, recogido: completa(l) ? 0 : l.cantidad } : l)));
+  const completar = (key: string) => setLineas(prev => prev.map(l => (l.key === key ? { ...l, recogido: completa(l) ? 0 : l.cantidad, lotes: completa(l) ? {} : l.lotes } : l)));
 
   /** Un código leído (cámara, pistola o escrito): suma 1 a la primera línea de ese artículo que aún no esté completa */
-  function leer(entrada: string) {
+  const cacheLotes = useRef(new Map<string, LoteInv[]>());
+  async function lotesDeArticulo(id: string): Promise<LoteInv[]> {
+    const k = id.toUpperCase();
+    if (!cacheLotes.current.has(k)) {
+      try { cacheLotes.current.set(k, (await api<{ lotes: LoteInv[] }>(`/almacen/inventario/${encodeURIComponent(id)}/lotes`)).lotes ?? []); }
+      catch { cacheLotes.current.set(k, []); }
+    }
+    return cacheLotes.current.get(k) ?? [];
+  }
+
+  async function leer(entrada: string) {
     // «5*INV-0212» (o «5x INV-0212»): suma 5 unidades de una vez; sin cantidad, suma 1
-    const m = /^s*(d+(?:[.,]d+)?)s*[*xX]s*(S.*)$/.exec(entrada);
+    const m = /^\s*(\d+(?:[.,]\d+)?)\s*[*xX]\s*(\S.*)$/.exec(entrada);
     const cuantas = m ? Math.max(1, parseFloat(m[1].replace(',', '.')) || 1) : 1;
-    const codigoCrudo = (m ? m[2] : entrada).trim();
+    // «INV-0212-L2» es el artículo INV-0212 del lote 2 (etiquetas por lote)
+    const { codigo: codigoSinLote, lote } = separarLote((m ? m[2] : entrada).trim());
+    const codigoCrudo = codigoSinLote;
     const codigo = clave(codigoCrudo);
     if (!codigo) return;
     const art = porCodigo.get(codigo);
@@ -120,29 +151,45 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
       setAviso({ ok: false, texto: `Ya tienes todo lo pedido de ${candidatas[0].descripcion}.` });
       return;
     }
+    // Con etiqueta de lote: el lote debe existir y tener saldo (descontando lo que ya se escaneó de él en esta hoja)
+    if (lote != null) {
+      const lotes = await lotesDeArticulo(idArt);
+      const info = lotes.find(x => x.numero === lote);
+      const yaUsado = candidatas.reduce((s, l) => s + (l.lotes[lote] || 0), 0);
+      if (!info || info.saldo <= 0) { pitido(false); haptic('warning'); setAviso({ ok: false, texto: `El lote ${lote} de ${falta.descripcion} está agotado: no se puede usar.` }); return; }
+      if (yaUsado + cuantas > info.saldo + 1e-9) { pitido(false); haptic('warning'); setAviso({ ok: false, texto: `El lote ${lote} solo tiene ${cant(Math.max(0, info.saldo - yaUsado))} unidades disponibles.` }); return; }
+    }
     pitido(true); haptic('success');
     // Con varias unidades, se reparte entre las líneas de ese artículo (de las salidas que lo piden) hasta completar cada una
     let resto = cuantas;
-    const nuevos = new Map<string, number>();
+    const nuevos = new Map<string, { recogido: number; tomado: number }>();
     for (const l of candidatas) {
       if (resto <= 0) break;
       const cabe = Math.max(0, l.cantidad - l.recogido);
       const toma = Math.min(cabe, resto);
-      if (toma > 0) { nuevos.set(l.key, l.recogido + toma); resto -= toma; }
+      if (toma > 0) { nuevos.set(l.key, { recogido: l.recogido + toma, tomado: toma }); resto -= toma; }
     }
-    setLineas(prev => prev.map(l => (nuevos.has(l.key) ? { ...l, recogido: nuevos.get(l.key) as number } : l)));
+    setLineas(prev => prev.map(l => {
+      const n = nuevos.get(l.key);
+      if (!n) return l;
+      return { ...l, recogido: n.recogido, lotes: lote != null ? { ...l.lotes, [lote]: (l.lotes[lote] || 0) + n.tomado } : l.lotes };
+    }));
     const total = cuantas - Math.max(0, resto);
-    setAviso({ ok: true, texto: `${falta.descripcion} · +${cant(total)}${resto > 0 ? ` (sobraron ${cant(resto)}: ya estaba completo)` : ''}` });
+    setAviso({ ok: true, texto: `${falta.descripcion}${lote != null ? ` · Lote ${lote}` : ''} · +${cant(total)}${resto > 0 ? ` (sobraron ${cant(resto)}: ya estaba completo)` : ''}` });
   }
 
   // Lo que se despachará: de cada salida, las líneas completas
   const porSalida = useMemo(() => {
-    const m = new Map<string, { id: SalidaInv['id']; folio: string; completas: number[]; total: number }>();
+    const m = new Map<string, { id: SalidaInv['id']; folio: string; completas: number[]; total: number; lotes: Record<string, Array<{ numero: number; cantidad: number }>> }>();
     for (const l of lineas) {
       const k = String(l.salidaId);
-      const x = m.get(k) ?? { id: l.salidaId, folio: l.folio, completas: [], total: 0 };
+      const x = m.get(k) ?? { id: l.salidaId, folio: l.folio, completas: [], total: 0, lotes: {} };
       x.total++;
-      if (completa(l)) x.completas.push(l.itemId);
+      if (completa(l)) {
+        x.completas.push(l.itemId);
+        const ls = Object.entries(l.lotes).map(([n, c]) => ({ numero: Number(n), cantidad: c })).filter(z => z.cantidad > 0);
+        if (ls.length) x.lotes[String(l.itemId)] = ls;
+      }
       m.set(k, x);
     }
     return [...m.values()];
@@ -155,7 +202,7 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
     const res: Resultado[] = [];
     for (const s of aDespachar) {
       try {
-        const r = await despacharSalida(s.id, s.completas, usuario);
+        const r = await despacharSalida(s.id, s.completas, usuario, s.lotes);
         res.push({ folio: s.folio, ok: true, texto: r.parcial && r.nuevo_pendiente_id ? `Despachada. Lo no recogido quedó en la salida ${r.nuevo_pendiente_id}.` : 'Despachada, stock descontado.' });
       } catch (err) {
         const faltantes = err instanceof ApiError ? sinStockDe(err.data) : null;
@@ -248,6 +295,7 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
                     <small>
                       {l.ubicacion ? <span className="pk-ubi">{l.ubicacion}</span> : <span className="pk-ubi pk-ubi--sin">Sin ubicación</span>}
                       {l.inventarioId} · {l.folio}{l.destino ? ` · ${l.destino}` : ''}
+                      {Object.entries(l.lotes).map(([n, c]) => <span key={n} className="pk-lote">Lote {n} ×{cant(c)}</span>)}
                     </small>
                   </span>
                   <span className="pk-linea__cant">

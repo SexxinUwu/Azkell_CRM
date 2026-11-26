@@ -338,3 +338,39 @@ enum InventarioSubTipo {
   Nuevo
   Reparado
 }
+
+/// Lote de un artículo: una capa de costo (Lote 1, Lote 2…). Una compra con otro costo abre un lote nuevo; con el mismo costo se suma al lote con saldo.
+model InventarioLote {
+  id               Int      @id @default(autoincrement())
+  inventario_id    String   @db.VarChar(20)
+  numero           Int
+  costo_unitario   Decimal  @default(0) @db.Decimal(14, 4)
+  cantidad_inicial Decimal  @default(0) @db.Decimal(14, 4)
+  saldo            Decimal  @default(0) @db.Decimal(14, 4)
+  origen           String   @default("RECEPCION") @db.VarChar(20)
+  recepcion_id     Int?
+  entrada_id       String?  @db.VarChar(50)
+  fecha            DateTime @default(now()) @db.DateTime(0)
+  creado_en        DateTime? @default(now()) @db.Timestamp(0)
+
+  @@unique([inventario_id, numero], map: "uq_inv_lote_numero")
+  @@index([inventario_id, saldo], map: "idx_inv_lote_saldo")
+  @@map("inventario_lotes")
+}
+
+/// De qué lote(s) salió cada línea despachada de una salida, con el costo real de cada lote.
+model SalidaLote {
+  id             Int       @id @default(autoincrement())
+  salida_id      String    @db.VarChar(20)
+  detalle_id     Int
+  inventario_id  String    @db.VarChar(20)
+  lote_id        Int
+  cantidad       Decimal   @db.Decimal(14, 4)
+  costo_unitario Decimal   @db.Decimal(14, 4)
+  creado_en      DateTime? @default(now()) @db.Timestamp(0)
+
+  @@index([salida_id], map: "idx_salida_lotes_salida")
+  @@index([detalle_id], map: "idx_salida_lotes_detalle")
+  @@index([lote_id], map: "idx_salida_lotes_lote")
+  @@map("salida_lotes")
+}

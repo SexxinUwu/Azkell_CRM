@@ -9,6 +9,7 @@ import { costoUnitarioSoles, stockTono, useKardex, valorEnStock, type ArticuloIn
 import { RegularizarSheet } from './RegularizarSheet';
 import { api } from '../../core/api/client';
 import { EtiquetaSheet } from './EtiquetaSheet';
+import { LotesArticulo } from './LotesArticulo';
 import { formatMoneda, formatSoles } from '../../core/lib/format';
 import { KardexMovimientos } from './KardexMovimientos';
 import { marcasCompatibles } from './InventarioGrid';
@@ -54,6 +55,7 @@ function CodigoBarras({ valor }: { valor: string }) {
 export function InventarioFicha({ articulo: a, onEditar, onEliminar, onActualizado }: Props) {
   const [regularizando, setRegularizando] = useState(false);
   const [etiquetando, setEtiquetando] = useState(false);
+  const esServicioFicha = /^SERV/i.test(a.id);
   const [pestana, setPestana] = useState<Pestana>('especificaciones');
 
   // Llantas (familia NEUMATICOS): medida, modelo y cocada viven en neumaticos_articulo
@@ -126,6 +128,12 @@ export function InventarioFicha({ articulo: a, onEditar, onEliminar, onActualiza
             </div>
             {!ubicacion && <p className="ficha__nota">Sin ubicación registrada.</p>}
           </div>
+
+          {!esServicioFicha && (
+            <div className="ficha__bloque" style={{ '--i': 1 } as CSSProperties}>
+              <LotesArticulo inventarioId={a.id} />
+            </div>
+          )}
 
           {marcas.length > 0 && (
             <div className="ficha__bloque" style={{ '--i': 2 } as CSSProperties}>

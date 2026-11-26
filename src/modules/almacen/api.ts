@@ -510,9 +510,10 @@ export async function solicitarMateriales(data: Partial<SalidaInv> & { items: It
 }
 
 /** Despacha los ítems indicados (o todos si la lista va vacía). Lo no despachado pasa a una salida pendiente nueva. */
-export async function despacharSalida(id: number, itemIds: number[], usuario: string) {
+/** `lotes`: lotes escaneados en el picking por línea ({ [idLínea]: [{ numero, cantidad }] }); lo que no traiga lote sale por PEPS (el más antiguo primero) */
+export async function despacharSalida(id: number, itemIds: number[], usuario: string, lotes?: Record<string, Array<{ numero: number; cantidad: number }>>) {
   return api<{ ok?: boolean; parcial?: boolean; nuevo_pendiente_id?: string | number }>(`/almacen/salidas/${id}`, {
-    method: 'PUT', body: { accion: 'despachar', item_ids: itemIds, usuario },
+    method: 'PUT', body: { accion: 'despachar', item_ids: itemIds, usuario, ...(lotes && Object.keys(lotes).length ? { lotes } : {}) },
   });
 }
 
@@ -939,4 +940,16 @@ export function costoUnitarioSoles(a: ArticuloInv): number {
 export function valorEnStock(a: ArticuloInv): number {
   const stock = Number(a.stock_actual);
   return stock > 0 ? stock * costoUnitarioSoles(a) : 0;
+}
+
+// ─── Lotes de inventario ────────────────────────────────────────────────────
+export interface LoteInv { id: number; inventario_id: string; numero: number; costo_unitario: number; cantidad_inicial: number; saldo: number; origen: 'INICIAL' | 'RECEPCION' | 'AJUSTE' | string; entrada_id: string | null; fecha: string }
+/** Lotes de un artículo (Lote 1, Lote 2…). Los agotados solo vienen con verAgotados. */
+export function useLotes(inventarioId: string | null, verAgotados = false) {
+  return useQuery<{ lotes: LoteInv[]; agotados: number }>({
+    queryKey: ['almacen', 'lotes', inventarioId, verAgotados],
+    enabled: !!inventarioId,
+    queryFn: () => api(`/almacen/inventario/${encodeURIComponent(String(inventarioId))}/lotes${verAgotados ? '?agotados=1' : ''}`),
+    staleTime: 15_000,
+  });
 }
