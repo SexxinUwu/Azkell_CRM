@@ -637,3 +637,30 @@
 
 /* Celular: los paneles de Recorrido y de Geocercas ocupan todo el ancho, sin dejar espacio a la derecha */
 @media (max-width: 900px) { .tg .tg-side--rec, .tg .tg-geo { left: 8px; right: 8px; width: auto; max-width: none; } }
+
+/* ═══ Celular: hojas que llegan hasta el borde de la pantalla, filas de unidades compactas y sin avisos flotantes ═══ */
+@media (max-width: 900px) {
+  /* Las hojas (unidades, recorrido y geocercas) se prolongan por debajo de la barra de módulos con el mismo fondo, para que no asome el mapa al desplegarlas */
+  .tg .tg-side, .tg .tg-geo { overflow: visible; }
+  .tg .tg-side::after, .tg .tg-geo::after { content: ''; position: absolute; left: 0; right: 0; top: calc(100% - 1px); height: calc(var(--tg-dock, 0px) + 60px); background: var(--surface); pointer-events: none; }
+  .tg .tg-geo { left: 0; right: 0; bottom: var(--tg-dock, 0px); width: auto; max-height: 62%; border-radius: 22px 22px 0 0; }
+  .tg .tg-geo__lista { padding-bottom: 10px; }
+  .tg .tg-list { padding: 4px 6px calc(var(--tg-dock, 0px) + 8px); }
+
+  /* Filas de unidades más compactas, con letras algo más chicas (como la lista de geocercas) */
+  .tg .tg-unit { padding-left: 2px; border-radius: 12px; gap: 2px; }
+  .tg .tg-unit__b { padding: 6px 8px 6px 2px; gap: 2px 8px; }
+  .tg .tg-unit__riel { width: 3px; margin: 6px 0; }
+  .tg .tg-unit__cuerpo { gap: 1px; padding: 5px 0; }
+  .tg .tg-unit__l1 { gap: 5px; }
+  .tg .tg-unit .plate { --plate-size: 0.56rem; }
+  .tg .tg-pill { font-size: 9.5px; padding: 1px 6px; }
+  .tg .tg-unit .sub { font-size: 10.5px; line-height: 1.25; }
+  .tg .tg-unit__l3 { font-size: 9.5px; line-height: 1.2; }
+  .tg .tg-unit .sp b { font-size: 15px; }
+  .tg .tg-unit .sp small { font-size: 9px; }
+  .tg .tg-unit__check { width: 14px; height: 14px; }
+
+  /* Los avisos (exceso de velocidad, combustible…) solo salen en la versión de escritorio */
+  .tg .tg-alerts { display: none !important; }
+}
