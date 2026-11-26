@@ -13,6 +13,9 @@ import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
 import { haptic } from '../../core/lib/haptics';
+import { EscanerContinuo } from './EscanerContinuo';
+import { usePistola } from './usePistola';
+import { pitido } from './pitido';
 import { formatMoneda } from '../../core/lib/format';
 import {
   esVigente, guardarEntrada, subirCotizacion, useConfiguracionAlmacen, useCuentasProveedor, useEmpresaCuentas, useInventario,
@@ -376,6 +379,39 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
 
   function quitarLinea(key: string) {
     setLineas(prev => prev.filter(l => l.key !== key));
+  }
+
+  // Escaneo de varios artículos seguidos (picking rápido de entradas): cada lectura suma 1 al artículo, o «5*código» suma 5.
+  // Si el artículo ya está en una línea, se aumenta su cantidad; si no, se agrega una línea nueva con su costo de referencia.
+  const [escaneoVarios, setEscaneoVarios] = useState(false);
+  const [manualVarios, setManualVarios] = useState('');
+  const [avisoVarios, setAvisoVarios] = useState<{ ok: boolean; texto: string } | null>(null);
+  const campoVarios = useRef<HTMLInputElement>(null);
+  usePistola(escaneoVarios, campoVarios);
+  function leerVarios(entrada: string) {
+    const m = /^\s*(\d+(?:[.,]\d+)?)\s*[*xX]\s*(\S.*)$/.exec(entrada);
+    const cuantas = m ? Math.max(1, parseFloat(m[1].replace(',', '.')) || 1) : 1;
+    const codigo = (m ? m[2] : entrada).trim().toUpperCase();
+    if (!codigo) return;
+    const art = articulosOC.find(a => [a.id, a.codigo_barras, a.codigo_articulo].some(c => String(c ?? '').trim().toUpperCase() === codigo));
+    if (!art) { pitido(false); haptic('warning'); setAvisoVarios({ ok: false, texto: `El código ${codigo} no es de ningún artículo${servicio ? ' ni servicio' : ''} de esta orden.` }); return; }
+    const ref = costoReferencia(art, moneda, tc);
+    const conArticulo = (l: LineaOC, cant: number): LineaOC => {
+      const base: LineaOC = { ...l, inventario_id: art.id, descripcion: art.articulo || art.descripcion || '', unidad: art.unidad ?? null, refCosto: ref > 0 ? ref : null, cantidad: String(cant) };
+      return modoIgv === 'mas_igv'
+        ? calcularLinea({ ...base, vu: (ref / (1 + TASA_IGV)).toFixed(4) }, 'vu', modoIgv)
+        : calcularLinea({ ...base, pu: ref.toFixed(2) }, 'pu', modoIgv);
+    };
+    let total = cuantas;
+    setLineas(prev => {
+      const i = prev.findIndex(l => l.inventario_id === art.id);
+      if (i >= 0) { total = num(prev[i].cantidad) + cuantas; return prev.map((l, k) => (k === i ? calcularLinea({ ...l, cantidad: String(total) }, 'cantidad', modoIgv) : l)); }
+      const vacia = prev.findIndex(l => !l.inventario_id && !l.descripcion);
+      if (vacia >= 0) return prev.map((l, k) => (k === vacia ? conArticulo(l, cuantas) : l));
+      return [...prev, conArticulo(nuevaLinea(), cuantas)];
+    });
+    pitido(true); haptic('success');
+    setAvisoVarios({ ok: true, texto: `${art.articulo || art.descripcion} · +${cuantas}` });
   }
 
   /** Resultado del escáner: busca por código (o código de barras) entre los artículos de esta clase */
@@ -827,7 +863,20 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
           </Seccion>
 
           <Seccion tono="celeste" icono={<Package size={15} />} titulo={servicio ? 'Servicios' : 'Artículos'} badge={`${usados.length} ${usados.length === 1 ? 'línea' : 'líneas'}`}
-            accion={<Button size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => setLineas(prev => [...prev, nuevaLinea()])}>Agregar</Button>}>
+            accion={<>
+              <Button size="sm" variant={escaneoVarios ? 'primary' : 'secondary'} icon={<ScanLine size={14} />} onClick={() => { setEscaneoVarios(v => !v); setAvisoVarios(null); }}>{escaneoVarios ? 'Cerrar escáner' : 'Escanear varios'}</Button>
+              <Button size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => setLineas(prev => [...prev, nuevaLinea()])}>Agregar</Button>
+            </>}>
+            {escaneoVarios && (
+              <div className="rec2-escaneo">
+                <EscanerContinuo activo={escaneoVarios} onLeido={leerVarios} />
+                <form className="pk-entrada" onSubmit={e => { e.preventDefault(); leerVarios(manualVarios); setManualVarios(''); }}>
+                  <input ref={campoVarios} className="input" value={manualVarios} onChange={e => setManualVarios(e.target.value)} placeholder="Pistolea o escribe el código (5*código suma 5)" autoCapitalize="characters" autoCorrect="off" />
+                  <Button type="submit" variant="secondary" disabled={!manualVarios.trim()}>Usar</Button>
+                </form>
+                {avisoVarios && <p className={`pk-aviso ${avisoVarios.ok ? 'pk-aviso--ok' : 'pk-aviso--error'}`} role="status">{avisoVarios.texto}</p>}
+              </div>
+            )}
             {mostrar(errorCab.articulos) && <p role="alert" className="t-footnote oc-error">{errorCab.articulos}</p>}
 
             {lineas.length === 0 && (

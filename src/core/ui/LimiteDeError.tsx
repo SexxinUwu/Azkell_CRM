@@ -98,8 +98,9 @@ export class LimiteDeError extends Component<{ children: ReactNode }, Estado> {
         <div style={{ maxWidth: 360, display: 'grid', gap: 12, justifyItems: 'center' }}>
           <p style={{ margin: 0, fontWeight: 600, fontSize: '1.0625rem' }}>Esta pantalla no se pudo cargar</p>
           <p style={{ margin: 0, color: 'var(--label-2)', fontSize: '0.875rem' }}>
-            Puede que haya una versión nueva de Azkell. Recarga para continuar.
+            {esFalloDeModulo(String(error?.message ?? '')) ? 'Puede que haya una versión nueva de Azkell. Recarga para continuar.' : 'Ocurrió un error en esta pantalla. Recarga para continuar.'}
           </p>
+          <p style={{ margin: 0, color: 'var(--label-3)', fontSize: '0.6875rem', wordBreak: 'break-word', userSelect: 'text' }}>{String(error?.message ?? '').slice(0, 160)}</p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
             <Button variant="primary" onClick={() => recargarVersionNueva()}>Recargar</Button>
             <Button onClick={() => window.location.assign('/app/')}>Ir al inicio</Button>

@@ -14,6 +14,7 @@ import { duracion, tonoEspera } from './ControlSalidasSheet';
 import { EscanerContinuo } from './EscanerContinuo';
 import { separarLote } from './codigosLote';
 import { pitido } from './pitido';
+import { usePistola } from './usePistola';
 import './salidaDetalle.css';
 
 // Hoja de despacho de una salida. Arriba los datos de la orden; abajo los artículos numerados, cada uno con su CONFORMIDAD:
@@ -136,18 +137,11 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
     if (bloqueadoAntes.current && !bloqueado && !camara) entrada.current?.focus();
     bloqueadoAntes.current = bloqueado;
   }, [bloqueado, camara]);
-  // La pistola de teclado escribe donde esté el foco: si no hay un campo activo, lo que se teclea va al campo de código
-  useEffect(() => {
-    if (!open || !pendiente || !puedeEditar) return;
-    const alTeclear = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
-      const t = e.target as HTMLElement | null;
-      if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
-      entrada.current?.focus();
-    };
-    window.addEventListener('keydown', alTeclear);
-    return () => window.removeEventListener('keydown', alTeclear);
-  }, [open, pendiente, puedeEditar]);
+  // Pistola láser: lo que se teclea sin campo activo va al campo de código
+  usePistola(open && pendiente && puedeEditar, entrada);
+  /** Cantidad automática: cada lectura confirma de una vez lo solicitado (para pistolear varios artículos seguidos sin cuadro intermedio) */
+  const [auto, setAuto] = useState(() => { try { return localStorage.getItem('fleet_despacho_auto') === '1'; } catch { return false; } });
+  const cambiarAuto = (v: boolean) => { setAuto(v); try { localStorage.setItem('fleet_despacho_auto', v ? '1' : '0'); } catch { /* nada */ } };
 
   const filas = useMemo(() => items.map((it, idx) => {
     const art = articuloDeItem(it, inventario);
@@ -214,14 +208,14 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
     if (!delArticulo.length && !art && !idExtra) { pitido(false); haptic('warning'); setAviso(null); setDesconocido({ codigo, texto }); return; }
     if (!delArticulo.length) return error(art ? `${art.descripcion || art.articulo} no está en esta salida.` : `El código ${cod} no es de ningún artículo.`);
     // Si se escaneó desde la línea de un artículo, el código tiene que ser de ese artículo
-    if (lineaActiva != null && !delArticulo.some(f => f.idx === lineaActiva)) return error(`Ese código no es de «${filas[lineaActiva].it.descripcion || filas[lineaActiva].it.inventario_id}».`);
-    const destino = lineaActiva != null ? filas[lineaActiva] : delArticulo.find(f => !f.completa);
+    if (lineaActiva != null && filas[lineaActiva] && !delArticulo.some(f => f.idx === lineaActiva)) return error(`Ese código no es de «${filas[lineaActiva].it.descripcion || filas[lineaActiva].it.inventario_id}».`);
+    const destino = lineaActiva != null && filas[lineaActiva] ? filas[lineaActiva] : delArticulo.find(f => !f.completa);
     if (!destino) return error(`${delArticulo[0].it.descripcion || idArt} ya tiene conformidad.`);
     if (destino.completa) return error('Esa línea ya tiene conformidad.');
     // Lo máximo que se puede confirmar en la línea: lo pedido, o lo que hay en el sistema si es menos
     const falta = Math.min(destino.cant, destino.stock ?? Infinity) - destino.c.recogido;
     if (falta <= EPS) return error(`${destino.it.descripcion || idArt}: no hay más unidades disponibles en el sistema (stock ${cantidad(destino.stock ?? 0)}).`);
-    if (!m && falta > 1 + EPS) {
+    if (!m && !auto && falta > 1 + EPS) {
       pitido(true); haptic('selection');
       setPregunta({ idx: destino.idx, lote, valor: String(falta) });
       setAviso(null);
@@ -233,6 +227,7 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
   /** Suma unidades confirmadas a una línea (y a su lote si se escaneó etiqueta de lote) */
   function aplicar(idx: number, lote: number | null, toma: number): boolean {
     const destino = filas[idx];
+    if (!destino) return false;
     const error = (t: string) => { pitido(false); haptic('warning'); setAviso({ ok: false, texto: t }); return false; };
     if (!(toma > 0)) return error('Escribe una cantidad mayor que cero.');
     const falta = Math.min(destino.cant, destino.stock ?? Infinity) - destino.c.recogido;
@@ -358,13 +353,14 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
                 <Button variant={camara ? 'primary' : 'secondary'} size="sm" icon={camara ? <X size={15} /> : <Camera size={15} />} onClick={() => { setCamara(v => !v); if (camara) setLineaActiva(null); }}>
                   {camara ? 'Cerrar cámara' : 'Escanear QR'}
                 </Button>
+                <label className="sdt-auto" title="Cada lectura confirma de una vez la cantidad solicitada, sin preguntar"><input type="checkbox" checked={auto} onChange={e => cambiarAuto(e.target.checked)} /> Cantidad automática</label>
                 <form className="sdt-scan__manual" onSubmit={e => { e.preventDefault(); leer(manual); setManual(''); entrada.current?.focus(); }}>
                   <input ref={entrada} className="input" value={manual} onChange={e => setManual(e.target.value)} placeholder="Código del artículo o lote (o 5*código)" autoCapitalize="characters" autoCorrect="off" />
                 </form>
               </div>
               {camara && (
                 <>
-                  {lineaActiva != null && <p className="sdt-scan__linea">Confirmando solo la línea {lineaActiva + 1}: <b>{filas[lineaActiva].it.descripcion || filas[lineaActiva].it.inventario_id}</b> <button type="button" onClick={() => setLineaActiva(null)}>Cualquier línea</button></p>}
+                  {lineaActiva != null && filas[lineaActiva] && <p className="sdt-scan__linea">Confirmando solo la línea {lineaActiva + 1}: <b>{filas[lineaActiva].it.descripcion || filas[lineaActiva].it.inventario_id}</b> <button type="button" onClick={() => setLineaActiva(null)}>Cualquier línea</button></p>}
                   <EscanerContinuo activo={camara} onLeido={leer} />
                 </>
               )}
@@ -374,6 +370,7 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
 
           {pregunta && (() => {
             const f = filas[pregunta.idx];
+            if (!f) return null;
             const falta = Math.min(f.cant, f.stock ?? Infinity) - f.c.recogido;
             const valorNum = parseFloat(pregunta.valor.replace(',', '.'));
             const hermanas = filas.filter(x => x.it.inventario_id === f.it.inventario_id && !x.completa);

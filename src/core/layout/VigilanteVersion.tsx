@@ -49,7 +49,15 @@ export function VigilanteVersion() {
     if (primera.current) { primera.current = false; return; }
     void (async () => {
       if (!hayNueva.current) await revisar();
-      if (hayNueva.current) window.location.reload();
+      if (!hayNueva.current) return;
+      // Freno: si ya se recargó hace poco por esta misma diferencia y la versión sigue sin coincidir (dos servidores con versiones
+      // distintas durante un despliegue), no se recarga otra vez en cada pantalla: queda solo el aviso con el botón Actualizar.
+      try {
+        const ultima = Number(sessionStorage.getItem('fleet_ultima_recarga_version') || 0);
+        if (Date.now() - ultima < 120_000) return;
+        sessionStorage.setItem('fleet_ultima_recarga_version', String(Date.now()));
+      } catch { /* sin sessionStorage */ }
+      window.location.reload();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);

@@ -13,6 +13,7 @@ import { errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 import { formatDolares, formatSoles } from '../../core/lib/format';
 import { EscanerContinuo } from './EscanerContinuo';
+import { usePistola } from './usePistola';
 import { pitido } from './pitido';
 import { separarLote } from './codigosLote';
 import './picking.css';
@@ -69,6 +70,8 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
   // Escaneo de lo que llega: cada lectura suma 1 (o «5*código», 5) a la cantidad recibida de ese artículo
   const [escaneando, setEscaneando] = useState(false);
   const [manualEsc, setManualEsc] = useState('');
+  const campoEsc = useRef<HTMLInputElement>(null);
+  usePistola(escaneando, campoEsc);
   const [avisoEsc, setAvisoEsc] = useState<{ ok: boolean; texto: string } | null>(null);
   const [cant, setCant] = useState<Record<number, string>>({});
   const [alm, setAlm] = useState<Record<number, string>>({});
@@ -246,7 +249,7 @@ export function RegistrarRecepcion({ oc, usuario, open, onClose }: {
                 <>
                   <EscanerContinuo activo={escaneando} onLeido={leerCodigo} />
                   <form className="pk-entrada" onSubmit={e => { e.preventDefault(); leerCodigo(manualEsc); setManualEsc(''); }}>
-                    <input className="input" value={manualEsc} onChange={e => setManualEsc(e.target.value)} placeholder="Código (o 5*código para 5 unidades)" autoCapitalize="characters" autoCorrect="off" />
+                    <input ref={campoEsc} className="input" value={manualEsc} onChange={e => setManualEsc(e.target.value)} placeholder="Código (o 5*código para 5 unidades)" autoCapitalize="characters" autoCorrect="off" />
                     <Button type="submit" variant="secondary" disabled={!manualEsc.trim()}>Usar</Button>
                   </form>
                 </>

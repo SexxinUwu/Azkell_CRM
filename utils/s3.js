@@ -129,3 +129,12 @@ function urlPublicaDeKey(key) {
 }
 
 module.exports = { uploadToS3, deleteFromS3, s3KeyFromUrl, getPresignedUrl, getPresignedUrlEstable, getPresignedUploadUrl, urlPublicaDeKey };
+
+/** Baja un objeto de S3 completo a memoria (para las fotos del inventario guardadas en el servidor) */
+async function descargarDeS3(key) {
+    const r = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+    const partes = [];
+    for await (const parte of r.Body) partes.push(parte);
+    return Buffer.concat(partes);
+}
+module.exports.descargarDeS3 = descargarDeS3;

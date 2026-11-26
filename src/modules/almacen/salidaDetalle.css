@@ -118,3 +118,5 @@
 .sdt-cant__linea { padding: 6px 12px; border-radius: 99px; border: 1.5px solid var(--separator); background: var(--surface); font-size: 0.8125rem; font-weight: 600; cursor: pointer; color: var(--label); text-align: left; }
 .sdt-cant__linea--on { border-color: var(--accent); background: var(--accent-tint); color: var(--accent-ink, var(--accent)); }
 .sdt-cant__resto { margin: 0; font-size: 0.8125rem; font-weight: 600; color: #b45309; }
+
+.sdt-auto { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 600; color: var(--label-2); white-space: nowrap; cursor: pointer; }

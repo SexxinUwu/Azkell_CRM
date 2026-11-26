@@ -808,20 +808,19 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
         const targetDb = getDb(req);
         targetDb.query(_stockSQL, async (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
-            const { getPresignedUrlEstable, s3KeyFromUrl } = require('../utils/s3');
-            const signedRows = await Promise.all(rows.map(async (row) => {
+            const { s3KeyFromUrl } = require('../utils/s3');
+            const fotos = require('../services/fotos_cache');
+            const llaves = [];
+            // Las fotos se sirven desde el propio servidor (guardadas en disco, reducidas y con caché de un año): carga inmediata
+            const signedRows = rows.map((row) => {
                 if (row.imagen_url) {
                     const key = s3KeyFromUrl(row.imagen_url);
-                    if (key) {
-                        try {
-                            // Enlace estable por día: el navegador reutiliza la foto en vez de bajarla otra vez
-                            row.imagen_url = await getPresignedUrlEstable(key);
-                        } catch (e) { }
-                    }
+                    if (key) { llaves.push(key); row.imagen_url = fotos.urlFoto(key); }
                 }
                 return row;
-            }));
+            });
             res.json(signedRows);
+            fotos.precalentar(llaves).catch(() => {});
         });
     });
 
@@ -1234,13 +1233,10 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
                         logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', 'MODIFICÓ', req.path);
                     }
 
-                    let presigned = url;
-                    try {
-                        presigned = await getPresignedUrl(s3Key, 3600);
-                    } catch (e) {
-                        console.warn('[Presign Error]', e.message);
-                    }
-                    res.json({ ok: true, imagen_url: presigned });
+                    // La foto recién subida ya queda lista en el servidor: se ve al instante
+                    const fotos = require('../services/fotos_cache');
+                    await fotos.asegurar(s3Key, req.file.buffer).catch(e => console.warn('[Foto caché]', e.message));
+                    res.json({ ok: true, imagen_url: fotos.urlFoto(s3Key) });
                 });
             });
         } catch (error) {

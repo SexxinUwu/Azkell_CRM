@@ -2790,6 +2790,9 @@ app.post('/api/logout', (req, res) => {
     res.json({ ok: true });
 });
 
+// Fotos del inventario guardadas en el servidor (dirección firmada; ver services/fotos_cache.js)
+app.get('/fotos-inv/:archivo', (req, res) => require('./services/fotos_cache').servir(req, res));
+
 // Versión publicada de la app: cambia con cada despliegue. Las pestañas abiertas la consultan y, si cambió, se recargan
 // antes de pedir módulos que ya no existen (así no aparecen errores al navegar mientras se publica una versión).
 const _versionApp = (() => {
@@ -5642,6 +5645,20 @@ require('./services/notificaciones_eventos').programarVencimientos(async () => {
     const { getAllActiveTenants } = require('./services/tenant_master');
     return (await getAllActiveTenants()).map(t => ({ db: t.pool, nombre: t.nombre_empresa }));
 });
+// Fotos del inventario: al arrancar se bajan todas de S3 y quedan listas en el servidor, para que nadie espere al abrir el inventario
+setTimeout(async () => {
+    try {
+        const { getAllActiveTenants } = require('./services/tenant_master');
+        const { s3KeyFromUrl } = require('./utils/s3');
+        const fotos = require('./services/fotos_cache');
+        for (const t of await getAllActiveTenants()) {
+            const p = typeof t.pool.promise === 'function' ? t.pool.promise() : t.pool;
+            const [rows] = await p.query("SELECT imagen_url FROM inventario WHERE imagen_url IS NOT NULL AND imagen_url <> ''");
+            await fotos.precalentar(rows.map(r => s3KeyFromUrl(r.imagen_url)));
+        }
+        console.log('[fotos] inventario listo en el servidor');
+    } catch (e) { console.warn('[fotos] precarga:', e.message); }
+}, 8000);
 setTimeout(() => gpsDeTodasLasEmpresas().catch(e => console.warn('Precarga GPS:', e.message)), 15000);
 
 // 4. Encender Servidor
