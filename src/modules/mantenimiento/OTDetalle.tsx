@@ -28,7 +28,6 @@ import '../../core/ui/botonesIcono.css';
 import './ot-detalle.css';
 import { TrabajoOTSheet } from './TrabajoOTSheet';
 import { OTServiciosTerceros } from './OTServiciosTerceros';
-import { OTNeumaticos } from './OTNeumaticos';
 import { EditarFechasSheet, EditarKmSheet, EditarOTSheet, EditarSolicitudSheet } from './OTEditar';
 import { SalidaFormulario } from '../almacen/SalidaFormulario';
 import { pdfOt, pdfPlantillaInspeccion, pdfPlantillaLlantas, pdfPlantillaOt } from './otPdf';
@@ -120,7 +119,7 @@ function useBacklogDeOT(ticket: string) {
   });
 }
 
-type Seccion = 'tareas' | 'tiempos' | 'repuestos' | 'terceros' | 'neumaticos' | 'costos';
+type Seccion = 'tareas' | 'tiempos' | 'repuestos' | 'terceros' | 'costos';
 
 interface OTDetalleProps {
   ot: OrdenTrabajo;
@@ -587,7 +586,6 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
               { value: 'tiempos', label: 'Tiempos' },
               { value: 'repuestos', label: 'Repuestos' },
               { value: 'terceros', label: 'Servicios' },
-              { value: 'neumaticos', label: 'Neumáticos' },
               { value: 'costos', label: 'Costos' },
             ]} />
           </div>
@@ -830,7 +828,6 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
         </>
       )}
 
-      {seccion === 'neumaticos' && <OTNeumaticos idOt={idOt} puedeEditar={puedeEditar} />}
 
       {seccion === 'costos' && (
         <div className="ot-bento">

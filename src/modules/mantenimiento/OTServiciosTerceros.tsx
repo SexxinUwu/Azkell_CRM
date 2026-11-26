@@ -1,9 +1,10 @@
 import './otServicios.css';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Plus, ScrollText, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice } from '../../core/ui/Display';
+import { SearchField } from '../../core/ui/Field';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
@@ -24,6 +25,7 @@ export function OTServiciosTerceros({ ot, puedeEditar }: { ot: string; puedeEdit
   const toast = useToast();
   const [agregando, setAgregando] = useState(false);
   const [seleccion, setSeleccion] = useState<string[]>([]);
+  const [buscar, setBuscar] = useState('');
   const [quitar, setQuitar] = useState<ServicioOt | null>(null);
   const [ocupado, setOcupado] = useState(false);
 
@@ -39,6 +41,16 @@ export function OTServiciosTerceros({ ot, puedeEditar }: { ot: string; puedeEdit
     queryFn: () => api<{ data: ServicioOt[] }>(`/taller/ot-servicios-disponibles?ot=${encodeURIComponent(ot)}`).then(r => r.data ?? []),
     staleTime: 0,
   });
+
+  // Búsqueda: por proveedor, número de OC, fecha, estado, OT sugerida o monto (sin tildes ni mayúsculas)
+  const limpio = (x: unknown) => String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const filtradas = useMemo(() => {
+    const q = limpio(buscar).trim();
+    const todas = disponibles.data ?? [];
+    if (!q) return todas;
+    return todas.filter(s => [s.proveedor_nombre, s.id, dia(s.fecha), s.estado, s.ot_id, monto(s), s.numero_operacion].some(v => limpio(v).includes(q)));
+  }, [disponibles.data, buscar]);
+  const todasMarcadas = filtradas.length > 0 && filtradas.every(s => seleccion.includes(s.id));
 
   const refrescar = async () => {
     await qc.invalidateQueries({ queryKey: ['mant', 'ot-servicios'] });
@@ -110,26 +122,44 @@ export function OTServiciosTerceros({ ot, puedeEditar }: { ot: string; puedeEdit
         </div>
       )}
 
-      <Sheet open={agregando} onClose={() => !ocupado && setAgregando(false)} title={`Agregar servicios a la OT ${ot}`}
+      <Sheet open={agregando} onClose={() => !ocupado && setAgregando(false)} title={`Agregar servicios a la OT ${ot}`} ancho
         footer={<><Button variant="secondary" onClick={() => setAgregando(false)} disabled={ocupado}>Cancelar</Button>
           <Button variant="primary" icon={<Check size={15} />} onClick={agregar} loading={ocupado} disabled={seleccion.length === 0}>Agregar {seleccion.length || ''}</Button></>}>
         {disponibles.isLoading ? <PageLoader /> : disponibles.isError ? <Notice tone="error">{errorMessage(disponibles.error)}</Notice> : (disponibles.data ?? []).length === 0 ? (
           <EmptyState icon={<ScrollText size={22} />} title="Nada para agregar">No hay OC de servicio procesadas sin agregar a una OT.</EmptyState>
         ) : (
-          <div className="tarjeta__lista">
-            {(disponibles.data ?? []).map(s => {
-              const marcado = seleccion.includes(s.id);
-              return (
-                <label key={s.id} className="dato" style={{ alignItems: 'center', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={marcado} onChange={() => setSeleccion(prev => (marcado ? prev.filter(x => x !== s.id) : [...prev, s.id]))} style={{ width: 18, height: 18, accentColor: 'var(--accent)' }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.875rem' }}>{s.proveedor_nombre || 'Sin proveedor'}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--label-2)' }}>OC {s.id} · {dia(s.fecha)} · {s.estado}{s.ot_id ? ` · sugerida para ${s.ot_id}` : ''}</div>
-                  </div>
-                  <span className="t-numeric">{monto(s)}</span>
-                </label>
-              );
-            })}
+          <div className="ots-elegir">
+          <SearchField value={buscar} onChange={setBuscar} placeholder="Buscar por proveedor, OC, servicio, fecha o monto…" />
+          {filtradas.length === 0 && <p className="ots-sin-res">Ninguna OC coincide con «{buscar}».</p>}
+          <div className="ots-tabla-wrap ots-tabla-wrap--elegir">
+            <table className="ots-tabla ots-tabla--elegir">
+              <thead>
+                <tr>
+                  <th className="ots-check">
+                    <input type="checkbox" aria-label="Elegir todas" checked={todasMarcadas} ref={el => { if (el) el.indeterminate = !todasMarcadas && filtradas.some(s => seleccion.includes(s.id)); }}
+                      onChange={() => setSeleccion(prev => (todasMarcadas ? prev.filter(id => !filtradas.some(s => s.id === id)) : [...new Set([...prev, ...filtradas.map(s => s.id)])]))} />
+                  </th>
+                  <th>Proveedor</th><th>OC</th><th>Fecha</th><th>Estado</th><th className="ots-num">Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtradas.map(s => {
+                  const marcado = seleccion.includes(s.id);
+                  const alternar = () => setSeleccion(prev => (marcado ? prev.filter(x => x !== s.id) : [...prev, s.id]));
+                  return (
+                    <tr key={s.id} className={marcado ? 'ots-fila--on' : undefined} onClick={alternar}>
+                      <td className="ots-check"><input type="checkbox" aria-label={`Elegir ${s.id}`} checked={marcado} onChange={alternar} onClick={e => e.stopPropagation()} /></td>
+                      <td className="ots-prov"><strong>{s.proveedor_nombre || 'Sin proveedor'}</strong>{s.ot_id ? <small>Sugerida para {s.ot_id}</small> : null}</td>
+                      <td className="ots-mono">{s.id}</td>
+                      <td className="ots-mono">{dia(s.fecha)}</td>
+                      <td>{s.estado}</td>
+                      <td className="ots-num ots-mono">{monto(s)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
           </div>
         )}
       </Sheet>
