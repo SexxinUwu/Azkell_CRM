@@ -41,7 +41,7 @@ export function EtiquetaSheet({ open, articulo: a, onClose }: { open: boolean; a
     try {
       await imprimirZpl(zplEtiquetas([etiquetaDe(a)], n));
       haptic('success');
-      toast(`${n} ${n === 1 ? 'etiqueta enviada' : 'etiquetas enviadas'} a la etiquetadora`);
+      toast(`${n} ${n === 1 ? 'etiqueta impresa' : 'etiquetas impresas'}`);
       onClose();
     } catch (err) {
       haptic('warning');
@@ -69,18 +69,16 @@ export function EtiquetaSheet({ open, articulo: a, onClose }: { open: boolean; a
           {p => <TextInput {...p} type="number" min={1} max={99} inputMode="numeric" value={copias} onChange={e => setCopias(e.target.value)} />}
         </Field>
 
-        {estado === 'buscando' && <Notice>Buscando la etiquetadora…</Notice>}
-        {estado === 'lista' && <Notice tone="success">Etiquetadora conectada y lista.</Notice>}
-        {estado === 'sin-impresora' && (
-          <Notice tone="error">El programa de la etiquetadora responde, pero no encuentra la impresora. Revisa que esté encendida y con el cable USB conectado.</Notice>
-        )}
+        {estado === 'buscando' && <Notice>Buscando la etiquetadora del almacén…</Notice>}
+        {estado === 'lista' && <Notice tone="success">Etiquetadora del almacén conectada y lista.</Notice>}
         {estado === 'sin-agente' && (
-          <>
-            <Notice tone="error">No se encontró el programa de la etiquetadora en esta PC. Ábrelo con <b>agente-etiquetas\iniciar-agente.bat</b>.</Notice>
-            <Button variant="secondary" onClick={() => { if (!imprimirEtiqueta(a)) toast('No se pudo abrir la etiqueta. Permite las ventanas emergentes para este sitio.', 'error'); }}>
-              Imprimir una desde el navegador
-            </Button>
-          </>
+          <Notice tone="error">La etiquetadora del almacén no está conectada. Pide que abran el programa de etiquetas en la PC que tiene la impresora (archivo «iniciar-agente.bat», carpeta agente-etiquetas).</Notice>
+        )}
+        {estado === 'error' && <Notice tone="error">No se pudo consultar la etiquetadora. Revisa tu conexión.</Notice>}
+        {(estado === 'sin-agente' || estado === 'error') && (
+          <Button variant="secondary" onClick={() => { if (!imprimirEtiqueta(a)) toast('No se pudo abrir la etiqueta. Permite las ventanas emergentes para este sitio.', 'error'); }}>
+            Imprimir una desde el navegador
+          </Button>
         )}
       </div>
     </Sheet>

@@ -1,30 +1,39 @@
 /**
- * Comunicación con el agente de etiquetas (agente-etiquetas/agente.js), que corre en la PC con la etiquetadora USB.
- * El navegador no puede hablarle a la impresora; le manda la etiqueta al agente y este la pasa por USB.
+ * Etiquetas por la etiquetadora del almacén. El navegador manda la etiqueta al servidor y la PC del almacén (la que tiene la etiquetadora
+ * conectada por USB, con el programa agente-etiquetas) la recoge y la imprime. Funciona desde cualquier equipo con acceso al sistema.
  */
-const AGENTE = 'http://127.0.0.1:9101';
+import { api, errorMessage } from '../../core/api/client';
 
-export type EstadoEtiquetadora = 'lista' | 'sin-impresora' | 'sin-agente';
+export type EstadoEtiquetadora = 'lista' | 'sin-agente' | 'error';
 
-/** ¿Hay agente en esta PC y la etiquetadora está encendida y conectada? */
+/** ¿La PC del almacén está conectada y atendiendo la etiquetadora? */
 export async function estadoEtiquetadora(): Promise<EstadoEtiquetadora> {
   try {
-    const r = await fetch(`${AGENTE}/estado`, { signal: AbortSignal.timeout(6000) });
-    const j = (await r.json()) as { impresora?: boolean };
-    return j.impresora ? 'lista' : 'sin-impresora';
+    const r = await api<{ agente?: boolean }>('/almacen/inventario/etiquetas/estado');
+    return r.agente ? 'lista' : 'sin-agente';
   } catch {
-    return 'sin-agente';
+    return 'error';
   }
 }
 
-/** Manda el ZPL a la etiquetadora. Lanza un error con el motivo si no se pudo. */
+interface Trabajo { ok?: boolean; estado?: 'pendiente' | 'enviado' | 'impreso' | 'error'; error?: string }
+
+/** Manda el ZPL a la cola y espera a que la etiquetadora lo imprima. Lanza un error con el motivo si no se pudo. */
 export async function imprimirZpl(zpl: string): Promise<void> {
-  let r: Response;
+  let id = '';
   try {
-    r = await fetch(`${AGENTE}/imprimir`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ zpl }), signal: AbortSignal.timeout(30000) });
-  } catch {
-    throw new Error('No se encontró el programa de la etiquetadora en esta PC.');
+    const r = await api<{ id: string }>('/almacen/inventario/etiquetas/imprimir', { method: 'POST', body: { zpl } });
+    id = r.id;
+  } catch (e) {
+    throw new Error(errorMessage(e));
   }
-  const j = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string };
-  if (!r.ok || !j.ok) throw new Error(j.error || 'No se pudo imprimir la etiqueta.');
+  const limite = Date.now() + 25000;
+  while (Date.now() < limite) {
+    await new Promise(r => setTimeout(r, 1000));
+    let t: Trabajo;
+    try { t = await api<Trabajo>(`/almacen/inventario/etiquetas/trabajo/${encodeURIComponent(id)}`); } catch { continue; }
+    if (t.estado === 'impreso') return;
+    if (t.estado === 'error') throw new Error(t.error || 'No se pudo imprimir la etiqueta.');
+  }
+  throw new Error('La etiquetadora tarda en responder. Revisa que esté encendida y con papel.');
 }

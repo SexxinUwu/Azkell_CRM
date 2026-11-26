@@ -48,7 +48,7 @@ app.use(require('helmet')({
             styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net', 'https://unpkg.com'],
             fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com', 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net'],
             imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
-            connectSrc: ["'self'", 'https:', 'wss:', 'http://127.0.0.1:9101'],
+            connectSrc: ["'self'", 'https:', 'wss:'],
             frameSrc: ["'self'", 'blob:', 'https:'],
             objectSrc: ["'none'"],
             baseUri: ["'self'"],
@@ -206,6 +206,9 @@ app.use((req, res, next) => {
 // La gestión de llaves y webhooks (/sistema/...) va más abajo, detrás de la sesión y el RBAC.
 const { router: apiGatewayRouter, gestionRouter: apiGatewayGestionRouter } = require('./routes/api-gateway');
 app.use('/api', apiGatewayRouter);
+// Cola de etiquetas: la PC del almacén (llave de API) recoge e imprime lo que mandan los usuarios
+const etiquetasRoutes = require('./routes/etiquetas');
+app.use('/api', etiquetasRoutes.agente);
 
 // ── Helper para generar PNG cuadrado (1:1) centrado con padding automático ──
 // Permite que logos alargados/rectangulares cumplan con la estricta validación 1:1 de PWA/Chrome
@@ -2587,6 +2590,7 @@ app.use('/api', verifyToken);
 // Panel SuperAdmin: después de la sesión (exige Fundador o clave maestra) y antes de los permisos por módulo
 app.use('/api/superadmin', require('./routes/superadmin')());
 app.use('/api', globalRBAC);
+app.use('/api', etiquetasRoutes.usuario);
 // Sistema › API y desarrolladores (llaves y webhooks): exige sesión y permiso de administración (rbac.js)
 app.use('/api', apiGatewayGestionRouter);
 

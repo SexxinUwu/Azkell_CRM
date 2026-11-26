@@ -19,3 +19,6 @@ assets/3d/scania_s730_ligero*.glb
 docs/referencia/
 .env.local
 assets/3d/scania_s730_web.glb
+
+# Etiquetadora: configuración local con la llave de API (no se sube)
+agente-etiquetas/config.json
