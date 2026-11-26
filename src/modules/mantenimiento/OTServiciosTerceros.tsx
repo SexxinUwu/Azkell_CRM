@@ -14,7 +14,13 @@ import { haptic } from '../../core/lib/haptics';
 export interface ServicioOt {
   id: string; fecha: string | null; proveedor_nombre: string | null; moneda: string | null;
   total_pen: number | string | null; estado: string; numero_operacion?: string | null; ot_id?: string | null;
+  /** 1 = la OC ya se agregó a la OT que dice ot_id */
+  ot_servicio_agregado?: number | null;
+  /** Qué se contrató: las líneas de la OC (o, si no tiene, el motivo) */
+  descripcion?: string | null; motivo_entrada?: string | null;
 }
+
+const queServicio = (s: ServicioOt) => (s.descripcion || s.motivo_entrada || '').trim();
 
 const n = (v: unknown) => Number(v) || 0;
 const monto = (s: ServicioOt) => `${/DOL/i.test(String(s.moneda ?? '')) ? 'US$' : 'S/'} ${n(s.total_pen).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -48,9 +54,12 @@ export function OTServiciosTerceros({ ot, puedeEditar, cerrada = false }: { ot: 
     const q = limpio(buscar).trim();
     const todas = disponibles.data ?? [];
     if (!q) return todas;
-    return todas.filter(s => [s.proveedor_nombre, s.id, dia(s.fecha), s.estado, s.ot_id, monto(s), s.numero_operacion].some(v => limpio(v).includes(q)));
+    return todas.filter(s => [s.proveedor_nombre, s.id, dia(s.fecha), s.estado, s.ot_id, queServicio(s), monto(s), s.numero_operacion].some(v => limpio(v).includes(q)));
   }, [disponibles.data, buscar]);
-  const todasMarcadas = filtradas.length > 0 && filtradas.every(s => seleccion.includes(s.id));
+  // Las OC que ya están en una OT salen en la lista, tachadas, y no se pueden marcar
+  const yaAsignada = (s: ServicioOt) => Number(s.ot_servicio_agregado) === 1;
+  const elegibles = filtradas.filter(s => !yaAsignada(s));
+  const todasMarcadas = elegibles.length > 0 && elegibles.every(s => seleccion.includes(s.id));
 
   const refrescar = async () => {
     await qc.invalidateQueries({ queryKey: ['mant', 'ot-servicios'] });
@@ -100,18 +109,18 @@ export function OTServiciosTerceros({ ot, puedeEditar, cerrada = false }: { ot: 
           <table className="ots-tabla">
             <thead>
               <tr>
-                <th>Proveedor</th><th>OC</th><th>Fecha</th><th>Estado</th><th>Operación</th><th className="ots-num">Monto</th><th><span className="ots-sr">Acciones</span></th>
+                <th>Fecha</th><th>OC</th><th>Proveedor</th><th>Descripción del servicio</th><th className="ots-num">Monto</th><th>Estado</th><th><span className="ots-sr">Acciones</span></th>
               </tr>
             </thead>
             <tbody>
               {lista.map(s => (
                 <tr key={s.id}>
-                  <td>{s.proveedor_nombre || 'Sin proveedor'}</td>
-                  <td className="ots-mono">{s.id}</td>
                   <td className="ots-mono">{dia(s.fecha)}</td>
-                  <td>{s.estado}</td>
-                  <td className="ots-mono">{s.numero_operacion || '—'}</td>
+                  <td className="ots-mono">{s.id}</td>
+                  <td>{s.proveedor_nombre || 'Sin proveedor'}</td>
+                  <td className="ots-desc">{queServicio(s) || '—'}</td>
                   <td className="ots-num ots-mono">{monto(s)}</td>
+                  <td>{s.estado}{s.numero_operacion ? <small className="ots-op">Op. {s.numero_operacion}</small> : null}</td>
                   <td>
                     {puedeEditar && !cerrada && <Button variant="plain" iconOnly icon={<Trash2 size={14} />} aria-label={`Quitar ${s.id}`} title="Quitar de la OT" onClick={() => setQuitar(s)} />}
                   </td>
@@ -136,24 +145,31 @@ export function OTServiciosTerceros({ ot, puedeEditar, cerrada = false }: { ot: 
               <thead>
                 <tr>
                   <th className="ots-check">
-                    <input type="checkbox" aria-label="Elegir todas" checked={todasMarcadas} ref={el => { if (el) el.indeterminate = !todasMarcadas && filtradas.some(s => seleccion.includes(s.id)); }}
-                      onChange={() => setSeleccion(prev => (todasMarcadas ? prev.filter(id => !filtradas.some(s => s.id === id)) : [...new Set([...prev, ...filtradas.map(s => s.id)])]))} />
+                    <input type="checkbox" aria-label="Elegir todas" checked={todasMarcadas} ref={el => { if (el) el.indeterminate = !todasMarcadas && elegibles.some(s => seleccion.includes(s.id)); }}
+                      onChange={() => setSeleccion(prev => (todasMarcadas ? prev.filter(id => !elegibles.some(s => s.id === id)) : [...new Set([...prev, ...elegibles.map(s => s.id)])]))} />
                   </th>
-                  <th>Proveedor</th><th>OC</th><th>Fecha</th><th>Estado</th><th className="ots-num">Monto</th>
+                  <th>Fecha</th><th>OC</th><th>Proveedor</th><th>Descripción del servicio</th><th className="ots-num">Monto</th><th>Estado</th>
                 </tr>
               </thead>
               <tbody>
                 {filtradas.map(s => {
-                  const marcado = seleccion.includes(s.id);
-                  const alternar = () => setSeleccion(prev => (marcado ? prev.filter(x => x !== s.id) : [...prev, s.id]));
+                  const asignada = yaAsignada(s);
+                  const marcado = !asignada && seleccion.includes(s.id);
+                  const alternar = () => { if (!asignada) setSeleccion(prev => (marcado ? prev.filter(x => x !== s.id) : [...prev, s.id])); };
+                  const enEstaOt = asignada && s.ot_id === ot;
                   return (
-                    <tr key={s.id} className={marcado ? 'ots-fila--on' : undefined} onClick={alternar}>
-                      <td className="ots-check"><input type="checkbox" aria-label={`Elegir ${s.id}`} checked={marcado} onChange={alternar} onClick={e => e.stopPropagation()} /></td>
-                      <td className="ots-prov"><strong>{s.proveedor_nombre || 'Sin proveedor'}</strong>{s.ot_id ? <small>Sugerida para {s.ot_id}</small> : null}</td>
-                      <td className="ots-mono">{s.id}</td>
+                    <tr key={s.id} className={asignada ? 'ots-fila--asignada' : marcado ? 'ots-fila--on' : undefined} onClick={alternar} aria-disabled={asignada || undefined}>
+                      <td className="ots-check"><input type="checkbox" aria-label={asignada ? `${s.id} ya está asignada` : `Elegir ${s.id}`} checked={marcado} disabled={asignada} onChange={alternar} onClick={e => e.stopPropagation()} /></td>
                       <td className="ots-mono">{dia(s.fecha)}</td>
-                      <td>{s.estado}</td>
+                      <td className="ots-mono">{s.id}</td>
+                      <td className="ots-prov"><strong>{s.proveedor_nombre || 'Sin proveedor'}</strong></td>
+                      <td className="ots-desc">{queServicio(s) || '—'}</td>
                       <td className="ots-num ots-mono">{monto(s)}</td>
+                      <td className="ots-estado">
+                        {asignada
+                          ? <span className="ots-asignada" title="Esta OC ya está asignada y no se puede agregar de nuevo">{enEstaOt ? 'Ya está en esta OT' : `Ya asignada a ${s.ot_id || 'otra OT'}`}<small>No se puede agregar</small></span>
+                          : s.estado}
+                      </td>
                     </tr>
                   );
                 })}

@@ -181,7 +181,8 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     router.get('/ot-servicios', async (req, res) => {
         try {
             const [rows] = await (req.db || db).promise().query(
-                `SELECT id, fecha, proveedor_nombre, moneda, total_pen, estado, numero_operacion
+                `SELECT id, fecha, proveedor_nombre, moneda, total_pen, estado, numero_operacion, motivo_entrada,
+                        (SELECT GROUP_CONCAT(d.descripcion SEPARATOR ' · ') FROM detalle_entradas_inv d WHERE d.entrada_id = entradas_inv.id) AS descripcion
                  FROM entradas_inv
                  WHERE ot_id = ? AND ot_servicio_agregado = 1 AND LOWER(tipo_orden) = 'orden de servicio' AND estado NOT IN ('Anulado', 'Anulada')
                  ORDER BY fecha DESC`, [req.query.ot || '']);
@@ -191,11 +192,11 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     router.get('/ot-servicios-disponibles', async (req, res) => {
         try {
             const [rows] = await (req.db || db).promise().query(
-                `SELECT id, fecha, proveedor_nombre, moneda, total_pen, estado, ot_id
+                `SELECT id, fecha, proveedor_nombre, moneda, total_pen, estado, ot_id, ot_servicio_agregado, motivo_entrada,
+                        (SELECT GROUP_CONCAT(d.descripcion SEPARATOR ' · ') FROM detalle_entradas_inv d WHERE d.entrada_id = entradas_inv.id) AS descripcion
                  FROM entradas_inv
                  WHERE LOWER(tipo_orden) = 'orden de servicio' AND LOWER(estado) IN (?)
-                   AND (ot_id IS NULL OR ot_id = '' OR ot_servicio_agregado = 0)
-                 ORDER BY fecha DESC LIMIT 200`, [ESTADOS_PROCESADO]);
+                 ORDER BY fecha DESC, id DESC LIMIT 300`, [ESTADOS_PROCESADO]);
             res.json({ ok: true, data: rows });
         } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
     });

@@ -22,3 +22,14 @@
 .ots-prov small { font-size: 0.6875rem; color: var(--label-2); }
 .ots-elegir { display: flex; flex-direction: column; gap: var(--s-2); }
 .ots-sin-res { margin: 0; padding: var(--s-2); font-size: 0.8125rem; color: var(--label-2); }
+.ots-desc { max-width: 22rem; font-size: 0.8125rem; line-height: 1.3; }
+.ots-tabla--elegir .ots-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ots-op { display: block; font-size: 0.6875rem; color: var(--label-2); }
+/* OC ya asignada a una OT: sale en la lista, tachada y sin poder elegirse */
+.ots-tabla--elegir .ots-fila--asignada { cursor: not-allowed; }
+.ots-tabla--elegir .ots-fila--asignada:hover { background: transparent; }
+.ots-fila--asignada td:not(.ots-estado) { color: var(--label-3); text-decoration: line-through; }
+.ots-fila--asignada .ots-check input { cursor: not-allowed; }
+.ots-asignada { display: flex; flex-direction: column; gap: 1px; font-size: 0.75rem; font-weight: 700; color: var(--red-ink, #b4232a); text-decoration: none; }
+.ots-asignada small { font-size: 0.6875rem; font-weight: 500; color: var(--label-2); }
+.ots-tabla--elegir { min-width: 760px; }
