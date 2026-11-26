@@ -234,3 +234,31 @@
     .page--fill .otd__lateral, .page--fill .otd__principal { min-height: 0; overflow-y: auto; padding-bottom: var(--s-4); }
   }
 }
+
+/* ─── Detalle compacto: casillas de resumen pequeñas, fallas en lista numerada, asignación y cierre en dos columnas ─── */
+.otd__lateral, .otd-ficha { gap: var(--s-5); }
+.otd-kpis { gap: 6px; }
+.otd-kpi { display: grid; grid-template-columns: auto 1fr; grid-template-areas: 'i e' 'v v' 'p p'; column-gap: 6px; row-gap: 0; align-items: center; padding: 8px 12px; border-radius: var(--r-lg); }
+.otd-kpi__icono { grid-area: i; margin: 0; }
+.otd-kpi__icono svg { width: 14px; height: 14px; }
+.otd-kpi__etiqueta { grid-area: e; font-size: 0.6875rem; }
+.otd-kpi__valor { grid-area: v; font-size: 1rem; line-height: 1.2; }
+.otd-kpi__pie { grid-area: p; font-size: 0.625rem; line-height: 1.2; }
+
+.otd-fallas { list-style: none; margin: 0; padding: 4px 0; border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-card); }
+.otd-falla-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 14px; }
+.otd-falla-item + .otd-falla-item { border-top: 0.5px solid var(--separator); }
+.otd-falla-item__n { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; margin-top: 1px; background: var(--fill); color: var(--label-2); font-size: 0.6875rem; font-weight: 700; }
+.otd-falla-item:first-child .otd-falla-item__n { background: var(--accent); color: #fff; }
+.otd-falla-item__txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; font-size: 0.8125rem; line-height: 1.35; overflow-wrap: anywhere; }
+.otd-falla-item__txt strong { font-size: 0.8125rem; font-weight: 700; }
+.otd-falla-item__txt span { color: var(--label-2); }
+.otd-falla-item__principal { flex: none; font-size: 0.625rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: var(--accent-tint); color: var(--accent-ink, var(--accent)); }
+.otd-falla-pie { margin: 2px 4px 0; font-size: 0.6875rem; color: var(--label-3); line-height: 1.35; }
+
+.otd-datos--compacto { display: grid; grid-template-columns: 1fr 1fr; }
+.otd-datos--compacto .otd-datos__fila { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 1px; padding: 8px 14px; border-top: 0; }
+.otd-datos--compacto .otd-datos__fila:nth-child(n+3) { border-top: 0.5px solid var(--separator); }
+.otd-datos--compacto dt { font-size: 0.6875rem; color: var(--label-3); }
+.otd-datos--compacto dd { font-size: 0.8125rem; text-align: left; }
+.otd-datos--compacto .otd-datos__fila--bloque { grid-column: 1 / -1; }

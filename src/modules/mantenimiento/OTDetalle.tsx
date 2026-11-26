@@ -119,6 +119,21 @@ function useBacklogDeOT(ticket: string) {
   });
 }
 
+/** Parte el texto de la falla reportada en una lista: cada línea es una falla ("Sistema : detalle"); el origen ("Generado automáticamente…") y las notas van aparte */
+function partirFalla(texto: string): { items: Array<{ cat: string | null; detalle: string }>; origen: string | null; nota: string | null } {
+  const items: Array<{ cat: string | null; detalle: string }> = [];
+  let origen: string | null = null; const notas: string[] = [];
+  for (const crudo of texto.split('\n')) {
+    const l = crudo.replace(/^\s*\d+[.)-]?\s+/, '').trim();
+    if (!l) continue;
+    if (/^Generado automáticamente/i.test(l)) { origen = l; continue; }
+    if (/^Nota\s*:/i.test(l)) { notas.push(l.replace(/^Nota\s*:\s*/i, '')); continue; }
+    const i = l.indexOf(' : ');
+    items.push(i > 0 && i < 60 ? { cat: l.slice(0, i).trim(), detalle: l.slice(i + 3).trim() } : { cat: null, detalle: l });
+  }
+  return { items, origen, nota: notas.length ? notas.join(' · ') : null };
+}
+
 type Seccion = 'tareas' | 'tiempos' | 'repuestos' | 'terceros' | 'costos';
 
 interface OTDetalleProps {
@@ -405,6 +420,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   const motivo = det.motivo || ot.observaciones
     ? String(rotGetCleanMotivoDisplay(det, ot)).replace(/^•\s*/gm, '').replace(/^(Falla Manual|MANUAL)\s*:\s*/i, '')
     : '';
+  const fallas = useMemo(() => partirFalla(motivo), [motivo]);
   const datosFicha = ([
     ['Técnico responsable', ot.tecnico],
     ['Supervisor', ot.supervisor],
@@ -421,14 +437,26 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
     <div className={`otd-ficha ${clase}`}>
       {motivo && (
         <section className="otd-grupo">
-          <h3 className="otd-grupo__titulo">Falla reportada</h3>
-          <p className="otd-falla">{motivo}</p>
+          <h3 className="otd-grupo__titulo">Falla reportada{fallas.items.length > 1 ? <span className="otd-cuenta">{fallas.items.length}</span> : null}</h3>
+          <ol className="otd-fallas">
+            {fallas.items.map((f, i) => (
+              <li key={i} className="otd-falla-item">
+                <span className="otd-falla-item__n" aria-hidden>{i + 1}</span>
+                <span className="otd-falla-item__txt">
+                  {f.cat && <strong>{f.cat}</strong>}
+                  <span>{f.detalle}</span>
+                </span>
+                {i === 0 && fallas.items.length > 1 && <span className="otd-falla-item__principal" title="Es la primera falla reportada">Principal</span>}
+              </li>
+            ))}
+          </ol>
+          {(fallas.nota || fallas.origen) && <p className="otd-falla-pie">{fallas.nota ? `Nota: ${fallas.nota}` : ''}{fallas.nota && fallas.origen ? ' · ' : ''}{fallas.origen ?? ''}</p>}
         </section>
       )}
       {datosFicha.length > 0 && (
         <section className="otd-grupo">
           <h3 className="otd-grupo__titulo">Asignación</h3>
-          <dl className="otd-datos">
+          <dl className="otd-datos otd-datos--compacto">
             {datosFicha.map(([k, v]) => (
               <div key={k} className="otd-datos__fila">
                 <dt>{k}</dt>
@@ -453,7 +481,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
       {hayCierre && (
         <section className="otd-grupo">
           <h3 className="otd-grupo__titulo">Cierre</h3>
-          <dl className="otd-datos">
+          <dl className="otd-datos otd-datos--compacto">
             {ot.comentario_cierre && <div className="otd-datos__fila otd-datos__fila--bloque"><dt>Observaciones finales</dt><dd>{ot.comentario_cierre}</dd></div>}
             {ot.cerrado_por && <div className="otd-datos__fila"><dt>Cerrado por</dt><dd>{nombrePersona(ot.cerrado_por)}</dd></div>}
           </dl>
