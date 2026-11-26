@@ -26,3 +26,5 @@
 .otl-barra .placas-toolbar { padding: 0; }
 .otl-rango { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-2); }
 .otl-rango label { display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; font-weight: 600; color: var(--label-2); }
+.otl-acciones .btn { flex: none; white-space: nowrap; }
+.otl-acciones { justify-content: center; width: 100%; }

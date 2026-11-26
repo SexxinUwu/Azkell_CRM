@@ -31,7 +31,7 @@ import { LogoArchivo } from './NeumaticosRequerimiento';
 
 // ─── Tabla de OT: columnas que se pueden ocultar y tamaño de la tabla (se recuerdan en este dispositivo) ───
 const COLUMNAS_OT: Array<ColumnaTabla & { fija?: boolean }> = [
-  { id: 'acciones', titulo: 'Acciones', ancho: 190, minimo: 120, alinear: 'center', fija: true },
+  { id: 'acciones', titulo: 'Acciones', ancho: 196, minimo: 196, alinear: 'center', fija: true },
   { id: 'ot', titulo: 'N° OT', ancho: 112, minimo: 90, fija: true },
   { id: 'fecha', titulo: 'Fecha', ancho: 96, minimo: 84 },
   { id: 'placa', titulo: 'Placa', ancho: 112, minimo: 104 },
