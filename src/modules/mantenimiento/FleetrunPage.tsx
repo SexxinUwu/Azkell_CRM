@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Bus, ChevronDown, ChevronRight, Clock, Columns3, Gauge, History, ListChecks, Plus, SearchX, ShieldCheck, SlidersHorizontal, Trash2, Upload } from 'lucide-react';
 import { FileSpreadsheet, FilePdf, MessageCircle, Pencil } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
+import { LicensePlate } from '../../core/ui/LicensePlate';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, TextInput } from '../../core/ui/Field';
 import { ListaMultiple } from '../../core/ui/ListaMultiple';
@@ -735,7 +736,7 @@ export function FleetrunPage() {
 
   function valorColumna(id: ColId, d: ReturnType<typeof datosFila>): ReactNodeLike {
     switch (id) {
-      case 'placa': return <span className="prev-placa">{d.placa}</span>;
+      case 'placa': return <LicensePlate plate={d.placa} size="sm" />;
       case 'fecha': return d.fecha ? d.fecha : <span className="prev-muted">Plan inicial</span>;
       case 'modelo': return d.modelo || '—';
       case 'tipo': return <strong>{d.tipo}</strong>;
@@ -856,7 +857,7 @@ export function FleetrunPage() {
                 return (
                   <article key={g.placa} className="prev-card">
                     <button type="button" className="prev-card__cab" aria-expanded={abierta} onClick={() => alternarGrupo(g.placa)}>
-                      <span className="prev-placa">{g.placa}</span>
+                      <LicensePlate plate={g.placa} size="sm" />
                       <span className="prev-card__info">
                         {cliente && <span className="prev-card__cliente">{cliente}</span>}
                         <span className="prev-card__meta">{uts}{kmDiaT ? ` · ${kmDiaT}` : ''}</span>
@@ -910,7 +911,7 @@ export function FleetrunPage() {
                       <td colSpan={columnasTabla.length}>
                         <div className="prev-grupo__cab">
                           {abierta ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                          <span className="prev-placa">{g.placa}</span>
+                          <LicensePlate plate={g.placa} size="sm" />
                           {cliente && <span style={pildora('#475569')}>{cliente}</span>}
                           {uts && <span style={pildora('#0891b2')}>{uts}</span>}
                           {kmDiaT && <span className="prev-muted">{kmDiaT}</span>}
