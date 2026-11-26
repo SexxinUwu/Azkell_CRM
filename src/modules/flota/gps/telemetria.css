@@ -617,18 +617,19 @@
 /* ═══ Sin tarjetas de resumen ni casillas de estado (ya están en Filtros); controles del mapa en horizontal en el celular ═══ */
 .tg-kpis, .tg-estados { display: none !important; }
 @media (max-width: 900px) {
-  /* Herramientas y estilo del mapa: una sola fila horizontal bajo el encabezado. Si no caben, se desplazan de lado sin barra y el borde se desvanece */
-  .tg .tg-ctrl { left: 8px; right: 8px; top: calc(env(safe-area-inset-top) + 124px); bottom: auto; transform: none; flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px;
-    overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none; padding: 2px 0 6px; overscroll-behavior-x: contain; scroll-snap-type: x proximity;
-    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+  /* Celular: pestañas, herramientas y estilo del mapa en UNA misma fila, con el mismo alto y del ancho de la tarjeta de título.
+     Las pestañas van a la izquierda; herramientas y Mapa/Satélite ocupan el resto y, si en una pantalla muy angosta no caben, se desplazan de lado sin barra. */
+  .tg .tg-tabs { height: 46px; padding: 3px; gap: 1px; align-items: stretch; }
+  .tg .tg-tab { padding: 0 10px; min-height: 0; }
+  .tg .tg-ctrl { left: 134px; right: 8px; top: calc(env(safe-area-inset-top) + 70px); bottom: auto; transform: none; flex-direction: row; align-items: center; justify-content: space-between; gap: 6px;
+    height: 46px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none; overscroll-behavior-x: contain; }
   .tg .tg-ctrl::-webkit-scrollbar { display: none; }
-  .tg .tg-ctrl > * { flex: none; scroll-snap-align: start; }
-  .tg .tg-tools { flex-direction: row; border-radius: 16px; }
-  .tg .tg-seg { flex-direction: row; border-radius: 16px; }
-  .tg .tg-seg .segmented { flex-direction: row; }
-  .tg .tg-seg .segmented__item { min-height: 40px; padding: 0 14px; }
-  .tg .tg-tool { width: 40px; height: 40px; min-height: 40px; }
-  .tg .tg-alerts { top: calc(env(safe-area-inset-top) + 180px); }
+  .tg .tg-ctrl > * { flex: none; height: 46px; display: flex; align-items: center; }
+  .tg .tg-tools, .tg .tg-seg { flex-direction: row; border-radius: 16px; padding: 3px; }
+  .tg .tg-tool { width: 36px; height: 36px; min-height: 36px; }
+  .tg .tg-seg .segmented { flex-direction: row; height: 100%; }
+  .tg .tg-seg .segmented__item { min-height: 0; height: 100%; padding: 0 10px; font-size: 0.75rem; }
+  .tg .tg-alerts { top: calc(env(safe-area-inset-top) + 124px); }
 }
 
 /* Los paneles de la izquierda empiezan debajo de la tarjeta de título (ya no hay fila de tarjetas de resumen que los separe) */
