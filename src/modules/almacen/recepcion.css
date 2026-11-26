@@ -58,3 +58,4 @@
 .rec-tabla thead th { padding: 7px 10px; }
 .rec-pago { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; }
 .rec-pago small { font-size: 0.6875rem; color: var(--label-2); }
+.rec2-escaneo { display: flex; flex-direction: column; gap: 8px; margin-bottom: var(--s-3); }

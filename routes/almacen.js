@@ -1046,6 +1046,31 @@ const { asignarServicioAOT } = require('../services/ot_servicios');
         });
     });
 
+    // Asignar anaquel (y, si se indica, ubicación) a varios artículos a la vez. Solo cambia lo que se manda; no borra nada.
+    router.post('/inventario/bulk-ubicacion', (req, res) => {
+        const ids = Array.isArray(req.body.ids) ? [...new Set(req.body.ids.map(String).filter(Boolean))] : [];
+        const anaquel = String(req.body.anaquel ?? '').trim();
+        const ubicacion = String(req.body.ubicacion ?? '').trim();
+        if (!ids.length) return res.status(400).json({ error: 'Sin artículos' });
+        if (ids.length > 2000) return res.status(400).json({ error: 'Máximo 2000 artículos por vez' });
+        if (!anaquel && !ubicacion) return res.status(400).json({ error: 'Indica el anaquel o la ubicación' });
+        if (anaquel.length > 50) return res.status(400).json({ error: 'El anaquel admite hasta 50 caracteres' });
+        if (ubicacion.length > 150) return res.status(400).json({ error: 'La ubicación admite hasta 150 caracteres' });
+        const sets = []; const params = [];
+        if (anaquel) { sets.push('anaquel = ?'); params.push(anaquel); }
+        if (ubicacion) { sets.push('ubicacion = ?'); params.push(ubicacion); }
+        const tdb = getDb(req);
+        tdb.query(`UPDATE inventario SET ${sets.join(', ')} WHERE id IN (?) AND id NOT LIKE 'SERV%'`, [...params, ids], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            auditar(tdb, actorDe(req), {
+                action: 'UPDATE', entity: 'inventory', entityId: `${result.affectedRows} artículos`,
+                summary: `Asignó ${[anaquel && `anaquel ${anaquel}`, ubicacion && `ubicación ${ubicacion}`].filter(Boolean).join(' y ')} a ${result.affectedRows} artículos del inventario`,
+                changes: { anaquel: { from: null, to: anaquel || undefined }, ubicacion: { from: null, to: ubicacion || undefined } },
+            });
+            res.json({ ok: true, actualizados: result.affectedRows });
+        });
+    });
+
     function _getPeruNowString() {
         const formatter = new Intl.DateTimeFormat('en-CA', {
             timeZone: 'America/Lima',
