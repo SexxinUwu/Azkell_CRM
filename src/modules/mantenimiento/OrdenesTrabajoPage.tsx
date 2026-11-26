@@ -4,7 +4,7 @@ import '../almacen/almacen.css'; // estilos de tabla (.inv-kardex) que usa la li
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, CheckCircle2, Eye, Filter, Lock, Pause, Play, Plus, ScrollText, SearchX, Trash2, XCircle } from 'lucide-react';
+import { BookOpen, CheckCircle2, Columns3, Eye, Filter, Lock, Pause, Play, Plus, ScrollText, SearchX, Trash2, XCircle, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, TextInput } from '../../core/ui/Field';
@@ -14,6 +14,8 @@ import { Celda, TablaRedimensionable, type ColumnaTabla } from '../../core/ui/Ta
 import '../../core/ui/listado.css';
 import { ChoiceChips } from '../../core/ui/Chips';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
+import { LicensePlate } from '../../core/ui/LicensePlate';
+import './otLista.css';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
@@ -26,6 +28,29 @@ import { ETIQUETA_ACCION, OTDetalle } from './OTDetalle';
 import { exportarReportesOT } from './exportarOT';
 import { abrirPdfReportesOT } from './exportarPDFOT';
 import { LogoArchivo } from './NeumaticosRequerimiento';
+
+// ─── Tabla de OT: columnas que se pueden ocultar y tamaño de la tabla (se recuerdan en este dispositivo) ───
+const COLUMNAS_OT: Array<ColumnaTabla & { fija?: boolean }> = [
+  { id: 'acciones', titulo: 'Acciones', ancho: 190, minimo: 120, alinear: 'center', fija: true },
+  { id: 'ot', titulo: 'N° OT', ancho: 112, minimo: 90, fija: true },
+  { id: 'fecha', titulo: 'Fecha', ancho: 96, minimo: 84 },
+  { id: 'placa', titulo: 'Placa', ancho: 112, minimo: 104 },
+  { id: 'km', titulo: 'Kilometraje', ancho: 104, minimo: 84, alinear: 'right' },
+  { id: 'tipo', titulo: 'Tipo / Sub tipo', ancho: 190, minimo: 100 },
+  { id: 'supervisor', titulo: 'Supervisor', ancho: 190, minimo: 100 },
+  { id: 'rampa', titulo: 'Estado de rampa', ancho: 110, minimo: 84 },
+  { id: 'motivo', titulo: 'Motivo de ingreso', ancho: 260, minimo: 120 },
+  { id: 'costo', titulo: 'Costo total', ancho: 104, minimo: 84, alinear: 'right' },
+  { id: 'ver', titulo: 'Ver', ancho: 48, minimo: 44, alinear: 'center', fija: true },
+];
+const CLAVE_COLS_OT = 'fleet_ot_columnas_ocultas';
+const CLAVE_TAM_OT = 'fleet_ot_tamano';
+function leerOcultasOT(): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem(CLAVE_COLS_OT) || '[]') as string[]); } catch { return new Set(); }
+}
+function leerTamanoOT(): 0 | 1 | 2 {
+  try { const v = Number(localStorage.getItem(CLAVE_TAM_OT)); return v === 0 || v === 2 ? v : 1; } catch { return 1; }
+}
 
 // ─── Tipos adicionales ────────────────────────────────────────────────────────
 
@@ -283,6 +308,20 @@ export function OrdenesTrabajoPage() {
     }
   }
 
+  const [ocultasOT, setOcultasOT] = useState<Set<string>>(leerOcultasOT);
+  const [tamanoOT, setTamanoOT] = useState<0 | 1 | 2>(leerTamanoOT);
+  const [eligiendoCols, setEligiendoCols] = useState(false);
+  const columnasOT = useMemo(() => COLUMNAS_OT.filter(c => !ocultasOT.has(c.id)), [ocultasOT]);
+  const alternarColOT = (id: string) => setOcultasOT(prev => {
+    const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id);
+    try { localStorage.setItem(CLAVE_COLS_OT, JSON.stringify([...n])); } catch { /* sin almacenamiento */ }
+    return n;
+  });
+  const cambiarTamanoOT = (d: -1 | 1) => setTamanoOT(prev => {
+    const n = Math.max(0, Math.min(2, prev + d)) as 0 | 1 | 2;
+    try { localStorage.setItem(CLAVE_TAM_OT, String(n)); } catch { /* sin almacenamiento */ }
+    return n;
+  });
   const puedeEditar  = can('reportes_ot.editar') || can('reportes_ot.editar');
   const puedeEliminar = can('reportes_ot.eliminar') || can('reportes_ot.eliminar');
   // Se busca la OT en los datos actuales: el detalle refleja pausas y cierres tras cada acción
@@ -304,6 +343,13 @@ export function OrdenesTrabajoPage() {
                 <Button variant="primary" size="sm" icon={<Plus size={15} />} onClick={() => setModalBK(true)}>
                   Agregar tarea
                 </Button>
+              )}
+              {tab === 'OTs' && !esMovil && (
+                <>
+                  <Button variant="secondary" iconOnly icon={<Columns3 size={18} />} aria-label="Elegir columnas" title="Elegir columnas" style={{ minHeight: 44, minWidth: 44 }} onClick={() => setEligiendoCols(true)} />
+                  <Button variant="secondary" iconOnly icon={<ZoomOut size={18} />} aria-label="Reducir el tamaño de la tabla" title="Reducir el tamaño de la tabla" disabled={tamanoOT === 0} style={{ minHeight: 44, minWidth: 44 }} onClick={() => cambiarTamanoOT(-1)} />
+                  <Button variant="secondary" iconOnly icon={<ZoomIn size={18} />} aria-label="Agrandar el tamaño de la tabla" title="Agrandar el tamaño de la tabla" disabled={tamanoOT === 2} style={{ minHeight: 44, minWidth: 44 }} onClick={() => cambiarTamanoOT(1)} />
+                </>
               )}
               <Button variant="secondary" iconOnly icon={<LogoArchivo tipo="excel" />} disabled={visibles.length === 0}
                 aria-label="Exportar a Excel" title="Exportar a Excel" style={{ minHeight: 44, minWidth: 44 }}
@@ -421,49 +467,34 @@ export function OrdenesTrabajoPage() {
                     })}
                   </div>
                 ) : (
-                <div className="tarjeta__lista" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                  <table className="inv-kardex" style={{ minWidth: '78rem' }}>
-                    <thead style={{ textTransform: 'uppercase', letterSpacing: '0.03em', fontWeight: 800 }}>
-                      <tr>
-                        <th style={{ textAlign: 'center' }}>Acciones</th><th>N° OT</th><th>Fecha</th><th>Placa</th><th style={{ textAlign: 'right' }}>Kilometraje</th>
-                        <th>Tipo / Sub tipo</th><th>Supervisor</th><th>Estado de rampa</th><th>Motivo de Ingreso</th>
-                        <th style={{ textAlign: 'right' }}>Costo total</th><th style={{ width: 56, textAlign: 'center' }}>Ver</th>
+                <TablaRedimensionable id="ot-lista-v2" columnas={columnasOT} ariaLabel="Órdenes de trabajo" altoMax="70vh" className={`tabla-redim--compacta ot-tabla ot-tabla--t${tamanoOT}`}>
+                  {visibles.map(o => {
+                    const det = otDetalles(o);
+                    const obs = String(det.motivo ?? o.observaciones ?? '')
+                      .replace(/\[[^\]]*\]\s*/g, '')
+                      .replace(/•\s*/g, '')
+                      .replace(/(falla manual|manual)\s*:\s*/gi, '')
+                      .trim();
+                    const celdas: Record<string, React.ReactNode> = {
+                      acciones: <Celda key="acciones" alinear="center"><span className="ot-acciones" onClick={e => e.stopPropagation()}><AccionesFila estado={o.estado} disabled={ejecutando} onAccion={a => abrirAccion(a, o)} /></span></Celda>,
+                      ot: <Celda key="ot" mono className="ot-celda-ot">{otId(o)}{o.reporte_desvinculado && <> <Badge tone="amber">Reporte desvinculado</Badge></>}</Celda>,
+                      fecha: <Celda key="fecha" mono className="ot-celda-fecha">{otFecha(o)}</Celda>,
+                      placa: <Celda key="placa">{o.placa ? <LicensePlate plate={o.placa} size="sm" /> : '—'}</Celda>,
+                      km: <Celda key="km" mono alinear="right">{kmOHoras(det)}</Celda>,
+                      tipo: <Celda key="tipo" className="ot-celda-tipo">{otTipo(o)}</Celda>,
+                      supervisor: <Celda key="supervisor">{String(det.supervisor ?? o.supervisor ?? '—')}</Celda>,
+                      rampa: <Celda key="rampa">{String(o.situacion ?? '—')}</Celda>,
+                      motivo: <Celda key="motivo" className="ot-celda-motivo">{obs || '—'}</Celda>,
+                      costo: <Celda key="costo" mono alinear="right" className="ot-celda-costo">{formatSoles(Number(o.costo_total_pen ?? o.costo_total ?? 0) || 0)}</Celda>,
+                      ver: <Celda key="ver" alinear="center"><button type="button" className="ot-ver" aria-label={`Ver ${otId(o)}`} title="Ver OT" onClick={e => { e.stopPropagation(); haptic('selection'); setSeleccionada(o); }}><Eye size={16} /></button></Celda>,
+                    };
+                    return (
+                      <tr key={otId(o)} className="ot-fila" onClick={() => { haptic('selection'); setSeleccionada(o); }}>
+                        {columnasOT.map(c => celdas[c.id])}
                       </tr>
-                    </thead>
-                    <tbody>
-                      {visibles.map(o => {
-                        const det = otDetalles(o);
-                        const obs = String(det.motivo ?? o.observaciones ?? '')
-                          .replace(/\[[^\]]*\]\s*/g, '')
-                          .replace(/•\s*/g, '')
-                          .replace(/(falla manual|manual)\s*:\s*/gi, '')
-                          .trim();
-                        return (
-                          <tr key={otId(o)} onClick={() => { haptic('selection'); setSeleccionada(o); }} style={{ cursor: 'pointer' }}>
-                            <td style={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
-                              <AccionesFila estado={o.estado} disabled={ejecutando} onAccion={a => abrirAccion(a, o)} />
-                            </td>
-                            <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)' }}>{otId(o)}{o.reporte_desvinculado && <> <Badge tone="amber">Reporte desvinculado</Badge></>}</td>
-                            <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8125rem', color: 'var(--label-2)' }}>{otFecha(o)}</td>
-                            <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{o.placa}</td>
-                            <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{kmOHoras(det)}</td>
-                            <td style={{ fontWeight: 600 }}>{otTipo(o)}</td>
-                            <td style={{ fontSize: '0.8125rem' }}>{String(det.supervisor ?? o.supervisor ?? '—')}</td>
-                            <td style={{ fontSize: '0.8125rem' }}>{String(o.situacion ?? '—')}</td>
-                            <td style={{ maxWidth: '18rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8125rem', color: 'var(--label-2)' }} title={obs}>{obs || '—'}</td>
-                            <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--green-ink)' }}>{formatSoles(Number(o.costo_total_pen ?? o.costo_total ?? 0) || 0)}</td>
-                            <td style={{ textAlign: 'center' }}>
-                              <button type="button" aria-label={`Ver ${otId(o)}`} title="Ver OT" onClick={e => { e.stopPropagation(); haptic('selection'); setSeleccionada(o); }}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', minWidth: 44, minHeight: 44 }}>
-                                <Eye size={17} />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                    );
+                  })}
+                </TablaRedimensionable>
                 )}
                 </>
               )}
@@ -474,6 +505,20 @@ export function OrdenesTrabajoPage() {
         </div>
       )}
 
+
+      <Sheet open={eligiendoCols} onClose={() => setEligiendoCols(false)} title="Columnas de la tabla"
+        footer={<><Button variant="secondary" onClick={() => { setOcultasOT(new Set()); try { localStorage.removeItem(CLAVE_COLS_OT); } catch { /* sin almacenamiento */ } }}>Mostrar todas</Button>
+          <Button variant="primary" onClick={() => setEligiendoCols(false)}>Listo</Button></>}>
+        <div className="ot-cols">
+          {COLUMNAS_OT.map(c => (
+            <label key={c.id} className={`ot-cols__fila${c.fija ? ' ot-cols__fila--fija' : ''}`}>
+              <input type="checkbox" checked={!ocultasOT.has(c.id)} disabled={c.fija} onChange={() => alternarColOT(c.id)} />
+              <span>{c.titulo}</span>
+              {c.fija && <small>Siempre visible</small>}
+            </label>
+          ))}
+        </div>
+      </Sheet>
 
       {/* ── Modal Crear Backlog ── */}
       <Sheet

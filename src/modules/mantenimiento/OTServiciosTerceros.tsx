@@ -1,9 +1,10 @@
 import './otServicios.css';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Plus, ScrollText, Trash2 } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice } from '../../core/ui/Display';
+import { SearchField } from '../../core/ui/Field';
 import { ConfirmSheet, Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { api, errorMessage } from '../../core/api/client';
@@ -24,6 +25,7 @@ export function OTServiciosTerceros({ ot, puedeEditar }: { ot: string; puedeEdit
   const toast = useToast();
   const [agregando, setAgregando] = useState(false);
   const [seleccion, setSeleccion] = useState<string[]>([]);
+  const [buscar, setBuscar] = useState('');
   const [quitar, setQuitar] = useState<ServicioOt | null>(null);
   const [ocupado, setOcupado] = useState(false);
 
@@ -40,7 +42,15 @@ export function OTServiciosTerceros({ ot, puedeEditar }: { ot: string; puedeEdit
     staleTime: 0,
   });
 
-  const todasMarcadas = (disponibles.data ?? []).length > 0 && seleccion.length === (disponibles.data ?? []).length;
+  // Búsqueda: por proveedor, número de OC, fecha, estado, OT sugerida o monto (sin tildes ni mayúsculas)
+  const limpio = (x: unknown) => String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const filtradas = useMemo(() => {
+    const q = limpio(buscar).trim();
+    const todas = disponibles.data ?? [];
+    if (!q) return todas;
+    return todas.filter(s => [s.proveedor_nombre, s.id, dia(s.fecha), s.estado, s.ot_id, monto(s), s.numero_operacion].some(v => limpio(v).includes(q)));
+  }, [disponibles.data, buscar]);
+  const todasMarcadas = filtradas.length > 0 && filtradas.every(s => seleccion.includes(s.id));
 
   const refrescar = async () => {
     await qc.invalidateQueries({ queryKey: ['mant', 'ot-servicios'] });
@@ -118,19 +128,22 @@ export function OTServiciosTerceros({ ot, puedeEditar }: { ot: string; puedeEdit
         {disponibles.isLoading ? <PageLoader /> : disponibles.isError ? <Notice tone="error">{errorMessage(disponibles.error)}</Notice> : (disponibles.data ?? []).length === 0 ? (
           <EmptyState icon={<ScrollText size={22} />} title="Nada para agregar">No hay OC de servicio procesadas sin agregar a una OT.</EmptyState>
         ) : (
+          <div className="ots-elegir">
+          <SearchField value={buscar} onChange={setBuscar} placeholder="Buscar por proveedor, OC, servicio, fecha o monto…" />
+          {filtradas.length === 0 && <p className="ots-sin-res">Ninguna OC coincide con «{buscar}».</p>}
           <div className="ots-tabla-wrap ots-tabla-wrap--elegir">
             <table className="ots-tabla ots-tabla--elegir">
               <thead>
                 <tr>
                   <th className="ots-check">
-                    <input type="checkbox" aria-label="Elegir todas" checked={todasMarcadas} ref={el => { if (el) el.indeterminate = seleccion.length > 0 && !todasMarcadas; }}
-                      onChange={() => setSeleccion(todasMarcadas ? [] : (disponibles.data ?? []).map(s => s.id))} />
+                    <input type="checkbox" aria-label="Elegir todas" checked={todasMarcadas} ref={el => { if (el) el.indeterminate = !todasMarcadas && filtradas.some(s => seleccion.includes(s.id)); }}
+                      onChange={() => setSeleccion(prev => (todasMarcadas ? prev.filter(id => !filtradas.some(s => s.id === id)) : [...new Set([...prev, ...filtradas.map(s => s.id)])]))} />
                   </th>
                   <th>Proveedor</th><th>OC</th><th>Fecha</th><th>Estado</th><th className="ots-num">Monto</th>
                 </tr>
               </thead>
               <tbody>
-                {(disponibles.data ?? []).map(s => {
+                {filtradas.map(s => {
                   const marcado = seleccion.includes(s.id);
                   const alternar = () => setSeleccion(prev => (marcado ? prev.filter(x => x !== s.id) : [...prev, s.id]));
                   return (
@@ -146,6 +159,7 @@ export function OTServiciosTerceros({ ot, puedeEditar }: { ot: string; puedeEdit
                 })}
               </tbody>
             </table>
+          </div>
           </div>
         )}
       </Sheet>
