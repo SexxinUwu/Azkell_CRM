@@ -1,8 +1,9 @@
 import './flota.css';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Hexagon, MapPin, RefreshCw, Route as IconoRecorrido, Search, SlidersHorizontal, Truck, X } from 'lucide-react';
+import { Bell, Hexagon, MapPin, RefreshCw, Route as IconoRecorrido, Search, SlidersHorizontal, Truck, X } from 'lucide-react';
 import { Page } from '../../core/ui/Display';
 import { Button, PageLoader } from '../../core/ui/Button';
+import { Sheet } from '../../core/ui/Sheet';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { AnimatePresence } from 'motion/react';
 import { Notice } from '../../core/ui/Display';
@@ -93,6 +94,8 @@ export function UbicacionPage() {
   const [playerAbierto, setPlayerAbierto] = useState(false);
   const [recientes, setRecientes] = useState<Reciente[]>([]);
   const [autoplay, setAutoplay] = useState(false);
+  // El recorrido solo se pide y se muestra después de «Ver recorrido» (o de elegir uno de la lista); la X lo quita
+  const [consultar, setConsultar] = useState(false);
   const colorSiguiente = useRef(0);
   const panel = vista === 'recorrido' ? 'historial' : 'ficha';
   const [horas, setHoras] = useState(24);
@@ -108,7 +111,9 @@ export function UbicacionPage() {
   const [base, setBase] = useState<BaseMapa>(baseGuardada);
   const tema: TemaMapa = base === 'sat' ? 'sat' : oscuro ? 'night' : 'day';
     const [ahora, setAhora] = useState(() => Date.now());
-  const [alertas, setAlertas] = useState<Alerta[]>([]);
+  // Novedades de la flota (pérdida de señal, exceso de velocidad, combustible…): no salen en pantalla, se juntan en la campana
+  const [novedades, setNovedades] = useState<Array<Alerta & { leida: boolean }>>([]);
+  const [verNovedades, setVerNovedades] = useState(false);
   const [piloto, setPiloto] = useState(false);
   const [hojaLista, setHojaLista] = useState(false);
   const [hojaFicha, setHojaFicha] = useState(false);
@@ -214,7 +219,7 @@ export function UbicacionPage() {
   const encuadrarA = useMemo(() => (busqueda.trim() && lista.length <= 25 ? lista.map(u => u.placa) : []), [busqueda, lista]);
 
   // Historial: solo se pide cuando el panel de historial está abierto
-  const abiertoHistorial = panel === 'historial' && seleccion ? seleccion : null;
+  const abiertoHistorial = panel === 'historial' && seleccion && consultar ? seleccion : null;
   const historialQ = useHistorial(abiertoHistorial?.placa ?? null, abiertoHistorial?.id ?? null, { horas, dia, desde, hasta });
   const historial = abiertoHistorial ? historialQ.data : undefined;
   const capacidadSel = (seleccion && capacidades.get(placaLimpia(seleccion.placa))) || null;
@@ -274,7 +279,7 @@ export function UbicacionPage() {
   }, [abiertoHistorial, historial, dia, desde, hasta, horas]);
   const aplicarReciente = useCallback((r: Reciente) => {
     if (r.placa !== seleccionada) { setSeleccionada(r.placa); setIndice(0); setReproduciendo(false); }
-    setHoras(r.horas); setDia(r.dia); setDesde(r.desde); setHasta(r.hasta);
+    setHoras(r.horas); setDia(r.dia); setDesde(r.desde); setHasta(r.hasta); setConsultar(true);
   }, [seleccionada]);
   // "Reproducir" en la lista: carga ese recorrido y, cuando está listo, arranca
   useEffect(() => {
@@ -288,18 +293,16 @@ export function UbicacionPage() {
   const cambiarVista = useCallback((v: VistaGps) => {
     haptic('selection');
     setVista(v);
+    setConsultar(false);
     setReproduciendo(false);
     try { localStorage.setItem('fleet_gps_vista', v); } catch { /* sin almacenamiento */ }
   }, []);
 
   const conductorDe = (placa: string) => conductorPorPlaca.get(placa) ?? null;
 
-  // Alertas en pantalla (sin enviar nada fuera): se quitan solas a los 14 s
-  const conductorRef = useRef(conductorDe);
-  conductorRef.current = conductorDe;
+  const sinLeer = novedades.filter(n => !n.leida).length;
   const nuevaAlerta = useCallback((a: Alerta) => {
-    setAlertas(prev => [a, ...prev].slice(0, 4));
-    setTimeout(() => setAlertas(prev => prev.filter(x => x.id !== a.id)), 14000);
+    setNovedades(prev => [{ ...a, leida: false }, ...prev].slice(0, 100));
   }, []);
   useVigilanciaCombustible(combustibleFlota.data, capacidades, unidades, nuevaAlerta);
 
@@ -322,6 +325,7 @@ export function UbicacionPage() {
   const elegir = useCallback((placa: string | null) => {
     if (placa) haptic('selection');
     setSeleccionada(placa);
+    setConsultar(false);
     setIndice(0);
     setReproduciendo(false);
     setHojaFicha(false);
@@ -394,6 +398,8 @@ export function UbicacionPage() {
                   <h1>Ubicación GPS</h1>
                   <span className="tg-live" aria-live="polite"><i />En vivo{segundos !== null && ` · ${segundos}s`}</span>
                   <span className="tg-resumen">{cifras.total} unidades · {cifras.enMovimiento} en movimiento · {cifras.sinSenal} sin señal</span>
+                  <Button variant="plain" iconOnly className="tg-campana" icon={<Bell size={18} />} aria-label={sinLeer ? `Novedades, ${sinLeer} sin leer` : 'Novedades'} title="Novedades" onClick={() => setVerNovedades(true)} />
+                  {sinLeer > 0 && <span className="tg-campana__n t-numeric" aria-hidden>{sinLeer > 99 ? '99+' : sinLeer}</span>}
                   <Button variant="plain" iconOnly className="tg-refrescar" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar" disabled={isFetching} onClick={() => refetch()} />
                 </div>
                 <nav className="tg-tabs tg-glass" role="tablist" aria-label="Vistas de ubicación">
@@ -453,14 +459,14 @@ export function UbicacionPage() {
                   <div className="tg-rec-cuerpo">
                     {seleccion ? (
                     <PanelHistorial placa={seleccion.placa} horas={horas} analisis={analisis} tramos={tramos} viajeSel={viajeSel} onViaje={setViajeSel}
-                      onHoras={setHoras} dia={dia} onDia={d => { setDia(d); setDesde(null); setHasta(null); }} desde={desde} hasta={hasta} onRango={(a, b) => { setDesde(a); setHasta(b); setDia(null); }} onIrA={(lat, lng) => motor?.irA(lat, lng)} historial={historial} cargando={historialQ.isFetching && !historial}
+                      onHoras={setHoras} dia={dia} onDia={d => { setDia(d); setDesde(null); setHasta(null); setConsultar(true); }} desde={desde} hasta={hasta} onRango={(a, b) => { setDesde(a); setHasta(b); setDia(null); setConsultar(true); }} onIrA={(lat, lng) => motor?.irA(lat, lng)} historial={historial} cargando={historialQ.isFetching && !historial}
                       error={errorHistorial} progreso={historialQ.progreso}
                       recientes={recientes} recienteActiva={abiertoHistorial ? `${abiertoHistorial.placa}|${dia ?? (desde && hasta ? `${desde}>${hasta}` : `h${horas}`)}` : null}
                       onReciente={aplicarReciente} onReproducirReciente={r => { aplicarReciente(r); setAutoplay(true); }} onQuitarReciente={k => setRecientes(prev => prev.filter(r => r.clave !== k))} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
                       reproduciendo={reproduciendo} onReproducir={() => setReproduciendo(r => !r)}
                       onReiniciar={() => { setIndice(0); setReproduciendo(false); }}
                       velocidad={velocidad} onVelocidad={setVelocidad}
-                      onSalir={() => cambiarVista('unidades')} />
+                      onSalir={() => { setConsultar(false); setReproduciendo(false); setPlayerAbierto(false); }} activo={!!abiertoHistorial} />
                     ) : <p className="tg-vacio">Elige una unidad para ver su recorrido: ruta, paradas, viajes y reproducción con la calle y los sensores.</p>}
                   </div>
                 </HojaGesto>
@@ -483,20 +489,28 @@ export function UbicacionPage() {
                   <Button variant="secondary" size="sm" onClick={() => motor?.setFollow(false)}>Salir</Button>
                 </div>
               )}
-
-              <div className="tg-alerts" aria-live="polite">
-                {alertas.map(a => (
-                  <div key={a.id} className="tg-alert-wrap">
-                    <button type="button" className="tg-alert tg-glass" onClick={() => elegir(a.placa)}>
-                      <i style={{ background: a.color + '22', color: a.color }}>{a.icono}</i>
-                      <div><b>{a.placa} · {a.msg}</b><span>{[conductorRef.current(a.placa), a.hora].filter(Boolean).join(' · ')}</span></div>
-                    </button>
-                    <button type="button" className="tg-alert-x" aria-label="Quitar notificación" onClick={() => setAlertas(prev => prev.filter(x => x.id !== a.id))}><X size={11} strokeWidth={3} /></button>
-                  </div>
-                ))}
-              </div>
             </UbicacionMapa>
           </Suspense>
+
+          <Sheet open={verNovedades} onClose={() => setVerNovedades(false)} title={`Novedades${sinLeer ? ` · ${sinLeer} sin leer` : ''}`}
+            footer={<>
+              <Button variant="secondary" onClick={() => setVerNovedades(false)}>Cerrar</Button>
+              <Button variant="primary" disabled={sinLeer === 0} onClick={() => setNovedades(prev => prev.map(n => ({ ...n, leida: true })))}>Marcar todo como leído</Button>
+            </>}>
+            {novedades.length === 0 ? <p className="tg-nov-vacio">Sin novedades por ahora. Aquí se juntan las pérdidas de señal, excesos de velocidad y alertas de combustible.</p> : (
+              <ul className="tg-nov">
+                {novedades.map(n => (
+                  <li key={n.id}>
+                    <button type="button" className="tg-nov__item" data-leida={n.leida} onClick={() => { setNovedades(prev => prev.map(x => (x.id === n.id ? { ...x, leida: true } : x))); setVerNovedades(false); elegir(n.placa); }}>
+                      <i style={{ background: `${n.color}22`, color: n.color }}>{n.icono}</i>
+                      <span><b>{n.placa} · {n.msg}</b><small>{[conductorDe(n.placa), n.hora].filter(Boolean).join(' · ')}</small></span>
+                      {!n.leida && <em className="tg-nov__punto" aria-label="Sin leer" />}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Sheet>
 
           <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={activos}
             onLimpiar={() => { setEmpresa('TODAS'); setSegmento('todos'); }} resultado={lista.length} unidad="unidad">

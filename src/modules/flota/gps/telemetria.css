@@ -571,6 +571,8 @@
 .tg-pp-sens dd { margin: 2px 0 0; font-size: 13px; font-weight: 700; color: var(--label); overflow-wrap: anywhere; }
 .tg-pp-nota { margin: 0; font-size: 12px; color: var(--label-2); }
 .tg-pp-pie { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--label-3); }
+/* En escritorio el reproductor ocupa el mismo alto que la lista de la izquierda: arranca y termina a su altura */
+@media (min-width: 901px) { .tg-pp { top: 150px; bottom: 16px; max-height: none; } }
 @media (max-width: 900px) {
   .tg-pp { left: 8px; right: 8px; top: auto; bottom: calc(var(--tg-dock, 0px) + 8px); width: auto; max-height: 46vh; }
 }
@@ -664,3 +666,22 @@
   /* Los avisos (exceso de velocidad, combustible…) solo salen en la versión de escritorio */
   .tg .tg-alerts { display: none !important; }
 }
+
+/* Campana de novedades: reemplaza los avisos emergentes sobre el mapa */
+.tg-campana { position: absolute; right: 48px; top: 10px; width: 32px; height: 32px; border-radius: 50%; background: var(--fill); display: grid; place-items: center; color: var(--label-2); }
+.tg-campana__n { position: absolute; right: 42px; top: 4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #ef4444; color: #fff; font-size: 10.5px; font-weight: 700; display: grid; place-items: center; pointer-events: none; border: 2px solid var(--surface, #fff); box-sizing: content-box; line-height: 1; }
+@media (max-width: 900px) {
+  .tg-brand { padding-right: 96px; }
+  .tg-campana { top: 50%; transform: translateY(-50%); right: 48px; }
+  .tg-campana__n { top: 3px; right: 42px; }
+}
+.tg-nov { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.tg-nov li + li { border-top: 0.5px solid var(--separator); }
+.tg-nov__item { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 4px; border: 0; background: none; text-align: left; cursor: pointer; font: inherit; }
+.tg-nov__item i { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; flex: none; font-style: normal; font-size: 15px; }
+.tg-nov__item span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.tg-nov__item b { font-size: 0.8125rem; color: var(--label); font-weight: 600; }
+.tg-nov__item[data-leida="true"] b { font-weight: 500; color: var(--label-2); }
+.tg-nov__item small { font-size: 0.75rem; color: var(--label-2); }
+.tg-nov__punto { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex: none; }
+.tg-nov-vacio { margin: 8px 0; font-size: 0.875rem; color: var(--label-2); line-height: 1.45; }

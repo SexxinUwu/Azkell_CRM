@@ -55,6 +55,8 @@ interface Props {
   velocidad: Velocidad;
   onVelocidad: (v: Velocidad) => void;
   onSalir: () => void;
+  /** Hay un recorrido pedido con «Ver recorrido»; si no, solo se muestra el formulario */
+  activo?: boolean;
 }
 
 function GraficoCombustible({ a, t0, t1, tCursor, onElegir }: { a: AnalisisCombustible; t0: number; t1: number; tCursor: number | null; onElegir: (t: number) => void }) {
@@ -86,11 +88,12 @@ export function PanelHistorial(p: Props) {
   const finDelDia = (d: string) => `${d}T23:59`;
   const desdeProp = p.dia ? `${p.dia}T00:00` : p.desde ?? aLocal(new Date(Date.now() - p.horas * 3600000));
   const hastaProp = p.dia ? finDelDia(p.dia) : p.hasta ?? aLocal(new Date());
-  const [borrDesde, setBorrDesde] = useState(desdeProp);
-  const [borrHasta, setBorrHasta] = useState(hastaProp);
+  const [borrDesde, setBorrDesde] = useState(p.activo ? desdeProp : `${hoy}T00:00`);
+  const [borrHasta, setBorrHasta] = useState(p.activo ? hastaProp : finDelDia(hoy));
+  const [presetLocal, setPresetLocal] = useState('hoy');
   const [errRango, setErrRango] = useState('');
   // Los campos siguen al recorrido activo (por ejemplo, al elegir uno de la lista)
-  useEffect(() => { setBorrDesde(desdeProp); setBorrHasta(hastaProp); setErrRango(''); }, [desdeProp, hastaProp]);
+  useEffect(() => { if (p.activo) { setBorrDesde(desdeProp); setBorrHasta(hastaProp); setErrRango(''); } }, [p.activo, desdeProp, hastaProp]);
   const minimo = aISO(new Date(Date.now() - 400 * 86400000)); // Wialon conserva 400 días
   const verRango = () => {
     const a = new Date(borrDesde).getTime(), b = new Date(borrHasta).getTime();
@@ -98,12 +101,21 @@ export function PanelHistorial(p: Props) {
     if (b <= a) return setErrRango('El fin debe ser después del inicio.');
     if (b - a > 400 * 86400000) return setErrRango('El rango puede ser de máximo 400 días (lo que conserva Wialon).');
     setErrRango('');
-    p.onRango(borrDesde, borrHasta);
+    // Un día completo se pide como «día» (usa el guardado en el servidor); lo demás, como rango
+    if (borrDesde.slice(0, 10) === borrHasta.slice(0, 10) && borrDesde.endsWith('T00:00') && borrHasta.endsWith('T23:59')) p.onDia(borrDesde.slice(0, 10));
+    else p.onRango(borrDesde, borrHasta);
   };
-  const rangoDias = (n: number) => { const d = `${sumarDias(hoy, -(n - 1))}T00:00`, h = finDelDia(hoy); setBorrDesde(d); setBorrHasta(h); p.onRango(d, h); };
+  // Los botones de periodo solo llenan las fechas; el recorrido se pide con «Ver recorrido»
+  const elegirPeriodo = (v: string) => {
+    const n = v === 'hoy' ? 1 : v === 'ayer' ? 1 : v === 'semana' ? 7 : 30;
+    const fin = v === 'ayer' ? ayer : hoy;
+    setBorrDesde(`${sumarDias(fin, -(n - 1))}T00:00`); setBorrHasta(finDelDia(fin)); setPresetLocal(v); setErrRango('');
+  };
   const esSemana = !!(p.desde && p.hasta && p.desde === `${sumarDias(hoy, -6)}T00:00` && p.hasta === finDelDia(hoy));
   const esMes = !!(p.desde && p.hasta && p.desde === `${sumarDias(hoy, -29)}T00:00` && p.hasta === finDelDia(hoy));
-  const preset = p.dia === hoy ? 'hoy' : p.dia === ayer ? 'ayer' : esSemana ? 'semana' : esMes ? 'mes' : '';
+  const presetProp = p.dia === hoy ? 'hoy' : p.dia === ayer ? 'ayer' : esSemana ? 'semana' : esMes ? 'mes' : '';
+  useEffect(() => { if (p.activo) setPresetLocal(presetProp); }, [p.activo, presetProp]);
+  const preset = presetLocal;
 
   const h = p.historial;
   const puntos = h?.puntos ?? [];
@@ -136,20 +148,20 @@ export function PanelHistorial(p: Props) {
   return (
     <div className="tg-h" aria-label={`Historial de ${p.placa}`}>
       <AsaHoja />
-      <ZonaArrastre className="tg-h-cab">
+      {p.activo && <ZonaArrastre className="tg-h-cab">
         <span className="tg-h-icono"><Route size={18} /></span>
         <div className="tg-h-titulo">
           <div><strong>{p.placa}</strong><span className="tg-h-etiqueta">{etiqueta}</span></div>
           <small className={p.error ? 'tg-h-error' : undefined}>{subtitulo}</small>
         </div>
-        <Button variant="plain" iconOnly icon={<X size={18} />} aria-label="Cerrar historial" onClick={p.onSalir} />
-      </ZonaArrastre>
+        <Button variant="plain" iconOnly icon={<X size={18} />} aria-label="Quitar el recorrido" onClick={p.onSalir} />
+      </ZonaArrastre>}
 
       <section className="tg-h-sec tg-h-sec--form">
         <div className="tg-h-pres" role="group" aria-label="Periodo">
           {([['hoy', 'Hoy'], ['ayer', 'Ayer'], ['semana', 'Semana'], ['mes', 'Mes']] as const).map(([v, t]) => (
             <button key={v} type="button" aria-pressed={preset === v}
-              onClick={() => { if (v === 'hoy') p.onDia(hoy); else if (v === 'ayer') p.onDia(ayer); else if (v === 'semana') rangoDias(7); else rangoDias(30); }}>{t}</button>
+              onClick={() => elegirPeriodo(v)}>{t}</button>
           ))}
         </div>
         <label className="tg-h-campo"><span>Desde</span><input type="datetime-local" value={borrDesde} min={`${minimo}T00:00`} max={`${hoy}T23:59`} onChange={e => setBorrDesde(e.target.value)} /></label>
