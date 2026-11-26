@@ -123,8 +123,8 @@ export function OTServiciosTerceros({ ot, puedeEditar, cerrada = false }: { ot: 
                 <tr key={s.id}>
                   <td className="ots-mono">{dia(s.fecha)}</td>
                   <td className="ots-mono">{s.id}</td>
-                  <td>{s.proveedor_nombre || 'Sin proveedor'}</td>
-                  <td className="ots-desc">{queServicio(s) || '—'}</td>
+                  <td><span className="ots-corto ots-corto--prov" title={s.proveedor_nombre || ''}>{s.proveedor_nombre || 'Sin proveedor'}</span></td>
+                  <td><span className="ots-corto ots-corto--desc" title={queServicio(s)}>{queServicio(s) || '—'}</span></td>
                   <td className="ots-num ots-mono">{monto(s)}</td>
                   <td>{s.estado}{s.numero_operacion ? <small className="ots-op">Op. {s.numero_operacion}</small> : null}</td>
                   <td>
@@ -145,7 +145,7 @@ export function OTServiciosTerceros({ ot, puedeEditar, cerrada = false }: { ot: 
         ) : (
           <div className="ots-elegir">
           <div className="ots-placa">
-            <span>{placaOT ? <>Servicios de la placa <b>{placaOT}</b> y servicios sin placa.</> : 'Esta OT no tiene placa: salen todos los servicios.'}</span>
+            <span>{placaOT ? <>Servicios de la placa <b>{placaOT}</b> y servicios sin placa.</> : 'Esta OT no tiene placa: salen todos los servicios.'} Las <s>tachadas</s> ya están asignadas a una OT y no se pueden agregar.</span>
             {placaOT && (otrasPlacas || (disponibles.data?.ocultas ?? 0) > 0) && (
               <label className="ots-placa__otras">
                 <input type="checkbox" checked={otrasPlacas} onChange={e => { setOtrasPlacas(e.target.checked); setSeleccion([]); }} />
@@ -177,12 +177,12 @@ export function OTServiciosTerceros({ ot, puedeEditar, cerrada = false }: { ot: 
                       <td className="ots-check"><input type="checkbox" aria-label={asignada ? `${s.id} ya está asignada` : `Elegir ${s.id}`} checked={marcado} disabled={asignada} onChange={alternar} onClick={e => e.stopPropagation()} /></td>
                       <td className="ots-mono">{dia(s.fecha)}</td>
                       <td className="ots-mono">{s.id}</td>
-                      <td className="ots-prov"><strong>{s.proveedor_nombre || 'Sin proveedor'}</strong>{deOtraPlaca(s) ? <small className="ots-otra">Placa {s.placa}</small> : null}</td>
-                      <td className="ots-desc">{queServicio(s) || '—'}</td>
+                      <td><div className="ots-linea"><span className="ots-corto ots-corto--prov ots-fuerte" title={s.proveedor_nombre || ''}>{s.proveedor_nombre || 'Sin proveedor'}</span>{deOtraPlaca(s) ? <span className="ots-otra">Placa {s.placa}</span> : null}</div></td>
+                      <td><span className="ots-corto ots-corto--desc" title={queServicio(s)}>{queServicio(s) || '—'}</span></td>
                       <td className="ots-num ots-mono">{monto(s)}</td>
                       <td className="ots-estado">
                         {asignada
-                          ? <span className="ots-asignada" title="Esta OC ya está asignada y no se puede agregar de nuevo">{enEstaOt ? 'Ya está en esta OT' : `Ya asignada a ${s.ot_id || 'otra OT'}`}<small>No se puede agregar</small></span>
+                          ? <span className="ots-asignada" title="Esta OC ya está asignada y no se puede agregar de nuevo">{enEstaOt ? 'Ya está en esta OT' : `Ya asignada a ${s.ot_id || 'otra OT'}`}</span>
                           : s.estado}
                       </td>
                     </tr>
