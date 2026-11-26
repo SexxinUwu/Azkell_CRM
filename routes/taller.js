@@ -189,15 +189,33 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             res.json({ ok: true, data: rows });
         } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
     });
+    // Placa sin guiones ni espacios y en mayúsculas, para comparar «BTV-993» con «BTV993»
+    const PLACA_SQL = (c) => `REPLACE(REPLACE(UPPER(TRIM(COALESCE(${c}, ''))), '-', ''), ' ', '')`;
+    const normPlaca = (p) => String(p || '').toUpperCase().replace(/[\s-]/g, '');
+    async function placaDeLaOT(tdb, ot) {
+        const [r] = await tdb.promise().query('SELECT placa FROM ordenes_trabajo WHERE id_ot = ? OR ticket_entrada = ? LIMIT 1', [ot, ot]);
+        return r[0] ? normPlaca(r[0].placa) : '';
+    }
+    // Servicios que se pueden agregar a una OT: los de la placa de la OT y los que no tienen placa. Con ?todas=1 también salen los de otras placas.
+    // Las OC ya asignadas a una OT salen igual (la pantalla las muestra tachadas).
     router.get('/ot-servicios-disponibles', async (req, res) => {
         try {
-            const [rows] = await (req.db || db).promise().query(
-                `SELECT id, fecha, proveedor_nombre, moneda, total_pen, estado, ot_id, ot_servicio_agregado, motivo_entrada,
+            const tdb = req.db || db;
+            const placaOT = await placaDeLaOT(tdb, req.query.ot || '');
+            const todas = req.query.todas === '1' || !placaOT;
+            const base = `FROM entradas_inv WHERE LOWER(tipo_orden) = 'orden de servicio' AND LOWER(estado) IN (?)`;
+            const coincide = `(TRIM(COALESCE(placa, '')) = '' OR ${PLACA_SQL('placa')} = ?)`;
+            const [rows] = await tdb.promise().query(
+                `SELECT id, fecha, proveedor_nombre, moneda, total_pen, estado, ot_id, ot_servicio_agregado, motivo_entrada, placa,
                         (SELECT GROUP_CONCAT(d.descripcion SEPARATOR ' · ') FROM detalle_entradas_inv d WHERE d.entrada_id = entradas_inv.id) AS descripcion
-                 FROM entradas_inv
-                 WHERE LOWER(tipo_orden) = 'orden de servicio' AND LOWER(estado) IN (?)
-                 ORDER BY fecha DESC, id DESC LIMIT 300`, [ESTADOS_PROCESADO]);
-            res.json({ ok: true, data: rows });
+                 ${base} ${todas ? '' : `AND ${coincide}`}
+                 ORDER BY fecha DESC, id DESC LIMIT 300`, todas ? [ESTADOS_PROCESADO] : [ESTADOS_PROCESADO, placaOT]);
+            let ocultas = 0;
+            if (!todas) {
+                const [[c]] = await tdb.promise().query(`SELECT COUNT(*) AS n ${base} AND NOT ${coincide}`, [ESTADOS_PROCESADO, placaOT]);
+                ocultas = Number(c.n) || 0;
+            }
+            res.json({ ok: true, data: rows, placa: placaOT || null, ocultas, todas });
         } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
     });
     router.post('/ot-servicios', async (req, res) => {
@@ -205,6 +223,14 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(String).filter(Boolean) : [];
         if (!ot || !ids.length) return res.status(400).json({ ok: false, error: 'Indica la OT y las OC a agregar' });
         try {
+            if (req.body?.otraPlaca !== true) {
+                const placaOT = await placaDeLaOT(req.db || db, ot);
+                if (placaOT) {
+                    const [otras] = await (req.db || db).promise().query(
+                        `SELECT id, placa FROM entradas_inv WHERE id IN (?) AND TRIM(COALESCE(placa, '')) <> '' AND ${PLACA_SQL('placa')} <> ?`, [ids, placaOT]);
+                    if (otras.length) return res.status(409).json({ ok: false, error: `${otras.map(o => `${o.id} es de la placa ${o.placa}`).join(', ')}; esta OT es de ${placaOT}. Si es correcto, agrégala marcando «Incluir otras placas».` });
+                }
+            }
             const [r] = await (req.db || db).promise().query(
                 `UPDATE entradas_inv SET ot_id = ?, ot_servicio_agregado = 1
                  WHERE id IN (?) AND LOWER(tipo_orden) = 'orden de servicio'
