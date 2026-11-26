@@ -193,3 +193,12 @@
   .page-header__actions .oc-acciones { flex: none; }
   .sal-registros { display: none; }
 }
+
+/* Picking rápido dentro de la solicitud de salida */
+.sal-escaneo { display: flex; flex-direction: column; gap: 8px; margin-bottom: var(--s-3); padding: 10px; border-radius: var(--r-lg); background: var(--accent-tint); }
+.sal-escaneo__fila { display: flex; gap: 8px; align-items: center; }
+.sal-escaneo__campo { flex: 1; min-width: 0; min-height: 44px; font-size: 1rem; }
+.sal-escaneo__aviso { margin: 0; padding: 6px 12px; border-radius: var(--r-md); font-size: 0.8125rem; font-weight: 600; }
+.sal-escaneo__aviso--ok { background: rgba(52, 199, 89, .16); color: #15803d; }
+.sal-escaneo__aviso--warn { background: rgba(245, 158, 11, .18); color: #b45309; }
+.sal-escaneo__aviso--error { background: rgba(255, 59, 48, .14); color: #b4232a; }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { FileText, Plus, Trash2, Wrench } from 'lucide-react';
+import { Camera, FileText, Plus, Trash2, Wrench, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Field, SelectInput, TextInput } from '../../core/ui/Field';
@@ -16,6 +16,9 @@ import {
   useInventario, usePlacasSalida, type ArticuloInv, type ItemSalida, type SalidaInv,
 } from './api';
 import { ArticuloSelector, SolicitanteSelector, usePersonalSolicitante } from './SelectoresSalida';
+import { EscanerContinuo } from './EscanerContinuo';
+import { usePistola } from './usePistola';
+import { pitido } from './pitido';
 import { SalidaKitSheet } from './SalidaKitSheet';
 import { SalidaOCSheet } from './SalidaOCSheet';
 import { SinStockDialogo, sinStockDe, type ArticuloSinStock } from './SinStockDialogo';
@@ -162,6 +165,39 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset,
     }));
   }
 
+  // Picking rápido (estado natural de una salida): se escanea o pistolea el código y el artículo entra solo; repetirlo suma 1 (o «5*código» suma 5)
+  const [camaraEsc, setCamaraEsc] = useState(false);
+  const [manualEsc, setManualEsc] = useState('');
+  const [avisoEsc, setAvisoEsc] = useState<{ ok: boolean; texto: string; warn?: boolean } | null>(null);
+  const campoEsc = useRef<HTMLInputElement>(null);
+  // En computador el cursor queda listo en el campo de código (en el teléfono no, para no abrir el teclado sin pedirlo)
+  const conPuntero = typeof window !== 'undefined' && window.matchMedia?.('(pointer: fine)').matches;
+  usePistola(open && !!conPuntero, campoEsc);
+  useEffect(() => { if (open) { setCamaraEsc(false); setManualEsc(''); setAvisoEsc(null); } }, [open, s?.id]);
+
+  function leerRapido(entrada: string) {
+    const m = /^\s*(\d+(?:[.,]\d+)?)\s*[*xX]\s*(\S.*)$/.exec(entrada);
+    const cuantas = m ? Math.max(1, parseFloat(m[1].replace(',', '.')) || 1) : 1;
+    const codigo = (m ? m[2] : entrada).trim().toUpperCase();
+    if (!codigo) return;
+    const art = inventario.find(a => [a.id, a.codigo_barras, a.codigo_articulo].some(c => String(c ?? '').trim().toUpperCase() === codigo));
+    if (!art) { pitido(false); haptic('warning'); setAvisoEsc({ ok: false, texto: `El código ${codigo} no es de ningún artículo.` }); return; }
+    const cu = costoSolesArticulo(art);
+    const yaEnLista = items.find(i => i.inventario_id === art.id);
+    const total = (yaEnLista ? Number(yaEnLista.cantidad) || 0 : 0) + cuantas;
+    const disp = disponibleDe(art.id);
+    setItems(prev => {
+      const i = prev.findIndex(x => x.inventario_id === art.id);
+      if (i >= 0) return prev.map((x, k) => (k === i ? { ...x, cantidad: total, importe: total * (Number(x.costo_unitario) || 0) } : x));
+      const fila: Fila = { uid: nuevoUid(), inventario_id: art.id, descripcion: art.descripcion || art.articulo, cantidad: cuantas, costo_unitario: cu, moneda: 'PEN', importe: cuantas * cu };
+      const vacia = prev.findIndex(x => !x.descripcion.trim() && !x.inventario_id);
+      return vacia >= 0 ? prev.map((x, k) => (k === vacia ? { ...fila, uid: x.uid } : x)) : [...prev, fila];
+    });
+    pitido(true); haptic('success');
+    const corto = disp !== null && total > disp + 1e-9;
+    setAvisoEsc({ ok: true, warn: corto, texto: `${art.descripcion || art.articulo} · ${total}${corto ? ` · Ojo: solo hay ${Number(disp).toLocaleString('es-PE', { maximumFractionDigits: 2 })} disponibles` : ''}` });
+  }
+
   /** Agrega filas (kit u OC). Si la única fila está vacía, se reemplaza, como en el clásico */
   function agregarFilas(nuevas: ItemSalida[]) {
     setItems(prev => {
@@ -296,6 +332,18 @@ export function SalidaFormulario({ open, salida: s, onClose, onGuardado, preset,
               <Button size="sm" variant="secondary" icon={<FileText size={14} />} onClick={() => setOcAbierta(true)}>OC</Button>
               <Button size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => setItems(prev => [...prev, itemVacio(nuevoUid())])}>Ítem</Button>
             </div>
+          </div>
+
+          <div className="sal-escaneo">
+            <form className="sal-escaneo__fila" onSubmit={e => { e.preventDefault(); leerRapido(manualEsc); setManualEsc(''); campoEsc.current?.focus(); }}>
+              <input ref={campoEsc} className="input sal-escaneo__campo" value={manualEsc} onChange={e => setManualEsc(e.target.value)}
+                placeholder="Escanea o escribe el código del repuesto (5*código suma 5)" autoCapitalize="characters" autoCorrect="off" aria-label="Código del repuesto" />
+              <Button type="button" variant={camaraEsc ? 'primary' : 'secondary'} icon={camaraEsc ? <X size={16} /> : <Camera size={16} />} onClick={() => setCamaraEsc(v => !v)}>
+                {camaraEsc ? 'Cerrar' : 'Cámara'}
+              </Button>
+            </form>
+            {camaraEsc && <EscanerContinuo activo={camaraEsc} onLeido={leerRapido} />}
+            {avisoEsc && <p className={`sal-escaneo__aviso${avisoEsc.warn ? ' sal-escaneo__aviso--warn' : avisoEsc.ok ? ' sal-escaneo__aviso--ok' : ' sal-escaneo__aviso--error'}`} role="status">{avisoEsc.texto}</p>}
           </div>
 
           <div className="sal-items-form">
