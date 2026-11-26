@@ -817,23 +817,44 @@ export class MotorTelemetria {
     m.addLayer({ id: 'h-ruta', type: 'line', source: 'h-ruta', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': color, 'line-opacity': this.opacidadViaje(), 'line-width': W([9, 2.2, 18, 7]) as any } });
     m.addSource('h-linea', { type: 'geojson', data: fc([]) });
     m.addLayer({ id: 'h-flechas', type: 'symbol', source: 'h-linea', minzoom: 11, layout: { 'symbol-placement': 'line', 'symbol-spacing': 110, 'icon-image': 'h-flecha', 'icon-size': ['interpolate', ['linear'], ['zoom'], 11, .45, 17, .8], 'icon-allow-overlap': true, 'icon-ignore-placement': true, 'icon-rotation-alignment': 'map' }, paint: { 'icon-opacity': .85 } });
-    m.addSource('h-pins', { type: 'geojson', data: fc([]) });
-    m.addLayer({ id: 'h-pins', type: 'circle', source: 'h-pins', paint: { 'circle-radius': 11, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
-    m.addLayer({ id: 'h-pins-txt', type: 'symbol', source: 'h-pins', layout: { 'text-field': ['get', 'sym'], 'text-font': F_BOLD, 'text-size': 11, 'text-allow-overlap': true }, paint: { 'text-color': '#ffffff' } });
+    // Paradas, excesos y eventos de combustible se agrupan en burbujas con su cantidad (como Wialon); al acercar se separan. Inicio y fin no se agrupan.
+    m.addSource('h-pins', { type: 'geojson', data: fc([]), cluster: true, clusterRadius: 46, clusterMaxZoom: 15 });
+    m.addSource('h-marca', { type: 'geojson', data: fc([]) });
+    const sinGrupo: any = ['!', ['has', 'point_count']];
+    m.addLayer({ id: 'h-cluster', type: 'circle', source: 'h-pins', filter: ['has', 'point_count'], paint: { 'circle-radius': ['step', ['get', 'point_count'], 14, 10, 17, 50, 20, 200, 23], 'circle-color': '#2f7df6', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2.5, 'circle-opacity': .95 } });
+    m.addLayer({ id: 'h-cluster-n', type: 'symbol', source: 'h-pins', filter: ['has', 'point_count'], layout: { 'text-field': ['get', 'point_count_abbreviated'], 'text-font': F_BOLD, 'text-size': 12, 'text-allow-overlap': true }, paint: { 'text-color': '#ffffff' } });
+    m.addLayer({ id: 'h-pins', type: 'circle', source: 'h-pins', filter: sinGrupo, paint: { 'circle-radius': 11, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
+    m.addLayer({ id: 'h-pins-txt', type: 'symbol', source: 'h-pins', filter: sinGrupo, layout: { 'text-field': ['get', 'sym'], 'text-font': F_BOLD, 'text-size': 11, 'text-allow-overlap': true }, paint: { 'text-color': '#ffffff' } });
+    m.addLayer({ id: 'h-marca', type: 'circle', source: 'h-marca', paint: { 'circle-radius': 12, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2.5 } });
+    m.addLayer({ id: 'h-marca-txt', type: 'symbol', source: 'h-marca', layout: { 'text-field': ['get', 'sym'], 'text-font': F_BOLD, 'text-size': 11, 'text-allow-overlap': true }, paint: { 'text-color': '#ffffff' } });
     m.addSource('h-cur', { type: 'geojson', data: fc([]) });
     m.addLayer({ id: 'h-cur', type: 'symbol', source: 'h-cur', layout: { 'icon-image': ['concat', 's-', ['get', 'st']], 'icon-rotate': ['get', 'hdg'], 'icon-rotation-alignment': 'map', 'icon-allow-overlap': true, 'icon-ignore-placement': true, 'icon-size': 1.15 } });
-    m.on('click', 'h-pins', e => {
+    for (const capa of ['h-pins', 'h-marca']) {
+      m.on('click', capa, e => {
+        const f = e.features?.[0]; if (!f) return;
+        this.aviso?.remove();
+        this.aviso = new maplibregl.Popup({ closeButton: false, offset: 14 }).setLngLat((f.geometry as any).coordinates).setText(String(f.properties?.tip ?? '')).addTo(m);
+      });
+    }
+    // Tocar una burbuja acerca el mapa hasta que se separe
+    m.on('click', 'h-cluster', async e => {
       const f = e.features?.[0]; if (!f) return;
-      this.aviso?.remove();
-      this.aviso = new maplibregl.Popup({ closeButton: false, offset: 14 }).setLngLat((f.geometry as any).coordinates).setText(String(f.properties?.tip ?? '')).addTo(m);
+      try {
+        const z = await (m.getSource('h-pins') as GeoJSONSource).getClusterExpansionZoom(Number(f.properties?.cluster_id));
+        m.easeTo({ center: (f.geometry as any).coordinates, zoom: z + 0.2 });
+      } catch { /* la burbuja cambió mientras tanto */ }
     });
+    for (const capa of ['h-cluster', 'h-pins', 'h-marca']) {
+      m.on('mouseenter', capa, () => { m.getCanvas().style.cursor = 'pointer'; });
+      m.on('mouseleave', capa, () => { m.getCanvas().style.cursor = ''; });
+    }
     this.pintarHistorial();
   }
   private pintarHistorial() {
     const m = this.mapa, h = this.hist;
     if (!m.getSource('h-ruta')) return;
     const set = (id: string, d: any) => (m.getSource(id) as GeoJSONSource | undefined)?.setData(d);
-    if (!h || !h.puntos.length) { set('h-ruta', fc([])); set('h-linea', fc([])); set('h-pins', fc([])); set('h-cur', fc([])); return; }
+    if (!h || !h.puntos.length) { set('h-ruta', fc([])); set('h-linea', fc([])); set('h-pins', fc([])); set('h-marca', fc([])); set('h-cur', fc([])); return; }
     const hora = (t: number) => new Date(t * 1000).toLocaleString('es-PE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     const pin = (p: { lat: number; lng: number }, color: string, sym: string, tip: string) => ({ type: 'Feature', properties: { color, sym, tip }, geometry: { type: 'Point', coordinates: [p.lng, p.lat] } });
     const ini = h.puntos[0], fin = h.puntos[h.puntos.length - 1];
@@ -846,8 +867,8 @@ export class MotorTelemetria {
     }
     set('h-ruta', fc(seg));
     set('h-linea', fc([{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: h.puntos.map(p => [p.lng, p.lat]) } }]));
+    set('h-marca', fc([pin(ini, '#16a34a', '▶', 'Inicio · ' + hora(ini.tiempo)), pin(fin, '#0f172a', '■', 'Fin · ' + hora(fin.tiempo))]));
     set('h-pins', fc([
-      pin(ini, '#16a34a', '▶', 'Inicio · ' + hora(ini.tiempo)), pin(fin, '#0f172a', '■', 'Fin · ' + hora(fin.tiempo)),
       // P = parada; roja con ⛽ si el combustible bajó durante la parada
       ...h.paradas.map((s, i) => {
         const baja = this.histParadasBaja.has(s.startT);
