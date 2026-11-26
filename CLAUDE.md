@@ -36,6 +36,7 @@
 `RECORRIDOS_HISTORICO=0` apaga el guardado en segundo plano de los recorridos desde `RECORRIDOS_HISTORICO_DESDE` (por defecto 2026-01-01); `PRECALCULO_RECORRIDOS=0` apaga el de cada noche (03:30 Lima).
 `GOOGLE_MAPS_KEY` (opcional: foto de la calle en el reproductor de recorridos; sin ella queda el botón "Ver calle"), `STREETVIEW_LIMITE_DIARIO` (tope diario de fotos, 800 por defecto).
 Nunca imprimir valores de estas variables.
+Mapa de lugares propio: `services/lugares_mapa.js` sirve `/mapa-lugares/z/x/y.pbf` desde `services/datos/lugares_peru.json.gz` (Overture Maps, 163 mil lugares de Perú). Para actualizarlo: `pip install duckdb` y `python scripts/lugares_peru.py`.
 
 ## 4. Backend y permisos
 

@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import maplibregl from 'maplibre-gl';
 import type { GeoJSONSource, Map as MapaGL } from 'maplibre-gl';
-import { estiloMapa, F_BOLD, W, type TemaMapa } from './estilos';
+import { estiloMapa, F_BOLD, F_REG, W, type TemaMapa } from './estilos';
 import { Camiones3D, ST, type ClaseEstado, type DescCamion, type VistaCamion } from './camiones';
 import { angLerp, distM, enAnillo, type LngLat } from './geo';
 import { claseEstado } from './estado';
@@ -260,6 +260,7 @@ export class MotorTelemetria {
       m.addSource('trafico', { type: 'raster', tiles: [TRAFICO_URL], tileSize: 256, maxzoom: 22, attribution: TRAFICO_ATRIBUCION });
       m.addLayer({ id: 'trafico', type: 'raster', source: 'trafico', paint: { 'raster-opacity': .9 } });
     }
+    this.capaLugares();
     m.addSource('geo', { type: 'geojson', data: this.datosGeo() });
     // Cuadro plano de color sobre el suelo (como en Wialon): más fuerte al acercarse
     m.addLayer({ id: 'geo-fill', type: 'fill', source: 'geo', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 8, .5, 14, .38, 18, .26] } });
@@ -284,6 +285,27 @@ export class MotorTelemetria {
     this.camiones.noche = this.tema === 'night';
     this.aplicarOpciones(this.opt.terrain);
     this.styleReady = true; this.sucio = true; this.sucioDatos = true;
+  }
+  /** Lugares de Perú guardados en nuestro servidor (Overture Maps): colegios, grifos, hospitales, parques… Primero los más fiables y, al acercarse, el resto */
+  private capaLugares() {
+    const m = this.mapa;
+    m.addSource('lugares', { type: 'vector', tiles: [`${location.origin}/mapa-lugares/{z}/{x}/{y}.pbf`], minzoom: 12, maxzoom: 16, attribution: 'Lugares © Overture Maps' });
+    const color = ['match', ['get', 'g'],
+      'combustible', '#f59e0b', 'salud', '#e5484d', 'educacion', '#3b82f6', 'comida', '#f97316', 'alojamiento', '#8b5cf6', 'finanzas', '#0ea5a4',
+      'gobierno', '#64748b', 'culto', '#a16207', 'naturaleza', '#22a06b', 'transporte', '#0891b2', 'automotriz', '#6366f1', '#94a3b8'];
+    const dia = this.tema === 'day';
+    // Tres niveles: confianza alta desde zoom 13.5, media desde 15 y el resto desde 16
+    const niveles: Array<{ id: string; desde: number; min: number; max: number }> = [
+      { id: 'a', desde: 13.5, min: 85, max: 101 }, { id: 'b', desde: 15, min: 65, max: 85 }, { id: 'c', desde: 16, min: 0, max: 65 },
+    ];
+    for (const n of niveles) {
+      const filtro: any = ['all', ['>=', ['get', 'q'], n.min], ['<', ['get', 'q'], n.max]];
+      m.addLayer({ id: `lugares-punto-${n.id}`, type: 'circle', source: 'lugares', 'source-layer': 'lugares', minzoom: n.desde, filter: filtro,
+        paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 13.5, 2.6, 17, 5], 'circle-color': color as any, 'circle-stroke-color': dia ? '#ffffff' : '#0b1220', 'circle-stroke-width': 1, 'circle-opacity': .95 } });
+      m.addLayer({ id: `lugares-nombre-${n.id}`, type: 'symbol', source: 'lugares', 'source-layer': 'lugares', minzoom: n.desde + 0.6, filter: filtro,
+        layout: { 'text-field': ['get', 'n'], 'text-font': F_REG, 'text-size': ['interpolate', ['linear'], ['zoom'], 14, 10, 18, 12.5], 'text-anchor': 'top', 'text-offset': [0, .7], 'text-max-width': 7, 'text-optional': true, 'symbol-sort-key': ['-', 100, ['get', 'q']] },
+        paint: { 'text-color': dia ? '#3d4658' : '#c8d3e6', 'text-halo-color': dia ? '#ffffff' : '#05070c', 'text-halo-width': 1.4 } });
+    }
   }
   private iconOpacity() { return this.opt.models ? ['interpolate', ['linear'], ['zoom'], ZOOM_3D, 1, 15.4, 0] : 1; }
   private datosGeo() {

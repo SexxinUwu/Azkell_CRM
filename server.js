@@ -124,6 +124,15 @@ app.post('/csp-report', express.json({ type: ['application/csp-report', 'applica
 // ── Compresión gzip (reduce 60-70% el tamaño de respuestas) ───────
 app.use(compression());
 
+// Mapa de lugares propio (Overture Maps guardado en el servidor): teselas vectoriales por casilla, sin datos de la empresa
+app.get(/^\/mapa-lugares\/(\d{1,2})\/(\d{1,7})\/(\d{1,7})\.pbf$/, async (req, res) => {
+    try {
+        const buf = require('./services/lugares_mapa').tesela(Number(req.params[0]), Number(req.params[1]), Number(req.params[2]));
+        if (!buf.length) return res.status(204).set('Cache-Control', 'public, max-age=86400').end();
+        res.set({ 'Content-Type': 'application/x-protobuf', 'Cache-Control': 'public, max-age=86400' }).send(buf);
+    } catch (err) { res.status(500).end(); }
+});
+
 // ── Sitios públicos (azkell.com y fleet.azkell.com): antes de la resolución de empresa ──
 app.use(require('./services/sitios_publicos').sitiosPublicos());
 
