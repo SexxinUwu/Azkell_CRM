@@ -5555,6 +5555,52 @@ async function recorridosDeTodasLasEmpresas() {
         } catch (err) { console.warn('[recorridos]', e.slug, err.message); }
     }
 }
+// Histórico de recorridos: al arrancar, y en segundo plano, el servidor guarda todos los días cerrados desde el 01/01/2026 (RECORRIDOS_HISTORICO_DESDE) de cada unidad,
+// del más reciente al más antiguo. Se retoma solo tras cada reinicio (lo ya guardado se salta). Se apaga con RECORRIDOS_HISTORICO=0.
+// Las empresas que comparten la cuenta de Wialon de Marsisa (RECORRIDOS_COPIAR_DE_MARSISA, por defecto yoguitransport y trahesa) reciben copia de lo de Marsisa y
+// solo piden a Wialon lo que falte.
+let historicoRecorridosEnCurso = false;
+async function copiarRecorridos(origen, destino) {
+    const { listarUnidadesGps } = require('./services/wialon_unidades');
+    const poolDestino = getTenantPool(destino.db_name);
+    const ids = (await listarUnidadesGps(poolDestino)).map(u => u.id);
+    if (!ids.length) return 0;
+    const ok = n => /^[A-Za-z0-9_]+$/.test(String(n));
+    if (!ok(origen.db_name) || !ok(destino.db_name)) return 0;
+    const [r] = await poolDestino.promise().query(
+        `INSERT IGNORE INTO \`${destino.db_name}\`.gps_recorrido_dia (placa, fecha, unit_id, puntos, km, datos)
+         SELECT placa, fecha, unit_id, puntos, km, datos FROM \`${origen.db_name}\`.gps_recorrido_dia WHERE unit_id IN (?)`, [ids]);
+    return r.affectedRows || 0;
+}
+async function historicoRecorridosTodas() {
+    if (process.env.RECORRIDOS_HISTORICO === '0' || historicoRecorridosEnCurso) return;
+    historicoRecorridosEnCurso = true;
+    try {
+        const desde = process.env.RECORRIDOS_HISTORICO_DESDE || '2026-01-01';
+        const dependientes = String(process.env.RECORRIDOS_COPIAR_DE_MARSISA ?? 'yoguitransport,trahesa').split(',').map(s => s.trim()).filter(Boolean);
+        const [empresas] = await getMasterPool().promise().query("SELECT slug, db_name FROM empresas WHERE estado = 'activo'").catch(() => [[]]);
+        const lista = empresas || [];
+        const correr = (e) => tenantStorage.run(getTenantPool(e.db_name), () => legacyRoutes.precalcularRecorridos(e.slug, {
+            desde, limiteMs: 72 * 3600 * 1000,
+            alAvanzar: p => console.log(`[histórico recorridos] ${e.slug}: ${p.hechos} consultados (con datos ${p.conDatos}, ya estaban ${p.yaEstaban}) · va por ${p.fecha}`),
+        })).then(r => console.log('[histórico recorridos]', e.slug, 'FIN', JSON.stringify(r))).catch(err => console.warn('[histórico recorridos]', e.slug, err.message));
+        const marsisa = lista.find(e => e.slug === 'marsisa');
+        const propias = lista.filter(e => !dependientes.includes(e.slug));
+        const tareas = new Map(propias.map(e => [e.slug, correr(e)]));
+        await Promise.all([
+            ...tareas.values(),
+            ...lista.filter(e => dependientes.includes(e.slug)).map(async e => {
+                if (marsisa) {
+                    await tareas.get('marsisa');
+                    try { console.log('[histórico recorridos]', e.slug, 'copiados desde Marsisa:', await copiarRecorridos(marsisa, e)); } catch (err) { console.warn('[histórico recorridos] copia', e.slug, err.message); }
+                }
+                await correr(e);
+            }),
+        ]);
+    } finally { historicoRecorridosEnCurso = false; }
+}
+if (process.env.RECORRIDOS_HISTORICO !== '0') setTimeout(() => historicoRecorridosTodas().catch(e => console.warn('Histórico de recorridos:', e.message)), 2 * 60 * 1000);
+
 if (process.env.PRECALCULO_RECORRIDOS !== '0') {
     const ahora = new Date();
     const prox = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate(), 8, 30));

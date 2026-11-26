@@ -69,28 +69,32 @@ async function valorSensorUltimo(baseUrl, sid, unitId, sensor) {
     } catch (e) { /* sin lectura */ }
     return null;
 }
-// Una sola consulta del historial a la vez sobre la sesión compartida: calc_sensors usa los mensajes que dejó cargados la última consulta de esa sesión
-let colaHistorial = Promise.resolve();
-function tomarTurnoHistorial() {
+// Sesión de Wialon que se reutiliza entre consultas seguidas del historial, UNA POR TOKEN (cada empresa tiene el suyo): se renueva sola a los 3 minutos
+// sin uso o si Wialon la rechaza. Dentro de una sesión va una sola consulta a la vez: calc_sensors usa los mensajes que dejó cargados la última consulta.
+const sesionesHistorial = new Map();
+function sesionDe(clave) {
+    let s = sesionesHistorial.get(clave);
+    if (!s) { s = { sid: null, uso: 0, ok: 0, cola: Promise.resolve() }; sesionesHistorial.set(clave, s); }
+    return s;
+}
+function tomarTurnoHistorial(clave) {
+    const s = sesionDe(clave);
     let liberar;
-    const anterior = colaHistorial;
-    colaHistorial = new Promise(r => { liberar = r; });
+    const anterior = s.cola;
+    s.cola = new Promise(r => { liberar = r; });
     return anterior.then(() => liberar);
 }
-
-// Sesión de Wialon que se reutiliza entre consultas seguidas del historial: se renueva sola a los 3 minutos sin uso o si Wialon la rechaza
-const sesionHistorial = { sid: null, clave: '', uso: 0, ok: 0 };
 // Sensor de combustible de cada unidad: se guarda 30 minutos (cambia muy poco y buscarlo cuesta varias consultas a Wialon)
 const sensorCombustibleCache = new Map();
 async function sidHistorial(baseUrl, token, nueva) {
-    const clave = baseUrl + '|' + token;
-    if (!nueva && sesionHistorial.sid && sesionHistorial.clave === clave && Date.now() - sesionHistorial.uso < 3 * 60 * 1000) {
-        sesionHistorial.uso = Date.now();
-        return sesionHistorial.sid;
+    const s = sesionDe(baseUrl + '|' + token);
+    if (!nueva && s.sid && Date.now() - s.uso < 3 * 60 * 1000) {
+        s.uso = Date.now();
+        return s.sid;
     }
     const login = await (await fetch(`${baseUrl}?svc=token/login&params=${encodeURIComponent(JSON.stringify({ token }))}`)).json();
-    if (!login || !login.eid) { sesionHistorial.sid = null; return null; }
-    sesionHistorial.sid = login.eid; sesionHistorial.clave = clave; sesionHistorial.uso = Date.now(); sesionHistorial.ok = Date.now();
+    if (!login || !login.eid) { s.sid = null; return null; }
+    s.sid = login.eid; s.uso = Date.now(); s.ok = Date.now();
     return login.eid;
 }
 
@@ -1855,15 +1859,16 @@ router.post('/:metodo', async (req, res) => {
             const [token, baseUrl] = await Promise.all([obtenerToken(), obtenerUrl()]);
             if (!token) return res.json({ data: { error: 'Token Wialon no configurado.' } });
 
-            liberarTurno = await tomarTurnoHistorial();
+            const claveSesion = baseUrl + '|' + token;
+            liberarTurno = await tomarTurnoHistorial(claveSesion);
             let sid = await sidHistorial(baseUrl, token);
             if (!sid) return res.json({ data: { error: 'No se pudo iniciar sesión con Wialon.' } });
             // Si la sesión guardada ya no sirve (Wialon responde error 1), se inicia una nueva
             try {
-                if (Date.now() - sesionHistorial.ok > 30000) {
+                if (Date.now() - sesionDe(claveSesion).ok > 30000) {
                 const prueba = await (await fetch(`${baseUrl}?svc=core/search_item&params=${encodeURIComponent(JSON.stringify({ id: targetUnitId || 0, flags: 1 }))}&sid=${sid}`)).json();
                 if (prueba && prueba.error === 1) { sid = await sidHistorial(baseUrl, token, true); if (!sid) return res.json({ data: { error: 'No se pudo iniciar sesión con Wialon.' } }); }
-                else sesionHistorial.ok = Date.now();
+                else sesionDe(claveSesion).ok = Date.now();
                 }
             } catch (e) { /* si falla la prueba, se intenta con la sesión que hay */ }
 
