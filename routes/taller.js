@@ -216,6 +216,11 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         const ot = String(req.query.ot || '').trim();
         if (!ot) return res.status(400).json({ ok: false, error: 'Indica la OT' });
         try {
+            // En una OT cerrada no se quita ningún servicio: el costo ya quedó firmado
+            const [ots] = await (req.db || db).promise().query('SELECT estado FROM ordenes_trabajo WHERE id_ot = ? OR ticket_entrada = ? LIMIT 1', [ot, ot]);
+            if (ots[0] && ['finalizado', 'cerrada', 'cerrado'].includes(String(ots[0].estado || '').toLowerCase())) {
+                return res.status(409).json({ ok: false, error: 'La OT está cerrada: no se pueden quitar sus servicios' });
+            }
             const [r] = await (req.db || db).promise().query(
                 `UPDATE entradas_inv SET ot_servicio_agregado = 0
                  WHERE id = ? AND ot_id = ? AND LOWER(tipo_orden) = 'orden de servicio'`, [req.params.id, ot]);
