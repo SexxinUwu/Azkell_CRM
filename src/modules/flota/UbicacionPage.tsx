@@ -12,7 +12,7 @@ import { GrupoFiltro, HojaFiltros } from '../../core/ui/FiltrosListado';
 import { errorMessage } from '../../core/api/client';
 import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
 import { haptic } from '../../core/lib/haptics';
-import { PanelHistorial, type Velocidad } from './UbicacionPlayback';
+import { PanelHistorial, type Reciente, type Velocidad } from './UbicacionPlayback';
 import { useHistorial } from './UbicacionHistorial';
 import { estadoUnidad, useDisponibilidad, useGeocercas, useUnidadesGps, type EstadoUnidad, type UnidadMapa } from './api';
 import { usePlacas } from '../placas/api';
@@ -92,6 +92,9 @@ export function UbicacionPage() {
   // Tres vistas: Unidades (en vivo), Recorrido (historial y reproductor de una unidad) y Geocercas (buscador)
   const [vista, setVista] = useState<VistaGps>(vistaGuardada);
   const [playerAbierto, setPlayerAbierto] = useState(false);
+  const [recientes, setRecientes] = useState<Reciente[]>([]);
+  const [autoplay, setAutoplay] = useState(false);
+  const colorSiguiente = useRef(0);
   const panel = vista === 'recorrido' ? 'historial' : 'ficha';
   const [horas, setHoras] = useState(24);
   const [dia, setDia] = useState<string | null>(null);
@@ -253,6 +256,31 @@ export function UbicacionPage() {
     }, 50);
     return () => clearInterval(t);
   }, [reproduciendo, velocidad, historial]);
+
+  // Cada recorrido consultado queda en la lista (hasta 8), con sus km; se actualiza mientras los días van llegando
+  useEffect(() => {
+    if (!abiertoHistorial || !historial) return;
+    const hoyL = new Date(); const aIso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const hoyS = aIso(hoyL), ayerS = aIso(new Date(hoyL.getTime() - 86400000));
+    const corta = (f: string) => `${f.slice(8, 10)}/${f.slice(5, 7)}`;
+    const clave = `${abiertoHistorial.placa}|${dia ?? (desde && hasta ? `${desde}>${hasta}` : `h${horas}`)}`;
+    const etiqueta = dia ? (dia === hoyS ? 'Hoy' : dia === ayerS ? 'Ayer' : `${corta(dia)}/${dia.slice(0, 4)}`) : desde && hasta ? `${corta(desde)} – ${corta(hasta)}` : `Últimas ${horas} h`;
+    setRecientes(prev => {
+      const i = prev.findIndex(r => r.clave === clave);
+      if (i >= 0) return prev.map((r, k) => (k === i ? { ...r, km: historial.metricas.totalKm } : r));
+      const PALETA = ['#2563eb', '#16a34a', '#f97316', '#9333ea', '#e11d48', '#0891b2', '#ca8a04', '#475569'];
+      const color = PALETA[colorSiguiente.current++ % PALETA.length];
+      return [{ clave, placa: abiertoHistorial.placa, etiqueta, dia, desde, hasta, horas, km: historial.metricas.totalKm, color }, ...prev].slice(0, 8);
+    });
+  }, [abiertoHistorial, historial, dia, desde, hasta, horas]);
+  const aplicarReciente = useCallback((r: Reciente) => {
+    if (r.placa !== seleccionada) { setSeleccionada(r.placa); setIndice(0); setReproduciendo(false); }
+    setHoras(r.horas); setDia(r.dia); setDesde(r.desde); setHasta(r.hasta);
+  }, [seleccionada]);
+  // "Reproducir" en la lista: carga ese recorrido y, cuando está listo, arranca
+  useEffect(() => {
+    if (autoplay && historial && historial.puntos.length > 0 && !historialQ.isFetching) { setReproduciendo(true); setAutoplay(false); }
+  }, [autoplay, historial, historialQ.isFetching]);
 
   // El reproductor se abre al dar play y se cierra al salir de Recorrido o cambiar de unidad
   useEffect(() => { if (reproduciendo) setPlayerAbierto(true); }, [reproduciendo]);
@@ -441,7 +469,9 @@ export function UbicacionPage() {
                     {seleccion ? (
                     <PanelHistorial placa={seleccion.placa} horas={horas} analisis={analisis} tramos={tramos} viajeSel={viajeSel} onViaje={setViajeSel}
                       onHoras={setHoras} dia={dia} onDia={d => { setDia(d); setDesde(null); setHasta(null); }} desde={desde} hasta={hasta} onRango={(a, b) => { setDesde(a); setHasta(b); setDia(null); }} onIrA={(lat, lng) => motor?.irA(lat, lng)} historial={historial} cargando={historialQ.isFetching && !historial}
-                      error={errorHistorial} progreso={historialQ.progreso} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
+                      error={errorHistorial} progreso={historialQ.progreso}
+                      recientes={recientes} recienteActiva={abiertoHistorial ? `${abiertoHistorial.placa}|${dia ?? (desde && hasta ? `${desde}>${hasta}` : `h${horas}`)}` : null}
+                      onReciente={aplicarReciente} onReproducirReciente={r => { aplicarReciente(r); setAutoplay(true); }} onQuitarReciente={k => setRecientes(prev => prev.filter(r => r.clave !== k))} indice={indice} onIndice={i => { setIndice(i); setReproduciendo(false); }}
                       reproduciendo={reproduciendo} onReproducir={() => setReproduciendo(r => !r)}
                       onReiniciar={() => { setIndice(0); setReproduciendo(false); }}
                       velocidad={velocidad} onVelocidad={setVelocidad}
