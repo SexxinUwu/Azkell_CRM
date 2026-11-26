@@ -538,7 +538,7 @@
 .tg-tab[aria-selected='true'] { background: var(--accent); color: #fff; box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 40%, transparent); }
 @media (max-width: 900px) { .tg-tab span { display: none; } .tg-tab { padding: 9px 12px; } }
 
-.tg-side--rec { width: 360px; }
+@media (min-width: 901px) { .tg-side--rec { width: 360px; } }
 .tg-rec-titulo { margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--label-2); }
 .tg-rec-cuerpo { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 10px 12px 14px; overscroll-behavior: contain; }
 .tg-rec-cuerpo::-webkit-scrollbar { display: none; }
@@ -634,3 +634,6 @@
 
 /* Los paneles de la izquierda empiezan debajo de la tarjeta de título (ya no hay fila de tarjetas de resumen que los separe) */
 @media (min-width: 901px) { .tg-side, .tg-geo { top: 156px; } }
+
+/* Celular: los paneles de Recorrido y de Geocercas ocupan todo el ancho, sin dejar espacio a la derecha */
+@media (max-width: 900px) { .tg .tg-side--rec, .tg .tg-geo { left: 8px; right: 8px; width: auto; max-width: none; } }
