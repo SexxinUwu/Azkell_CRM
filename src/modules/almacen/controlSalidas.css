@@ -1,0 +1,31 @@
+/* Tiempos de despacho de las salidas */
+.cs-cuerpo { display: flex; flex-direction: column; gap: var(--s-4); padding: var(--s-1) 0; }
+.cs-periodo { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap; font-size: 0.875rem; color: var(--label-2); }
+.cs-titulo { margin: 0 0 var(--s-2); font-size: 0.75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--label-2); }
+.cs-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.cs-kpi { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow-card); }
+.cs-kpi span { font-size: 0.6875rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--label-2); }
+.cs-kpi b { font-size: 1.5rem; line-height: 1.15; }
+.cs-kpi small { font-size: 0.6875rem; color: var(--label-3); }
+.cs-kpi--verde b { color: var(--green-ink, #176b47); }
+.cs-kpi--rojo b { color: var(--red-ink, #b4232a); }
+
+.cs-barras, .cs-pend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cs-barras li { display: grid; grid-template-columns: 8.5rem 1fr 8.5rem; align-items: center; gap: 10px; font-size: 0.8125rem; }
+.cs-barras__txt { color: var(--label-2); }
+.cs-barras__pista { height: 10px; border-radius: 99px; background: var(--fill); overflow: hidden; }
+.cs-barras__relleno { display: block; height: 100%; border-radius: 99px; }
+.cs-barras__relleno--verde { background: var(--green, #22a06b); }
+.cs-barras__relleno--ambar { background: #f59e0b; }
+.cs-barras__relleno--rojo { background: var(--red, #e5484d); }
+.cs-barras__n { text-align: right; font-weight: 600; }
+
+.cs-pend li { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow-card); }
+.cs-pend__txt { display: flex; flex-direction: column; min-width: 0; }
+.cs-pend__txt b { font-size: 0.875rem; }
+.cs-pend__txt small { font-size: 0.75rem; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-espera { flex: none; min-width: 4.8rem; text-align: center; padding: 3px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 700; }
+.cs-espera--verde { background: rgba(52, 199, 89, .16); color: #15803d; }
+.cs-espera--ambar { background: rgba(245, 158, 11, .18); color: #b45309; }
+.cs-espera--rojo { background: rgba(255, 59, 48, .14); color: #b4232a; }
+@media (max-width: 600px) { .cs-barras li { grid-template-columns: 6rem 1fr 6.5rem; gap: 6px; } }

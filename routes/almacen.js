@@ -2719,6 +2719,47 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
     // ============================================================
     // ALMACÉN — Salidas
     // ============================================================
+    // Control de tiempos de las salidas: cuánto tarda en despacharse lo que se pide y qué pendientes llevan más espera.
+    // El despacho se toma de la auditoría (la base guarda created_at en UTC y la auditoría en hora de Lima: de ahí el +5 h).
+    router.get('/salidas/tiempos', async (req, res) => {
+        try {
+            const p = (typeof (req.db || db).promise === 'function' ? (req.db || db).promise() : (req.db || db));
+            const dias = Math.min(365, Math.max(7, parseInt(req.query.dias, 10) || 60));
+            const [filas] = await p.query(
+                `SELECT s.id, s.placa, s.ticket_ot, DATE_FORMAT(DATE_ADD(MIN(l.fecha), INTERVAL 5 HOUR), '%Y-%m-%d') AS dia_despacho,
+                        DATE_FORMAT(MIN(l.fecha), '%x-%v') AS semana, TIMESTAMPDIFF(MINUTE, s.created_at, DATE_ADD(MIN(l.fecha), INTERVAL 5 HOUR)) AS minutos
+                 FROM salidas_inv s
+                 JOIN log_auditoria l ON l.ruta COLLATE utf8mb4_unicode_ci = CONCAT('/almacen/salidas/', s.id) COLLATE utf8mb4_unicode_ci
+                      AND l.metodo = 'PUT' AND l.body_resumen LIKE '%despachar%' AND l.status_codigo BETWEEN 200 AND 299
+                 WHERE s.created_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL ? DAY)
+                 GROUP BY s.id, s.placa, s.ticket_ot, s.created_at`, [dias]);
+            const mins = filas.map(f => Math.max(0, Number(f.minutos) || 0)).sort((x, y) => x - y);
+            const pct = (q) => (mins.length ? mins[Math.min(mins.length - 1, Math.floor(mins.length * q))] : null);
+            const cuenta = (f) => mins.filter(f).length;
+            const porSemana = new Map();
+            for (const f of filas) { const k = f.semana; (porSemana.get(k) || porSemana.set(k, []).get(k)).push(Math.max(0, Number(f.minutos) || 0)); }
+            const semanas = [...porSemana.entries()].sort((x, y) => x[0].localeCompare(y[0])).slice(-12).map(([sem, v]) => {
+                const o = v.sort((x, y) => x - y);
+                return { semana: sem, salidas: o.length, mediana: o[Math.floor(o.length / 2)] };
+            });
+            const [pend] = await p.query(
+                `SELECT s.id, s.placa, s.ticket_ot, s.responsable, s.created_at, TIMESTAMPDIFF(MINUTE, s.created_at, UTC_TIMESTAMP()) AS espera_min,
+                        (SELECT COUNT(*) FROM detalle_salidas_inv d WHERE d.salida_id = s.id) AS items
+                 FROM salidas_inv s WHERE COALESCE(s.estado, '') NOT IN ('Despachado', 'Anulado') ORDER BY s.created_at ASC LIMIT 60`);
+            res.json({
+                dias,
+                resumen: {
+                    medidas: mins.length,
+                    mediana_min: pct(0.5), promedio_min: mins.length ? Math.round(mins.reduce((s, x) => s + x, 0) / mins.length) : null, p90_min: pct(0.9),
+                    hasta_30m: cuenta(x => x <= 30), hasta_2h: cuenta(x => x > 30 && x <= 120), hasta_1d: cuenta(x => x > 120 && x <= 1440),
+                    hasta_3d: cuenta(x => x > 1440 && x <= 4320), mas_3d: cuenta(x => x > 4320),
+                },
+                semanas,
+                pendientes: pend.map(x => ({ id: x.id, placa: x.placa, ot: x.ticket_ot, responsable: x.responsable, creada: x.created_at, espera_min: Math.max(0, Number(x.espera_min) || 0), items: Number(x.items) || 0 })),
+            });
+        } catch (err) { console.error('[salidas/tiempos]', err.message); res.status(500).json({ error: err.message }); }
+    });
+
     router.get('/salidas', (req, res) => {
         const targetDb = req.db || db;
         const q = (req.query.q || '').trim();

@@ -1,0 +1,91 @@
+/* Detalle de una salida: encabezado compacto y artículos uno debajo del otro */
+.sdt { display: flex; flex-direction: column; gap: var(--s-4); padding: var(--s-1) 0; }
+
+.sdt-hero { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-card); }
+.sdt-hero__fila { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.sdt-hero__folio { font-family: var(--font-mono); font-weight: 800; font-size: 1.0625rem; color: var(--accent-ink, var(--accent)); }
+.sdt-hero__acciones { margin-left: auto; }
+.sdt-hero__meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.sdt-hero__pie { color: var(--label-3); font-size: 0.75rem; }
+.sdt-nota { margin: 0; padding: 8px 12px; border-radius: var(--r-md); background: var(--fill); font-size: 0.8125rem; color: var(--label-2); line-height: 1.4; }
+.sdt-nota--rojo { background: rgba(255, 59, 48, .1); color: #b4232a; }
+
+.sdt-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 99px; background: var(--fill); font-size: 0.75rem; color: var(--label-2); white-space: nowrap; }
+.sdt-chip b { color: var(--label); font-weight: 700; }
+.sdt-chip--mono { font-family: var(--font-mono); font-weight: 700; color: var(--label); }
+.sdt-chip--ubi { background: var(--accent-tint); color: var(--accent-ink, var(--accent)); font-weight: 700; }
+.sdt-chip--sin { color: var(--label-3); }
+.sdt-chip--ok { background: rgba(52, 199, 89, .16); color: #15803d; font-weight: 600; }
+.sdt-chip--mal { background: rgba(255, 59, 48, .14); color: #b4232a; font-weight: 700; }
+.sdt-espera { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 700; }
+.sdt-espera--verde { background: rgba(52, 199, 89, .16); color: #15803d; }
+.sdt-espera--ambar { background: rgba(245, 158, 11, .18); color: #b45309; }
+.sdt-espera--rojo { background: rgba(255, 59, 48, .14); color: #b4232a; }
+
+.sdt-titulo { display: flex; align-items: center; justify-content: space-between; margin: 0 4px 8px; font-size: 0.75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--label-2); }
+.sdt-titulo__n { padding: 2px 10px; border-radius: 99px; background: var(--fill); letter-spacing: 0; text-transform: none; }
+.sdt-vacio { margin: 0; padding: var(--s-3) 0; font-size: 0.8125rem; color: var(--label-2); }
+
+.sdt-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sdt-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow-card); border: 1.5px solid transparent; }
+.sdt-item--sin-stock { border-color: rgba(255, 59, 48, .35); }
+.sdt-check { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--separator); background: transparent; color: #fff; display: grid; place-items: center; cursor: pointer; padding: 0; }
+.sdt-check--on { background: var(--accent); border-color: var(--accent); }
+.sdt-check:disabled { opacity: .4; cursor: not-allowed; }
+.sdt-item__cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.sdt-item__nombre { font-size: 0.9375rem; line-height: 1.25; overflow-wrap: anywhere; }
+.sdt-item__chips, .sdt-item__lotes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.sdt-item__lotes { color: #6d28d9; }
+.sdt-lote { padding: 2px 10px; border-radius: 99px; background: rgba(124, 58, 237, .12); color: #6d28d9; font-size: 0.75rem; font-weight: 700; }
+.sdt-item__cant { flex: none; display: flex; flex-direction: column; align-items: flex-end; min-width: 4.5rem; }
+.sdt-item__cant b { font-size: 1.375rem; line-height: 1.1; }
+.sdt-item__cant small { font-size: 0.6875rem; color: var(--label-3); }
+.sdt-item__imp { margin-top: 4px; font-size: 0.75rem; font-weight: 700; color: var(--label-2); font-variant-numeric: tabular-nums; }
+
+.sdt-total { margin-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-radius: var(--r-xl); background: var(--label); color: var(--bg, #fff); }
+.sdt-total > div { display: flex; flex-direction: column; gap: 2px; }
+.sdt-total span { font-size: 0.75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; opacity: .8; }
+.sdt-total small { font-size: 0.6875rem; opacity: .7; }
+.sdt-total b { font-size: 1.375rem; font-variant-numeric: tabular-nums; }
+
+.sdt-pie { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.sdt-pie__fila { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+
+/* Hoja de despacho (según el boceto): datos arriba, artículos numerados con conformidad */
+.sdt-hoja { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-card); }
+.sdt-hoja__estado { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.sdt-hoja__acciones { margin-left: auto; }
+.sdt-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 16px; margin: 0; }
+.sdt-datos dt { font-size: 0.6875rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--label-3); }
+.sdt-datos dd { margin: 2px 0 0; font-size: 0.875rem; font-weight: 600; color: var(--label); overflow-wrap: anywhere; }
+.sdt-mono { font-family: var(--font-mono); }
+.sdt-obs { padding: 8px 12px; border-radius: var(--r-md); background: var(--fill); }
+.sdt-obs span { font-size: 0.6875rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--label-3); }
+.sdt-obs p { margin: 2px 0 0; font-size: 0.8125rem; color: var(--label-2); line-height: 1.4; }
+.sdt-titulo__prog { text-transform: none; letter-spacing: 0; font-weight: 600; }
+.sdt-titulo__prog b { color: var(--accent-ink, var(--accent)); }
+
+.sdt-scan { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.sdt-scan__barra { display: flex; gap: 8px; align-items: center; }
+.sdt-scan__manual { flex: 1; min-width: 0; }
+.sdt-scan__manual .input { width: 100%; }
+.sdt-scan__linea { margin: 0; font-size: 0.75rem; color: var(--label-2); }
+.sdt-scan__linea button { margin-left: 6px; border: 0; background: none; color: var(--accent-ink, var(--accent)); font-weight: 700; cursor: pointer; }
+.sdt-aviso { margin: 0; padding: 6px 12px; border-radius: var(--r-md); font-size: 0.8125rem; font-weight: 600; }
+.sdt-aviso--ok { background: rgba(52, 199, 89, .16); color: #15803d; }
+.sdt-aviso--error { background: rgba(255, 59, 48, .14); color: #b4232a; }
+
+.sdt-item__n { flex: none; width: 1.6rem; font-weight: 700; color: var(--label-3); font-variant-numeric: tabular-nums; }
+.sdt-item--ok { border-color: rgba(52, 199, 89, .55); background: rgba(52, 199, 89, .06); }
+.sdt-lote--leido { background: rgba(52, 199, 89, .18); color: #15803d; }
+.sdt-conf { flex: none; display: flex; align-items: center; gap: 8px; padding-left: 10px; border-left: 1px solid var(--separator); }
+.sdt-conf__txt { min-width: 2.2rem; text-align: right; font-size: 0.75rem; font-weight: 700; color: var(--label-2); }
+.sdt-conf__scan { width: 32px; height: 32px; border-radius: 10px; border: 0; background: var(--fill); color: var(--label-2); display: grid; place-items: center; cursor: pointer; }
+.sdt-conf__check { width: 30px; height: 30px; border-radius: 8px; border: 2px solid var(--separator); background: transparent; color: #fff; display: grid; place-items: center; cursor: pointer; padding: 0; }
+.sdt-conf__check--parcial { border-color: #f59e0b; }
+.sdt-conf__check--on { background: #16a34a; border-color: #16a34a; }
+.sdt-conf button:disabled { opacity: .4; cursor: not-allowed; }
+
+.sdt-pie__icono { width: 40px; height: 40px; border-radius: 12px; border: 0; display: grid; place-items: center; cursor: pointer; background: var(--fill); }
+.sdt-pie__icono--rojo { color: #dc2626; background: rgba(255, 59, 48, .12); }
+.sdt-pie__icono--verde { color: #16a34a; background: rgba(52, 199, 89, .16); }

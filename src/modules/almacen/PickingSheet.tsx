@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Camera, Check, CircleAlert, Minus, PackageCheck, Plus, ScanLine } from 'lucide-react';
 import { Sheet, ConfirmSheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
@@ -10,6 +10,7 @@ import { separarLote } from './codigosLote';
 import { sinStockDe } from './SinStockDialogo';
 import { EscanerContinuo } from './EscanerContinuo';
 import { pitido } from './pitido';
+import { duracion, tonoEspera } from './ControlSalidasSheet';
 import './picking.css';
 
 interface Linea {
@@ -36,7 +37,9 @@ const clave = (s: string) => s.trim().toUpperCase();
  * Picking de salidas pendientes: se eligen varias, sale una hoja ordenada por ubicación y se va escaneando cada artículo
  * (cámara del celular o escribiendo el código). Al terminar se despachan todas de una vez; lo que no se recogió queda pendiente.
  */
-export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTerminado }: {
+export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTerminado, inicial = null }: {
+  /** Si viene una salida, el picking empieza directo con ella (se abre desde su detalle) */
+  inicial?: SalidaInv | null;
   open: boolean;
   onClose: () => void;
   salidas: SalidaInv[];
@@ -44,7 +47,10 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
   usuario: string;
   onTerminado: () => void;
 }) {
-  const pendientes = useMemo(() => salidas.filter(s => estadoSalida(s) === 'Pendiente' && (s.items ?? []).some(i => i.id != null)), [salidas]);
+  // Las que más llevan esperando, primero (el tiempo corre desde que se pidió)
+  const pendientes = useMemo(() => salidas.filter(s => estadoSalida(s) === 'Pendiente' && (s.items ?? []).some(i => i.id != null))
+    .sort((a, b) => (Date.parse(a.created_at) || 0) - (Date.parse(b.created_at) || 0)), [salidas]);
+  const esperaMin = (s: SalidaInv) => { const t = Date.parse(s.created_at); return Number.isFinite(t) ? Math.max(0, Math.round((Date.now() - t) / 60000)) : null; };
   const porId = useMemo(() => new Map(inventario.map(a => [a.id.toUpperCase(), a])), [inventario]);
   const porCodigo = useMemo(() => {
     const m = new Map<string, ArticuloInv>();
@@ -73,9 +79,9 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
   const marcadas = pendientes.filter(s => elegidas.has(String(s.id)));
   const totalItems = marcadas.reduce((a, s) => a + (s.items ?? []).filter(i => i.id != null).length, 0);
 
-  function empezar() {
+  function construir(lista: SalidaInv[]) {
     const ls: Linea[] = [];
-    for (const s of marcadas) {
+    for (const s of lista) {
       for (const it of s.items ?? []) {
         if (it.id == null) continue;
         const art = it.inventario_id ? porId.get(it.inventario_id.toUpperCase()) : undefined;
@@ -90,6 +96,14 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
     ls.sort((a, b) => (a.ubicacion ? 0 : 1) - (b.ubicacion ? 0 : 1) || a.ubicacion.localeCompare(b.ubicacion, 'es', { numeric: true }) || a.descripcion.localeCompare(b.descripcion, 'es'));
     setLineas(ls); setAviso(null); setPaso('picking'); setCamara(true);
   }
+  const empezar = () => construir(marcadas);
+  // Abierto desde el detalle de una salida: empieza directo con esa salida
+  const iniciado = useRef(false);
+  useEffect(() => {
+    if (!open) { iniciado.current = false; return; }
+    if (inicial && !iniciado.current) { iniciado.current = true; construir([inicial]); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, inicial]);
 
   const completa = (l: Linea) => l.recogido >= l.cantidad - 1e-9;
   const unidadesTotal = lineas.reduce((a, l) => a + l.cantidad, 0);
@@ -214,7 +228,7 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
     onTerminado();
   }
 
-  const titulo = paso === 'elegir' ? 'Picking de salidas' : paso === 'picking' ? 'Hoja de picking' : 'Resultado del despacho';
+  const titulo = paso === 'elegir' ? 'Picking de salidas' : paso === 'picking' ? (inicial ? `Despachar ${inicial.id}` : 'Hoja de picking') : 'Resultado del despacho';
   const pie = paso === 'elegir' ? (
     <>
       <Button variant="secondary" onClick={cerrar}>Cancelar</Button>
@@ -224,7 +238,7 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
     </>
   ) : paso === 'picking' ? (
     <>
-      <Button variant="secondary" onClick={() => (unidadesHechas > 0 ? setSaliendo(true) : reiniciar())}>Atrás</Button>
+      <Button variant="secondary" onClick={() => (unidadesHechas > 0 ? setSaliendo(true) : inicial ? cerrar() : reiniciar())}>{inicial ? 'Cancelar' : 'Atrás'}</Button>
       <Button variant="primary" icon={<PackageCheck size={16} />} disabled={!aDespachar.length} onClick={() => setConfirmando(true)}>
         Despachar {aDespachar.length ? `${aDespachar.length} ${aDespachar.length === 1 ? 'salida' : 'salidas'}` : ''}
       </Button>
@@ -257,7 +271,9 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
                             <small>{[s.placa, s.ticket_ot, s.responsable].filter(Boolean).join(' · ') || 'Sin destino'}</small>
                             <small className="pk-salida__items">{its.slice(0, 3).map(i => i.descripcion).join(' · ')}{its.length > 3 ? ` · +${its.length - 3} más` : ''}</small>
                           </span>
-                          <span className="pk-salida__n">{its.length} {its.length === 1 ? 'ítem' : 'ítems'}</span>
+                          <span className="pk-salida__n">{its.length} {its.length === 1 ? 'ítem' : 'ítems'}
+                            {esperaMin(s) != null && <em className={`pk-espera pk-espera--${tonoEspera(esperaMin(s) as number)}`}>Hace {duracion(esperaMin(s))}</em>}
+                          </span>
                         </label>
                       </li>
                     );
