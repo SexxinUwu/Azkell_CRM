@@ -28,3 +28,8 @@
 .otl-rango label { display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; font-weight: 600; color: var(--label-2); }
 .otl-acciones .btn { flex: none; white-space: nowrap; }
 .otl-acciones { justify-content: center; width: 100%; }
+
+/* La tabla llena la pantalla hasta el final del menú lateral y se desplaza por dentro, sin barras visibles (el encabezado y los resúmenes quedan fijos arriba) */
+.page--fill .otl-cuerpo { flex: 1 1 auto; min-height: 0; }
+.page--fill .otl-cuerpo > .tabla-redim { flex: 1 1 auto; min-height: 0; max-height: none !important; scrollbar-width: none; -ms-overflow-style: none; }
+.page--fill .otl-cuerpo > .tabla-redim::-webkit-scrollbar { display: none; }
