@@ -577,3 +577,56 @@
 .tg-pp-dir { grid-column: 1 / -1; display: flex; align-items: flex-start; gap: 6px; font-size: 12.5px; font-weight: 600; line-height: 1.3; color: var(--label); }
 .tg-pp-dir svg { flex: none; margin-top: 2px; color: var(--accent); }
 .tg-h-nota { margin: 6px 0 0; font-size: 11.5px; line-height: 1.35; color: var(--label-2); }
+
+/* ═══ Recorrido compacto (como el formulario de Wialon) ═══ */
+.tg-h-sec--form { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; }
+.tg-h-pres { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border: 1px solid var(--separator); border-radius: 10px; overflow: hidden; background: var(--fill); }
+.tg-h-pres button { border: 0; background: transparent; padding: 7px 4px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--label-2); cursor: pointer; transition: background .15s, color .15s; }
+.tg-h-pres button + button { border-left: 1px solid var(--separator); }
+.tg-h-pres button:hover { color: var(--label); }
+.tg-h-pres button[aria-pressed='true'] { background: var(--accent); color: #fff; }
+.tg-h-campo { display: grid; grid-template-columns: 52px 1fr; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--label-2); }
+.tg-h-campo input { width: 100%; min-width: 0; height: 30px; padding: 0 8px; font: inherit; font-size: 12.5px; color: var(--label); background: var(--surface); border: 1px solid var(--separator); border-radius: 8px; }
+.tg-h-accion { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tg-h-accion small { font-size: 10.5px; color: var(--label-3); line-height: 1.25; }
+.tg-h-sec--pistas { padding: 4px 10px 6px; }
+.tg-h-pistas__cab { display: grid; grid-template-columns: 1fr auto 56px; padding: 2px 4px 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--label-2); border-bottom: 1px solid var(--separator); }
+.tg-h-pista { display: grid; grid-template-columns: 14px 1fr auto 26px 26px; align-items: center; gap: 6px; padding: 6px 4px; border-bottom: 1px solid var(--separator); border-radius: 8px; }
+.tg-h-pista[data-activa='true'] { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.tg-h-pista__color { width: 12px; height: 12px; border-radius: 3px; }
+.tg-h-pista__txt { border: 0; background: none; text-align: left; font: inherit; cursor: pointer; display: flex; flex-direction: column; min-width: 0; padding: 0; color: var(--label); }
+.tg-h-pista__txt strong { font-size: 12.5px; }
+.tg-h-pista__txt small { font-size: 11px; color: var(--label-2); }
+.tg-h-pista__km { font-size: 12px; font-weight: 700; color: var(--label); text-align: right; }
+.tg-h-pista__b { width: 26px; height: 26px; border: 0; border-radius: 7px; background: transparent; color: var(--label-2); display: grid; place-items: center; cursor: pointer; }
+.tg-h-pista__b:hover { background: var(--fill); color: var(--label); }
+.tg-h-grid--compacto { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.tg-h-grid--compacto .tg-cell { padding: 6px 8px; }
+.tg-h-grid--compacto .tg-lbl { font-size: 9.5px; }
+.tg-h-grid--compacto b { font-size: 12.5px; }
+
+/* Geocercas: la lista va a la izquierda, como la lista de unidades */
+.tg-geo { left: 16px; top: 112px; bottom: 16px; transform: none; width: 340px; max-height: none; }
+.tg-geo__lista { flex: 1; min-height: 0; scrollbar-width: none; }
+.tg-geo__lista::-webkit-scrollbar { display: none; }
+@media (max-width: 900px) { .tg-geo { left: 8px; right: 8px; top: auto; bottom: calc(var(--tg-dock, 0px) + 8px); width: auto; max-height: 55%; } }
+
+/* Fondo del espacio detrás del globo cuando el mapa está alejado */
+.tg-host { background: radial-gradient(circle at 50% 42%, #10213f 0%, #070d1a 60%, #03060d 100%); }
+
+/* ═══ Sin tarjetas de resumen ni casillas de estado (ya están en Filtros); controles del mapa en horizontal en el celular ═══ */
+.tg-kpis, .tg-estados { display: none !important; }
+@media (max-width: 900px) {
+  /* Herramientas y estilo del mapa: una sola fila horizontal bajo el encabezado. Si no caben, se desplazan de lado sin barra y el borde se desvanece */
+  .tg .tg-ctrl { left: 8px; right: 8px; top: calc(env(safe-area-inset-top) + 124px); bottom: auto; transform: none; flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px;
+    overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none; padding: 2px 0 6px; overscroll-behavior-x: contain; scroll-snap-type: x proximity;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+  .tg .tg-ctrl::-webkit-scrollbar { display: none; }
+  .tg .tg-ctrl > * { flex: none; scroll-snap-align: start; }
+  .tg .tg-tools { flex-direction: row; border-radius: 16px; }
+  .tg .tg-seg { flex-direction: row; border-radius: 16px; }
+  .tg .tg-seg .segmented { flex-direction: row; }
+  .tg .tg-seg .segmented__item { min-height: 40px; padding: 0 14px; }
+  .tg .tg-tool { width: 40px; height: 40px; min-height: 40px; }
+  .tg .tg-alerts { top: calc(env(safe-area-inset-top) + 180px); }
+}

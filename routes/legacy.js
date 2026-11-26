@@ -69,17 +69,32 @@ async function valorSensorUltimo(baseUrl, sid, unitId, sensor) {
     } catch (e) { /* sin lectura */ }
     return null;
 }
-// Sesión de Wialon que se reutiliza entre consultas seguidas del historial: se renueva sola a los 3 minutos sin uso o si Wialon la rechaza
-const sesionHistorial = { sid: null, clave: '', uso: 0 };
+// Sesión de Wialon que se reutiliza entre consultas seguidas del historial, UNA POR TOKEN (cada empresa tiene el suyo): se renueva sola a los 3 minutos
+// sin uso o si Wialon la rechaza. Dentro de una sesión va una sola consulta a la vez: calc_sensors usa los mensajes que dejó cargados la última consulta.
+const sesionesHistorial = new Map();
+function sesionDe(clave) {
+    let s = sesionesHistorial.get(clave);
+    if (!s) { s = { sid: null, uso: 0, ok: 0, cola: Promise.resolve() }; sesionesHistorial.set(clave, s); }
+    return s;
+}
+function tomarTurnoHistorial(clave) {
+    const s = sesionDe(clave);
+    let liberar;
+    const anterior = s.cola;
+    s.cola = new Promise(r => { liberar = r; });
+    return anterior.then(() => liberar);
+}
+// Sensor de combustible de cada unidad: se guarda 30 minutos (cambia muy poco y buscarlo cuesta varias consultas a Wialon)
+const sensorCombustibleCache = new Map();
 async function sidHistorial(baseUrl, token, nueva) {
-    const clave = baseUrl + '|' + token;
-    if (!nueva && sesionHistorial.sid && sesionHistorial.clave === clave && Date.now() - sesionHistorial.uso < 3 * 60 * 1000) {
-        sesionHistorial.uso = Date.now();
-        return sesionHistorial.sid;
+    const s = sesionDe(baseUrl + '|' + token);
+    if (!nueva && s.sid && Date.now() - s.uso < 3 * 60 * 1000) {
+        s.uso = Date.now();
+        return s.sid;
     }
     const login = await (await fetch(`${baseUrl}?svc=token/login&params=${encodeURIComponent(JSON.stringify({ token }))}`)).json();
-    if (!login || !login.eid) { sesionHistorial.sid = null; return null; }
-    sesionHistorial.sid = login.eid; sesionHistorial.clave = clave; sesionHistorial.uso = Date.now();
+    if (!login || !login.eid) { s.sid = null; return null; }
+    s.sid = login.eid; s.uso = Date.now(); s.ok = Date.now();
     return login.eid;
 }
 
@@ -1828,6 +1843,7 @@ router.post('/:metodo', async (req, res) => {
             } catch (e) { /* sin la tabla o copia ilegible: se calcula normal */ }
         }
 
+        let liberarTurno = null;
         try {
             const obtenerToken = () => new Promise((resolve) => {
                 tdb.query("SELECT valor FROM integraciones_api WHERE clave = 'wialon_token' LIMIT 1", (err, rows) => {
@@ -1843,12 +1859,17 @@ router.post('/:metodo', async (req, res) => {
             const [token, baseUrl] = await Promise.all([obtenerToken(), obtenerUrl()]);
             if (!token) return res.json({ data: { error: 'Token Wialon no configurado.' } });
 
+            const claveSesion = baseUrl + '|' + token;
+            liberarTurno = await tomarTurnoHistorial(claveSesion);
             let sid = await sidHistorial(baseUrl, token);
             if (!sid) return res.json({ data: { error: 'No se pudo iniciar sesión con Wialon.' } });
             // Si la sesión guardada ya no sirve (Wialon responde error 1), se inicia una nueva
             try {
+                if (Date.now() - sesionDe(claveSesion).ok > 30000) {
                 const prueba = await (await fetch(`${baseUrl}?svc=core/search_item&params=${encodeURIComponent(JSON.stringify({ id: targetUnitId || 0, flags: 1 }))}&sid=${sid}`)).json();
                 if (prueba && prueba.error === 1) { sid = await sidHistorial(baseUrl, token, true); if (!sid) return res.json({ data: { error: 'No se pudo iniciar sesión con Wialon.' } }); }
+                else sesionDe(claveSesion).ok = Date.now();
+                }
             } catch (e) { /* si falla la prueba, se intenta con la sesión que hay */ }
 
             // Si no tenemos unitId, buscar por placa
@@ -1867,10 +1888,16 @@ router.post('/:metodo', async (req, res) => {
 
             // Sensor de nivel de combustible (%) de la unidad, si lo tiene configurado
             let sensorCombustible = null;
-            try {
-                const itc = await (await fetch(`${baseUrl}?svc=core/search_item&params=${encodeURIComponent(JSON.stringify({ id: targetUnitId, flags: 4096 }))}&sid=${sid}`)).json();
-                sensorCombustible = (await elegirSensorValido(baseUrl, sid, targetUnitId, itc && itc.item && itc.item.sens)).sensor;
-            } catch (e) { sensorCombustible = null; }
+            const cacheSensor = sensorCombustibleCache.get(String(targetUnitId));
+            if (cacheSensor && Date.now() - cacheSensor.en < 30 * 60 * 1000) {
+                sensorCombustible = cacheSensor.sensor;
+            } else {
+                try {
+                    const itc = await (await fetch(`${baseUrl}?svc=core/search_item&params=${encodeURIComponent(JSON.stringify({ id: targetUnitId, flags: 4096 }))}&sid=${sid}`)).json();
+                    sensorCombustible = (await elegirSensorValido(baseUrl, sid, targetUnitId, itc && itc.item && itc.item.sens)).sensor;
+                    sensorCombustibleCache.set(String(targetUnitId), { en: Date.now(), sensor: sensorCombustible });
+                } catch (e) { sensorCombustible = null; }
+            }
 
             // Consultar mensajes / telemetría en el rango
             // load_interval devuelve como máximo loadCount mensajes y, si el rango trae más, descarta los MÁS ANTIGUOS (se perdía el inicio del viaje).
@@ -2083,6 +2110,8 @@ router.post('/:metodo', async (req, res) => {
         } catch(histErr) {
             console.error('Error Historial GPS Wialon:', histErr);
             return res.json({ data: { error: 'Fallo al procesar historial GPS: ' + histErr.message } });
+        } finally {
+            if (liberarTurno) liberarTurno();
         }
     }
 
@@ -2090,44 +2119,54 @@ router.post('/:metodo', async (req, res) => {
 });
 
     // Snapshot diario de km y precarga de Wialon para una empresa (lo llama server.js: cron nocturno y arranque)
-    // Precarga nocturna: guarda el recorrido de ayer (y de los 2 días anteriores que falten) de cada unidad con GPS, entrando por el mismo camino que la pantalla.
-    // Va de a una unidad por vez (Wialon atiende una consulta a la vez) y se corta a los 25 minutos por empresa.
-    router.precalcularRecorridos = async (tenantSlug, dias = 3) => {
+    // Precarga de recorridos: guarda el recorrido de cada día cerrado de cada unidad con GPS (de Wialon), entrando por el mismo camino que la pantalla.
+    // Por defecto (noche): ayer y los 2 días anteriores que falten. Con { desde, hasta } ('AAAA-MM-DD') recorre ese rango del más reciente al más antiguo.
+    // Va de a una unidad por vez (Wialon atiende una consulta a la vez por sesión) y se puede repartir entre procesos con { reparto: [n, de] }.
+    router.precalcularRecorridos = async (tenantSlug, opciones = {}) => {
+        const { listarUnidadesGps } = require('../services/wialon_unidades');
         const pdb = (db && typeof db.promise === 'function') ? db.promise() : db;
-        let placas = [];
-        try { [placas] = await pdb.query("SELECT placa FROM placas WHERE wialon_name IS NOT NULL AND TRIM(wialon_name) <> ''"); } catch (e) { return { ok: false, error: e.message }; }
+        let unidades = await listarUnidadesGps(db);
+        if (!unidades.length) return { ok: false, error: 'Sin unidades con GPS' };
+        if (opciones.reparto) { const [n, de] = opciones.reparto; unidades = unidades.filter((_, i) => i % de === n); }
         const inicioHoy = Math.floor((Date.now() / 1000 - 18000) / 86400) * 86400 + 18000;
-        const limite = Date.now() + 25 * 60 * 1000;
-        let hechos = 0, yaEstaban = 0;
-        for (let d = 1; d <= dias; d++) {
-            const a = inicioHoy - d * 86400, b = a + 86400;
-            const fecha = new Date(a * 1000).toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
-            for (const p of placas) {
-                if (Date.now() > limite) return { ok: true, hechos, yaEstaban, cortado: true };
-                const placa = String(p.placa || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
-                if (!placa) continue;
+        const limite = Date.now() + (opciones.limiteMs || 25 * 60 * 1000);
+        const diaLima = (seg) => new Date(seg * 1000).toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+        const inicioDeFecha = (f) => Math.floor(new Date(f + 'T05:00:00Z').getTime() / 1000);   // 00:00 de Lima = 05:00 UTC
+        const dias = [];
+        if (opciones.desde) {
+            const fin = opciones.hasta ? inicioDeFecha(opciones.hasta) : inicioHoy - 86400;
+            for (let a = Math.min(fin, inicioHoy - 86400); a >= inicioDeFecha(opciones.desde); a -= 86400) dias.push(a);
+        } else {
+            for (let d = 1; d <= (opciones.dias || 3); d++) dias.push(inicioHoy - d * 86400);
+        }
+        let hechos = 0, yaEstaban = 0, conDatos = 0;
+        for (const a of dias) {
+            const b = a + 86400, fecha = diaLima(a);
+            for (const u of unidades) {
+                if (Date.now() > limite) return { ok: true, hechos, conDatos, yaEstaban, cortado: true, ultimoDia: fecha };
                 try {
-                    const [ya] = await pdb.query('SELECT 1 FROM gps_recorrido_dia WHERE placa = ? AND fecha = ? LIMIT 1', [placa, fecha]);
+                    const [ya] = await pdb.query('SELECT 1 FROM gps_recorrido_dia WHERE placa = ? AND fecha = ? LIMIT 1', [u.placa, fecha]);
                     if (ya.length) { yaEstaban++; continue; }
                 } catch (e) { return { ok: false, error: e.message }; }
                 await new Promise((resolve) => {
-                    const req = { method: 'POST', url: '/obtenerHistorialGPS', originalUrl: '/obtenerHistorialGPS', baseUrl: '', path: '/obtenerHistorialGPS', headers: {}, query: {}, params: {}, tenantSlug, body: { args: [{ placa, fechaInicio: new Date(a * 1000).toISOString(), fechaFin: new Date(b * 1000).toISOString(), completo: true }] } };
+                    const req = { method: 'POST', url: '/obtenerHistorialGPS', originalUrl: '/obtenerHistorialGPS', baseUrl: '', path: '/obtenerHistorialGPS', headers: {}, query: {}, params: {}, tenantSlug,
+                        body: { args: [{ placa: u.placa, unitId: u.id, fechaInicio: new Date(a * 1000).toISOString(), fechaFin: new Date(b * 1000).toISOString(), completo: true }] } };
                     let listo = false;
-                    const fin = () => { if (listo) return; listo = true; resolve(); };
+                    const fin = (r) => { if (listo) return; listo = true; if (r && r.puntos && r.puntos.length) conDatos++; resolve(); };
                     const res = {
                         statusCode: 200, locals: {},
                         status(c) { this.statusCode = c; return this; },
-                        json() { fin(); return this; }, send() { fin(); return this; }, end() { fin(); return this; },
+                        json(o) { fin(o && o.data); return this; }, send() { fin(); return this; }, end() { fin(); return this; },
                         set() { return this; }, setHeader() {}, getHeader() {}, removeHeader() {}, writeHead() {}, write() {}, on() {}, once() {},
                     };
                     router.handle(req, res, () => fin());
-                    setTimeout(fin, 90000);
+                    setTimeout(() => fin(), 90000);
                 });
                 hechos++;
-                await new Promise(r => setTimeout(r, 300));
+                if (opciones.alAvanzar && hechos % 25 === 0) opciones.alAvanzar({ hechos, conDatos, yaEstaban, fecha, placa: u.placa });
             }
         }
-        return { ok: true, hechos, yaEstaban };
+        return { ok: true, hechos, conDatos, yaEstaban };
     };
 
     router.snapshotGpsEmpresa = (tenantSlug) => new Promise((resolve) => {

@@ -33,6 +33,7 @@
 ## 3. Variables de entorno (`.env` y Coolify)
 
 `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_SSL`, `MASTER_DB_NAME` (por defecto `azkell_master`), `JWT_SECRET` (obligatorio), `WIALON_TOKEN`, `GEMINI_API_KEY`, `GEMINI_MODEL` (opcional), `ASISTENTE_LIMITE_DIARIO` (por defecto 30), `AWS_*` (archivos en S3), `EVOLUTION_*` (WhatsApp).
+`RECORRIDOS_HISTORICO=0` apaga el guardado en segundo plano de los recorridos desde `RECORRIDOS_HISTORICO_DESDE` (por defecto 2026-01-01); `PRECALCULO_RECORRIDOS=0` apaga el de cada noche (03:30 Lima).
 `GOOGLE_MAPS_KEY` (opcional: foto de la calle en el reproductor de recorridos; sin ella queda el botón "Ver calle"), `STREETVIEW_LIMITE_DIARIO` (tope diario de fotos, 800 por defecto).
 Nunca imprimir valores de estas variables.
 

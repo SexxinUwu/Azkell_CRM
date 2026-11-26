@@ -1,18 +1,19 @@
 // Historial / playback de una unidad: periodo, resumen, combustible, viajes y paradas con hora, y reproducción.
 // Cada bloque tiene su título; en celular se apila y se desplaza dentro de la hoja.
-import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, CalendarDays, ChevronLeft, ChevronRight, Clock, Fuel, Gauge, MapPin, Pause, Play, RotateCcw, Route, TriangleAlert, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowDown, ArrowUp, Clock, Fuel, Gauge, MapPin, Pause, Play, RotateCcw, Route, TriangleAlert, X } from 'lucide-react';
 import { fechaHora, soloHora, type Historial } from './UbicacionHistorial';
 import { FUEL_CAMBIO_PCT, type AnalisisCombustible } from './gps/combustible';
 import { VELOCIDADES_REP, type VelocidadRep } from './gps/BarraReproduccion';
 import type { Tramo } from './gps/viajes';
 import { AsaHoja, ZonaArrastre } from './gps/HojaGesto';
 import { Button } from '../../core/ui/Button';
-import { ChoiceChips } from '../../core/ui/Chips';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 
-const HORAS = [6, 12, 24, 48];
 export type Velocidad = VelocidadRep;
+
+/** Un recorrido consultado: se apila debajo del formulario, como la lista de recorridos de Wialon */
+export interface Reciente { clave: string; placa: string; etiqueta: string; dia: string | null; desde: string | null; hasta: string | null; horas: number; km: number | null; color: string }
 
 const aISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const aLocal = (d: Date) => `${aISO(d)}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -26,6 +27,12 @@ interface Props {
   /** Día elegido ('AAAA-MM-DD') o null */
   dia: string | null;
   onDia: (d: string | null) => void;
+  /** Recorridos consultados (más reciente primero) y sus acciones */
+  recientes?: Reciente[];
+  recienteActiva?: string | null;
+  onReciente?: (r: Reciente) => void;
+  onReproducirReciente?: (r: Reciente) => void;
+  onQuitarReciente?: (clave: string) => void;
   /** Rangos largos: días ya cargados y total (null en rangos cortos) */
   progreso?: { hechos: number; total: number } | null;
   /** Rango libre 'AAAA-MM-DDTHH:mm' (hora local) o null */
@@ -76,12 +83,15 @@ function GraficoCombustible({ a, t0, t1, tCursor, onElegir }: { a: AnalisisCombu
 export function PanelHistorial(p: Props) {
   const hoy = aISO(new Date());
   const ayer = sumarDias(hoy, -1);
-  const [borrDesde, setBorrDesde] = useState(p.desde ?? '');
-  const [borrHasta, setBorrHasta] = useState(p.hasta ?? '');
+  const finDelDia = (d: string) => `${d}T23:59`;
+  const desdeProp = p.dia ? `${p.dia}T00:00` : p.desde ?? aLocal(new Date(Date.now() - p.horas * 3600000));
+  const hastaProp = p.dia ? finDelDia(p.dia) : p.hasta ?? aLocal(new Date());
+  const [borrDesde, setBorrDesde] = useState(desdeProp);
+  const [borrHasta, setBorrHasta] = useState(hastaProp);
   const [errRango, setErrRango] = useState('');
-  const [rangoAbierto, setRangoAbierto] = useState(false);
+  // Los campos siguen al recorrido activo (por ejemplo, al elegir uno de la lista)
+  useEffect(() => { setBorrDesde(desdeProp); setBorrHasta(hastaProp); setErrRango(''); }, [desdeProp, hastaProp]);
   const minimo = aISO(new Date(Date.now() - 400 * 86400000)); // Wialon conserva 400 días
-  const esSemana = !!(p.desde && p.hasta && Math.abs(new Date(p.hasta).getTime() - new Date(p.desde).getTime() - 7 * 86400000) < 3600000);
   const verRango = () => {
     const a = new Date(borrDesde).getTime(), b = new Date(borrHasta).getTime();
     if (!borrDesde || !borrHasta || isNaN(a) || isNaN(b)) return setErrRango('Elige fecha y hora de inicio y de fin.');
@@ -90,9 +100,10 @@ export function PanelHistorial(p: Props) {
     setErrRango('');
     p.onRango(borrDesde, borrHasta);
   };
-  const esMes = !!(p.desde && p.hasta && Math.abs(new Date(p.hasta).getTime() - new Date(p.desde).getTime() - 30 * 86400000) < 3600000);
-  const mes = () => { const fin = new Date(), ini = new Date(fin.getTime() - 30 * 86400000); setBorrDesde(aLocal(ini)); setBorrHasta(aLocal(fin)); p.onRango(aLocal(ini), aLocal(fin)); };
-  const semana = () => { const fin = new Date(), ini = new Date(fin.getTime() - 7 * 86400000); setBorrDesde(aLocal(ini)); setBorrHasta(aLocal(fin)); p.onRango(aLocal(ini), aLocal(fin)); };
+  const rangoDias = (n: number) => { const d = `${sumarDias(hoy, -(n - 1))}T00:00`, h = finDelDia(hoy); setBorrDesde(d); setBorrHasta(h); p.onRango(d, h); };
+  const esSemana = !!(p.desde && p.hasta && p.desde === `${sumarDias(hoy, -6)}T00:00` && p.hasta === finDelDia(hoy));
+  const esMes = !!(p.desde && p.hasta && p.desde === `${sumarDias(hoy, -29)}T00:00` && p.hasta === finDelDia(hoy));
+  const preset = p.dia === hoy ? 'hoy' : p.dia === ayer ? 'ayer' : esSemana ? 'semana' : esMes ? 'mes' : '';
 
   const h = p.historial;
   const puntos = h?.puntos ?? [];
@@ -134,43 +145,43 @@ export function PanelHistorial(p: Props) {
         <Button variant="plain" iconOnly icon={<X size={18} />} aria-label="Cerrar historial" onClick={p.onSalir} />
       </ZonaArrastre>
 
-      <section className="tg-h-sec">
-        <h3>Periodo</h3>
-        <ChoiceChips label="Periodo" value={p.dia === hoy ? 'hoy' : p.dia === ayer ? 'ayer' : esSemana ? 'semana' : esMes ? 'mes' : (!p.dia && !p.desde ? `h${p.horas}` : '')}
-          onChange={v => {
-            if (v === 'hoy') p.onDia(hoy); else if (v === 'ayer') p.onDia(ayer); else if (v === 'semana') semana(); else if (v === 'mes') mes();
-            else { p.onDia(null); p.onRango(null, null); p.onHoras(Number(v.slice(1))); }
-          }}
-          options={[{ value: 'hoy', label: 'Hoy' }, { value: 'ayer', label: 'Ayer' }, { value: 'semana', label: 'Semana' }, { value: 'mes', label: 'Mes' }, ...HORAS.map(x => ({ value: `h${x}`, label: `${x} h` }))]} />
-        <div className="tg-h-dia">
-          <Button variant="secondary" iconOnly icon={<ChevronLeft size={18} />} aria-label="Día anterior" onClick={() => p.onDia(sumarDias(p.dia ?? hoy, -1))} />
-          <label><CalendarDays size={14} aria-hidden /><input type="date" value={p.dia ?? ''} min={minimo} max={hoy} aria-label="Día del recorrido" onChange={e => p.onDia(e.target.value || null)} /></label>
-          <Button variant="secondary" iconOnly icon={<ChevronRight size={18} />} aria-label="Día siguiente" disabled={!p.dia || p.dia >= hoy} onClick={() => p.onDia(p.dia && sumarDias(p.dia, 1) < hoy ? sumarDias(p.dia, 1) : null)} />
+      <section className="tg-h-sec tg-h-sec--form">
+        <div className="tg-h-pres" role="group" aria-label="Periodo">
+          {([['hoy', 'Hoy'], ['ayer', 'Ayer'], ['semana', 'Semana'], ['mes', 'Mes']] as const).map(([v, t]) => (
+            <button key={v} type="button" aria-pressed={preset === v}
+              onClick={() => { if (v === 'hoy') p.onDia(hoy); else if (v === 'ayer') p.onDia(ayer); else if (v === 'semana') rangoDias(7); else rangoDias(30); }}>{t}</button>
+          ))}
         </div>
-        <button type="button" className="tg-h-acordeon" aria-expanded={rangoAbierto} onClick={() => setRangoAbierto(v => !v)}>
-          Rango personalizado <small>hasta 400 días</small><ChevronRight size={14} />
-        </button>
-        {rangoAbierto && (
-          <div className="tg-h-rango">
-            <label>Desde<input type="datetime-local" value={borrDesde} min={`${minimo}T00:00`} max={`${hoy}T23:59`} onChange={e => setBorrDesde(e.target.value)} /></label>
-            <label>Hasta<input type="datetime-local" value={borrHasta} min={`${minimo}T00:00`} max={`${hoy}T23:59`} onChange={e => setBorrHasta(e.target.value)} /></label>
-            <Button variant="primary" block onClick={verRango}>Ver rango</Button>
-            <p className="tg-h-nota">Los rangos de más de 7 días se cargan día por día y el recorrido se va dibujando.</p>
-            {errRango && <p className="tg-h-error">{errRango}</p>}
-          </div>
-        )}
+        <label className="tg-h-campo"><span>Desde</span><input type="datetime-local" value={borrDesde} min={`${minimo}T00:00`} max={`${hoy}T23:59`} onChange={e => setBorrDesde(e.target.value)} /></label>
+        <label className="tg-h-campo"><span>Hasta</span><input type="datetime-local" value={borrHasta} min={`${minimo}T00:00`} max={`${hoy}T23:59`} onChange={e => setBorrHasta(e.target.value)} /></label>
+        <div className="tg-h-accion"><small>Más de 7 días: se carga día por día</small><Button variant="primary" size="sm" onClick={verRango}>Ver recorrido</Button></div>
+        {errRango && <p className="tg-h-error">{errRango}</p>}
       </section>
+
+      {(p.recientes?.length ?? 0) > 0 && (
+        <section className="tg-h-sec tg-h-sec--pistas" aria-label="Recorridos consultados">
+          <div className="tg-h-pistas__cab"><span>Recorrido</span><span>Km</span></div>
+          {p.recientes!.map(r => (
+            <div key={r.clave} className="tg-h-pista" data-activa={p.recienteActiva === r.clave}>
+              <i className="tg-h-pista__color" style={{ background: r.color }} aria-hidden />
+              <button type="button" className="tg-h-pista__txt" onClick={() => p.onReciente?.(r)} title="Ver este recorrido"><strong>{r.placa}</strong><small>{r.etiqueta}</small></button>
+              <span className="tg-h-pista__km t-numeric">{r.km == null ? '—' : r.km.toLocaleString('es-PE', { maximumFractionDigits: 1 })}</span>
+              <button type="button" className="tg-h-pista__b" aria-label={`Reproducir el recorrido de ${r.placa}`} title="Reproducir" onClick={() => p.onReproducirReciente?.(r)}><Play size={14} /></button>
+              <button type="button" className="tg-h-pista__b" aria-label="Quitar de la lista" title="Quitar" onClick={() => p.onQuitarReciente?.(r.clave)}><X size={14} /></button>
+            </div>
+          ))}
+        </section>
+      )}
 
       {h?.truncado && <p className="tg-h-aviso"><TriangleAlert size={14} />El rango es muy denso y el GPS no pudo cargarse completo; el trazado puede tener huecos.</p>}
 
       {m && puntos.length > 0 && (
         <section className="tg-h-sec">
           <h3>Resumen</h3>
-          <div className="tg-h-grid">
+          <div className="tg-h-grid tg-h-grid--compacto">
             <div className="tg-cell"><span className="tg-lbl">Recorrido</span><b className="mono">{m.totalKm.toLocaleString('es-PE')} km</b></div>
-            <div className="tg-cell"><span className="tg-lbl">Tiempo en ruta</span><b className="mono">{dur(minRuta)}</b></div>
-            <div className="tg-cell"><span className="tg-lbl">Vel. máx. / prom.</span><b className="mono">{Math.round(m.maxSpeed)} / {Math.round(m.avgSpeed)} km/h</b></div>
-            <div className="tg-cell"><span className="tg-lbl">Viajes / paradas</span><b className="mono">{p.tramos.filter(t => t.tipo === 'viaje').length} / {h?.paradas.length ?? m.paradasTotal}</b></div>
+            <div className="tg-cell"><span className="tg-lbl">En ruta</span><b className="mono">{dur(minRuta)}</b></div>
+            <div className="tg-cell"><span className="tg-lbl">Vel. máx. / prom.</span><b className="mono">{Math.round(m.maxSpeed)} / {Math.round(m.avgSpeed)}</b></div>
           </div>
         </section>
       )}
