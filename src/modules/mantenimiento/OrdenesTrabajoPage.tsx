@@ -4,7 +4,7 @@ import '../almacen/almacen.css'; // estilos de tabla (.inv-kardex) que usa la li
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, CheckCircle2, Columns3, Eye, Lock, Pause, Play, Plus, ScrollText, SearchX, XCircle, ZoomIn, ZoomOut } from 'lucide-react';
+import { BookOpen, CheckCircle2, Columns3, Eye, Lock, Pause, Play, Plus, ScrollText, SearchX, XCircle } from 'lucide-react';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { TextInput } from '../../core/ui/Field';
@@ -44,12 +44,8 @@ const COLUMNAS_OT: Array<ColumnaTabla & { fija?: boolean }> = [
   { id: 'ver', titulo: 'Ver', ancho: 48, minimo: 44, alinear: 'center', fija: true },
 ];
 const CLAVE_COLS_OT = 'fleet_ot_columnas_ocultas';
-const CLAVE_TAM_OT = 'fleet_ot_tamano';
 function leerOcultasOT(): Set<string> {
   try { return new Set(JSON.parse(localStorage.getItem(CLAVE_COLS_OT) || '[]') as string[]); } catch { return new Set(); }
-}
-function leerTamanoOT(): 0 | 1 | 2 {
-  try { const v = Number(localStorage.getItem(CLAVE_TAM_OT)); return v === 0 || v === 2 ? v : 1; } catch { return 1; }
 }
 
 // ─── Tipos adicionales ────────────────────────────────────────────────────────
@@ -311,17 +307,11 @@ export function OrdenesTrabajoPage() {
   const filtrosActivosOT = (filtroEstado !== 'Todas' ? 1 : 0) + (fOT ? 1 : 0) + (fPlaca ? 1 : 0) + (fMes ? 1 : 0) + (fDesde ? 1 : 0) + (fHasta ? 1 : 0);
   const limpiarFiltrosOT = () => { setFiltroEstado('Todas'); setFOT(''); setFPlaca(''); setFMes(''); setFDesde(''); setFHasta(''); };
   const [ocultasOT, setOcultasOT] = useState<Set<string>>(leerOcultasOT);
-  const [tamanoOT, setTamanoOT] = useState<0 | 1 | 2>(leerTamanoOT);
   const [eligiendoCols, setEligiendoCols] = useState(false);
   const columnasOT = useMemo(() => COLUMNAS_OT.filter(c => !ocultasOT.has(c.id)), [ocultasOT]);
   const alternarColOT = (id: string) => setOcultasOT(prev => {
     const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id);
     try { localStorage.setItem(CLAVE_COLS_OT, JSON.stringify([...n])); } catch { /* sin almacenamiento */ }
-    return n;
-  });
-  const cambiarTamanoOT = (d: -1 | 1) => setTamanoOT(prev => {
-    const n = Math.max(0, Math.min(2, prev + d)) as 0 | 1 | 2;
-    try { localStorage.setItem(CLAVE_TAM_OT, String(n)); } catch { /* sin almacenamiento */ }
     return n;
   });
   const puedeEditar  = can('reportes_ot.editar') || can('reportes_ot.editar');
@@ -349,8 +339,6 @@ export function OrdenesTrabajoPage() {
               {tab === 'OTs' && !esMovil && (
                 <>
                   <Button variant="secondary" iconOnly icon={<Columns3 size={18} />} aria-label="Elegir columnas" title="Elegir columnas" style={{ minHeight: 44, minWidth: 44 }} onClick={() => setEligiendoCols(true)} />
-                  <Button variant="secondary" iconOnly icon={<ZoomOut size={18} />} aria-label="Reducir el tamaño de la tabla" title="Reducir el tamaño de la tabla" disabled={tamanoOT === 0} style={{ minHeight: 44, minWidth: 44 }} onClick={() => cambiarTamanoOT(-1)} />
-                  <Button variant="secondary" iconOnly icon={<ZoomIn size={18} />} aria-label="Agrandar el tamaño de la tabla" title="Agrandar el tamaño de la tabla" disabled={tamanoOT === 2} style={{ minHeight: 44, minWidth: 44 }} onClick={() => cambiarTamanoOT(1)} />
                 </>
               )}
               <Button variant="secondary" iconOnly icon={<LogoArchivo tipo="excel" />} disabled={visibles.length === 0}
@@ -397,7 +385,7 @@ export function OrdenesTrabajoPage() {
           {tab === 'OTs' ? (
             <>
               {/* Buscador corto con su botón Filtros al lado; todos los filtros van dentro de la hoja */}
-              <div className="ot-barra">
+              <div className="otl-barra">
                 <BarraFiltros busqueda={busqueda} onBusqueda={setBusqueda} placeholder="OT, placa, técnico…" activos={filtrosActivosOT} onAbrirFiltros={() => setPanelFiltros(true)} />
               </div>
               <HojaFiltros open={panelFiltros} onClose={() => setPanelFiltros(false)} activos={filtrosActivosOT} onLimpiar={limpiarFiltrosOT} resultado={visibles.length} unidad="orden">
@@ -416,7 +404,7 @@ export function OrdenesTrabajoPage() {
                   <TextInput type="month" value={fMes} onChange={e => { setFMes(e.target.value); setFDesde(''); setFHasta(''); }} />
                 </GrupoFiltro>
                 <GrupoFiltro titulo="Rango de fechas">
-                  <div className="ot-rango">
+                  <div className="otl-rango">
                     <label><span>Desde</span><TextInput type="date" value={fDesde || rango.desde} onChange={e => { setFDesde(e.target.value); setFMes(''); }} /></label>
                     <label><span>Hasta</span><TextInput type="date" value={fHasta || rango.hasta} onChange={e => { setFHasta(e.target.value); setFMes(''); }} /></label>
                   </div>
@@ -464,7 +452,7 @@ export function OrdenesTrabajoPage() {
                     })}
                   </div>
                 ) : (
-                <TablaRedimensionable id="ot-lista-v2" columnas={columnasOT} ariaLabel="Órdenes de trabajo" altoMax="70vh" className={`tabla-redim--compacta ot-tabla ot-tabla--t${tamanoOT}`}>
+                <TablaRedimensionable id="ot-lista-v2" columnas={columnasOT} ariaLabel="Órdenes de trabajo" altoMax="70vh" className={`tabla-redim--compacta otl-tabla otl-tabla--t1`}>
                   {visibles.map(o => {
                     const det = otDetalles(o);
                     const obs = String(det.motivo ?? o.observaciones ?? '')
@@ -473,20 +461,20 @@ export function OrdenesTrabajoPage() {
                       .replace(/(falla manual|manual)\s*:\s*/gi, '')
                       .trim();
                     const celdas: Record<string, React.ReactNode> = {
-                      acciones: <Celda key="acciones" alinear="center"><span className="ot-acciones" onClick={e => e.stopPropagation()}><AccionesFila estado={o.estado} disabled={ejecutando} onAccion={a => abrirAccion(a, o)} /></span></Celda>,
-                      ot: <Celda key="ot" mono className="ot-celda-ot">{otId(o)}{o.reporte_desvinculado && <> <Badge tone="amber">Reporte desvinculado</Badge></>}</Celda>,
-                      fecha: <Celda key="fecha" mono className="ot-celda-fecha">{otFecha(o)}</Celda>,
+                      acciones: <Celda key="acciones" alinear="center"><span className="otl-acciones" onClick={e => e.stopPropagation()}><AccionesFila estado={o.estado} disabled={ejecutando} onAccion={a => abrirAccion(a, o)} /></span></Celda>,
+                      ot: <Celda key="ot" mono className="otl-celda-ot">{otId(o)}{o.reporte_desvinculado && <> <Badge tone="amber">Reporte desvinculado</Badge></>}</Celda>,
+                      fecha: <Celda key="fecha" mono className="otl-celda-fecha">{otFecha(o)}</Celda>,
                       placa: <Celda key="placa">{o.placa ? <LicensePlate plate={o.placa} size="sm" /> : '—'}</Celda>,
                       km: <Celda key="km" mono alinear="right">{kmOHoras(det)}</Celda>,
-                      tipo: <Celda key="tipo" className="ot-celda-tipo">{otTipo(o)}</Celda>,
+                      tipo: <Celda key="tipo" className="otl-celda-tipo">{otTipo(o)}</Celda>,
                       supervisor: <Celda key="supervisor">{String(det.supervisor ?? o.supervisor ?? '—')}</Celda>,
                       rampa: <Celda key="rampa">{String(o.situacion ?? '—')}</Celda>,
-                      motivo: <Celda key="motivo" className="ot-celda-motivo">{obs || '—'}</Celda>,
-                      costo: <Celda key="costo" mono alinear="right" className="ot-celda-costo">{formatSoles(Number(o.costo_total_pen ?? o.costo_total ?? 0) || 0)}</Celda>,
-                      ver: <Celda key="ver" alinear="center"><button type="button" className="ot-ver" aria-label={`Ver ${otId(o)}`} title="Ver OT" onClick={e => { e.stopPropagation(); haptic('selection'); setSeleccionada(o); }}><Eye size={16} /></button></Celda>,
+                      motivo: <Celda key="motivo" className="otl-celda-motivo">{obs || '—'}</Celda>,
+                      costo: <Celda key="costo" mono alinear="right" className="otl-celda-costo">{formatSoles(Number(o.costo_total_pen ?? o.costo_total ?? 0) || 0)}</Celda>,
+                      ver: <Celda key="ver" alinear="center"><button type="button" className="otl-ver" aria-label={`Ver ${otId(o)}`} title="Ver OT" onClick={e => { e.stopPropagation(); haptic('selection'); setSeleccionada(o); }}><Eye size={16} /></button></Celda>,
                     };
                     return (
-                      <tr key={otId(o)} className="ot-fila" onClick={() => { haptic('selection'); setSeleccionada(o); }}>
+                      <tr key={otId(o)} className="otl-fila" onClick={() => { haptic('selection'); setSeleccionada(o); }}>
                         {columnasOT.map(c => celdas[c.id])}
                       </tr>
                     );
@@ -506,9 +494,9 @@ export function OrdenesTrabajoPage() {
       <Sheet open={eligiendoCols} onClose={() => setEligiendoCols(false)} title="Columnas de la tabla"
         footer={<><Button variant="secondary" onClick={() => { setOcultasOT(new Set()); try { localStorage.removeItem(CLAVE_COLS_OT); } catch { /* sin almacenamiento */ } }}>Mostrar todas</Button>
           <Button variant="primary" onClick={() => setEligiendoCols(false)}>Listo</Button></>}>
-        <div className="ot-cols">
+        <div className="otl-cols">
           {COLUMNAS_OT.map(c => (
-            <label key={c.id} className={`ot-cols__fila${c.fija ? ' ot-cols__fila--fija' : ''}`}>
+            <label key={c.id} className={`otl-cols__fila${c.fija ? ' otl-cols__fila--fija' : ''}`}>
               <input type="checkbox" checked={!ocultasOT.has(c.id)} disabled={c.fija} onChange={() => alternarColOT(c.id)} />
               <span>{c.titulo}</span>
               {c.fija && <small>Siempre visible</small>}
