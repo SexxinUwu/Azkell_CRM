@@ -1,6 +1,6 @@
 import { exportarExcel, type CeldaEnlace } from '../../core/lib/excel';
 import type { EntradaInv, ItemEntrada } from './api';
-import { codigoLimpio, fechaOrden } from './entradaReglas';
+import { codigoLimpio, fechaOrden, situacionOt } from './entradaReglas';
 
 // Excel de las órdenes de compra, con las mismas columnas que el clásico (modulos/almacen/entradas):
 // - Consolidado: una fila por orden (20 columnas), como la vista «Por órdenes».
@@ -14,6 +14,12 @@ type EntradaExtendida = EntradaInv & { centro_costo?: string | null; aprobador_n
 const descripcionLimpia = (it: ItemEntrada) => {
   const d = String(it.descripcion ?? '');
   return it.inventario_id ? d.replace(new RegExp(`^${it.inventario_id}\\s*[—-]?\\s*`, 'i'), '') : d;
+};
+
+/** OT y situación de una orden de servicio (las órdenes de compra van vacías) */
+const columnasOt = (e: EntradaInv): [string, string] => {
+  const s = situacionOt(e);
+  return s === 'asignada' ? [String(e.ot_id), 'Asignada a la OT'] : s === 'vinculada' ? [String(e.ot_id), 'Vinculada, por asignar'] : s === 'sin-ot' ? ['', 'Sin OT'] : ['', ''];
 };
 
 /** Enlace a un adjunto, o vacío si no hay archivo */
@@ -30,7 +36,7 @@ const creditoDias = (e: EntradaInv) => (e.condicion_pago === 'A crédito' ? (par
 
 export async function exportarConsolidadoOC(lista: EntradaInv[]) {
   const encabezados = [
-    'Código Orden', 'Fecha', 'Tipo Orden', 'Estado', 'Aprobador / Solicitante', 'Placa', 'Motivo', 'Proveedor',
+    'Código Orden', 'Fecha', 'Tipo Orden', 'Estado', 'Aprobador / Solicitante', 'Placa', 'OT', 'Situación OT', 'Motivo', 'Proveedor',
     'Ítems (Cant.)', 'Resumen Artículos', 'Total Unidades', 'Total Monto PEN', 'Centro de Costo', 'Condición Pago',
     'Días Crédito', 'Moneda', 'Voucher', 'Cotización', 'Factura', 'Observaciones',
   ];
@@ -49,6 +55,7 @@ export async function exportarConsolidadoOC(lista: EntradaInv[]) {
       String(e.estado || 'REGISTRADA').toUpperCase(),
       aprobadorDe(x),
       e.placa || '',
+      ...columnasOt(e),
       e.motivo_entrada || '',
       e.proveedor_nombre || '',
       items.length,
@@ -71,7 +78,7 @@ export async function exportarConsolidadoOC(lista: EntradaInv[]) {
 
 export async function exportarDetalleArticulosOC(lista: EntradaInv[]) {
   const encabezados = [
-    'Código Orden', 'Tipo Orden', 'Fecha', 'Estado', 'Aprobador / Solicitante', 'Placa', 'Motivo', 'Proveedor',
+    'Código Orden', 'Tipo Orden', 'Fecha', 'Estado', 'Aprobador / Solicitante', 'Placa', 'OT', 'Situación OT', 'Motivo', 'Proveedor',
     'Centro de Costo', 'Cód. Artículo', 'Descripción Artículo', 'Cantidad', 'Costo Unit.', 'Importe Ítem',
     'Total Orden PEN', 'Condición Pago', 'Días Crédito', 'Moneda', 'Voucher', 'Cotización', 'Factura', 'Observaciones',
   ];
@@ -88,6 +95,7 @@ export async function exportarDetalleArticulosOC(lista: EntradaInv[]) {
       String(e.estado || 'REGISTRADA').toUpperCase(),
       aprobadorDe(x),
       e.placa || '',
+      ...columnasOt(e),
       e.motivo_entrada || '',
       e.proveedor_nombre || '',
       x.centro_costo || 'CC-100',
