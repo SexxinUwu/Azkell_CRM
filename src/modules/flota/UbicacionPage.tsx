@@ -1,8 +1,9 @@
 import './flota.css';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Hexagon, MapPin, RefreshCw, Route as IconoRecorrido, Search, SlidersHorizontal, Truck, X } from 'lucide-react';
+import { Bell, Hexagon, MapPin, RefreshCw, Route as IconoRecorrido, Search, SlidersHorizontal, Truck, X } from 'lucide-react';
 import { Page } from '../../core/ui/Display';
 import { Button, PageLoader } from '../../core/ui/Button';
+import { Sheet } from '../../core/ui/Sheet';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { AnimatePresence } from 'motion/react';
 import { Notice } from '../../core/ui/Display';
@@ -110,7 +111,9 @@ export function UbicacionPage() {
   const [base, setBase] = useState<BaseMapa>(baseGuardada);
   const tema: TemaMapa = base === 'sat' ? 'sat' : oscuro ? 'night' : 'day';
     const [ahora, setAhora] = useState(() => Date.now());
-  const [alertas, setAlertas] = useState<Alerta[]>([]);
+  // Novedades de la flota (pérdida de señal, exceso de velocidad, combustible…): no salen en pantalla, se juntan en la campana
+  const [novedades, setNovedades] = useState<Array<Alerta & { leida: boolean }>>([]);
+  const [verNovedades, setVerNovedades] = useState(false);
   const [piloto, setPiloto] = useState(false);
   const [hojaLista, setHojaLista] = useState(false);
   const [hojaFicha, setHojaFicha] = useState(false);
@@ -297,12 +300,9 @@ export function UbicacionPage() {
 
   const conductorDe = (placa: string) => conductorPorPlaca.get(placa) ?? null;
 
-  // Alertas en pantalla (sin enviar nada fuera): se quitan solas a los 14 s
-  const conductorRef = useRef(conductorDe);
-  conductorRef.current = conductorDe;
+  const sinLeer = novedades.filter(n => !n.leida).length;
   const nuevaAlerta = useCallback((a: Alerta) => {
-    setAlertas(prev => [a, ...prev].slice(0, 4));
-    setTimeout(() => setAlertas(prev => prev.filter(x => x.id !== a.id)), 14000);
+    setNovedades(prev => [{ ...a, leida: false }, ...prev].slice(0, 100));
   }, []);
   useVigilanciaCombustible(combustibleFlota.data, capacidades, unidades, nuevaAlerta);
 
@@ -398,6 +398,8 @@ export function UbicacionPage() {
                   <h1>Ubicación GPS</h1>
                   <span className="tg-live" aria-live="polite"><i />En vivo{segundos !== null && ` · ${segundos}s`}</span>
                   <span className="tg-resumen">{cifras.total} unidades · {cifras.enMovimiento} en movimiento · {cifras.sinSenal} sin señal</span>
+                  <Button variant="plain" iconOnly className="tg-campana" icon={<Bell size={18} />} aria-label={sinLeer ? `Novedades, ${sinLeer} sin leer` : 'Novedades'} title="Novedades" onClick={() => setVerNovedades(true)} />
+                  {sinLeer > 0 && <span className="tg-campana__n t-numeric" aria-hidden>{sinLeer > 99 ? '99+' : sinLeer}</span>}
                   <Button variant="plain" iconOnly className="tg-refrescar" icon={<RefreshCw size={18} />} aria-label="Actualizar" title="Actualizar" disabled={isFetching} onClick={() => refetch()} />
                 </div>
                 <nav className="tg-tabs tg-glass" role="tablist" aria-label="Vistas de ubicación">
@@ -487,20 +489,28 @@ export function UbicacionPage() {
                   <Button variant="secondary" size="sm" onClick={() => motor?.setFollow(false)}>Salir</Button>
                 </div>
               )}
-
-              <div className="tg-alerts" aria-live="polite">
-                {alertas.map(a => (
-                  <div key={a.id} className="tg-alert-wrap">
-                    <button type="button" className="tg-alert tg-glass" onClick={() => elegir(a.placa)}>
-                      <i style={{ background: a.color + '22', color: a.color }}>{a.icono}</i>
-                      <div><b>{a.placa} · {a.msg}</b><span>{[conductorRef.current(a.placa), a.hora].filter(Boolean).join(' · ')}</span></div>
-                    </button>
-                    <button type="button" className="tg-alert-x" aria-label="Quitar notificación" onClick={() => setAlertas(prev => prev.filter(x => x.id !== a.id))}><X size={11} strokeWidth={3} /></button>
-                  </div>
-                ))}
-              </div>
             </UbicacionMapa>
           </Suspense>
+
+          <Sheet open={verNovedades} onClose={() => setVerNovedades(false)} title={`Novedades${sinLeer ? ` · ${sinLeer} sin leer` : ''}`}
+            footer={<>
+              <Button variant="secondary" onClick={() => setVerNovedades(false)}>Cerrar</Button>
+              <Button variant="primary" disabled={sinLeer === 0} onClick={() => setNovedades(prev => prev.map(n => ({ ...n, leida: true })))}>Marcar todo como leído</Button>
+            </>}>
+            {novedades.length === 0 ? <p className="tg-nov-vacio">Sin novedades por ahora. Aquí se juntan las pérdidas de señal, excesos de velocidad y alertas de combustible.</p> : (
+              <ul className="tg-nov">
+                {novedades.map(n => (
+                  <li key={n.id}>
+                    <button type="button" className="tg-nov__item" data-leida={n.leida} onClick={() => { setNovedades(prev => prev.map(x => (x.id === n.id ? { ...x, leida: true } : x))); setVerNovedades(false); elegir(n.placa); }}>
+                      <i style={{ background: `${n.color}22`, color: n.color }}>{n.icono}</i>
+                      <span><b>{n.placa} · {n.msg}</b><small>{[conductorDe(n.placa), n.hora].filter(Boolean).join(' · ')}</small></span>
+                      {!n.leida && <em className="tg-nov__punto" aria-label="Sin leer" />}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Sheet>
 
           <HojaFiltros open={filtrando} onClose={() => setFiltrando(false)} activos={activos}
             onLimpiar={() => { setEmpresa('TODAS'); setSegmento('todos'); }} resultado={lista.length} unidad="unidad">
