@@ -314,3 +314,5 @@ button.ntb-pos { cursor: pointer; }
 
 /* En la inspección, Reforma y Descarte van apilados bajo Disponible (como en el boceto) */
 .ntb-tablero--insp .ntb-zonas-par { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 1100px) { .ntb-tablero--insp .ntb-zonas-par { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .ntb-tablero--insp .ntb-chips { flex: 1 1 100%; order: 3; justify-content: flex-start; } }

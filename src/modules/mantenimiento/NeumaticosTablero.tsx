@@ -325,7 +325,7 @@ export function NeumaticosTablero({ inspeccion = false }: { inspeccion?: boolean
     <Page wide>
       <PageHeader
         eyebrow="Mantenimiento · Neumáticos"
-        title={inspeccion ? 'Inspección neumática' : 'Tablero de movimientos'}
+        title={inspeccion ? 'Inspección neumática Nº …….' : 'Tablero de movimientos'}
         subtitle={placa ? `${placa}${cfg && configCodigo ? ` · ${configCodigo} · ${nombreUnidad}` : ''}` : 'Elige una unidad para ver y mover sus neumáticos'}
         actions={
           <PlacaPicker
