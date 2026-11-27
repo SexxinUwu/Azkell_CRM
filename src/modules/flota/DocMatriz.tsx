@@ -21,13 +21,18 @@ const GENERALES = ['Placa', 'Tipo', 'Propiedad', 'Empresa', 'F. entrega', 'Año'
 const tiveDe = (v: VehiculoFlota) => personalizadosDe(v).find(d => /TIVE/i.test(d.tipo)) ?? null;
 const NO_VENCE = 'No vence';
 
+/** Orden de los documentos en la matriz: después del TIVE (que va primero), estos. Es solo de la matriz: el expediente y los colores siguen igual. */
+const ORDEN_MATRIZ = ['tc', 'soat', 'rt', 'sv', 'boni', 'matpel', 'fum', 'ext'];
+const DOCS_MATRIZ = ORDEN_MATRIZ.map(c => DOCS.find(d => d.clave === c)).filter((d): d is (typeof DOCS)[number] => !!d);
+
 /** Datos de la tabla que se exportan: los mismos que se ven, uno por columna */
 function encabezadosYFilas(filas: FilaExpediente[]) {
-  const grupos = [...DOCS.flatMap(d => [...d.datos.map(x => `${d.corto} ${x.etiqueta}`), `${d.corto} F. venc.`, `${d.corto} días`]), 'TIVE N°', 'TIVE F. título', 'TIVE vencimiento'];
+  const grupos = ['TIVE N°', 'TIVE F. título', 'TIVE vencimiento', ...DOCS_MATRIZ.flatMap(d => [...d.datos.map(x => `${d.corto} ${x.etiqueta}`), `${d.corto} F. venc.`, `${d.corto} días`])];
   const datos = filas.map(({ v, m }) => [
     v.placa, celda(v.tipo), celda(v.propiedad), celda(v.empresa), fechaCorta(v.fecha_entrega), celda(v.anio), celda(v.modelo),
     celda(v.color), celda(v.marca), celda(v.chasis),
-    ...DOCS.flatMap(d => {
+    ...(() => { const t = tiveDe(v); return [t?.constancia ?? '', t?.emision ? fechaCorta(String(t.emision).slice(0, 10)) : '', t ? NO_VENCE : '']; })(),
+    ...DOCS_MATRIZ.flatMap(d => {
       const doc = m.docs.find(x => x.config.clave === d.clave);
       return [
         ...d.datos.map(x => celda(v[x.campo])),
@@ -35,7 +40,6 @@ function encabezadosYFilas(filas: FilaExpediente[]) {
         doc && doc.estado.dias != null ? doc.estado.dias : '',
       ];
     }),
-    ...(() => { const t = tiveDe(v); return [t?.constancia ?? '', t?.emision ? fechaCorta(String(t.emision).slice(0, 10)) : '', t ? NO_VENCE : '']; })(),
   ]);
   return { encabezados: [...GENERALES, ...grupos], datos };
 }
@@ -59,20 +63,20 @@ export function DocMatriz({ filas }: { filas: FilaExpediente[] }) {
             <tr>
               <th rowSpan={2}>N°</th>
               {GENERALES.map(g => <th key={g} rowSpan={2}>{g}</th>)}
-              {DOCS.map(d => (
+              <th colSpan={3} className="doc-matriz__grupo" style={{ '--grupo-color': COLOR_PERSONALIZADO } as React.CSSProperties}>TIVE</th>
+              {DOCS_MATRIZ.map(d => (
                 <th key={d.clave} colSpan={d.datos.length + 2} className="doc-matriz__grupo" style={{ '--grupo-color': colorDoc(d.num) } as React.CSSProperties}>{d.corto}</th>
               ))}
-              <th colSpan={3} className="doc-matriz__grupo" style={{ '--grupo-color': COLOR_PERSONALIZADO } as React.CSSProperties}>TIVE</th>
             </tr>
             <tr>
-              {DOCS.flatMap(d => [
+              <th>N°</th>
+              <th>F. título</th>
+              <th>Vence</th>
+              {DOCS_MATRIZ.flatMap(d => [
                 ...d.datos.map(x => <th key={`${d.clave}-${x.campo}`}>{x.etiqueta}</th>),
                 <th key={`${d.clave}-venc`}>F. venc.</th>,
                 <th key={`${d.clave}-dias`}>Días</th>,
               ])}
-              <th>N°</th>
-              <th>F. título</th>
-              <th>Vence</th>
             </tr>
           </thead>
           <tbody>
@@ -89,7 +93,15 @@ export function DocMatriz({ filas }: { filas: FilaExpediente[] }) {
                 <td>{celda(v.color)}</td>
                 <td>{celda(v.marca)}</td>
                 <td className="doc-matriz__mono">{celda(v.chasis)}</td>
-                {DOCS.flatMap(d => {
+                {(() => {
+                  const t = tiveDe(v);
+                  return [
+                    <td key={`${v.placa}-tive-n`} className="doc-matriz__mono">{t?.constancia || '—'}</td>,
+                    <td key={`${v.placa}-tive-f`} className="doc-matriz__mono">{t?.emision ? fechaCorta(String(t.emision).slice(0, 10)) : '—'}</td>,
+                    <td key={`${v.placa}-tive-v`}>{t ? <span className="doc-dias" style={{ background: 'color-mix(in srgb, var(--green-ink) 13%, transparent)', color: 'var(--green-ink)' }}>{NO_VENCE}</span> : <span className="doc-dias doc-dias--vacio">—</span>}</td>,
+                  ];
+                })()}
+                {DOCS_MATRIZ.flatMap(d => {
                   const doc = m.docs.find(x => x.config.clave === d.clave);
                   const registrado = !!doc?.registrado;
                   return [
@@ -102,14 +114,6 @@ export function DocMatriz({ filas }: { filas: FilaExpediente[] }) {
                     </td>,
                   ];
                 })}
-                {(() => {
-                  const t = tiveDe(v);
-                  return [
-                    <td key={`${v.placa}-tive-n`} className="doc-matriz__mono">{t?.constancia || '—'}</td>,
-                    <td key={`${v.placa}-tive-f`} className="doc-matriz__mono">{t?.emision ? fechaCorta(String(t.emision).slice(0, 10)) : '—'}</td>,
-                    <td key={`${v.placa}-tive-v`}>{t ? <span className="doc-dias" style={{ background: 'color-mix(in srgb, var(--green-ink) 13%, transparent)', color: 'var(--green-ink)' }}>{NO_VENCE}</span> : <span className="doc-dias doc-dias--vacio">—</span>}</td>,
-                  ];
-                })()}
               </tr>
             ))}
           </tbody>
