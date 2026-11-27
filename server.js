@@ -4616,8 +4616,9 @@ app.put('/api/documentos-flota/alquiler/:placa', (req, res) => {
     const responsable = alquilada ? (String(b.docs_responsable).toUpperCase() === 'ARRENDATARIA' ? 'ARRENDATARIA' : 'PROPIA') : null;
     const nota = alquilada ? (String(b.alquiler_nota || '').trim().slice(0, 500) || null) : null;
     tdb.query(
-        'UPDATE placas SET alquilada_a = ?, alquiler_desde = ?, docs_responsable = ?, alquiler_nota = ? WHERE placa = ?',
-        [alquilada ? empresa : null, desde, responsable, nota, placa],
+        // La placa se compara sin guiones ni espacios: la API de documentos y la ficha de placas no siempre la escriben igual
+        "UPDATE placas SET alquilada_a = ?, alquiler_desde = ?, docs_responsable = ?, alquiler_nota = ? WHERE REPLACE(REPLACE(UPPER(placa), '-', ''), ' ', '') = ?",
+        [alquilada ? empresa : null, desde, responsable, nota, placa.replace(/[s-]/g, '')],
         (err, r) => {
             if (err) return res.status(500).json({ error: err.message });
             if (!r.affectedRows) return res.status(404).json({ error: 'Unidad no encontrada' });

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'motion/react';
-import { Briefcase, CircleAlert, Clock, Eye, FileText, FolderDown, History, ListChecks, RefreshCw, SearchX, Settings2, SlidersHorizontal, Truck, Wrench } from 'lucide-react';
+import { Briefcase, Building2, CircleAlert, Clock, Eye, FileText, FolderDown, Handshake, History, ListChecks, RefreshCw, SearchX, Settings2, SlidersHorizontal, Truck, Wrench } from 'lucide-react';
 import { MenuFila } from '../../core/ui/MenuFila';
 import '../flota/flota.css';
 import '../mantenimiento/mant.css';
@@ -32,6 +32,8 @@ import { DocMetaVigentes } from '../flota/DocMetaVigentes';
 import { DocsMarsisaCalendario, type EventoCal } from './DocsMarsisaCalendario';
 import { ConfigurarPlacasSheet, guardarSeleccion, leerSeleccion } from '../flota/ConfigurarPlacasSheet';
 import { colorDoc, repartirPorcentajes } from '../flota/docsEstado';
+import { DocAlquilerSheet } from '../flota/DocAlquilerSheet';
+import type { VehiculoFlota } from '../flota/api';
 
 // Operaciones Marsisa › Documentos de flota (API externa): los documentos que entrega la API de Marsisa con el mismo diseño de
 // Documentos de flota (expediente por unidad y matriz general), solo de consulta. Se actualiza con «Sincronizar».
@@ -148,6 +150,8 @@ export function DocsMarsisaPage() {
   const [empresaF, setEmpresaF] = useState('TODAS');
   const [alquilerF, setAlquilerF] = useState<FiltroAlquiler>('todas');
   const [filtrando, setFiltrando] = useState(false);
+  // Hoja para marcar o quitar el alquiler de la unidad que se está viendo
+  const [editandoAlquiler, setEditandoAlquiler] = useState(false);
   const [placa, setPlaca] = useState<string | null>(null);
   // Placas que eligió el administrador en este dispositivo (null = aún no eligió: se ven las de Marsisa)
   const [elegidas, setElegidas] = useState<Set<string> | null>(() => leerSeleccion(CLAVE_PLACAS));
@@ -180,11 +184,13 @@ export function DocsMarsisaPage() {
     return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1], 'es')).map(([value, label]) => ({ value, label }));
   }, [docs]);
 
-  const empresas = useMemo(() => agruparEmpresas(todosLosDocs.map(d => d.empresa)), [todosLosDocs]);
+  // Empresas del filtro: las dueñas de unidades y también las que reciben unidades alquiladas
+  const empresas = useMemo(() => agruparEmpresas(todosLosDocs.flatMap(d => [d.empresa, d.alquilada_a])), [todosLosDocs]);
   // Documentos de las placas seleccionadas que cumplen la empresa, el alquiler y la búsqueda (todavía sin el tipo)
   const docsBase = useMemo(() => {
     const t = busqueda.trim().toUpperCase();
-    return docs.filter(d => (empresaF === 'TODAS' || claveEmpresa(d.empresa) === empresaF)
+    // Al elegir una empresa salen sus unidades, las que alquila a otras y las que otras le alquilan a ella
+    return docs.filter(d => (empresaF === 'TODAS' || claveEmpresa(d.empresa) === empresaF || claveEmpresa(d.alquilada_a) === empresaF)
       && (alquilerF === 'todas' || (alquilerF === 'alquiladas' ? !!d.alquilada_a : alquilerF === 'propias' ? !d.alquilada_a : !!d.alquilada_a && d.docs_responsable === 'ARRENDATARIA'))
       && (!t || [d.placa, d.tipo_nombre, d.numero].some(x => String(x ?? '').toUpperCase().includes(t))));
   }, [docs, busqueda, empresaF, alquilerF]);
@@ -394,7 +400,7 @@ export function DocsMarsisaPage() {
                       <button type="button" className={`doc-unidad pressable${activa ? ' doc-unidad--activa' : ''}`} aria-current={activa} onClick={() => { haptic('selection'); setPlaca(u.placa); }}>
                         <span className="doc-unidad__icono" style={{ background: `color-mix(in srgb, ${COLOR_GRUPO[u.grupo]} 12%, transparent)`, color: COLOR_GRUPO[u.grupo] }} aria-hidden><FileText size={17} strokeWidth={1.9} /></span>
                         <LicensePlate plate={u.placa} size="sm" />
-                        {u.alquiladaA && <span className="doc-unidad__alq" title={esDeMarsisa(u.empresa) ? `Alquilada a ${u.alquiladaA}` : `Nos la alquila ${u.empresa ?? 'otra empresa'}`}>ALQ.</span>}
+                        {u.alquiladaA && <span className="doc-unidad__alq" title={esDeMarsisa(u.empresa) ? `Alquilada a ${u.alquiladaA}` : `Nos la alquila ${u.empresa ?? 'otra empresa'}`}>{empresaF !== 'TODAS' && claveEmpresa(u.empresa) !== empresaF ? `DE ${String(u.empresa ?? 'OTRA').replace(/s+(S.?s?A.?s?C.?|S.?s?A.?|S.?s?R.?s?L.?)s*$/i, '').toUpperCase()}` : empresaF !== 'TODAS' ? `A ${String(u.alquiladaA).replace(/s+(S.?s?A.?s?C.?|S.?s?A.?|S.?s?R.?s?L.?)s*$/i, '').toUpperCase()}` : 'ALQ.'}</span>}
                         {!u.activa && <span className="doc-unidad__alq" title="Unidad inactiva en la API">INACT.</span>}
                         <span className="doc-punto" style={{ background: COLOR_GRUPO[u.grupo] }} aria-hidden />
                       </button>
@@ -421,14 +427,25 @@ export function DocsMarsisaPage() {
                 </header>
                 <div className="doc-alquiler">
                   <div className="doc-alquiler__chips">
-                    {seleccion.empresa && <span className="doc-alquiler__chip">Empresa: {seleccion.empresa}</span>}
+                    {seleccion.empresa && <span className="doc-alquiler__chip doc-alquiler__chip--dueno"><Building2 size={14} aria-hidden /> Propietaria: {seleccion.empresa}</span>}
                     {seleccion.alquiladaA ? <span className="doc-alquiler__chip">{esDeMarsisa(seleccion.empresa) ? `Marsisa la alquila a ${seleccion.alquiladaA}` : `${seleccion.empresa ?? 'Otra empresa'} se la alquila a ${seleccion.alquiladaA}`}</span> : seleccion.enFlota ? <span className="doc-alquiler__chip">Unidad propia, sin alquiler</span> : <span className="doc-alquiler__chip doc-alquiler__chip--aviso">No está en mi flota</span>}
                   </div>
+                  {puedeSincronizar && (
+                    <div className="doc-alquiler__acciones">
+                      {seleccion.enFlota
+                        ? <Button variant="secondary" size="sm" icon={<Handshake size={14} />} onClick={() => setEditandoAlquiler(true)}>{seleccion.alquiladaA ? 'Editar alquiler' : 'Marcar como alquilada'}</Button>
+                        : <span className="doc-alquiler__nota">Para marcar el alquiler, la unidad debe estar en la ficha de placas.</span>}
+                    </div>
+                  )}
                 </div>
                 <div className="doc-tarjetas">
                   {seleccion.tipos.map((t, i) => <TarjetaDoc key={t.codigo} num={i + 1} tipo={t} abriendo={abriendo} onVer={d => { void verArchivo(d); }} />)}
                 </div>
               </motion.section>
+              <DocAlquilerSheet
+                vehiculo={editandoAlquiler ? ({ placa: seleccion.placa, alquilada_a: seleccion.alquiladaA, alquiler_desde: seleccion.alquilerDesde, docs_responsable: seleccion.docsResponsable, alquiler_nota: seleccion.alquilerNota } as unknown as VehiculoFlota) : null}
+                empresas={empresas.map(e => e.nombre)} onClose={() => setEditandoAlquiler(false)}
+                onHecho={() => Promise.all([qc.invalidateQueries({ queryKey: ['operaciones', 'docs-marsisa'] }), qc.invalidateQueries({ queryKey: ['flota', 'vehiculos'] })])} />
             </div>
           ) : vista === 'alquiler' ? (
             <Alquileres filas={filas} onVerDocumentos={p => { setPlaca(p); setVista('expediente'); }} />

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ClipboardList, Eye, FileText, Handshake, History, Send, Trash2, Truck } from 'lucide-react';
+import { Building2, ClipboardList, Eye, FileText, Handshake, History, Send, Trash2, Truck } from 'lucide-react';
 import { MessageCircle } from '../../core/ui/IconosArchivo';
 import { EmptyState } from '../../core/ui/Display';
 import { LicensePlate } from '../../core/ui/LicensePlate';
@@ -12,10 +12,11 @@ import { api, errorMessage } from '../../core/api/client';
 import { spring } from '../../core/lib/motion';
 import { useHistorialDocumentos, type RegistroHistorial, type VehiculoFlota } from './api';
 import {
-  COLOR_PERSONALIZADO, colorDoc, esAlquilada, esMotora, responsableExterno, textoDias, type DocPersonalizado, type EstadoDoc, type MetaVehiculo,
+  COLOR_PERSONALIZADO, colorDoc, esAlquilada, esMotora, relacionConEmpresa, responsableExterno, textoDias, type DocPersonalizado, type EstadoDoc, type MetaVehiculo,
 } from './docsEstado';
 import { abrirPdfEntregaPorId, compartirEntregaPorId } from './ce-pdf';
 import { formatFechaPe } from '../../core/lib/format';
+import { claveEmpresa } from '../../core/lib/empresa';
 import { haptic } from '../../core/lib/haptics';
 
 /** Nombre de empresa sin «S.A.C.» y similares, para etiquetas cortas */
@@ -39,6 +40,8 @@ export interface EliminarDocumento { placa: string; tipoKey: string; titulo: str
 
 interface Props {
   filas: FilaExpediente[];
+  /** Empresa elegida en el filtro ('TODAS' = sin elegir): decide si la unidad se marca como ajena */
+  empresa?: string;
   placa: string | null;
   onElegir: (placa: string) => void;
   puedeEditar: boolean;
@@ -54,7 +57,7 @@ interface Props {
 }
 
 // Expediente de la unidad: la lista a la izquierda y las tarjetas de sus documentos a la derecha
-export function DocExpediente({ filas, placa, onElegir, puedeEditar, onCargar, onEditarPersonalizado, onVerArchivo, onCompartir, onEliminar, onAlquiler, onPedirActualizacion }: Props) {
+export function DocExpediente({ filas, empresa = 'TODAS', placa, onElegir, puedeEditar, onCargar, onEditarPersonalizado, onVerArchivo, onCompartir, onEliminar, onAlquiler, onPedirActualizacion }: Props) {
   const seleccion = filas.find(f => f.v.placa === placa) ?? filas[0] ?? null;
 
   if (!seleccion) {
@@ -75,7 +78,9 @@ export function DocExpediente({ filas, placa, onElegir, puedeEditar, onCargar, o
               <button type="button" className={`doc-unidad pressable${activa ? ' doc-unidad--activa' : ''}`} onClick={() => { haptic('selection'); onElegir(u.placa); }} aria-current={activa}>
                 <span className="doc-unidad__icono" style={{ background: `color-mix(in srgb, ${m.peor.color} 12%, transparent)`, color: m.peor.color }} aria-hidden><FileText size={17} strokeWidth={1.9} /></span>
                 <LicensePlate plate={u.placa} size="sm" />
-                {esAlquilada(u) && <span className="doc-unidad__alq" title={`Alquilada a ${u.alquilada_a}`}>ALQ.</span>}
+                {empresa !== 'TODAS' && relacionConEmpresa(u, empresa) === 'recibida'
+                  ? <span className="doc-unidad__alq" title={`De ${u.empresa}, alquilada a ${u.alquilada_a}`}>DE {empresaCorta(String(u.empresa ?? '')).toUpperCase()}</span>
+                  : esAlquilada(u) && <span className="doc-unidad__alq" title={`Alquilada a ${u.alquilada_a}`}>{empresa !== 'TODAS' && claveEmpresa(u.empresa) === empresa ? `A ${empresaCorta(String(u.alquilada_a)).toUpperCase()}` : 'ALQ.'}</span>}
                 <span className="doc-punto" style={{ background: m.peor.color }} title={m.peor.texto} aria-hidden />
               </button>
             </li>
@@ -109,6 +114,7 @@ export function DocExpediente({ filas, placa, onElegir, puedeEditar, onCargar, o
         {(esAlquilada(v) || puedeEditar) && (
           <div className="doc-alquiler">
             <div className="doc-alquiler__chips">
+              {v.empresa && <span className="doc-alquiler__chip doc-alquiler__chip--dueno"><Building2 size={14} aria-hidden /> Propietaria: {v.empresa}</span>}
               {esAlquilada(v) ? (
                 <>
                   <span className="doc-alquiler__chip"><Handshake size={14} aria-hidden /> Alquilada a {v.alquilada_a}</span>
