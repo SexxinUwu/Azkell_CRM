@@ -12,7 +12,6 @@ import { LicensePlate } from '../../core/ui/LicensePlate';
 import { PlacaPicker } from '../../core/ui/PlacaPicker';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
-import { formatFechaPe } from '../../core/lib/format';
 import { CONFIGURACIONES } from '../inspecciones/components/ChasisEsquemaVisual';
 import { LeyendaSemaforo, configParaPosiciones, configReconocida } from './NeumaticosEsquema';
 import { NeumaticosCenital } from './nv3-cenital';
@@ -24,12 +23,13 @@ import {
 import { useArrastre, posicionDeEvento, type Destino, type ItemArrastre, type SondaPosicion } from './ntb-arrastre';
 import { ejecutarRegreso, tituloLlanta, useTablero, usePlacasLista, vidaTexto } from './ntb-api';
 import { createPortal } from 'react-dom';
-import { LlantaPlano, LlantaTile, RemanenteChip, VidaChip, aLlantaDato, remanenteMinimo } from './ntb-llanta';
+import { LlantaPlano, LlantaTile, aLlantaDato } from './ntb-llanta';
 import { LineaTiempo } from './ntb-linea-tiempo';
-import { CocadaPanel } from './ntb-cocada';
 import { Sheet } from '../../core/ui/Sheet';
 import { MovimientoSheet, type Propuesta } from './ntb-movimiento-sheet';
 import './ntb.css';
+import { DetalleSecciones } from './ntb-secciones';
+import { HistorialLlanta } from './ntb-historial-llanta';
 
 type Grupo = 'bodega' | 'unidad' | 'reforma' | 'descarte';
 
@@ -485,31 +485,10 @@ export function NeumaticosTablero() {
                   <span className="ntb-det__codigo">{detalle.llanta.codigo}</span>
                   <span className="t-footnote c-secondary">{tituloLlanta(detalle.llanta)}</span>
                 </div>
-                <dl className="ntb-det__datos">
-                  <div><dt>Vida</dt><dd><VidaChip vida={detalle.llanta.vida} /></dd></div>
-                  <div><dt>Remanente (mínimo)</dt><dd><RemanenteChip mm={remanenteMinimo(detalle.llanta)} /></dd></div>
-                  <div className="ntb-det__erres"><dt>Medidas R1 · R2 · R3</dt><dd>
-                    {(['r1', 'r2', 'r3'] as const).map(k => (
-                      <span key={k} className="ntb-erre"><b>{k.toUpperCase()}</b><RemanenteChip mm={detalle.llanta[k] ?? null} /></span>
-                    ))}
-                  </dd></div>
-                  <CocadaPanel codigo={detalle.llanta.codigo} />
-                  <div><dt>Ubicación</dt><dd>{
-                    detalle.grupo === 'unidad' ? `${placa} · ${detalle.posicion}`
-                      : detalle.grupo === 'bodega' ? (detalle.llanta.almacen ?? 'Bodega')
-                        : detalle.grupo === 'reforma' ? 'Reforma (reencauche)' : 'Descarte'
-                  }</dd></div>
-                  <div><dt>Marca</dt><dd>{detalle.llanta.marca ?? '—'}</dd></div>
-                  <div><dt>Modelo</dt><dd>{detalle.llanta.modelo ?? '—'}</dd></div>
-                  <div><dt>Medida</dt><dd>{detalle.llanta.medida ?? '—'}</dd></div>
-                  {detalle.grupo === 'unidad' && (
-                    <>
-                      <div><dt>Montada desde</dt><dd>{formatFechaPe(detalle.llanta.fecha_montaje)}</dd></div>
-                      <div><dt>Km al montar</dt><dd>{detalle.llanta.km_montaje?.toLocaleString('es-PE') ?? '—'}</dd></div>
-                    </>
-                  )}
-                  <div><dt>Km recorridos</dt><dd>{detalle.llanta.km_recorridos?.toLocaleString('es-PE') ?? '—'}</dd></div>
-                </dl>
+                <DetalleSecciones llanta={detalle.llanta} grupo={detalle.grupo} placa={placa} posicion={detalle.posicion ?? null}
+                  ubicacion={detalle.grupo === 'unidad' ? `${placa} · ${detalle.posicion}`
+                    : detalle.grupo === 'bodega' ? (detalle.llanta.almacen ?? 'Bodega')
+                      : detalle.grupo === 'reforma' ? 'Reforma (reencauche)' : 'Descarte'} />
 
                 {detalle.grupo === 'unidad' && (puedeReforma || puedeBaja) && (
                   <div className="ntb-det__acciones">
@@ -544,7 +523,7 @@ export function NeumaticosTablero() {
                 {detalle.grupo === 'reforma' && <p className="ntb-det__ayuda">Vida {vidaTexto(detalle.llanta.vida)} en reencauche.</p>}
 
                 <h3 className="ntb-det__subtitulo">Línea de tiempo</h3>
-                <LineaTiempo codigo={detalle.llanta.codigo} limite={2} onVerTodo={() => setHistorial(detalle.llanta.codigo)} />
+                <HistorialLlanta codigo={detalle.llanta.codigo} limite={4} onVerTodo={() => setHistorial(detalle.llanta.codigo)} />
               </>
             )}
           </aside>
