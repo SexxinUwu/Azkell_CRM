@@ -587,6 +587,69 @@ export async function llenarFormulario(f: File, campos: CampoForm[], aplanar: bo
   return comoPdf(await doc.save(), `${sinExt(f.name)}_lleno.pdf`, aplanar ? 'Formulario llenado y fijado (ya no se edita)' : 'Formulario llenado (se puede seguir editando)');
 }
 
+// ─── PDF a Excel ────────────────────────────────────────────────────────────
+
+/** Texto que parece un número (sin ceros a la izquierda, que serían códigos) pasa a número de Excel */
+function comoCelda(t: string): string | number {
+  if (/^-?(0|[1-9]\d{0,2}(,\d{3})+|[1-9]\d*)(\.\d+)?$/.test(t)) return Number(t.replace(/,/g, ''));
+  if (/^-?(0|[1-9]\d*),\d{1,2}$/.test(t)) return Number(t.replace(',', '.'));
+  return t;
+}
+
+/** Una hoja de Excel por página: las filas salen de la altura del texto y las columnas, de donde empieza cada celda */
+export async function pdfAExcel(f: File, alAvance?: Avance): Promise<Salida> {
+  const doc = await abrirParaDibujar(f);
+  try {
+    const hojas: Array<{ nombre: string; filas: Array<Array<string | number>> }> = [];
+    for (let n = 1; n <= doc.numPages; n++) {
+      const p = await doc.getPage(n);
+      const c = await p.getTextContent();
+      type Pieza = { x: number; fin: number; t: string };
+      const filas: Array<{ y: number; tam: number; piezas: Pieza[] }> = [];
+      for (const it of c.items as Array<{ str?: string; transform?: number[]; width?: number }>) {
+        if (typeof it.str !== 'string' || !it.str.trim() || !it.transform) continue;
+        const [, , , , x, y] = it.transform;
+        const tam = Math.hypot(it.transform[0], it.transform[1]);
+        let fila = filas.find(r => Math.abs(r.y - y) < Math.max(2, tam * 0.35));
+        if (!fila) { fila = { y, tam, piezas: [] }; filas.push(fila); }
+        fila.piezas.push({ x, fin: x + (it.width ?? it.str.length * tam * 0.5), t: it.str });
+      }
+      filas.sort((a, b) => b.y - a.y);
+      // Celdas de cada fila: las piezas muy separadas son columnas distintas
+      const celdasPorFila = filas.map(r => {
+        const celdas: Array<{ x: number; t: string }> = [];
+        let fin = -1e9;
+        for (const pz of r.piezas.sort((a, b) => a.x - b.x)) {
+          if (celdas.length && pz.x - fin <= Math.max(5, r.tam * 0.7)) celdas[celdas.length - 1].t += (pz.x - fin > 1 ? ' ' : '') + pz.t;
+          else celdas.push({ x: pz.x, t: pz.t });
+          fin = Math.max(fin, pz.fin);
+        }
+        return celdas.map(z => ({ x: z.x, t: z.t.replace(/\s+/g, ' ').trim() })).filter(z => z.t);
+      }).filter(r => r.length);
+      if (!celdasPorFila.length) { p.cleanup(); alAvance?.(n, doc.numPages); continue; }
+      // Columnas: se agrupan las posiciones de inicio parecidas (hasta 12 puntos de diferencia)
+      const xs = celdasPorFila.flat().map(z => z.x).sort((a, b) => a - b);
+      const anclas: number[] = [];
+      for (const x of xs) { if (!anclas.length || x - anclas[anclas.length - 1] > 12) anclas.push(x); }
+      const columnaDe = (x: number) => { let k = 0; for (let i = 0; i < anclas.length; i++) if (anclas[i] <= x + 12) k = i; return k; };
+      const matriz = celdasPorFila.map(r => {
+        const fila: Array<string | number> = Array(anclas.length).fill('');
+        for (const z of r) { const k = columnaDe(z.x); fila[k] = fila[k] === '' ? comoCelda(z.t) : `${fila[k]} ${z.t}`; }
+        return fila;
+      });
+      hojas.push({ nombre: `Página ${n}`, filas: matriz });
+      p.cleanup();
+      alAvance?.(n, doc.numPages);
+    }
+    if (!hojas.length) throw new Error('Este PDF no tiene texto (puede ser un escaneo): no hay nada que pasar a Excel. Prueba primero con «OCR PDF».');
+    const XLSX = await import('xlsx');
+    const libro = XLSX.utils.book_new();
+    for (const h of hojas) XLSX.utils.book_append_sheet(libro, XLSX.utils.aoa_to_sheet(h.filas), h.nombre);
+    const bytes = XLSX.write(libro, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
+    return { nombre: `${sinExt(f.name)}.xlsx`, blob: new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), detalle: `${hojas.length} ${hojas.length === 1 ? 'hoja' : 'hojas'}` };
+  } finally { void doc.loadingTask.destroy(); }
+}
+
 // ─── Descarga ───────────────────────────────────────────────────────────────
 
 export function descargar(s: Salida) {

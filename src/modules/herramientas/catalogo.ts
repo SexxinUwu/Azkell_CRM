@@ -29,9 +29,10 @@ export interface Herramienta {
   listo: boolean;
   /** Por qué todavía no está (se muestra al abrirla) */
   nota?: string;
+  /** Se procesa en el servidor de Azkell (no dentro del navegador) */
+  enServidor?: boolean;
 }
 
-const NECESITA_SERVIDOR = 'Esta conversión no se puede hacer bien dentro del navegador: necesita un motor en el servidor. Estamos definiendo cómo hacerla sin que tus archivos salgan de la empresa.';
 const NECESITA_IA = 'Usa inteligencia artificial, y eso enviaría el contenido del documento a un servicio externo. Está pendiente de decidir si se habilita.';
 
 export const HERRAMIENTAS: Herramienta[] = [
@@ -48,16 +49,16 @@ export const HERRAMIENTAS: Herramienta[] = [
   { id: 'ocr', titulo: 'OCR PDF', descripcion: 'Convierte un escaneo en un PDF con texto seleccionable.', categoria: 'optimizar', icono: ScanText, color: '#4caf50', listo: true },
   // Convertir a PDF
   { id: 'jpg-a-pdf', titulo: 'JPG a PDF', descripcion: 'Convierte fotos y capturas en un PDF. Corrige las fotos del celular.', categoria: 'a-pdf', icono: FileImage, color: '#f5b400', listo: true },
-  { id: 'word-a-pdf', titulo: 'WORD a PDF', descripcion: 'Convierte un documento de Word a PDF.', categoria: 'a-pdf', icono: FileText, color: '#2b6cb0', listo: false, nota: NECESITA_SERVIDOR },
-  { id: 'powerpoint-a-pdf', titulo: 'POWERPOINT a PDF', descripcion: 'Convierte una presentación a PDF.', categoria: 'a-pdf', icono: Presentation, color: '#e8593c', listo: false, nota: NECESITA_SERVIDOR },
-  { id: 'excel-a-pdf', titulo: 'EXCEL a PDF', descripcion: 'Convierte una hoja de cálculo a PDF.', categoria: 'a-pdf', icono: FileSpreadsheet, color: '#2e8b57', listo: false, nota: NECESITA_SERVIDOR },
-  { id: 'html-a-pdf', titulo: 'HTML a PDF', descripcion: 'Convierte una página web guardada en PDF.', categoria: 'a-pdf', icono: Globe, color: '#f5b400', listo: false, nota: NECESITA_SERVIDOR },
+  { id: 'word-a-pdf', titulo: 'WORD a PDF', descripcion: 'Convierte un documento de Word a PDF.', categoria: 'a-pdf', icono: FileText, color: '#2b6cb0', listo: true, enServidor: true },
+  { id: 'powerpoint-a-pdf', titulo: 'POWERPOINT a PDF', descripcion: 'Convierte una presentación a PDF.', categoria: 'a-pdf', icono: Presentation, color: '#e8593c', listo: true, enServidor: true },
+  { id: 'excel-a-pdf', titulo: 'EXCEL a PDF', descripcion: 'Convierte una hoja de cálculo a PDF.', categoria: 'a-pdf', icono: FileSpreadsheet, color: '#2e8b57', listo: true, enServidor: true },
+  { id: 'html-a-pdf', titulo: 'HTML a PDF', descripcion: 'Convierte una página web guardada en PDF.', categoria: 'a-pdf', icono: Globe, color: '#f5b400', listo: true, enServidor: true },
   // Convertir desde PDF
   { id: 'pdf-a-jpg', titulo: 'PDF a JPG', descripcion: 'Saca cada página como imagen JPG o PNG.', categoria: 'desde-pdf', icono: Images, color: '#f5b400', listo: true },
-  { id: 'pdf-a-word', titulo: 'PDF a WORD', descripcion: 'Convierte un PDF en un documento de Word editable.', categoria: 'desde-pdf', icono: FileInput, color: '#2b6cb0', listo: false, nota: NECESITA_SERVIDOR },
-  { id: 'pdf-a-powerpoint', titulo: 'PDF a POWERPOINT', descripcion: 'Convierte un PDF en una presentación.', categoria: 'desde-pdf', icono: Presentation, color: '#e8593c', listo: false, nota: NECESITA_SERVIDOR },
-  { id: 'pdf-a-excel', titulo: 'PDF a EXCEL', descripcion: 'Convierte las tablas de un PDF a Excel.', categoria: 'desde-pdf', icono: FileSpreadsheet, color: '#2e8b57', listo: false, nota: NECESITA_SERVIDOR },
-  { id: 'pdf-a-pdfa', titulo: 'PDF a PDF/A', descripcion: 'Convierte un PDF al formato de archivo a largo plazo.', categoria: 'desde-pdf', icono: FileCode, color: '#3b5b9a', listo: false, nota: NECESITA_SERVIDOR },
+  { id: 'pdf-a-word', titulo: 'PDF a WORD', descripcion: 'Convierte un PDF en un documento de Word editable.', categoria: 'desde-pdf', icono: FileInput, color: '#2b6cb0', listo: true, enServidor: true },
+  { id: 'pdf-a-powerpoint', titulo: 'PDF a POWERPOINT', descripcion: 'Convierte un PDF en una presentación.', categoria: 'desde-pdf', icono: Presentation, color: '#e8593c', listo: true, enServidor: true },
+  { id: 'pdf-a-excel', titulo: 'PDF a EXCEL', descripcion: 'Convierte las tablas de un PDF a Excel.', categoria: 'desde-pdf', icono: FileSpreadsheet, color: '#2e8b57', listo: true },
+  { id: 'pdf-a-pdfa', titulo: 'PDF a PDF/A', descripcion: 'Convierte un PDF al formato de archivo a largo plazo.', categoria: 'desde-pdf', icono: FileCode, color: '#3b5b9a', listo: false, nota: 'El formato PDF/A exige una validación estricta (fuentes incrustadas, perfil de color) que hay que comprobar con un verificador oficial antes de ofrecerlo. Está pendiente.' },
   { id: 'pdf-a-markdown', titulo: 'PDF a Markdown', descripcion: 'Saca el texto del PDF como Markdown, con títulos y viñetas.', categoria: 'inteligencia', icono: FileCode, color: '#7c4dff', listo: true },
   // Editar
   { id: 'rotar', titulo: 'Rotar PDF', descripcion: 'Gira todas las páginas o solo algunas.', categoria: 'editar', icono: RotateCw, color: '#8e5bd6', listo: true },

@@ -5,6 +5,7 @@ import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { CabeceraHerramientas, IconoHerramienta } from './CabeceraHerramientas';
 import { CATEGORIAS, deCategoria, porId } from './catalogo';
 import { ComprimirPdf, DividirPdf, ImagenAPdf, MarcaAguaPdf, NumerarPdf, OrganizarPdf, PdfAImagen, RotarPdf, UnirPdf } from './Herramientas';
+import { ExcelAPdf, HtmlAPdf, PdfAExcel, PdfAPowerpoint, PdfAWord, PowerpointAPdf, WordAPdf } from './HerramientasServidor';
 import { CompararPdf, DesbloquearPdf, EliminarPaginas, EscanearAPdf, ExtraerPaginas, FirmarPdf, FormulariosPdf, OcrPdf, PdfAMarkdown, ProtegerPdf, RecortarPdf, RepararPdf } from './HerramientasMas';
 import './herramientas.css';
 
@@ -15,6 +16,7 @@ const VISTAS: Record<string, ComponentType> = {
   'jpg-a-pdf': ImagenAPdf, 'pdf-a-jpg': PdfAImagen, 'pdf-a-markdown': PdfAMarkdown,
   rotar: RotarPdf, numerar: NumerarPdf, 'marca-de-agua': MarcaAguaPdf, recortar: RecortarPdf, formularios: FormulariosPdf,
   firmar: FirmarPdf, comparar: CompararPdf, ocr: OcrPdf, proteger: ProtegerPdf, desbloquear: DesbloquearPdf,
+  'word-a-pdf': WordAPdf, 'powerpoint-a-pdf': PowerpointAPdf, 'excel-a-pdf': ExcelAPdf, 'html-a-pdf': HtmlAPdf, 'pdf-a-word': PdfAWord, 'pdf-a-powerpoint': PdfAPowerpoint, 'pdf-a-excel': PdfAExcel,
 };
 
 const PRIVACIDAD = 'Tus archivos no salen de este equipo: todo se procesa aquí, en tu navegador. No se suben a internet ni pasan por el servidor de Azkell.';
@@ -33,7 +35,7 @@ export function HerramientasPage() {
         <PageHeader eyebrow="Herramientas PDF" title={actual.titulo} subtitle={actual.descripcion} />
         {Vista ? (
           <>
-            <div className="hp-privado"><ShieldCheck size={16} aria-hidden /> {PRIVACIDAD}</div>
+            {!actual.enServidor && <div className="hp-privado"><ShieldCheck size={16} aria-hidden /> {PRIVACIDAD}</div>}
             <Vista />
           </>
         ) : (

@@ -3,13 +3,15 @@ import { ArrowDown, ArrowUp, Camera, FileText, Image as ImagenIcono, Upload, X }
 import { MAX_ARCHIVO_MB, tamano } from './motorPdf';
 
 /** Zona para soltar o elegir archivos. Con `ordenable` se pueden subir, bajar y quitar (el orden es el del resultado). */
-export function ZonaArchivos({ archivos, onChange, multiple, accept, tipo, etiqueta, ordenable, disabled, onAviso, camara }: {
+export function ZonaArchivos({ archivos, onChange, multiple, accept, tipo, extensiones, etiqueta, ordenable, disabled, onAviso, camara }: {
   archivos: File[];
   onChange: (a: File[]) => void;
   multiple?: boolean;
   accept: string;
   /** Qué se acepta: decide el filtro y el texto */
-  tipo: 'pdf' | 'imagen';
+  tipo: 'pdf' | 'imagen' | 'archivo';
+  /** Con tipo «archivo»: extensiones que se aceptan, sin punto (por ejemplo ['docx', 'doc']) */
+  extensiones?: string[];
   etiqueta: string;
   ordenable?: boolean;
   disabled?: boolean;
@@ -21,7 +23,8 @@ export function ZonaArchivos({ archivos, onChange, multiple, accept, tipo, etiqu
   const foto = useRef<HTMLInputElement>(null);
   const [encima, setEncima] = useState(false);
 
-  const valido = (f: File) => (tipo === 'pdf' ? f.type === 'application/pdf' || /\.pdf$/i.test(f.name) : f.type.startsWith('image/') || /\.(jpe?g|png|webp|gif|bmp|avif|heic|heif)$/i.test(f.name));
+  const extDe = (f: File) => (f.name.split('.').pop() ?? '').toLowerCase();
+  const valido = (f: File) => (tipo === 'archivo' ? (extensiones ?? []).includes(extDe(f)) : tipo === 'pdf' ? f.type === 'application/pdf' || /\.pdf$/i.test(f.name) : f.type.startsWith('image/') || /\.(jpe?g|png|webp|gif|bmp|avif|heic|heif)$/i.test(f.name));
 
   function agregar(lista: FileList | File[] | null) {
     const elegidos = Array.from(lista ?? []);
@@ -30,7 +33,7 @@ export function ZonaArchivos({ archivos, onChange, multiple, accept, tipo, etiqu
     const grandes = buenos.filter(f => f.size > MAX_ARCHIVO_MB * 1048576);
     const aceptados = buenos.filter(f => f.size <= MAX_ARCHIVO_MB * 1048576);
     const avisos: string[] = [];
-    if (buenos.length < elegidos.length) avisos.push(tipo === 'pdf' ? 'Solo se aceptan archivos PDF.' : 'Solo se aceptan imágenes.');
+    if (buenos.length < elegidos.length) avisos.push(tipo === 'pdf' ? 'Solo se aceptan archivos PDF.' : tipo === 'archivo' ? `Solo se aceptan archivos ${(extensiones ?? []).map(e => '.' + e).join(', ')}.` : 'Solo se aceptan imágenes.');
     if (grandes.length) avisos.push(`${grandes.map(f => f.name).join(', ')} pesa más de ${MAX_ARCHIVO_MB} MB y se omitió.`);
     onAviso?.(avisos.length ? avisos.join(' ') : null);
     if (!aceptados.length) return;
@@ -39,7 +42,7 @@ export function ZonaArchivos({ archivos, onChange, multiple, accept, tipo, etiqu
 
   const soltar = (e: DragEvent) => { e.preventDefault(); setEncima(false); if (!disabled) agregar(e.dataTransfer.files); };
   const mover = (i: number, d: -1 | 1) => { const c = [...archivos]; [c[i], c[i + d]] = [c[i + d], c[i]]; onChange(c); };
-  const Icono = tipo === 'pdf' ? FileText : ImagenIcono;
+  const Icono = tipo === 'imagen' ? ImagenIcono : FileText;
 
   return (
     <div className="hp-zona">
