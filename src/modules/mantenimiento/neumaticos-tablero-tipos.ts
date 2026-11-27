@@ -25,6 +25,8 @@ export interface LlantaTablero {
   fecha_montaje: string | null;    // yyyy-mm-dd
   km_montaje: number | null;
   km_recorridos: number | null;
+  /** Despachada por almacén para esta placa (OT y salida): solo en «Disponible para uso» */
+  asignacion?: { ot: string | null; salida: string } | null;
 }
 
 /** Una posición del vehículo (la lista la define la configuración de la unidad) */
@@ -39,6 +41,8 @@ export interface TableroPlaca {
   placa: string;
   /** La unidad tiene GPS y odómetro (tracto, camión, Thermo King). Carretas y semirremolques no */
   con_gps?: boolean;
+  /** Cuántas llantas disponibles hay: despachadas para esta placa, sin asignar y asignadas a otras placas */
+  disponibles_resumen?: { asignadas_a_placa: number; sin_asignar: number; de_otras_placas: number };
   /** Psi con que se deja la llanta por defecto: 110 en tracto y camión, 100 en el resto */
   psi_defecto?: number;
   configuracion: string | null;    // p. ej. "2DD-1L-2L" o "T3"; lo usa el frontend para dibujar el layout

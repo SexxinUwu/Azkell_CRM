@@ -320,3 +320,7 @@ button.ntb-pos { cursor: pointer; }
 @media (max-width: 760px) { .ntb-tablero--insp .ntb-centro { order: -1; } }
 /* El aviso del arrastre flota sobre la pantalla: si empujara el contenido, el plano se movería mientras se arrastra y se fallaría al soltar */
 .ntb-banner { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 60; margin: 0; width: max-content; max-width: calc(100vw - 24px); box-shadow: var(--shadow-raised, 0 6px 20px rgba(0,0,0,0.18)); }
+
+/* Aviso de «Disponible para uso» en la inspección (solo lo despachado para la placa) */
+.ntb-asig { margin: 0 0 var(--s-2); font-size: 0.8125rem; color: var(--label-2); line-height: 1.35; }
+.ntb-asig__ver { border: 0; background: transparent; padding: 0; font: inherit; font-weight: 700; color: var(--accent-ink); cursor: pointer; text-decoration: underline; }

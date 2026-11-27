@@ -10,6 +10,7 @@ import { separarLote } from './codigosLote';
 import { sinStockDe } from './SinStockDialogo';
 import { EscanerContinuo } from './EscanerContinuo';
 import { pitido } from './pitido';
+import { SelectorLlantas, useLlantasDeArticulos } from './SelectorLlantas';
 import { duracion, tonoEspera } from './ControlSalidasSheet';
 import './picking.css';
 
@@ -26,6 +27,8 @@ interface Linea {
   recogido: number;
   /** Lotes escaneados en esta línea: { número de lote: unidades } */
   lotes: Record<number, number>;
+  /** Si el artículo es una llanta: los códigos de fuego elegidos (cada llanta sale por su código) */
+  llantas: string[];
 }
 type Paso = 'elegir' | 'picking' | 'resultado';
 interface Resultado { folio: string; ok: boolean; texto: string }
@@ -88,7 +91,7 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
         ls.push({
           key: `${s.id}-${it.id}`, salidaId: s.id, folio: String(s.id), destino: [s.placa, s.ticket_ot].filter(Boolean).join(' · '),
           itemId: it.id, inventarioId: it.inventario_id ?? '', descripcion: it.descripcion || art?.descripcion || art?.articulo || '(sin descripción)',
-          cantidad: Number(it.cantidad) || 0, ubicacion: [art?.ubicacion, art?.anaquel].filter(Boolean).join(' ').trim(), recogido: 0, lotes: {},
+          cantidad: Number(it.cantidad) || 0, ubicacion: [art?.ubicacion, art?.anaquel].filter(Boolean).join(' ').trim(), recogido: 0, lotes: {}, llantas: [],
         });
       }
     }
@@ -105,9 +108,14 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, inicial]);
 
-  const completa = (l: Linea) => l.recogido >= l.cantidad - 1e-9;
+  // Llantas: se entregan por código de fuego (lo recogido son los códigos elegidos)
+  const idsHoja = useMemo(() => [...new Set(lineas.map(l => l.inventarioId).filter(id => id && !/^SERV/i.test(id)))], [lineas]);
+  const llantasDe = useLlantasDeArticulos(idsHoja, open && paso === 'picking');
+  const esLl = (l: Linea) => !!llantasDe.get(l.inventarioId)?.es_llanta;
+  const rec = (l: Linea) => (esLl(l) ? l.llantas.length : l.recogido);
+  const completa = (l: Linea) => rec(l) >= l.cantidad - 1e-9;
   const unidadesTotal = lineas.reduce((a, l) => a + l.cantidad, 0);
-  const unidadesHechas = lineas.reduce((a, l) => a + Math.min(l.recogido, l.cantidad), 0);
+  const unidadesHechas = lineas.reduce((a, l) => a + Math.min(rec(l), l.cantidad), 0);
   const lineasHechas = lineas.filter(completa).length;
 
   /** Si se baja la cantidad a mano, los lotes escaneados se recortan (primero los de número más alto) para que no sumen más que lo recogido */
@@ -124,12 +132,12 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
   };
   function sumar(key: string, delta: number) {
     setLineas(prev => prev.map(l => {
-      if (l.key !== key) return l;
+      if (l.key !== key || esLl(l)) return l;
       const recogido = Math.max(0, Math.min(l.cantidad, l.recogido + delta));
       return { ...l, recogido, lotes: recortarLotes(l.lotes, recogido) };
     }));
   }
-  const completar = (key: string) => setLineas(prev => prev.map(l => (l.key === key ? { ...l, recogido: completa(l) ? 0 : l.cantidad, lotes: completa(l) ? {} : l.lotes } : l)));
+  const completar = (key: string) => setLineas(prev => prev.map(l => (l.key === key && !esLl(l) ? { ...l, recogido: completa(l) ? 0 : l.cantidad, lotes: completa(l) ? {} : l.lotes } : l)));
 
   /** Un código leído (cámara, pistola o escrito): suma 1 a la primera línea de ese artículo que aún no esté completa */
   const cacheLotes = useRef(new Map<string, LoteInv[]>());
@@ -151,9 +159,26 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
     const codigoCrudo = codigoSinLote;
     const codigo = clave(codigoCrudo);
     if (!codigo) return;
+    // Un código de fuego elige esa llanta en la línea que la pide
+    for (const l of lineas) {
+      const ll = llantasDe.get(l.inventarioId)?.llantas.find(x => x.codigo.toUpperCase() === codigo);
+      if (!ll) continue;
+      if (l.llantas.some(x => x.toUpperCase() === codigo)) { pitido(false); haptic('warning'); setAviso({ ok: false, texto: `${ll.codigo} ya está elegida.` }); return; }
+      if (l.llantas.length >= l.cantidad) { pitido(false); haptic('warning'); setAviso({ ok: false, texto: `${l.descripcion} ya tiene sus ${cant(l.cantidad)} códigos.` }); return; }
+      pitido(true); haptic('success');
+      setLineas(prev => prev.map(x => (x.key === l.key ? { ...x, llantas: [...x.llantas, ll.codigo] } : x)));
+      setAviso({ ok: true, texto: `${l.descripcion} · ${ll.codigo}` });
+      return;
+    }
     const art = porCodigo.get(codigo);
     const idArt = art?.id.toUpperCase() ?? codigo;
-    const candidatas = lineas.filter(l => l.inventarioId.toUpperCase() === idArt);
+    const delArt = lineas.filter(l => l.inventarioId.toUpperCase() === idArt);
+    if (delArt.length && delArt.every(esLl)) {
+      pitido(false); haptic('warning');
+      setAviso({ ok: false, texto: `${delArt[0].descripcion}: las llantas se entregan por código de fuego. Escanea el código de la llanta o elígelo en su línea.` });
+      return;
+    }
+    const candidatas = delArt.filter(l => !esLl(l));
     if (!candidatas.length) {
       pitido(false); haptic('warning');
       setAviso({ ok: false, texto: art ? `${art.descripcion || art.articulo} no está en esta hoja de picking.` : `El código ${codigoCrudo} no es de ningún artículo.` });
@@ -194,20 +219,21 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
 
   // Lo que se despachará: de cada salida, las líneas completas
   const porSalida = useMemo(() => {
-    const m = new Map<string, { id: SalidaInv['id']; folio: string; completas: number[]; total: number; lotes: Record<string, Array<{ numero: number; cantidad: number }>> }>();
+    const m = new Map<string, { id: SalidaInv['id']; folio: string; completas: number[]; total: number; lotes: Record<string, Array<{ numero: number; cantidad: number }>>; llantas: Record<string, string[]> }>();
     for (const l of lineas) {
       const k = String(l.salidaId);
-      const x = m.get(k) ?? { id: l.salidaId, folio: l.folio, completas: [], total: 0, lotes: {} };
+      const x = m.get(k) ?? { id: l.salidaId, folio: l.folio, completas: [], total: 0, lotes: {}, llantas: {} };
       x.total++;
       if (completa(l)) {
         x.completas.push(l.itemId);
+        if (esLl(l)) x.llantas[String(l.itemId)] = l.llantas;
         const ls = Object.entries(l.lotes).map(([n, c]) => ({ numero: Number(n), cantidad: c })).filter(z => z.cantidad > 0);
         if (ls.length) x.lotes[String(l.itemId)] = ls;
       }
       m.set(k, x);
     }
     return [...m.values()];
-  }, [lineas]);
+  }, [lineas, llantasDe]);
   const aDespachar = porSalida.filter(s => s.completas.length > 0);
   const incompletas = aDespachar.filter(s => s.completas.length < s.total).length;
 
@@ -216,7 +242,7 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
     const res: Resultado[] = [];
     for (const s of aDespachar) {
       try {
-        const r = await despacharSalida(s.id, s.completas, usuario, s.lotes);
+        const r = await despacharSalida(s.id, s.completas, usuario, s.lotes, undefined, s.llantas);
         res.push({ folio: s.folio, ok: true, texto: r.parcial && r.nuevo_pendiente_id ? `Despachada. Lo no recogido quedó en la salida ${r.nuevo_pendiente_id}.` : 'Despachada, stock descontado.' });
       } catch (err) {
         const faltantes = err instanceof ApiError ? sinStockDe(err.data) : null;
@@ -303,7 +329,7 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
             <ul className="pk-lineas">
               {lineas.map(l => (
                 <li key={l.key} className={`pk-linea${completa(l) ? ' pk-linea--lista' : ''}`}>
-                  <button type="button" className="pk-linea__check" aria-label={completa(l) ? 'Deshacer' : 'Marcar completo'} title={completa(l) ? 'Deshacer' : 'Marcar completo'} onClick={() => completar(l.key)}>
+                  <button type="button" className="pk-linea__check" aria-label={completa(l) ? 'Deshacer' : 'Marcar completo'} title={completa(l) ? 'Deshacer' : 'Marcar completo'} disabled={esLl(l)} onClick={() => completar(l.key)}>
                     {completa(l) ? <Check size={18} strokeWidth={3} /> : null}
                   </button>
                   <span className="pk-linea__cuerpo">
@@ -313,11 +339,15 @@ export function PickingSheet({ open, onClose, salidas, inventario, usuario, onTe
                       {l.inventarioId} · {l.folio}{l.destino ? ` · ${l.destino}` : ''}
                       {Object.entries(l.lotes).map(([n, c]) => <span key={n} className="pk-lote">Lote {n} ×{cant(c)}</span>)}
                     </small>
+                    {esLl(l) && llantasDe.get(l.inventarioId) && (
+                      <SelectorLlantas datos={llantasDe.get(l.inventarioId)!} cantidad={l.cantidad} valor={l.llantas}
+                        onChange={cods => setLineas(prev => prev.map(x => (x.key === l.key ? { ...x, llantas: cods } : x)))} />
+                    )}
                   </span>
                   <span className="pk-linea__cant">
-                    <button type="button" aria-label="Quitar uno" onClick={() => sumar(l.key, -1)} disabled={l.recogido <= 0}><Minus size={15} /></button>
-                    <span className="t-numeric"><b>{cant(l.recogido)}</b> / {cant(l.cantidad)}</span>
-                    <button type="button" aria-label="Agregar uno" onClick={() => sumar(l.key, 1)} disabled={completa(l)}><Plus size={15} /></button>
+                    {!esLl(l) && <button type="button" aria-label="Quitar uno" onClick={() => sumar(l.key, -1)} disabled={l.recogido <= 0}><Minus size={15} /></button>}
+                    <span className="t-numeric"><b>{cant(rec(l))}</b> / {cant(l.cantidad)}</span>
+                    {!esLl(l) && <button type="button" aria-label="Agregar uno" onClick={() => sumar(l.key, 1)} disabled={completa(l)}><Plus size={15} /></button>}
                   </span>
                 </li>
               ))}

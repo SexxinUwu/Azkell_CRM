@@ -15,6 +15,7 @@ import { EscanerContinuo } from './EscanerContinuo';
 import { separarLote } from './codigosLote';
 import { pitido } from './pitido';
 import { usePistola } from './usePistola';
+import { SelectorLlantas, useLlantasDeArticulos } from './SelectorLlantas';
 import './salidaDetalle.css';
 
 // Hoja de despacho de una salida. Arriba los datos de la orden; abajo los artículos numerados, cada uno con su CONFORMIDAD:
@@ -67,7 +68,7 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
   puedeEditar: boolean;
   puedeEliminar: boolean;
   /** Ítems conformes (y los lotes escaneados) más el texto de confirmación; la página abre el diálogo y despacha */
-  onDespachar: (sel: { id: number; itemIds: number[]; mensaje: ReactNode; lotes?: Record<string, Array<{ numero: number; cantidad: number }>>; cantidades?: Record<string, number> }) => void;
+  onDespachar: (sel: { id: number; itemIds: number[]; mensaje: ReactNode; lotes?: Record<string, Array<{ numero: number; cantidad: number }>>; cantidades?: Record<string, number>; llantas?: Record<string, string[]> }) => void;
   onPdf: () => void;
   onVistaPrevia: () => void;
   onEditar: () => void;
@@ -89,6 +90,10 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
     })),
   });
   const lotesDe = useMemo(() => { const m = new Map<string, LoteInv[]>(); idsArt.forEach((id, i) => { const d = consultas[i]?.data; if (d) m.set(id, d.lotes); }); return m; }, [idsArt, consultas]);
+
+  // Llantas: cada una se entrega por su código de fuego (los que se eligen aquí quedan ligados a la OT y a la placa)
+  const llantasDe = useLlantasDeArticulos(idsArt, open && pendiente);
+  const [llantas, setLlantas] = useState<Record<number, string[]>>({});
 
   // Conformidad de cada línea
   const [conf, setConf] = useState<Record<number, Conf>>({});
@@ -115,7 +120,7 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
       const raw = localStorage.getItem(claveGuardado);
       if (raw) { const d = JSON.parse(raw); if (d && d.firma === firma) previo = d.conf ?? {}; else localStorage.removeItem(claveGuardado); }
     } catch { /* sin almacenamiento: se empieza de cero */ }
-    setConf(previo); setCamara(false); setLineaActiva(null); setAviso(null); setManual(''); setPregunta(null); setDesconocido(null);
+    setLlantas({}); setConf(previo); setCamara(false); setLineaActiva(null); setAviso(null); setManual(''); setPregunta(null); setDesconocido(null);
   }, [open, salida.id]);
   useEffect(() => {
     if (!open) return;
@@ -150,10 +155,14 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
     const stock = art ? Number(art.stock_actual) : null;
     const lotes = it.inventario_id ? lotesDe.get(it.inventario_id) : undefined;
     const imp = Number(it.importe) || cant * cu;
-    const c = conf[idx] ?? { recogido: 0, lotes: {} };
+    // En una llanta, lo confirmado son los códigos de fuego elegidos (no se escanea por cantidad)
+    const datosLl = it.inventario_id ? llantasDe.get(it.inventario_id) : undefined;
+    const esLlanta = !!datosLl?.es_llanta;
+    const sel = llantas[idx] ?? [];
+    const c = esLlanta ? { recogido: sel.length, lotes: {} } : (conf[idx] ?? { recogido: 0, lotes: {} });
     const completa = cant > 0 && c.recogido >= cant - EPS;
-    return { it, idx, art, cant, cu, imp, stock, alcanza: stock === null || stock >= cant, lotes, ubic: [art?.ubicacion, art?.anaquel].filter(Boolean).join(' · '), c, completa };
-  }), [items, inventario, lotesDe, conf]);
+    return { it, idx, art, cant, cu, imp, stock, alcanza: stock === null || stock >= cant, lotes, ubic: [art?.ubicacion, art?.anaquel].filter(Boolean).join(' · '), c, completa, esLlanta, datosLl, sel };
+  }), [items, inventario, lotesDe, conf, llantasDe, llantas]);
 
   const totalCant = filas.reduce((a, f) => a + f.cant, 0);
   const totalImp = filas.reduce((a, f) => a + f.imp, 0);
@@ -184,12 +193,13 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
   // ── Conformidad ───────────────────────────────────────────────────────────
   const marcar = (idx: number) => setConf(prev => {
     const f = filas[idx];
+    if (f.esLlanta) return prev; // las llantas se confirman eligiendo sus códigos de fuego
     const ya = (prev[idx]?.recogido ?? 0) >= f.cant - EPS;
     return { ...prev, [idx]: ya ? { recogido: 0, lotes: {} } : { recogido: f.cant, lotes: prev[idx]?.lotes ?? {} } };
   });
   const todoConforme = () => {
     haptic('selection');
-    setConf(Object.fromEntries(filas.filter(f => f.it.id != null && f.alcanza).map(f => [f.idx, { recogido: f.cant, lotes: conf[f.idx]?.lotes ?? {} }])));
+    setConf(Object.fromEntries(filas.filter(f => f.it.id != null && f.alcanza && !f.esLlanta).map(f => [f.idx, { recogido: f.cant, lotes: conf[f.idx]?.lotes ?? {} }])));
   };
 
   /** Un código leído (cámara, pistola o escrito): «INV-0212» confirma 1 unidad, «INV-0212-L2» la toma del lote 2, «5*INV-0212» confirma 5 */
@@ -200,6 +210,15 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
     const codigo = cod.trim().toUpperCase();
     if (!codigo) return;
     if (pregunta || desconocido) return; // hay algo por confirmar: se ignora la lectura
+    // Un código de fuego escaneado elige esa llanta en la línea que la pide
+    for (const f of filas) {
+      const ll = f.datosLl?.llantas.find(l => l.codigo.toUpperCase() === codigo);
+      if (!ll) continue;
+      if (f.sel.some(x => x.toUpperCase() === codigo)) { pitido(false); haptic('warning'); setAviso({ ok: false, texto: `${ll.codigo} ya está elegida.` }); return; }
+      if (f.sel.length >= f.cant) { pitido(false); haptic('warning'); setAviso({ ok: false, texto: `La línea ${f.idx + 1} ya tiene sus ${cantidad(f.cant)} códigos.` }); return; }
+      pitido(true); haptic('success'); setLlantas(p => ({ ...p, [f.idx]: [...(p[f.idx] ?? []), ll.codigo] })); setAviso({ ok: true, texto: `${ll.codigo} · línea ${f.idx + 1}` });
+      return;
+    }
     const idExtra = extras[codigo];
     const art = inventario.find(a => [a.id, a.codigo_barras, a.codigo_articulo].some(c => String(c ?? '').trim().toUpperCase() === codigo)) ?? (idExtra ? inventario.find(a => a.id === idExtra) : undefined);
     const idArt = (art?.id ?? idExtra ?? codigo).toUpperCase();
@@ -211,6 +230,7 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
     if (lineaActiva != null && filas[lineaActiva] && !delArticulo.some(f => f.idx === lineaActiva)) return error(`Ese código no es de «${filas[lineaActiva].it.descripcion || filas[lineaActiva].it.inventario_id}».`);
     const destino = lineaActiva != null && filas[lineaActiva] ? filas[lineaActiva] : delArticulo.find(f => !f.completa);
     if (!destino) return error(`${delArticulo[0].it.descripcion || idArt} ya tiene conformidad.`);
+    if (destino.esLlanta) return error('Las llantas se entregan por código de fuego: escanea el código de la llanta o elígelo en su línea.');
     if (destino.completa) return error('Esa línea ya tiene conformidad.');
     // Lo máximo que se puede confirmar en la línea: lo pedido, o lo que hay en el sistema si es menos
     const falta = Math.min(destino.cant, destino.stock ?? Infinity) - destino.c.recogido;
@@ -275,13 +295,15 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
     const parciales = conformes.filter(f => !f.completa);
     const cantidades: Record<string, number> = {};
     for (const f of parciales) cantidades[String(f.it.id)] = f.c.recogido;
+    const llantasPorItem: Record<string, string[]> = {};
+    for (const f of conformes) if (f.esLlanta && f.sel.length) llantasPorItem[String(f.it.id)] = f.sel;
     const sinEntrega = items.length - conformes.length;
     const mensaje = !todoCompleto
       ? <>¿Despachar <strong>{conformes.length} de {items.length}</strong> artículos de la salida <strong>{salida.id}</strong>?<br />
         {parciales.length > 0 && <span>{parciales.map(f => `${f.it.descripcion || f.it.inventario_id}: ${cantidad(f.c.recogido)} de ${cantidad(f.cant)}`).join(' · ')}<br /></span>}
         <span style={{ color: 'var(--accent-ink)', fontWeight: 600 }}>{sinEntrega > 0 ? `${sinEntrega} sin entrega` : ''}{sinEntrega > 0 && parciales.length > 0 ? ' y ' : ''}{parciales.length > 0 ? `${parciales.length} entregados a medias` : ''}: lo que falta quedará pendiente en una nueva salida.</span></>
       : <>¿Despachar todos los artículos de la salida <strong>{salida.id}</strong>?<br />El stock se descuenta ahora y el costo sale de los lotes.</>;
-    onDespachar({ id: salida.id, itemIds: conformes.map(f => f.it.id as number), mensaje, lotes, cantidades });
+    onDespachar({ id: salida.id, itemIds: conformes.map(f => f.it.id as number), mensaje, lotes, cantidades, llantas: llantasPorItem });
   }
 
   const puedeDespachar = pendiente && puedeEditar;
@@ -425,6 +447,9 @@ export function SalidaDetalle({ open, onClose, salida, inventario, puedeEditar, 
                       </div>
                     )}
                     {!pendiente && <small className="sdt-item__costo">{formatSoles(f.cu)} c/u</small>}
+                    {puedeDespachar && f.esLlanta && f.datosLl && (
+                      <SelectorLlantas datos={f.datosLl} cantidad={f.cant} valor={f.sel} onChange={cods => setLlantas(p => ({ ...p, [f.idx]: cods }))} />
+                    )}
                   </div>
                   <div className="sdt-item__cant">
                     <b>{cantidad(f.cant)}</b><small>unid.</small>
