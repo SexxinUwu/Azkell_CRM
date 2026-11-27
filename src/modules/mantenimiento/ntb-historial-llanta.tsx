@@ -1,4 +1,6 @@
-import { CircleAlert } from 'lucide-react';
+import { useState } from 'react';
+import { Camera, CircleAlert } from 'lucide-react';
+import { VisorFotos, type FotoVisor } from '../../core/ui/VisorFotos';
 import { EmptyState, Notice } from '../../core/ui/Display';
 import { PageLoader } from '../../core/ui/Button';
 import { errorMessage } from '../../core/api/client';
@@ -8,7 +10,7 @@ import { useFicha } from './NeumaticoHojaVida';
 // Línea de tiempo de una llanta en el tablero: corta y directa. Lo más reciente arriba (inspecciones y cambios) y, al fondo, el montaje.
 
 type Tono = 'green' | 'amber' | 'red' | 'blue' | 'gray';
-interface Item { clave: string; fecha: string; titulo: string; detalle?: string; meta: string; tono: Tono }
+interface Item { clave: string; fecha: string; titulo: string; detalle?: string; meta: string; tono: Tono; fotos?: string[]; aviso?: string }
 
 const miles = (n: number) => Number(n).toLocaleString('es-PE');
 const dia = (f: string) => formatFechaPe(f.slice(0, 10));
@@ -19,6 +21,7 @@ const bonito = (t: string) => { const s = t.replace(/_/g, ' ').toLowerCase(); re
 
 export function HistorialLlanta({ codigo, limite = 4, onVerTodo }: { codigo: string; limite?: number; onVerTodo?: () => void }) {
   const { data, isLoading, error } = useFicha(codigo);
+  const [visor, setVisor] = useState<{ lista: FotoVisor[]; i: number } | null>(null);
   if (isLoading) return <PageLoader />;
   if (error) return <Notice tone="error" icon={<CircleAlert size={16} />}>{errorMessage(error)}</Notice>;
 
@@ -37,13 +40,17 @@ export function HistorialLlanta({ codigo, limite = 4, onVerTodo }: { codigo: str
   });
 
   // Inspecciones: lo medido y cuánto se lleva gastado desde el alta
+  const primerMontaje = (c?.montajes ?? []).find(m => m.fechaIn)?.fechaIn ?? null;
   (c?.mediciones ?? []).filter(m => m.origen !== 'Alta' && m.fecha).forEach((m, i) => {
     const gastado = c?.inicial != null && m.minimo != null ? Math.round((c.inicial - m.minimo) * 10) / 10 : null;
     items.push({
       clave: `i${i}`, fecha: m.fecha as string, tono: 'blue',
       titulo: `Inspección · ${mm1(m.minimo)}`,
       detalle: [`R1 ${mm1(m.interno)} · R2 ${mm1(m.central)} · R3 ${mm1(m.externo)}`, gastado != null && gastado > 0 ? `${gastado.toFixed(1)} mm gastados` : null].filter(Boolean).join(' · '),
-      meta: `${dia(m.fecha as string)}${m.km != null ? ` · ${miles(m.km)} km` : ''}`,
+      meta: `${dia(m.fecha as string)}${m.km ? ` · ${miles(m.km)} km` : ''}`,
+      fotos: m.fotos,
+      // Posterior al montaje y con km 0: casi seguro es un olvido al digitar
+      aviso: !m.km && primerMontaje && (m.fecha as string).slice(0, 10) > primerMontaje.slice(0, 10) ? 'Km de la unidad sin registrar (0): revisar' : undefined,
     });
   });
 
@@ -76,6 +83,12 @@ export function HistorialLlanta({ codigo, limite = 4, onVerTodo }: { codigo: str
               <span className="ntb-linea__titulo">{x.titulo}{i === 0 && items.length > 1 && <em className="ntb-linea__actual">Más reciente</em>}</span>
               {x.detalle && <span className="ntb-linea__detalle">{x.detalle}</span>}
               <span className="ntb-linea__meta">{x.meta}</span>
+              {x.aviso && <span className="ntb-linea__aviso">{x.aviso}</span>}
+              {x.fotos && x.fotos.length > 0 && (
+                <button type="button" className="ntb-linea__fotos" onClick={() => setVisor({ lista: x.fotos!.map((url, n) => ({ url, titulo: `${x.titulo} · foto ${n + 1}` })), i: 0 })}>
+                  <Camera size={13} /> {x.fotos.length === 1 ? 'Ver foto' : `Ver ${x.fotos.length} fotos`}
+                </button>
+              )}
             </div>
           </li>
         ))}
@@ -83,6 +96,7 @@ export function HistorialLlanta({ codigo, limite = 4, onVerTodo }: { codigo: str
       {ocultos > 0 && onVerTodo && (
         <button type="button" className="ntb-linea__todo" onClick={onVerTodo}>Ver historial completo ({items.length} registros)</button>
       )}
+      <VisorFotos open={!!visor} onClose={() => setVisor(null)} fotos={visor?.lista ?? []} indiceInicial={visor?.i ?? 0} titulo="Fotos de la inspección" />
     </>
   );
 }
