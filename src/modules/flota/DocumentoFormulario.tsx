@@ -116,7 +116,9 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
     try {
       if (esCustom) {
         if (!nombreTipo) { setError('Escribe el nombre del documento.'); haptic('warning'); return; }
-        const { emision, vencimiento } = perso;
+        // El TIVE no vence: nunca lleva fecha de vencimiento
+        const emision = perso.emision;
+        const vencimiento = seleccion === TIVE ? '' : perso.vencimiento;
         if (emision && vencimiento && vencimiento < emision) { setErrCampo({ vencimiento: 'El vencimiento es anterior a la emisión.' }); haptic('warning'); return; }
         const url = archivo ? await subirArchivoDocumento(archivo) : (personalizado?.url ?? null);
         await guardarDocumentoPersonalizado({
@@ -169,12 +171,16 @@ export function DocumentoFormulario({ placa: placaInicial, prefijo: prefijoInici
             <Field label="N° de constancia">
               {p => <TextInput {...p} value={perso.constancia} onChange={e => setPerso(x => ({ ...x, constancia: e.target.value }))} />}
             </Field>
-            <Field label="Emisión">
+            <Field label={seleccion === TIVE ? 'Fecha del título' : 'Emisión'}>
               {p => <TextInput {...p} type="date" value={perso.emision} onChange={e => setPerso(x => ({ ...x, emision: e.target.value }))} />}
             </Field>
-            <Field label="Vencimiento" error={errCampo.vencimiento} hint="Opcional: sin fecha, el documento queda permanente">
-              {p => <TextInput {...p} type="date" value={perso.vencimiento} onChange={e => setPerso(x => ({ ...x, vencimiento: e.target.value }))} />}
-            </Field>
+            {seleccion === TIVE
+              ? <Notice tone="neutral">El TIVE no vence: solo se registra la fecha del título.</Notice>
+              : (
+                <Field label="Vencimiento" error={errCampo.vencimiento} hint="Opcional: sin fecha, el documento queda permanente">
+                  {p => <TextInput {...p} type="date" value={perso.vencimiento} onChange={e => setPerso(x => ({ ...x, vencimiento: e.target.value }))} />}
+                </Field>
+              )}
             <Field label="Costo / Pago (S/)">
               {p => <TextInput {...p} inputMode="decimal" value={perso.costo} onChange={e => setPerso(x => ({ ...x, costo: e.target.value }))} />}
             </Field>
