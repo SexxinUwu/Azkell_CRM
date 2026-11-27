@@ -612,7 +612,7 @@ app.use('/app/assets', (req, res) => {
 app.get('/app/assets-lista', (req, res) => {
     try {
         const dir = path.join(DIST_APP, 'assets');
-        const archivos = fs.existsSync(dir) ? fs.readdirSync(dir).filter(n => /.(js|mjs|css|woff2)$/i.test(n)).sort() : [];
+        const archivos = fs.existsSync(dir) ? fs.readdirSync(dir).filter(n => /\.(js|mjs|css|woff2)$/i.test(n) && !/^tesseract-core/i.test(n)).sort() : [];
         const version = crypto.createHash('md5').update(archivos.join('|')).digest('hex').slice(0, 16);
         res.set('Cache-Control', 'no-store').json({ version, archivos });
     } catch (e) { res.status(500).json({ error: 'No se pudo listar' }); }
