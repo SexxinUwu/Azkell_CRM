@@ -302,14 +302,7 @@ button.ntb-pos { cursor: pointer; }
 .ntb-sec__derecha { font-size: 0.75rem; font-weight: 700; color: var(--accent-ink, var(--accent)); white-space: nowrap; }
 .ntb-linea__actual { margin-left: 8px; padding: 1px 7px; border-radius: 999px; font-style: normal; font-size: 0.625rem; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; background: var(--accent-tint, var(--fill)); color: var(--accent-ink, var(--accent)); vertical-align: middle; }
 
-/* Cambio estimado, aviso de km 0 y fotos en la línea de tiempo */
-.ntb-cambio { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; padding: var(--s-3); border-radius: var(--r-md); background: var(--fill-subtle); }
-.ntb-cambio dd, .ntb-cambio dt { margin: 0; }
-.ntb-cambio__chip { padding: 3px 10px; border-radius: 999px; font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; }
-.ntb-cambio__chip--green { background: var(--green-tint); color: var(--green-ink); }
-.ntb-cambio__chip--amber { background: var(--amber-tint); color: var(--amber-ink); }
-.ntb-cambio__chip--red { background: var(--red-tint); color: var(--red-ink); }
-.ntb-cambio__km { font-size: 1.0625rem; letter-spacing: -0.01em; }
+/* Aviso de km 0 y fotos en la línea de tiempo */
 .ntb-det__aviso, .ntb-linea__aviso { color: var(--amber-ink); font-size: 0.75rem; font-weight: 700; }
 .ntb-linea__aviso { display: block; }
 .ntb-linea__fotos { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; padding: 2px 8px; border: 0; border-radius: 999px; background: var(--fill); color: var(--label-2); font: inherit; font-size: 0.75rem; font-weight: 600; cursor: pointer; }

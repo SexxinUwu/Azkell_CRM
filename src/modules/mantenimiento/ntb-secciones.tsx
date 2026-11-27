@@ -3,16 +3,12 @@ import { formatFechaPe } from '../../core/lib/format';
 import { useFicha } from './NeumaticoHojaVida';
 import { RemanenteChip, VidaChip, remanenteMinimo } from './ntb-llanta';
 import type { LlantaTablero } from './neumaticos-tablero-tipos';
-import { estimarCambio, MM_RETEN, type NivelCambio } from './neumaticosVida';
 
 // Panel «Detalles de neumático» del tablero, en tres secciones: al montar, datos del neumático y última inspección (con su fecha).
 
 const miles = (n: number | null | undefined) => (n == null ? '—' : Number(n).toLocaleString('es-PE'));
 const fecha = (f: string | null | undefined) => (f ? formatFechaPe(f.slice(0, 10)) : '—');
 const mmTexto = (n: number | null | undefined) => (n == null ? '—' : `${n.toFixed(1)} mm`);
-/** Estimaciones: se redondean a la centena (no tiene sentido prometer el último kilómetro) */
-const aprox = (n: number) => (Math.round(n / 100) * 100).toLocaleString('es-PE');
-const ETIQUETA_NIVEL: Record<NivelCambio, string> = { green: 'Va bien', amber: 'Cambio próximo', red: 'Cambiar ya' };
 
 function Dato({ etiqueta, children, ancho }: { etiqueta: string; children: ReactNode; ancho?: boolean }) {
   return <div className={ancho ? 'ntb-det__erres' : undefined}><dt>{etiqueta}</dt><dd>{children}</dd></div>;
@@ -48,10 +44,6 @@ export function DetalleSecciones({ llanta, grupo, placa, posicion, ubicacion }: 
 
   // Una inspección posterior al montaje con km 0 casi seguro es un olvido al digitar: daría un ritmo de desgaste falso
   const kmSinRegistrar = !!ultima && (ultima.km == null || ultima.km === 0) && !!fechaMontaje && !!ultima.fecha && ultima.fecha.slice(0, 10) > fechaMontaje.slice(0, 10);
-  const estimacion = estimarCambio({
-    inicial: c?.inicial ?? null, minimoUltima: ultima?.minimo ?? null, kmUltima: ultima?.km ?? null,
-    kmMontaje: kmMontaje, kmRecorridos: llanta.km_recorridos ?? null,
-  });
   const minimo = ultima?.minimo ?? remanenteMinimo(llanta);
   const r = ultima ? [ultima.interno, ultima.central, ultima.externo] : [llanta.r1 ?? null, llanta.r2 ?? null, llanta.r3 ?? null];
 
@@ -103,33 +95,6 @@ export function DetalleSecciones({ llanta, grupo, placa, posicion, ubicacion }: 
           <Dato etiqueta="Inspección" ancho>Esta llanta todavía no tiene inspecciones.</Dato>
         )}
       </Seccion>
-      {/* 4. Cambio estimado: cuánto le queda hasta sacarla (retén) */}
-      {enUnidad && (
-        <Seccion titulo="Cambio estimado" derecha={`Retén a ${MM_RETEN} mm`}>
-          {estimacion.ok ? (
-            <>
-              <div className="ntb-cambio ntb-det__erres">
-                <span className={`ntb-cambio__chip ntb-cambio__chip--${estimacion.nivel}`}>{ETIQUETA_NIVEL[estimacion.nivel]}</span>
-                <strong className="ntb-cambio__km">
-                  {estimacion.restantesHoy <= 0 ? 'Ya llegó al retén' : `≈ ${aprox(estimacion.restantesHoy)} km restantes`}
-                </strong>
-              </div>
-              <Dato etiqueta="Ritmo de desgaste">{Math.round(estimacion.kmPorMm).toLocaleString('es-PE')} km por mm</Dato>
-              <Dato etiqueta={`Vida total estimada (${c?.inicial ?? '—'} → ${estimacion.reten} mm)`}>{aprox(estimacion.vidaTotalKm)} km</Dato>
-              <Dato etiqueta="Km recorridos">{miles(llanta.km_recorridos)}</Dato>
-              <Dato etiqueta="Faltan hasta el retén">{mmTexto(estimacion.mmHastaReten)}</Dato>
-              <Dato etiqueta="Cómo se calculó" ancho>
-                <span className="ntb-det__nota">
-                  Ritmo = {miles(estimacion.kmTramo)} km ÷ {estimacion.mmGastados.toFixed(1)} mm gastados (inspección del {fecha(ultima?.fecha)}).
-                  Vida total = ({c?.inicial ?? '—'} − {estimacion.reten}) × ritmo. Restan = vida total − km recorridos. Estimación lineal: supone un desgaste parejo; se recalcula en cada inspección.
-                </span>
-              </Dato>
-            </>
-          ) : (
-            <Dato etiqueta="Estimación" ancho><span className="ntb-det__nota">{estimacion.motivo}</span></Dato>
-          )}
-        </Seccion>
-      )}
     </>
   );
 }

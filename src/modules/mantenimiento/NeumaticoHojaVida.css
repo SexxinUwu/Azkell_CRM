@@ -194,3 +194,12 @@
 .nhv-coc__tabla { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
 .nhv-coc__tabla th { text-align: left; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--label-2); padding: 6px 8px; border-bottom: 0.5px solid var(--separator); white-space: nowrap; }
 .nhv-coc__tabla td { padding: 6px 8px; border-bottom: 0.5px solid var(--separator); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Kilometraje proyectado: las dos fórmulas de la empresa */
+.nhv-formulas { display: flex; flex-direction: column; gap: var(--s-3); }
+.nhv-formula { display: grid; grid-template-columns: minmax(110px, 0.7fr) 1.4fr 1.2fr auto; align-items: baseline; gap: var(--s-3); padding: var(--s-3) var(--s-4); border-radius: var(--r-md); background: var(--fill-subtle); }
+.nhv-formula__nombre { font-weight: 800; }
+.nhv-formula__texto { font-family: var(--font-mono); font-size: 0.8125rem; color: var(--label-2); }
+.nhv-formula__cuenta { font-family: var(--font-mono); font-size: 0.875rem; }
+.nhv-formula__resultado { font-size: 1.125rem; text-align: right; white-space: nowrap; }
+@media (max-width: 760px) { .nhv-formula { grid-template-columns: 1fr; gap: 4px; } .nhv-formula__resultado { text-align: left; } }
