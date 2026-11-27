@@ -9,6 +9,7 @@ import { fechaHoraTexto, useLineaTiempo } from './ntb-api';
 const ETIQUETAS: Record<string, { texto: string; tono: 'green' | 'amber' | 'red' | 'blue' | 'gray' }> = {
   ALTA: { texto: 'Alta en almacén', tono: 'gray' },
   INSTALACION: { texto: 'Montada en unidad', tono: 'green' },
+  ROTACION: { texto: 'Rotada de posición', tono: 'blue' },
   RETIRO_REENCAUCHE: { texto: 'Enviada a reencauche', tono: 'amber' },
   RETIRO_DESECHO: { texto: 'Dada de baja', tono: 'red' },
   RETORNO_REENCAUCHE: { texto: 'Retorno de reencauche', tono: 'blue' },
