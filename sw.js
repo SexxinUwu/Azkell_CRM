@@ -1,13 +1,19 @@
 // v55: sale /app del service worker y descarta lo que quedó guardado (archivos de compilación que ya no existen)
-const CACHE_NAME = 'azkell-fleet-v63';
+const CACHE_NAME = 'azkell-fleet-v64';
 const STATIC_CACHE = 'azkell-libs-v2';
 // Fotos de artículos (S3): la URL firmada cambia en cada consulta, por eso se guardan por su ruta sin la firma
 const IMG_CACHE = 'azkell-img-v1';
 const IMG_MAX = 600;
 // Pantalla nueva (/app) para usarla sin señal: archivos con hash y una copia del HTML de la última carga
 const APP_CACHE = 'azkell-app-v3';
-const APP_ASSETS_MAX = 300;
+const APP_ASSETS_MAX = 900; // toda la compilación (la app se precarga completa para navegarla sin internet)
 const APP_SHELL = '/app/__shell';
+// Datos de la API (solo lecturas GET en JSON): la última respuesta de cada consulta, para seguir viendo la app sin internet.
+// Se borran al cerrar sesión (mensaje 'limpiar-datos'): en un equipo compartido no debe quedar nada de la sesión anterior.
+const DATOS_CACHE = 'azkell-datos-v1';
+const DATOS_MAX = 600;
+// Lo que nunca se guarda: sesión, avisos en vivo, el agente de etiquetas y el panel de empresas
+const DATOS_NO = /^\/api\/(login|logout|auth\/|eventos|etiquetas|superadmin|sesiones)/i;
 
 // Librerías pesadas
 const LIB_ASSETS = [
@@ -40,7 +46,7 @@ self.addEventListener('install', event => {
 
 // Activar: tomar control inmediato y limpiar versiones viejas
 self.addEventListener('activate', event => {
-  const keep = [CACHE_NAME, STATIC_CACHE, IMG_CACHE, APP_CACHE];
+  const keep = [CACHE_NAME, STATIC_CACHE, IMG_CACHE, APP_CACHE, DATOS_CACHE];
   event.waitUntil(
     caches.keys().then(names =>
       Promise.all(names.map(n => keep.includes(n) ? undefined : caches.delete(n)))
@@ -91,6 +97,39 @@ function appPantalla(request) {
     return resp;
   }).catch(() => caches.open(APP_CACHE).then(c => c.match(clave)).then(copia => copia || Response.error()));
 }
+
+// Lecturas de la API: red primero; si no hay internet (o tarda demasiado y ya hay copia), la última respuesta guardada.
+// La copia sale marcada con X-Azkell-Offline para que la app sepa que está viendo datos guardados.
+function datosApi(request, url) {
+  const clave = new Request(url.origin + url.pathname + url.search);
+  return caches.open(DATOS_CACHE).then(cache => cache.match(clave, { ignoreVary: true }).then(guardada => {
+    const red = fetch(request).then(resp => {
+      if (resp && resp.ok && /json/i.test(resp.headers.get('Content-Type') || '')) {
+        const copia = resp.clone();
+        cache.put(clave, copia).then(() => cache.keys()).then(ks => {
+          if (ks.length > DATOS_MAX) return Promise.all(ks.slice(0, ks.length - DATOS_MAX).map(k => cache.delete(k)));
+        }).catch(() => {});
+      }
+      return resp;
+    });
+    // Con copia guardada no se espera más de 15 s a una red que no responde; sin copia se espera lo normal (hay consultas largas)
+    const conLimite = guardada ? Promise.race([red, new Promise((_, rechazar) => setTimeout(() => rechazar(new Error('NetworkTimeout')), 15000))]) : red;
+    return conLimite.catch(() => {
+      if (guardada) {
+        const h = new Headers(guardada.headers);
+        h.set('X-Azkell-Offline', '1');
+        if (guardada.headers.get('Date')) h.set('X-Azkell-Cached-At', guardada.headers.get('Date'));
+        return guardada.blob().then(b => new Response(b, { status: 200, statusText: 'OK', headers: h }));
+      }
+      return new Response(JSON.stringify({ error: 'Sin conexión a internet' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+    });
+  }));
+}
+
+// Al cerrar sesión la app pide borrar los datos guardados
+self.addEventListener('message', event => {
+  if (event.data && event.data.tipo === 'limpiar-datos') event.waitUntil(caches.delete(DATOS_CACHE));
+});
 
 // Avisos en el teléfono (Web Push): muestra la notificación con el logo de la empresa
 self.addEventListener('push', event => {
@@ -158,8 +197,12 @@ self.addEventListener('fetch', event => {
   // Mapa base (teselas y tipografías de /mapa-ofm): sin Service Worker; las guarda el caché normal del navegador
   if (url.pathname.startsWith('/mapa-ofm/')) return;
 
-  // 1. API → siempre red directa (nunca cachear)
+  // 1. API → las lecturas guardan su última respuesta (ver datosApi); sesión y avisos en vivo, siempre red directa
   if (url.pathname.startsWith('/api/')) {
+    if (!DATOS_NO.test(url.pathname) && !/text\/event-stream/i.test(event.request.headers.get('Accept') || '')) {
+      event.respondWith(datosApi(event.request, url));
+      return;
+    }
     event.respondWith(
       fetch(event.request).catch(() =>
         new Response(JSON.stringify({ error: 'Sin conexión a internet' }), {

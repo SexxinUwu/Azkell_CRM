@@ -59,6 +59,24 @@ export class ApiError extends Error {
 /** Error de red (sin señal, servidor apagado): se puede reintentar más tarde */
 export const isNetworkError = (err: unknown) => err instanceof ApiError && err.status === 0;
 
+// Estado de la red según las propias llamadas: avisa al banner aunque el dispositivo diga que tiene Wi-Fi pero no haya internet.
+// El service worker responde con la última copia guardada (cabecera x-azkell-offline) cuando no hay internet.
+export const EVENTO_SIN_RED = 'azkell:sin-red';
+export const EVENTO_CON_RED = 'azkell:con-red';
+let redCaida = false;
+function avisarRed(caida: boolean) {
+  if (caida === redCaida) return;
+  redCaida = caida;
+  window.dispatchEvent(new Event(caida ? EVENTO_SIN_RED : EVENTO_CON_RED));
+}
+const sinInternet = (res: Response, data?: { error?: string } | null) =>
+  res.headers.get('x-azkell-offline') === '1' || (res.status === 503 && data?.error === 'Sin conexión a internet');
+
+/** Borra del equipo las respuestas de la API guardadas para usar la app sin internet (al cerrar sesión) */
+export function limpiarDatosLocales() {
+  try { navigator.serviceWorker?.controller?.postMessage({ tipo: 'limpiar-datos' }); } catch { /* sin service worker */ }
+}
+
 // Claves que también usa la versión actual (logica.js). Se borran juntas al cerrar sesión.
 const LEGACY_KEYS = ['fleet_user', 'fleet_rol', 'fleet_correo', 'fleet_dni', 'fleet_ultimo_acceso', 'fleet_permisos', 'fleet_token', 'fleet_sesion'];
 
@@ -86,6 +104,7 @@ export const tokenStore = {
       for (const k of [...LEGACY_KEYS, PROFILE_KEY]) localStorage.removeItem(k);
       sessionStorage.removeItem('fleet_rutaActual');
     } catch { /* sin almacenamiento */ }
+    limpiarDatosLocales();
   },
   /** Perfil guardado junto al token */
   getProfile(): unknown {
@@ -135,10 +154,12 @@ export async function api<T>(path: string, { method = 'GET', body, query, header
       body: isBlob || isForm ? (body as Blob | FormData) : body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
+    avisarRed(true);
     throw new ApiError(0, 'No hay conexión con el servidor. Revisa tu conexión a internet.');
   }
 
   const data = await res.json().catch(() => null);
+  avisarRed(sinInternet(res, data));
   if (!res.ok) {
     // Sesión vencida o revocada: se avisa a AuthProvider para volver al login.
     if (res.status === 401 && path !== '/login') avisarSesionVencida();
