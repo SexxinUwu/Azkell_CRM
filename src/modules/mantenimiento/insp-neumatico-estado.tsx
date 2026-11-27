@@ -32,7 +32,7 @@ export const minimoDe = (f: { r1: string; r2: string; r3: string }) => {
 export type AccionPosicion = 'Inspección' | 'Instalación' | 'Cambio' | 'Rotación';
 interface Movimiento { posicion: string | null; accion: AccionPosicion | null; texto: string; /** Observación automática de la fila (ej. «De Posición #2 a Posición #1») */ nota?: string }
 
-export function useInspeccion({ activa, placa, montadas }: { activa: boolean; placa: string; montadas: Montada[] }) {
+export function useInspeccion({ activa, placa, montadas, conGps = true }: { activa: boolean; placa: string; montadas: Montada[]; conGps?: boolean }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const toast = useToast();
@@ -50,7 +50,7 @@ export function useInspeccion({ activa, placa, montadas }: { activa: boolean; pl
   const catalogos = useQuery<{ estados?: string[] }>({ queryKey: ['mant', 'neu-catalogos'], enabled: activa, staleTime: 600_000, queryFn: () => api('/neumaticos/catalogos') });
   const estados = catalogos.data?.estados?.length ? catalogos.data.estados : ['NUEVA', 'RENCAUCHADA'];
   const kmGps = useQuery<{ ok?: boolean; km: number | null; fecha: string | null }>({
-    queryKey: ['mant', 'neu-km-gps', placa, fecha], enabled: activa && !!placa, staleTime: 60_000,
+    queryKey: ['mant', 'neu-km-gps', placa, fecha], enabled: activa && !!placa && conGps, staleTime: 60_000,
     queryFn: () => api(`/neumaticos/km-gps/${encodeURIComponent(placa)}`, { query: { fecha } }),
   });
   const km = kmGps.data?.km != null ? String(kmGps.data.km) : '';
@@ -119,7 +119,7 @@ export function useInspeccion({ activa, placa, montadas }: { activa: boolean; pl
 
   async function guardar() {
     if (!montadas.length) { toast('La unidad no tiene neumáticos montados', 'error'); return; }
-    if (!(Number(km) > 0)) { toast('No hay lectura de GPS del kilometraje de esta unidad: no se puede guardar la inspección', 'error'); return; }
+    if (conGps && !(Number(km) > 0)) { toast('No hay lectura de GPS del kilometraje de esta unidad: no se puede guardar la inspección', 'error'); return; }
     // Se guardan todas las llantas como estén en este momento: las que no se tocaron conservan su última medición
     const incompletas = montadas.filter(m => {
       const f = filaDe(m);
@@ -144,7 +144,7 @@ export function useInspeccion({ activa, placa, montadas }: { activa: boolean; pl
     try {
       const r = await api<{ ok: boolean; id_inspeccion?: string; error?: string }>('/neumaticos/inspecciones', {
         method: 'POST',
-        body: { placa, fecha_inspeccion: fecha, km_vehiculo: Number(km), odometro_km: String(Number(km)), inspector: tecnico.trim(), dias_propuestos: Number(dias) || 30, observaciones: resumenMov, items, llantas_inspeccionadas: items },
+        body: { placa, fecha_inspeccion: fecha, km_vehiculo: Number(km) || 0, odometro_km: String(Number(km) || 0), inspector: tecnico.trim(), dias_propuestos: Number(dias) || 30, observaciones: resumenMov, items, llantas_inspeccionadas: items },
       });
       if (!r.ok) throw new Error(r.error ?? 'No se pudo guardar la inspección');
       toast(`Inspección ${r.id_inspeccion ?? ''} registrada`);
@@ -155,7 +155,7 @@ export function useInspeccion({ activa, placa, montadas }: { activa: boolean; pl
   }
 
   return {
-    fecha, tecnico, km, kmFecha: kmGps.data?.fecha ?? null, kmCargando: kmGps.isLoading, dias, setDias, estados,
+    conGps, fecha, tecnico, km, kmFecha: kmGps.data?.fecha ?? null, kmCargando: kmGps.isLoading, dias, setDias, estados,
     vigentes, filaDe, abierta, abrir: (pos: string) => setAbierta(pos), cerrar: () => setAbierta(null), llantaAbierta, inicialModal, confirmar,
     accionDe, notaDe, registrar, guardar, guardando, movimientos,
     /** El plano muestra lo medido en esta inspección (cambia el color al confirmar) */
@@ -182,7 +182,7 @@ export function InspeccionCabecera({ e }: { e: EstadoInspeccion; placa: string }
       <Button variant="plain" className="ninsp-atras" icon={<ArrowLeft size={16} />} onClick={() => navigate(-1)}>Atrás</Button>
       <Dato etiqueta="Fecha" valor={formatFechaPe(e.fecha)} ancho="9rem" />
       <Dato etiqueta="Técnico" valor={e.tecnico || '—'} ancho="14rem" />
-      <Dato etiqueta={e.kmFecha ? `Kilometraje · GPS del ${formatFechaPe(e.kmFecha)}` : 'Kilometraje · GPS'} valor={kmTexto} ancho="14rem" />
+      {e.conGps && <Dato etiqueta={e.kmFecha ? `Kilometraje · GPS del ${formatFechaPe(e.kmFecha)}` : 'Kilometraje · GPS'} valor={kmTexto} ancho="14rem" />}
       <div className="ninsp-cab__dias">
         <label htmlFor="ninsp-dias">Próxima en</label>
         <input id="ninsp-dias" inputMode="numeric" value={e.dias} onChange={ev => e.setDias(ev.target.value.replace(/\D/g, '').slice(0, 3))} />
@@ -234,7 +234,7 @@ export function InspeccionResumen({ e, montadas }: { e: EstadoInspeccion; montad
       </section>
       <div className="ninsp-pie">
         <span className="t-footnote c-secondary">Toca una llanta (en el plano o en la tabla) para cambiar sus medidas, Psi, estado, observación o fotos. Al guardar se registran todas las llantas como estén en ese momento.</span>
-        <Button variant="primary" size="lg" onClick={() => { void e.guardar(); }} loading={e.guardando} disabled={montadas.length === 0 || !e.km}>Guardar</Button>
+        <Button variant="primary" size="lg" onClick={() => { void e.guardar(); }} loading={e.guardando} disabled={montadas.length === 0 || (e.conGps && !e.km)}>Guardar</Button>
       </div>
     </>
   );

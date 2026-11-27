@@ -700,7 +700,9 @@ module.exports = function (db) {
             const destino = mayus(b.posicion_destino);
             if (!codigo) throw aviso(400, 'El código de la llanta es obligatorio');
             if (!placa || !destino) throw aviso(400, 'Placa y posición de destino son obligatorias');
-            const km = Math.trunc(numeroNoNegativo(b.km, 'Kilometraje', true));
+            // Las unidades sin GPS (carretas, semirremolques) rotan sin kilometraje
+            const sinKm = b.km == null || b.km === '';
+            const km = Math.trunc(numeroNoNegativo(b.km, 'Kilometraje', false));
 
             const resultado = await conTransaccion(pool(req), async (conn) => {
                 const llanta = await bloquearLlanta(conn, codigo);
@@ -721,7 +723,7 @@ module.exports = function (db) {
                 const piezas = [{ id: inst.id, id_neumatico: llanta.id_neumatico, km_in: Number(inst.km_in) || 0, de: origen, a: destino }];
                 if (otra) piezas.push({ id: otra.id, id_neumatico: otra.id_neumatico, km_in: Number(otra.km_in) || 0, de: destino, a: origen });
                 for (const p of piezas) {
-                    if (km < p.km_in) throw aviso(400, `El kilometraje (${km}) no puede ser menor al de montaje de la llanta ${p.id_neumatico} (${p.km_in})`);
+                    if (!sinKm && km < p.km_in) throw aviso(400, `El kilometraje (${km}) no puede ser menor al de montaje de la llanta ${p.id_neumatico} (${p.km_in})`);
                 }
 
                 const fecha = hoyLima();
@@ -1040,9 +1042,14 @@ module.exports = function (db) {
         const salioDeLaUnidad = new Set(retirosDeLaUnidad.map(x => x.id_neumatico));
 
         const [configRows] = await p.query(
-            'SELECT configuracion FROM placas WHERE UPPER(TRIM(placa)) = ? LIMIT 1',
+            'SELECT configuracion, tipo, motora FROM placas WHERE UPPER(TRIM(placa)) = ? LIMIT 1',
             [placa]);
         const configuracion = configRows.length ? (txt(configRows[0].configuracion) || null) : null;
+        // Con GPS: tracto, camión y Thermo King. Las carretas y semirremolques (no motoras) no tienen GPS ni odómetro.
+        const tipoUnidad = configRows.length ? txt(configRows[0].tipo) : '';
+        const motoraUnidad = configRows.length ? txt(configRows[0].motora) : '';
+        const esThermo = /thermo/i.test(tipoUnidad);
+        const conGps = esThermo || !(/carreta|semi|remolque/i.test(tipoUnidad) || /^no/i.test(motoraUnidad));
 
         // Última inspección de la placa: define las llantas de la unidad y sus mediciones (ver services/neumaticos_unidad.js)
         const [ultimas] = await p.query(
@@ -1158,6 +1165,7 @@ module.exports = function (db) {
             ok: true,
             placa,
             configuracion,
+            con_gps: conGps,
             posiciones: [...detalleMontadas.map(({ posicion, llanta }) => ({ posicion, llanta })), ...posicionesVacias.map(posicion => ({ posicion, llanta: null }))]
                 .sort((a, b) => String(a.posicion).localeCompare(String(b.posicion), 'es', { numeric: true })),
             disponibles: enStock

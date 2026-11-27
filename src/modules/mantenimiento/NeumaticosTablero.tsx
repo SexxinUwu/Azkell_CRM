@@ -134,7 +134,7 @@ export function NeumaticosTablero({ inspeccion = false }: { inspeccion?: boolean
   const descarte = useMemo(() => datos?.descarte ?? [], [datos]);
   const montadas = useMemo(() => montadasDe(posiciones), [posiciones]);
   const libres = useMemo(() => posiciones.filter(p => !p.llanta), [posiciones]);
-  const insp = useInspeccion({ activa: inspeccion, placa, montadas });
+  const insp = useInspeccion({ activa: inspeccion, placa, montadas, conGps: !!datos && datos.con_gps !== false });
   const llantasDato = useMemo(() => montadas.map(m => {
     const d = aLlantaDato(m.llanta, m.posicion);
     const h = inspeccion ? insp.medido(m.posicion) : null;
@@ -233,9 +233,9 @@ export function NeumaticosTablero({ inspeccion = false }: { inspeccion?: boolean
 
   async function rotarAutomatico(p: Extract<Propuesta, { clase: 'rotacion' }>) {
     const km = Number(insp.km);
-    if (!(km > 0)) { setAviso({ tono: 'error', texto: 'No hay lectura de GPS del kilometraje de esta unidad: no se puede rotar desde la inspección.' }); return; }
+    if (insp.conGps && !(km > 0)) { setAviso({ tono: 'error', texto: 'No hay lectura de GPS del kilometraje de esta unidad: no se puede rotar desde la inspección.' }); return; }
     try {
-      await ejecutarMovimiento({ clase: 'rotar', codigo: p.llanta.codigo, placa, posicion_destino: p.posicion, km });
+      await ejecutarMovimiento({ clase: 'rotar', codigo: p.llanta.codigo, placa, posicion_destino: p.posicion, km: insp.conGps ? km : null });
       const mensaje = p.ocupante ? `${p.llanta.codigo} pasó a ${p.posicion} y ${p.ocupante.codigo} a ${p.desde}` : `${p.llanta.codigo} pasó de ${p.desde} a ${p.posicion}`;
       toast(mensaje, 'success');
       insp.registrar(p, mensaje);
