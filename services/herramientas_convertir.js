@@ -45,6 +45,14 @@ function ejecutar(comando, args, limiteMs = LIMITE_MS) {
     });
 }
 
+/**
+ * En Linux LibreOffice corre con prioridad baja (nice 10): si alguien convierte un documento grande en hora pico,
+ * la app y la base de datos siguen respondiendo igual. En Windows (desarrollo) se lanza directo.
+ */
+function conPrioridadBaja(comando, args) {
+    return process.platform === 'win32' ? { comando, args } : { comando: 'nice', args: ['-n', '10', comando, ...args] };
+}
+
 // LibreOffice atiende una conversión a la vez (comparten perfil): las demás esperan su turno
 let cola = Promise.resolve();
 function enCola(fn) {
@@ -84,8 +92,10 @@ async function convertirConLibreOffice(buffer, ext, destino) {
         const args = ['--headless', '--norestore', '--nologo', '--nodefault', '--nolockcheck', `-env:UserInstallation=file://${PERFIL_LO.replace(/\\/g, '/')}`];
         if (destino.infiltro) args.push(`--infilter=${destino.infiltro}`);
         args.push('--convert-to', destino.convertTo, '--outdir', carpeta, entrada);
-        const r = await enCola(() => ejecutar(SOFFICE, args));
-        if (r.noExiste) throw error('Este servidor no tiene LibreOffice instalado: la conversión no está disponible.', 501);
+        const { comando, args: argsFinal } = conPrioridadBaja(SOFFICE, args);
+        const r = await enCola(() => ejecutar(comando, argsFinal));
+        // 127 = el programa no existe (con «nice» por delante, el sistema lo informa así en vez de fallar al lanzarlo)
+        if (r.noExiste || r.codigo === 127) throw error('Este servidor no tiene LibreOffice instalado: la conversión no está disponible.', 501);
         if (r.codigo === -2) throw error('La conversión tardó demasiado y se canceló. Prueba con un archivo más pequeño.', 504);
         const salida = path.join(carpeta, `entrada.${destino.salida}`);
         if (!fs.existsSync(salida) || fs.statSync(salida).size === 0) throw error('No se pudo convertir el archivo (puede estar dañado o protegido con contraseña).', 422);
@@ -124,4 +134,4 @@ async function convertir({ buffer, nombre, destino }) {
     return { buffer: salida, mime: d.mime, extension: d.salida };
 }
 
-module.exports = { convertir, estado, DESTINOS, extensionDe };
+module.exports = { convertir, estado, DESTINOS, extensionDe, conPrioridadBaja };
