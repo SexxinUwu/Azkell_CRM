@@ -38,6 +38,8 @@ export interface NeumaticosCenitalProps {
   placa?: string;
   /** Llanta de la unidad que se arrastra en el plano: se mueve la propia llanta del dibujo */
   arrastrando?: { posicion: string; x: number; y: number } | null;
+  /** Sin el número sobre las llantas (inspección): se ve el color de cada neumático */
+  sinNumeros?: boolean;
 }
 
 /** Este equipo puede dibujar en WebGL */
@@ -58,7 +60,7 @@ class RespaldoSeguro extends Component<{ respaldo: ReactNode; children: ReactNod
   render() { return this.state.fallo ? this.props.respaldo : this.props.children; }
 }
 
-export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null, onSelect, sondaRef, arrastreRef, marca = null, camion = false, modo, onModo, plano2d = false, placa, arrastrando = null }: NeumaticosCenitalProps) {
+export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null, onSelect, sondaRef, arrastreRef, marca = null, camion = false, modo, onModo, plano2d = false, placa, arrastrando = null, sinNumeros = false }: NeumaticosCenitalProps) {
   const [soportaWebgl] = useState(webglDisponible);
   const [perdido, setPerdido] = useState(false);
 
@@ -73,7 +75,7 @@ export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null
         <Suspense fallback={respaldo}>
           <Placa3DVista
             placa={placa} configuracion={configuracion} llantas={llantas} activa={activa} sobre={sobre} camion={camion}
-            modo={modo} onModo={onModo} onSelect={onSelect} arrastrando={arrastrando}
+            modo={modo} onModo={onModo} onSelect={onSelect} arrastrando={arrastrando} sinNumeros={sinNumeros}
           />
         </Suspense>
       </RespaldoSeguro>
