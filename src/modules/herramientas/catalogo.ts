@@ -45,7 +45,7 @@ export const HERRAMIENTAS: Herramienta[] = [
   // Optimizar
   { id: 'comprimir', titulo: 'Comprimir PDF', descripcion: 'Reduce el peso para enviarlo por correo o WhatsApp.', categoria: 'optimizar', icono: FileDown, color: '#4caf50', listo: true },
   { id: 'reparar', titulo: 'Reparar PDF', descripcion: 'Recupera las páginas de un PDF dañado.', categoria: 'optimizar', icono: Wrench, color: '#4caf50', listo: true },
-  { id: 'ocr', titulo: 'OCR PDF', descripcion: 'Convierte un escaneo en un PDF con texto seleccionable.', categoria: 'optimizar', icono: ScanText, color: '#4caf50', listo: false, nota: 'Necesita descargar el idioma de lectura (unos 10 MB). Está en preparación.' },
+  { id: 'ocr', titulo: 'OCR PDF', descripcion: 'Convierte un escaneo en un PDF con texto seleccionable.', categoria: 'optimizar', icono: ScanText, color: '#4caf50', listo: true },
   // Convertir a PDF
   { id: 'jpg-a-pdf', titulo: 'JPG a PDF', descripcion: 'Convierte fotos y capturas en un PDF. Corrige las fotos del celular.', categoria: 'a-pdf', icono: FileImage, color: '#f5b400', listo: true },
   { id: 'word-a-pdf', titulo: 'WORD a PDF', descripcion: 'Convierte un documento de Word a PDF.', categoria: 'a-pdf', icono: FileText, color: '#2b6cb0', listo: false, nota: NECESITA_SERVIDOR },
@@ -67,8 +67,8 @@ export const HERRAMIENTAS: Herramienta[] = [
   { id: 'editar', titulo: 'Editar PDF', descripcion: 'Agrega texto, imágenes y formas sobre el PDF.', categoria: 'editar', icono: PenLine, color: '#8e5bd6', listo: false, nota: 'El editor visual está en preparación.' },
   { id: 'formularios', titulo: 'Formularios PDF', descripcion: 'Llena los campos de un formulario PDF.', categoria: 'editar', icono: FormInput, color: '#8e5bd6', listo: true },
   // Seguridad
-  { id: 'desbloquear', titulo: 'Desbloquear PDF', descripcion: 'Quita la contraseña de un PDF.', categoria: 'seguridad', icono: Unlock, color: '#3b6fd6', listo: false, nota: 'Necesita un motor de cifrado dentro del navegador. Está en preparación.' },
-  { id: 'proteger', titulo: 'Proteger PDF', descripcion: 'Ponle contraseña a un PDF.', categoria: 'seguridad', icono: Lock, color: '#3b6fd6', listo: false, nota: 'Necesita un motor de cifrado dentro del navegador. Está en preparación.' },
+  { id: 'desbloquear', titulo: 'Desbloquear PDF', descripcion: 'Quita la contraseña de un PDF.', categoria: 'seguridad', icono: Unlock, color: '#3b6fd6', listo: true },
+  { id: 'proteger', titulo: 'Proteger PDF', descripcion: 'Ponle contraseña a un PDF.', categoria: 'seguridad', icono: Lock, color: '#3b6fd6', listo: true },
   { id: 'firmar', titulo: 'Firmar PDF', descripcion: 'Dibuja tu firma y ponla en el documento.', categoria: 'seguridad', icono: PenTool, color: '#3b6fd6', listo: true },
   { id: 'censurar', titulo: 'Censurar PDF', descripcion: 'Tapa datos sensibles de forma definitiva.', categoria: 'seguridad', icono: EyeOff, color: '#3b6fd6', listo: false, nota: 'El editor visual está en preparación.' },
   { id: 'comparar', titulo: 'Comparar PDF', descripcion: 'Mira qué texto cambió entre dos versiones.', categoria: 'seguridad', icono: GitCompare, color: '#3b6fd6', listo: true },

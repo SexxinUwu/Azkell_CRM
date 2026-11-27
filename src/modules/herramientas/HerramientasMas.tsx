@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CircleAlert, Download } from 'lucide-react';
 import { Button } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
-import { Field, SelectInput, TextInput } from '../../core/ui/Field';
+import { Field, PasswordInput, SelectInput, TextInput } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { ZonaArchivos } from './ZonaArchivos';
 import { SelectorPaginas } from './SelectorPaginas';
@@ -309,6 +309,73 @@ export function FormulariosPdf() {
       )}
       <Accion t={t} etiqueta="Guardar formulario" listo={!!campos && campos.length > 0} onOtra={() => { u.setArchivos([]); setCampos(null); t.limpiar(); }}
         correr={() => t.ejecutar(() => llenarFormulario(u.archivo as File, campos ?? [], aplanar))} />
+    </Cuadro>
+  );
+}
+
+// ─── OCR ───
+export function OcrPdf() {
+  const t = useTarea();
+  const [archivos, setArchivos] = useState<File[]>([]);
+  const [aviso, setAviso] = useState<string | null>(null);
+  return (
+    <Cuadro>
+      <ZonaArchivos tipo="pdf" accept="application/pdf,.pdf" archivos={archivos} onChange={a => { setArchivos(a); t.limpiar(); }} etiqueta="Elegir PDF escaneado" onAviso={setAviso} disabled={t.trabajando} />
+      <Aviso texto={aviso} />
+      <p className="hp-ayuda">Lee el texto de cada página (en español) y lo deja seleccionable y buscable. Tarda unos segundos por página y todo se hace en este equipo.</p>
+      <Accion t={t} etiqueta="Reconocer texto (OCR)" listo={archivos.length > 0} onOtra={() => { setArchivos([]); t.limpiar(); }}
+        correr={() => t.ejecutar(async av => (await import('./motorOcr')).ocrPdf(archivos[0], av))} />
+    </Cuadro>
+  );
+}
+
+// ─── Proteger ───
+export function ProtegerPdf() {
+  const t = useTarea();
+  const [archivos, setArchivos] = useState<File[]>([]);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [clave, setClave] = useState('');
+  const [repite, setRepite] = useState('');
+  const [soloLectura, setSoloLectura] = useState(false);
+  const distinta = repite.length > 0 && clave !== repite;
+  return (
+    <Cuadro>
+      <ZonaArchivos tipo="pdf" accept="application/pdf,.pdf" archivos={archivos} onChange={a => { setArchivos(a); t.limpiar(); }} etiqueta="Elegir archivo PDF" onAviso={setAviso} disabled={t.trabajando} />
+      <Aviso texto={aviso} />
+      {archivos.length > 0 && (
+        <>
+          <div className="hp-opciones">
+            <Field label="Contraseña">{p => <PasswordInput {...p} value={clave} autoComplete="new-password" onChange={e => { setClave(e.target.value); t.limpiar(); }} />}</Field>
+            <Field label="Repite la contraseña" error={distinta ? 'No coincide con la anterior.' : undefined}>{p => <PasswordInput {...p} value={repite} autoComplete="new-password" onChange={e => setRepite(e.target.value)} />}</Field>
+          </div>
+          <label className="hp-diff__ver"><input type="checkbox" checked={soloLectura} onChange={e => setSoloLectura(e.target.checked)} /> Solo lectura: no dejar imprimir, copiar ni editar</label>
+          <Notice tone="neutral" icon={<CircleAlert size={16} />}>Cifrado AES de 256 bits. Si olvidas la contraseña no hay forma de recuperar el archivo: guárdala en un lugar seguro.</Notice>
+        </>
+      )}
+      <Accion t={t} etiqueta="Proteger PDF" listo={archivos.length > 0 && clave.length >= 4 && clave === repite} onOtra={() => { setArchivos([]); setClave(''); setRepite(''); t.limpiar(); }}
+        correr={() => t.ejecutar(async () => (await import('./motorSeguridad')).protegerPdf(archivos[0], clave, soloLectura))} />
+    </Cuadro>
+  );
+}
+
+// ─── Desbloquear ───
+export function DesbloquearPdf() {
+  const t = useTarea();
+  const [archivos, setArchivos] = useState<File[]>([]);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [clave, setClave] = useState('');
+  return (
+    <Cuadro>
+      <ZonaArchivos tipo="pdf" accept="application/pdf,.pdf" archivos={archivos} onChange={a => { setArchivos(a); t.limpiar(); }} etiqueta="Elegir PDF con contraseña" onAviso={setAviso} disabled={t.trabajando} />
+      <Aviso texto={aviso} />
+      {archivos.length > 0 && (
+        <Field label="Contraseña del PDF" hint="Déjala vacía si el PDF abre sin contraseña pero no deja imprimir o copiar.">
+          {p => <PasswordInput {...p} value={clave} autoComplete="off" onChange={e => { setClave(e.target.value); t.limpiar(); }} />}
+        </Field>
+      )}
+      <Notice tone="neutral" icon={<CircleAlert size={16} />}>Solo funciona con archivos tuyos o que tengas permiso de abrir: hace falta conocer la contraseña si el PDF la pide.</Notice>
+      <Accion t={t} etiqueta="Quitar la protección" listo={archivos.length > 0} onOtra={() => { setArchivos([]); setClave(''); t.limpiar(); }}
+        correr={() => t.ejecutar(async () => (await import('./motorSeguridad')).desbloquearPdf(archivos[0], clave))} />
     </Cuadro>
   );
 }

@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import idiomaOcr from './scripts/vite-idioma-ocr.mjs';
 
 // App nueva (React). Vive en src/ y se publica en /app/ junto a la versión actual,
 // servida por el mismo server.js desde dist/app.
@@ -9,7 +10,7 @@ export default defineConfig({
   envDir: '..',
   base: '/app/',
   publicDir: false,
-  plugins: [react()],
+  plugins: [react(), idiomaOcr()],
   build: {
     outDir: '../dist/app',
     emptyOutDir: true,

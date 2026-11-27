@@ -5,7 +5,7 @@ import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { CabeceraHerramientas, IconoHerramienta } from './CabeceraHerramientas';
 import { CATEGORIAS, deCategoria, porId } from './catalogo';
 import { ComprimirPdf, DividirPdf, ImagenAPdf, MarcaAguaPdf, NumerarPdf, OrganizarPdf, PdfAImagen, RotarPdf, UnirPdf } from './Herramientas';
-import { CompararPdf, EliminarPaginas, EscanearAPdf, ExtraerPaginas, FirmarPdf, FormulariosPdf, PdfAMarkdown, RecortarPdf, RepararPdf } from './HerramientasMas';
+import { CompararPdf, DesbloquearPdf, EliminarPaginas, EscanearAPdf, ExtraerPaginas, FirmarPdf, FormulariosPdf, OcrPdf, PdfAMarkdown, ProtegerPdf, RecortarPdf, RepararPdf } from './HerramientasMas';
 import './herramientas.css';
 
 // Pantalla de cada herramienta, por su id del catálogo
@@ -14,7 +14,7 @@ const VISTAS: Record<string, ComponentType> = {
   comprimir: ComprimirPdf, reparar: RepararPdf,
   'jpg-a-pdf': ImagenAPdf, 'pdf-a-jpg': PdfAImagen, 'pdf-a-markdown': PdfAMarkdown,
   rotar: RotarPdf, numerar: NumerarPdf, 'marca-de-agua': MarcaAguaPdf, recortar: RecortarPdf, formularios: FormulariosPdf,
-  firmar: FirmarPdf, comparar: CompararPdf,
+  firmar: FirmarPdf, comparar: CompararPdf, ocr: OcrPdf, proteger: ProtegerPdf, desbloquear: DesbloquearPdf,
 };
 
 const PRIVACIDAD = 'Tus archivos no salen de este equipo: todo se procesa aquí, en tu navegador. No se suben a internet ni pasan por el servidor de Azkell.';
