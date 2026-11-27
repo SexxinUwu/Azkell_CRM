@@ -92,7 +92,9 @@ export function NeumaticosTablero({ inspeccion = false }: { inspeccion?: boolean
   const bloqueoVista = enPlano ? 'Sin permiso para esta acción' : 'Cambia a Plano para mover';
 
   const placas = usePlacasLista();
-  const tablero = useTablero(placa);
+  // En la inspección, «Disponible para uso» muestra solo lo que almacén despachó para esta placa; «Ver otras» muestra el resto del almacén
+  const [verOtras, setVerOtras] = useState(false);
+  const tablero = useTablero(placa, inspeccion && !verOtras);
   const datos = tablero.data;
 
   const [seleccion, setSeleccion] = useState<string | null>(null);
@@ -394,6 +396,16 @@ export function NeumaticosTablero({ inspeccion = false }: { inspeccion?: boolean
             <div className="ntb-col__cab">
               <h2 className="ntb-col__titulo">Disponible para uso ({bodega.length})</h2>
             </div>
+            {inspeccion && (
+              <p className="ntb-asig">
+                {verOtras
+                  ? 'Mostrando también las llantas del almacén sin asignar.'
+                  : `Solo las llantas despachadas por almacén para ${placa || 'esta placa'}.`}{' '}
+                <button type="button" className="ntb-asig__ver" onClick={() => setVerOtras(v => !v)}>
+                  {verOtras ? 'Solo las de esta placa' : `Ver otras del almacén${datos?.disponibles_resumen ? ` (${datos.disponibles_resumen.sin_asignar})` : ''}`}
+                </button>
+              </p>
+            )}
             <SearchField value={busqueda} onChange={setBusqueda} placeholder="Buscar código, marca o medida" />
             <div className="ntb-grid">
               {bodegaFiltrada.map(l => (

@@ -204,6 +204,7 @@ function surcoPromedio(r1, r2, r3) {
 
 const { aviso: avisoCodigo, anioLima, formatearCodigo, asignarCodigosFuego } = require('../services/neumaticos_codigo');
 const { aplicarRetornoReencauche, sinTabla } = require('../services/neumaticos_retorno');
+const asignaciones = require('../services/neumaticos_asignacion');
 
 module.exports = function (db) {
     const router = express.Router();
@@ -493,11 +494,15 @@ module.exports = function (db) {
                     [placa, posicion]);
                 if (ocupada.length) throw aviso(409, `La posición ${posicion} de ${placa} ya tiene una llanta montada (${ocupada[0].id_neumatico})`);
 
+                // Una llanta despachada por almacén para otra placa no se instala aquí: hay que anular esa solicitud y pedirla de nuevo
+                await asignaciones.validarInstalacion(conn, llanta.id_neumatico, placa);
+
                 const fecha = hoyLima();
                 await conn.query(
                     `INSERT INTO neumaticos_instalaciones (id_neumatico, placa, posicion, fecha_in, km_in, usuario)
                      VALUES (?, ?, ?, ?, ?, ?)`,
                     [llanta.id_neumatico, placa, posicion, fecha, km, usuarioDe(req)]);
+                await asignaciones.cerrarAlInstalar(conn, llanta.id_neumatico);
 
                 // Montada: ya no está en almacén
                 await conn.query(
@@ -1013,7 +1018,8 @@ module.exports = function (db) {
     }
 
     // Arma el tablero de una placa. Devuelve el contrato TableroPlaca y el detalle del croquis (con surco central).
-    async function cargarTablero(p, placa) {
+    // soloAsignadas: «Disponible para uso» muestra solo las llantas que almacén despachó para esta placa (por OT)
+    async function cargarTablero(p, placa, { soloAsignadas = false } = {}) {
         const [montadas] = await p.query(
             `SELECT i.placa, i.posicion, i.km_in, DATE_FORMAT(i.fecha_in, '%Y-%m-%d') AS fecha_in,
                     h.id_neumatico, COALESCE(h.codigo_llanta, h.id_neumatico) AS codigo,
@@ -1163,6 +1169,21 @@ module.exports = function (db) {
             };
         };
 
+        // Llantas despachadas por almacén: una asignada a otra placa no se ofrece aquí (solo puede instalarse en la suya)
+        const [asigRows] = await p.query("SELECT id_neumatico, UPPER(TRIM(placa)) AS placa, ticket_ot, salida_id FROM neumaticos_asignaciones WHERE estado = 'asignada'").catch(() => [[]]);
+        const asigDe = new Map((asigRows || []).map(a => [a.id_neumatico, a]));
+        const disponiblesTodas = enStock
+            // Solo las llantas con código de fuego pueden ir a una unidad; sin código están en su propia situación
+            .filter(f => f.estado_ciclo === 'en_almacen' && ALMACENES_INSTALAR.includes(Number(f.almacen_id)) && txt(f.codigo_fuego));
+        const aEstaPlaca = f => { const a = asigDe.get(f.id_neumatico); return !!a && (!a.placa || a.placa === placa); };
+        const deOtraPlaca = f => { const a = asigDe.get(f.id_neumatico); return !!a && !!a.placa && a.placa !== placa; };
+        const resumenDisponibles = {
+            asignadas_a_placa: disponiblesTodas.filter(aEstaPlaca).length,
+            sin_asignar: disponiblesTodas.filter(f => !asigDe.has(f.id_neumatico)).length,
+            de_otras_placas: disponiblesTodas.filter(deOtraPlaca).length,
+        };
+        const conAsignacion = f => { const l = aLlanta(f); const a = asigDe.get(f.id_neumatico); return a && (!a.placa || a.placa === placa) ? { ...l, asignacion: { ot: a.ticket_ot || null, salida: a.salida_id } } : l; };
+
         const tablero = {
             ok: true,
             placa,
@@ -1171,10 +1192,8 @@ module.exports = function (db) {
             psi_defecto: psiDefecto,
             posiciones: [...detalleMontadas.map(({ posicion, llanta }) => ({ posicion, llanta })), ...posicionesVacias.map(posicion => ({ posicion, llanta: null }))]
                 .sort((a, b) => String(a.posicion).localeCompare(String(b.posicion), 'es', { numeric: true })),
-            disponibles: enStock
-                // Solo las llantas con código de fuego pueden ir a una unidad; sin código están en su propia situación
-                .filter(f => f.estado_ciclo === 'en_almacen' && ALMACENES_INSTALAR.includes(Number(f.almacen_id)) && txt(f.codigo_fuego))
-                .map(aLlanta),
+            disponibles: disponiblesTodas.filter(f => !deOtraPlaca(f) && (!soloAsignadas || aEstaPlaca(f))).map(conAsignacion),
+            disponibles_resumen: resumenDisponibles,
             reforma: enStock.filter(f => f.estado_ciclo === 'en_reencauche' && salioDeLaUnidad.has(f.id_neumatico)).map(aLlanta),
             descarte: enStock.filter(f => f.estado_ciclo === 'desechado' && salioDeLaUnidad.has(f.id_neumatico)).map(aLlanta),
         };
@@ -1258,8 +1277,23 @@ module.exports = function (db) {
             if (!tienePermiso(req, PERMISO_VER, 'l')) throw aviso(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
             const placa = mayus(req.params.placa);
             if (!placa) throw aviso(400, 'La placa es obligatoria');
-            const { tablero } = await cargarTablero(pool(req), placa);
+            const { tablero } = await cargarTablero(pool(req), placa, { soloAsignadas: req.query.asignadas === '1' });
             res.json(tablero);
+        } catch (err) {
+            responder(res, err);
+        }
+    });
+
+    // GET /api/neumaticos/asignaciones-pendientes -> llantas despachadas por almacén que aún no se instalan (con los días que llevan)
+    router.get('/asignaciones-pendientes', async (req, res) => {
+        try {
+            if (!tienePermiso(req, PERMISO_VER, 'l')) throw aviso(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
+            const [filas] = await pool(req).query(
+                `SELECT a.id, COALESCE(h.codigo_llanta, h.id_neumatico) AS codigo, h.marca, h.modelo, h.medida, a.placa, a.ticket_ot, a.salida_id,
+                        DATE_FORMAT(a.created_at, '%Y-%m-%d %H:%i') AS despachada_en, DATEDIFF(CURDATE(), DATE(a.created_at)) AS dias
+                 FROM neumaticos_asignaciones a INNER JOIN neumaticos_hoja_vida h ON h.id_neumatico = a.id_neumatico
+                 WHERE a.estado = 'asignada' ORDER BY a.created_at ASC`);
+            res.json({ ok: true, data: filas, dias_alerta: 7 });
         } catch (err) {
             responder(res, err);
         }

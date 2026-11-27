@@ -33,12 +33,13 @@ export function tituloLlanta(l: Pick<LlantaTablero, 'marca' | 'modelo' | 'medida
   return [l.marca, l.modelo, l.medida].filter(Boolean).join(' · ') || 'Sin marca ni medida';
 }
 
-export function useTablero(placa: string) {
+/** `soloAsignadas`: «Disponible para uso» trae solo las llantas que almacén despachó para esa placa (inspección) */
+export function useTablero(placa: string, soloAsignadas = false) {
   return useQuery<TableroPlaca>({
-    queryKey: ['mant', 'neumaticos-tablero', placa],
+    queryKey: ['mant', 'neumaticos-tablero', placa, soloAsignadas],
     enabled: !!placa,
     queryFn: async () => {
-      const r = await api<TableroPlaca & { error?: string }>(`/neumaticos/tablero/${encodeURIComponent(placa)}`);
+      const r = await api<TableroPlaca & { error?: string }>(`/neumaticos/tablero/${encodeURIComponent(placa)}${soloAsignadas ? '?asignadas=1' : ''}`);
       if (r.ok === false) throw new Error(r.error ?? 'No se pudo cargar el tablero');
       return r;
     },

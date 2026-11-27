@@ -238,6 +238,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
     const { audit: auditar, actorFrom: actorDe, diff } = require('../services/auditoria');
 const { asignarServicioAOT } = require('../services/ot_servicios');
 const lotesInv = require('../services/almacen_lotes');
+const asigLlantas = require('../services/neumaticos_asignacion');
 const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
 
     function getDb(req) {
@@ -892,6 +893,16 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
     // ¿La base ya tiene la columna vida_inicial? (migración 13): sin ella, el artículo se guarda como antes
     const tieneVidaInicial = (tdb) => new Promise(resolve => tdb.query(
         "SHOW COLUMNS FROM neumaticos_articulo LIKE 'vida_inicial'", (err, rows) => resolve(!err && !!rows && rows.length > 0)));
+
+    // Llantas que almacén puede despachar de un artículo (con código de fuego, en un almacén de uso y sin asignar). sin_codigo: las que aún no tienen código.
+    router.get('/llantas-disponibles/:inventario_id', async (req, res) => {
+        try {
+            const r = await asigLlantas.candidatasDeArticulo(promesa(getDb(req)), req.params.inventario_id);
+            res.json({ ok: true, ...r });
+        } catch (err) {
+            res.status(500).json({ ok: false, error: err.message });
+        }
+    });
 
     // Lectura de los datos de la llanta de un artículo (para el formulario de inventario)
     router.get('/neumaticos-articulo/:id', (req, res) => {
@@ -2856,6 +2867,9 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
             return res.status(400).json({ error: 'Solo se pueden solicitar artículos (INV). Quita los servicios: ' + servicios.map(d => d.inventario_id).join(', ') });
         }
 
+        // Las llantas no salen en una salida directa: se piden con una solicitud (OT) y se despachan eligiendo su código de fuego
+        asigLlantas.nombresDeLlantas(promesa(targetDb), items).then(llantasEnSalida => {
+        if (llantasEnSalida.length) return res.status(400).json({ error: 'Las llantas se despachan por código de fuego: pídelas con una solicitud de la OT y despáchalas desde Salidas (' + llantasEnSalida.join(', ') + ').' });
         // Sin existencias no sale nada (la salida nace ya despachada, así que aquí es el único control de stock)
         validarStockSalida(targetDb, items, null, (errStk, faltan) => {
             if (errStk) return res.status(500).json({ error: errStk.message });
@@ -2873,6 +2887,7 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
                 crearSalida();
             }
         });
+        }).catch(eLl => res.status(500).json({ error: eLl.message }));
 
         // Costo promedio ponderado del inventario para cada repuesto (S/); luego se crea la salida con ese costo
         function costearItemsSalida(lista, cb) {
@@ -2959,6 +2974,8 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
                     if (err) return res.status(500).json({ error: err.message });
                     if (!result.affectedRows) return res.status(404).json({ error: 'No encontrado' });
                     lotesInv.devolverSalida(promesa(targetDb), id).catch(eLote => console.error('[lotes anular salida]', eLote.message));
+                    // Las llantas asignadas a esta salida vuelven a estar disponibles (las ya instaladas no se tocan)
+                    asigLlantas.liberarDeSalida(promesa(targetDb), id, `Salida anulada: ${motivoFinal}`).catch(eAsig => console.error('[liberar llantas anular]', eAsig.message));
                     if (typeof logAudit === 'function' && (req.body && req.body.usuario)) { logAudit((req.body && req.body.usuario), req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 });
         } else if (accion === 'despachar') {
@@ -3065,13 +3082,19 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
                 const lotesElegidos = (req.body && req.body.lotes && typeof req.body.lotes === 'object') ? req.body.lotes : {};
                 const detallesLotes = aDespachar.map(r => ({ detalle_id: r.detalle_id, inventario_id: r.inv_id || r.inventario_id, cantidad: Number(r.cantidad) || 0, descripcion: r.descripcion }));
                 // Costea con lotes lo despachado y recién entonces responde; si los lotes fallan, el despacho ya hecho se respeta
+                // Llantas: cada una sale con su código de fuego, que queda ligado a la OT y a la placa de la salida
+                let llantasValidadas = [];
                 const costearYResponder = (respuesta) => lotesInv.aplicarDespacho(promesa(targetDb), id, detallesLotes, lotesElegidos)
                     .catch(eLote => console.error('[lotes despacho]', id, eLote.message))
+                    .then(() => asigLlantas.asignarDespacho(promesa(targetDb), id, llantasValidadas, req.body && req.body.usuario)
+                        .catch(eAsig => console.error('[asignación de llantas]', id, eAsig.message)))
                     .then(() => respuesta());
                 return lotesInv.validarElegidos(promesa(targetDb), detallesLotes, lotesElegidos).then(errLote => {
                     if (errLote) return res.status(400).json({ error: errLote });
-                    return continuarDespacho();
-                }).catch(eLote => res.status(500).json({ error: eLote.message }));
+                    // Las líneas que son llantas exigen los códigos de fuego exactos de lo que se entrega
+                    return asigLlantas.validarDespacho(promesa(targetDb), detallesLotes, req.body && req.body.llantas)
+                        .then(v => { llantasValidadas = v; return continuarDespacho(); });
+                }).catch(eLote => res.status(eLote.status || 500).json({ error: eLote.message, ...(eLote.llantas_requeridas ? { llantas_requeridas: eLote.llantas_requeridas } : {}) }));
 
                 function continuarDespacho() {
                 // Proceder con el despacho
@@ -3207,6 +3230,7 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
     router.delete('/salidas/:id', (req, res) => {
         const { id } = req.params;
         lotesInv.devolverSalida(promesa(getDb(req)), id).catch(eLote => console.error('[lotes eliminar salida]', eLote.message));
+        asigLlantas.liberarDeSalida(promesa(getDb(req)), id, 'Salida eliminada').catch(eAsig => console.error('[liberar llantas eliminar]', eAsig.message));
         getDb(req).query('DELETE FROM detalle_salidas_inv WHERE salida_id=?', [id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             getDb(req).query('DELETE FROM salidas_inv WHERE id=?', [id], (err2) => {

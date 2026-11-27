@@ -125,6 +125,29 @@ model NeumaticoInstalacion {
   @@map("neumaticos_instalaciones")
 }
 
+// Llantas despachadas por almacén para una OT, por código de fuego: asignada (sin instalar) → instalada, o liberada si se anula.
+// abierta_id (columna generada) vale el id de la llanta solo mientras está asignada; su índice único impide dos asignaciones abiertas.
+model NeumaticoAsignacion {
+  id                Int       @id @default(autoincrement())
+  id_neumatico      String    @db.VarChar(50)
+  salida_id         String    @db.VarChar(20)
+  detalle_id        Int?
+  ticket_ot         String?   @db.VarChar(30)
+  placa             String?   @db.VarChar(100)
+  estado            String    @default("asignada") @db.VarChar(12)
+  usuario           String?   @db.VarChar(100)
+  created_at        DateTime? @default(now()) @db.Timestamp(0)
+  instalada_en      DateTime? @db.DateTime(0)
+  liberada_en       DateTime? @db.DateTime(0)
+  motivo_liberacion String?   @db.VarChar(200)
+  abierta_id        String?   @unique(map: "uq_neu_asig_abierta") @db.VarChar(50)
+
+  @@index([placa, estado], map: "idx_neu_asig_placa")
+  @@index([salida_id], map: "idx_neu_asig_salida")
+  @@index([ticket_ot], map: "idx_neu_asig_ot")
+  @@map("neumaticos_asignaciones")
+}
+
 // Kardex de cada llanta: ingresos, traslados entre almacenes, instalaciones, retiros, reencauches y desecho.
 model NeumaticoMovimiento {
   id                 Int       @id @default(autoincrement())

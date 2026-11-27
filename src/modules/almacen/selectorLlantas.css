@@ -1,0 +1,22 @@
+/* Elegir los códigos de fuego de las llantas que se despachan */
+.sll { margin-top: var(--s-2); padding: var(--s-3); border-radius: var(--r-md); background: var(--fill-subtle, var(--fill)); display: flex; flex-direction: column; gap: var(--s-2); }
+.sll__cab { margin: 0; font-size: 0.8125rem; display: flex; gap: 8px; align-items: baseline; color: var(--label-2); }
+.sll__cab b { color: var(--label); }
+.sll__ok { color: var(--green-ink); font-weight: 800; }
+.sll__elegidas { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.sll__elegidas li { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border-radius: 999px; background: var(--green-tint, rgba(31, 157, 85, 0.14)); color: var(--green-ink); font-size: 0.8125rem; font-weight: 700; }
+.sll__elegidas button { display: grid; place-items: center; width: 20px; height: 20px; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.08); color: inherit; cursor: pointer; }
+.sll__buscar { display: flex; align-items: center; gap: 8px; }
+.sll__buscar input { flex: 1; min-width: 0; }
+.sll__lista { list-style: none; margin: 0; padding: 0; max-height: 190px; overflow-y: auto; border-radius: var(--r-sm, 10px); background: var(--surface); box-shadow: inset 0 0 0 1px var(--separator); }
+.sll__lista button { width: 100%; display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 9px 12px; border: 0; border-bottom: 1px solid var(--separator); background: transparent; font: inherit; cursor: pointer; text-align: left; }
+.sll__lista li:last-child button { border-bottom: 0; }
+.sll__lista button:hover { background: var(--fill-subtle, var(--fill)); }
+.sll__codigo { font-weight: 800; }
+.sll__dato { font-size: 0.75rem; color: var(--label-3); white-space: nowrap; }
+.sll__vacio { padding: 10px 12px; font-size: 0.8125rem; color: var(--label-3); }
+.sll__falta, .sll__aviso, .sll__nota { margin: 0; display: flex; gap: 6px; align-items: flex-start; font-size: 0.8125rem; line-height: 1.35; }
+.sll__falta { color: var(--red-ink); }
+.sll__aviso { color: var(--amber-ink, #9a5b00); }
+.sll__nota { color: var(--label-3); }
+.sll .mono { font-family: var(--font-mono); }

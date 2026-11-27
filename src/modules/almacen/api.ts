@@ -511,9 +511,10 @@ export async function solicitarMateriales(data: Partial<SalidaInv> & { items: It
 
 /** Despacha los ítems indicados (o todos si la lista va vacía). Lo no despachado pasa a una salida pendiente nueva. */
 /** `lotes`: lotes escaneados en el picking por línea ({ [idLínea]: [{ numero, cantidad }] }); lo que no traiga lote sale por PEPS (el más antiguo primero) */
-export async function despacharSalida(id: number, itemIds: number[], usuario: string, lotes?: Record<string, Array<{ numero: number; cantidad: number }>>, cantidades?: Record<string, number>) {
+/** `llantas`: por línea (id del ítem), los códigos de fuego de las llantas que se entregan (obligatorio en las líneas que son llantas) */
+export async function despacharSalida(id: number, itemIds: number[], usuario: string, lotes?: Record<string, Array<{ numero: number; cantidad: number }>>, cantidades?: Record<string, number>, llantas?: Record<string, string[]>) {
   return api<{ ok?: boolean; parcial?: boolean; nuevo_pendiente_id?: string | number }>(`/almacen/salidas/${id}`, {
-    method: 'PUT', body: { accion: 'despachar', item_ids: itemIds, usuario, ...(lotes && Object.keys(lotes).length ? { lotes } : {}), ...(cantidades && Object.keys(cantidades).length ? { cantidades } : {}) },
+    method: 'PUT', body: { accion: 'despachar', item_ids: itemIds, usuario, ...(lotes && Object.keys(lotes).length ? { lotes } : {}), ...(cantidades && Object.keys(cantidades).length ? { cantidades } : {}), ...(llantas && Object.keys(llantas).length ? { llantas } : {}) },
   });
 }
 

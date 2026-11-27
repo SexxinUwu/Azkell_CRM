@@ -21,6 +21,7 @@ import { ADMIN } from '../../core/auth/permisos';
 import { CorregirEnvioSheet } from './ntl-corregir-envio-sheet';
 import { AltaUnidadNuevaSheet } from './NeumaticosAltaUnidad';
 import { DespacharReformadoraSheet, GenerarOrdenReencaucheSheet } from './NeumaticosReencauche';
+import { AsignacionesPendientes } from './ntl-asignaciones-pendientes';
 
 // Listado de neumáticos: GET /api/neumaticos/listado (contrato en routes/neumaticos-ciclo.js).
 // Cada fila abre la ficha de la llanta (ruta mantenimiento/neumaticos-ficha/:codigo).
@@ -451,6 +452,7 @@ export function NeumaticosListado() {
 
       {isError && <Notice tone="error">{errorMessage(error)}</Notice>}
       {errorExcel && <Notice tone="error">{errorExcel}</Notice>}
+      <AsignacionesPendientes />
 
       <div className="nl-chips" role="group" aria-label="Filtrar por situación">
         {CHIPS.map(c => (
