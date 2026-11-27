@@ -21,7 +21,7 @@ import {
   type LlantaTablero, type PosicionTablero,
 } from './neumaticos-tablero-tipos';
 import { useArrastre, posicionDeEvento, type Destino, type ItemArrastre, type SondaPosicion } from './ntb-arrastre';
-import { ejecutarRegreso, tituloLlanta, useTablero, usePlacasLista, vidaTexto } from './ntb-api';
+import { ejecutarMovimiento, ejecutarRegreso, tituloLlanta, useTablero, usePlacasLista, vidaTexto } from './ntb-api';
 import { createPortal } from 'react-dom';
 import { LlantaPlano, LlantaTile, aLlantaDato } from './ntb-llanta';
 import { LineaTiempo } from './ntb-linea-tiempo';
@@ -199,7 +199,10 @@ export function NeumaticosTablero({ inspeccion = false }: { inspeccion?: boolean
         const origen = montadas.find(m => m.llanta.codigo === item.codigo);
         setEnMano(null);
         if (!origen || origen.posicion === destino.posicion) return;
-        abrirHoja({ clase: 'rotacion', llanta: origen.llanta, desde: origen.posicion, posicion: destino.posicion, ocupante: llantaEnPosicion(destino.posicion) });
+        const rotacion: Propuesta = { clase: 'rotacion', llanta: origen.llanta, desde: origen.posicion, posicion: destino.posicion, ocupante: llantaEnPosicion(destino.posicion) };
+        // En la inspección la rotación es automática: usa el km del GPS y no pide confirmación
+        if (inspeccion) { void rotarAutomatico(rotacion); return; }
+        abrirHoja(rotacion);
         return;
       }
       if (!puedeMover) { setAviso({ tono: 'error', texto: 'No tienes permiso para mover neumáticos.' }); return; }
@@ -225,6 +228,20 @@ export function NeumaticosTablero({ inspeccion = false }: { inspeccion?: boolean
     } else {
       if (!puedeBaja) { setAviso({ tono: 'error', texto: 'No tienes permiso para dar de baja llantas.' }); return; }
       abrirHoja({ clase: 'descarte', llanta: montada.llanta, posicion: montada.posicion });
+    }
+  }
+
+  async function rotarAutomatico(p: Extract<Propuesta, { clase: 'rotacion' }>) {
+    const km = Number(insp.km);
+    if (!(km > 0)) { setAviso({ tono: 'error', texto: 'No hay lectura de GPS del kilometraje de esta unidad: no se puede rotar desde la inspección.' }); return; }
+    try {
+      await ejecutarMovimiento({ clase: 'rotar', codigo: p.llanta.codigo, placa, posicion_destino: p.posicion, km });
+      const mensaje = p.ocupante ? `${p.llanta.codigo} pasó a ${p.posicion} y ${p.ocupante.codigo} a ${p.desde}` : `${p.llanta.codigo} pasó de ${p.desde} a ${p.posicion}`;
+      toast(mensaje, 'success');
+      insp.registrar(p, mensaje);
+      void refrescar();
+    } catch (err) {
+      setAviso({ tono: 'error', texto: errorMessage(err) });
     }
   }
 
@@ -331,7 +348,7 @@ export function NeumaticosTablero({ inspeccion = false }: { inspeccion?: boolean
         eyebrow="Mantenimiento · Neumáticos"
         title={inspeccion ? 'Inspección neumática Nº …….' : 'Tablero de movimientos'}
         subtitle={placa ? `${placa}${cfg && configCodigo ? ` · ${configCodigo} · ${nombreUnidad}` : ''}` : 'Elige una unidad para ver y mover sus neumáticos'}
-        actions={
+        actions={inspeccion && placa ? <LicensePlate plate={placa} size="lg" /> : (
           <PlacaPicker
             id="ntb-placa"
             value={placa}
@@ -339,7 +356,7 @@ export function NeumaticosTablero({ inspeccion = false }: { inspeccion?: boolean
             placeholder="Elige una unidad…"
             onChange={p => navigate(`/mantenimiento/neumaticos-${inspeccion ? 'inspeccion' : 'tablero'}/${encodeURIComponent(p)}`, { replace: inspeccion })}
           />
-        }
+        )}
       />
 
       {inspeccion && <InspeccionCabecera e={insp} placa={placa} />}
