@@ -10,7 +10,8 @@ module.exports = function globalRBAC(req, res, next) {
         '/documentos-flota/presign-read', '/mantenimiento/inspecciones/presign-read', '/mantenimiento/checklist/presign-read', '/mantenimiento/presign-read', '/checklist/presign-read',
         '/presign-read', '/operaciones/conductor-portal', '/tesoreria/liquidaciones-gastos', '/combustible/vales',
         '/guias-remision/pdf-apisunat', '/guias-remision/pdf',
-        '/whatsapp/qr', '/approvals/oc'
+        '/whatsapp/qr', '/approvals/oc',
+        '/herramientas' // Herramientas PDF: las usa cualquier persona con sesión (la ruta exige sesión por su cuenta)
     ];
     // Listas de consulta: exentas solo para leer. Borrar, importar o modificar exige el permiso del módulo
     // (antes, DELETE /conductores/:id o PUT /config-metrica/:placa pasaban sin permiso).

@@ -14,7 +14,7 @@ import {
 
 // Cada herramienta: se eligen los archivos, se ajusta una opción y se procesa en este mismo navegador. Nada se envía a ningún servidor.
 
-function useTarea() {
+export function useTarea() {
   const [trabajando, setTrabajando] = useState(false);
   const [avance, setAvance] = useState<{ hecho: number; total: number } | null>(null);
   const [salida, setSalida] = useState<Salida | null>(null);
@@ -31,7 +31,7 @@ function useTarea() {
   const limpiar = () => { setSalida(null); setError(null); };
   return { trabajando, avance, salida, error, ejecutar, limpiar, setError };
 }
-type Tarea = ReturnType<typeof useTarea>;
+export type Tarea = ReturnType<typeof useTarea>;
 
 /** Resultado: confirma la descarga y deja bajarlo otra vez o empezar de nuevo */
 function Resultado({ t, onOtra }: { t: Tarea; onOtra: () => void }) {
@@ -51,7 +51,7 @@ function Resultado({ t, onOtra }: { t: Tarea; onOtra: () => void }) {
 }
 
 /** Botón de procesar con avance; al terminar muestra el resultado */
-function Accion({ t, etiqueta, listo, onOtra, correr }: { t: Tarea; etiqueta: string; listo: boolean; onOtra: () => void; correr: () => void }) {
+export function Accion({ t, etiqueta, listo, onOtra, correr }: { t: Tarea; etiqueta: string; listo: boolean; onOtra: () => void; correr: () => void }) {
   return (
     <div className="hp-cierre">
       {t.error && <Notice tone="error" icon={<CircleAlert size={16} />}>{t.error}</Notice>}
@@ -64,10 +64,10 @@ function Accion({ t, etiqueta, listo, onOtra, correr }: { t: Tarea; etiqueta: st
   );
 }
 
-const Aviso = ({ texto }: { texto: string | null }) => (texto ? <Notice tone="neutral" icon={<CircleAlert size={16} />}>{texto}</Notice> : null);
+export const Aviso = ({ texto }: { texto: string | null }) => (texto ? <Notice tone="neutral" icon={<CircleAlert size={16} />}>{texto}</Notice> : null);
 
 /** Un PDF elegido, con su cantidad de páginas */
-function useUnPdf() {
+export function useUnPdf() {
   const [archivos, setArchivos] = useState<File[]>([]);
   const [paginas, setPaginas] = useState<number | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -82,9 +82,9 @@ function useUnPdf() {
   }, [archivo]);
   return { archivos, setArchivos, archivo, paginas, aviso, setAviso, errorLectura };
 }
-type UnPdf = ReturnType<typeof useUnPdf>;
+export type UnPdf = ReturnType<typeof useUnPdf>;
 
-function ElegirPdf({ u, disabled }: { u: UnPdf; disabled?: boolean }) {
+export function ElegirPdf({ u, disabled }: { u: UnPdf; disabled?: boolean }) {
   return (
     <>
       <ZonaArchivos tipo="pdf" accept="application/pdf,.pdf" archivos={u.archivos} onChange={u.setArchivos} etiqueta="Elegir archivo PDF" onAviso={u.setAviso} disabled={disabled} />
@@ -95,7 +95,7 @@ function ElegirPdf({ u, disabled }: { u: UnPdf; disabled?: boolean }) {
   );
 }
 
-const Cuadro = ({ children }: { children: ReactNode }) => <div className="hp-herramienta">{children}</div>;
+export const Cuadro = ({ children }: { children: ReactNode }) => <div className="hp-herramienta">{children}</div>;
 
 // ─── Unir ───
 export function UnirPdf() {

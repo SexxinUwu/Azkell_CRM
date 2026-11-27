@@ -24,7 +24,10 @@ ENV NODE_ENV=production
 # Chromium del sistema para el PDF de la OT (puppeteer-core no descarga navegador)
 ENV CHROME_PATH=/usr/bin/chromium
 # curl: para el healthcheck de Coolify
+# LibreOffice (solo los módulos que hacen falta): conversiones de Herramientas PDF (Word, PowerPoint y Excel ↔ PDF).
+# Las fuentes Carlito y Caladea reemplazan a Calibri y Cambria con las mismas medidas, para que el PDF salga igual que el documento.
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates chromium fonts-liberation \
+    libreoffice-writer libreoffice-calc libreoffice-impress libreoffice-draw fonts-dejavu-core fonts-crosextra-carlito fonts-crosextra-caladea \
   && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
