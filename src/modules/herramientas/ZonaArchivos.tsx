@@ -1,9 +1,9 @@
 import { useRef, useState, type DragEvent } from 'react';
-import { ArrowDown, ArrowUp, FileText, Image as ImagenIcono, Upload, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Camera, FileText, Image as ImagenIcono, Upload, X } from 'lucide-react';
 import { MAX_ARCHIVO_MB, tamano } from './motorPdf';
 
 /** Zona para soltar o elegir archivos. Con `ordenable` se pueden subir, bajar y quitar (el orden es el del resultado). */
-export function ZonaArchivos({ archivos, onChange, multiple, accept, tipo, etiqueta, ordenable, disabled, onAviso }: {
+export function ZonaArchivos({ archivos, onChange, multiple, accept, tipo, etiqueta, ordenable, disabled, onAviso, camara }: {
   archivos: File[];
   onChange: (a: File[]) => void;
   multiple?: boolean;
@@ -14,8 +14,11 @@ export function ZonaArchivos({ archivos, onChange, multiple, accept, tipo, etiqu
   ordenable?: boolean;
   disabled?: boolean;
   onAviso?: (msg: string | null) => void;
+  /** Agrega un botón para tomar la foto con la cámara (en el celular abre la cámara trasera) */
+  camara?: boolean;
 }) {
   const entrada = useRef<HTMLInputElement>(null);
+  const foto = useRef<HTMLInputElement>(null);
   const [encima, setEncima] = useState(false);
 
   const valido = (f: File) => (tipo === 'pdf' ? f.type === 'application/pdf' || /\.pdf$/i.test(f.name) : f.type.startsWith('image/') || /\.(jpe?g|png|webp|gif|bmp|avif|heic|heif)$/i.test(f.name));
@@ -45,7 +48,9 @@ export function ZonaArchivos({ archivos, onChange, multiple, accept, tipo, etiqu
         onDragOver={e => { e.preventDefault(); if (!disabled) setEncima(true); }} onDragLeave={() => setEncima(false)} onDrop={soltar}
       >
         <Upload size={28} aria-hidden />
-        <button type="button" className="btn btn--primary" disabled={disabled} onClick={() => entrada.current?.click()}>{etiqueta}</button>
+        <button type="button" className="btn btn--primary" disabled={disabled} onClick={() => (camara ? foto.current : entrada.current)?.click()}>{camara ? <><Camera size={16} /> Tomar foto</> : etiqueta}</button>
+        {camara && <button type="button" className="btn btn--secondary" disabled={disabled} onClick={() => entrada.current?.click()}>{etiqueta}</button>}
+        {camara && <input ref={foto} type="file" hidden accept="image/*" capture="environment" onChange={e => { agregar(e.target.files); e.target.value = ''; }} />}
         <p>o suelta aquí {multiple ? 'los archivos' : 'el archivo'}</p>
         <input ref={entrada} type="file" hidden accept={accept} multiple={multiple} onChange={e => { agregar(e.target.files); e.target.value = ''; }} />
       </div>

@@ -1,6 +1,6 @@
 // Motor de las Herramientas PDF. TODO ocurre en el navegador del usuario: los archivos no se envían a ningún servidor.
 // pdf-lib arma y modifica los PDF; pdf.js los dibuja (miniaturas, PDF a imagen, comprimir); JSZip junta varios resultados.
-import { PDFDocument, StandardFonts, degrees, rgb } from 'pdf-lib';
+import { PDFCheckBox, PDFDocument, PDFDropdown, PDFOptionList, PDFRadioGroup, PDFTextField, StandardFonts, degrees, rgb } from 'pdf-lib';
 import * as pdfjs from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import JSZip from 'jszip';
@@ -136,13 +136,13 @@ export async function rotar(f: File, grados: number, indices: number[] | null): 
 
 // ─── Imagen → PDF ───────────────────────────────────────────────────────────
 
-export interface OpcionesImagenPdf { hoja: 'ajustar' | 'a4' | 'carta'; orientacion: 'auto' | 'vertical' | 'horizontal'; margen: 'sin' | 'pequeno' | 'normal' }
+export interface OpcionesImagenPdf { hoja: 'ajustar' | 'a4' | 'carta'; orientacion: 'auto' | 'vertical' | 'horizontal'; margen: 'sin' | 'pequeno' | 'normal'; filtro?: 'color' | 'gris' | 'documento' }
 
 const HOJAS: Record<'a4' | 'carta', [number, number]> = { a4: [595.28, 841.89], carta: [612, 792] };
 const MARGENES = { sin: 0, pequeno: 18, normal: 36 } as const;
 
 /** Imagen ya orientada (respeta la rotación de las fotos del celular) como PNG o JPG listo para PDF */
-async function imagenParaPdf(f: File): Promise<{ bytes: Uint8Array; png: boolean; w: number; h: number }> {
+async function imagenParaPdf(f: File, filtro: OpcionesImagenPdf['filtro'] = 'color'): Promise<{ bytes: Uint8Array; png: boolean; w: number; h: number }> {
   let bmp: ImageBitmap;
   try { bmp = await createImageBitmap(f, { imageOrientation: 'from-image' }); }
   catch { throw new Error(`«${f.name}» no se pudo abrir como imagen.`); }
@@ -153,6 +153,17 @@ async function imagenParaPdf(f: File): Promise<{ bytes: Uint8Array; png: boolean
   const png = f.type === 'image/png';
   if (!png) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
   ctx.drawImage(bmp, 0, 0);
+  // Escaneo: gris, o «documento» (gris con más contraste y el fondo llevado a blanco)
+  if (filtro === 'gris' || filtro === 'documento') {
+    const datos = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const px = datos.data;
+    for (let i = 0; i < px.length; i += 4) {
+      let v = px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114;
+      if (filtro === 'documento') v = Math.max(0, Math.min(255, ((v - 70) * 255) / (205 - 70)));
+      px[i] = px[i + 1] = px[i + 2] = v;
+    }
+    ctx.putImageData(datos, 0, 0);
+  }
   const w = bmp.width; const h = bmp.height;
   bmp.close();
   const blob = await new Promise<Blob | null>(r => canvas.toBlob(r, png ? 'image/png' : 'image/jpeg', 0.92));
@@ -165,7 +176,7 @@ export async function imagenesAPdf(archivos: File[], op: OpcionesImagenPdf, alAv
   const d = await PDFDocument.create();
   const margen = MARGENES[op.margen];
   for (let i = 0; i < archivos.length; i++) {
-    const im = await imagenParaPdf(archivos[i]);
+    const im = await imagenParaPdf(archivos[i], op.filtro);
     const img = im.png ? await d.embedPng(im.bytes) : await d.embedJpg(im.bytes);
     if (op.hoja === 'ajustar') {
       const p = d.addPage([im.w + margen * 2, im.h + margen * 2]);
@@ -248,7 +259,7 @@ export type NivelCompresion = 'alta' | 'media' | 'baja';
 const NIVELES: Record<NivelCompresion, { dpi: number; jpg: number }> = { alta: { dpi: 150, jpg: 0.8 }, media: { dpi: 110, jpg: 0.65 }, baja: { dpi: 80, jpg: 0.5 } };
 
 /** Reduce el peso volviendo cada página una imagen. Si el resultado no pesa menos, se devuelve el original sin cambios. */
-export async function comprimir(f: File, nivel: NivelCompresion, alAvance?: Avance): Promise<Salida> {
+export async function comprimir(f: File, nivel: NivelCompresion, alAvance?: Avance, forzar = false): Promise<Salida> {
   const { dpi, jpg } = NIVELES[nivel];
   const doc = await abrirParaDibujar(f);
   try {
@@ -265,7 +276,7 @@ export async function comprimir(f: File, nivel: NivelCompresion, alAvance?: Avan
       alAvance?.(i, doc.numPages);
     }
     const bytes = await salida.save();
-    if (bytes.length >= f.size) return { nombre: f.name, blob: f, detalle: 'Este PDF ya está optimizado: no se pudo reducir más, se conserva el original.' };
+    if (!forzar && bytes.length >= f.size) return { nombre: f.name, blob: f, detalle: 'Este PDF ya está optimizado: no se pudo reducir más, se conserva el original.' };
     const ahorro = Math.round((1 - bytes.length / f.size) * 100);
     return comoPdf(bytes, `${sinExt(f.name)}_comprimido.pdf`, `${tamano(f.size)} → ${tamano(bytes.length)} (−${ahorro} %)`);
   } finally { void doc.loadingTask.destroy(); }
@@ -318,6 +329,262 @@ export async function marcaDeAgua(f: File, op: OpcionesMarca): Promise<Salida> {
     p.drawText(texto, { x, y, size: op.tamano, font: fuente, color: COLORES[op.color], opacity: op.opacidad, rotate: degrees(op.angulo) });
   });
   return comoPdf(await doc.save(), `${sinExt(f.name)}_marca.pdf`, `${doc.getPageCount()} páginas`);
+}
+
+// ─── Reparar ────────────────────────────────────────────────────────────────
+
+/**
+ * Reconstruye la tabla de objetos de un PDF que perdió su final (descargas cortadas, archivos truncados): busca cada «N G obj» en el
+ * archivo, ubica el catálogo del documento y escribe una tabla nueva con los desplazamientos reales. Sirve para PDF sin objetos
+ * comprimidos; devuelve null si no se puede (archivo muy grande, sin catálogo o con objetos comprimidos).
+ */
+function reconstruirTabla(bytes: Uint8Array): Uint8Array | null {
+  if (bytes.length > 60 * 1048576) return null;
+  const txt = new TextDecoder('latin1').decode(bytes); // un carácter por byte: las posiciones coinciden con los bytes
+  const inicios: Array<{ num: number; gen: number; pos: number }> = [];
+  const re = /(?:^|[\s>\]])(\d{1,7})[ \t]+(\d{1,5})[ \t]+obj\b/g;
+  for (let m = re.exec(txt); m; m = re.exec(txt)) {
+    const pos = m.index + m[0].indexOf(m[1]);
+    inicios.push({ num: Number(m[1]), gen: Number(m[2]), pos });
+  }
+  if (!inicios.length) return null;
+  // Solo los objetos completos (con su «endobj» antes del siguiente); si un número se repite, vale el último
+  const validos = new Map<number, { gen: number; pos: number; fin: number }>();
+  let finMax = 0;
+  for (let i = 0; i < inicios.length; i++) {
+    const limite = i + 1 < inicios.length ? inicios[i + 1].pos : txt.length;
+    const e = txt.indexOf('endobj', inicios[i].pos);
+    if (e < 0 || e >= limite) continue;
+    validos.set(inicios[i].num, { gen: inicios[i].gen, pos: inicios[i].pos, fin: e + 6 });
+    finMax = Math.max(finMax, e + 6);
+  }
+  const cat = /\/Type\s*\/Catalog\b/.exec(txt);
+  if (!cat) return null;
+  const duenos = inicios.filter(x => x.pos <= cat.index);
+  const raiz = duenos[duenos.length - 1];
+  if (!raiz || !validos.has(raiz.num)) return null;
+  // Si todos los objetos de páginas estuvieran comprimidos no habría «/Type /Page» a la vista
+  if (!/\/Type\s*\/Page\b/.test(txt)) return null;
+  const cuerpo = bytes.slice(0, finMax);
+  const total = Math.max(...validos.keys()) + 1;
+  let tabla = `\nxref\n0 ${total}\n`;
+  const inicioTabla = cuerpo.length + 1;
+  for (let n = 0; n < total; n++) {
+    const o = validos.get(n);
+    tabla += n === 0 || !o ? '0000000000 65535 f \n' : `${String(o.pos).padStart(10, '0')} ${String(o.gen).padStart(5, '0')} n \n`;
+  }
+  tabla += `trailer\n<< /Size ${total} /Root ${raiz.num} ${raiz.gen} R >>\nstartxref\n${inicioTabla}\n%%EOF\n`;
+  const extra = new TextEncoder().encode(tabla);
+  const out = new Uint8Array(cuerpo.length + extra.length);
+  out.set(cuerpo, 0); out.set(extra, cuerpo.length);
+  return out;
+}
+
+/** Reconstruye un PDF dañado: lee lo que se pueda con pdf-lib (rearmando antes la tabla de objetos si hace falta); si no abre, rehace cada página como imagen con pdf.js */
+export async function reparar(f: File, alAvance?: Avance): Promise<Salida> {
+  const base = sinExt(f.name);
+  const bytes = await bytesDe(f);
+  try {
+    const opciones = { ignoreEncryption: true, throwOnInvalidObject: false, updateMetadata: false };
+    let origen: PDFDocument;
+    let reconstruido = false;
+    try { origen = await PDFDocument.load(bytes, opciones); }
+    catch {
+      const arreglado = reconstruirTabla(bytes);
+      if (!arreglado) throw new Error('sin tabla');
+      origen = await PDFDocument.load(arreglado, opciones);
+      reconstruido = true;
+    }
+    const n = origen.getPageCount();
+    if (!n) throw new Error('sin páginas');
+    const d = await PDFDocument.create();
+    let bien = 0;
+    for (let i = 0; i < n; i++) {
+      try { const [p] = await d.copyPages(origen, [i]); d.addPage(p); bien++; } catch { /* esa página no se pudo recuperar */ }
+      alAvance?.(i + 1, n);
+    }
+    if (!bien) throw new Error('ninguna página');
+    return comoPdf(await d.save(), `${base}_reparado.pdf`, `${bien === n ? `${n} páginas recuperadas` : `${bien} de ${n} páginas recuperadas`}${reconstruido ? ' (se reconstruyó la tabla del archivo)' : ''}`);
+  } catch {
+    try {
+      const r = await comprimir(f, 'alta', alAvance, true);
+      return { ...r, nombre: `${base}_reparado.pdf`, detalle: 'Se rehizo cada página como imagen (el texto ya no se puede seleccionar).' };
+    } catch {
+      throw new Error(`«${f.name}» no se pudo reparar: el archivo está demasiado dañado.`);
+    }
+  }
+}
+
+// ─── Recortar ───────────────────────────────────────────────────────────────
+
+export interface MargenesMm { arriba: number; abajo: number; izquierda: number; derecha: number }
+const MM = 72 / 25.4;
+
+/** Quita los márgenes dados (en mm, vistos con la página derecha) de todas las páginas o de las indicadas */
+export async function recortar(f: File, m: MargenesMm, indices: number[] | null): Promise<Salida> {
+  const doc = await abrir(f);
+  const sel = new Set(indices ?? doc.getPageIndices());
+  let mal = 0;
+  doc.getPages().forEach((p, i) => {
+    if (!sel.has(i)) return;
+    const mb = p.getMediaBox();
+    const a = m.arriba * MM, b = m.abajo * MM, l = m.izquierda * MM, r = m.derecha * MM;
+    const rot = (((p.getRotation().angle % 360) + 360) % 360);
+    // Márgenes de lo que se ve → márgenes de la página sin girar
+    const [izq, arr, der, aba] = rot === 90 ? [a, r, b, l] : rot === 180 ? [r, b, l, a] : rot === 270 ? [b, l, a, r] : [l, a, r, b];
+    const w = mb.width - izq - der, h = mb.height - arr - aba;
+    if (w < 20 || h < 20) { mal++; return; }
+    p.setCropBox(mb.x + izq, mb.y + aba, w, h);
+  });
+  if (mal === sel.size) throw new Error('Los márgenes son demasiado grandes: no quedaría nada de la página.');
+  return comoPdf(await doc.save(), `${sinExt(f.name)}_recortado.pdf`, mal ? `${sel.size - mal} páginas recortadas (${mal} quedaron igual: margen demasiado grande)` : `${sel.size} páginas recortadas`);
+}
+
+// ─── Firmar ─────────────────────────────────────────────────────────────────
+
+export interface OpcionesFirma { png: Uint8Array; ancho: number; posicion: 'abajo-derecha' | 'abajo-centro' | 'abajo-izquierda' | 'centro' | 'arriba-derecha' | 'arriba-centro' | 'arriba-izquierda'; paginas: number[] }
+
+/** Pone la firma (imagen PNG con fondo transparente) en las páginas elegidas; `ancho` es el % del ancho de la página */
+export async function firmar(f: File, op: OpcionesFirma): Promise<Salida> {
+  if (!op.paginas.length) throw new Error('Elige en qué páginas va la firma.');
+  const doc = await abrir(f);
+  const img = await doc.embedPng(op.png);
+  const sel = new Set(op.paginas);
+  doc.getPages().forEach((p, i) => {
+    if (!sel.has(i)) return;
+    const { width, height } = p.getSize();
+    const w = (width * op.ancho) / 100;
+    const h = (w * img.height) / img.width;
+    const margen = 36;
+    const x = op.posicion.endsWith('derecha') ? width - w - margen : op.posicion.endsWith('izquierda') ? margen : (width - w) / 2;
+    const y = op.posicion.startsWith('abajo') ? margen : op.posicion.startsWith('arriba') ? height - h - margen : (height - h) / 2;
+    p.drawImage(img, { x, y, width: w, height: h });
+  });
+  return comoPdf(await doc.save(), `${sinExt(f.name)}_firmado.pdf`, `${sel.size} ${sel.size === 1 ? 'página firmada' : 'páginas firmadas'}`);
+}
+
+// ─── Texto: comparar y PDF a Markdown ───────────────────────────────────────
+
+interface LineaTexto { texto: string; tam: number; y: number; pagina: number }
+
+/** Líneas de texto de cada página, de arriba abajo, con el tamaño de letra (sirve para comparar y para detectar títulos) */
+async function lineasDe(f: File, alAvance?: Avance): Promise<LineaTexto[]> {
+  const doc = await abrirParaDibujar(f);
+  try {
+    const out: LineaTexto[] = [];
+    for (let n = 1; n <= doc.numPages; n++) {
+      const p = await doc.getPage(n);
+      const c = await p.getTextContent();
+      const items = (c.items as Array<{ str?: string; transform?: number[]; hasEOL?: boolean }>).filter(it => typeof it.str === 'string' && it.transform);
+      const filas: Array<{ y: number; tam: number; piezas: Array<{ x: number; t: string }> }> = [];
+      for (const it of items) {
+        const t = it.transform as number[];
+        const y = t[5]; const tam = Math.hypot(t[0], t[1]);
+        let fila = filas.find(r => Math.abs(r.y - y) < Math.max(2, tam * 0.35));
+        if (!fila) { fila = { y, tam, piezas: [] }; filas.push(fila); }
+        fila.piezas.push({ x: t[4], t: it.str as string });
+        fila.tam = Math.max(fila.tam, tam);
+      }
+      filas.sort((a, b) => b.y - a.y);
+      for (const r of filas) {
+        const texto = r.piezas.sort((a, b) => a.x - b.x).map(x => x.t).join('').replace(/\s+/g, ' ').trim();
+        if (texto) out.push({ texto, tam: r.tam, y: r.y, pagina: n });
+      }
+      p.cleanup();
+      alAvance?.(n, doc.numPages);
+    }
+    return out;
+  } finally { void doc.loadingTask.destroy(); }
+}
+
+export interface LineaDiff { tipo: 'igual' | 'quitado' | 'agregado'; texto: string; pagina: number }
+
+/** Compara el texto de dos PDF línea por línea (lo que está en A y no en B sale «quitado»; lo que solo está en B, «agregado») */
+export async function compararPdf(a: File, b: File, alAvance?: Avance): Promise<LineaDiff[]> {
+  const [la, lb] = [await lineasDe(a, (h, t) => alAvance?.(h, t * 2)), await lineasDe(b, (h, t) => alAvance?.(t + h, t * 2))];
+  if (!la.length && !lb.length) throw new Error('Ninguno de los dos PDF tiene texto que se pueda comparar (puede ser un escaneo).');
+  if (la.length > 4000 || lb.length > 4000) throw new Error('Los documentos son demasiado largos para compararlos aquí (más de 4000 líneas).');
+  const n = la.length, m = lb.length;
+  const w = m + 1;
+  const T = new Uint16Array((n + 1) * w);
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) T[i * w + j] = la[i].texto === lb[j].texto ? T[(i + 1) * w + j + 1] + 1 : Math.max(T[(i + 1) * w + j], T[i * w + j + 1]);
+  const out: LineaDiff[] = [];
+  let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (la[i].texto === lb[j].texto) { out.push({ tipo: 'igual', texto: la[i].texto, pagina: la[i].pagina }); i++; j++; }
+    else if (T[(i + 1) * w + j] >= T[i * w + j + 1]) { out.push({ tipo: 'quitado', texto: la[i].texto, pagina: la[i].pagina }); i++; }
+    else { out.push({ tipo: 'agregado', texto: lb[j].texto, pagina: lb[j].pagina }); j++; }
+  }
+  while (i < n) { out.push({ tipo: 'quitado', texto: la[i].texto, pagina: la[i].pagina }); i++; }
+  while (j < m) { out.push({ tipo: 'agregado', texto: lb[j].texto, pagina: lb[j].pagina }); j++; }
+  return out;
+}
+
+/** Texto del PDF como Markdown: los títulos se detectan por el tamaño de letra y las viñetas por su símbolo */
+export async function pdfAMarkdown(f: File, alAvance?: Avance): Promise<Salida> {
+  const lineas = await lineasDe(f, alAvance);
+  if (!lineas.length) throw new Error('Este PDF no tiene texto (puede ser un escaneo): no hay nada que convertir.');
+  const tams = lineas.map(l => l.tam).sort((a, b) => a - b);
+  const cuerpo = tams[Math.floor(tams.length / 2)] || 10;
+  const md: string[] = [];
+  let parrafo: string[] = [];
+  const cerrar = () => { if (parrafo.length) { md.push(parrafo.join(' ')); parrafo = []; } };
+  let anterior: LineaTexto | null = null;
+  for (const l of lineas) {
+    const r = l.tam / cuerpo;
+    const viñeta = /^[•·▪●◦\-–]\s+/.test(l.texto);
+    if (r >= 1.6) { cerrar(); md.push(`# ${l.texto}`); }
+    else if (r >= 1.3) { cerrar(); md.push(`## ${l.texto}`); }
+    else if (r >= 1.12) { cerrar(); md.push(`### ${l.texto}`); }
+    else if (viñeta) { cerrar(); md.push(`- ${l.texto.replace(/^[•·▪●◦\-–]\s+/, '')}`); }
+    else {
+      // Una línea nueva con un salto grande (o de otra página) abre otro párrafo
+      if (anterior && (anterior.pagina !== l.pagina ? false : Math.abs(anterior.y - l.y) > l.tam * 2)) cerrar();
+      parrafo.push(l.texto);
+    }
+    anterior = l;
+  }
+  cerrar();
+  const texto = md.join('\n\n') + '\n';
+  return { nombre: `${sinExt(f.name)}.md`, blob: new Blob([texto], { type: 'text/markdown;charset=utf-8' }), detalle: `${lineas.length} líneas` };
+}
+
+// ─── Formularios ────────────────────────────────────────────────────────────
+
+export interface CampoForm { nombre: string; tipo: 'texto' | 'casilla' | 'lista' | 'opciones'; valor: string | boolean; opciones: string[] }
+
+/** Campos rellenables del PDF (texto, casillas, listas y opciones); vacío si el PDF no es un formulario */
+export async function leerCampos(f: File): Promise<CampoForm[]> {
+  const form = (await abrir(f)).getForm();
+  const out: CampoForm[] = [];
+  for (const c of form.getFields()) {
+    const nombre = c.getName();
+    if (c instanceof PDFTextField) out.push({ nombre, tipo: 'texto', valor: c.getText() ?? '', opciones: [] });
+    else if (c instanceof PDFCheckBox) out.push({ nombre, tipo: 'casilla', valor: c.isChecked(), opciones: [] });
+    else if (c instanceof PDFDropdown) out.push({ nombre, tipo: 'lista', valor: c.getSelected()[0] ?? '', opciones: c.getOptions() });
+    else if (c instanceof PDFOptionList) out.push({ nombre, tipo: 'lista', valor: c.getSelected()[0] ?? '', opciones: c.getOptions() });
+    else if (c instanceof PDFRadioGroup) out.push({ nombre, tipo: 'opciones', valor: c.getSelected() ?? '', opciones: c.getOptions() });
+  }
+  return out;
+}
+
+export async function llenarFormulario(f: File, campos: CampoForm[], aplanar: boolean): Promise<Salida> {
+  const doc = await abrir(f);
+  const form = doc.getForm();
+  const fuente = await doc.embedFont(StandardFonts.Helvetica);
+  for (const c of campos) {
+    try {
+      if (c.tipo === 'texto') form.getTextField(c.nombre).setText(String(c.valor ?? ''));
+      else if (c.tipo === 'casilla') { const x = form.getCheckBox(c.nombre); if (c.valor) x.check(); else x.uncheck(); }
+      else if (c.tipo === 'lista') { const nom = c.nombre; const campo = form.getField(nom); if (c.valor) { if (campo instanceof PDFDropdown) campo.select(String(c.valor)); else if (campo instanceof PDFOptionList) campo.select(String(c.valor)); } }
+      else if (c.tipo === 'opciones' && c.valor) form.getRadioGroup(c.nombre).select(String(c.valor));
+    } catch (e) {
+      throw new Error(`No se pudo llenar el campo «${c.nombre}»: ${String((e as Error).message ?? e)}`);
+    }
+  }
+  form.updateFieldAppearances(fuente);
+  if (aplanar) form.flatten();
+  return comoPdf(await doc.save(), `${sinExt(f.name)}_lleno.pdf`, aplanar ? 'Formulario llenado y fijado (ya no se edita)' : 'Formulario llenado (se puede seguir editando)');
 }
 
 // ─── Descarga ───────────────────────────────────────────────────────────────
