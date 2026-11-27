@@ -21,7 +21,7 @@ import { ConfirmSheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
 import { useAuth } from '../../core/auth/AuthProvider';
-import { agruparEmpresas, claveEmpresa } from '../../core/lib/empresa';
+import { agruparEmpresas } from '../../core/lib/empresa';
 import { haptic } from '../../core/lib/haptics';
 import { compartirDocumento, eliminarDocumento, registrarSolicitudDocs, urlTemporalDocumento, useVehiculosFlota } from './api';
 import { usePapeletas } from './pap-api';
@@ -36,7 +36,7 @@ import { DocMiniCalendario } from './DocMiniCalendario';
 import { ConfigurarPlacasSheet, guardarSeleccion, leerSeleccion } from './ConfigurarPlacasSheet';
 import { ImportarDocumentosSheet } from './ImportarDocumentosSheet';
 import { descargarPlantilla } from './documentosExcel';
-import { DOCS, esAlquilada, grupoDe, metaDeVehiculo, pendientesDeDocs, personalizadosDe, repartirPorcentajes, responsableExterno, type DocPersonalizado, type MetaVehiculo } from './docsEstado';
+import { DOCS, esAlquilada, grupoDe, metaDeVehiculo, pendientesDeDocs, personalizadosDe, relacionConEmpresa, repartirPorcentajes, responsableExterno, type DocPersonalizado, type MetaVehiculo } from './docsEstado';
 
 type Vista = 'expediente' | 'matriz' | 'calendario' | 'alquiler';
 type Grupo = 'todos' | 'vigente' | 'alerta' | 'vencido' | 'sin';
@@ -79,13 +79,15 @@ export function DocumentosPage() {
 
   // Solo unidades activas: las inactivas no se muestran ni suman
   const vehiculos = useMemo(() => (data ?? []).filter(v => !/^inactiv/i.test(v.estado_placa ?? '')), [data]);
-  const empresas = useMemo(() => agruparEmpresas(vehiculos.map(v => v.empresa)), [vehiculos]);
+  // Empresas del filtro: las dueñas de unidades y también las que reciben unidades alquiladas
+  const empresas = useMemo(() => agruparEmpresas(vehiculos.flatMap(v => [v.empresa, v.alquilada_a])), [vehiculos]);
   const todas = useMemo<FilaExpediente[]>(
     () => vehiculos.map(v => ({ v, m: metaDeVehiculo(v) })).sort((a, b) => a.v.placa.localeCompare(b.v.placa)),
     [vehiculos],
   );
   const delEmpresa = useMemo(
-    () => todas.filter(f => (!seleccion || seleccion.has(f.v.placa)) && (empresa === 'TODAS' || claveEmpresa(f.v.empresa) === empresa)),
+    () => todas.filter(f => (!seleccion || seleccion.has(f.v.placa)) && // Al elegir una empresa salen sus unidades, las que alquila a otras y las que otras le alquilan a ella
+    (empresa === 'TODAS' || relacionConEmpresa(f.v, empresa) !== null)),
     [todas, empresa, seleccion],
   );
   // Tipos de documento: los estándar y todos los personalizados que ya existen en alguna unidad
@@ -288,7 +290,7 @@ export function DocumentosPage() {
           </HojaFiltros>
 
           {vista === 'expediente' && (
-            <DocExpediente filas={filas} placa={placa} onElegir={setPlaca} puedeEditar={puedeEditar}
+            <DocExpediente filas={filas} placa={placa} empresa={empresa} onElegir={setPlaca} puedeEditar={puedeEditar}
               onCargar={(p, prefijo) => setFormulario({ placa: p, prefijo, personalizado: null })}
               onEditarPersonalizado={(p, doc) => setFormulario({ placa: p, prefijo: null, personalizado: doc })}
               onVerArchivo={verArchivo} onCompartir={compartir} onEliminar={setAEliminar}

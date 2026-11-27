@@ -1,5 +1,6 @@
 // Estado de los documentos de cada vehículo. Misma regla que la versión actual (calcularEstado):
 // vencido si ya pasó la fecha; crítico hasta 15 días; alerta hasta 30 días; vigente después.
+import { claveEmpresa } from '../../core/lib/empresa';
 import type { VehiculoFlota } from './api';
 
 export type Clave = 'vigente' | 'alerta' | 'critico' | 'vencido' | 'sin';
@@ -126,6 +127,18 @@ export function repartirPorcentajes(valores: number[], total: number): number[] 
 
 /** ¿La unidad está alquilada a otra empresa? */
 export const esAlquilada = (v: VehiculoFlota) => !!String(v.alquilada_a ?? '').trim();
+
+/** Cómo se relaciona una unidad con la empresa elegida: 'propia' (es suya y no la alquila), 'prestada' (es suya y la alquila a otra) o 'recibida' (es de otra y se la alquilan) */
+export type RelacionEmpresa = 'propia' | 'prestada' | 'recibida';
+
+/** La dueña es la de la ficha (empresa); la arrendataria, la de «alquilada a». Sin relación con la empresa elegida devuelve null. */
+export function relacionConEmpresa(v: VehiculoFlota, clave: string): RelacionEmpresa | null {
+  const duena = claveEmpresa(v.empresa);
+  const arrendataria = claveEmpresa(v.alquilada_a);
+  if (duena === clave) return arrendataria && arrendataria !== clave ? 'prestada' : 'propia';
+  if (arrendataria === clave) return 'recibida';
+  return null;
+}
 
 /** Empresa que se comprometió a actualizar los documentos (solo si el convenio lo dice), o null si los actualizamos nosotros */
 export const responsableExterno = (v: VehiculoFlota): string | null =>
