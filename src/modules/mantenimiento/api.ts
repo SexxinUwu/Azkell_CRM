@@ -376,6 +376,42 @@ export const crearTrabajo = (d: {
 export const eliminarTrabajo = (id: string) =>
   api<{ ok: boolean }>(`/ot-trabajos/${encodeURIComponent(id)}`, { method: 'DELETE' });
 
+/** Evidencia de un trabajo de la OT: foto, video o PDF (se guarda en los detalles del trabajo; el archivo, en S3) */
+export interface AdjuntoTrabajo { id: string; url: string; nombre: string | null; tipo: 'foto' | 'video' | 'pdf'; subido_por: string | null; creado_en: string | null }
+
+/** Cantidad de evidencias de un trabajo, sin consultar al servidor (viene en sus detalles) */
+export function cuentaAdjuntos(t: TrabajoOT | null | undefined): number {
+  const a = t ? aObjeto(t.detalles_json).adjuntos : null;
+  return Array.isArray(a) ? a.length : 0;
+}
+
+export function useAdjuntosTrabajo(id: string | null) {
+  return useQuery<AdjuntoTrabajo[]>({
+    queryKey: ['mant', 'trabajos-ot', 'adjuntos', id], enabled: !!id, staleTime: 20_000,
+    queryFn: () => api<{ data?: AdjuntoTrabajo[] }>(`/ot-trabajos/${encodeURIComponent(id ?? '')}/adjuntos`).then(r => r.data ?? []),
+  });
+}
+
+/** Sube las evidencias de a una por solicitud (un video grande no frena a las demás). Devuelve los nombres de las que fallaron. */
+export async function subirAdjuntosTrabajo(id: string, archivos: File[], alAvance?: (hechos: number, total: number) => void) {
+  const fallidos: string[] = [];
+  for (let i = 0; i < archivos.length; i++) {
+    try {
+      const f = new FormData();
+      f.append('archivo', archivos[i]);
+      const r = await api<{ ok?: boolean }>(`/ot-trabajos/${encodeURIComponent(id)}/adjuntos`, { method: 'POST', body: f });
+      if (r.ok === false) fallidos.push(archivos[i].name);
+    } catch {
+      fallidos.push(archivos[i].name);
+    }
+    alAvance?.(i + 1, archivos.length);
+  }
+  return { fallidos };
+}
+
+export const quitarAdjuntoTrabajo = (id: string, adjId: string) =>
+  api<{ ok?: boolean; error?: string; data?: AdjuntoTrabajo[] }>(`/ot-trabajos/${encodeURIComponent(id)}/adjuntos/${encodeURIComponent(adjId)}`, { method: 'DELETE' });
+
 export function trabajoId(t: TrabajoOT): string {
   return String(t.id_ot || '').trim() || String(t.ticket_visita || '').trim() || '';
 }

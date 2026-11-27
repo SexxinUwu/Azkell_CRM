@@ -1,7 +1,8 @@
 const express = require('express');
 const { envolverLogAudit } = require('../services/auditoria');
 const path = require('path');
-const { getPresignedUploadUrl, getPresignedUrl } = require('../utils/s3');
+const multer = require('multer');
+const { getPresignedUploadUrl, getPresignedUrl, getPresignedUrlEstable, uploadToS3, deleteFromS3, s3KeyFromUrl } = require('../utils/s3');
 const { calcularHorasTecnicos, horasDeTrabajo, fechaNaive } = require('../services/horas_tecnicos');
 const eventosNotif = require('../services/notificaciones_eventos');
 const { htmlAPdf } = require('../services/ot_pdf');
@@ -1049,6 +1050,89 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
             return;
         }
         res.status(400).json({ error: 'Acción desconocida' });
+    });
+
+    // ── Evidencias de cada trabajo: fotos, videos y PDF. Viven en detalles_json.adjuntos (sin tabla nueva); el archivo, en S3. ──
+    const MAX_ADJUNTOS_TRABAJO = 30;
+    const TIPO_ADJ_EXT = { jpg: 'foto', jpeg: 'foto', png: 'foto', webp: 'foto', gif: 'foto', heic: 'foto', heif: 'foto', pdf: 'pdf', mp4: 'video', mov: 'video', webm: 'video', m4v: 'video', '3gp': 'video', avi: 'video', mkv: 'video' };
+    const tipoAdjunto = (nombre, mime) => {
+        if (/^video\//.test(mime || '')) return 'video';
+        if (/^image\//.test(mime || '')) return 'foto';
+        if (mime === 'application/pdf') return 'pdf';
+        return TIPO_ADJ_EXT[String(nombre || '').split('?')[0].split('.').pop().toLowerCase()] || 'foto';
+    };
+    const subidaAdjunto = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024, files: 1 } });
+    const DONDE_TRABAJO = "((id_ot = ? AND id_ot != '') OR (id_ot = '' AND ticket_visita = ?))";
+    const leerTrabajoAdj = async (p, id) => {
+        const [rows] = await p.query(`SELECT id_ot, detalles_json FROM trabajos_ot WHERE ${DONDE_TRABAJO} LIMIT 1`, [id, id]);
+        if (!rows.length) return null;
+        let det = {};
+        try { const raw = rows[0].detalles_json; det = typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw || {}); } catch (e) { det = {}; }
+        if (!det || typeof det !== 'object') det = {};
+        return { det, adjuntos: Array.isArray(det.adjuntos) ? det.adjuntos : [] };
+    };
+    const guardarAdjuntos = (p, id, det, adjuntos) =>
+        p.query(`UPDATE trabajos_ot SET detalles_json = ? WHERE ${DONDE_TRABAJO}`, [JSON.stringify({ ...det, adjuntos }), id, id]);
+    const firmarAdjuntos = (adjuntos) => Promise.all(adjuntos.map(async a => {
+        let url = a.url;
+        const key = s3KeyFromUrl(a.url);
+        if (key) { try { url = await getPresignedUrlEstable(key); } catch (e) { /* queda la dirección guardada */ } }
+        return { id: a.id, url, nombre: a.nombre || null, tipo: a.tipo || 'foto', subido_por: a.subido_por || null, creado_en: a.creado_en || null };
+    }));
+    const usuarioAdj = req => String((req.user && (req.user.nombre || req.user.correo)) || 'sistema').slice(0, 150);
+
+    router.get('/ot-trabajos/:id/adjuntos', async (req, res) => {
+        try {
+            const t = await leerTrabajoAdj((req.db || db).promise(), req.params.id);
+            if (!t) return res.status(404).json({ ok: false, error: 'Trabajo no encontrado.' });
+            res.json({ ok: true, data: await firmarAdjuntos(t.adjuntos) });
+        } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+    });
+
+    router.post('/ot-trabajos/:id/adjuntos', subidaAdjunto.single('archivo'), async (req, res) => {
+        try {
+            const p = (req.db || db).promise();
+            const a = req.file;
+            if (!a || !(/^(image|video)\//.test(a.mimetype) || a.mimetype === 'application/pdf')) return res.status(400).json({ ok: false, error: 'Adjunta una foto, un PDF o un video.' });
+            const t = await leerTrabajoAdj(p, req.params.id);
+            if (!t) return res.status(404).json({ ok: false, error: 'Trabajo no encontrado.' });
+            if (t.adjuntos.length >= MAX_ADJUNTOS_TRABAJO) return res.status(400).json({ ok: false, error: `Cada trabajo admite hasta ${MAX_ADJUNTOS_TRABAJO} archivos.` });
+            const ext = (String(a.originalname || '').split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+            const adjId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+            const url = await uploadToS3(a.buffer, `taller/ot-trabajos/${String(req.params.id).replace(/[^A-Za-z0-9_-]/g, '_')}/${adjId}.${ext}`, a.mimetype);
+            const nuevo = { id: adjId, url, nombre: String(a.originalname || '').slice(0, 255), tipo: tipoAdjunto(a.originalname, a.mimetype), subido_por: usuarioAdj(req), creado_en: new Date().toISOString() };
+            // Se vuelve a leer justo antes de guardar, por si otro archivo se subió mientras tanto
+            const t2 = await leerTrabajoAdj(p, req.params.id);
+            await guardarAdjuntos(p, req.params.id, t2.det, [...t2.adjuntos, nuevo]);
+            if (typeof logAudit === 'function') logAudit(req, 'taller', 'CREÓ', `/ot-trabajos/${req.params.id}/adjuntos`);
+            res.json({ ok: true, data: await firmarAdjuntos([...t2.adjuntos, nuevo]) });
+        } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+    });
+
+    router.delete('/ot-trabajos/:id/adjuntos/:adjId', async (req, res) => {
+        try {
+            const p = (req.db || db).promise();
+            const t = await leerTrabajoAdj(p, req.params.id);
+            if (!t) return res.status(404).json({ ok: false, error: 'Trabajo no encontrado.' });
+            const a = t.adjuntos.find(x => x.id === req.params.adjId);
+            if (!a) return res.status(404).json({ ok: false, error: 'El archivo no existe.' });
+            const resto = t.adjuntos.filter(x => x.id !== req.params.adjId);
+            await guardarAdjuntos(p, req.params.id, t.det, resto);
+            const k = s3KeyFromUrl(a.url);
+            if (k) await deleteFromS3(k).catch(() => { });
+            if (typeof logAudit === 'function') logAudit(req, 'taller', 'ELIMINÓ', `/ot-trabajos/${req.params.id}/adjuntos`);
+            res.json({ ok: true, data: await firmarAdjuntos(resto) });
+        } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+    });
+
+    // Al eliminar un trabajo se borran también sus archivos de S3 (solo si la eliminación salió bien)
+    router.delete('/ot-trabajos/:id', async (req, res, next) => {
+        try {
+            const t = await leerTrabajoAdj((req.db || db).promise(), req.params.id);
+            const llaves = t ? t.adjuntos.map(a => s3KeyFromUrl(a.url)).filter(Boolean) : [];
+            if (llaves.length) res.on('finish', () => { if (res.statusCode === 200) llaves.forEach(k => deleteFromS3(k).catch(() => { })); });
+        } catch (e) { /* sin archivos que limpiar */ }
+        next();
     });
 
     router.delete('/ot-trabajos/limpiar-importados', (req, res) => {

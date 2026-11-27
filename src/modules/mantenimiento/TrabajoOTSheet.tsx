@@ -13,9 +13,10 @@ import { haptic } from '../../core/lib/haptics';
 import { usePersonalSolicitante } from '../almacen/SelectoresSalida';
 import { useProveedores } from '../almacen/api';
 import {
-  aObjeto, crearTrabajo, otYaCerrada, editarTrabajo, eliminarTrabajo, estadoTrabajo, trabajoCosto, trabajoId,
+  aObjeto, crearTrabajo, otYaCerrada, editarTrabajo, eliminarTrabajo, estadoTrabajo, subirAdjuntosTrabajo, trabajoCosto, trabajoId,
   type OrdenTrabajo, type TrabajoOT,
 } from './api';
+import { AdjuntosTrabajo } from './AdjuntosTrabajo';
 
 // Formulario "Agregar / Editar trabajo" de la OT, calcado del clásico (#rot-drawer-trabajo):
 // descripción del trabajo, técnicos ejecutores con buscador, inicio y fin, costo estimado y Eliminar solo al editar.
@@ -58,11 +59,14 @@ export function TrabajoOTSheet({ ot, trabajo, motivo, motivosLibres = [], open, 
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [borrando, setBorrando] = useState(false);
+  // Evidencias nuevas (fotos, videos, PDF): se suben al guardar el trabajo
+  const [nuevos, setNuevos] = useState<File[]>([]);
+  const [subidos, setSubidos] = useState<{ hechos: number; total: number } | null>(null);
   const edicion = !!trabajo;
 
   useEffect(() => {
     if (!open) return;
-    setError(null);
+    setError(null); setNuevos([]); setSubidos(null);
     if (trabajo) {
       setDesc(trabajo.trabajo_realizado ?? ''); setPersonal(personalDe(trabajo));
       setIni(aLocal(trabajo.fecha_trabajo)); setFin(aLocal(trabajo.fecha_salida));
@@ -97,26 +101,35 @@ export function TrabajoOTSheet({ ot, trabajo, motivo, motivosLibres = [], open, 
     if (ini && fin && fin < ini) { setError('La hora de fin es anterior al inicio.'); haptic('warning'); return; }
     setEnviando(true); setError(null);
     const costoNum = parseFloat(costo.replace(',', '.')) || 0;
+    let idGuardado = '';
     try {
       if (trabajo) {
-        await editarTrabajo(trabajoId(trabajo), {
+        idGuardado = trabajoId(trabajo);
+        await editarTrabajo(idGuardado, {
           trabajo_realizado: desc.trim().toUpperCase(), fecha_trabajo: ini || null, fecha_salida: fin || null,
           personal: personal.join(', '), costo: costoNum, estado: estadoTrabajo(trabajo.estado),
         });
-        toast('Trabajo actualizado');
       } else {
-        await crearTrabajo({
+        const r = await crearTrabajo({
           ticket_visita: ot.ticket_entrada || ot.id_ot || '', trabajo_realizado: desc.trim().toUpperCase(),
           fecha_trabajo: ini || null, fecha_salida: fin || null, creado_por: usuario,
           personal: personal.join(', '), costo: costoNum, falla_reportada: motivoElegido || undefined,
         });
-        toast('Trabajo registrado');
+        idGuardado = r.id_ot;
       }
-      haptic('success');
+      // Las evidencias se suben de a una, ya con el trabajo guardado (el nuevo o el que se está corrigiendo)
+      let fallidos: string[] = [];
+      if (nuevos.length && idGuardado) {
+        setSubidos({ hechos: 0, total: nuevos.length });
+        fallidos = (await subirAdjuntosTrabajo(idGuardado, nuevos, (hechos, total) => setSubidos({ hechos, total }))).fallidos;
+      }
+      haptic(fallidos.length ? 'warning' : 'success');
       await refrescar();
+      if (fallidos.length) toast(`El trabajo se guardó, pero no se subieron: ${fallidos.join(', ')}. Ábrelo de nuevo y agrégalos.`, 'error');
+      else toast(trabajo ? 'Trabajo actualizado' : 'Trabajo registrado');
       onClose();
-    } catch (err) { setError(errorMessage(err)); haptic('warning'); }
-    finally { setEnviando(false); }
+    } catch (err) { setError(errorMessage(err)); haptic('warning'); if (idGuardado) await refrescar(); }
+    finally { setEnviando(false); setSubidos(null); }
   }
 
   async function eliminar() {
@@ -145,7 +158,7 @@ export function TrabajoOTSheet({ ot, trabajo, motivo, motivosLibres = [], open, 
             )}
             <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
               <Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
-              <Button variant="primary" onClick={guardar} loading={enviando}>Guardar trabajo</Button>
+              <Button variant="primary" onClick={guardar} loading={enviando}>{enviando && subidos ? `Subiendo ${subidos.hechos}/${subidos.total}…` : 'Guardar trabajo'}</Button>
             </div>
           </div>
         }
@@ -171,6 +184,9 @@ export function TrabajoOTSheet({ ot, trabajo, motivo, motivosLibres = [], open, 
           <Field label="Fecha y hora inicio *">{p => <TextInput {...p} type="datetime-local" value={ini} onChange={e => setIni(e.target.value)} />}</Field>
           <Field label="Fecha y hora fin *">{p => <TextInput {...p} type="datetime-local" value={fin} min={ini || undefined} onChange={e => setFin(e.target.value)} />}</Field>
           <Field label="Costo estimado del trabajo (S/)" wide>{p => <TextInput {...p} inputMode="decimal" value={costo} onChange={e => setCosto(e.target.value)} />}</Field>
+          <Field label="Evidencias (fotos, videos y PDF)" wide>
+            {() => <AdjuntosTrabajo trabajoId={trabajo ? trabajoId(trabajo) : null} nuevos={nuevos} onNuevos={setNuevos} puedeQuitar disabled={enviando} />}
+          </Field>
         </div>
       </Sheet>
       <ConfirmSheet
