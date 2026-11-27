@@ -70,3 +70,24 @@
 
 /* Observación automática de la fila (rotación: de qué posición a cuál) */
 .ninsp-nota { font-size: 0.75rem; font-weight: 600; color: var(--label-2); margin-bottom: 4px; white-space: nowrap; }
+
+/* Cabecera: una sola fila, todos los elementos a la misma altura y datos bloqueados */
+.ninsp-barra { align-items: flex-end; gap: var(--s-4); }
+.ninsp-barra .ninsp-atras { height: 40px; }
+.ninsp-barra .ninsp-cab__dias { height: 40px; margin-left: auto; }
+.ninsp-dato { display: flex; flex-direction: column; gap: 4px; max-width: 100%; }
+.ninsp-dato__etiqueta { font-size: 0.75rem; font-weight: 700; color: var(--label-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ninsp-dato__valor { height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 12px; border-radius: var(--r-md); background: var(--fill); color: var(--label); font-size: 0.9375rem; font-weight: 600; }
+.ninsp-dato__valor span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ninsp-dato__valor svg { color: var(--label-3); flex: none; }
+@media (max-width: 760px) { .ninsp-barra .ninsp-dato { width: 100% !important; } .ninsp-barra .ninsp-cab__dias { margin-left: 0; } }
+
+/* Tabla de solo lectura */
+.ninsp-tabla__obs { min-width: 180px; white-space: normal; }
+
+/* Ventana: Psi, estado y observaciones */
+.ninsp-modal__psi { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-3); }
+.ninsp-modal__campo { display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; font-weight: 700; color: var(--label-2); }
+.ninsp-modal__campo input, .ninsp-modal__campo select { height: 44px; padding: 0 12px; border: 1px solid var(--separator); border-radius: var(--r-md); background: var(--surface); font: inherit; font-size: 1rem; font-weight: 600; color: var(--label); min-width: 0; }
+@media (max-width: 480px) { .ninsp-modal__psi { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ninsp-barra .ninsp-atras { height: 40px; min-height: 40px; padding-block: 0; }

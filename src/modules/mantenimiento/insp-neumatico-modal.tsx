@@ -12,7 +12,7 @@ import { tituloLlanta } from './ntb-api';
 export const MAX_FOTOS = 3;
 const MAX_MM = 25;
 
-export interface MedidaPosicion { r1: string; r2: string; r3: string; fotos: string[] }
+export interface MedidaPosicion { r1: string; r2: string; r3: string; fotos: string[]; psiEncontrado: string; psiDejado: string; estado: string; obs: string }
 
 function Contador({ etiqueta, valor, onCambiar }: { etiqueta: string; valor: string; onCambiar: (v: string) => void }) {
   const n = Number(valor) || 0;
@@ -40,17 +40,19 @@ async function comoDataUrl(f: File): Promise<string> {
   });
 }
 
-export function InspeccionPosicionSheet({ abierta, posicion, llanta, inicial, onConfirmar, onClose }: {
+export function InspeccionPosicionSheet({ abierta, posicion, llanta, inicial, estados, onConfirmar, onClose }: {
   abierta: boolean;
   posicion: string;
   llanta: LlantaTablero | null;
   /** Lo último que se conoce de esa llanta (o lo ya confirmado en esta inspección) */
   inicial: MedidaPosicion;
+  estados: string[];
   onConfirmar: (m: MedidaPosicion) => void;
   onClose: () => void;
 }) {
   const [r, setR] = useState({ r1: '', r2: '', r3: '' });
   const [fotos, setFotos] = useState<string[]>([]);
+  const [datos, setDatos] = useState({ psiEncontrado: '', psiDejado: '', estado: '', obs: '' });
   const [error, setError] = useState<string | null>(null);
   const [procesando, setProcesando] = useState(false);
   const camara = useRef<HTMLInputElement>(null);
@@ -60,6 +62,7 @@ export function InspeccionPosicionSheet({ abierta, posicion, llanta, inicial, on
     if (!abierta) return;
     setR({ r1: inicial.r1, r2: inicial.r2, r3: inicial.r3 });
     setFotos(inicial.fotos); setError(null);
+    setDatos({ psiEncontrado: inicial.psiEncontrado, psiDejado: inicial.psiDejado, estado: inicial.estado, obs: inicial.obs });
   }, [abierta, posicion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function agregar(e: ChangeEvent<HTMLInputElement>) {
@@ -79,7 +82,8 @@ export function InspeccionPosicionSheet({ abierta, posicion, llanta, inicial, on
   function confirmar() {
     const vals = [r.r1, r.r2, r.r3].map(Number);
     if (vals.some(v => !Number.isInteger(v) || v < 1 || v > MAX_MM)) { setError(`R1, R2 y R3 deben estar entre 1 y ${MAX_MM} mm.`); return; }
-    onConfirmar({ ...r, fotos });
+    if (!(Number(datos.psiEncontrado) > 0) || !(Number(datos.psiDejado) > 0)) { setError('Escribe el Psi con que lo encontraste y el Psi con que lo dejas.'); return; }
+    onConfirmar({ ...r, fotos, ...datos, obs: datos.obs.trim() });
   }
 
   return (
@@ -93,6 +97,19 @@ export function InspeccionPosicionSheet({ abierta, posicion, llanta, inicial, on
           <Contador etiqueta="R2" valor={r.r2} onCambiar={v => setR(x => ({ ...x, r2: v }))} />
           <Contador etiqueta="R3" valor={r.r3} onCambiar={v => setR(x => ({ ...x, r3: v }))} />
         </div>
+
+        <div className="ninsp-modal__psi">
+          <label className="ninsp-modal__campo"><span>Psi encontrado</span>
+            <input inputMode="numeric" value={datos.psiEncontrado} placeholder="Ej. 90" onChange={e => setDatos(d => ({ ...d, psiEncontrado: e.target.value.replace(/\D/g, '').slice(0, 3) }))} /></label>
+          <label className="ninsp-modal__campo"><span>Psi dejado</span>
+            <input inputMode="numeric" value={datos.psiDejado} placeholder="Ej. 110" onChange={e => setDatos(d => ({ ...d, psiDejado: e.target.value.replace(/\D/g, '').slice(0, 3) }))} /></label>
+          <label className="ninsp-modal__campo"><span>Estado</span>
+            <select value={datos.estado} onChange={e => setDatos(d => ({ ...d, estado: e.target.value }))}>
+              {[...new Set([datos.estado, ...estados].filter(Boolean))].map(s => <option key={s} value={s}>{s}</option>)}
+            </select></label>
+        </div>
+        <label className="ninsp-modal__campo"><span>Observaciones</span>
+          <input value={datos.obs} placeholder="Opcional" onChange={e => setDatos(d => ({ ...d, obs: e.target.value }))} /></label>
 
         <div className="ninsp-modal__evidencia">
           <h4 className="ninsp-modal__sub">Adjuntar evidencia</h4>

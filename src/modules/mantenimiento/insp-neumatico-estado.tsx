@@ -6,7 +6,8 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { api, errorMessage } from '../../core/api/client';
 import { hoyLima } from '../../core/lib/format';
 import { Button } from '../../core/ui/Button';
-import { Field, TextInput } from '../../core/ui/Field';
+import { Lock } from 'lucide-react';
+import { formatFechaPe } from '../../core/lib/format';
 import { useToast } from '../../core/ui/Toast';
 import type { LlantaTablero } from './neumaticos-tablero-tipos';
 import { RemanenteChip } from './ntb-llanta';
@@ -19,7 +20,7 @@ import './insp-neumatico.css';
 
 export interface Fila { codigo: string; r1: string; r2: string; r3: string; fotos: string[]; psiEncontrado: string; psiDejado: string; estado: string; obs: string }
 type Montada = { posicion: string; llanta: LlantaTablero };
-interface UltimaInsp { km_vehiculo?: number | null }
+interface UltimaInsp { km_vehiculo?: number | null; datosPosiciones?: Record<string, { presion_actual?: number | string | null }> }
 
 const aTexto = (n: number | null | undefined) => (n == null || !Number.isFinite(Number(n)) ? '' : String(Math.round(Number(n))));
 export const minimoDe = (f: { r1: string; r2: string; r3: string }) => {
@@ -31,14 +32,14 @@ export const minimoDe = (f: { r1: string; r2: string; r3: string }) => {
 export type AccionPosicion = 'Inspección' | 'Instalación' | 'Cambio' | 'Rotación';
 interface Movimiento { posicion: string | null; accion: AccionPosicion | null; texto: string; /** Observación automática de la fila (ej. «De Posición #2 a Posición #1») */ nota?: string }
 
-export function useInspeccion({ activa, placa, montadas }: { activa: boolean; placa: string; montadas: Montada[] }) {
+export function useInspeccion({ activa, placa, montadas, conGps = true }: { activa: boolean; placa: string; montadas: Montada[]; conGps?: boolean }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const toast = useToast();
   const { user } = useAuth();
-  const [fecha, setFecha] = useState(() => hoyLima());
-  const [tecnico, setTecnico] = useState('');
-  const [km, setKm] = useState('');
+  // Fecha y técnico no se editan; el kilometraje es la lectura de GPS de hoy
+  const fecha = hoyLima();
+  const tecnico = user?.name ?? '';
   const [dias, setDias] = useState('30');
   const [hechas, setHechas] = useState<Record<string, Fila>>({});
   const [abierta, setAbierta] = useState<string | null>(null);
@@ -48,9 +49,13 @@ export function useInspeccion({ activa, placa, montadas }: { activa: boolean; pl
   const ultima = useQuery<UltimaInsp>({ queryKey: ['mant', 'neumaticos-placa-ultima', placa], enabled: activa && !!placa, staleTime: 60_000, queryFn: () => api<UltimaInsp>(`/neumaticos/placa-ultima/${encodeURIComponent(placa)}`) });
   const catalogos = useQuery<{ estados?: string[] }>({ queryKey: ['mant', 'neu-catalogos'], enabled: activa, staleTime: 600_000, queryFn: () => api('/neumaticos/catalogos') });
   const estados = catalogos.data?.estados?.length ? catalogos.data.estados : ['NUEVA', 'RENCAUCHADA'];
+  const kmGps = useQuery<{ ok?: boolean; km: number | null; fecha: string | null }>({
+    queryKey: ['mant', 'neu-km-gps', placa, fecha], enabled: activa && !!placa && conGps, staleTime: 60_000,
+    queryFn: () => api(`/neumaticos/km-gps/${encodeURIComponent(placa)}`, { query: { fecha } }),
+  });
+  const km = kmGps.data?.km != null ? String(kmGps.data.km) : '';
 
-  useEffect(() => { setHechas({}); setAbierta(null); setMovimientos([]); setKm(''); }, [placa]);
-  useEffect(() => { if (activa && !tecnico && user?.name) setTecnico(user.name); }, [activa, user?.name]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setHechas({}); setAbierta(null); setMovimientos([]); }, [placa]);
 
   const estadoDe = (l: LlantaTablero) => (l.vida != null && l.vida > 0 ? 'RENCAUCHADA' : 'NUEVA');
   // Una medición solo vale para la llanta que estaba medida: si la posición cambió de llanta durante la inspección, hay que medir la nueva
@@ -71,24 +76,30 @@ export function useInspeccion({ activa, placa, montadas }: { activa: boolean; pl
     return ult?.nota ?? '';
   };
 
+  /** Psi con que quedó la última inspección: sugerencia para las posiciones que no cambiaron */
+  const psiPrevio = (pos: string): string => {
+    const n = Number(ultima.data?.datosPosiciones?.[pos]?.presion_actual);
+    return n > 0 ? String(Math.round(n)) : '';
+  };
+  /** Lo que se guarda de cada posición: lo confirmado en la ventana o, si no se tocó, cómo está ahora la llanta */
+  const filaDe = (m: Montada): Fila => vigentes[m.posicion] ?? {
+    codigo: m.llanta.codigo, r1: aTexto(m.llanta.r1), r2: aTexto(m.llanta.r2), r3: aTexto(m.llanta.r3), fotos: [],
+    psiEncontrado: accionDe(m.posicion) === 'Inspección' ? psiPrevio(m.posicion) : '', psiDejado: accionDe(m.posicion) === 'Inspección' ? psiPrevio(m.posicion) : '',
+    estado: estadoDe(m.llanta), obs: '',
+  };
+
   const llantaAbierta = abierta ? montadas.find(m => m.posicion === abierta)?.llanta ?? null : null;
-  const inicialModal: MedidaPosicion = abierta
-    ? (vigentes[abierta] ? { r1: vigentes[abierta].r1, r2: vigentes[abierta].r2, r3: vigentes[abierta].r3, fotos: vigentes[abierta].fotos }
-      : { r1: aTexto(llantaAbierta?.r1), r2: aTexto(llantaAbierta?.r2), r3: aTexto(llantaAbierta?.r3), fotos: [] })
-    : { r1: '', r2: '', r3: '', fotos: [] };
+  const montadaAbierta = abierta ? montadas.find(m => m.posicion === abierta) ?? null : null;
+  const inicialModal: MedidaPosicion = montadaAbierta
+    ? (({ r1, r2, r3, fotos, psiEncontrado, psiDejado, estado, obs }) => ({ r1, r2, r3, fotos, psiEncontrado, psiDejado, estado, obs }))(filaDe(montadaAbierta))
+    : { r1: '', r2: '', r3: '', fotos: [], psiEncontrado: '', psiDejado: '', estado: 'NUEVA', obs: '' };
 
   function confirmar(m: MedidaPosicion) {
     if (!abierta || !llantaAbierta) return;
     const pos = abierta;
-    setHechas(h => ({ ...h, [pos]: { codigo: llantaAbierta.codigo, ...m, psiEncontrado: vigentes[pos]?.psiEncontrado ?? '', psiDejado: vigentes[pos]?.psiDejado ?? '', estado: vigentes[pos]?.estado ?? estadoDe(llantaAbierta), obs: vigentes[pos]?.obs ?? '' } }));
+    setHechas(h => ({ ...h, [pos]: { codigo: llantaAbierta.codigo, ...m } }));
     setAbierta(null);
   }
-  const cambiar = (pos: string, campo: 'psiEncontrado' | 'psiDejado' | 'estado' | 'obs', v: string) => setHechas(h => {
-    const f = h[pos]; if (!f) return h;
-    // Lo más común es dejarla como se encontró: al escribir el primer Psi, el segundo se propone igual
-    const igualar = campo === 'psiEncontrado' && (f.psiDejado === '' || f.psiDejado === f.psiEncontrado);
-    return { ...h, [pos]: { ...f, [campo]: v, ...(igualar ? { psiDejado: v } : {}) } };
-  });
 
   /** Anota solo lo que se hizo en la unidad (instalar, cambiar, enviar) para la acción de cada posición y las observaciones de la inspección */
   function registrar(p: Propuesta, mensaje: string) {
@@ -107,16 +118,17 @@ export function useInspeccion({ activa, placa, montadas }: { activa: boolean; pl
   }
 
   async function guardar() {
-    const pos = montadas.filter(m => vigentes[m.posicion]);
-    if (!pos.length) { toast('Inspecciona al menos un neumático', 'error'); return; }
-    if (!fecha) { toast('Ingresa la fecha', 'error'); return; }
-    if (!(Number(km) > 0)) { toast('Ingresa el kilometraje de la unidad (mayor a 0)', 'error'); return; }
-    const sinPsi = pos.filter(m => !(Number(vigentes[m.posicion].psiEncontrado) > 0) || !(Number(vigentes[m.posicion].psiDejado) > 0)).map(m => m.posicion);
-    if (sinPsi.length) { toast(`Falta el Psi (cómo se encontró y cómo se deja) en la posición ${sinPsi.join(', ')}`, 'error'); return; }
-    const sinMedir = montadas.filter(m => !vigentes[m.posicion] && accionDe(m.posicion) !== 'Inspección').map(m => m.posicion);
-    if (sinMedir.length) { toast(`Mide la posición ${sinMedir.join(', ')}: tuvo movimiento y debe quedar en la inspección`, 'error'); return; }
-    const items = pos.map(({ posicion, llanta }) => {
-      const h = vigentes[posicion];
+    if (!montadas.length) { toast('La unidad no tiene neumáticos montados', 'error'); return; }
+    if (conGps && !(Number(km) > 0)) { toast('No hay lectura de GPS del kilometraje de esta unidad: no se puede guardar la inspección', 'error'); return; }
+    // Se guardan todas las llantas como estén en este momento: las que no se tocaron conservan su última medición
+    const incompletas = montadas.filter(m => {
+      const f = filaDe(m);
+      return [f.r1, f.r2, f.r3].some(v => !(Number(v) >= 1)) || !(Number(f.psiEncontrado) > 0) || !(Number(f.psiDejado) > 0);
+    }).map(m => m.posicion);
+    if (incompletas.length) { toast(`Completa las medidas y el Psi de la posición ${incompletas.join(', ')} (toca la fila para abrirla)`, 'error'); return; }
+    const items = montadas.map(m => {
+      const { posicion, llanta } = m;
+      const h = filaDe(m);
       return {
         posicion, marca: llanta.marca ?? '', medida: llanta.medida ?? '', modelo: llanta.modelo ?? '',
         r1: Number(h.r1), r2: Number(h.r2), r3: Number(h.r3),
@@ -132,7 +144,7 @@ export function useInspeccion({ activa, placa, montadas }: { activa: boolean; pl
     try {
       const r = await api<{ ok: boolean; id_inspeccion?: string; error?: string }>('/neumaticos/inspecciones', {
         method: 'POST',
-        body: { placa, fecha_inspeccion: fecha, km_vehiculo: Number(km), odometro_km: String(Number(km)), inspector: tecnico.trim(), dias_propuestos: Number(dias) || 30, observaciones: resumenMov, items, llantas_inspeccionadas: items },
+        body: { placa, fecha_inspeccion: fecha, km_vehiculo: Number(km) || 0, odometro_km: String(Number(km) || 0), inspector: tecnico.trim(), dias_propuestos: Number(dias) || 30, observaciones: resumenMov, items, llantas_inspeccionadas: items },
       });
       if (!r.ok) throw new Error(r.error ?? 'No se pudo guardar la inspección');
       toast(`Inspección ${r.id_inspeccion ?? ''} registrada`);
@@ -143,8 +155,8 @@ export function useInspeccion({ activa, placa, montadas }: { activa: boolean; pl
   }
 
   return {
-    fecha, setFecha, tecnico, setTecnico, km, setKm, dias, setDias, estados, ultimaKm: ultima.data?.km_vehiculo ?? null,
-    vigentes, abierta, abrir: (pos: string) => setAbierta(pos), cerrar: () => setAbierta(null), llantaAbierta, inicialModal, confirmar, cambiar,
+    conGps, fecha, tecnico, km, kmFecha: kmGps.data?.fecha ?? null, kmCargando: kmGps.isLoading, dias, setDias, estados,
+    vigentes, filaDe, abierta, abrir: (pos: string) => setAbierta(pos), cerrar: () => setAbierta(null), llantaAbierta, inicialModal, confirmar,
     accionDe, notaDe, registrar, guardar, guardando, movimientos,
     /** El plano muestra lo medido en esta inspección (cambia el color al confirmar) */
     medido: (pos: string) => vigentes[pos] ?? null,
@@ -152,18 +164,25 @@ export function useInspeccion({ activa, placa, montadas }: { activa: boolean; pl
 }
 export type EstadoInspeccion = ReturnType<typeof useInspeccion>;
 
-export function InspeccionCabecera({ e, placa }: { e: EstadoInspeccion; placa: string }) {
+/** Dato de la cabecera que no se edita (fecha, técnico, kilometraje de GPS) */
+function Dato({ etiqueta, valor, ancho }: { etiqueta: string; valor: string; ancho: string }) {
+  return (
+    <div className="ninsp-dato" style={{ width: ancho }}>
+      <span className="ninsp-dato__etiqueta">{etiqueta}</span>
+      <div className="ninsp-dato__valor" aria-label={etiqueta}><span>{valor}</span><Lock size={12} aria-hidden /></div>
+    </div>
+  );
+}
+
+export function InspeccionCabecera({ e }: { e: EstadoInspeccion; placa: string }) {
   const navigate = useNavigate();
+  const kmTexto = e.km ? `${Number(e.km).toLocaleString('es-PE')} km` : e.kmCargando ? 'Leyendo GPS…' : 'Sin lectura GPS';
   return (
     <div className="ninsp-barra">
-      <Button variant="plain" icon={<ArrowLeft size={16} />} onClick={() => navigate(-1)}>Atrás</Button>
-      <div className="ninsp-datos">
-        <Field label="Fecha">{p => <TextInput {...p} type="date" value={e.fecha} max={hoyLima()} onChange={ev => e.setFecha(ev.target.value)} />}</Field>
-        <Field label="Técnico">{p => <TextInput {...p} value={e.tecnico} onChange={ev => e.setTecnico(ev.target.value)} placeholder="Nombre del técnico" />}</Field>
-        <Field label="Kilometraje" hint={e.ultimaKm ? `Última inspección: ${Number(e.ultimaKm).toLocaleString('es-PE')} km` : undefined}>
-          {p => <TextInput {...p} inputMode="numeric" value={e.km} onChange={ev => e.setKm(ev.target.value.replace(/\D/g, ''))} placeholder="0" disabled={!placa} />}
-        </Field>
-      </div>
+      <Button variant="plain" className="ninsp-atras" icon={<ArrowLeft size={16} />} onClick={() => navigate(-1)}>Atrás</Button>
+      <Dato etiqueta="Fecha" valor={formatFechaPe(e.fecha)} ancho="9rem" />
+      <Dato etiqueta="Técnico" valor={e.tecnico || '—'} ancho="14rem" />
+      {e.conGps && <Dato etiqueta={e.kmFecha ? `Kilometraje · GPS del ${formatFechaPe(e.kmFecha)}` : 'Kilometraje · GPS'} valor={kmTexto} ancho="14rem" />}
       <div className="ninsp-cab__dias">
         <label htmlFor="ninsp-dias">Próxima en</label>
         <input id="ninsp-dias" inputMode="numeric" value={e.dias} onChange={ev => e.setDias(ev.target.value.replace(/\D/g, '').slice(0, 3))} />
@@ -174,33 +193,35 @@ export function InspeccionCabecera({ e, placa }: { e: EstadoInspeccion; placa: s
 }
 
 export function InspeccionResumen({ e, montadas }: { e: EstadoInspeccion; montadas: Montada[] }) {
-  const hechas = montadas.filter(m => e.vigentes[m.posicion]).length;
+  const modificadas = montadas.filter(m => e.vigentes[m.posicion]).length;
   return (
     <>
       <section className="ninsp-resumen" aria-label="Resumen de la inspección">
-        <h2 className="ninsp-resumen__titulo">Resumen <span className="ninsp-resumen__cuenta">{hechas} de {montadas.length} inspeccionados</span></h2>
+        <h2 className="ninsp-resumen__titulo">Resumen <span className="ninsp-resumen__cuenta">{modificadas} de {montadas.length} con cambios</span></h2>
         <div className="ninsp-resumen__scroll">
           <table className="ninsp-tabla">
             <thead>
               <tr><th>#</th><th>Marca</th><th>Medida</th><th>Modelo</th><th>R1</th><th>R2</th><th>R3</th><th>Mín.</th><th>Psi encontrado</th><th>Psi dejado</th><th>Cód. fuego</th><th>Acción</th><th>Estado</th><th>Observación</th></tr>
             </thead>
             <tbody>
-              {montadas.map(({ posicion, llanta }) => {
+              {montadas.map(m => {
+                const { posicion, llanta } = m;
                 const h = e.vigentes[posicion];
-                const r = h ?? { r1: aTexto(llanta.r1), r2: aTexto(llanta.r2), r3: aTexto(llanta.r3) };
+                const r = e.filaDe(m);
                 const accion = e.accionDe(posicion);
+                const obs = [e.notaDe(posicion), r.obs].filter(Boolean).join(' · ');
                 return (
                   <tr key={posicion} className={`ninsp-tabla__fila${h ? ' ninsp-tabla__fila--hecha' : ''}`} onClick={() => e.abrir(posicion)}>
-                    <td className="ninsp-tabla__pos">{h ? <Check size={14} aria-label="Inspeccionada" /> : null}{posicion}</td>
+                    <td className="ninsp-tabla__pos">{h ? <Check size={14} aria-label="Con cambios" /> : null}{posicion}</td>
                     <td>{llanta.marca ?? '—'}</td><td>{llanta.medida ?? '—'}</td><td>{llanta.modelo ?? '—'}</td>
                     <td className="ninsp-tabla__num">{r.r1 || '—'}</td><td className="ninsp-tabla__num">{r.r2 || '—'}</td><td className="ninsp-tabla__num">{r.r3 || '—'}</td>
                     <td><RemanenteChip mm={minimoDe(r)} /></td>
-                    <td onClick={ev => ev.stopPropagation()}>{h ? <input className="ninsp-tabla__input ninsp-tabla__input--corto" inputMode="numeric" value={h.psiEncontrado} onChange={ev => e.cambiar(posicion, 'psiEncontrado', ev.target.value.replace(/\D/g, '').slice(0, 3))} aria-label={`Psi con que se encontró la posición ${posicion}`} placeholder="Psi" /> : '—'}</td>
-                    <td onClick={ev => ev.stopPropagation()}>{h ? <input className="ninsp-tabla__input ninsp-tabla__input--corto" inputMode="numeric" value={h.psiDejado} onChange={ev => e.cambiar(posicion, 'psiDejado', ev.target.value.replace(/\D/g, '').slice(0, 3))} aria-label={`Psi con que se deja la posición ${posicion}`} placeholder="Psi" /> : '—'}</td>
+                    <td className="ninsp-tabla__num">{r.psiEncontrado || '—'}</td>
+                    <td className="ninsp-tabla__num">{r.psiDejado || '—'}</td>
                     <td className="ninsp-tabla__codigo">{llanta.codigo}</td>
                     <td><span className={`ninsp-accion${accion !== 'Inspección' ? ' ninsp-accion--mov' : ''}`}>{accion}</span></td>
-                    <td onClick={ev => ev.stopPropagation()}>{h ? <select className="ninsp-tabla__input" value={h.estado} onChange={ev => e.cambiar(posicion, 'estado', ev.target.value)} aria-label={`Estado de la posición ${posicion}`}>{e.estados.map(s => <option key={s} value={s}>{s}</option>)}</select> : '—'}</td>
-                    <td onClick={ev => ev.stopPropagation()}>{e.notaDe(posicion) && <div className="ninsp-nota">{e.notaDe(posicion)}</div>}{h ? <input className="ninsp-tabla__input" value={h.obs} onChange={ev => e.cambiar(posicion, 'obs', ev.target.value)} placeholder="Observación" aria-label={`Observación de la posición ${posicion}`} /> : (e.notaDe(posicion) ? null : '—')}</td>
+                    <td>{r.estado || '—'}</td>
+                    <td className="ninsp-tabla__obs">{obs || '—'}</td>
                   </tr>
                 );
               })}
@@ -212,13 +233,13 @@ export function InspeccionResumen({ e, montadas }: { e: EstadoInspeccion; montad
         )}
       </section>
       <div className="ninsp-pie">
-        <span className="t-footnote c-secondary">Solo se guardan los neumáticos medidos y confirmados ({hechas}). Los movimientos (instalar, cambiar, enviar) ya quedan registrados al confirmarlos.</span>
-        <Button variant="primary" size="lg" onClick={() => { void e.guardar(); }} loading={e.guardando} disabled={hechas === 0}>Guardar</Button>
+        <span className="t-footnote c-secondary">Toca una llanta (en el plano o en la tabla) para cambiar sus medidas, Psi, estado, observación o fotos. Al guardar se registran todas las llantas como estén en ese momento.</span>
+        <Button variant="primary" size="lg" onClick={() => { void e.guardar(); }} loading={e.guardando} disabled={montadas.length === 0 || (e.conGps && !e.km)}>Guardar</Button>
       </div>
     </>
   );
 }
 
 export function InspeccionModal({ e }: { e: EstadoInspeccion }) {
-  return <InspeccionPosicionSheet abierta={!!e.abierta} posicion={e.abierta ?? ''} llanta={e.llantaAbierta} inicial={e.inicialModal} onConfirmar={e.confirmar} onClose={e.cerrar} />;
+  return <InspeccionPosicionSheet abierta={!!e.abierta} posicion={e.abierta ?? ''} llanta={e.llantaAbierta} inicial={e.inicialModal} estados={e.estados} onConfirmar={e.confirmar} onClose={e.cerrar} />;
 }

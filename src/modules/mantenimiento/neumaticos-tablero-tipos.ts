@@ -37,6 +37,8 @@ export interface PosicionTablero {
 export interface TableroPlaca {
   ok: boolean;
   placa: string;
+  /** La unidad tiene GPS y odómetro (tracto, camión, Thermo King). Carretas y semirremolques no */
+  con_gps?: boolean;
   configuracion: string | null;    // p. ej. "2DD-1L-2L" o "T3"; lo usa el frontend para dibujar el layout
   posiciones: PosicionTablero[];   // montadas en la unidad
   disponibles: LlantaTablero[];    // listas para instalar: Nuevas 100, Reencauche 1142 (ya reencauchadas), Reparadas 1144 y Retén 1146
