@@ -1,6 +1,7 @@
 import { Button } from '../../core/ui/Button';
 import { exportarExcel } from '../../core/lib/excel';
-import { DOCS, colorDoc, textoDias } from './docsEstado';
+import { COLOR_PERSONALIZADO, DOCS, colorDoc, personalizadosDe, textoDias } from './docsEstado';
+import type { VehiculoFlota } from './api';
 import type { FilaExpediente } from './DocExpediente';
 import { formatFechaPe } from '../../core/lib/format';
 import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
@@ -16,9 +17,13 @@ const celda = (v: unknown) => {
 /** Datos generales de la unidad, en el mismo orden que la matriz de la versión actual */
 const GENERALES = ['Placa', 'Tipo', 'Propiedad', 'Empresa', 'F. entrega', 'Año', 'Modelo', 'Color', 'Marca', 'Serie/chasis'];
 
+/** El TIVE (tarjeta de propiedad electrónica) es un documento personalizado que no vence: se muestra con su N°, la fecha del título y «No vence» */
+const tiveDe = (v: VehiculoFlota) => personalizadosDe(v).find(d => /TIVE/i.test(d.tipo)) ?? null;
+const NO_VENCE = 'No vence';
+
 /** Datos de la tabla que se exportan: los mismos que se ven, uno por columna */
 function encabezadosYFilas(filas: FilaExpediente[]) {
-  const grupos = DOCS.flatMap(d => [...d.datos.map(x => `${d.corto} ${x.etiqueta}`), `${d.corto} F. venc.`, `${d.corto} días`]);
+  const grupos = [...DOCS.flatMap(d => [...d.datos.map(x => `${d.corto} ${x.etiqueta}`), `${d.corto} F. venc.`, `${d.corto} días`]), 'TIVE N°', 'TIVE F. título', 'TIVE vencimiento'];
   const datos = filas.map(({ v, m }) => [
     v.placa, celda(v.tipo), celda(v.propiedad), celda(v.empresa), fechaCorta(v.fecha_entrega), celda(v.anio), celda(v.modelo),
     celda(v.color), celda(v.marca), celda(v.chasis),
@@ -30,6 +35,7 @@ function encabezadosYFilas(filas: FilaExpediente[]) {
         doc && doc.estado.dias != null ? doc.estado.dias : '',
       ];
     }),
+    ...(() => { const t = tiveDe(v); return [t?.constancia ?? '', t?.emision ? fechaCorta(String(t.emision).slice(0, 10)) : '', t ? NO_VENCE : '']; })(),
   ]);
   return { encabezados: [...GENERALES, ...grupos], datos };
 }
@@ -56,6 +62,7 @@ export function DocMatriz({ filas }: { filas: FilaExpediente[] }) {
               {DOCS.map(d => (
                 <th key={d.clave} colSpan={d.datos.length + 2} className="doc-matriz__grupo" style={{ '--grupo-color': colorDoc(d.num) } as React.CSSProperties}>{d.corto}</th>
               ))}
+              <th colSpan={3} className="doc-matriz__grupo" style={{ '--grupo-color': COLOR_PERSONALIZADO } as React.CSSProperties}>TIVE</th>
             </tr>
             <tr>
               {DOCS.flatMap(d => [
@@ -63,6 +70,9 @@ export function DocMatriz({ filas }: { filas: FilaExpediente[] }) {
                 <th key={`${d.clave}-venc`}>F. venc.</th>,
                 <th key={`${d.clave}-dias`}>Días</th>,
               ])}
+              <th>N°</th>
+              <th>F. título</th>
+              <th>Vence</th>
             </tr>
           </thead>
           <tbody>
@@ -92,6 +102,14 @@ export function DocMatriz({ filas }: { filas: FilaExpediente[] }) {
                     </td>,
                   ];
                 })}
+                {(() => {
+                  const t = tiveDe(v);
+                  return [
+                    <td key={`${v.placa}-tive-n`} className="doc-matriz__mono">{t?.constancia || '—'}</td>,
+                    <td key={`${v.placa}-tive-f`} className="doc-matriz__mono">{t?.emision ? fechaCorta(String(t.emision).slice(0, 10)) : '—'}</td>,
+                    <td key={`${v.placa}-tive-v`}>{t ? <span className="doc-dias" style={{ background: 'color-mix(in srgb, var(--green-ink) 13%, transparent)', color: 'var(--green-ink)' }}>{NO_VENCE}</span> : <span className="doc-dias doc-dias--vacio">—</span>}</td>,
+                  ];
+                })()}
               </tr>
             ))}
           </tbody>
