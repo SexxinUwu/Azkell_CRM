@@ -134,7 +134,7 @@ export function NeumaticosTablero({ inspeccion = false }: { inspeccion?: boolean
   const descarte = useMemo(() => datos?.descarte ?? [], [datos]);
   const montadas = useMemo(() => montadasDe(posiciones), [posiciones]);
   const libres = useMemo(() => posiciones.filter(p => !p.llanta), [posiciones]);
-  const insp = useInspeccion({ activa: inspeccion, placa, montadas, conGps: !!datos && datos.con_gps !== false });
+  const insp = useInspeccion({ activa: inspeccion, placa, montadas, conGps: !!datos && datos.con_gps !== false, psiDefecto: datos?.psi_defecto });
   const llantasDato = useMemo(() => montadas.map(m => {
     const d = aLlantaDato(m.llanta, m.posicion);
     const h = inspeccion ? insp.medido(m.posicion) : null;

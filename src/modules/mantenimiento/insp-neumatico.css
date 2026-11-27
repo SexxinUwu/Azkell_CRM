@@ -91,3 +91,7 @@
 .ninsp-modal__campo input, .ninsp-modal__campo select { height: 44px; padding: 0 12px; border: 1px solid var(--separator); border-radius: var(--r-md); background: var(--surface); font: inherit; font-size: 1rem; font-weight: 600; color: var(--label); min-width: 0; }
 @media (max-width: 480px) { .ninsp-modal__psi { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .ninsp-barra .ninsp-atras { height: 40px; min-height: 40px; padding-block: 0; }
+
+/* Atrás con forma y color de fondo */
+.ninsp-barra .ninsp-atras { background: var(--accent-tint); border-radius: 999px; padding: 0 16px; font-weight: 700; }
+.ninsp-barra .ninsp-atras:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); }

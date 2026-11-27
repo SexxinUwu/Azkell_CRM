@@ -49,7 +49,9 @@ export function PlanoTecnico({ configuracion, llantas, activa, sobre, camion = f
     // La izquierda de la unidad queda a la izquierda de la pantalla (el frente va arriba)
     ([[-1, eje.izquierda], [1, eje.derecha]] as Array<[number, string[]]>).forEach(([lado, posiciones]) => {
       posiciones.forEach((pos, k) => {
-        ruedas.push({ pos, x: lado * (posiciones.length > 1 && k > 0 ? X_INT : X_EXT), y: yEje[i] });
+        // Izquierda: [exterior, interior]; derecha: [interior, exterior] (la numeración sigue el orden de izquierda a derecha: 3 4 · 5 6)
+        const interior = posiciones.length > 1 && (lado < 0 ? k > 0 : k === 0);
+        ruedas.push({ pos, x: lado * (interior ? X_INT : X_EXT), y: yEje[i] });
       });
     });
   });

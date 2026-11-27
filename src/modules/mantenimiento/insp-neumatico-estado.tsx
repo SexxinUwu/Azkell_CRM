@@ -20,7 +20,6 @@ import './insp-neumatico.css';
 
 export interface Fila { codigo: string; r1: string; r2: string; r3: string; fotos: string[]; psiEncontrado: string; psiDejado: string; estado: string; obs: string }
 type Montada = { posicion: string; llanta: LlantaTablero };
-interface UltimaInsp { km_vehiculo?: number | null; datosPosiciones?: Record<string, { presion_actual?: number | string | null }> }
 
 const aTexto = (n: number | null | undefined) => (n == null || !Number.isFinite(Number(n)) ? '' : String(Math.round(Number(n))));
 export const minimoDe = (f: { r1: string; r2: string; r3: string }) => {
@@ -32,7 +31,7 @@ export const minimoDe = (f: { r1: string; r2: string; r3: string }) => {
 export type AccionPosicion = 'Inspección' | 'Instalación' | 'Cambio' | 'Rotación';
 interface Movimiento { posicion: string | null; accion: AccionPosicion | null; texto: string; /** Observación automática de la fila (ej. «De Posición #2 a Posición #1») */ nota?: string }
 
-export function useInspeccion({ activa, placa, montadas, conGps = true }: { activa: boolean; placa: string; montadas: Montada[]; conGps?: boolean }) {
+export function useInspeccion({ activa, placa, montadas, conGps = true, psiDefecto = 100 }: { activa: boolean; placa: string; montadas: Montada[]; conGps?: boolean; psiDefecto?: number }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const toast = useToast();
@@ -46,7 +45,6 @@ export function useInspeccion({ activa, placa, montadas, conGps = true }: { acti
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
   const [guardando, setGuardando] = useState(false);
 
-  const ultima = useQuery<UltimaInsp>({ queryKey: ['mant', 'neumaticos-placa-ultima', placa], enabled: activa && !!placa, staleTime: 60_000, queryFn: () => api<UltimaInsp>(`/neumaticos/placa-ultima/${encodeURIComponent(placa)}`) });
   const catalogos = useQuery<{ estados?: string[] }>({ queryKey: ['mant', 'neu-catalogos'], enabled: activa, staleTime: 600_000, queryFn: () => api('/neumaticos/catalogos') });
   const estados = catalogos.data?.estados?.length ? catalogos.data.estados : ['NUEVA', 'RENCAUCHADA'];
   const kmGps = useQuery<{ ok?: boolean; km: number | null; fecha: string | null }>({
@@ -76,15 +74,11 @@ export function useInspeccion({ activa, placa, montadas, conGps = true }: { acti
     return ult?.nota ?? '';
   };
 
-  /** Psi con que quedó la última inspección: sugerencia para las posiciones que no cambiaron */
-  const psiPrevio = (pos: string): string => {
-    const n = Number(ultima.data?.datosPosiciones?.[pos]?.presion_actual);
-    return n > 0 ? String(Math.round(n)) : '';
-  };
   /** Lo que se guarda de cada posición: lo confirmado en la ventana o, si no se tocó, cómo está ahora la llanta */
   const filaDe = (m: Montada): Fila => vigentes[m.posicion] ?? {
     codigo: m.llanta.codigo, r1: aTexto(m.llanta.r1), r2: aTexto(m.llanta.r2), r3: aTexto(m.llanta.r3), fotos: [],
-    psiEncontrado: accionDe(m.posicion) === 'Inspección' ? psiPrevio(m.posicion) : '', psiDejado: accionDe(m.posicion) === 'Inspección' ? psiPrevio(m.posicion) : '',
+    // Encontrado: vacío para llenarlo; dejado: el valor habitual de la unidad (editable)
+    psiEncontrado: '', psiDejado: String(psiDefecto),
     estado: estadoDe(m.llanta), obs: '',
   };
 
@@ -201,7 +195,7 @@ export function InspeccionResumen({ e, montadas }: { e: EstadoInspeccion; montad
         <div className="ninsp-resumen__scroll">
           <table className="ninsp-tabla">
             <thead>
-              <tr><th>#</th><th>Marca</th><th>Medida</th><th>Modelo</th><th>R1</th><th>R2</th><th>R3</th><th>Mín.</th><th>Psi encontrado</th><th>Psi dejado</th><th>Cód. fuego</th><th>Acción</th><th>Estado</th><th>Observación</th></tr>
+              <tr><th>#</th><th>Cód. fuego</th><th>Marca</th><th>Medida</th><th>Modelo</th><th>R1</th><th>R2</th><th>R3</th><th>Mín.</th><th>Psi encontrado</th><th>Psi dejado</th><th>Acción</th><th>Estado</th><th>Observación</th></tr>
             </thead>
             <tbody>
               {montadas.map(m => {
@@ -213,12 +207,12 @@ export function InspeccionResumen({ e, montadas }: { e: EstadoInspeccion; montad
                 return (
                   <tr key={posicion} className={`ninsp-tabla__fila${h ? ' ninsp-tabla__fila--hecha' : ''}`} onClick={() => e.abrir(posicion)}>
                     <td className="ninsp-tabla__pos">{h ? <Check size={14} aria-label="Con cambios" /> : null}{posicion}</td>
+                    <td className="ninsp-tabla__codigo">{llanta.codigo}</td>
                     <td>{llanta.marca ?? '—'}</td><td>{llanta.medida ?? '—'}</td><td>{llanta.modelo ?? '—'}</td>
                     <td className="ninsp-tabla__num">{r.r1 || '—'}</td><td className="ninsp-tabla__num">{r.r2 || '—'}</td><td className="ninsp-tabla__num">{r.r3 || '—'}</td>
                     <td><RemanenteChip mm={minimoDe(r)} /></td>
                     <td className="ninsp-tabla__num">{r.psiEncontrado || '—'}</td>
                     <td className="ninsp-tabla__num">{r.psiDejado || '—'}</td>
-                    <td className="ninsp-tabla__codigo">{llanta.codigo}</td>
                     <td><span className={`ninsp-accion${accion !== 'Inspección' ? ' ninsp-accion--mov' : ''}`}>{accion}</span></td>
                     <td>{r.estado || '—'}</td>
                     <td className="ninsp-tabla__obs">{obs || '—'}</td>

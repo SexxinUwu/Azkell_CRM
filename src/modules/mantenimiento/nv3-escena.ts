@@ -376,7 +376,9 @@ export function construirCamion(codigo: string, datos: Map<string, LlantaDato>, 
     const lados: Array<[number, string[]]> = [[-1, eje.izquierda], [1, eje.derecha]];
     for (const [lado, posiciones] of lados) {
       posiciones.forEach((pos, k) => {
-        const x = lado * (posiciones.length > 1 && k > 0 ? LADO_INTERIOR : LADO_EXTERIOR);
+        // Izquierda: [exterior, interior]; derecha: [interior, exterior]
+        const interior = posiciones.length > 1 && (lado < 0 ? k > 0 : k === 0);
+        const x = lado * (interior ? LADO_INTERIOR : LADO_EXTERIOR);
         const llanta = crearLlanta(pos, x, z, lado, datos.get(pos), rec, geometrias);
         llantas.set(pos, llanta);
         grupo.add(llanta.grupo);
