@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api, errorMessage } from '../../core/api/client';
 import { Button } from '../../core/ui/Button';
@@ -13,6 +13,32 @@ import { Sheet } from '../../core/ui/Sheet';
 interface Grupo { uso: string; posiciones: string; marca: string; modelo: string; medida: string; remanente: string }
 
 const GRUPO_VACIO = (uso: string, posiciones: string): Grupo => ({ uso, posiciones, marca: '', modelo: '', medida: '', remanente: '' });
+
+/**
+ * Remanente (cocada) de alta. Con marca, modelo y medida escritos, sugiere la cocada con la que ya entraron otras llantas del mismo modelo
+ * (la más usada) y la pone si el campo está vacío. Si se escribe otra, avisa: así se evitan errores de digitación (como 17,5 en vez de 19).
+ */
+function CampoRemanente({ g, onCambiar }: { g: Grupo; onCambiar: (v: string) => void }) {
+  const marca = g.marca.trim(), modelo = g.modelo.trim(), medida = g.medida.trim();
+  const q = useQuery({
+    queryKey: ['mant', 'neumaticos', 'cocada-sugerida', marca.toUpperCase(), modelo.toUpperCase(), medida.toUpperCase()],
+    enabled: !!marca && !!modelo, staleTime: 5 * 60_000,
+    queryFn: async () => (await api<{ data: { cocada: number; cantidad: number } | null }>('/neumaticos/cocada-sugerida', { query: { marca, modelo, medida } })).data,
+  });
+  const sug = q.data ?? null;
+  const escrita = Number(g.remanente.replace(',', '.'));
+  const distinta = !!sug && g.remanente.trim() !== '' && Number.isFinite(escrita) && escrita !== sug.cocada;
+  // Se pone sola solo cuando llega la sugerencia y el campo está vacío; si la persona la borra o la cambia, se respeta
+  useEffect(() => { if (sug && g.remanente.trim() === '') onCambiar(String(sug.cocada)); }, [sug?.cocada]); // eslint-disable-line react-hooks/exhaustive-deps
+  const hint = !sug ? undefined
+    : distinta ? `Ojo: ${sug.cantidad} ${sug.cantidad === 1 ? 'llanta' : 'llantas'} de este modelo entraron con ${sug.cocada} mm. Revisa que no sea un error de digitación.`
+      : `Sugerida: ${sug.cocada} mm (la usada en ${sug.cantidad} ${sug.cantidad === 1 ? 'llanta' : 'llantas'} de este modelo).`;
+  return (
+    <Field label="Remanente (mm)" hint={hint}>
+      {p => <TextInput {...p} inputMode="decimal" value={g.remanente} onChange={e => onCambiar(e.target.value)} />}
+    </Field>
+  );
+}
 
 const separar = (t: string) => t.split(/[\s,;]+/).map(p => p.trim().toUpperCase()).filter(Boolean);
 
@@ -90,7 +116,7 @@ export function AltaUnidadNuevaSheet({ open, onClose, onHecho }: { open: boolean
             <Field label="Marca">{p => <TextInput {...p} value={g.marca} onChange={e => cambiar(i, 'marca', e.target.value)} placeholder="MICHELIN" />}</Field>
             <Field label="Modelo">{p => <TextInput {...p} value={g.modelo} onChange={e => cambiar(i, 'modelo', e.target.value)} placeholder="X WORKS Z" />}</Field>
             <Field label="Medida">{p => <TextInput {...p} value={g.medida} onChange={e => cambiar(i, 'medida', e.target.value)} placeholder="295/80R22.5" />}</Field>
-            <Field label="Remanente (mm)">{p => <TextInput {...p} inputMode="decimal" value={g.remanente} onChange={e => cambiar(i, 'remanente', e.target.value)} />}</Field>
+            <CampoRemanente g={g} onCambiar={v => cambiar(i, 'remanente', v)} />
           </fieldset>
         ))}
       </div>

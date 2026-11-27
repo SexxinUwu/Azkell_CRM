@@ -1144,6 +1144,25 @@ module.exports = function (db) {
         };
     }
 
+    // GET /api/neumaticos/cocada-sugerida?marca=&modelo=&medida= -> { data: { cocada, cantidad } | null }
+    // La cocada de alta que más se ha usado en llantas del mismo modelo: se sugiere al dar de alta para evitar errores de digitación.
+    router.get('/cocada-sugerida', async (req, res) => {
+        try {
+            if (!tienePermiso(req, PERMISO_VER, 'l')) throw aviso(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
+            const marca = mayus(req.query.marca), modelo = mayus(req.query.modelo), medida = mayus(req.query.medida).replace(/\s+/g, '');
+            if (!marca || !modelo) return res.json({ ok: true, data: null });
+            const params = [marca, modelo];
+            if (medida) params.push(medida);
+            const [filas] = await pool(req).query(
+                `SELECT remanente_inicial AS cocada, COUNT(*) AS cantidad FROM neumaticos_hoja_vida
+                 WHERE UPPER(TRIM(marca)) = ? AND UPPER(TRIM(modelo)) = ? ${medida ? "AND UPPER(REPLACE(medida, ' ', '')) = ?" : ''} AND remanente_inicial > 0
+                 GROUP BY remanente_inicial ORDER BY cantidad DESC, remanente_inicial DESC LIMIT 1`, params);
+            res.json({ ok: true, data: filas.length ? { cocada: Number(filas[0].cocada), cantidad: Number(filas[0].cantidad) } : null });
+        } catch (err) {
+            responder(res, err);
+        }
+    });
+
     // GET /api/neumaticos/tablero/:placa -> TableroPlaca
     // Unidades para el selector del tablero: la tabla de placas de la empresa
     router.get('/placas', async (req, res) => {
@@ -1316,7 +1335,7 @@ module.exports = function (db) {
     // Orden: más reciente primero.
     async function medicionesLlanta(p, idNeumatico) {
         const [filas] = await p.query(`
-            SELECT d.id, d.posicion, d.r1, d.r2, d.r3, d.presion_actual, i.placa, i.km_vehiculo,
+            SELECT d.id, d.posicion, d.r1, d.r2, d.r3, d.presion_actual, d.foto1, d.foto2, d.foto3, i.placa, i.km_vehiculo,
                    DATE_FORMAT(i.fecha_inspeccion, '%Y-%m-%d') AS fecha,
                    DATE_FORMAT(COALESCE(i.created_at, i.fecha_inspeccion), '%Y-%m-%d %H:%i') AS fecha_hora
             FROM neumaticos_inspecciones_det d
@@ -1450,7 +1469,20 @@ module.exports = function (db) {
             const medCron = mediciones.slice().reverse().map(m => ({
                 fecha: m.fecha_hora || m.fecha, interno: num(m.r1), central: num(m.r2), externo: num(m.r3), minimo: minimoDe(m),
                 km: num(m.km_vehiculo), placa: m.placa || null, posicion: m.posicion || null,
+                fotos: [m.foto1, m.foto2, m.foto3].filter(x => typeof x === 'string' && x.trim() !== '' && !x.startsWith('data:image')),
             })).filter(m => m.minimo != null);
+            // Las fotos están en S3 privado: se entregan con enlace firmado por 2 horas (igual que el detalle de la inspección)
+            {
+                const { s3KeyFromUrl, getPresignedUrl } = require('../utils/s3');
+                for (const m of medCron) {
+                    const firmadas = await Promise.all(m.fotos.map(async x => {
+                        const clave = s3KeyFromUrl(x) || (x.startsWith('http') ? null : x);
+                        if (!clave) return x;
+                        try { return await getPresignedUrl(clave, 7200); } catch (e) { return null; }
+                    }));
+                    m.fotos = firmadas.filter(Boolean);
+                }
+            }
             const mismaUnidad = (m, i) => !m.placa || String(m.placa).toUpperCase().trim() === String(i.placa || '').toUpperCase().trim();
             // Cocada al montar: la primera medición desde el día del montaje en esa unidad; si no hay, la última anterior
             const alMontar = i => {
