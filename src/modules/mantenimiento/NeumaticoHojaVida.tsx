@@ -11,6 +11,7 @@ import { Badge, Notice, Page } from '../../core/ui/Display';
 import { LicensePlate } from '../../core/ui/LicensePlate';
 import { Sheet } from '../../core/ui/Sheet';
 import { NhvCocada } from './nhv2-Cocada';
+import { CambioEstimadoDetalle } from './ntb-cambio';
 import { NhvRanura } from './nhv2-Ranura';
 import { NhvTimeline } from './nhv2-Timeline';
 import {
@@ -128,6 +129,11 @@ function PanelPresionSurco({ f }: { f: Ficha }) {
       {f.cocada && (
         <Bloque titulo="Cocada: ingreso, montaje y desgaste">
           <NhvCocada c={f.cocada} />
+        </Bloque>
+      )}
+      {f.cocada && (
+        <Bloque titulo="Kilometraje proyectado">
+          <CambioEstimadoDetalle c={f.cocada} />
         </Bloque>
       )}
       <Bloque titulo="Ranura del neumático">
