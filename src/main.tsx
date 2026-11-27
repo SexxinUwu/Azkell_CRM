@@ -29,9 +29,14 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 30_000,
       refetchOnWindowFocus: true,
+      // Sin internet las consultas se siguen haciendo: el service worker responde con la última copia guardada.
+      // (Con el modo normal quedarían en pausa, cargando para siempre.)
+      networkMode: 'always',
       // No reintentar errores de permisos o de datos; sí los de red.
-      retry: (count, err) => !(err instanceof ApiError && err.status >= 400 && err.status < 500) && count < 2,
+      retry: (count, err) => navigator.onLine && !(err instanceof ApiError && err.status >= 400 && err.status < 500) && count < 2,
     },
+    // Un cambio sin internet falla al instante con su aviso: no se queda esperando en silencio
+    mutations: { networkMode: 'always' },
   },
 });
 

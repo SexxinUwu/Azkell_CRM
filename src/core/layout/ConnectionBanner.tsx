@@ -3,23 +3,12 @@ import { AnimatePresence, motion } from 'motion/react';
 import { CloudOff, Wifi } from 'lucide-react';
 import { spring } from '../lib/motion';
 import type { LiveState } from '../api/live';
-import { PantallaError } from '../ui/PantallaError';
 
-// Tiempo sin señal antes de cubrir la app con la pantalla de error
-const SIN_SENAL_MS = 8000;
 
 // Aviso flotante de conexión. Espera unos segundos antes de aparecer (un corte breve no molesta)
 // y, al volver la señal, confirma "Conectado" un momento.
 export function ConnectionBanner({ state }: { state: LiveState }) {
   const [shown, setShown] = useState<'offline' | 'back' | null>(null);
-  const [caido, setCaido] = useState(false);
-
-  useEffect(() => {
-    if (state !== 'offline') { setCaido(false); return; }
-    const t = setTimeout(() => setCaido(true), SIN_SENAL_MS);
-    return () => clearTimeout(t);
-  }, [state]);
-
   useEffect(() => {
     if (state === 'offline') {
       const t = setTimeout(() => setShown('offline'), navigator.onLine ? 4000 : 800);
@@ -34,7 +23,6 @@ export function ConnectionBanner({ state }: { state: LiveState }) {
 
   return (
     <>
-    {caido && <PantallaError tipo="sin-conexion" pantallaCompleta />}
     <AnimatePresence>
       {shown && (
         <motion.div
@@ -48,7 +36,7 @@ export function ConnectionBanner({ state }: { state: LiveState }) {
         >
           {shown === 'offline' ? <CloudOff size={16} /> : <Wifi size={16} />}
           {shown === 'offline'
-            ? (typeof navigator !== 'undefined' && !navigator.onLine ? 'Sin conexión a internet' : 'Reconectando…')
+            ? 'Sin conexión · modo lectura: ves lo último que se cargó'
             : 'Conectado'}
         </motion.div>
       )}

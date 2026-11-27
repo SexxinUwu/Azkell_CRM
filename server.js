@@ -607,6 +607,16 @@ app.use('/app/assets', (req, res) => {
     if (/\.js$/i.test(req.path)) return res.status(200).set('Cache-Control', 'no-store').type('application/javascript').send(SCRIPT_RECARGA);
     res.status(404).type('text/plain').send('Archivo no encontrado');
 });
+// Lista de los archivos de la compilación (pantallas, estilos y tipografías) y su versión: la app los baja en segundo plano
+// para poder navegarla sin internet (src/core/lib/precargaOffline.ts). Es información pública: los mismos archivos que ya sirve /app/assets.
+app.get('/app/assets-lista', (req, res) => {
+    try {
+        const dir = path.join(DIST_APP, 'assets');
+        const archivos = fs.existsSync(dir) ? fs.readdirSync(dir).filter(n => /.(js|mjs|css|woff2)$/i.test(n)).sort() : [];
+        const version = crypto.createHash('md5').update(archivos.join('|')).digest('hex').slice(0, 16);
+        res.set('Cache-Control', 'no-store').json({ version, archivos });
+    } catch (e) { res.status(500).json({ error: 'No se pudo listar' }); }
+});
 // Mismo título que el clásico: nombre de la empresa (quitando S.A.C.) + Azkell Fleet
 async function tituloDeAplicacion(req) {
     if (_isSuperAdminReq(req)) return 'SuperAdmin SaaS Master — Azkell Fleet';

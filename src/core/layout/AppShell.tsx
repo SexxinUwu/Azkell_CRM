@@ -24,6 +24,7 @@ import { ModuleDock, type DockItem } from './ModuleDock';
 import { AccentPicker } from '../ui/AccentPicker';
 import { ThemeButton, ThemeSelector } from '../ui/ThemeToggle';
 import { ConnectionBanner } from './ConnectionBanner';
+import { programarPrecarga } from '../lib/precargaOffline';
 import { AsistenteFab } from '../../modules/asistente/components/AsistenteFab';
 import { useLiveUpdates } from '../api/live';
 import { cargarLogoEmpresa } from '../lib/logoEmpresa';
@@ -57,6 +58,8 @@ export function AppShell() {
   useEffect(() => { reiniciarBloqueos(); }, [location.pathname]);
   // Logo de la empresa para los documentos imprimibles (OT, rampa, status de unidades)
   useEffect(() => { void cargarLogoEmpresa(); }, []);
+  // Baja en segundo plano toda la app para poder navegarla sin internet
+  useEffect(() => { programarPrecarga(); }, []);
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false); // hoja de Ajustes
   const [moduloAbierto, setModuloAbierto] = useState<string | null>(null);
