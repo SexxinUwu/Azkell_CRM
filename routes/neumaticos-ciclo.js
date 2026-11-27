@@ -1049,6 +1049,8 @@ module.exports = function (db) {
         const tipoUnidad = configRows.length ? txt(configRows[0].tipo) : '';
         const motoraUnidad = configRows.length ? txt(configRows[0].motora) : '';
         const esThermo = /thermo/i.test(tipoUnidad);
+        // Psi con que se deja la llanta por defecto: 110 en tracto y camión, 100 en el resto (semirremolque, carreta, etc.)
+        const psiDefecto = /tracto|cami/i.test(tipoUnidad) ? 110 : 100;
         const conGps = esThermo || !(/carreta|semi|remolque/i.test(tipoUnidad) || /^no/i.test(motoraUnidad));
 
         // Última inspección de la placa: define las llantas de la unidad y sus mediciones (ver services/neumaticos_unidad.js)
@@ -1166,6 +1168,7 @@ module.exports = function (db) {
             placa,
             configuracion,
             con_gps: conGps,
+            psi_defecto: psiDefecto,
             posiciones: [...detalleMontadas.map(({ posicion, llanta }) => ({ posicion, llanta })), ...posicionesVacias.map(posicion => ({ posicion, llanta: null }))]
                 .sort((a, b) => String(a.posicion).localeCompare(String(b.posicion), 'es', { numeric: true })),
             disponibles: enStock

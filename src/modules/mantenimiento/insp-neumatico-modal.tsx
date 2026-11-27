@@ -40,13 +40,12 @@ async function comoDataUrl(f: File): Promise<string> {
   });
 }
 
-export function InspeccionPosicionSheet({ abierta, posicion, llanta, inicial, estados, onConfirmar, onClose }: {
+export function InspeccionPosicionSheet({ abierta, posicion, llanta, inicial, onConfirmar, onClose }: {
   abierta: boolean;
   posicion: string;
   llanta: LlantaTablero | null;
   /** Lo último que se conoce de esa llanta (o lo ya confirmado en esta inspección) */
   inicial: MedidaPosicion;
-  estados: string[];
   onConfirmar: (m: MedidaPosicion) => void;
   onClose: () => void;
 }) {
@@ -103,10 +102,6 @@ export function InspeccionPosicionSheet({ abierta, posicion, llanta, inicial, es
             <input inputMode="numeric" value={datos.psiEncontrado} placeholder="Ej. 90" onChange={e => setDatos(d => ({ ...d, psiEncontrado: e.target.value.replace(/\D/g, '').slice(0, 3) }))} /></label>
           <label className="ninsp-modal__campo"><span>Psi dejado</span>
             <input inputMode="numeric" value={datos.psiDejado} placeholder="Ej. 110" onChange={e => setDatos(d => ({ ...d, psiDejado: e.target.value.replace(/\D/g, '').slice(0, 3) }))} /></label>
-          <label className="ninsp-modal__campo"><span>Estado</span>
-            <select value={datos.estado} onChange={e => setDatos(d => ({ ...d, estado: e.target.value }))}>
-              {[...new Set([datos.estado, ...estados].filter(Boolean))].map(s => <option key={s} value={s}>{s}</option>)}
-            </select></label>
         </div>
         <label className="ninsp-modal__campo"><span>Observaciones</span>
           <input value={datos.obs} placeholder="Opcional" onChange={e => setDatos(d => ({ ...d, obs: e.target.value }))} /></label>

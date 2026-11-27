@@ -11,6 +11,7 @@ import { formatFechaPe } from '../../core/lib/format';
 import { useToast } from '../../core/ui/Toast';
 import type { LlantaTablero } from './neumaticos-tablero-tipos';
 import { RemanenteChip } from './ntb-llanta';
+import { vidaTexto } from './ntb-api';
 import type { Propuesta } from './ntb-movimiento-sheet';
 import { InspeccionPosicionSheet, type MedidaPosicion } from './insp-neumatico-modal';
 import './insp-neumatico.css';
@@ -20,7 +21,6 @@ import './insp-neumatico.css';
 
 export interface Fila { codigo: string; r1: string; r2: string; r3: string; fotos: string[]; psiEncontrado: string; psiDejado: string; estado: string; obs: string }
 type Montada = { posicion: string; llanta: LlantaTablero };
-interface UltimaInsp { km_vehiculo?: number | null; datosPosiciones?: Record<string, { presion_actual?: number | string | null }> }
 
 const aTexto = (n: number | null | undefined) => (n == null || !Number.isFinite(Number(n)) ? '' : String(Math.round(Number(n))));
 export const minimoDe = (f: { r1: string; r2: string; r3: string }) => {
@@ -32,7 +32,7 @@ export const minimoDe = (f: { r1: string; r2: string; r3: string }) => {
 export type AccionPosicion = 'Inspección' | 'Instalación' | 'Cambio' | 'Rotación';
 interface Movimiento { posicion: string | null; accion: AccionPosicion | null; texto: string; /** Observación automática de la fila (ej. «De Posición #2 a Posición #1») */ nota?: string }
 
-export function useInspeccion({ activa, placa, montadas, conGps = true }: { activa: boolean; placa: string; montadas: Montada[]; conGps?: boolean }) {
+export function useInspeccion({ activa, placa, montadas, conGps = true, psiDefecto = 100 }: { activa: boolean; placa: string; montadas: Montada[]; conGps?: boolean; psiDefecto?: number }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const toast = useToast();
@@ -46,9 +46,6 @@ export function useInspeccion({ activa, placa, montadas, conGps = true }: { acti
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
   const [guardando, setGuardando] = useState(false);
 
-  const ultima = useQuery<UltimaInsp>({ queryKey: ['mant', 'neumaticos-placa-ultima', placa], enabled: activa && !!placa, staleTime: 60_000, queryFn: () => api<UltimaInsp>(`/neumaticos/placa-ultima/${encodeURIComponent(placa)}`) });
-  const catalogos = useQuery<{ estados?: string[] }>({ queryKey: ['mant', 'neu-catalogos'], enabled: activa, staleTime: 600_000, queryFn: () => api('/neumaticos/catalogos') });
-  const estados = catalogos.data?.estados?.length ? catalogos.data.estados : ['NUEVA', 'RENCAUCHADA'];
   const kmGps = useQuery<{ ok?: boolean; km: number | null; fecha: string | null }>({
     queryKey: ['mant', 'neu-km-gps', placa, fecha], enabled: activa && !!placa && conGps, staleTime: 60_000,
     queryFn: () => api(`/neumaticos/km-gps/${encodeURIComponent(placa)}`, { query: { fecha } }),
@@ -57,6 +54,7 @@ export function useInspeccion({ activa, placa, montadas, conGps = true }: { acti
 
   useEffect(() => { setHechas({}); setAbierta(null); setMovimientos([]); }, [placa]);
 
+  // El estado (NUEVA / RENCAUCHADA) no se escribe: se deduce de la vida de la llanta (R0 = nueva)
   const estadoDe = (l: LlantaTablero) => (l.vida != null && l.vida > 0 ? 'RENCAUCHADA' : 'NUEVA');
   // Una medición solo vale para la llanta que estaba medida: si la posición cambió de llanta durante la inspección, hay que medir la nueva
   const vigentes = useMemo(() => {
@@ -76,15 +74,11 @@ export function useInspeccion({ activa, placa, montadas, conGps = true }: { acti
     return ult?.nota ?? '';
   };
 
-  /** Psi con que quedó la última inspección: sugerencia para las posiciones que no cambiaron */
-  const psiPrevio = (pos: string): string => {
-    const n = Number(ultima.data?.datosPosiciones?.[pos]?.presion_actual);
-    return n > 0 ? String(Math.round(n)) : '';
-  };
   /** Lo que se guarda de cada posición: lo confirmado en la ventana o, si no se tocó, cómo está ahora la llanta */
   const filaDe = (m: Montada): Fila => vigentes[m.posicion] ?? {
     codigo: m.llanta.codigo, r1: aTexto(m.llanta.r1), r2: aTexto(m.llanta.r2), r3: aTexto(m.llanta.r3), fotos: [],
-    psiEncontrado: accionDe(m.posicion) === 'Inspección' ? psiPrevio(m.posicion) : '', psiDejado: accionDe(m.posicion) === 'Inspección' ? psiPrevio(m.posicion) : '',
+    // Encontrado: vacío para llenarlo; dejado: el valor habitual de la unidad (editable)
+    psiEncontrado: '', psiDejado: String(psiDefecto),
     estado: estadoDe(m.llanta), obs: '',
   };
 
@@ -155,7 +149,7 @@ export function useInspeccion({ activa, placa, montadas, conGps = true }: { acti
   }
 
   return {
-    conGps, fecha, tecnico, km, kmFecha: kmGps.data?.fecha ?? null, kmCargando: kmGps.isLoading, dias, setDias, estados,
+    conGps, fecha, tecnico, km, kmFecha: kmGps.data?.fecha ?? null, kmCargando: kmGps.isLoading, dias, setDias,
     vigentes, filaDe, abierta, abrir: (pos: string) => setAbierta(pos), cerrar: () => setAbierta(null), llantaAbierta, inicialModal, confirmar,
     accionDe, notaDe, registrar, guardar, guardando, movimientos,
     /** El plano muestra lo medido en esta inspección (cambia el color al confirmar) */
@@ -201,7 +195,7 @@ export function InspeccionResumen({ e, montadas }: { e: EstadoInspeccion; montad
         <div className="ninsp-resumen__scroll">
           <table className="ninsp-tabla">
             <thead>
-              <tr><th>#</th><th>Marca</th><th>Medida</th><th>Modelo</th><th>R1</th><th>R2</th><th>R3</th><th>Mín.</th><th>Psi encontrado</th><th>Psi dejado</th><th>Cód. fuego</th><th>Acción</th><th>Estado</th><th>Observación</th></tr>
+              <tr><th>#</th><th>Cód. fuego</th><th>Marca</th><th>Medida</th><th>Modelo</th><th>R1</th><th>R2</th><th>R3</th><th>Mín.</th><th>Psi encontrado</th><th>Psi dejado</th><th>Acción</th><th>Vida</th><th>Observación</th></tr>
             </thead>
             <tbody>
               {montadas.map(m => {
@@ -213,14 +207,14 @@ export function InspeccionResumen({ e, montadas }: { e: EstadoInspeccion; montad
                 return (
                   <tr key={posicion} className={`ninsp-tabla__fila${h ? ' ninsp-tabla__fila--hecha' : ''}`} onClick={() => e.abrir(posicion)}>
                     <td className="ninsp-tabla__pos">{h ? <Check size={14} aria-label="Con cambios" /> : null}{posicion}</td>
+                    <td className="ninsp-tabla__codigo">{llanta.codigo}</td>
                     <td>{llanta.marca ?? '—'}</td><td>{llanta.medida ?? '—'}</td><td>{llanta.modelo ?? '—'}</td>
                     <td className="ninsp-tabla__num">{r.r1 || '—'}</td><td className="ninsp-tabla__num">{r.r2 || '—'}</td><td className="ninsp-tabla__num">{r.r3 || '—'}</td>
                     <td><RemanenteChip mm={minimoDe(r)} /></td>
                     <td className="ninsp-tabla__num">{r.psiEncontrado || '—'}</td>
                     <td className="ninsp-tabla__num">{r.psiDejado || '—'}</td>
-                    <td className="ninsp-tabla__codigo">{llanta.codigo}</td>
                     <td><span className={`ninsp-accion${accion !== 'Inspección' ? ' ninsp-accion--mov' : ''}`}>{accion}</span></td>
-                    <td>{r.estado || '—'}</td>
+                    <td className="ninsp-tabla__num">{vidaTexto(llanta.vida)}</td>
                     <td className="ninsp-tabla__obs">{obs || '—'}</td>
                   </tr>
                 );
@@ -233,7 +227,7 @@ export function InspeccionResumen({ e, montadas }: { e: EstadoInspeccion; montad
         )}
       </section>
       <div className="ninsp-pie">
-        <span className="t-footnote c-secondary">Toca una llanta (en el plano o en la tabla) para cambiar sus medidas, Psi, estado, observación o fotos. Al guardar se registran todas las llantas como estén en ese momento.</span>
+        <span className="t-footnote c-secondary">Toca una llanta (en el plano o en la tabla) para cambiar sus medidas, Psi, observación o fotos. Al guardar se registran todas las llantas como estén en ese momento.</span>
         <Button variant="primary" size="lg" onClick={() => { void e.guardar(); }} loading={e.guardando} disabled={montadas.length === 0 || (e.conGps && !e.km)}>Guardar</Button>
       </div>
     </>
@@ -241,5 +235,5 @@ export function InspeccionResumen({ e, montadas }: { e: EstadoInspeccion; montad
 }
 
 export function InspeccionModal({ e }: { e: EstadoInspeccion }) {
-  return <InspeccionPosicionSheet abierta={!!e.abierta} posicion={e.abierta ?? ''} llanta={e.llantaAbierta} inicial={e.inicialModal} estados={e.estados} onConfirmar={e.confirmar} onClose={e.cerrar} />;
+  return <InspeccionPosicionSheet abierta={!!e.abierta} posicion={e.abierta ?? ''} llanta={e.llantaAbierta} inicial={e.inicialModal} onConfirmar={e.confirmar} onClose={e.cerrar} />;
 }

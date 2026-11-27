@@ -8,6 +8,8 @@ export interface ItemArrastre { codigo: string; origen: OrigenLlanta }
 export type Destino = { tipo: 'posicion'; posicion: string } | { tipo: 'zona'; zona: 'reforma' | 'descarte' } | { tipo: 'bodega' };
 
 const UMBRAL_PX = 6;
+/** Tiempo que hay que mantener presionada una llanta con el dedo para levantarla */
+const ESPERA_TACTIL_MS = 220;
 const PREFIJO_LABEL = 'Llanta ';
 
 /** Código de posición de un nodo del diagrama o de un chip (o null) */
@@ -92,8 +94,17 @@ export function useArrastre(opciones: Opciones) {
     const x0 = e.clientX;
     const y0 = e.clientY;
     let movido = false;
+    // En pantalla táctil, la llanta se levanta manteniéndola presionada un instante (así el dedo sigue pudiendo desplazar la página).
+    // Una vez levantada, se bloquea el desplazamiento para que el gesto no se cancele.
+    const tactil = e.pointerType === 'touch';
+    let armado = !tactil;
+    const temporizador = tactil ? window.setTimeout(() => { armado = true; navigator.vibrate?.(12); }, ESPERA_TACTIL_MS) : 0;
+    const bloquearScroll = (te: TouchEvent) => { if (armado && te.cancelable) te.preventDefault(); };
+    if (tactil) window.addEventListener('touchmove', bloquearScroll, { passive: false });
 
     const cortar = () => {
+      window.clearTimeout(temporizador);
+      window.removeEventListener('touchmove', bloquearScroll);
       window.removeEventListener('pointermove', mover);
       window.removeEventListener('pointerup', soltar);
       window.removeEventListener('pointercancel', cancelar);
@@ -105,6 +116,8 @@ export function useArrastre(opciones: Opciones) {
     function mover(ev: PointerEvent) {
       if (!movido) {
         if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < UMBRAL_PX) return;
+        // Con el dedo, moverse antes de que la llanta se levante es desplazar la página: no se arrastra
+        if (!armado) { cortar(); return; }
         movido = true;
         opcionesRef.current.onInicio?.(item);
       }
