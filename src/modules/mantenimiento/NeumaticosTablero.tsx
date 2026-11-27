@@ -325,7 +325,7 @@ export function NeumaticosTablero({ inspeccion = false }: { inspeccion?: boolean
     <Page wide>
       <PageHeader
         eyebrow="Mantenimiento · Neumáticos"
-        title={inspeccion ? 'Inspección neumática' : 'Tablero de movimientos'}
+        title={inspeccion ? 'Inspección neumática Nº …….' : 'Tablero de movimientos'}
         subtitle={placa ? `${placa}${cfg && configCodigo ? ` · ${configCodigo} · ${nombreUnidad}` : ''}` : 'Elige una unidad para ver y mover sus neumáticos'}
         actions={
           <PlacaPicker
@@ -445,7 +445,7 @@ export function NeumaticosTablero({ inspeccion = false }: { inspeccion?: boolean
                     onSelect={l => { const m = montadas.find(x => x.posicion === l.posicion); if (!m) return; if (inspeccion) insp.abrir(m.posicion); else elegirLlanta(m.llanta.codigo); }}
                     marca={(placas.data ?? []).find(p => p.placa === placa)?.marca ?? null}
                     camion={/^C/i.test(datos?.configuracion ?? '')}
-                    modo={modo} onModo={setModo} plano2d placa={placa} arrastrando={llevada}
+                    modo={modo} onModo={setModo} plano2d placa={placa} arrastrando={llevada} sinNumeros={inspeccion} soloPlano={inspeccion}
                   />
                 </div>
               ) : (

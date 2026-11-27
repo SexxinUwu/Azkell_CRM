@@ -18,7 +18,9 @@ const normal = (p: string) => String(p).trim().toUpperCase();
 
 interface Rueda { pos: string; x: number; y: number; plana?: boolean }
 
-export function PlanoTecnico({ configuracion, llantas, activa, sobre, camion = false, animar = false, arrastrando = null }: {
+export function PlanoTecnico({ configuracion, llantas, activa, sobre, camion = false, animar = false, arrastrando = null, sinNumeros = false }: {
+  /** Sin el número sobre la llanta; la llanta se pinta con el color de su remanente */
+  sinNumeros?: boolean;
   configuracion: string; llantas: LlantaDato[]; activa: string; sobre: string | null; camion?: boolean;
   /** El dibujo se traza en secuencia al montarse: largueros, ejes, parachoques y, al final, las llantas */
   animar?: boolean;
@@ -155,14 +157,15 @@ export function PlanoTecnico({ configuracion, llantas, activa, sobre, camion = f
                 {surcos.map(s => r.plana
                   ? <line key={s} x1={r.x + s} x2={r.x + s} y1={r.y - h / 2 + 2} y2={r.y + h / 2 - 2} stroke="#2f3237" strokeWidth={1.2} opacity={0.55} />
                   : <line key={s} x1={r.x - w / 2 + 2} x2={r.x + w / 2 - 2} y1={r.y + s} y2={r.y + s} stroke="#2f3237" strokeWidth={1.2} opacity={0.55} />)}
+                {sinNumeros && tono && tono !== 'gray' && <rect x={r.x - w / 2} y={r.y - h / 2} width={w} height={h} rx={5} fill={`var(--${tono}-ink)`} opacity={0.62} pointerEvents="none" />}
                 {/* Aro del semáforo de remanente */}
                 <rect x={r.x - w / 2 - 2.5} y={r.y - h / 2 - 2.5} width={w + 5} height={h + 5} rx={7.5} fill="none" stroke={aro} strokeWidth={2.4} />
               </>
             ) : (
               <rect x={r.x - w / 2} y={r.y - h / 2} width={w} height={h} rx={5} fill="none" stroke="var(--label-3)" strokeWidth={1.4} strokeDasharray="4 3" />
             )}
-            <circle cx={r.x} cy={r.y} r={8.5} fill="#ffffff" opacity={dato ? 0.92 : 0.6} />
-            <text x={r.x} y={r.y + 3.6} textAnchor="middle" fontSize={r.pos.length > 2 ? 7.5 : 9.5} fontWeight={700} fill="#1c1c1e" pointerEvents="none">{r.pos}</text>
+            {!sinNumeros && <circle cx={r.x} cy={r.y} r={8.5} fill="#ffffff" opacity={dato ? 0.92 : 0.6} />}
+            {!sinNumeros && <text x={r.x} y={r.y + 3.6} textAnchor="middle" fontSize={r.pos.length > 2 ? 7.5 : 9.5} fontWeight={700} fill="#1c1c1e" pointerEvents="none">{r.pos}</text>}
           </g>
           </g>
         );

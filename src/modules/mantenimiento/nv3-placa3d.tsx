@@ -24,11 +24,13 @@ const OPCIONES: Array<{ valor: ModoVista; etiqueta: string }> = [
   { valor: 'isometria', etiqueta: 'Isometría' },
 ];
 
-export default function Placa3DVista({ placa, configuracion, llantas, activa, sobre, camion = false, modo, onModo, onSelect, arrastrando = null }: {
+export default function Placa3DVista({ placa, configuracion, llantas, activa, sobre, camion = false, modo, onModo, onSelect, arrastrando = null, sinNumeros = false }: {
   placa: string; configuracion: string; llantas: LlantaDato[]; activa: string; sobre: string | null; camion?: boolean;
   modo: ModoVista; onModo: (m: ModoVista) => void; onSelect: (l: LlantaDato) => void;
   /** Llanta de la unidad que se lleva con el puntero en el plano */
   arrastrando?: { posicion: string; x: number; y: number } | null;
+  /** Sin números sobre las llantas (inspección) */
+  sinNumeros?: boolean;
 }) {
   const { oscuro } = useOscuro();
   const placas = usePlacas();
@@ -192,15 +194,15 @@ export default function Placa3DVista({ placa, configuracion, llantas, activa, so
           return (
             <div key={pos} ref={el => { if (el) marcadores.current.set(pos, el); else marcadores.current.delete(pos); }}
               data-ntb-pos={pos} className={`nv3-marca${normal(activa) === pos ? ' nv3-marca--activa' : ''}${sobre && normal(sobre) === pos ? ' nv3-marca--destino' : ''}`}
-              style={{ borderColor: aro }} aria-label={`Llanta ${pos}`} role="button" tabIndex={-1}>
-              {pos}
+              style={sinNumeros ? { borderColor: aro, background: 'transparent', boxShadow: 'none' } : { borderColor: aro }} aria-label={`Llanta ${pos}`} role="button" tabIndex={-1}>
+              {sinNumeros ? null : pos}
             </div>
           );
         })}
       </div>
 
       <div className="nv3-plano">
-        <PlanoTecnico key={modo} configuracion={configuracion} llantas={llantas} activa={activa} sobre={sobre} camion={camion} animar arrastrando={arrastrando} />
+        <PlanoTecnico key={modo} configuracion={configuracion} llantas={llantas} activa={activa} sobre={sobre} camion={camion} animar arrastrando={arrastrando} sinNumeros={sinNumeros} />
       </div>
 
       <div className="nv3-modos" role="group" aria-label="Tipo de vista" onPointerDown={detener} onClick={detener}>
