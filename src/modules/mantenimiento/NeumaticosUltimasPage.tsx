@@ -9,7 +9,7 @@ import { Button, PageLoader } from '../../core/ui/Button';
 import { EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField, SelectInput } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
-import { NeumaticosNuevaInspeccionSheet } from './NeumaticosNuevaInspeccionSheet';
+import { useNavigate } from 'react-router-dom';
 import { NeumaticosHistorialPlaca } from './NeumaticosHistorialPlaca';
 import { LogoArchivo, RequerimientoNeumaticos } from './NeumaticosRequerimiento';
 import { VehiculosTarjetas } from './NeumaticosVehiculos';
@@ -61,7 +61,7 @@ export function NeumaticosUltimasPage() {
   const [motora, setMotora] = useState<FiltroMotora>('Todos');
   const [umbral, setUmbral] = useState(leerUmbral);
   const [medidaSel, setMedidaSel] = useState<string | null>(null);
-  const [nueva, setNueva] = useState<{ abierta: boolean; placa: string }>({ abierta: false, placa: '' });
+  const navegar = useNavigate();
   const [historial, setHistorial] = useState<{ abierto: boolean; placa: string }>({ abierto: false, placa: '' });
 
   const ultimas = useMemo(() => data ?? [], [data]);
@@ -88,7 +88,8 @@ export function NeumaticosUltimasPage() {
   const visiblesReq = useMemo(() => requerimiento.filter(pasa), [requerimiento, pasa]);
   const hayFiltros = !!busqueda || empresa !== 'Todos' || motora !== 'Todos';
 
-  const abrirInspeccion = (placa: string) => setNueva({ abierta: true, placa });
+  // La inspección tiene su propia pantalla (plano de la unidad, medición por posición y resumen)
+  const abrirInspeccion = (placa: string) => navegar(placa ? `/mantenimiento/neumaticos-inspeccion/${encodeURIComponent(placa)}` : '/mantenimiento/neumaticos-inspeccion');
 
   return (
     <Page wide>
@@ -149,7 +150,6 @@ export function NeumaticosUltimasPage() {
         </div>
       )}
 
-      <NeumaticosNuevaInspeccionSheet open={nueva.abierta} placaInicial={nueva.placa} onClose={() => setNueva({ abierta: false, placa: '' })} />
       <NeumaticosHistorialPlaca placa={historial.placa} open={historial.abierto} onClose={() => setHistorial({ abierto: false, placa: '' })} />
     </Page>
   );

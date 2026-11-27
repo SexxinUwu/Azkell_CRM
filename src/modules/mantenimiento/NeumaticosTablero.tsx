@@ -30,6 +30,7 @@ import { MovimientoSheet, type Propuesta } from './ntb-movimiento-sheet';
 import './ntb.css';
 import { DetalleSecciones } from './ntb-secciones';
 import { HistorialLlanta } from './ntb-historial-llanta';
+import { InspeccionCabecera, InspeccionModal, InspeccionResumen, minimoDe, useInspeccion } from './insp-neumatico-estado';
 
 type Grupo = 'bodega' | 'unidad' | 'reforma' | 'descarte';
 
@@ -66,7 +67,11 @@ function ZonaDrop({ zona, titulo, nota, cantidad, resaltada, permitido, bloqueo 
   );
 }
 
-export function NeumaticosTablero() {
+/** Pantalla de la inspección: el tablero en modo inspección */
+export const NeumaticosInspeccion = () => <NeumaticosTablero inspeccion />;
+
+/** `inspeccion`: el mismo tablero (con sus arrastres y movimientos) para inspeccionar la unidad: cabecera, medición por posición, resumen y Guardar */
+export function NeumaticosTablero({ inspeccion = false }: { inspeccion?: boolean } = {}) {
   const { placa: placaRuta } = useParams();
   const placa = (placaRuta ?? '').trim().toUpperCase();
   const navigate = useNavigate();
@@ -129,7 +134,12 @@ export function NeumaticosTablero() {
   const descarte = useMemo(() => datos?.descarte ?? [], [datos]);
   const montadas = useMemo(() => montadasDe(posiciones), [posiciones]);
   const libres = useMemo(() => posiciones.filter(p => !p.llanta), [posiciones]);
-  const llantasDato = useMemo(() => montadas.map(m => aLlantaDato(m.llanta, m.posicion)), [montadas]);
+  const insp = useInspeccion({ activa: inspeccion, placa, montadas });
+  const llantasDato = useMemo(() => montadas.map(m => {
+    const d = aLlantaDato(m.llanta, m.posicion);
+    const h = inspeccion ? insp.medido(m.posicion) : null;
+    return h ? { ...d, r1: Number(h.r1), r2: Number(h.r2), r3: Number(h.r3), remanente_promedio: minimoDe(h) } : d;
+  }), [montadas, inspeccion, insp.vigentes]); // eslint-disable-line react-hooks/exhaustive-deps
   // La inspección manda: la configuración se toma de las posiciones con llanta si la ficha no las cubre
   const configCodigo = configParaPosiciones(datos?.configuracion, posiciones.map(p => p.posicion));
   const configFicha = configReconocida(datos?.configuracion);
@@ -227,6 +237,7 @@ export function NeumaticosTablero() {
     if (!enMano) {
       const l = llantaEnPosicion(pos);
       setAviso(null);
+      if (l && inspeccion) { insp.abrir(pos); return; }
       if (l) elegirLlanta(l.codigo);
       else { setSeleccion(null); setPosLibre(pos); }
       return;
@@ -238,6 +249,7 @@ export function NeumaticosTablero() {
     sondaRef,
     onTap: (item) => {
       if (item.origen === 'bodega') tocarBodega(item.codigo);
+      else if (inspeccion) { const m = montadas.find(x => x.llanta.codigo === item.codigo); if (m) insp.abrir(m.posicion); }
       else { setAviso(null); elegirLlanta(item.codigo); }
     },
     onSoltar: (item, destino) => proponer(item, destino),
@@ -313,7 +325,7 @@ export function NeumaticosTablero() {
     <Page wide>
       <PageHeader
         eyebrow="Mantenimiento · Neumáticos"
-        title="Tablero de movimientos"
+        title={inspeccion ? 'Inspección neumática' : 'Tablero de movimientos'}
         subtitle={placa ? `${placa}${cfg && configCodigo ? ` · ${configCodigo} · ${nombreUnidad}` : ''}` : 'Elige una unidad para ver y mover sus neumáticos'}
         actions={
           <PlacaPicker
@@ -321,11 +333,12 @@ export function NeumaticosTablero() {
             value={placa}
             opciones={opcionesPlaca}
             placeholder="Elige una unidad…"
-            onChange={p => navigate(`/mantenimiento/neumaticos-tablero/${encodeURIComponent(p)}`)}
+            onChange={p => navigate(`/mantenimiento/neumaticos-${inspeccion ? 'inspeccion' : 'tablero'}/${encodeURIComponent(p)}`, { replace: inspeccion })}
           />
         }
       />
 
+      {inspeccion && <InspeccionCabecera e={insp} placa={placa} />}
       {!puedeMover && <Notice>Solo lectura: no tienes permiso para mover neumáticos.</Notice>}
       {bannerTexto && (
         <div className="ntb-banner" role="status">
@@ -353,7 +366,7 @@ export function NeumaticosTablero() {
       ) : tablero.isError ? (
         <Notice tone="error" icon={<CircleAlert size={16} />}>{errorMessage(tablero.error)}</Notice>
       ) : (
-        <div className="ntb-tablero">
+        <div className={`ntb-tablero${inspeccion ? ' ntb-tablero--insp' : ''}`}>
           {/* Columna izquierda: disponibles para uso y, debajo, las zonas de reforma y descarte */}
           <div className="ntb-lateral">
           <section data-ntb-zona="bodega" className={`card ntb-col ntb-bodega${sobre?.tipo === 'bodega' ? ' ntb-bodega--sobre' : ''}`} aria-label="Disponible para uso">
@@ -429,7 +442,7 @@ export function NeumaticosTablero() {
                   <NeumaticosCenital
                     llantas={llantasDato} configuracion={configCodigo} activa={posicionActiva}
                     sobre={sobre?.tipo === 'posicion' ? sobre.posicion : null} sondaRef={sondaRef}
-                    onSelect={l => { const m = montadas.find(x => x.posicion === l.posicion); if (m) elegirLlanta(m.llanta.codigo); }}
+                    onSelect={l => { const m = montadas.find(x => x.posicion === l.posicion); if (!m) return; if (inspeccion) insp.abrir(m.posicion); else elegirLlanta(m.llanta.codigo); }}
                     marca={(placas.data ?? []).find(p => p.placa === placa)?.marca ?? null}
                     camion={/^C/i.test(datos?.configuracion ?? '')}
                     modo={modo} onModo={setModo} plano2d placa={placa} arrastrando={llevada}
@@ -457,7 +470,8 @@ export function NeumaticosTablero() {
             </section>
           </div>
 
-          {/* Detalle y línea de tiempo */}
+          {/* Detalle y línea de tiempo (en la inspección se reemplaza por el resumen de abajo) */}
+          {!inspeccion && (
           <div className="ntb-detalle-col">
           <aside className="card ntb-col ntb-detalle" aria-label="Detalles de neumático">
             <div className="ntb-col__cab">
@@ -528,8 +542,12 @@ export function NeumaticosTablero() {
             )}
           </aside>
           </div>
+          )}
         </div>
       )}
+
+      {inspeccion && placa && !tablero.isLoading && !tablero.isError && <InspeccionResumen e={insp} montadas={montadas} />}
+      {inspeccion && <InspeccionModal e={insp} />}
 
       {/* El neumático que se arrastra va en el cuerpo de la página y se ve igual que los del plano de la unidad */}
       {arrastre.fantasma && !llevada && llantaArrastrada && createPortal(
@@ -552,8 +570,10 @@ export function NeumaticosTablero() {
           puedeReencauche={puedeReforma}
           puedeBaja={puedeBaja}
           onClose={cerrarHoja}
+          kmSugerido={inspeccion ? insp.km : undefined}
           onHecho={(mensaje, deshacer) => {
             toast(mensaje, 'success');
+            if (inspeccion && hoja.propuesta) insp.registrar(hoja.propuesta, mensaje);
             if (deshacer) setUltimoEnvio({ ...deshacer, venceEn: Date.now() + 5 * 60_000 });
             void refrescar();
           }}
