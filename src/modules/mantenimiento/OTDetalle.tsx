@@ -2,7 +2,7 @@ import { mantenerUrl } from '../../core/lib/blobUrl';
 import { formatFechaHoraPe, formatSoles } from '../../core/lib/format';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, Ban, CalendarDays, ClipboardCheck, Disc, FileText, Gauge, Package, Play, Plus, Receipt, RotateCcw, Timer, Trash2, Wrench } from 'lucide-react';
+import { ArrowUpRight, Ban, CalendarDays, ClipboardCheck, Disc, FileText, Gauge, Package, Paperclip, Play, Plus, Receipt, RotateCcw, Timer, Trash2, Wrench } from 'lucide-react';
 import { ConfirmSheet } from '../../core/ui/Sheet';
 import { Button, PageLoader } from '../../core/ui/Button';
 import { Notice } from '../../core/ui/Display';
@@ -19,7 +19,7 @@ import { compartirPDF } from '../../core/lib/pdf';
 import { InspeccionFicha } from '../inspecciones/InspeccionFicha';
 import { useInspecciones, type Inspeccion } from '../inspecciones/api';
 import {
-  aObjeto, trabajoId, accionesDisponibles, limpioMotivo, otYaCerrada, costosOT, duracionPausa, etiquetaEstado, formatoDuracion, otDetalles, otId,
+  aObjeto, cuentaAdjuntos, trabajoId, accionesDisponibles, limpioMotivo, otYaCerrada, costosOT, duracionPausa, etiquetaEstado, formatoDuracion, otDetalles, otId,
   pausasDe, tiempoNetoOT, trabajoCosto, trabajosDeOT, useInspeccionesDeOT, useMateriales, useTrabajosOT,
   type AccionOT, type MaterialSalida, type OrdenTrabajo, type PausaOT, type TrabajoOT,
 } from './api';
@@ -656,7 +656,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
                       <tr key={t ? trabajoId(t) : `m-${idx}`} className={clic ? 'otd-tr--clic' : undefined} onClick={clic ? abrir : undefined}>
                         <Celda mono>{idx + 1}</Celda>
                         <Celda>{f.continuacion ? '↳ mismo motivo' : f.motivo ? `${f.backlog ? `Backlog ${f.backlog.backlog_id} · ` : ''}${f.motivo.replace(/^falla manual\s*:\s*/i, '')}${f.veces && f.veces > 1 ? ` (repetido ×${f.veces})` : ''}` : 'Adicional (sin motivo de ingreso)'}</Celda>
-                        <Celda>{t ? (t.trabajo_realizado || '—') : '—'}</Celda>
+                        <Celda>{t ? (t.trabajo_realizado || '—') : '—'}{t && cuentaAdjuntos(t) > 0 && <span title={`${cuentaAdjuntos(t)} evidencia(s) adjunta(s)`} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginLeft: 6, color: 'var(--label-3)', fontSize: '0.75rem' }}><Paperclip size={12} />{cuentaAdjuntos(t)}</span>}</Celda>
                         <Celda>{t ? (personal || 'Sin técnico') : '—'}</Celda>
                         <Celda mono>{t ? fecha(t.fecha_trabajo) : '—'}</Celda>
                         <Celda mono>{t ? fecha(t.fecha_salida) : '—'}</Celda>
