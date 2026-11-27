@@ -95,7 +95,7 @@ export const RUTAS: RutaModulo[] = [
     // Inspección de neumáticos de una unidad: plano del tablero, medición por posición con fotos y tabla de resumen
     path: 'mantenimiento/neumaticos-inspeccion/:placa?',
     permisos: ['neumaticos.ver'],
-    Page: lazy(() => import('./NeumaticosInspeccionPage').then(m => ({ default: m.NeumaticosInspeccionPage }))),
+    Page: lazy(() => import('./NeumaticosTablero').then(m => ({ default: m.NeumaticosInspeccion }))),
   },
   {
     // Ficha de un neumático (pantalla completa; también existe como hoja desde las inspecciones)

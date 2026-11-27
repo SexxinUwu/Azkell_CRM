@@ -56,3 +56,14 @@
 .ninsp-modal__ayuda { margin: var(--s-2) 0 0; font-size: 0.75rem; color: var(--label-3); }
 
 @media (max-width: 900px) { .ninsp-cuerpo { grid-template-columns: 1fr; } .ninsp-cab__dias { margin-left: 0; } }
+
+/* Barra de la inspección dentro del tablero */
+.ninsp-barra { display: flex; align-items: flex-end; gap: var(--s-3); flex-wrap: wrap; margin-bottom: var(--s-3); }
+.ninsp-barra .ninsp-datos { flex: 1 1 520px; margin-bottom: 0; grid-template-columns: repeat(3, minmax(160px, 1fr)); }
+.ninsp-barra .ninsp-cab__dias { margin-left: 0; }
+.ninsp-resumen__cuenta { margin-left: 8px; font-size: 0.8125rem; font-weight: 600; color: var(--label-3); }
+.ninsp-accion { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 0.6875rem; font-weight: 800; background: var(--fill); color: var(--label-2); white-space: nowrap; }
+.ninsp-accion--mov { background: var(--accent-tint, var(--fill)); color: var(--accent-ink, var(--accent)); }
+.ninsp-movs { margin: var(--s-3) 0 0; font-size: 0.8125rem; color: var(--label-2); }
+.ninsp-tabla { min-width: 1120px; }
+@media (max-width: 760px) { .ninsp-barra .ninsp-datos { grid-template-columns: 1fr; } }

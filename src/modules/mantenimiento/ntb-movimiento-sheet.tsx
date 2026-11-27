@@ -38,6 +38,8 @@ interface Props {
   /** Enviar a descarte permitido (descarte y el destino del intercambio) */
   puedeBaja: boolean;
   onClose: () => void;
+  /** Km con el que se abre el campo (en una inspección, el kilometraje de la inspección) */
+  kmSugerido?: string;
   /** `deshacer`: solo cuando se envió una llanta a reforma o descarte (para ofrecer volver atrás) */
   onHecho: (mensaje: string, deshacer?: { codigo: string; posicion: string; km: number; destino: 'reforma' | 'descarte' }) => void;
 }
@@ -65,7 +67,7 @@ function Resumen({ children }: { children: ReactNode }) {
   return <div className="ntb-resumen">{children}</div>;
 }
 
-export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puedeBaja, onClose, onHecho }: Props) {
+export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puedeBaja, onClose, onHecho, kmSugerido }: Props) {
   // Toda llanta retirada pasa por el Retén: puede quedar ahí disponible, ir a reforma o esperar su descarte
   const opcionesDestino: Array<{ value: Destino; label: string }> = [
     { value: 'reten', label: 'Retén (disponible)' },
@@ -73,7 +75,7 @@ export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puede
     ...(puedeBaja ? [{ value: 'descarte' as const, label: 'Esperando descarte' }] : []),
   ];
 
-  const [km, setKm] = useState('');
+  const [km, setKm] = useState(kmSugerido ?? '');
   const [destino, setDestino] = useState<Destino>('reten');
   const [resultado, setResultado] = useState<ResultadoReencauche>('aprobada');
   const [motivo, setMotivo] = useState('');
