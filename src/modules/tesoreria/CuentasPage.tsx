@@ -16,8 +16,10 @@ import { useAuth } from '../../core/auth/AuthProvider';
 import { exportarExcel } from '../../core/lib/excel';
 import { haptic } from '../../core/lib/haptics';
 import { formatFechaPe } from '../../core/lib/format';
+import { MOBILE_QUERY, useMediaQuery } from '../../core/lib/useMediaQuery';
 import { cambiarEstadoCuenta, useCuentas, type CuentaPorCobrar } from './api';
 import { ImportarCuentasSheet } from './ImportarCuentasSheet';
+import { CuentasTabla } from './CuentasTabla';
 import { NotaCreditoSheet } from './NotaCreditoSheet';
 import { DetalleCuenta } from './cuentas-detalle';
 import { FormularioCuenta } from './cuentas-formulario';
@@ -54,6 +56,8 @@ export function CuentasPage() {
   const { can, user } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
+  // En escritorio, tabla con todas las columnas (como el clásico); en el celular, lista de tarjetas
+  const movil = useMediaQuery(MOBILE_QUERY);
   const [busqueda, setBusqueda] = useState('');
   const [estado, setEstado] = useState<EstadoFiltro>('');
   const [mes, setMes] = useState('');
@@ -148,7 +152,7 @@ export function CuentasPage() {
   }
 
   return (
-    <Page>
+    <Page wide={!movil}>
       <PageHeader
         eyebrow="Tesorería"
         title="Cuentas por cobrar"
@@ -211,6 +215,8 @@ export function CuentasPage() {
             <EmptyState icon={hayFiltros ? <SearchX size={22} /> : <Wallet size={22} />} title={hayFiltros ? 'Sin coincidencias' : 'Sin cuentas por cobrar'}>
               {puedeCrear && !hayFiltros ? <>Registra la primera con <strong>Nuevo</strong> o importa un Excel.</> : 'Prueba con otros filtros.'}
             </EmptyState>
+          ) : !movil ? (
+            <CuentasTabla filas={visibles} onAbrir={setAbiertoId} altoMax="calc(100vh - 400px)" />
           ) : (
             <div className="tarjeta__lista">
               {visibles.map(c => {
