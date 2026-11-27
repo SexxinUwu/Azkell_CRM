@@ -3,6 +3,7 @@
 import { Component, lazy, Suspense, useState, type ReactNode } from 'react';
 import { CONFIGURACIONES, posicionesDeConfig } from '../inspecciones/components/ChasisEsquemaVisual';
 import { EsquemaNeumaticos, type LlantaDato } from './NeumaticosEsquema';
+import { PlanoTecnico } from './nv3-plano';
 import type { SondaPosicion } from './ntb-arrastre';
 import type { ArrastreLlanta, ModoVista } from './nv3-motor';
 import './nv3.css';
@@ -40,6 +41,8 @@ export interface NeumaticosCenitalProps {
   arrastrando?: { posicion: string; x: number; y: number } | null;
   /** Sin el número sobre las llantas (inspección): se ve el color de cada neumático */
   sinNumeros?: boolean;
+  /** Solo el plano (sin 3D ni botón de Isometría): el dibujo se traza con su animación */
+  soloPlano?: boolean;
 }
 
 /** Este equipo puede dibujar en WebGL */
@@ -60,7 +63,7 @@ class RespaldoSeguro extends Component<{ respaldo: ReactNode; children: ReactNod
   render() { return this.state.fallo ? this.props.respaldo : this.props.children; }
 }
 
-export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null, onSelect, sondaRef, arrastreRef, marca = null, camion = false, modo, onModo, plano2d = false, placa, arrastrando = null, sinNumeros = false }: NeumaticosCenitalProps) {
+export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null, onSelect, sondaRef, arrastreRef, marca = null, camion = false, modo, onModo, plano2d = false, placa, arrastrando = null, sinNumeros = false, soloPlano = false }: NeumaticosCenitalProps) {
   const [soportaWebgl] = useState(webglDisponible);
   const [perdido, setPerdido] = useState(false);
 
@@ -68,6 +71,16 @@ export function NeumaticosCenital({ llantas, configuracion, activa, sobre = null
   const encaja = !!configuracion && !!CONFIGURACIONES[configuracion]
     && llantas.every(l => posicionesConfig.includes(String(l.posicion).trim().toUpperCase()));
   const respaldo = <EsquemaNeumaticos llantas={llantas} configuracion={configuracion} activa={activa} onSelect={onSelect} />;
+
+  if (soloPlano && configuracion && encaja) {
+    return (
+      <div className="nv3-vista nv3-vista--2d nv3-vista--placa" data-nv3 data-modo="plano">
+        <div className="nv3-plano">
+          <PlanoTecnico configuracion={configuracion} llantas={llantas} activa={activa} sobre={sobre} arrastrando={arrastrando} sinNumeros={sinNumeros} camion={camion} animar />
+        </div>
+      </div>
+    );
+  }
 
   if (plano2d && placa && modo && onModo && configuracion && encaja) {
     return (
