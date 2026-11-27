@@ -29,7 +29,7 @@ export const minimoDe = (f: { r1: string; r2: string; r3: string }) => {
 
 /** La acción de cada posición se anota sola según lo que se hizo ahí durante la inspección */
 export type AccionPosicion = 'Inspección' | 'Instalación' | 'Cambio' | 'Rotación';
-interface Movimiento { posicion: string | null; accion: AccionPosicion | null; texto: string }
+interface Movimiento { posicion: string | null; accion: AccionPosicion | null; texto: string; /** Observación automática de la fila (ej. «De Posición #2 a Posición #1») */ nota?: string }
 
 export function useInspeccion({ activa, placa, montadas }: { activa: boolean; placa: string; montadas: Montada[] }) {
   const navigate = useNavigate();
@@ -65,6 +65,12 @@ export function useInspeccion({ activa, placa, montadas }: { activa: boolean; pl
     return ult?.accion ?? 'Inspección';
   };
 
+  /** Observación automática de la posición (la rotación dice de dónde a dónde se movió) */
+  const notaDe = (pos: string): string => {
+    const ult = [...movimientos].reverse().find(m => m.posicion === pos && m.nota);
+    return ult?.nota ?? '';
+  };
+
   const llantaAbierta = abierta ? montadas.find(m => m.posicion === abierta)?.llanta ?? null : null;
   const inicialModal: MedidaPosicion = abierta
     ? (vigentes[abierta] ? { r1: vigentes[abierta].r1, r2: vigentes[abierta].r2, r3: vigentes[abierta].r3, fotos: vigentes[abierta].fotos }
@@ -90,8 +96,8 @@ export function useInspeccion({ activa, placa, montadas }: { activa: boolean; pl
       // Las dos posiciones cambian de llanta (o la de origen queda libre): ambas se marcan como rotación
       setMovimientos(m => [
         ...m,
-        { posicion: p.posicion, accion: 'Rotación', texto: `Pos ${p.posicion}: ${mensaje}` },
-        ...(p.ocupante ? [{ posicion: p.desde, accion: 'Rotación' as const, texto: `Pos ${p.desde}: ${p.ocupante.codigo} rotada desde ${p.posicion}` }] : []),
+        { posicion: p.posicion, accion: 'Rotación', texto: `Pos ${p.posicion}: ${mensaje}`, nota: `De Posición #${p.desde} a Posición #${p.posicion}` },
+        ...(p.ocupante ? [{ posicion: p.desde, accion: 'Rotación' as const, texto: `Pos ${p.desde}: ${p.ocupante.codigo} rotada desde ${p.posicion}`, nota: `De Posición #${p.posicion} a Posición #${p.desde}` }] : []),
       ]);
       return;
     }
@@ -107,6 +113,8 @@ export function useInspeccion({ activa, placa, montadas }: { activa: boolean; pl
     if (!(Number(km) > 0)) { toast('Ingresa el kilometraje de la unidad (mayor a 0)', 'error'); return; }
     const sinPsi = pos.filter(m => !(Number(vigentes[m.posicion].psiEncontrado) > 0) || !(Number(vigentes[m.posicion].psiDejado) > 0)).map(m => m.posicion);
     if (sinPsi.length) { toast(`Falta el Psi (cómo se encontró y cómo se deja) en la posición ${sinPsi.join(', ')}`, 'error'); return; }
+    const sinMedir = montadas.filter(m => !vigentes[m.posicion] && accionDe(m.posicion) !== 'Inspección').map(m => m.posicion);
+    if (sinMedir.length) { toast(`Mide la posición ${sinMedir.join(', ')}: tuvo movimiento y debe quedar en la inspección`, 'error'); return; }
     const items = pos.map(({ posicion, llanta }) => {
       const h = vigentes[posicion];
       return {
@@ -114,7 +122,8 @@ export function useInspeccion({ activa, placa, montadas }: { activa: boolean; pl
         r1: Number(h.r1), r2: Number(h.r2), r3: Number(h.r3),
         // presion_ant = como se encontró al ingresar; presion_actual = como se deja
         presion_ant: Number(h.psiEncontrado), presion_actual: Number(h.psiDejado),
-        estado: h.estado, accion: accionDe(posicion), observaciones: h.obs.trim(),
+        estado: h.estado, accion: accionDe(posicion), rot: accionDe(posicion) === 'Rotación' ? 'SI' : 'NO',
+        observaciones: [notaDe(posicion), h.obs.trim()].filter(Boolean).join(' · '),
         foto1: h.fotos[0] ?? null, foto2: h.fotos[1] ?? null, foto3: h.fotos[2] ?? null,
       };
     });
@@ -136,7 +145,7 @@ export function useInspeccion({ activa, placa, montadas }: { activa: boolean; pl
   return {
     fecha, setFecha, tecnico, setTecnico, km, setKm, dias, setDias, estados, ultimaKm: ultima.data?.km_vehiculo ?? null,
     vigentes, abierta, abrir: (pos: string) => setAbierta(pos), cerrar: () => setAbierta(null), llantaAbierta, inicialModal, confirmar, cambiar,
-    accionDe, registrar, guardar, guardando, movimientos,
+    accionDe, notaDe, registrar, guardar, guardando, movimientos,
     /** El plano muestra lo medido en esta inspección (cambia el color al confirmar) */
     medido: (pos: string) => vigentes[pos] ?? null,
   };
@@ -191,7 +200,7 @@ export function InspeccionResumen({ e, montadas }: { e: EstadoInspeccion; montad
                     <td className="ninsp-tabla__codigo">{llanta.codigo}</td>
                     <td><span className={`ninsp-accion${accion !== 'Inspección' ? ' ninsp-accion--mov' : ''}`}>{accion}</span></td>
                     <td onClick={ev => ev.stopPropagation()}>{h ? <select className="ninsp-tabla__input" value={h.estado} onChange={ev => e.cambiar(posicion, 'estado', ev.target.value)} aria-label={`Estado de la posición ${posicion}`}>{e.estados.map(s => <option key={s} value={s}>{s}</option>)}</select> : '—'}</td>
-                    <td onClick={ev => ev.stopPropagation()}>{h ? <input className="ninsp-tabla__input" value={h.obs} onChange={ev => e.cambiar(posicion, 'obs', ev.target.value)} placeholder="Observación" aria-label={`Observación de la posición ${posicion}`} /> : '—'}</td>
+                    <td onClick={ev => ev.stopPropagation()}>{e.notaDe(posicion) && <div className="ninsp-nota">{e.notaDe(posicion)}</div>}{h ? <input className="ninsp-tabla__input" value={h.obs} onChange={ev => e.cambiar(posicion, 'obs', ev.target.value)} placeholder="Observación" aria-label={`Observación de la posición ${posicion}`} /> : (e.notaDe(posicion) ? null : '—')}</td>
                   </tr>
                 );
               })}
