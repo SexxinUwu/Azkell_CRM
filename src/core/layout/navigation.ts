@@ -12,6 +12,7 @@
 import {
   Accessibility, Activity, TriangleAlert, Sparkles, TrendingUp, ReceiptText, ArrowLeftRight, Banknote, BarChart3, Boxes, Building2, Cog, Code, Contact, Disc3, Droplet, FileText, Fuel, Gauge, Gavel, HardHat, History, Hourglass, IdCard, Landmark, Layers, LayoutDashboard, List, MapPin, Package, PackageMinus, PackagePlus, Palette, Route, ScrollText, Settings, ShieldCheck, Tag, Target, Truck, UserCog, Users, Wallet, Warehouse, Wrench, CalendarDays, ClipboardCheck, ClipboardList, Clock, type LucideIcon, Bell,
 } from 'lucide-react';
+import { FileStack } from 'lucide-react';
 import type { RutaModulo } from '../../modules/personal/rutas.tipos';
 
 export interface NavItem {
@@ -243,6 +244,13 @@ const SECCIONES_BASE: NavSection[] = [
     items: [
       { key: 'seg-unidades', label: 'Checklist "Unidades"', to: '/personas/seg-unidades', icon: ShieldCheck, permissions: ver('seguridad_unidades') },
       { key: 'seg-status', label: 'Status "Unidades en Base"', to: '/seguridad/unidades-base', icon: MapPin, permissions: ver('seguridad_unidades') },
+    ],
+  },
+  {
+    title: 'Herramientas',
+    items: [
+      // Sin permiso especial: las usa cualquiera con sesión. Todo se procesa en el navegador (ver modules/herramientas).
+      { key: 'herramientas-pdf', label: 'Herramientas PDF', to: '/herramientas', icon: FileStack, permissions: [] },
     ],
   },
   {

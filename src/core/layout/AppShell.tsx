@@ -6,6 +6,7 @@ import {
   Banknote, Boxes, ChevronDown, ChevronRight, Contact, Download, IdCard, House, LogOut, Palette, PanelLeftClose, PanelLeftOpen, Route, Settings, Share, ShieldCheck, Truck,
   SquarePlus, Smartphone, Users, Wrench, Search, EyeOff, Star, type LucideIcon,
 } from 'lucide-react';
+import { FileStack } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { PaletaComandos, type OpcionPaleta } from './PaletaComandos';
@@ -34,7 +35,7 @@ import './menu-secciones.css';
 // Color de cada sección del menú: identifica el módulo de un vistazo
 const COLOR_SECCION: Record<string, string> = {
   Operaciones: '#2563eb', 'Operaciones Marsisa': '#d97706', Flota: '#16a34a', Mantenimiento: '#ea580c', 'Almacén': '#7c3aed',
-  Gerencia: '#0f766e', RRHH: '#db2777', 'Tesorería': '#059669', Conductor: '#0891b2', Seguridad: '#475569', Directorio: '#4f46e5',
+  Gerencia: '#0f766e', RRHH: '#db2777', 'Tesorería': '#059669', Conductor: '#0891b2', Seguridad: '#475569', Directorio: '#4f46e5', Herramientas: '#e5322d',
 };
 
 // Todas las pantallas de una sección (los submenús se aplanan) para la paleta Ctrl+K
@@ -404,7 +405,7 @@ const SECCION_INICIO = 'Dashboard';
 
 const ICONOS_MODULO: Record<string, LucideIcon> = {
   Operaciones: Route, 'Operaciones Marsisa': Route, Flota: Truck, Mantenimiento: Wrench, 'Almacén': Boxes,
-  Gerencia: ShieldCheck, RRHH: Users, 'Tesorería': Banknote, Conductor: IdCard, Seguridad: ShieldCheck, Directorio: Contact, Dashboard: House,
+  Gerencia: ShieldCheck, RRHH: Users, 'Tesorería': Banknote, Conductor: IdCard, Seguridad: ShieldCheck, Directorio: Contact, Herramientas: FileStack, Dashboard: House,
 };
 const iconoModulo = (titulo: string): LucideIcon => ICONOS_MODULO[titulo] ?? Boxes;
 // El nombre del módulo va completo, tal cual aparece en el menú

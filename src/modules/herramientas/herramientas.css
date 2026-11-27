@@ -1,0 +1,44 @@
+/* Herramientas PDF */
+.hp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--s-3); margin-top: var(--s-4); }
+.hp-tarjeta { display: flex; flex-direction: column; gap: 6px; padding: var(--s-4); border-radius: var(--r-lg); background: var(--fill-subtle); border: 1px solid var(--separator); text-decoration: none; color: inherit; transition: transform 160ms ease, box-shadow 160ms ease; }
+.hp-tarjeta:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); }
+.hp-tarjeta:active { transform: scale(0.98); }
+.hp-tarjeta strong { font-size: 1rem; letter-spacing: -0.01em; }
+.hp-tarjeta span:last-child { font-size: 0.8125rem; color: var(--label-2); line-height: 1.35; }
+.hp-tarjeta__icono { display: inline-grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; color: #fff; margin-bottom: 4px; }
+.hp-pie { display: flex; align-items: center; gap: 6px; margin: var(--s-4) 0 0; font-size: 0.75rem; color: var(--label-3); }
+.hp-volver { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; color: var(--accent); text-decoration: none; margin-bottom: var(--s-2); }
+.hp-privado { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: var(--r-md); background: var(--green-tint); color: var(--green-ink); font-size: 0.8125rem; margin-bottom: var(--s-4); }
+.hp-privado svg { flex-shrink: 0; margin-top: 2px; }
+
+.hp-herramienta { display: flex; flex-direction: column; gap: var(--s-4); }
+.hp-ayuda { margin: 0; font-size: 0.8125rem; color: var(--label-2); }
+.hp-opciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--s-3); }
+.hp-cierre { display: flex; flex-direction: column; gap: var(--s-3); }
+.hp-procesar { width: 100%; }
+
+.hp-zona { display: flex; flex-direction: column; gap: var(--s-3); }
+.hp-zona__caja { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: var(--s-6) var(--s-4); border: 2px dashed var(--separator); border-radius: var(--r-lg); color: var(--label-2); text-align: center; transition: border-color 160ms ease, background 160ms ease; }
+.hp-zona__caja p { margin: 0; font-size: 0.8125rem; }
+.hp-zona__caja--encima { border-color: var(--accent); background: var(--accent-tint); }
+.hp-zona__caja--off { opacity: 0.55; }
+.hp-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.hp-lista__fila { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--r-md); background: var(--fill-subtle); }
+.hp-lista__nombre { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.875rem; font-weight: 600; }
+.hp-lista__peso { font-size: 0.75rem; color: var(--label-3); white-space: nowrap; }
+.hp-icono { display: inline-grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 8px; background: var(--fill); color: var(--label-2); cursor: pointer; }
+.hp-icono:hover:not(:disabled) { background: var(--separator); }
+.hp-icono:disabled { opacity: 0.4; cursor: default; }
+.hp-icono--peligro { color: var(--red-ink); }
+
+.hp-resultado { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: var(--s-4); border-radius: var(--r-lg); background: var(--green-tint); color: var(--green-ink); }
+.hp-resultado__texto { flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: 2px; }
+.hp-resultado__texto span { font-size: 0.8125rem; opacity: 0.85; }
+
+.hp-paginas { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--s-3); }
+.hp-pag { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px; border-radius: var(--r-md); border: 1px solid var(--separator); background: var(--fill-subtle); cursor: grab; }
+.hp-pag--mov { opacity: 0.4; }
+.hp-pag__vista { width: 100%; aspect-ratio: 3 / 4; display: grid; place-items: center; overflow: hidden; background: #fff; border-radius: 4px; }
+.hp-pag__vista img { object-fit: contain; transition: transform 200ms ease; }
+.hp-pag__num { font-size: 0.75rem; font-weight: 700; color: var(--label-2); }
+.hp-pag__acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
