@@ -180,3 +180,6 @@
 @media (prefers-reduced-motion: reduce) {
   .nv3-plano__svg--anim .pt-riel, .nv3-plano__svg--anim .pt-eje, .nv3-plano__svg--anim .pt-fade, .nv3-plano__svg--anim .pt-llanta { animation: none; }
 }
+
+/* Plano: el dedo desplaza la página en vertical; las llantas se levantan manteniéndolas presionadas */
+.nv3-plano, .nv3-plano__svg { touch-action: pan-y; }

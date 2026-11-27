@@ -80,13 +80,12 @@
 .ninsp-dato__valor { height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 12px; border-radius: var(--r-md); background: var(--fill); color: var(--label); font-size: 0.9375rem; font-weight: 600; }
 .ninsp-dato__valor span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ninsp-dato__valor svg { color: var(--label-3); flex: none; }
-@media (max-width: 760px) { .ninsp-barra .ninsp-dato { width: 100% !important; } .ninsp-barra .ninsp-cab__dias { margin-left: 0; } }
 
 /* Tabla de solo lectura */
 .ninsp-tabla__obs { min-width: 180px; white-space: normal; }
 
 /* Ventana: Psi, estado y observaciones */
-.ninsp-modal__psi { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-3); }
+.ninsp-modal__psi { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
 .ninsp-modal__campo { display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; font-weight: 700; color: var(--label-2); }
 .ninsp-modal__campo input, .ninsp-modal__campo select { height: 44px; padding: 0 12px; border: 1px solid var(--separator); border-radius: var(--r-md); background: var(--surface); font: inherit; font-size: 1rem; font-weight: 600; color: var(--label); min-width: 0; }
 @media (max-width: 480px) { .ninsp-modal__psi { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -95,3 +94,16 @@
 /* Atrás con forma y color de fondo */
 .ninsp-barra .ninsp-atras { background: var(--accent-tint); border-radius: 999px; padding: 0 16px; font-weight: 700; }
 .ninsp-barra .ninsp-atras:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); }
+
+/* Teléfono y tablet angosta: la cabecera en dos columnas para no tener que bajar */
+@media (max-width: 760px) {
+  .ninsp-barra { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2) var(--s-3); align-items: end; }
+  .ninsp-barra .ninsp-dato { width: 100% !important; min-width: 0; }
+  .ninsp-barra .ninsp-atras { order: 1; justify-self: start; }
+  .ninsp-barra .ninsp-cab__dias { order: 2; margin-left: 0; justify-self: end; }
+  .ninsp-barra .ninsp-dato:nth-of-type(1) { order: 3; }
+  .ninsp-barra .ninsp-dato:nth-of-type(2) { order: 4; }
+  .ninsp-barra .ninsp-dato:nth-of-type(3) { order: 5; grid-column: 1 / -1; }
+}
+
+@media (max-width: 760px) { .ninsp-placa { zoom: 0.62; } }

@@ -347,8 +347,8 @@ export function NeumaticosTablero({ inspeccion = false }: { inspeccion?: boolean
       <PageHeader
         eyebrow="Mantenimiento · Neumáticos"
         title={inspeccion ? 'Inspección neumática Nº …….' : 'Tablero de movimientos'}
-        subtitle={placa ? `${placa}${cfg && configCodigo ? ` · ${configCodigo} · ${nombreUnidad}` : ''}` : 'Elige una unidad para ver y mover sus neumáticos'}
-        actions={inspeccion && placa ? <LicensePlate plate={placa} size="lg" /> : (
+        subtitle={inspeccion && placa ? undefined : placa ? `${placa}${cfg && configCodigo ? ` · ${configCodigo} · ${nombreUnidad}` : ''}` : 'Elige una unidad para ver y mover sus neumáticos'}
+        actions={inspeccion && placa ? <span className="ninsp-placa"><LicensePlate plate={placa} size="lg" /></span> : (
           <PlacaPicker
             id="ntb-placa"
             value={placa}
@@ -431,7 +431,8 @@ export function NeumaticosTablero({ inspeccion = false }: { inspeccion?: boolean
           <div className="ntb-centro">
             <section className="card ntb-col" aria-label="Vehículo">
               <div className="ntb-col__cab">
-                <LicensePlate plate={placa} size="lg" />
+                {/* En la inspección la placa ya se ve arriba */}
+                {!inspeccion && <LicensePlate plate={placa} size="lg" />}
                 {posiciones.length > 0 && (
                   <div className="ntb-chips" role="group" aria-label="Posiciones de la unidad">
                     {posiciones.map(p => (
