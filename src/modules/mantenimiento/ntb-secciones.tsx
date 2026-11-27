@@ -116,10 +116,13 @@ export function DetalleSecciones({ llanta, grupo, placa, posicion, ubicacion }: 
               </div>
               <Dato etiqueta="Ritmo de desgaste">{Math.round(estimacion.kmPorMm).toLocaleString('es-PE')} km por mm</Dato>
               <Dato etiqueta={`Vida total estimada (${c?.inicial ?? '—'} → ${estimacion.reten} mm)`}>{aprox(estimacion.vidaTotalKm)} km</Dato>
+              <Dato etiqueta="Km recorridos">{miles(llanta.km_recorridos)}</Dato>
               <Dato etiqueta="Faltan hasta el retén">{mmTexto(estimacion.mmHastaReten)}</Dato>
-              <Dato etiqueta="Al día de la inspección">{aprox(estimacion.restantesAlInspeccion)} km</Dato>
               <Dato etiqueta="Cómo se calculó" ancho>
-                <span className="ntb-det__nota">{mmTexto(estimacion.mmGastados)} gastados en {miles(estimacion.kmTramo)} km (inspección del {fecha(ultima?.fecha)}). Estimación lineal: supone un desgaste parejo.</span>
+                <span className="ntb-det__nota">
+                  Ritmo = {miles(estimacion.kmTramo)} km ÷ {estimacion.mmGastados.toFixed(1)} mm gastados (inspección del {fecha(ultima?.fecha)}).
+                  Vida total = ({c?.inicial ?? '—'} − {estimacion.reten}) × ritmo. Restan = vida total − km recorridos. Estimación lineal: supone un desgaste parejo; se recalcula en cada inspección.
+                </span>
               </Dato>
             </>
           ) : (
