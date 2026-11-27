@@ -2867,6 +2867,9 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
             return res.status(400).json({ error: 'Solo se pueden solicitar artículos (INV). Quita los servicios: ' + servicios.map(d => d.inventario_id).join(', ') });
         }
 
+        // Las llantas no salen en una salida directa: se piden con una solicitud (OT) y se despachan eligiendo su código de fuego
+        asigLlantas.nombresDeLlantas(promesa(targetDb), items).then(llantasEnSalida => {
+        if (llantasEnSalida.length) return res.status(400).json({ error: 'Las llantas se despachan por código de fuego: pídelas con una solicitud de la OT y despáchalas desde Salidas (' + llantasEnSalida.join(', ') + ').' });
         // Sin existencias no sale nada (la salida nace ya despachada, así que aquí es el único control de stock)
         validarStockSalida(targetDb, items, null, (errStk, faltan) => {
             if (errStk) return res.status(500).json({ error: errStk.message });
@@ -2884,6 +2887,7 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
                 crearSalida();
             }
         });
+        }).catch(eLl => res.status(500).json({ error: eLl.message }));
 
         // Costo promedio ponderado del inventario para cada repuesto (S/); luego se crea la salida con ese costo
         function costearItemsSalida(lista, cb) {

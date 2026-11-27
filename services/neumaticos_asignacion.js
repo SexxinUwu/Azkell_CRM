@@ -29,6 +29,16 @@ async function datosDeLinea(db, inventarioId) {
     return { esLlanta: esArticuloLlanta(invs[0], art), art, inv: invs[0] };
 }
 
+/** Nombres de las líneas que son llantas (las llantas solo salen por solicitud con código de fuego) */
+async function nombresDeLlantas(db, items) {
+    const nombres = [];
+    for (const it of Array.isArray(items) ? items : []) {
+        const d = await datosDeLinea(db, it && it.inventario_id);
+        if (d.esLlanta) nombres.push((it.descripcion || d.inv.descripcion || it.inventario_id));
+    }
+    return nombres;
+}
+
 /** Condiciones SQL y parámetros para las llantas de un artículo (misma medida, marca, modelo y vida) */
 function filtroDeArticulo({ art, inv }) {
     const where = ['UPPER(TRIM(h.medida)) = ?', "COALESCE(h.vida, 'R0') = ?"];
@@ -80,7 +90,7 @@ async function validarDespacho(db, lineas, elegidas) {
         if (Math.abs((Number(l.cantidad) || 0) - cantidad) > 1e-9) throw aviso(400, `${nombre}: la cantidad de llantas debe ser un número entero.`);
         const codigos = [...new Set((Array.isArray(mapa[l.detalle_id]) ? mapa[l.detalle_id] : []).map(mayus).filter(Boolean))];
         if (codigos.length !== cantidad) {
-            throw aviso(400, `${nombre}: elige los ${cantidad} código${cantidad === 1 ? '' : 's'} de fuego de las llantas que se entregan (elegidos: ${codigos.length}).`,
+            throw aviso(400, `${nombre}: elige ${cantidad === 1 ? 'el código' : `los ${cantidad} códigos`} de fuego de ${cantidad === 1 ? 'la llanta' : 'las llantas'} que se entrega${cantidad === 1 ? '' : 'n'} (elegidos: ${codigos.length}).`,
                 { llantas_requeridas: { detalle_id: l.detalle_id, inventario_id: l.inventario_id, cantidad } });
         }
         const { where, params } = filtroDeArticulo(d);
@@ -162,6 +172,6 @@ async function cerrarAlInstalar(db, idNeumatico) {
 }
 
 module.exports = {
-    ALMACENES_DESPACHO, aviso, datosDeLinea, candidatasDeArticulo, validarDespacho, asignarDespacho, liberarDeSalida,
+    ALMACENES_DESPACHO, aviso, datosDeLinea, nombresDeLlantas, candidatasDeArticulo, validarDespacho, asignarDespacho, liberarDeSalida,
     asignacionAbierta, validarInstalacion, cerrarAlInstalar,
 };

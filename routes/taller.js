@@ -1,4 +1,5 @@
 const express = require('express');
+const asigLlantas = require('../services/neumaticos_asignacion');
 const { envolverLogAudit } = require('../services/auditoria');
 const path = require('path');
 const multer = require('multer');
@@ -1277,11 +1278,15 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
         }
     });
 
-    router.put('/ot-materiales/:id', (req, res) => {
+    router.put('/ot-materiales/:id', async (req, res) => {
         const id = req.params.id;
         const { accion, motivo } = req.body;
         const targetDb = req.db || db;
         if (accion === 'despachar') {
+            // Las llantas se despachan desde Almacén eligiendo su código de fuego (aquí no hay forma de elegirlo)
+            const detLl = await new Promise(resolve => targetDb.query('SELECT inventario_id, descripcion FROM detalle_salidas_inv WHERE salida_id = ?', [id], (e, r) => resolve(e ? [] : r)));
+            const nomLl = await asigLlantas.nombresDeLlantas(typeof targetDb.promise === 'function' ? targetDb.promise() : targetDb, detLl).catch(() => []);
+            if (nomLl.length) return res.status(400).json({ error: 'Las llantas se despachan desde Almacén eligiendo su código de fuego: ' + nomLl.join(', ') });
             const sqlStockCheck = `
                 SELECT d.id AS detalle_id, d.descripcion, d.cantidad, d.costo_unitario, d.moneda, d.importe, d.inventario_id,
                        i.id AS inv_id, i.descripcion AS inv_desc,
@@ -1403,6 +1408,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
                 ['Anulado', String(motivo).trim(), id], (err, result) => {
                     if (err) return res.status(500).json({ error: err.message });
                     if (!result.affectedRows) return res.status(404).json({ error: 'No encontrado' });
+                    asigLlantas.liberarDeSalida(typeof targetDb.promise === 'function' ? targetDb.promise() : targetDb, id, 'Solicitud anulada: ' + String(motivo).trim()).catch(eAsig => console.error('[liberar llantas anular OT]', eAsig.message));
                     if (typeof logAudit === 'function') { logAudit(req, req.baseUrl ? req.baseUrl.split('/').pop() : 'sistema', req.method === 'POST' ? 'CREÓ' : req.method === 'PUT' ? 'MODIFICÓ' : req.method === 'DELETE' ? 'ELIMINÓ' : 'ACCIÓN', req.path); } res.json({ ok: true });
                 });
         } else {
@@ -1413,6 +1419,7 @@ module.exports = (db, logAudit, _generarCodigoAlmacen) => {
     router.delete('/ot-materiales/:id', (req, res) => {
         const id = req.params.id;
         const targetDb = req.db || db;
+        asigLlantas.liberarDeSalida(typeof targetDb.promise === 'function' ? targetDb.promise() : targetDb, id, 'Solicitud eliminada').catch(eAsig => console.error('[liberar llantas eliminar OT]', eAsig.message));
         targetDb.query('DELETE FROM detalle_salidas_inv WHERE salida_id = ?', [id], () => {
             targetDb.query('DELETE FROM salidas_inv WHERE id = ?', [id], (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
