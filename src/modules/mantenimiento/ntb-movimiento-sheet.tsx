@@ -14,6 +14,7 @@ import { ejecutarIntercambio, ejecutarMovimiento, ejecutarRegreso, tituloLlanta,
 
 export type Propuesta =
   | { clase: 'instalar'; llanta: LlantaTablero; posicion: string }
+  | { clase: 'rotacion'; llanta: LlantaTablero; desde: string; posicion: string; ocupante: LlantaTablero | null }
   | { clase: 'intercambio'; entrante: LlantaTablero; saliente: LlantaTablero; posicion: string }
   | { clase: 'reforma' | 'descarte'; llanta: LlantaTablero; posicion: string }
   | { clase: 'retorno'; llanta: LlantaTablero }
@@ -46,6 +47,7 @@ interface Props {
 
 const TITULOS: Record<Propuesta['clase'], string> = {
   instalar: 'Instalar llanta',
+  rotacion: 'Rotar llanta',
   intercambio: 'Cambiar llanta',
   reforma: 'Enviar a reforma',
   descarte: 'Enviar a descarte',
@@ -99,6 +101,13 @@ export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puede
         const k = kilometraje(km, null);
         await ejecutarMovimiento({ clase: 'instalar', codigo: propuesta.llanta.codigo, placa, posicion: propuesta.posicion, km: k });
         mensaje = `${propuesta.llanta.codigo} montada en ${propuesta.posicion}`;
+      } else if (propuesta.clase === 'rotacion') {
+        const minimo = Math.max(propuesta.llanta.km_montaje ?? 0, propuesta.ocupante?.km_montaje ?? 0);
+        const k = kilometraje(km, minimo || null);
+        await ejecutarMovimiento({ clase: 'rotar', codigo: propuesta.llanta.codigo, placa, posicion_destino: propuesta.posicion, km: k });
+        mensaje = propuesta.ocupante
+          ? `${propuesta.llanta.codigo} pasó a ${propuesta.posicion} y ${propuesta.ocupante.codigo} a ${propuesta.desde}`
+          : `${propuesta.llanta.codigo} pasó de ${propuesta.desde} a ${propuesta.posicion}`;
       } else if (propuesta.clase === 'intercambio') {
         if (!destinoValido) throw new Error('No tienes permiso para retirar la llanta que ocupa esta posición.');
         const salienteKm = kilometraje(km, propuesta.saliente.km_montaje ?? null);
@@ -171,6 +180,14 @@ export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puede
           </Resumen>
         )}
 
+        {propuesta.clase === 'rotacion' && (
+          <Resumen>
+            <p>La llanta <b>{propuesta.llanta.codigo}</b> pasa de la posición <b>{propuesta.desde}</b> a la <b>{propuesta.posicion}</b> de <b>{placa}</b>.</p>
+            {propuesta.ocupante && <p>La llanta <b>{propuesta.ocupante.codigo}</b>, que estaba en <b>{propuesta.posicion}</b>, pasa a <b>{propuesta.desde}</b> (se intercambian).</p>}
+            <p className="ntb-hoja__nota">Siguen montadas en la unidad: conservan su kilometraje y fecha de montaje.</p>
+          </Resumen>
+        )}
+
         {propuesta.clase === 'intercambio' && (
           <Resumen>
             <p>1. La llanta <b>{propuesta.saliente.codigo}</b> sale de <b>{propuesta.posicion}</b> y pasa a {TEXTO_DESTINO[destino]}.</p>
@@ -211,9 +228,9 @@ export function MovimientoSheet({ open, propuesta, placa, puedeReencauche, puede
           </Resumen>
         )}
 
-        {(propuesta.clase === 'instalar' || propuesta.clase === 'regreso' || propuesta.clase === 'intercambio' || propuesta.clase === 'reforma' || propuesta.clase === 'descarte') && (
+        {(propuesta.clase === 'instalar' || propuesta.clase === 'rotacion' || propuesta.clase === 'regreso' || propuesta.clase === 'intercambio' || propuesta.clase === 'reforma' || propuesta.clase === 'descarte') && (
           <Field label="Kilometraje actual de la unidad" hint={
-            propuesta.clase === 'instalar' || propuesta.clase === 'regreso' ? undefined
+            propuesta.clase === 'instalar' || propuesta.clase === 'regreso' || propuesta.clase === 'rotacion' ? undefined
               : `Mínimo ${(propuesta.clase === 'intercambio' ? propuesta.saliente : propuesta.llanta).km_montaje?.toLocaleString('es-PE') ?? 0} km (km al montar)`
           }>
             {p => (

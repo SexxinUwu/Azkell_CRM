@@ -28,7 +28,7 @@ export const minimoDe = (f: { r1: string; r2: string; r3: string }) => {
 };
 
 /** La acción de cada posición se anota sola según lo que se hizo ahí durante la inspección */
-export type AccionPosicion = 'Inspección' | 'Instalación' | 'Cambio';
+export type AccionPosicion = 'Inspección' | 'Instalación' | 'Cambio' | 'Rotación';
 interface Movimiento { posicion: string | null; accion: AccionPosicion | null; texto: string }
 
 export function useInspeccion({ activa, placa, montadas }: { activa: boolean; placa: string; montadas: Montada[] }) {
@@ -86,6 +86,15 @@ export function useInspeccion({ activa, placa, montadas }: { activa: boolean; pl
 
   /** Anota solo lo que se hizo en la unidad (instalar, cambiar, enviar) para la acción de cada posición y las observaciones de la inspección */
   function registrar(p: Propuesta, mensaje: string) {
+    if (p.clase === 'rotacion') {
+      // Las dos posiciones cambian de llanta (o la de origen queda libre): ambas se marcan como rotación
+      setMovimientos(m => [
+        ...m,
+        { posicion: p.posicion, accion: 'Rotación', texto: `Pos ${p.posicion}: ${mensaje}` },
+        ...(p.ocupante ? [{ posicion: p.desde, accion: 'Rotación' as const, texto: `Pos ${p.desde}: ${p.ocupante.codigo} rotada desde ${p.posicion}` }] : []),
+      ]);
+      return;
+    }
     const pos = 'posicion' in p ? p.posicion : null;
     const accion: AccionPosicion | null = p.clase === 'instalar' || p.clase === 'regreso' ? 'Instalación' : p.clase === 'intercambio' ? 'Cambio' : null;
     setMovimientos(m => [...m, { posicion: pos, accion, texto: pos ? `Pos ${pos}: ${mensaje}` : mensaje }]);

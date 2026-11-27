@@ -57,6 +57,7 @@ const MOV = {
     DEVOLVER_RETEN: 'DEVOLVER_RETEN',
     DESPACHO_REFORMADORA: 'DESPACHO_REFORMADORA',
     DESACTIVACION: 'DESACTIVACION',
+    ROTACION: 'ROTACION',
     RETORNO_REENCAUCHE: 'RETORNO_REENCAUCHE',
     RECHAZO_REENCAUCHE: 'RECHAZO_REENCAUCHE',
 };
@@ -680,6 +681,67 @@ module.exports = function (db) {
                     km_recorridos: resultado.recorrido,
                 },
             });
+        } catch (err) {
+            responder(res, err);
+        }
+    });
+
+    // ============================================================
+    // 5a. ROTAR: una llanta montada pasa a otra posición de la misma unidad. Si la posición de destino está ocupada,
+    // las dos llantas se intercambian de lugar. Siguen montadas (se conserva el km y la fecha de montaje); queda en el kardex
+    // y en neumaticos_rotaciones.
+    // ============================================================
+    router.post('/rotar', async (req, res) => {
+        try {
+            if (!tienePermiso(req, PERMISO_MOVER, 'c')) throw aviso(403, `Sin permiso (${PERMISO_MOVER}) para rotar llantas`);
+            const b = req.body || {};
+            const codigo = mayus(b.codigo);
+            const placa = mayus(b.placa);
+            const destino = mayus(b.posicion_destino);
+            if (!codigo) throw aviso(400, 'El código de la llanta es obligatorio');
+            if (!placa || !destino) throw aviso(400, 'Placa y posición de destino son obligatorias');
+            const km = Math.trunc(numeroNoNegativo(b.km, 'Kilometraje', true));
+
+            const resultado = await conTransaccion(pool(req), async (conn) => {
+                const llanta = await bloquearLlanta(conn, codigo);
+                const [abiertas] = await conn.query(
+                    'SELECT * FROM neumaticos_instalaciones WHERE id_neumatico = ? AND fecha_out IS NULL FOR UPDATE',
+                    [llanta.id_neumatico]);
+                if (!abiertas.length) throw aviso(409, 'La llanta no está montada en ningún vehículo');
+                const inst = abiertas[0];
+                if (mayus(inst.placa) !== placa) throw aviso(409, `La llanta está montada en ${inst.placa}, no en ${placa}`);
+                const origen = mayus(inst.posicion);
+                if (origen === destino) throw aviso(400, 'La llanta ya está en esa posición');
+
+                const [ocupantes] = await conn.query(
+                    'SELECT * FROM neumaticos_instalaciones WHERE placa = ? AND posicion = ? AND fecha_out IS NULL FOR UPDATE',
+                    [placa, destino]);
+                const otra = ocupantes[0] || null;
+
+                const piezas = [{ id: inst.id, id_neumatico: llanta.id_neumatico, km_in: Number(inst.km_in) || 0, de: origen, a: destino }];
+                if (otra) piezas.push({ id: otra.id, id_neumatico: otra.id_neumatico, km_in: Number(otra.km_in) || 0, de: destino, a: origen });
+                for (const p of piezas) {
+                    if (km < p.km_in) throw aviso(400, `El kilometraje (${km}) no puede ser menor al de montaje de la llanta ${p.id_neumatico} (${p.km_in})`);
+                }
+
+                const fecha = hoyLima();
+                for (const p of piezas) {
+                    const [u1] = await conn.query('UPDATE neumaticos_instalaciones SET posicion = ? WHERE id = ?', [p.a, p.id]);
+                    if (u1.affectedRows !== 1) throw aviso(500, 'No se pudo cambiar la posición de la llanta');
+                    const [u2] = await conn.query('UPDATE neumaticos_hoja_vida SET posicion_actual = ? WHERE id_neumatico = ?', [p.a, p.id_neumatico]);
+                    if (u2.affectedRows !== 1) throw aviso(500, 'No se pudo actualizar la hoja de vida de la llanta');
+                    await registrarMovimiento(conn, {
+                        id_neumatico: p.id_neumatico, tipo: MOV.ROTACION, origen: null, destino: null, placa, posicion: p.a,
+                        km, fecha: ahoraLima(), usuario: usuarioDe(req), observacion: `Rotación de ${p.de} a ${p.a}`,
+                    });
+                    await conn.query(
+                        `INSERT INTO neumaticos_rotaciones (placa, fecha, km_actual, posicion_origen, posicion_destino, id_neumatico, motivo, tecnico)
+                         VALUES (?, ?, ?, ?, ?, ?, 'Rotación', ?)`,
+                        [placa, fecha, km, p.de, p.a, p.id_neumatico, usuarioDe(req) || '']);
+                }
+                return piezas.map(p => ({ id_neumatico: p.id_neumatico, de: p.de, a: p.a }));
+            });
+            res.json({ ok: true, data: { placa, rotadas: resultado } });
         } catch (err) {
             responder(res, err);
         }

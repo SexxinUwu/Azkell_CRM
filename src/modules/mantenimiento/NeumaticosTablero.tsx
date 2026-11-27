@@ -195,7 +195,11 @@ export function NeumaticosTablero({ inspeccion = false }: { inspeccion?: boolean
     }
     if (destino.tipo === 'posicion') {
       if (item.origen === 'unidad') {
-        setAviso({ tono: 'accent', texto: 'Una llanta montada solo se envía a reforma o descarte. Para cambiarla de posición, primero envíala a reforma o descarte.' });
+        if (!puedeMover) { setAviso({ tono: 'error', texto: 'No tienes permiso para mover neumáticos.' }); return; }
+        const origen = montadas.find(m => m.llanta.codigo === item.codigo);
+        setEnMano(null);
+        if (!origen || origen.posicion === destino.posicion) return;
+        abrirHoja({ clase: 'rotacion', llanta: origen.llanta, desde: origen.posicion, posicion: destino.posicion, ocupante: llantaEnPosicion(destino.posicion) });
         return;
       }
       if (!puedeMover) { setAviso({ tono: 'error', texto: 'No tienes permiso para mover neumáticos.' }); return; }

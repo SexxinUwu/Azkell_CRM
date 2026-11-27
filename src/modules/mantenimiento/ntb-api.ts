@@ -90,6 +90,7 @@ export type Movimiento =
   | { clase: 'instalar'; codigo: string; placa: string; posicion: string; km: number }
   | { clase: 'retirar'; codigo: string; placa: string; posicion: string; km: number; destino: DestinoRetiro }
   | { clase: 'devolver'; codigo: string }
+  | { clase: 'rotar'; codigo: string; placa: string; posicion_destino: string; km: number }
   | {
     clase: 'retorno'; codigo: string; proveedor: string; costo_servicio: number; disenio: string; remanente: number | null;
     resultado: ResultadoReencauche; observacion: string;
@@ -106,6 +107,9 @@ export function ejecutarMovimiento(m: Movimiento): Promise<void> {
   }
   if (m.clase === 'retirar') {
     return enviar('/neumaticos/retirar', { codigo: m.codigo, placa: m.placa, posicion: m.posicion, km: m.km, destino: m.destino });
+  }
+  if (m.clase === 'rotar') {
+    return enviar('/neumaticos/rotar', { codigo: m.codigo, placa: m.placa, posicion_destino: m.posicion_destino, km: m.km });
   }
   if (m.clase === 'devolver') {
     // Una llanta enviada a reforma o a descarte que sigue en el Retén vuelve a quedar disponible (por si el envío fue un error)
