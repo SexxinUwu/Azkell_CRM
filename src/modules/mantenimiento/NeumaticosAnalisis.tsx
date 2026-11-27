@@ -15,7 +15,7 @@ import { useToast } from '../../core/ui/Toast';
 import {
   EsquemaPlacaSheet, ImportarNeumaticosSheet, MedidaDetalleSheet, descargarPlantillaNeumaticos, exportarNeumaticos, type EstadoActual,
 } from './NeumaticosExtras';
-import { NeumaticosNuevaInspeccionSheet } from './NeumaticosNuevaInspeccionSheet';
+import { useNavigate } from 'react-router-dom';
 import { obtenerReporteCiclo } from './NeumaticosCicloExcel';
 import { InspeccionDetalleSheet } from './NeumaticosDetalleSheet';
 import { MM_CRITICO, TINTA_TONO, tonoMm } from './neumaticosSemaforo';
@@ -211,7 +211,7 @@ export function NeumaticosAnalisisPage() {
   const [medidaSel, setMedidaSel] = useState<string | null>(null);
   const [periodo, setPeriodo] = useState<string>('todos');
   const [busqueda, setBusqueda] = useState('');
-  const [nueva, setNueva] = useState<{ abierta: boolean; placa: string }>({ abierta: false, placa: '' });
+  const navegar = useNavigate();
   const [esquemaPlaca, setEsquemaPlaca] = useState<string | null>(null);
   const [importar, setImportar] = useState(false);
   const [detalleId, setDetalleId] = useState<string | null>(null);
@@ -221,7 +221,8 @@ export function NeumaticosAnalisisPage() {
   const inspecciones = data?.inspecciones;
   const filtradas = useMemo(() => filtrarInspecciones(inspecciones ?? [], busqueda, periodo), [inspecciones, busqueda, periodo]);
 
-  const abrirInspeccion = (placa = '') => setNueva({ abierta: true, placa });
+  // La inspección tiene su propia pantalla (plano de la unidad, medición por posición y resumen)
+  const abrirInspeccion = (placa = '') => navegar(placa ? `/mantenimiento/neumaticos-inspeccion/${encodeURIComponent(placa)}` : '/mantenimiento/neumaticos-inspeccion');
   const exportar = () => exportarNeumaticos().catch(e => toast(errorMessage(e), 'error'));
 
   async function confirmarEliminar() {
@@ -417,7 +418,6 @@ export function NeumaticosAnalisisPage() {
       )}
 
       <MedidaDetalleSheet medida={medidaSel} onClose={() => setMedidaSel(null)} />
-      <NeumaticosNuevaInspeccionSheet open={nueva.abierta} placaInicial={nueva.placa} onClose={() => setNueva({ abierta: false, placa: '' })} />
       <EsquemaPlacaSheet open={esquemaPlaca !== null} placaInicial={esquemaPlaca ?? ''} onClose={() => setEsquemaPlaca(null)} />
       <ImportarNeumaticosSheet open={importar} onClose={() => setImportar(false)} />
       <InspeccionDetalleSheet id={detalleId} onClose={() => setDetalleId(null)} />
