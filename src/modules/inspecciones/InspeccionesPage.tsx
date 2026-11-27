@@ -21,7 +21,6 @@ import { clavePlaca, useInspecciones, useInspeccionesNeumaticos, type Inspeccion
 import { ETIQUETA_ESTADO, evaluarCiclo, urgencia, type Ciclo, type Estado } from './vigencia';
 import { InspeccionFicha } from './InspeccionFicha';
 import { TipoInspeccionSheet } from './TipoInspeccionSheet';
-import { NeumaticosInspeccionSheet } from './NeumaticosInspeccionSheet';
 import { ImportarInspeccionesSheet, descargarPlantillaInspecciones } from './ImportarInspeccionesSheet';
 import { PlantillaInspeccionSheet } from './PlantillaInspeccionSheet';
 import { useEsquema } from './registro';
@@ -61,7 +60,7 @@ export function InspeccionesPage() {
   const dispQ = useDisponibilidad();
   const reduce = useReducedMotion();
   const navigate = useNavigate();
-  const { can, user } = useAuth();
+  const { can } = useAuth();
   const [vista, setVista] = useState<Vista>('flota');
   const [formato, setFormato] = useState<Formato>('tarjetas');
   const [busqueda, setBusqueda] = useState('');
@@ -70,7 +69,6 @@ export function InspeccionesPage() {
   const [empresas, setEmpresas] = useState<string[]>([]);
   const [abierta, setAbierta] = useState<Inspeccion | null>(null);
   const [eleccion, setEleccion] = useState<string | null>(null);   // placa a inspeccionar (selector)
-  const [neuPlaca, setNeuPlaca] = useState<string | null>(null);   // placa del formulario de neumáticos
 
   // Última inspección por placa, como la versión actual: general (no "Solo Frenos"), la más reciente
   const generales = useMemo(() => (insp.data ?? []).filter(i => i.tipo !== 'Solo Frenos')
@@ -371,9 +369,8 @@ export function InspeccionesPage() {
         placa={eleccion}
         onClose={() => setEleccion(null)}
         onMecanica={() => { const p = eleccion ?? ''; setEleccion(null); navigate(`/inspecciones/nueva?placa=${encodeURIComponent(p)}`); }}
-        onNeumaticos={() => { const p = eleccion; setEleccion(null); setNeuPlaca(p); }}
+        onNeumaticos={() => { const p = eleccion ?? ''; setEleccion(null); navigate(`/mantenimiento/neumaticos-inspeccion/${encodeURIComponent(p)}`); }}
       />
-      <NeumaticosInspeccionSheet placa={neuPlaca} usuario={user?.name ?? ''} onClose={() => setNeuPlaca(null)} />
       <InspeccionFicha inspeccion={abierta} onClose={() => setAbierta(null)} />
       <ImportarInspeccionesSheet open={importando} onClose={() => setImportando(false)}
         existentes={insp.data ?? []} placasRegistradas={(placasQ.data ?? []).map(p => p.placa)} />
