@@ -67,3 +67,6 @@
 .ninsp-movs { margin: var(--s-3) 0 0; font-size: 0.8125rem; color: var(--label-2); }
 .ninsp-tabla { min-width: 1120px; }
 @media (max-width: 760px) { .ninsp-barra .ninsp-datos { grid-template-columns: 1fr; } }
+
+/* Observación automática de la fila (rotación: de qué posición a cuál) */
+.ninsp-nota { font-size: 0.75rem; font-weight: 600; color: var(--label-2); margin-bottom: 4px; white-space: nowrap; }
