@@ -179,6 +179,8 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
   const tc = num(tipoCambio);
   const tcRespaldo = tcRespaldoDe(configQ.data?.tipo_cambio);
   const sunat = useTipoCambioSunat(open && moneda === 'USD');
+  // T.C. de la detracción: por defecto el de venta de la SUNAT (no el de la orden); se puede cambiar por el de la factura del proveedor
+  const tcDetSunat = sunat.data?.venta || tc;
 
   const proveedor = proveedores.find(p => p.id === proveedorId) ?? null;
   // Saldo a favor del proveedor (notas de crédito aprobadas) en la moneda de la orden: se avisa y se descuenta al pagar
@@ -601,7 +603,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       creado_por: user?.name ?? null,
       url_cotizacion: urlCotizacion || null,
       detraccion_codigo: detActiva ? detTipo : '',
-      ...(detActiva ? { detraccion_pct: num(detPct), ...(moneda === 'USD' ? { detraccion_tc: num(detTc) || tc } : {}) } : {}),
+      ...(detActiva ? { detraccion_pct: num(detPct), ...(moneda === 'USD' ? { detraccion_tc: num(detTc) || tcDetSunat } : {}) } : {}),
       items: usados.map(l => ({
         inventario_id: l.inventario_id,
         descripcion: l.descripcion,
@@ -629,7 +631,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
   const conIgv = modoIgv !== 'sin_igv';
   // Vista previa de la detracción (el servidor es quien la calcula al guardar)
   const detTipoSel = detTipos.find(x => x.codigo === detTipo) ?? null;
-  const detTcEfectivo = moneda === 'USD' ? (num(detTc) || tc) : 1;
+  const detTcEfectivo = moneda === 'USD' ? (num(detTc) || tcDetSunat) : 1;
   const detBase = total * detTcEfectivo;
   const detPctNum = num(detPct);
   const detMontoPen = Math.round(detBase * detPctNum / 100);
@@ -931,8 +933,8 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
                     {p => <TextInput {...p} type="number" min={0} max={100} step="0.01" value={detPct} onChange={ev => setDetPct(ev.target.value)} />}
                   </Field>
                   {moneda === 'USD' && (
-                    <Field label="T.C. de la detracción" hint={tc > 0 ? `Si lo dejas vacío se usa el de la orden (${tc})` : 'Si lo dejas vacío se usa el de la orden'}>
-                      {p => <TextInput {...p} type="number" min={0} step="0.0001" value={detTc} placeholder={tc > 0 ? String(tc) : ''} onChange={ev => setDetTc(ev.target.value)} />}
+                    <Field label="T.C. de la detracción" hint={sunat.data?.venta ? `Por defecto SUNAT venta del ${sunat.data.fecha}: ${sunat.data.venta}. Cámbialo por el de la factura del proveedor si difiere` : 'Por defecto el de la SUNAT; si no responde, el de la orden'}>
+                      {p => <TextInput {...p} type="number" min={0} step="0.0001" value={detTc} placeholder={tcDetSunat > 0 ? String(tcDetSunat) : ''} onChange={ev => setDetTc(ev.target.value)} />}
                     </Field>
                   )}
                   {detTipoSel && total > 0 && (
