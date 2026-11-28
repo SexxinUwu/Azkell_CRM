@@ -7,6 +7,7 @@ const { sendWarehousePaymentVoucherWhatsapp } = require('../services/whatsappSer
 const { recalcularLiquidacionViaje } = require('../services/liquidacion_viaje');
 const { fechaVencimiento } = require('../services/condicion_oc');
 const { hoyLima } = require('../services/horaLima');
+const detraccionOc = require('../services/detraccion');
 
 module.exports = function (db, broadcast, logAudit) {
     logAudit = envolverLogAudit(logAudit, db);
@@ -2368,6 +2369,21 @@ module.exports = function (db, broadcast, logAudit) {
                     else voucherPresigned = oc.url_voucher;
                 }
 
+                // Detracción (SPOT) de la orden y la cuenta del Banco de la Nación del proveedor donde se deposita
+                let detraccion = null;
+                if (oc.detraccion_codigo && Number(oc.detraccion_monto_pen) > 0) {
+                    const esUsdOc = String(oc.moneda || '').toUpperCase() === 'USD';
+                    const pctDet = Number(oc.detraccion_pct) || 0;
+                    const [ctaDet] = await tdb.query('SELECT banco, numero_cuenta FROM proveedor_cuentas_bancarias WHERE proveedor_id = ? AND detraccion = 1 AND estado = 1 ORDER BY principal DESC, id ASC LIMIT 1', [oc.proveedor_id || '']).catch(() => [[]]);
+                    detraccion = {
+                        codigo: oc.detraccion_codigo, pct: pctDet, tc: oc.detraccion_tc ? Number(oc.detraccion_tc) : null,
+                        monto_pen: Number(oc.detraccion_monto_pen),
+                        monto_origen: esUsdOc ? detraccionOc.r2(Number(importeCalculado) * pctDet / 100) : Number(oc.detraccion_monto_pen),
+                        constancia: oc.detraccion_constancia || null, pagada_en: oc.detraccion_pagada_en || null,
+                        cuenta_proveedor: ctaDet && ctaDet[0] ? `${ctaDet[0].banco} - ${ctaDet[0].numero_cuenta}` : null,
+                    };
+                }
+
                 return {
                     id: oc.id,
                     folio: oc.id,
@@ -2394,6 +2410,7 @@ module.exports = function (db, broadcast, logAudit) {
                     observaciones: oc.observaciones || '',
                     documento_referencia: oc.documento_referencia || '',
                     nc_sugeridas: oc.nc_sugeridas || null,
+                    detraccion,
                     creado_por: oc.creado_por,
                     creador_nombre: creadorNombre,
                     aprobado_por: oc.aprobado_por,
@@ -2541,6 +2558,19 @@ module.exports = function (db, broadcast, logAudit) {
             if (pagoMixto && tcPagoEnviado > 0 && (tcPagoEnviado < 1 || tcPagoEnviado > 20)) return res.status(400).json({ error: 'El tipo de cambio del pago no parece válido (soles por dólar).' });
             const importeUsdOc = Math.round((totalOc / (tcOc || 1)) * 100) / 100;
             const importeAPagar = pagoMixto ? importeUsdOc : (pendienteCajaChica ?? importeOrigen);
+            // Detracción (SPOT): se deposita un % del total en la cuenta del proveedor en el Banco de la Nación y al proveedor le llega el neto.
+            // El monto lo calculó el servidor al registrar la orden; en el pago con caja chica no aplica.
+            const detOc = pendienteCajaChica == null && oc.detraccion_codigo && Number(oc.detraccion_monto_pen) > 0
+                ? { pct: Number(oc.detraccion_pct) || 0, pen: Number(oc.detraccion_monto_pen), tc: Number(oc.detraccion_tc) || 1 } : null;
+            const detOrigen = detOc ? (ocEsUsd ? detraccionOc.r2(importeUsdOc * detOc.pct / 100) : detOc.pen) : 0;
+            let cuentaDetraccion = '';
+            const detraccionConstancia = String(b.detraccion_constancia || '').trim().slice(0, 60);
+            if (detOc) {
+                if (!detraccionConstancia) return res.status(400).json({ error: 'sin_constancia_detraccion', mensaje: 'Escribe el N° de constancia del depósito de la detracción.' });
+                const [ctaDet] = await tdb.query('SELECT banco, numero_cuenta FROM proveedor_cuentas_bancarias WHERE proveedor_id = ? AND detraccion = 1 AND estado = 1 ORDER BY principal DESC, id ASC LIMIT 1', [oc.proveedor_id || '']);
+                if (!ctaDet.length) return res.status(409).json({ error: 'sin_cuenta_detraccion', mensaje: 'El proveedor no tiene registrada su cuenta de detracciones (Banco de la Nación). Regístrala en Almacén › Proveedores antes de pagar.' });
+                cuentaDetraccion = `${ctaDet[0].banco} - ${ctaDet[0].numero_cuenta}`;
+            }
             // Notas de crédito del proveedor aplicadas a este pago: lo que sale del banco es el importe menos lo compensado
             let aplicacionesNc = [];
             try { aplicacionesNc = typeof b.nc_aplicaciones === 'string' ? JSON.parse(b.nc_aplicaciones || '[]') : (Array.isArray(b.nc_aplicaciones) ? b.nc_aplicaciones : []); } catch (e) { aplicacionesNc = []; }
@@ -2558,15 +2588,15 @@ module.exports = function (db, broadcast, logAudit) {
             }
             const montoEnviado = parseFloat(b.monto || b.importe) || 0;
             // En pago mixto: neto en dólares × tipo de cambio del pago = soles que salen del banco
-            const netoUsdMixto = Math.round((importeAPagar - ncAplicadas.total) * 100) / 100;
+            const netoUsdMixto = Math.round((importeAPagar - ncAplicadas.total - detOrigen) * 100) / 100;
             const montoPagado = pagoMixto
                 ? Math.round(netoUsdMixto * tcUsado * 100) / 100
                 : ncAplicadas.detalle.length
-                    ? Math.round((importeAPagar - ncAplicadas.total) * 100) / 100
-                    : (montoEnviado > 0 ? montoEnviado : importeAPagar);
-            if (ncAplicadas.detalle.length && montoEnviado > 0 && Math.abs(montoEnviado - montoPagado) > 0.011) {
+                    ? Math.round((importeAPagar - ncAplicadas.total - detOrigen) * 100) / 100
+                    : (detOrigen > 0 ? Math.round((importeAPagar - detOrigen) * 100) / 100 : (montoEnviado > 0 ? montoEnviado : importeAPagar));
+            if ((ncAplicadas.detalle.length || detOrigen > 0) && montoEnviado > 0 && Math.abs(montoEnviado - montoPagado) > 0.011) {
                 await notasCredito.revertir(tdb, ncAplicadas.detalle, usuarioPago, 'El monto del pago no coincide con el neto').catch(() => {});
-                return res.status(409).json({ error: `El monto a pagar (${montoEnviado.toFixed(2)}) no coincide con el importe menos las notas de crédito (${montoPagado.toFixed(2)}). Actualiza la pantalla.` });
+                return res.status(409).json({ error: `El monto a pagar (${montoEnviado.toFixed(2)}) no coincide con el importe menos la detracción y las notas de crédito (${montoPagado.toFixed(2)}). Actualiza la pantalla.` });
             }
             if (ncAplicadas.detalle.length && montoPagado < 0) {
                 await notasCredito.revertir(tdb, ncAplicadas.detalle, usuarioPago, 'Las notas superan el importe').catch(() => {});
@@ -2592,9 +2622,11 @@ module.exports = function (db, broadcast, logAudit) {
                     url_voucher = ?,
                     pagado_por = ?,
                     cuenta_bancaria_proveedor = COALESCE(NULLIF(?, ''), cuenta_bancaria_proveedor),
+                    detraccion_constancia = CASE WHEN ? > 0 THEN ? ELSE detraccion_constancia END,
+                    detraccion_pagada_en = CASE WHEN ? > 0 THEN NOW() ELSE detraccion_pagada_en END,
                     fecha_pago = NOW()
                 WHERE id = ? AND LOWER(TRIM(estado)) IN ('aprobado', 'autorizado', 'pago parcial')
-            `, [numeroConstancia, cuentaOrigen, voucherUrl, usuarioPago, cuentaDestinoElegida, id]);
+            `, [numeroConstancia, cuentaOrigen, voucherUrl, usuarioPago, cuentaDestinoElegida, detOrigen, detraccionConstancia, detOrigen, id]);
             if (!updOc || updOc.affectedRows === 0) {
                 if (ncAplicadas.detalle.length) await notasCredito.revertir(tdb, ncAplicadas.detalle, usuarioPago, 'La orden ya había sido procesada').catch(() => {});
                 return res.status(409).json({ error: 'La orden de compra ya fue procesada por otro pago. No se registró un nuevo egreso.' });
@@ -2646,7 +2678,7 @@ module.exports = function (db, broadcast, logAudit) {
                         ?, '', '', ?,
                         ?, ?, ?, ?, ?, ?,
                         'PROVEEDOR', ?, 'EGRESO', ?,
-                        0, ?, ?, ?,
+                        ?, ?, ?, ?,
                         'ORDEN DE COMPRA', ?, ?,
                         ?, ?, 0,
                         'PROCESADO', ?, ?, NOW()
@@ -2655,6 +2687,8 @@ module.exports = function (db, broadcast, logAudit) {
 
                 const monStr = esUSD ? 'DOLARES' : 'SOLES';
                 const totalFinal = montoPagado;
+                // Detracción retenida en la moneda del egreso: US$ si se paga en dólares; en soles, el monto SUNAT
+                const detFila = detOc ? (esUSD ? detOrigen : detOc.pen) : 0;
 
                 await tdb.query(insertCajaSql, [
                     numeroConstancia || '',
@@ -2670,7 +2704,8 @@ module.exports = function (db, broadcast, logAudit) {
                     cuentaOrigen.includes('CAJA') ? 'EFECTIVO' : 'TRANSFERENCIA',
                     monStr,
                     oc.proveedor_nombre || 'PROVEEDOR GENERAL',
-                    totalFinal,
+                    totalFinal + detFila,
+                    detFila,
                     totalFinal,
                     pagoMixto ? tcUsado : (oc.tipo_cambio || 1),
                     oc.motivo_entrada || descripcionPago,
@@ -2681,6 +2716,23 @@ module.exports = function (db, broadcast, logAudit) {
                     oc.creado_por || usuarioPago,
                     oc.aprobado_por || oc.autoriza || usuarioPago
                 ]);
+
+                // Egreso de la detracción: el depósito en soles a la cuenta del proveedor en el Banco de la Nación
+                if (detOc) {
+                    await tdb.query(insertCajaSql, [
+                        detraccionConstancia, oc.documento_referencia || '', String(anioActual), String(nextNum + 1).padStart(5, '0'),
+                        oc.ot_id || '', oc.placa || '',
+                        oc.autoriza || oc.aprobado_por || usuarioPago, motivoCatalogo, oc.centro_costo || 'CC-100', subCaja,
+                        'TRANSFERENCIA', 'SOLES',
+                        oc.proveedor_nombre || 'PROVEEDOR GENERAL', detOc.pen, 0, detOc.pen, 1,
+                        `DETRACCIÓN ${detOc.pct}% (${oc.detraccion_codigo}) - OC ${id}${oc.documento_referencia ? ` - ${oc.documento_referencia}` : ''}`,
+                        cuentaDetraccion, String(b.cuenta_origen_detraccion || '').trim() || cuentaOrigen || 'BCP - CTA CTE SOLES',
+                        voucherUrl,
+                        `DEPÓSITO DE DETRACCIÓN OC ${id} | N° Constancia: ${detraccionConstancia}`,
+                        oc.creado_por || usuarioPago,
+                        oc.aprobado_por || oc.autoriza || usuarioPago
+                    ]);
+                }
             } catch (errCaja) {
                 if (!errCaja.sinEgreso) console.warn('Advertencia al asentar egreso en tesoreria_caja:', errCaja.message);
             }

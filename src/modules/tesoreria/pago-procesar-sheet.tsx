@@ -3,13 +3,14 @@ import { ArchivoInput } from '../../core/ui/ArchivoInput';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, CheckCircle2, ClipboardList, Coins, Copy, FileCheck, FileText, Package, Paperclip, Truck, Wallet, X } from 'lucide-react';
+import { Check, CheckCircle2, ClipboardList, Coins, Copy, FileCheck, FileText, Package, Paperclip, Percent, Truck, Wallet, X } from 'lucide-react';
 import { Pencil } from '../../core/ui/IconosArchivo';
 import '../gerencia/gerencia-oc.css';
 import './pago.css';
-import { api, errorMessage } from '../../core/api/client';
+import { api, ApiError, errorMessage } from '../../core/api/client';
 import { Button } from '../../core/ui/Button';
 import { Badge, Notice } from '../../core/ui/Display';
+import { Combobox } from '../../core/ui/Combobox';
 import { Field, TextInput } from '../../core/ui/Field';
 import { Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
@@ -19,7 +20,7 @@ import { useBancos } from './api';
 import { AplicarNotasCredito, type AplicacionElegida } from './AplicarNotasCredito';
 import { useCuentasProveedor } from '../almacen/api';
 import { etiquetaCuentaProveedor } from '../almacen/entradaReglas';
-import { codigoOC, esUSD, importeOC, montoAPagar, redondear2, type OrdenPago } from './pago-datos';
+import { codigoOC, esUSD, importeOC, montoAPagar, num, redondear2, type OrdenPago } from './pago-datos';
 
 const MAX_VOUCHER = 25 * 1024 * 1024; // mismo límite que el servidor
 
@@ -115,7 +116,7 @@ function CuentaFila({ etiqueta, cuenta, vacio, recien }: { etiqueta: string; cue
 
 const animLista = { initial: { opacity: 0, height: 0 }, animate: { opacity: 1, height: 'auto' }, exit: { opacity: 0, height: 0 }, transition: { type: 'spring' as const, bounce: 0, duration: 0.35 } };
 
-interface Errores { constancia?: string; cuenta?: string; monto?: string; voucher?: string; confirmado?: string }
+interface Errores { constanciaDet?: string; constancia?: string; cuenta?: string; monto?: string; voucher?: string; confirmado?: string }
 
 // Etiqueta igual a la del clásico: "BCP - CTA CTE [SOLES] - 191-…". El servidor la usa para la moneda de la caja.
 function preseleccion(oc: OrdenPago, cuentas: CuentaOrigen[]): string {
@@ -143,6 +144,9 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
   const [confirmado, setConfirmado] = useState(false);
   const [errores, setErrores] = useState<Errores>({});
   const [guardando, setGuardando] = useState(false);
+  // Detracción: constancia del depósito y cuenta de la empresa desde la que se hace (vacía = la misma de origen)
+  const [constanciaDet, setConstanciaDet] = useState('');
+  const [cuentaDetSel, setCuentaDetSel] = useState('');
   // Notas de crédito del proveedor aplicadas a este pago (si las hay)
   const [ncs, setNcs] = useState<AplicacionElegida[]>([]);
   const [netoNc, setNetoNc] = useState<number | null>(null);
@@ -201,8 +205,18 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
   const tcPagoNum = Number(tcPago.replace(',', '.')) || 0;
   // En pago mixto el importe se calcula en dólares y se convierte; si no, como siempre
   const importe = oc ? (mixto ? importeUsd : montoAPagar(oc, usd)) : 0;
-  // Lo que sale del banco: el importe menos las notas de crédito aplicadas
-  const neto = ncs.length && netoNc != null ? netoNc : importe;
+  // Detracción: se retiene del importe y se deposita aparte en soles (al Banco de la Nación)
+  const det = oc?.detraccion ?? null;
+  const sinCuentaDetraccion = !!det && !det.cuenta_proveedor;
+  const detMontoPen = det ? num(det.monto_pen) : 0;
+  const detOrigen = det ? num(det.monto_origen) : 0;
+  // En la misma moneda del importe que se paga
+  const detEnImporte = !det ? 0
+    : (mixto || esUSD(oc?.moneda) === usd) ? redondear2(detOrigen)
+    : usd ? (tc > 0 ? redondear2(detMontoPen / tc) : 0) : redondear2(detMontoPen);
+  const importeSinDet = redondear2(Math.max(0, importe - detEnImporte));
+  // Lo que sale del banco: el importe menos la detracción y las notas de crédito aplicadas
+  const neto = ncs.length && netoNc != null ? netoNc : importeSinDet;
   const monto = mixto ? redondear2(neto * (tcPagoNum || tc)) : neto;
   const destino = destinos.find(d => d.label === destinoSel) ?? null;
   const difCambio = mixto ? redondear2(neto * ((tcPagoNum || tc) - tc)) : 0;
@@ -221,6 +235,7 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
 
   async function confirmar() {
     if (!oc || guardando) return;
+    if (sinCuentaDetraccion) { toast('El proveedor no tiene cuenta de detracciones: regístrala en Almacén › Proveedores.', 'error'); haptic('warning'); return; }
     if (sinCuentaDestino) { toast('No hay cuenta bancaria registrada del destinatario: no se puede pagar.', 'error'); haptic('warning'); return; }
     const e: Errores = {};
     const totalmenteCompensada = ncs.length > 0 && monto <= 0;
@@ -232,6 +247,7 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
         ? 'La orden no tiene tipo de cambio: no se puede calcular el monto en US$.'
         : 'La orden no tiene total en soles para pagar.';
     }
+    if (det && !constanciaDet.trim()) e.constanciaDet = 'Ingresa el número de constancia del depósito de la detracción.';
     if (!confirmado) e.confirmado = 'Marca la casilla para confirmar el pago.';
     setErrores(prev => ({ ...prev, ...e }));
     if (Object.values(e).some(Boolean)) { haptic('warning'); return; }
@@ -244,6 +260,10 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
     if (destinoSel) fd.append('cuenta_destino', destinoSel);
     fd.append('monto', String(redondear2(monto)));
     if (ncs.length) fd.append('nc_aplicaciones', JSON.stringify(ncs.map(a => ({ nc_id: a.nc_id, monto: a.monto }))));
+    if (det) {
+      fd.append('detraccion_constancia', constanciaDet.trim());
+      if (cuentaDetSel) fd.append('cuenta_origen_detraccion', cuentaDetSel);
+    }
     if (voucher) fd.append('voucher', voucher);
 
     setGuardando(true);
@@ -256,7 +276,11 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
       onPagado?.();
       onClose();
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      const dato = err instanceof ApiError ? err.data : null;
+      const codigoErr = dato && typeof dato.error === 'string' ? dato.error : '';
+      const mensajeErr = dato && typeof dato.mensaje === 'string' ? dato.mensaje : '';
+      if ((codigoErr === 'sin_constancia_detraccion' || codigoErr === 'sin_cuenta_detraccion') && mensajeErr) toast(mensajeErr, 'error');
+      else toast(errorMessage(err), 'error');
       haptic('warning');
     } finally {
       setGuardando(false);
@@ -265,7 +289,7 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
 
   const monedaPago: 'USD' | 'PEN' = usd ? 'USD' : 'PEN';
   const monedaNeto: 'USD' | 'PEN' = usd || mixto ? 'USD' : 'PEN';
-  const descuentoNc = ncs.length && netoNc != null ? redondear2(importe - netoNc) : 0;
+  const descuentoNc = ncs.length && netoNc != null ? redondear2(importeSinDet - netoNc) : 0;
   const docs = oc ? [
     { titulo: 'Cotización', url: oc.url_cotizacion_presigned, Icono: FileText },
     { titulo: 'Factura', url: oc.url_factura_presigned, Icono: FileCheck },
@@ -281,7 +305,7 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={guardando}>Cancelar</Button>
-          <Button variant="primary" icon={<CheckCircle2 size={16} />} loading={guardando} disabled={sinCuentaDestino || cargandoCuentas} onClick={confirmar}>Confirmar pago</Button>
+          <Button variant="primary" icon={<CheckCircle2 size={16} />} loading={guardando} disabled={sinCuentaDestino || sinCuentaDetraccion || cargandoCuentas} onClick={confirmar}>Confirmar pago</Button>
         </>
       }
     >
@@ -393,7 +417,36 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
               )}
             </section>
 
-            <AplicarNotasCredito entradaId={oc.id} sugeridas={(() => { try { const x = JSON.parse(oc.nc_sugeridas || '[]'); return Array.isArray(x) ? x.map(Number) : []; } catch { return []; } })()} moneda={usd || mixto ? 'USD' : 'PEN'} importe={importe} onChange={(a, n) => { setNcs(a); setNetoNc(n); }} />
+            {det && (
+              <section className="ga-sec" aria-label="Detracción">
+                <h3 className="ga-sec__titulo">
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Percent size={16} aria-hidden /> Detracción (SUNAT)</span>
+                  <span className="ga-sec__cuenta">{det.codigo} · {num(det.pct)} %</span>
+                </h3>
+                <p className="t-footnote c-secondary" style={{ margin: 0 }}>
+                  Se deposita {formatMoneda(detMontoPen, 'PEN')} en la cuenta de detracciones del proveedor y se le paga el resto. En Caja quedan dos egresos.
+                </p>
+                {sinCuentaDetraccion ? (
+                  <Notice tone="error">
+                    <strong>El proveedor no tiene cuenta de detracciones (Banco de la Nación):</strong> regístrala en Almacén › Proveedores, casilla «Cuenta de detracciones».
+                  </Notice>
+                ) : (
+                  <div className="pp-fila"><span className="pp-fila__etq">Depositar a</span><div className="pp-fila__val"><span className="pp-fila__num"><span className="pp-sel">{det.cuenta_proveedor}</span></span></div></div>
+                )}
+                <Field label="N° de constancia del depósito de la detracción *" error={errores.constanciaDet}>
+                  {p => <TextInput {...p} value={constanciaDet} placeholder="Ej. 00482910"
+                    onChange={e => { setConstanciaDet(e.target.value); setErrores(x => ({ ...x, constanciaDet: undefined })); }} />}
+                </Field>
+                <Field label="Cuenta de la empresa para el depósito de la detracción" hint="Opcional. Si no eliges, se usa la misma cuenta de origen del pago.">
+                  {p => (
+                    <Combobox {...p} enHoja tituloHoja="Cuenta para el depósito de la detracción" value={cuentaDetSel || null} onChange={v => setCuentaDetSel(v ?? '')}
+                      options={cuentas.map(c => ({ value: c.label, label: c.label }))} placeholder="La misma cuenta de origen" />
+                  )}
+                </Field>
+              </section>
+            )}
+
+            <AplicarNotasCredito entradaId={oc.id} sugeridas={(() => { try { const x = JSON.parse(oc.nc_sugeridas || '[]'); return Array.isArray(x) ? x.map(Number) : []; } catch { return []; } })()} moneda={usd || mixto ? 'USD' : 'PEN'} importe={importeSinDet} onChange={(a, n) => { setNcs(a); setNetoNc(n); }} />
 
             {(oc.items?.length ?? 0) > 0 && (
               <section className="ga-sec" aria-label="Artículos">
@@ -425,12 +478,13 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
               <h3 className="ga-sec__titulo"><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Coins size={16} aria-hidden /> Resumen del pago</span></h3>
               <div className="ga-resumen">
                 <div className="ga-resumen__fila"><span>Importe de la orden</span><b>{formatMoneda(importeOC(oc), oc.moneda)}</b></div>
+                {det && <div className="ga-resumen__fila"><span>Detracción {num(det.pct)} % ({formatMoneda(detMontoPen, 'PEN')}, depósito al Banco de la Nación)</span><b>− {formatMoneda(detEnImporte, monedaNeto)}</b></div>}
                 {descuentoNc > 0 && <div className="ga-resumen__fila"><span>Notas de crédito</span><b>− {formatMoneda(descuentoNc, monedaNeto)}</b></div>}
-                {(descuentoNc > 0 || mixto) && <div className="ga-resumen__fila"><span>Neto</span><b>{formatMoneda(neto, monedaNeto)}</b></div>}
+                {(descuentoNc > 0 || mixto || !!det) && <div className="ga-resumen__fila"><span>Neto</span><b>{formatMoneda(neto, monedaNeto)}</b></div>}
                 {mixto && <div className="ga-resumen__fila"><span>Tipo de cambio del pago</span><b>{tcPagoNum || tc}{tcPagoNum ? '' : ' (de la orden)'}</b></div>}
                 {mixto && difCambio !== 0 && <div className="ga-resumen__fila"><span>Diferencia de cambio</span><b>{formatMoneda(difCambio, 'PEN')}</b></div>}
                 <div className="ga-resumen__fila"><span>Cuenta de origen</span><b>{cuenta ? (cuenta.usd ? 'En dólares' : 'En soles') : '—'}</b></div>
-                <div className="ga-resumen__total"><span>Total a pagar</span><b>{formatMoneda(monto, monedaPago)}</b></div>
+                <div className="ga-resumen__total"><span>{det ? 'A pagar al proveedor (neto)' : 'Total a pagar'}</span><b>{formatMoneda(monto, monedaPago)}</b></div>
               </div>
               {errores.monto && <span className="field__error" role="alert">{errores.monto}</span>}
             </section>

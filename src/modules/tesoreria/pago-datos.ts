@@ -2,6 +2,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../core/api/client';
 
+/** Detracción (SPOT) de una orden: monto_pen es el depósito en soles; monto_origen, su equivalente en la moneda de la orden */
+export interface DetraccionPago {
+  codigo: string;
+  pct: number;
+  tc: number | null;
+  monto_pen: number;
+  monto_origen: number;
+  constancia: string | null;
+  pagada_en: string | null;
+  /** Cuenta de detracciones del proveedor en el Banco de la Nación ("BANCO - número"), o null si no tiene */
+  cuenta_proveedor: string | null;
+}
+
 export interface ItemOrden {
   inventario_id: string;
   descripcion: string;
@@ -63,6 +76,8 @@ export interface OrdenPago {
   url_factura_presigned?: string | null;
   url_voucher_presigned?: string | null;
   items?: ItemOrden[];
+  /** null o ausente: la orden no lleva detracción */
+  detraccion?: DetraccionPago | null;
 }
 
 export type FiltroEstado = 'aprobado' | 'procesados' | 'todos';

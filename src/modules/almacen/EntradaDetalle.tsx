@@ -212,6 +212,13 @@ export function EntradaDetalle({
             <Dato etiqueta="Se pagó realmente (sale del banco)" valor={formatMoneda(Math.max(0, Math.round((totalOrdenDetalle - (Number(e.nc_aplicado) || 0)) * 100) / 100), moneda)} extra="El egreso en Caja es solo esta diferencia; el costo de los artículos no cambia." ancho />
           </Grupo>
         )}
+        {e.detraccion_codigo && (
+          <Grupo titulo="Detracción (SUNAT)" ancho>
+            <Dato etiqueta={`Detracción ${Number(e.detraccion_pct) || 0} %`} valor={formatMoneda(Number(e.detraccion_monto_pen) || 0, 'PEN')}
+              extra={`Tipo ${e.detraccion_codigo}${moneda === 'USD' && Number(e.detraccion_tc) > 0 ? ` · T/C ${Number(e.detraccion_tc)}` : ''}`} />
+            {e.detraccion_constancia && <Dato etiqueta="Constancia del depósito" valor={e.detraccion_constancia} extra={e.detraccion_pagada_en ? `Pagada el ${formatFechaPe(String(e.detraccion_pagada_en).split(/[T ]/)[0])}` : undefined} />}
+          </Grupo>
+        )}
         <Grupo titulo="Motivo" ancho>
           <Dato etiqueta="Motivo de compra / ingreso" valor={e.motivo_entrada || '—'} />
           <Dato etiqueta="Motivo (naturaleza del gasto)" valor={naturaleza || '—'} />
