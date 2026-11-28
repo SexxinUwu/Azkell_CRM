@@ -16,6 +16,7 @@ import {
   EsquemaPlacaSheet, ImportarNeumaticosSheet, MedidaDetalleSheet, descargarPlantillaNeumaticos, exportarNeumaticos, type EstadoActual,
 } from './NeumaticosExtras';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../core/auth/AuthProvider';
 import { obtenerReporteCiclo } from './NeumaticosCicloExcel';
 import { InspeccionDetalleSheet } from './NeumaticosDetalleSheet';
 import { MM_CRITICO, TINTA_TONO, tonoMm } from './neumaticosSemaforo';
@@ -127,7 +128,7 @@ function Kpi({ label, valor, sub, color, icono }: { label: string; valor: string
 
 // ─── Visor interactivo por placa (GET /neumaticos/estado-actual/:placa) ───────
 
-function VisorPlaca({ onInspeccionar, onEsquema }: { onInspeccionar: (placa: string) => void; onEsquema: (placa: string) => void }) {
+function VisorPlaca({ onInspeccionar, onEsquema, puedeInspeccionar }: { onInspeccionar: (placa: string) => void; onEsquema: (placa: string) => void; puedeInspeccionar: boolean }) {
   const [texto, setTexto] = useState('');
   const [placa, setPlaca] = useState('');
   const { data, isFetching, error } = useQuery<EstadoActual>({
@@ -164,7 +165,7 @@ function VisorPlaca({ onInspeccionar, onEsquema }: { onInspeccionar: (placa: str
         <div style={{ textAlign: 'center', padding: 'var(--s-3) 0' }}>
           <Badge>{data.placa}</Badge>
           <p className="t-footnote c-secondary">No se encontraron inspecciones de neumáticos registradas para esta placa.</p>
-          <Button variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => onInspeccionar(data.placa)}>Crear Primera Inspección</Button>
+          {puedeInspeccionar && <Button variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => onInspeccionar(data.placa)}>Crear Primera Inspección</Button>}
         </div>
       ) : data && (
         <>
@@ -191,7 +192,7 @@ function VisorPlaca({ onInspeccionar, onEsquema }: { onInspeccionar: (placa: str
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
             <Button variant="secondary" size="sm" icon={<ScanSearch size={14} />} onClick={() => onEsquema(data.placa)}>Ver esquema</Button>
-            <Button variant="secondary" size="sm" icon={<Plus size={14} />} onClick={() => onInspeccionar(data.placa)}>Nueva Inspección para {data.placa}</Button>
+            {puedeInspeccionar && <Button variant="secondary" size="sm" icon={<Plus size={14} />} onClick={() => onInspeccionar(data.placa)}>Nueva Inspección para {data.placa}</Button>}
           </div>
         </>
       )}
@@ -212,6 +213,11 @@ export function NeumaticosAnalisisPage() {
   const [periodo, setPeriodo] = useState<string>('todos');
   const [busqueda, setBusqueda] = useState('');
   const navegar = useNavigate();
+  const { can } = useAuth();
+  // Crear una inspección es «Crear» de Inspecciones; importar es «Crear» de Neumáticos; eliminar, «Eliminar» de Neumáticos
+  const puedeInspeccionar = can('insp.crear');
+  const puedeImportar = can('neumaticos.crear');
+  const puedeEliminar = can('neumaticos.eliminar');
   const [esquemaPlaca, setEsquemaPlaca] = useState<string | null>(null);
   const [importar, setImportar] = useState(false);
   const [detalleId, setDetalleId] = useState<string | null>(null);
@@ -262,7 +268,7 @@ export function NeumaticosAnalisisPage() {
         subtitle="Monitoreo de desgaste, semáforo de vigencia por flota y control predictivo de recambio"
         actions={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <Button variant="secondary" size="sm" icon={<Upload size={15} />} onClick={() => setImportar(true)}>Importar Excel</Button>
+            {puedeImportar && <Button variant="secondary" size="sm" icon={<Upload size={15} />} onClick={() => setImportar(true)}>Importar Excel</Button>}
             <Button variant="secondary" size="sm" icon={<FileSpreadsheet size={15} />} onClick={exportar}>Exportar Excel</Button>
             <Button variant="secondary" size="sm" icon={<RefreshCw size={15} />} loading={isFetching} onClick={() => { void refetch(); }}>Actualizar</Button>
             <Button variant="primary" size="sm" icon={<Plus size={15} />} onClick={() => abrirInspeccion()}>Nueva Inspección</Button>
@@ -345,7 +351,7 @@ export function NeumaticosAnalisisPage() {
               </div>
             </div>
 
-            <VisorPlaca onInspeccionar={abrirInspeccion} onEsquema={setEsquemaPlaca} />
+            <VisorPlaca onInspeccionar={abrirInspeccion} onEsquema={setEsquemaPlaca} puedeInspeccionar={puedeInspeccionar} />
           </div>
 
           {/* Historial de inspecciones */}
@@ -402,7 +408,7 @@ export function NeumaticosAnalisisPage() {
                               <Button variant="secondary" size="sm" icon={<Eye size={13} />} onClick={() => setDetalleId(i.id_inspeccion)}>Ver</Button>
                               <MenuOtros soloIcono label="Más opciones" opciones={[
                                 { label: 'Ver Detalle', icon: <Eye size={17} />, onSelect: () => setDetalleId(i.id_inspeccion) },
-                                { label: 'Eliminar', icon: <Trash2 size={17} />, destructiva: true, separado: true, onSelect: () => setEliminar(i.id_inspeccion) },
+                                ...(puedeEliminar ? [{ label: 'Eliminar', icon: <Trash2 size={17} />, destructiva: true, separado: true, onSelect: () => setEliminar(i.id_inspeccion) }] : []),
                               ]} />
                             </span>
                           )}
