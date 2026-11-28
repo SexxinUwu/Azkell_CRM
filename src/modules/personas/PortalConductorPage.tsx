@@ -112,6 +112,7 @@ export function PortalConductorPage() {
   const r = q.data;
   const viaje = r?.viaje;
   const puedeEditar = can('conductor_portal.crear', 'conductor_portal.editar');
+  const puedeEliminar = can('conductor_portal.eliminar');
 
   // Gastos del viaje que siguen en el teléfono (los que ya aparecen en el servidor no se repiten)
   const sincronizados = new Set((r?.gastos ?? []).map(g => g.uuid_cliente).filter((x): x is string => !!x));
@@ -332,7 +333,7 @@ export function PortalConductorPage() {
                           <strong>{s(g.importe)}</strong>
                           {g.sustento_url && <a href={g.sustento_url} target="_blank" rel="noreferrer" className="placas-limpiar" aria-label="Ver sustento"><Paperclip size={16} /></a>}
                           {puedeEditar && <button type="button" className="placas-limpiar" onClick={() => setEditando(g)} aria-label="Editar gasto"><Pencil size={16} /></button>}
-                          {puedeEditar && <button type="button" className="placas-limpiar" style={{ color: 'var(--red-ink)' }} onClick={() => setPorEliminar({ tipo: 'servidor', gasto: g })} aria-label="Eliminar gasto"><Trash2 size={16} /></button>}
+                          {puedeEliminar && <button type="button" className="placas-limpiar" style={{ color: 'var(--red-ink)' }} onClick={() => setPorEliminar({ tipo: 'servidor', gasto: g })} aria-label="Eliminar gasto"><Trash2 size={16} /></button>}
                         </div>
                       ))}
                     </div>

@@ -152,7 +152,7 @@ module.exports = function globalRBAC(req, res, next) {
     if (esAprobacionOc || esAprobacionCaja) {
         const reglas = esAprobacionOc
             ? [['gerencia_aprobaciones_oc', ['a']]]
-            : [['gerencia_aprobaciones_caja', ['a']], ...['tesoreria', 'tes_motivos', 'liquidaciones_gastos', 'cond', 'conductores'].map(m => [m, ['c']])];
+            : [['gerencia_aprobaciones_caja', ['a']], ['tesoreria_caja', ['c']]];
         const tiene = reglas.some(([modulo, acciones]) => p[modulo] && acciones.some(a => p[modulo][a] === 1 || p[modulo][a] === true));
         if (!tiene) return res.status(403).json({ error: 'RBAC: Permiso denegado para aprobar o anular (Gerencia)' });
         return next();
@@ -371,7 +371,8 @@ module.exports = function globalRBAC(req, res, next) {
     // TESORERÍA: cada ruta con su módulo del catálogo. La acción la pone el método (GET l, POST c, PUT e, DELETE d).
     // Los cruces con otras áreas (Operaciones, Almacén, Gerencia y el portal del conductor) van listados aquí.
     else if (/^\/tesoreria\/caja\/(siguiente-numero|buscar-ordenes-viaje)$/.test(path)) mod = ['tesoreria_caja', 'op_ordenes_viaje'];
-    else if (path === '/tesoreria/caja' && req.method === 'POST') mod = ['tesoreria_caja', 'op_ordenes_viaje']; // Cochera (Operaciones): la ruta limita a ese cargo
+    // Cargo de la cochera del conductor: endpoint propio y estrecho para Operaciones (la ruta solo admite ese cargo). El POST /tesoreria/caja general exige Caja > Crear.
+    else if (path === '/tesoreria/caja/cochera' && req.method === 'POST') mod = ['op_ordenes_viaje'];
     else if (path === '/tesoreria/caja' && req.method === 'GET') mod = ['tesoreria_caja', 'gerencia_aprobaciones_caja'];
     else if (/^\/tesoreria\/caja(\/|$)/.test(path)) mod = ['tesoreria_caja'];
     else if (path.startsWith('/tesoreria/caja-chica')) mod = req.method === 'GET' ? ['tesoreria_caja', 'gerencia_aprobaciones_caja'] : ['tesoreria_caja'];

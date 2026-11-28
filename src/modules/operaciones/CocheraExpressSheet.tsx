@@ -132,7 +132,7 @@ export function CocheraExpressSheet({ open, datos, onClose }: { open: boolean; d
       f.append('no_aplica_liquidacion', '0');
       f.append('usuario_creacion', user?.name ?? '');
 
-      const r = await api<{ ok?: boolean; error?: string }>('/tesoreria/caja', { method: 'POST', body: f });
+      const r = await api<{ ok?: boolean; error?: string }>('/tesoreria/caja/cochera', { method: 'POST', body: f });
       if (r.ok === false) throw new Error(r.error || 'No se pudo generar la caja de cochera');
       haptic('success');
       toast(`Caja de cochera Nº ${serie}-${numero} registrada (S/ ${importe.toFixed(2)})`);
