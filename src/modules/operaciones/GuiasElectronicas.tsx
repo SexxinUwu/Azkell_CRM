@@ -106,8 +106,8 @@ export function GuiasElectronicas({ tipo }: { tipo: TipoGuia }) {
   const abierta = datos.find(g => g.id === abiertoId) ?? null;
   const g = det.data?.guia ?? abierta;
   const e = g ? estadoDe(g) : '';
-  const puedeEditar = can('op_guias_remision.editar', 'op_guias_remision.crear', 'guias_remision.editar');
-  const puedeEliminar = can('op_guias_remision.eliminar', 'guias_remision.eliminar');
+  const puedeEditar = can('op_guias_remision.editar', 'op_guias_remision.crear');
+  const puedeEliminar = can('op_guias_remision.eliminar');
   const refrescar = () => qc.invalidateQueries({ queryKey: ['operaciones'] });
 
   function nuevaGuia() {
