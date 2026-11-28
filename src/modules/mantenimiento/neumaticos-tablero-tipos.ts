@@ -3,9 +3,9 @@
 
 // Permisos (src/modules/sistema/permisosCatalogo.ts). El servidor debe comprobarlos en cada endpoint de escritura.
 export const PERMISO_VER_NEUMATICOS = 'neumaticos.ver';          // consultar tablero, pestaña, mapa y línea de tiempo
-export const PERMISO_MOVER_NEUMATICOS = 'neumaticos.mover';    // instalar y retirar llantas de una unidad
-export const PERMISO_REENCAUCHE = 'neumaticos.reencauche';     // enviar llantas a reencauche
-export const PERMISO_BAJA = 'neumaticos.baja';                 // enviar a descarte y desactivar (scrap)
+export const PERMISO_MOVER_NEUMATICOS = 'neumaticos.mover.crear';  // instalar y retirar llantas de una unidad
+export const PERMISO_REENCAUCHE = 'neumaticos.reencauche.crear';   // enviar llantas a reencauche
+export const PERMISO_BAJA = 'neumaticos.baja.crear';               // enviar a descarte y desactivar (scrap)
 
 /** Una llanta tal como la muestra el tablero */
 export interface LlantaTablero {

@@ -332,8 +332,8 @@ export function NeumaticosListado() {
   // Corregir un envío equivocado a reforma o descarte: solo administradores
   const esAdmin = permissions.has(ADMIN);
   const [corrigiendo, setCorrigiendo] = useState<{ codigo: string; situacion: string } | null>(null);
-  const puedeReforma = can('neumaticos.reencauche');
-  const puedeAlta = can('neumaticos.mover');
+  const puedeReforma = can('neumaticos.reencauche.crear');
+  const puedeAlta = can('neumaticos.mover.crear');
   const qc = useQueryClient();
   const toast = useToast();
 

@@ -86,8 +86,8 @@ type Dialogo =
   | { tipo: 'montaje'; posicion: string; llanta: LlantaDisponible };
 
 /** Permisos de los destinos: descarte (baja) y reforma (reencauche). El Retén solo pide el permiso de mover. */
-const PERMISO_BAJA = 'neumaticos.baja';
-const PERMISO_REENCAUCHE = 'neumaticos.reencauche';
+const PERMISO_BAJA = 'neumaticos.baja.crear';
+const PERMISO_REENCAUCHE = 'neumaticos.reencauche.crear';
 const AVISO_BAJA = 'No tienes permiso para enviar llantas a descarte (neumaticos.baja).';
 const AVISO_REFORMA = 'No tienes permiso para enviar llantas a reforma (neumaticos.reencauche).';
 
