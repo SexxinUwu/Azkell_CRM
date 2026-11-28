@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { FileStack } from 'lucide-react';
 import type { RutaModulo } from '../../modules/personal/rutas.tipos';
+import { ADMIN } from '../auth/permisos';
 
 export interface NavItem {
   key: string;
@@ -48,20 +49,20 @@ const EDITAN_TERCEROS = ['clientes', 'prov_inv', 'combustible_vales'].flatMap(c 
 
 // Opciones de "Otros" de Mantenimiento: la página /mantenimiento/otros las muestra en casillas
 export const OTROS_MANTENIMIENTO: NavItem[] = [
-        { key: 'planificacion', label: 'Planificación de mantenimientos', to: '/mantenimiento/planificacion', icon: CalendarDays, permissions: ver('plan') },
-        { key: 'backlog', label: 'Backlog pendientes', to: '/mantenimiento/reportes-ot?tab=backlog', icon: Hourglass, permissions: ver('mant_dashboard', 'trabajos_ot') },
-        { key: 'kpis', label: 'Métricas y KPIs', to: '/mantenimiento/kpis-taller', icon: Activity, permissions: ver('mant_dashboard') },
-        { key: 'productividad', label: 'Productividad personal', to: '/mantenimiento/productividad', icon: HardHat, permissions: ver('pers_mant', 'mant_dashboard') },
-        { key: 'finanzas-taller', label: 'Reporte financiero', to: '/mantenimiento/finanzas-taller', icon: Wallet, permissions: ver('mant_dashboard') },
-        { key: 'frecuencias-mp', label: 'Frecuencias MP', to: '/mantenimiento/configuracion-mp', icon: Settings, permissions: ver('cfg_mant') },
-        { key: 'kits-mp', label: 'Kits MP', to: '/mantenimiento/kits-mp', icon: Package, permissions: ver('cfg_mant') },
-        { key: 'tipos-mp', label: 'Tipos MP', to: '/mantenimiento/tipos-mp', icon: Wrench, permissions: ver('cfg_mant') },
-        { key: 'fleetrun-config', label: 'Umbrales Fleetrun', to: '/mantenimiento/fleetrun-config', icon: Gauge, permissions: ver('cfg_fleetrun') },
-        { key: 'config-metrica', label: 'Config. métrica', to: '/mantenimiento/config-metrica', icon: Target, permissions: ver('cfg_mant') },
-  { key: 'siniestros', label: 'Siniestros y daños', to: '/mantenimiento/siniestros', icon: TriangleAlert, permissions: ver('siniestros') },
-  { key: 'siniestros-analisis', label: 'Análisis de siniestros', to: '/mantenimiento/siniestros-analisis', icon: BarChart3, permissions: ver('siniestros') },
-  { key: 'personal-taller', label: 'Personal Taller', to: '/mantenimiento/personal', icon: UserCog, permissions: ver('pers_mant') },
-  { key: 'situaciones', label: 'Situaciones', to: '/preferencias/situaciones', icon: Tag, permissions: ver('cfg_situacion') },
+        { key: 'planificacion', label: 'Planificación de mantenimientos', to: '/mantenimiento/planificacion', icon: CalendarDays, permissions: ver('otros_mant') },
+        { key: 'backlog', label: 'Backlog pendientes', to: '/mantenimiento/reportes-ot?tab=backlog', icon: Hourglass, permissions: ver('otros_mant') },
+        { key: 'kpis', label: 'Métricas y KPIs', to: '/mantenimiento/kpis-taller', icon: Activity, permissions: ver('otros_mant') },
+        { key: 'productividad', label: 'Productividad personal', to: '/mantenimiento/productividad', icon: HardHat, permissions: ver('otros_mant') },
+        { key: 'finanzas-taller', label: 'Reporte financiero', to: '/mantenimiento/finanzas-taller', icon: Wallet, permissions: ver('otros_mant') },
+        { key: 'frecuencias-mp', label: 'Frecuencias MP', to: '/mantenimiento/configuracion-mp', icon: Settings, permissions: ver('otros_mant') },
+        { key: 'kits-mp', label: 'Kits MP', to: '/mantenimiento/kits-mp', icon: Package, permissions: ver('otros_mant') },
+        { key: 'tipos-mp', label: 'Tipos MP', to: '/mantenimiento/tipos-mp', icon: Wrench, permissions: ver('otros_mant') },
+        { key: 'fleetrun-config', label: 'Umbrales Fleetrun', to: '/mantenimiento/fleetrun-config', icon: Gauge, permissions: ver('otros_mant') },
+        { key: 'config-metrica', label: 'Config. métrica', to: '/mantenimiento/config-metrica', icon: Target, permissions: ver('otros_mant') },
+  { key: 'siniestros', label: 'Siniestros y daños', to: '/mantenimiento/siniestros', icon: TriangleAlert, permissions: ver('otros_mant') },
+  { key: 'siniestros-analisis', label: 'Análisis de siniestros', to: '/mantenimiento/siniestros-analisis', icon: BarChart3, permissions: ver('otros_mant') },
+  { key: 'personal-taller', label: 'Personal Taller', to: '/mantenimiento/personal', icon: UserCog, permissions: ver('otros_mant') },
+  { key: 'situaciones', label: 'Situaciones', to: '/preferencias/situaciones', icon: Tag, permissions: ver('otros_mant') },
 ];
 
 const SECCIONES_BASE: NavSection[] = [
@@ -159,7 +160,7 @@ const SECCIONES_BASE: NavSection[] = [
         ],
       },
       { key: 'incidencias', label: 'Incidencias en ruta', to: '/mantenimiento/incidencias', icon: ShieldCheck, permissions: ver('incidencias_ruta') },
-      { key: 'mant-otros', label: 'Otros', to: '/mantenimiento/otros', icon: Layers, permissions: [...ver('otros_mant'), ...OTROS_MANTENIMIENTO.flatMap(i => i.permissions)] },
+      { key: 'mant-otros', label: 'Otros', to: '/mantenimiento/otros', icon: Layers, permissions: ver('otros_mant') },
     ],
   },
   {
@@ -172,7 +173,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'salidas', label: 'Órdenes de salida', to: '/almacen/salidas', icon: PackageMinus, permissions: ver('sal_inv') },
       { key: 'kardex', label: 'Kardex', to: '/almacen/kardex', icon: History, permissions: ver('kardex') },
       { key: 'almacen-notas-credito', label: 'Notas de crédito de proveedores', to: '/almacen/notas-credito', icon: ReceiptText, permissions: ver('alm_nc') },
-      { key: 'almacen-otros', label: 'Otros', to: '/almacen/otros', icon: Layers, permissions: ver('almacen_otros', 'inv', 'ent_inv', 'prov_inv', 'rec_compras', 'gerencia_aprobaciones_oc', 'cfg_mant') },
+      { key: 'almacen-otros', label: 'Otros', to: '/almacen/otros', icon: Layers, permissions: ver('almacen_otros') },
     ],
   },
   {
@@ -257,15 +258,15 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Configuración',
     items: [
-      { key: 'usuarios', label: 'Usuarios', to: '/sistema/usuarios', icon: UserCog, permissions: ver('usuarios') },
+      { key: 'usuarios', label: 'Usuarios', to: '/sistema/usuarios', icon: UserCog, permissions: [ADMIN] },
       { key: 'superadmin', label: 'Empresas SaaS (SuperAdmin)', to: '/sistema/superadmin', icon: Building2, permissions: [], soloFundador: true },
-      { key: 'auditoria', label: 'Auditoría', to: '/sistema/auditoria', icon: History, permissions: ver('mod_auditoria') },
-      { key: 'api-gateway', label: 'API y desarrolladores', to: '/sistema/api', icon: Code, permissions: ver('administracion') },
-      { key: 'empresa', label: 'Empresa', to: '/sistema/empresa', icon: Building2, permissions: ver('administracion') },
-      { key: 'notificaciones', label: 'Notificaciones', to: '/sistema/notificaciones', icon: Bell, permissions: ver('administracion') },
+      { key: 'auditoria', label: 'Auditoría', to: '/sistema/auditoria', icon: History, permissions: [ADMIN] },
+      { key: 'api-gateway', label: 'API y desarrolladores', to: '/sistema/api', icon: Code, permissions: [ADMIN] },
+      { key: 'empresa', label: 'Empresa', to: '/sistema/empresa', icon: Building2, permissions: [ADMIN] },
+      { key: 'notificaciones', label: 'Notificaciones', to: '/sistema/notificaciones', icon: Bell, permissions: [ADMIN] },
       { key: 'apariencia', label: 'Apariencia', to: '/perfil', icon: Palette, permissions: [] },
       { key: 'accesibilidad', label: 'Accesibilidad e idioma', to: '/sistema/accesibilidad', icon: Accessibility, permissions: [] },
-      { key: 'integraciones', label: 'Integraciones', to: '/sistema/integraciones', icon: Cog, permissions: ver('integraciones', 'administracion') },
+      { key: 'integraciones', label: 'Integraciones', to: '/sistema/integraciones', icon: Cog, permissions: [ADMIN] },
     ],
   },
 ];
