@@ -165,6 +165,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
   const [detTipo, setDetTipo] = useState('');
   const [detPct, setDetPct] = useState('');
   const [detTc, setDetTc] = useState('');
+  const [detFecha, setDetFecha] = useState('');
 
   // Altas rápidas (proveedor o artículo que no está en la lista) y escáner
   const [altaProveedor, setAltaProveedor] = useState<{ nombre?: string; ruc?: string } | null>(null);
@@ -180,7 +181,8 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
   const tcRespaldo = tcRespaldoDe(configQ.data?.tipo_cambio);
   const sunat = useTipoCambioSunat(open && moneda === 'USD');
   // T.C. de la detracción: por defecto el de venta de la SUNAT (no el de la orden); se puede cambiar por el de la factura del proveedor
-  const tcDetSunat = sunat.data?.venta || tc;
+  const sunatDet = useTipoCambioSunat(open && moneda === 'USD' && !!detFecha, detFecha || undefined);
+  const tcDetSunat = (detFecha ? sunatDet.data?.venta : sunat.data?.venta) || tc;
 
   const proveedor = proveedores.find(p => p.id === proveedorId) ?? null;
   // Saldo a favor del proveedor (notas de crédito aprobadas) en la moneda de la orden: se avisa y se descuenta al pagar
@@ -932,6 +934,11 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
                   <Field label="Porcentaje (%)" hint="Por defecto el del tipo; puedes cambiarlo">
                     {p => <TextInput {...p} type="number" min={0} max={100} step="0.01" value={detPct} onChange={ev => setDetPct(ev.target.value)} />}
                   </Field>
+                  {moneda === 'USD' && (
+                    <Field label="Fecha de la factura" hint={detFecha ? (sunatDet.data?.venta ? `SUNAT venta del ${sunatDet.data.fecha}: ${sunatDet.data.venta}` : sunatDet.isError ? 'No se pudo consultar esa fecha: escribe el T.C. a mano' : 'Consultando la SUNAT…') : 'Opcional: con la fecha de emisión se usa el T.C. SUNAT de ese día'}>
+                      {p => <TextInput {...p} type="date" max={new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' })} value={detFecha} onChange={ev => { setDetFecha(ev.target.value); setDetTc(''); }} />}
+                    </Field>
+                  )}
                   {moneda === 'USD' && (
                     <Field label="T.C. de la detracción" hint={sunat.data?.venta ? `Por defecto SUNAT venta del ${sunat.data.fecha}: ${sunat.data.venta}. Cámbialo por el de la factura del proveedor si difiere` : 'Por defecto el de la SUNAT; si no responde, el de la orden'}>
                       {p => <TextInput {...p} type="number" min={0} step="0.0001" value={detTc} placeholder={tcDetSunat > 0 ? String(tcDetSunat) : ''} onChange={ev => setDetTc(ev.target.value)} />}

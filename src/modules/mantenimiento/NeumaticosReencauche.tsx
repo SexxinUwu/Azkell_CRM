@@ -43,15 +43,17 @@ export function GenerarOrdenReencaucheSheet({ open, onClose, llantas, onHecho }:
   const [detCodigo, setDetCodigo] = useState('');
   const [detPct, setDetPct] = useState('');
   const [detTc, setDetTc] = useState('');
+  const [detFecha, setDetFecha] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tipos = useDetraccionTipos();
-  const sunat = useTipoCambioSunat(open && moneda === 'USD');
+  const sunat = useTipoCambioSunat(open && moneda === 'USD' && !detFecha);
+  const sunatDet = useTipoCambioSunat(open && moneda === 'USD' && !!detFecha, detFecha || undefined);
 
   useEffect(() => {
     if (!open) return;
     setProveedorId(null); setPrecios({}); setCondicion('credito'); setDias('30'); setObs(''); setError(null);
-    setMoneda('PEN'); setTc(''); setIgv('sin_igv'); setCotizacion(''); setDetCodigo(''); setDetPct(''); setDetTc('');
+    setMoneda('PEN'); setTc(''); setIgv('sin_igv'); setCotizacion(''); setDetCodigo(''); setDetPct(''); setDetTc(''); setDetFecha('');
   }, [open]);
 
   // El reencauche es un servicio de neumáticos: la detracción sugerida es la del tipo 020 (12 %), editable
@@ -74,7 +76,7 @@ export function GenerarOrdenReencaucheSheet({ open, onClose, llantas, onHecho }:
   const usd = moneda === 'USD';
   const money = (n: number) => (usd ? formatDolares(n) : formatSoles(n));
   const tcNum = num(tc);
-  const detTcNum = num(detTc) || sunat.data?.venta || tcNum;
+  const detTcNum = num(detTc) || (detFecha ? sunatDet.data?.venta : sunat.data?.venta) || tcNum;
   const detPctNum = num(detPct);
   const detTipo = (tipos.data ?? []).find(x => x.codigo === detCodigo) ?? null;
   const detBaseSoles = usd ? total * (Number.isFinite(detTcNum) ? detTcNum : 0) : total;
@@ -186,13 +188,18 @@ export function GenerarOrdenReencaucheSheet({ open, onClose, llantas, onHecho }:
           )}
         </Field>
         {detCodigo && (
-          <div style={{ display: 'grid', gridTemplateColumns: usd ? '1fr 1fr' : '1fr', gap: 'var(--s-3)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: usd ? '1fr 1fr 1fr' : '1fr', gap: 'var(--s-3)' }}>
             <Field label="% de detracción">
               {p => <TextInput {...p} inputMode="decimal" value={detPct} onChange={e => setDetPct(e.target.value)} />}
             </Field>
             {usd && (
+              <Field label="Fecha de la factura">
+                {p => <TextInput {...p} type="date" max={new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' })} value={detFecha} onChange={e => { setDetFecha(e.target.value); setDetTc(''); }} />}
+              </Field>
+            )}
+            {usd && (
               <Field label="T.C. de la detracción">
-                {p => <TextInput {...p} inputMode="decimal" placeholder={sunat.data?.venta ? String(sunat.data.venta) : (tc || 'Ej. 3.4555')} value={detTc} onChange={e => setDetTc(e.target.value)} />}
+                {p => <TextInput {...p} inputMode="decimal" placeholder={(detFecha ? sunatDet.data?.venta : sunat.data?.venta) ? String(detFecha ? sunatDet.data?.venta : sunat.data?.venta) : (tc || 'Ej. 3.4555')} value={detTc} onChange={e => setDetTc(e.target.value)} />}
               </Field>
             )}
           </div>

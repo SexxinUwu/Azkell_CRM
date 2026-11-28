@@ -5378,7 +5378,7 @@ app.use('/api/guia-remitente', require('./routes/guia_remitente')(db, broadcast,
 const { tipoCambioSunat } = require('./services/tipo_cambio');
 app.get('/api/tipo-cambio/sunat', async (req, res) => {
     try {
-        res.json({ ok: true, ...(await tipoCambioSunat()) });
+        res.json({ ok: true, ...(await tipoCambioSunat(undefined, req.query.fecha ? String(req.query.fecha).slice(0, 10) : null)) });
     } catch (err) {
         res.status(503).json({ ok: false, error: 'No se pudo consultar el tipo de cambio de SUNAT: ' + err.message });
     }
