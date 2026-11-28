@@ -1327,7 +1327,8 @@ module.exports = function (db) {
     // GET /api/neumaticos/mapa-pdf/:placa -> PDF "Posición de los neumáticos en el vehículo {placa}" (solo lectura)
     router.get('/mapa-pdf/:placa', async (req, res) => {
         try {
-            if (!tienePermiso(req, PERMISO_VER, 'l')) throw aviso(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
+            // El mapa de llantas también se imprime desde la ficha de la placa (permiso placas); rbac.js lista la misma excepción
+            if (!tienePermiso(req, PERMISO_VER, 'l') && !tienePermiso(req, 'placas', 'l')) throw aviso(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
             const placa = mayus(req.params.placa);
             if (!placa) throw aviso(400, 'La placa es obligatoria');
             const { croquis } = await cargarTablero(pool(req), placa);

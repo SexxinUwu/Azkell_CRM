@@ -84,8 +84,14 @@ export function DashboardPage() {
   const [actualizado, setActualizado] = useState(() => new Date());
   const [recargando, setRecargando] = useState(false);
 
+  // Cada bloque pide lo mismo que el servidor exige a su ruta: sin el permiso no se llama y el bloque no se muestra
+  const veFlota = can('disponibilidad.ver', 'gps.ver', 'insp.ver', 'ot.ver');
+  const veVales = can('combustible_vales.ver', 'op_ordenes_viaje.ver', 'conductor_portal.ver');
+  const veRampas = can('status_rampa.ver', 'ot.ver', 'trabajos_ot.ver', 'otros_mant.ver');
+  const veNeu = can('neumaticos.ver', 'insp.ver', 'mant_dashboard.ver');
   const flota = useQuery({
     queryKey: ['dashboard', 'flota'],
+    enabled: veFlota,
     queryFn: () => api('/disponibilidad-flota').then(r => arr<Record<string, unknown>>(r)),
     staleTime: 60_000,
   });
@@ -101,16 +107,18 @@ export function DashboardPage() {
   });
   const vales = useQuery({
     queryKey: ['dashboard', 'vales'],
+    enabled: veVales,
     queryFn: () => api('/combustible/vales?limit=200').then(r => arr<Record<string, unknown>>(r)),
     staleTime: 60_000,
   });
   const rampas = useQuery({
     queryKey: ['dashboard', 'rampas'],
+    enabled: veRampas,
     queryFn: () => api('/taller-rampas').then(r => arr<Record<string, unknown>>(r)),
     staleTime: 30_000,
   });
   const insp = useInspecciones();
-  const neu = useInspeccionesNeumaticos();
+  const neu = useInspeccionesNeumaticos(veNeu);
   const placasQ = usePlacas();
   const reqs = useQuery({
     queryKey: ['dashboard', 'reqs'],
@@ -203,8 +211,8 @@ export function DashboardPage() {
     setRecargando(true);
     try {
       await Promise.all([
-        flota.refetch(), ots.refetch(), inventario.refetch(), vales.refetch(), rampas.refetch(), reqs.refetch(),
-        insp.refetch(), neu.refetch(), placasQ.refetch(),
+        veFlota && flota.refetch(), ots.refetch(), inventario.refetch(), veVales && vales.refetch(), veRampas && rampas.refetch(), reqs.refetch(),
+        insp.refetch(), veNeu && neu.refetch(), placasQ.refetch(),
       ]);
     } finally {
       setActualizado(new Date());
@@ -267,6 +275,7 @@ export function DashboardPage() {
           )}
 
           {/* ─── Flota ──────────────────────────────────────────────────── */}
+          {veFlota && (
           <div>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--label-2)', textTransform: 'uppercase', marginBottom: 'var(--s-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
               <Truck size={13} /> Flota
@@ -316,8 +325,10 @@ export function DashboardPage() {
             )}
           </div>
 
+          )}
+
           {/* ─── Vigencia de inspecciones ─────────────────────────────── */}
-          {(placasQ.data ?? []).length > 0 && (
+          {veNeu && (placasQ.data ?? []).length > 0 && (
             <div>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--label-2)', textTransform: 'uppercase', marginBottom: 'var(--s-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Truck size={13} /> Vigencia de inspecciones
