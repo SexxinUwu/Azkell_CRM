@@ -133,6 +133,9 @@ function ConfigCodigoSheet({ open, onClose }: { open: boolean; onClose: () => vo
   const config = useConfigCodigo();
   const qc = useQueryClient();
   const toast = useToast();
+  // Cambiar la letra es una edición: sin el permiso de editar, la pantalla solo la muestra
+  const { can } = useAuth();
+  const puedeEditar = can('neumaticos.editar');
   const [letra, setLetra] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -169,13 +172,13 @@ function ConfigCodigoSheet({ open, onClose }: { open: boolean; onClose: () => vo
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button variant="primary" loading={guardando} onClick={guardar}>Guardar</Button>
+          {puedeEditar && <Button variant="primary" loading={guardando} onClick={guardar}>Guardar</Button>}
         </>
       }>
       {config.isLoading ? <PageLoader /> : config.isError ? <Notice tone="error">{errorMessage(config.error)}</Notice> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
           <Field label="Letra de la empresa" hint="Marsisa M · Rosymar R · Trahesa T · Yogui Y" error={error ?? undefined}>
-            {p => <TextInput {...p} value={letra} maxLength={1} onChange={e => setLetra(e.target.value.toUpperCase())} />}
+            {p => <TextInput {...p} value={letra} maxLength={1} disabled={!puedeEditar} onChange={e => setLetra(e.target.value.toUpperCase())} />}
           </Field>
           <p className="nl-conteo">
             Año {config.data?.anio}: el siguiente código será <strong>{config.data?.proximo ?? '—'}</strong>.
@@ -490,7 +493,7 @@ export function NeumaticosListado() {
               Generar orden de reencauche ({seleccion.size})
             </Button>
           )}
-          {seleccion.size > 0 && !modoReforma && (
+          {seleccion.size > 0 && !modoReforma && puedeAlta && (
             <Button variant="primary" onClick={() => setPreviaAbierta(true)}>
               Generar código de fuego ({seleccion.size})
             </Button>

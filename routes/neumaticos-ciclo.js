@@ -382,7 +382,7 @@ module.exports = function (db) {
 
     router.put('/codigo-fuego/letra', async (req, res) => {
         try {
-            if (!tienePermiso(req, PERMISO_VER, 'l')) throw avisoCodigo(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
+            if (!tienePermiso(req, PERMISO_VER, 'e')) throw avisoCodigo(403, `Sin permiso (${PERMISO_VER}) para editar la letra del código de fuego`);
             const letra = txt((req.body || {}).letra).toUpperCase();
             if (!/^[A-Z]$/.test(letra)) throw avisoCodigo(400, 'La letra debe ser una sola letra de la A a la Z');
             await pool(req).query(
@@ -396,7 +396,7 @@ module.exports = function (db) {
 
     router.post('/codigo-fuego/generar', async (req, res) => {
         try {
-            if (!tienePermiso(req, PERMISO_VER, 'l')) throw avisoCodigo(403, `Sin permiso (${PERMISO_VER}) para ver neumáticos`);
+            if (!tienePermiso(req, PERMISO_MOVER, 'c')) throw avisoCodigo(403, `Sin permiso (${PERMISO_MOVER}) para generar códigos de fuego`);
             const entrada = Array.isArray((req.body || {}).ids) ? req.body.ids : [];
             const ids = [...new Set(entrada.map(v => txt(v)).filter(Boolean))];
             if (!ids.length) throw avisoCodigo(400, 'Selecciona al menos una llanta');
