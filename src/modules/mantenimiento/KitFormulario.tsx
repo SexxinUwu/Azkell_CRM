@@ -57,7 +57,7 @@ function crearFila(lista: ArticuloKit[], key: string, it?: KitItem): FilaKit {
   };
 }
 
-export function KitFormulario({ kit, kitsExistentes, open, onClose, onPedirEliminar }: {
+export function KitFormulario({ kit, kitsExistentes, open, onClose, onPedirEliminar, puedeEliminar }: {
   /** null = kit nuevo */
   kit: KitGrupo | null;
   /** Todos los ítems de kits guardados (para marcas y modelos ya usados) */
@@ -65,6 +65,7 @@ export function KitFormulario({ kit, kitsExistentes, open, onClose, onPedirElimi
   open: boolean;
   onClose: () => void;
   onPedirEliminar: (kit: KitGrupo) => void;
+  puedeEliminar: boolean;
 }) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -249,7 +250,7 @@ export function KitFormulario({ kit, kitsExistentes, open, onClose, onPedirElimi
       ancho
       footer={
         <>
-          {editando && kit && (
+          {editando && kit && puedeEliminar && (
             <Button variant="danger" icon={<Trash2 size={16} />} disabled={guardando} onClick={() => onPedirEliminar(kit)}>
               Eliminar kit
             </Button>

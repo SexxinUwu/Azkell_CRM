@@ -787,12 +787,12 @@ function RampaDetalle({ entrada: e, puedeEditar, usuario, ultimasInsp, onEditar,
         {puedeEditar && (
           <div className="tarjeta__barra-acciones">
             <Button variant="secondary" icon={<FileText size={16} />} onClick={imprimirParabrisas}>OT Parabrisas</Button>
-            {puedeEditar && <Button variant="secondary" icon={<Plus size={16} />} onClick={() => setNuevaOT(true)}>Nueva OT</Button>}
+            {puedeEditar && can('ot.crear') && <Button variant="secondary" icon={<Plus size={16} />} onClick={() => setNuevaOT(true)}>Nueva OT</Button>}
           {!liberada && <Button variant="secondary" icon={<Pencil size={16} />} onClick={onEditar}>Editar</Button>}
             {!liberada
               ? <Button variant="primary" icon={<LogOut size={16} />} onClick={() => setLiberando(true)}>Liberar</Button>
               : <Button variant="secondary" icon={<RotateCcw size={16} />} onClick={reactivar} loading={ocupado}>Reactivar</Button>}
-            <Button variant="secondary" icon={<Trash2 size={16} />} onClick={() => setEliminar(true)}>Eliminar</Button>
+            {can('status_rampa.eliminar') && <Button variant="secondary" icon={<Trash2 size={16} />} onClick={() => setEliminar(true)}>Eliminar</Button>}
           </div>
         )}
       </div>

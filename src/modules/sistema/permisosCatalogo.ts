@@ -29,6 +29,8 @@ export const MODULOS_PERMISO: ModuloPermiso[] = [
   { grupo: 'FLOTA', key: 'papeletas', nombre: 'Papeletas', desc: 'Papeletas, multas y actas de control de las unidades', lcad: true },
   { grupo: 'FLOTA', key: 'entrega_vehiculos', nombre: 'Entrega de Vehículos', desc: 'Actas de entrega y recepción de flota', lcad: true },
   { grupo: 'FLOTA', key: 'checklist', nombre: 'Reporte de Fallas', desc: 'Checklist y reportes de falla de unidades', lcad: true },
+  { grupo: 'MANTENIMIENTO', key: 'ot', nombre: 'Órdenes de trabajo', desc: 'Órdenes de trabajo del taller: ingreso, servicios y materiales de cada OT', lcad: true },
+  { grupo: 'MANTENIMIENTO', key: 'fallas', nombre: 'Fallas en ruta', desc: 'Fallas reportadas en ruta y su atención', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'plan', nombre: 'Planificación de Mantenimientos', desc: 'Programación de mantenimientos preventivos', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'cfg_mant', nombre: 'Configuración de Mantenimiento', desc: 'Frecuencias, kits MP, tipos MP y configuración de métricas', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'pers_mant', nombre: 'Personal de Taller', desc: 'Técnicos y personal del taller', lcad: true },
