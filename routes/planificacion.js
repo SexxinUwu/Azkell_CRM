@@ -246,7 +246,7 @@ router.get('/planificacion', (req, res) => {
     const { mes, anio, estado, placa } = req.query;
     let sql = `SELECT p.*, pl.marca, pl.cliente, pl.modelo_uts, pl.tipo, pl.uts AS placa_uts
                FROM planificacion p
-               LEFT JOIN placas pl ON pl.placa = p.placa
+               LEFT JOIN placas pl ON pl.placa = p.placa COLLATE utf8mb4_unicode_ci
                WHERE 1=1`;
     const params = [];
     if (mes)    { sql += ' AND p.mes_ejecucion=?';   params.push(parseInt(mes)); }
@@ -556,7 +556,7 @@ router.get('/reportePlanificacion', (req, res) => {
                         p.estado, p.prioridad, p.observaciones_plan, p.motivo_cancelacion,
                         p.fleetrun_id_ejecutado, p.source
                  FROM planificacion p
-                 LEFT JOIN placas pl ON pl.placa=p.placa
+                 LEFT JOIN placas pl ON pl.placa=p.placa COLLATE utf8mb4_unicode_ci
                  WHERE p.mes_ejecucion=? AND p.anio_ejecucion=?
                  ORDER BY p.fecha_inicio_ventana ASC`,
                 [mes, anio],
@@ -851,7 +851,7 @@ router.get('/requerimientos-resumen', (req, res) => {
                COUNT(DISTINCT r.plan_id) AS num_planes
         FROM requerimientos_planificacion r
         LEFT JOIN planificacion p ON p.id = r.plan_id
-        LEFT JOIN placas pl2 ON UPPER(pl2.placa) = UPPER(p.placa)
+        LEFT JOIN placas pl2 ON UPPER(pl2.placa) = UPPER(p.placa) COLLATE utf8mb4_unicode_ci
         LEFT JOIN mantenimiento_kits mk
                ON UPPER(mk.marca_vehiculo) = UPPER(pl2.marca)
               AND mk.tipo_mp = p.tipo_mp
