@@ -1,42 +1,43 @@
 import { lazy } from 'react';
 import type { RutaModulo } from '../personal/rutas.tipos';
+import { ADMIN } from '../../core/auth/permisos';
 
 export const RUTAS: RutaModulo[] = [
   {
     path: 'sistema/auditoria/*',
-    permisos: ['admin'],
+    permisos: [ADMIN],
     Page: lazy(() => import('./AuditoriaPage').then(m => ({ default: m.AuditoriaPage }))),
-    nav: { key: 'auditoria', label: 'Auditoría', to: '/sistema/auditoria', icon: 'History', permisos: ['admin'] },
+    nav: { key: 'auditoria', label: 'Auditoría', to: '/sistema/auditoria', icon: 'History', permisos: [ADMIN] },
   },
   {
     path: 'sistema/usuarios/*',
-    permisos: ['admin'],
+    permisos: [ADMIN],
     Page: lazy(() => import('./UsuariosPage').then(m => ({ default: m.UsuariosPage }))),
-    nav: { key: 'usuarios', label: 'Usuarios y roles', to: '/sistema/usuarios', icon: 'UserCog', permisos: ['admin'] },
+    nav: { key: 'usuarios', label: 'Usuarios y roles', to: '/sistema/usuarios', icon: 'UserCog', permisos: [ADMIN] },
   },
   {
     path: 'sistema/integraciones/*',
-    permisos: ['admin'],
+    permisos: [ADMIN],
     Page: lazy(() => import('./IntegracionesPage').then(m => ({ default: m.IntegracionesPage }))),
-    nav: { key: 'integraciones', label: 'Integraciones', to: '/sistema/integraciones', icon: 'Cog', permisos: ['admin'] },
+    nav: { key: 'integraciones', label: 'Integraciones', to: '/sistema/integraciones', icon: 'Cog', permisos: [ADMIN] },
   },
   {
     path: 'sistema/empresa/*',
-    permisos: ['admin'],
+    permisos: [ADMIN],
     Page: lazy(() => import('./ConfiguracionEmpresaPage').then(m => ({ default: m.ConfiguracionEmpresaPage }))),
-    nav: { key: 'empresa', label: 'Empresa', to: '/sistema/empresa', icon: 'Building2', permisos: ['admin'] },
+    nav: { key: 'empresa', label: 'Empresa', to: '/sistema/empresa', icon: 'Building2', permisos: [ADMIN] },
   },
   {
     path: 'sistema/notificaciones/*',
-    permisos: ['admin'],
+    permisos: [ADMIN],
     Page: lazy(() => import('./NotificacionesPage').then(m => ({ default: m.NotificacionesPage }))),
-    nav: { key: 'notificaciones', label: 'Notificaciones', to: '/sistema/notificaciones', icon: 'Bell', permisos: ['admin'] },
+    nav: { key: 'notificaciones', label: 'Notificaciones', to: '/sistema/notificaciones', icon: 'Bell', permisos: [ADMIN] },
   },
   {
     path: 'sistema/api/*',
-    permisos: ['admin'],
+    permisos: [ADMIN],
     Page: lazy(() => import('./ApiDesarrolladoresPage').then(m => ({ default: m.ApiDesarrolladoresPage }))),
-    nav: { key: 'api-gateway', label: 'API y desarrolladores', to: '/sistema/api', icon: 'Code', permisos: ['admin'] },
+    nav: { key: 'api-gateway', label: 'API y desarrolladores', to: '/sistema/api', icon: 'Code', permisos: [ADMIN] },
   },
   {
     path: 'sistema/accesibilidad/*',

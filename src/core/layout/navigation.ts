@@ -258,6 +258,7 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Configuración',
     items: [
+      // Solo administrador (no se asignan en los roles): usuarios, auditoría, API, empresa, notificaciones e integraciones
       { key: 'usuarios', label: 'Usuarios', to: '/sistema/usuarios', icon: UserCog, permissions: [ADMIN] },
       { key: 'superadmin', label: 'Empresas SaaS (SuperAdmin)', to: '/sistema/superadmin', icon: Building2, permissions: [], soloFundador: true },
       { key: 'auditoria', label: 'Auditoría', to: '/sistema/auditoria', icon: History, permissions: [ADMIN] },
