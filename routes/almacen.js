@@ -239,6 +239,7 @@ module.exports = (db, _multerInv, logAudit, _generarCodigoAlmacen) => {
 const { asignarServicioAOT } = require('../services/ot_servicios');
 const lotesInv = require('../services/almacen_lotes');
 const asigLlantas = require('../services/neumaticos_asignacion');
+const detraccionOc = require('../services/detraccion');
 const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
 
     function getDb(req) {
@@ -1950,6 +1951,7 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
                 (err2) => {
                     if (err2) return res.status(500).json({ error: err2.message });
                     guardarNcSugeridas(tdb, id, req.body.nc_sugeridas);
+                guardarDetraccion(tdb, id, req.body, { moneda, total_pen, tc });
                     auditar(tdb, actorDe(req), {
                         action: 'CREATE', entity: 'warehouse-entry', entityId: id,
                         summary: `Registró la entrada ${id} de ${proveedor_nombre || 'proveedor sin nombre'} por ${moneda === 'USD' ? 'US$' : 'S/'} ${Number(total_pen || 0).toFixed(2)}`,
@@ -2140,6 +2142,19 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
         const ids = Array.isArray(ncs) ? ncs.map(Number).filter(n => Number.isInteger(n) && n > 0) : [];
         tdb.query('UPDATE entradas_inv SET nc_sugeridas = ? WHERE id = ?', [ids.length ? JSON.stringify(ids) : null, id], (e) => { if (e) console.error('[nc_sugeridas]', e.message); });
     };
+    // Detracción (SPOT) de la orden: el tipo y el porcentaje vienen del formulario; el monto en soles lo calcula el servidor con el total
+    // Si el formulario no manda los campos (pantalla antigua), no se toca lo guardado; si manda el tipo vacío, se quita la detracción
+    const guardarDetraccion = (tdb, id, body, { moneda, total_pen, tc }) => {
+        if (!body || body.detraccion_codigo === undefined) return;
+        detraccionOc.camposDeOrden(promesa(tdb), body, { moneda, totalPen: total_pen, tipoCambioOrden: tc })
+            .then(c => promesa(tdb).query('UPDATE entradas_inv SET detraccion_codigo = ?, detraccion_pct = ?, detraccion_tc = ?, detraccion_monto_pen = ? WHERE id = ?', [c.detraccion_codigo, c.detraccion_pct, c.detraccion_tc, c.detraccion_monto_pen, id]))
+            .catch(e => console.error('[detracción de la orden]', id, e.message));
+    };
+    // Catálogo de tipos de detracción (código SUNAT, %, monto mínimo)
+    router.get('/detraccion-tipos', async (req, res) => {
+        try { res.json({ ok: true, data: await detraccionOc.tiposActivos(promesa(getDb(req))) }); }
+        catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+    });
     router.put('/entradas/:id', tcSunatSiFalta, ordenEditable, (req, res) => {
         const tdb = getDb(req);
         const { id } = req.params;
@@ -2177,6 +2192,7 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
         tdb.query(updateSql, updateParams, (err) => {
                 if (err) return res.status(500).json({ error: err.message });
                 guardarNcSugeridas(tdb, id, req.body.nc_sugeridas);
+                guardarDetraccion(tdb, id, req.body, { moneda, total_pen, tc });
 
                 // Delete old details
                 tdb.query('DELETE FROM detalle_entradas_inv WHERE entrada_id=?', [id], (errDel) => {
