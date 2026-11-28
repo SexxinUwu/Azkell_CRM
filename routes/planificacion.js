@@ -246,7 +246,7 @@ router.get('/planificacion', (req, res) => {
     const { mes, anio, estado, placa } = req.query;
     let sql = `SELECT p.*, pl.marca, pl.cliente, pl.modelo_uts, pl.tipo, pl.uts AS placa_uts
                FROM planificacion p
-               LEFT JOIN placas pl ON pl.placa = p.placa
+               LEFT JOIN placas pl ON pl.placa COLLATE utf8mb4_unicode_ci = p.placa COLLATE utf8mb4_unicode_ci
                WHERE 1=1`;
     const params = [];
     if (mes)    { sql += ' AND p.mes_ejecucion=?';   params.push(parseInt(mes)); }
@@ -556,7 +556,7 @@ router.get('/reportePlanificacion', (req, res) => {
                         p.estado, p.prioridad, p.observaciones_plan, p.motivo_cancelacion,
                         p.fleetrun_id_ejecutado, p.source
                  FROM planificacion p
-                 LEFT JOIN placas pl ON pl.placa=p.placa
+                 LEFT JOIN placas pl ON pl.placa COLLATE utf8mb4_unicode_ci=p.placa COLLATE utf8mb4_unicode_ci
                  WHERE p.mes_ejecucion=? AND p.anio_ejecucion=?
                  ORDER BY p.fecha_inicio_ventana ASC`,
                 [mes, anio],
@@ -612,13 +612,13 @@ router.get('/planificacion-proyeccion', (req, res) => {
             ) lf ON f.placa = lf.placa AND f.tipo_mp = lf.tipo_mp AND f.fecha = lf.max_fecha
             GROUP BY f.placa, f.tipo_mp
         ) fr
-        LEFT JOIN placas p   ON UPPER(p.placa) = UPPER(fr.placa)
+        LEFT JOIN placas p   ON UPPER(p.placa COLLATE utf8mb4_unicode_ci) = UPPER(fr.placa COLLATE utf8mb4_unicode_ci)
         LEFT JOIN tipos_mantenimiento tm
             ON tm.id = (
                 SELECT id FROM tipos_mantenimiento
-                WHERE UPPER(marca) = UPPER(COALESCE(p.marca, fr.fr_marca, ''))
-                  AND UPPER(tipo_mp) = UPPER(fr.tipo_mp)
-                ORDER BY CASE WHEN UPPER(uts) = UPPER(COALESCE(p.uts,'')) THEN 0 ELSE 1 END, id ASC
+                WHERE UPPER(marca COLLATE utf8mb4_unicode_ci) = UPPER(COALESCE(p.marca COLLATE utf8mb4_unicode_ci, fr.fr_marca COLLATE utf8mb4_unicode_ci, ''))
+                  AND UPPER(tipo_mp COLLATE utf8mb4_unicode_ci) = UPPER(fr.tipo_mp COLLATE utf8mb4_unicode_ci)
+                ORDER BY CASE WHEN UPPER(uts COLLATE utf8mb4_unicode_ci) = UPPER(COALESCE(p.uts COLLATE utf8mb4_unicode_ci,'')) THEN 0 ELSE 1 END, id ASC
                 LIMIT 1
             )
         LEFT JOIN (
@@ -626,7 +626,7 @@ router.get('/planificacion-proyeccion', (req, res) => {
             FROM mantenimiento_kits
             WHERE activo = 1 OR activo IS NULL
             GROUP BY marca_vehiculo, tipo_mp
-        ) ks ON UPPER(ks.marca_vehiculo) = UPPER(COALESCE(p.marca,'')) AND ks.tipo_mp = fr.tipo_mp
+        ) ks ON UPPER(ks.marca_vehiculo COLLATE utf8mb4_unicode_ci) = UPPER(COALESCE(p.marca COLLATE utf8mb4_unicode_ci,'')) AND ks.tipo_mp COLLATE utf8mb4_unicode_ci = fr.tipo_mp COLLATE utf8mb4_unicode_ci
         ${placa ? 'WHERE UPPER(fr.placa) = ?' : ''}
         ORDER BY fr.placa, fr.tipo_mp
     `;
@@ -851,7 +851,7 @@ router.get('/requerimientos-resumen', (req, res) => {
                COUNT(DISTINCT r.plan_id) AS num_planes
         FROM requerimientos_planificacion r
         LEFT JOIN planificacion p ON p.id = r.plan_id
-        LEFT JOIN placas pl2 ON UPPER(pl2.placa) = UPPER(p.placa)
+        LEFT JOIN placas pl2 ON UPPER(pl2.placa COLLATE utf8mb4_unicode_ci) = UPPER(p.placa COLLATE utf8mb4_unicode_ci)
         LEFT JOIN mantenimiento_kits mk
                ON UPPER(mk.marca_vehiculo) = UPPER(pl2.marca)
               AND mk.tipo_mp = p.tipo_mp

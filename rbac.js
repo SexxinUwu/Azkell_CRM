@@ -4,26 +4,23 @@ module.exports = function globalRBAC(req, res, next) {
     // Rutas públicas o helpers que no requieren permisos de módulo
     const ignoredPaths = [
         '/login', '/ping', '/version', '/eventos', 
-        '/cambiar-password', '/placas-lista', '/config-metrica', 
+        '/cambiar-password', '/placas-lista', 
         '/clientes-placas', '/marcas-placas', '/proxy/documento', '/proxy/sunat', '/proxy/geocode', '/push',
-        '/script/obtener', '/script/buscar', '/catalogos_taller',
-        '/documentos-flota/presign-read', '/mantenimiento/inspecciones/presign-read', '/mantenimiento/checklist/presign-read', '/mantenimiento/presign-read', '/checklist/presign-read',
-        '/presign-read', '/operaciones/conductor-portal',
+        '/catalogos_taller',
+        '/operaciones/conductor-portal',
         '/guias-remision/pdf-apisunat', '/guias-remision/pdf',
         '/whatsapp/qr', '/approvals/oc',
         '/herramientas' // Herramientas PDF: las usa cualquier persona con sesión (la ruta exige sesión por su cuenta)
     ];
     // Listas de consulta: exentas solo para leer. Borrar, importar o modificar exige el permiso del módulo
     // (antes, DELETE /conductores/:id o PUT /config-metrica/:placa pasaban sin permiso).
-    const soloLectura = new Set(['/conductores', '/conductores-lista', '/placas-lista', '/config-metrica', '/clientes-placas', '/marcas-placas', '/catalogos_taller']);
+    const soloLectura = new Set(['/conductores', '/conductores-lista', '/placas-lista', '/clientes-placas', '/marcas-placas', '/catalogos_taller']);
     // La lectura legacy de usuarios devolvía contraseñas y permisos de todos a cualquier sesión: solo administrador (ver SOLO_ADMIN)
     const lecturaUsuarios = path === '/script/obtenerDatosUsuarios';
     if (
         !lecturaUsuarios && (ignoredPaths.some(ip => (path === ip || path.startsWith(ip)) && (!soloLectura.has(ip) || req.method === 'GET')) || 
         path.startsWith('/whatsapp/') ||
         path.startsWith('/approvals/') ||
-        path.endsWith('/presign-read') || 
-        path.endsWith('/presigned') || 
         path.includes('/pdf-apisunat/') ||
         path.includes('/pdf/') ||
         path.includes('/imprimir/'))
@@ -39,7 +36,6 @@ module.exports = function globalRBAC(req, res, next) {
     const globalReferenceGets = [
         '/configuracion-clave',
         '/nav/indicadores', // cifras del menú (solo lectura, sin datos sensibles)
-        '/config-metrica',
         '/almacen/marcas-placas',
         '/almacen/detraccion-tipos', // catálogo de tipos de detracción (lectura para el formulario de la orden); editarlo es solo de administradores
         '/almacen/familias',
@@ -49,9 +45,6 @@ module.exports = function globalRBAC(req, res, next) {
         '/almacen/placas',
         '/catalogos_taller',
         '/almacen/notificaciones/resumen',
-        '/tipos-preventivo',
-        '/tipos-mantenimiento',
-        '/mantenimiento-kits',
         '/cat-rampas',
         '/taller/rampas',
         '/taller-personal',
@@ -148,7 +141,27 @@ module.exports = function globalRBAC(req, res, next) {
     }
 
     // FLOTA Y MÓDULOS
-    if (path.startsWith('/disponibilidad-flota') || path.toLowerCase().includes('disponibilidad')) {
+    // Lecturas legadas (/script/obtener*): antes abiertas a cualquier sesión. Cada una pide los módulos que la usan; el resto, solo administrador.
+    const WIALON = ['gps', 'fleet', 'placas', 'fallas', 'incidencias_ruta', 'insp', 'ot', 'trabajos_ot', 'status_rampa', 'checklist', 'plan', 'siniestros', 'otros_mant',
+        'op_ordenes_viaje', 'op_programacion', 'op_guias_remision', 'combustible_vales', 'combustible_analisis', 'urea_analisis', 'seguridad_unidades', 'entrega_vehiculos',
+        'disponibilidad', 'docs_flota', 'conductor_portal', 'cond'];
+    const SCRIPT_LECTURA = {
+        obtenerDatosWialon: WIALON,
+        obtenerHistorialGPS: ['gps', 'fleet', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision', 'combustible_analisis', 'urea_analisis', 'insp'],
+        obtenerCombustibleWialon: ['gps', 'fleet', 'combustible_analisis', 'urea_analisis', 'combustible_vales', 'op_ordenes_viaje', 'op_programacion'],
+        obtenerCombustibleWialonFlota: ['gps', 'fleet', 'combustible_analisis', 'urea_analisis', 'combustible_vales', 'op_ordenes_viaje', 'op_programacion'],
+        obtenerDatosPlacas: [...WIALON, 'inv', 'sal_inv', 'ent_inv', 'neumaticos', 'tesoreria_caja', 'mant_dashboard'],
+        obtenerDatosInspecciones: ['insp', 'mant_dashboard', 'ot', 'placas', 'fleet', 'neumaticos'],
+        obtenerDatosFleetrun: ['fleet', 'plan', 'cfg_mant', 'cfg_fleetrun', 'mant_dashboard', 'otros_mant', 'ot', 'trabajos_ot', 'status_rampa'],
+    };
+    // Firmar la lectura de un archivo (foto, factura, documento): lo piden las pantallas que muestran archivos; quien no tiene ningún módulo operativo, no
+    const MODULOS_CON_ARCHIVOS = [...WIALON, 'inv', 'sal_inv', 'ent_inv', 'rec_compras', 'prov_inv', 'almacen_otros', 'neumaticos', 'tesoreria_pago_req', 'tesoreria_caja',
+        'tesoreria_liquidaciones', 'tesoreria_nc', 'tesoreria_papeletas', 'papeletas', 'gerencia_aprobaciones_oc', 'gerencia_aprobaciones_caja', 'op_ordenes_servicio',
+        'rrhh_personal', 'rrhh_asistencia', 'mant_dashboard', 'pers_mant', 'clientes'];
+    const scriptLectura = path.match(/^\/script\/(obtener[A-Za-z]*)$/);
+    if (/\/presign-read$/.test(path)) { mod = MODULOS_CON_ARCHIVOS; accion = 'l'; /* es un POST que solo lee */ }
+    else if (scriptLectura && scriptLectura[1] !== 'obtenerDatosUsuarios') { mod = SCRIPT_LECTURA[scriptLectura[1]] || []; accion = 'l'; }
+    else if (path.startsWith('/disponibilidad-flota') || path.toLowerCase().includes('disponibilidad')) {
         // Leer la disponibilidad: también GPS (ubicación), Inspecciones y OT (marcar la unidad «En base» al cerrar la OT)
         mod = req.method === 'GET' ? ['disponibilidad', 'gps', 'insp', 'ot'] : ['disponibilidad'];
         if (path === '/disponibilidad-flota/pdf') accion = 'l'; /* el PDF no guarda nada */
@@ -417,7 +430,8 @@ module.exports = function globalRBAC(req, res, next) {
     }
     // Configuración de mantenimiento: kits, frecuencias, tipos MP, métricas y destinatarios de alertas
     else if (path.startsWith('/mantenimiento-kits') || path.startsWith('/tipos-preventivo') || path.startsWith('/tipos-mantenimiento') || path.startsWith('/config-metrica') || path.startsWith('/destinatarios-alertas') || path === '/testEmail') {
-        mod = otros('cfg_mant');
+        // Las listas de tipos de MP, kits y métricas también las leen las pantallas del taller y de planificación
+        mod = otros('cfg_mant', ...(req.method === 'GET' ? ['plan', 'ot', 'trabajos_ot', 'status_rampa', 'fleet', 'mant_dashboard', 'insp'] : []));
         if (/\/(bulk-delete|eliminarGrupo)$/.test(path)) accion = 'd';   // borrar en lote
         if (path === '/tipos-preventivo/sync-desde-frecuencias') accion = 'e';
     }
