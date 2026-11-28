@@ -49,7 +49,8 @@ export function AlmacenOtrosPage() {
   const { can } = useAuth();
   const secciones: SeccionHub[] = SECCIONES.map(s => ({
     titulo: s.titulo, tono: TONOS[s.titulo] ?? 'blue',
-    casillas: s.casillas.filter(c => can(...c.permisos)).map(c => ({ key: c.ruta, titulo: c.titulo, descripcion: c.descripcion, icono: c.icono, onAbrir: () => navigate(c.ruta) })),
+    // El permiso del hub «Otros» abre todas sus ventanas, salvo la aprobación de O/C, que es de Gerencia (acción Aprobar)
+    casillas: s.casillas.filter(c => can(...c.permisos, ...(c.ruta === '/gerencia/aprobaciones-oc' ? [] : ['almacen_otros.ver']))).map(c => ({ key: c.ruta, titulo: c.titulo, descripcion: c.descripcion, icono: c.icono, onAbrir: () => navigate(c.ruta) })),
   }));
   return <OtrosHub eyebrow="Almacén" subtitle="Compras, aprobaciones y configuración del almacén" secciones={secciones} />;
 }

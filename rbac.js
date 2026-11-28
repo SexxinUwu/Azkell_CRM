@@ -101,6 +101,8 @@ module.exports = function globalRBAC(req, res, next) {
     // leer(): en GET, las pantallas del taller también leen los datos de las demás; «Otros» (otros_mant) da lectura a sus ventanas.
     // Escribir (POST, PUT, PATCH, DELETE) siempre pide el permiso del módulo de la ruta.
     const leer = (...claves) => (req.method === 'GET' ? [...claves, 'otros_mant'] : []);
+    // Ventanas del hub «Otros» de Mantenimiento: el permiso del hub (con sus acciones ver, crear, editar y eliminar) gobierna TODAS sus ventanas, también al escribir
+    const otros = (...claves) => [...claves, 'otros_mant'];
 
     // Si es un script legacy, forzar la acción según el nombre de la operación
     if (path.startsWith('/script/obtener') || path.startsWith('/script/buscar')) accion = 'l';
@@ -178,7 +180,7 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/flota/entrega-vehiculos')) mod = ['entrega_vehiculos', 'seguridad_unidades', 'placas', ...(req.method === 'GET' ? ['docs_flota'] : [])];
     else if (path.startsWith('/seguridad/entrega-vehiculos')) mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas', ...(req.method === 'GET' ? ['docs_flota'] : [])];
     else if (path.startsWith('/seguridad')) mod = ['seguridad_unidades', 'seguridad', 'checklist', 'placas', 'unid'];
-    else if (path.startsWith('/configuracion-flota')) mod = ['cfg_mant', ...leer()];
+    else if (path.startsWith('/configuracion-flota')) mod = otros('cfg_mant');
     // RRHH: cada pantalla con su permiso (antes no estaba mapeado y solo entraban administradores)
     else if (path.startsWith('/rrhh/tareo') || path.startsWith('/rrhh/marcacion') || path.startsWith('/rrhh/horarios')) {
         mod = ['rrhh_asistencia'];
@@ -215,11 +217,12 @@ module.exports = function globalRBAC(req, res, next) {
         else if (en('/almacen/marcas-placas')) mod = ['placas', 'inv'];
         else if (en('/almacen/notificaciones')) mod = ['inv', 'ent_inv', 'sal_inv', 'kardex'];
         else if (en('/almacen/empresa-cuentas', '/almacen/empresa-documentos')) mod = ['ent_inv', 'inv', 'sal_inv', 'tesoreria', 'tesoreria_pago_req', 'tesoreria_caja'];
-        else if (en('/almacen/recepciones-oc')) mod = ['rec_compras', 'ent_inv', 'inv'];
+        // «Otros» de Almacén (almacen_otros): su permiso, con sus acciones, gobierna también estas ventanas del hub
+        else if (en('/almacen/recepciones-oc')) mod = ['rec_compras', 'ent_inv', 'inv', 'almacen_otros'];
         else if (en('/almacen/inventario')) {
-            if (esGet) mod = ['inv', 'ent_inv', 'sal_inv', 'kardex', 'rec_compras', 'dash_alm', 'gerencia_aprobaciones_oc'];
+            if (esGet) mod = ['inv', 'ent_inv', 'sal_inv', 'kardex', 'rec_compras', 'dash_alm', 'gerencia_aprobaciones_oc', 'almacen_otros'];
             else {
-                mod = ['inv'];
+                mod = ['inv', 'almacen_otros'];
                 if (req.method === 'POST' && /\/(bulk-delete)$/.test(path)) accion = 'd';
                 else if (req.method === 'POST' && /\/(bulk-estado|bulk-ubicacion|regularizar-todo-cero|regularizar|lotes\/sincronizar|imagen)$/.test(path)) accion = 'e';
             }
@@ -238,10 +241,10 @@ module.exports = function globalRBAC(req, res, next) {
         }
         else if (en('/almacen/salidas')) mod = esGet ? ['sal_inv', 'dash_alm', 'kardex', 'ent_inv'] : ['sal_inv'];
         else if (en('/almacen/proveedores', '/almacen/importarProveedoresMasivo')) {
-            mod = esGet ? ['prov_inv', 'ent_inv', 'sal_inv', 'tesoreria_pago_req', 'tesoreria_caja', 'tesoreria_nc'] : ['prov_inv'];
+            mod = esGet ? ['prov_inv', 'ent_inv', 'sal_inv', 'tesoreria_pago_req', 'tesoreria_caja', 'tesoreria_nc', 'almacen_otros'] : ['prov_inv', 'almacen_otros'];
             if (req.method === 'POST' && /\/bulk-delete$/.test(path)) accion = 'd';
         }
-        else if (en('/almacen/kardex')) mod = ['kardex', 'inv'];
+        else if (en('/almacen/kardex')) mod = ['kardex', 'inv', 'almacen_otros'];
         // Cualquier otra ruta de almacén no tiene mapa: queda sin mod y la regla estricta la rechaza
     }
     else if (path.startsWith('/clientes')) mod = ['clientes', 'placas'];
@@ -322,7 +325,7 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/taller-rampas') || path.startsWith('/taller/entradas') || path.startsWith('/taller/status') || path.startsWith('/taller/kanban') || path === '/taller/ingreso') {
         mod = ['status_rampa', ...leer('ot', 'trabajos_ot')];
     }
-    else if (path.startsWith('/taller-personal') || path.startsWith('/taller/personal')) mod = ['pers_mant', ...leer()];
+    else if (path.startsWith('/taller-personal') || path.startsWith('/taller/personal')) mod = otros('pers_mant');
     // Órdenes de trabajo: ingreso y OT, sus servicios y su PDF (el POST solo convierte el documento, no guarda nada)
     else if (path.startsWith('/ordenes') || path.startsWith('/taller/generar_ot') || path.startsWith('/ot-servicios') || path.startsWith('/taller/ot-servicios')) {
         mod = ['ot', ...leer('status_rampa', 'trabajos_ot', 'reportes_ot')];
@@ -388,15 +391,17 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path === '/mantenimiento/inspecciones/pdf') { mod = ['insp']; accion = 'l'; }
     else if (path.startsWith('/inspecciones') || path.startsWith('/mantenimiento/inspecciones')) mod = ['insp'];
     // Siniestros y daños (Mantenimiento › Otros): su propio permiso
-    else if (path.startsWith('/mantenimiento/siniestros')) mod = ['siniestros', ...leer()];
+    // Situaciones del taller (Mantenimiento › Otros): antes sin regla y solo las creaba el administrador
+    else if (path.startsWith('/cat-situaciones')) mod = otros('cfg_situacion');
+    else if (path.startsWith('/mantenimiento/siniestros')) mod = otros('siniestros');
     // Planificación de mantenimientos, con sus requerimientos, reportes y el envío de alertas
     else if (path.startsWith('/planificacion') || path.toLowerCase().includes('planificacion') || path.startsWith('/requerimientos')) {
-        mod = ['plan', ...leer()];
+        mod = otros('plan');
         if (/\/completar$/.test(path)) accion = 'e';   // marcar un mantenimiento como hecho es una edición
     }
     // Configuración de mantenimiento: kits, frecuencias, tipos MP, métricas y destinatarios de alertas
     else if (path.startsWith('/mantenimiento-kits') || path.startsWith('/tipos-preventivo') || path.startsWith('/tipos-mantenimiento') || path.startsWith('/config-metrica') || path.startsWith('/destinatarios-alertas') || path === '/testEmail') {
-        mod = ['cfg_mant', ...leer()];
+        mod = otros('cfg_mant');
         if (/\/(bulk-delete|eliminarGrupo)$/.test(path)) accion = 'd';   // borrar en lote
         if (path === '/tipos-preventivo/sync-desde-frecuencias') accion = 'e';
     }

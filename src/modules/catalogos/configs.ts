@@ -27,17 +27,17 @@ const camposBasicos = (ejemplo: string) => [
 export const CATALOGOS: ConfigCatalogo[] = [
   {
     clave: 'familias', ruta: '/almacen/familias', eyebrow: 'Almacén · Configuración', titulo: 'Familias', singular: 'Familia', femenino: true,
-    icono: Layers, permiso: 'cfg_familias', descripcion: 'Agrupan los artículos del inventario (filtros, lubricantes, llantas…).',
+    icono: Layers, permiso: 'almacen_otros', descripcion: 'Agrupan los artículos del inventario (filtros, lubricantes, llantas…).',
     campos: camposBasicos('LUBRICANTES'), ...rest('/almacen/familias'), ...nombreDescripcion,
   },
   {
     clave: 'marcas', ruta: '/almacen/marcas', eyebrow: 'Almacén · Configuración', titulo: 'Marcas', singular: 'Marca', femenino: true,
-    icono: Tag, permiso: 'cfg_marcas', descripcion: 'Marcas de los repuestos y artículos del almacén.',
+    icono: Tag, permiso: 'almacen_otros', descripcion: 'Marcas de los repuestos y artículos del almacén.',
     campos: camposBasicos('MOBIL'), ...rest('/almacen/marcas'), ...nombreDescripcion,
   },
   {
     clave: 'unidades', ruta: '/almacen/unidades', eyebrow: 'Almacén · Configuración', titulo: 'Unidades de medida', singular: 'Unidad de medida', femenino: true,
-    icono: Ruler, permiso: 'cfg_unidades', descripcion: 'Cómo se cuenta cada artículo: unidad, galón, litro, kit…',
+    icono: Ruler, permiso: 'almacen_otros', descripcion: 'Cómo se cuenta cada artículo: unidad, galón, litro, kit…',
     campos: [
       { clave: 'nombre', label: 'Abreviatura', tipo: 'texto', requerido: true, mayusculas: true, placeholder: 'GL', maxLength: 20 },
       { clave: 'descripcion', label: 'Nombre completo', tipo: 'texto', placeholder: 'Galones', maxLength: 200 },
@@ -49,7 +49,7 @@ export const CATALOGOS: ConfigCatalogo[] = [
   },
   {
     clave: 'sistemas', ruta: '/almacen/sistemas', eyebrow: 'Almacén · Configuración', titulo: 'Sistemas', singular: 'Sistema',
-    icono: Cog, permiso: 'cfg_sistemas', descripcion: 'Sistemas del vehículo (motor, frenos, suspensión…) y sus subsistemas, para clasificar repuestos y trabajos.',
+    icono: Cog, permiso: 'almacen_otros', descripcion: 'Sistemas del vehículo (motor, frenos, suspensión…) y sus subsistemas, para clasificar repuestos y trabajos.',
     campos: [
       { clave: 'nombre', label: 'Nombre', tipo: 'texto', requerido: true, mayusculas: true, placeholder: 'FRENOS' },
       { clave: 'orden', label: 'Orden en las listas', tipo: 'numero', ayuda: 'Menor número, más arriba' },
@@ -62,7 +62,7 @@ export const CATALOGOS: ConfigCatalogo[] = [
   },
   {
     clave: 'almacenes', ruta: '/almacen/almacenes', eyebrow: 'Almacén · Configuración', titulo: 'Almacenes', singular: 'Almacén',
-    icono: Warehouse, permiso: 'cfg_almacen', descripcion: 'Lugares donde se guarda el stock. El almacén Principal es del sistema y no se puede eliminar.',
+    icono: Warehouse, permiso: 'almacen_otros', descripcion: 'Lugares donde se guarda el stock. El almacén Principal es del sistema y no se puede eliminar.',
     campos: [
       { clave: 'nombre', label: 'Nombre', tipo: 'texto', requerido: true, mayusculas: true, placeholder: 'TALLER NORTE' },
       { clave: 'orden', label: 'Orden en las listas', tipo: 'numero' },
@@ -74,7 +74,7 @@ export const CATALOGOS: ConfigCatalogo[] = [
   },
   {
     clave: 'tipos-mp', ruta: '/mantenimiento/tipos-mp', eyebrow: 'Mantenimiento · Configuración', titulo: 'Tipos de mantenimiento preventivo', singular: 'Tipo de MP',
-    icono: Wrench, permiso: 'cfg_mant', descripcion: 'Nombres de los preventivos (MP-1, MP-2…) que se usan en planificación y Fleetrun.',
+    icono: Wrench, permiso: 'cfg_mant', hub: 'otros_mant', descripcion: 'Nombres de los preventivos (MP-1, MP-2…) que se usan en planificación y Fleetrun.',
     campos: [
       { clave: 'nombre', label: 'Nombre', tipo: 'texto', requerido: true, mayusculas: true, ancho: true, placeholder: 'MP-1' },
       { clave: 'descripcion', label: 'Descripción', tipo: 'textoLargo' },
@@ -92,7 +92,7 @@ export const CATALOGOS: ConfigCatalogo[] = [
   },
   {
     clave: 'personal-taller', ruta: '/mantenimiento/personal', eyebrow: 'Mantenimiento · Taller', titulo: 'Personal de taller', singular: 'Técnico',
-    icono: UserCog, permiso: 'pers_mant', descripcion: 'Técnicos del taller y su costo por hora, que se usa para calcular la mano de obra de las OT.',
+    icono: UserCog, permiso: 'pers_mant', hub: 'otros_mant', descripcion: 'Técnicos del taller y su costo por hora, que se usa para calcular la mano de obra de las OT.',
     campos: [
       { clave: 'nombre', label: 'Nombre', tipo: 'persona', requerido: true, ancho: true, ayuda: 'Elige un conductor del directorio, o escribe el nombre si no está' },
       { clave: 'sueldo_mensual', label: 'Sueldo mensual', tipo: 'moneda' },
@@ -108,7 +108,7 @@ export const CATALOGOS: ConfigCatalogo[] = [
   },
   {
     clave: 'situaciones', ruta: '/preferencias/situaciones', eyebrow: 'Preferencias', titulo: 'Situaciones', singular: 'Situación', femenino: true,
-    icono: CircleDot, permiso: 'cfg_situacion', descripcion: 'Situaciones de una unidad en el taller (en espera de repuesto, en reparación…).',
+    icono: CircleDot, permiso: 'cfg_situacion', hub: 'otros_mant', descripcion: 'Situaciones de una unidad en el taller (en espera de repuesto, en reparación…).',
     campos: [{ clave: 'nombre', label: 'Situación', tipo: 'texto', requerido: true, ancho: true, placeholder: 'En espera de repuesto' }],
     listar: async () => ((await api<{ situaciones?: Registro[] }>('/catalogos_taller')).situaciones ?? []).map(s => ({ ...s, nombre: texto(s.descripcion) })),
     guardar: async (d, id) => { await api(id ? `/cat-situaciones/${id}` : '/cat-situaciones', { method: id ? 'PUT' : 'POST', body: { nombre: d.nombre } }); },

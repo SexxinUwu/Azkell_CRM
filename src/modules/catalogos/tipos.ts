@@ -29,6 +29,8 @@ export interface ConfigCatalogo {
   descripcion: string;
   /** Clave de la matriz de permisos actual (ver, crear, editar, eliminar) */
   permiso: string;
+  /** Hub «Otros» al que pertenece la ventana: su permiso la gobierna también (ver, crear, editar, eliminar) */
+  hub?: string;
   campos: Campo[];
   listar: () => Promise<Registro[]>;
   guardar: (datos: Record<string, unknown>, id?: Registro['id']) => Promise<void>;
