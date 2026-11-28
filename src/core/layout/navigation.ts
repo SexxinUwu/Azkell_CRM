@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { FileStack } from 'lucide-react';
 import type { RutaModulo } from '../../modules/personal/rutas.tipos';
+import { ADMIN } from '../auth/permisos';
 
 export interface NavItem {
   key: string;
@@ -257,15 +258,16 @@ const SECCIONES_BASE: NavSection[] = [
   {
     title: 'Configuración',
     items: [
-      { key: 'usuarios', label: 'Usuarios', to: '/sistema/usuarios', icon: UserCog, permissions: ver('usuarios') },
+      // Solo administrador (no se asignan en los roles): usuarios, auditoría, API, empresa, notificaciones e integraciones
+      { key: 'usuarios', label: 'Usuarios', to: '/sistema/usuarios', icon: UserCog, permissions: [ADMIN] },
       { key: 'superadmin', label: 'Empresas SaaS (SuperAdmin)', to: '/sistema/superadmin', icon: Building2, permissions: [], soloFundador: true },
-      { key: 'auditoria', label: 'Auditoría', to: '/sistema/auditoria', icon: History, permissions: ver('mod_auditoria') },
-      { key: 'api-gateway', label: 'API y desarrolladores', to: '/sistema/api', icon: Code, permissions: ver('administracion') },
-      { key: 'empresa', label: 'Empresa', to: '/sistema/empresa', icon: Building2, permissions: ver('administracion') },
-      { key: 'notificaciones', label: 'Notificaciones', to: '/sistema/notificaciones', icon: Bell, permissions: ver('administracion') },
+      { key: 'auditoria', label: 'Auditoría', to: '/sistema/auditoria', icon: History, permissions: [ADMIN] },
+      { key: 'api-gateway', label: 'API y desarrolladores', to: '/sistema/api', icon: Code, permissions: [ADMIN] },
+      { key: 'empresa', label: 'Empresa', to: '/sistema/empresa', icon: Building2, permissions: [ADMIN] },
+      { key: 'notificaciones', label: 'Notificaciones', to: '/sistema/notificaciones', icon: Bell, permissions: [ADMIN] },
       { key: 'apariencia', label: 'Apariencia', to: '/perfil', icon: Palette, permissions: [] },
       { key: 'accesibilidad', label: 'Accesibilidad e idioma', to: '/sistema/accesibilidad', icon: Accessibility, permissions: [] },
-      { key: 'integraciones', label: 'Integraciones', to: '/sistema/integraciones', icon: Cog, permissions: ver('integraciones', 'administracion') },
+      { key: 'integraciones', label: 'Integraciones', to: '/sistema/integraciones', icon: Cog, permissions: [ADMIN] },
     ],
   },
 ];

@@ -5,8 +5,8 @@ module.exports = function globalRBAC(req, res, next) {
     const ignoredPaths = [
         '/login', '/ping', '/version', '/eventos', 
         '/cambiar-password', '/conductores', '/conductores-lista', '/placas-lista', '/config-metrica', 
-        '/clientes-placas', '/marcas-placas', '/proxy/documento', '/proxy/sunat', '/proxy/geocode', '/notificaciones', '/push',
-        '/script/obtener', '/script/buscar', '/integraciones', '/catalogos_taller',
+        '/clientes-placas', '/marcas-placas', '/proxy/documento', '/proxy/sunat', '/proxy/geocode', '/push',
+        '/script/obtener', '/script/buscar', '/catalogos_taller',
         '/documentos-flota/presign-read', '/mantenimiento/inspecciones/presign-read', '/mantenimiento/checklist/presign-read', '/mantenimiento/presign-read', '/checklist/presign-read',
         '/presign-read', '/operaciones/conductor-portal', '/tesoreria/liquidaciones-gastos', '/combustible/vales',
         '/guias-remision/pdf-apisunat', '/guias-remision/pdf',
@@ -60,8 +60,6 @@ module.exports = function globalRBAC(req, res, next) {
         '/taller/personal',
         '/conductores',
         '/conductores-lista',
-        '/roles',
-        '/usuarios-v2',
         '/almacen/entradas',
         '/almacen/salidas',
         '/almacen/inventario',
@@ -99,6 +97,11 @@ module.exports = function globalRBAC(req, res, next) {
         p = typeof req.user.permisos === 'string' ? JSON.parse(req.user.permisos) : req.user.permisos;
     } catch(e) {}
     if (p.admin === true) return next();
+
+    // SOLO ADMINISTRADOR (no se asignan en los roles): usuarios, roles, auditoría, API y desarrolladores, empresa,
+    // notificaciones e integraciones. Quien no es administrador recibe 403 aunque su rol tenga el resto de permisos.
+    const SOLO_ADMIN = ['/usuario', '/roles', '/audit', '/log-auditoria', '/notificaciones', '/integraciones', '/sire', '/docs-externos', '/empresa', '/sistema/empresa', '/sistema/api-keys', '/sistema/webhooks'];
+    if (SOLO_ADMIN.some(ip => path.startsWith(ip))) return res.status(403).json({ error: 'Solo un administrador puede usar esta sección.' });
 
     const methodMap = { GET: 'l', POST: 'c', PUT: 'e', DELETE: 'd' };
     let accion = methodMap[req.method] || 'l';
@@ -158,16 +161,7 @@ module.exports = function globalRBAC(req, res, next) {
 
     // FLOTA Y MÓDULOS
     if (path.startsWith('/disponibilidad-flota') || path.toLowerCase().includes('disponibilidad')) mod = ['disponibilidad', 'fleet', 'placas'];
-    else if (path.startsWith('/roles')) mod = 'roles';
-    else if (path.startsWith('/usuarios-v2')) mod = 'usuarios';
-    else if (path.startsWith('/integraciones')) mod = 'integraciones';
-    else if (path.startsWith('/sire')) mod = ['integraciones', 'administracion'];
-    else if (path.startsWith('/docs-externos')) mod = ['integraciones', 'administracion'];
     else if (path.startsWith('/contabilidad')) mod = ['contabilidad_sire'];
-    else if (path.startsWith('/auditoria') || path.startsWith('/audit')) mod = 'mod_auditoria';
-    else if (path.startsWith('/notificaciones')) mod = ['administracion', 'cfg_empresa'];
-    // Sistema › API y desarrolladores: llaves de API y webhooks (antes sin mapeo; ahora exigen administración)
-    else if (path.startsWith('/sistema/api-keys') || path.startsWith('/sistema/webhooks')) mod = ['administracion'];
     else if (path.startsWith('/seguridad/asistencia')) mod = ['asist', 'seguridad'];
     // Papeletas (Flota): su propio permiso; Tesorería también las ve y registra sus pagos
     // Notas de crédito de proveedores: su propio permiso; quien paga órdenes (Tesorería o Almacén) también las consulta para aplicarlas
@@ -283,7 +277,7 @@ module.exports = function globalRBAC(req, res, next) {
     // Legacy & API Endpoints
     else if (path.startsWith('/placas') || path.startsWith('/placa') || path.toLowerCase().includes('placa')) mod = ['placas', 'fleet'];
     else if (path.startsWith('/conductores') || path.startsWith('/conductor') || path.toLowerCase().includes('conductor')) mod = ['cond', 'conductores'];
-    else if (path.startsWith('/usuarios') || path.startsWith('/usuario') || path.toLowerCase().includes('usuario')) mod = ['usuarios'];
+    else if (path.toLowerCase().includes('usuario')) return res.status(403).json({ error: 'Solo un administrador puede usar esta sección.' });
     else if (path.startsWith('/vehiculos-flota') || path.startsWith('/documentos') || path.startsWith('/documento') || path.toLowerCase().includes('documento')) mod = ['docs_flota', 'placas', 'insp', 'ot'];
     else if (path.startsWith('/inspecciones') || path.toLowerCase().includes('inspeccion')) mod = ['insp'];
     else if (path.toLowerCase().includes('fleetrun')) mod = ['fleetrun', 'fleet', 'cfg_mant', 'plan'];

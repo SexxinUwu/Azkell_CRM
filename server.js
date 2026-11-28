@@ -685,6 +685,14 @@ app.get('/api/configuracion', async (req, res) => {
 app.post('/api/configuracion', verifyToken, async (req, res) => {
     try {
         const payload = req.body;
+        // Datos de la empresa: solo administrador. El único dato que no es de empresa son los umbrales de Fleetrun,
+        // que guarda Mantenimiento con su permiso de configuración (cfg_fleetrun, acción editar).
+        if (!esAdminPeticion(req)) {
+            const soloUmbrales = Object.keys(payload || {}).every(c => c === 'fleetrun_uts_umbrales');
+            let pu = {}; try { pu = JSON.parse(req.user.permisos || '{}'); } catch { pu = {}; }
+            const puedeUmbrales = soloUmbrales && pu.cfg_fleetrun && (pu.cfg_fleetrun.e === 1 || pu.cfg_fleetrun.e === true);
+            if (!puedeUmbrales) return res.status(403).json({ error: 'Solo un administrador puede cambiar los datos de la empresa.' });
+        }
         const [previos] = await tdbDe(req).query("SELECT clave, valor FROM configuracion_erp");
         const antesCfg = {};
         for (const r of previos) antesCfg[r.clave] = r.valor;
