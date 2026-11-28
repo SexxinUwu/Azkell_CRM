@@ -15,6 +15,36 @@ export interface DetraccionPago {
   cuenta_proveedor: string | null;
 }
 
+/** Un pago anterior de una orden que se paga en partes */
+export interface PagoParcialHecho {
+  numero: number;
+  tipo: 'CUOTA' | 'ENTREGA' | 'ADELANTO';
+  fecha: string | null;
+  /** Lo que cubre de la orden, en la moneda de la orden */
+  parte: number;
+  /** Lo que salió del banco en ese pago (parte menos la detracción retenida) */
+  neto: number;
+  detraccion_pen: number;
+  detraccion_constancia: string | null;
+  numero_operacion: string;
+  factura_ref: string;
+  usuario: string;
+}
+
+/** Estado de una orden pagada en partes (cuotas, entregas con factura parcial o adelantos). Migración 57. */
+export interface PagosParciales {
+  importe: number;
+  pagado: number;
+  saldo: number;
+  /** CUOTA o ENTREGA según el primer pago que no fue adelanto; null si solo hay adelantos */
+  modo: 'CUOTA' | 'ENTREGA' | null;
+  hayAdelantos: boolean;
+  /** Detracción ya depositada: en soles y en la moneda de la orden */
+  detDepositadoPen: number;
+  detDepositadoOrigen: number;
+  pagos: PagoParcialHecho[];
+}
+
 export interface ItemOrden {
   inventario_id: string;
   descripcion: string;
@@ -78,6 +108,8 @@ export interface OrdenPago {
   items?: ItemOrden[];
   /** null o ausente: la orden no lleva detracción */
   detraccion?: DetraccionPago | null;
+  /** null o ausente: la orden no se paga en partes */
+  pagos_parciales?: PagosParciales | null;
 }
 
 export type FiltroEstado = 'aprobado' | 'procesados' | 'todos';
@@ -90,7 +122,7 @@ export function esUSD(moneda?: string | null): boolean {
   return m.includes('DOL') || m.includes('DÓL') || m === 'USD' || m === 'US$';
 }
 
-export const esPendiente = (o: OrdenPago) => ['aprobado', 'autorizado'].includes(String(o.estado ?? '').toLowerCase());
+export const esPendiente = (o: OrdenPago) => ['aprobado', 'autorizado'].includes(String(o.estado ?? '').toLowerCase()) || (!!o.pagos_parciales && String(o.estado ?? '').toLowerCase() === 'pago parcial');
 export const esPagada = (o: OrdenPago) => ['procesado', 'pagado'].includes(String(o.estado ?? '').toLowerCase());
 export const esCredito = (o: OrdenPago) => /cr[eé]dito/i.test(String(o.condicion_pago ?? ''));
 

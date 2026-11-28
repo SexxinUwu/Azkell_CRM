@@ -8,6 +8,7 @@ const { recalcularLiquidacionViaje } = require('../services/liquidacion_viaje');
 const { fechaVencimiento } = require('../services/condicion_oc');
 const { hoyLima } = require('../services/horaLima');
 const detraccionOc = require('../services/detraccion');
+const pagosParciales = require('../services/pagos_parciales_oc');
 
 module.exports = function (db, broadcast, logAudit) {
     logAudit = envolverLogAudit(logAudit, db);
@@ -2210,23 +2211,29 @@ module.exports = function (db, broadcast, logAudit) {
             if (!tdb) return res.status(500).json({ error: 'DB no disponible' });
 
             const estadoFiltro = (req.query.estado || 'aprobado').toLowerCase();
-            let whereClause = "WHERE LOWER(e.estado) IN ('aprobado', 'autorizado')";
+            // Una orden en 'Pago parcial' por cuotas, entregas o adelantos (entradas_inv_pagos) sigue en la lista de pendientes; la de caja chica no.
+            // Los ids se leen aparte (las tablas de cada empresa tienen intercalaciones distintas y un JOIN fallaría). Sin la migración 57 la lista sigue como antes.
+            const [filasEnPartes] = await tdb.query('SELECT DISTINCT entrada_id FROM entradas_inv_pagos').catch(() => [[]]);
+            const idsEnPartes = (filasEnPartes || []).map(f => f.entrada_id);
+            const enPartes = idsEnPartes.length ? ` OR (LOWER(e.estado) = 'pago parcial' AND e.id IN (${idsEnPartes.map(() => '?').join(',')}))` : '';
+            let whereClause = `WHERE (LOWER(e.estado) IN ('aprobado', 'autorizado')${enPartes})`;
             if (estadoFiltro === 'todos') {
-                whereClause = "WHERE LOWER(e.estado) IN ('aprobado', 'autorizado', 'procesado', 'pagado')";
+                whereClause = `WHERE (LOWER(e.estado) IN ('aprobado', 'autorizado', 'procesado', 'pagado')${enPartes})`;
             } else if (estadoFiltro === 'procesados' || estadoFiltro === 'pagados') {
                 whereClause = "WHERE LOWER(e.estado) IN ('procesado', 'pagado')";
             }
 
             // 1. Obtener Órdenes de Compra
-            const sqlOC = `
+            const sqlOC = (donde) => `
                 SELECT e.*,
                        COALESCE(e.total_pen, 0) AS total_oc,
                        (SELECT DATE_FORMAT(oc2.fecha_vencimiento, '%Y-%m-%d') FROM ordenes_compra oc2 WHERE oc2.codigo = e.id LIMIT 1) AS fecha_vencimiento
                 FROM entradas_inv e
-                ${whereClause}
+                ${donde}
                 ORDER BY e.fecha DESC, e.id DESC
             `;
-            const [ocs] = await tdb.query(sqlOC);
+            const [ocs] = await tdb.query(sqlOC(whereClause), whereClause.includes('?') ? idsEnPartes : []);
+            const pagosPartes = await pagosParciales.resumenPorOrdenes(tdb, ocs || []).catch(() => ({}));
             const ocIds = (ocs || []).map(o => o.id);
 
             // 2. Mapear Usuarios, Cuentas Bancarias, Proveedores e Ítems en paralelo
@@ -2411,6 +2418,8 @@ module.exports = function (db, broadcast, logAudit) {
                     documento_referencia: oc.documento_referencia || '',
                     nc_sugeridas: oc.nc_sugeridas || null,
                     detraccion,
+                    // Pagos en partes (cuotas, entregas, adelantos): pagado, saldo, pagos anteriores y detracción ya depositada
+                    pagos_parciales: pagosPartes[oc.id] || null,
                     creado_por: oc.creado_por,
                     creador_nombre: creadorNombre,
                     aprobado_por: oc.aprobado_por,
@@ -2548,7 +2557,12 @@ module.exports = function (db, broadcast, logAudit) {
             const totalOc = parseFloat(oc.total_pen) || 0;
             const importeOrigen = esUSD && tcOc > 0 ? Math.round((totalOc / tcOc) * 100) / 100 : totalOc;
             // Con pago parcial de caja chica, lo que se paga aquí es solo lo que falta
-            const pendienteCajaChica = estadoOc === 'pago parcial' ? (await require('../services/caja_chica').pendienteOc(tdb, id)).pendiente : null;
+            // Pago en partes (cuotas, entregas, adelantos): modo_pago = cuota | entrega | adelanto; las órdenes que ya tienen pagos en partes siguen por esa vía
+            const modoPago = String(b.modo_pago || 'total').toLowerCase().trim();
+            if (!['total', 'cuota', 'entrega', 'adelanto'].includes(modoPago)) return res.status(400).json({ error: 'modo_pago_invalido', mensaje: 'El tipo de pago no es válido (total, cuota, entrega o adelanto).' });
+            const tienePagosParciales = estadoOc === 'pago parcial' && await pagosParciales.tienePagos(tdb, id);
+            const pagoEnPartes = modoPago !== 'total' || tienePagosParciales;
+            const pendienteCajaChica = estadoOc === 'pago parcial' && !tienePagosParciales ? (await require('../services/caja_chica').pendienteOc(tdb, id)).pendiente : null;
             // OC en dólares pagada desde una cuenta en soles: se calcula en dólares (con sus notas de crédito) y se convierte con el tipo de cambio DEL PAGO.
             // Sin tipo de cambio del pago se usa el de la orden (como antes).
             const ocEsUsd = aMoneda(oc.moneda) === 'USD';
@@ -2591,6 +2605,48 @@ module.exports = function (db, broadcast, logAudit) {
                         changes: diff(antesDet, despuesDet, ['tipo', 'pct', 'tc', 'monto_pen']),
                     });
                 }
+            }
+            // Pagos en partes: la lógica está en services/pagos_parciales_oc.js (una transacción con la orden bloqueada)
+            if (pagoEnPartes) {
+                let voucherParcial = oc.url_voucher || null;
+                let subido = null;
+                if (req.file) {
+                    const ext = (req.file.originalname.split('.').pop() || 'jpg').toLowerCase();
+                    subido = await uploadToS3(req.file.buffer, `tesoreria/requerimientos/voucher_${id}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`, req.file.mimetype);
+                    voucherParcial = subido;
+                }
+                let r;
+                try {
+                    r = await pagosParciales.registrarPago({
+                        db: tdb, id, b, usuario: usuarioPago, voucherUrl: voucherParcial, numeroConstancia, cuentaOrigen, cuentaDestino: cuentaDestinoElegida,
+                        tipo: modoPago === 'total' ? 'CUOTA' : modoPago, saldoCompleto: modoPago === 'total',
+                    });
+                } catch (eParcial) {
+                    if (subido) deleteFromS3(s3KeyFromUrl(subido)).catch(() => {});
+                    if (eParcial.status) return res.status(eParcial.status).json({ error: eParcial.codigo || eParcial.message, mensaje: eParcial.message });
+                    throw eParcial;
+                }
+                if (typeof logAudit === 'function') logAudit(req, 'tesoreria/pago-requerimientos', 'PROCESÓ PAGO', `Pagó ${r.tipo} ${r.numero} de la orden ${id} por ${r.moneda} ${r.neto} (parte ${r.parte}, saldo ${r.saldo}, constancia ${numeroConstancia})`);
+                if (typeof broadcast === 'function') { broadcast('almacen', 'actualizar_oc'); broadcast('tesoreria', 'pago_procesado'); }
+                (async () => {
+                    try {
+                        const [cfgRows] = await tdb.query("SELECT clave, valor FROM configuracion_erp WHERE clave IN ('almacen_whatsapp', 'empresa_nombre')");
+                        let almacenPhone = null, empresaNombre = null;
+                        (cfgRows || []).forEach(x => { if (x.clave === 'almacen_whatsapp' && x.valor) almacenPhone = x.valor; if (x.clave === 'empresa_nombre' && x.valor) empresaNombre = x.valor; });
+                        if (!almacenPhone) almacenPhone = process.env.ALMACEN_WHATSAPP || null;
+                        if (!almacenPhone) return;
+                        let presigned = voucherParcial;
+                        if (presigned && presigned.includes('amazonaws.com')) { const k = s3KeyFromUrl(presigned); if (k) { try { presigned = await getPresignedUrl(k, 86400); } catch (e) { /* se envía sin adjunto firmado */ } } }
+                        const provTxt = String(oc.proveedor_nombre || '');
+                        await sendWarehousePaymentVoucherWhatsapp({
+                            phone: almacenPhone, ocCode: id, supplier: provTxt.replace(/\s*\(\s*\b(10|20)\d{9}\b\s*\)\s*/, '').trim(), ruc: (provTxt.match(/\b(10|20)\d{9}\b/) || [''])[0],
+                            total: r.neto, currency: r.moneda, paidBy: usuarioPago, reason: `${oc.motivo_entrada || descripcionPago} (${r.tipo.toLowerCase()} ${r.numero}; saldo ${r.saldo})`,
+                            bankAccount: oc.cuenta_bancaria_proveedor || cuentaOrigen, operationNumber: numeroConstancia, mediaUrl: presigned,
+                            mimeType: req.file ? req.file.mimetype : null, tenantSlug: req.tenantSlug || (req.headers.host ? req.headers.host.split('.')[0] : null), empresaNombre,
+                        });
+                    } catch (errWa) { console.error('[WhatsApp Almacén] Error despachando comprobante de pago parcial:', errWa.message); }
+                })();
+                return res.json({ ok: true, success: true, message: 'Pago registrado', id, estado: r.estado, tipo: r.tipo, numero: r.numero, parte: r.parte, neto: r.neto, saldo: r.saldo, detraccion_pen: r.detraccion_pen, numero_operacion: numeroConstancia, voucher_url: voucherParcial });
             }
             // Detracción (SPOT): se deposita un % del total en la cuenta del proveedor en el Banco de la Nación y al proveedor le llega el neto.
             // El monto lo calculó el servidor al registrar la orden; en el pago con caja chica no aplica.
