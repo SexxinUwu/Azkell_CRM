@@ -15,7 +15,7 @@ import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
-import { useDetraccionTipos, useProveedores } from '../almacen/api';
+import { useDetraccionTipos, useProveedores, useTipoCambioSunat } from '../almacen/api';
 
 const num = (s: string) => {
   const n = parseFloat(s.replace(',', '.'));
@@ -46,6 +46,7 @@ export function GenerarOrdenReencaucheSheet({ open, onClose, llantas, onHecho }:
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tipos = useDetraccionTipos();
+  const sunat = useTipoCambioSunat(open && moneda === 'USD');
 
   useEffect(() => {
     if (!open) return;
@@ -73,7 +74,7 @@ export function GenerarOrdenReencaucheSheet({ open, onClose, llantas, onHecho }:
   const usd = moneda === 'USD';
   const money = (n: number) => (usd ? formatDolares(n) : formatSoles(n));
   const tcNum = num(tc);
-  const detTcNum = num(detTc) || tcNum;
+  const detTcNum = num(detTc) || sunat.data?.venta || tcNum;
   const detPctNum = num(detPct);
   const detTipo = (tipos.data ?? []).find(x => x.codigo === detCodigo) ?? null;
   const detBaseSoles = usd ? total * (Number.isFinite(detTcNum) ? detTcNum : 0) : total;
@@ -191,7 +192,7 @@ export function GenerarOrdenReencaucheSheet({ open, onClose, llantas, onHecho }:
             </Field>
             {usd && (
               <Field label="T.C. de la detracción">
-                {p => <TextInput {...p} inputMode="decimal" placeholder={tc || 'Ej. 3.4555'} value={detTc} onChange={e => setDetTc(e.target.value)} />}
+                {p => <TextInput {...p} inputMode="decimal" placeholder={sunat.data?.venta ? String(sunat.data.venta) : (tc || 'Ej. 3.4555')} value={detTc} onChange={e => setDetTc(e.target.value)} />}
               </Field>
             )}
           </div>
