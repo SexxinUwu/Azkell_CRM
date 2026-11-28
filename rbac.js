@@ -22,8 +22,6 @@ module.exports = function globalRBAC(req, res, next) {
         path.startsWith('/approvals/') ||
         path.endsWith('/presign-read') || 
         path.endsWith('/presigned') || 
-        path.endsWith('/ver') || 
-        (path.includes('/archivo/') && path.endsWith('/ver')) ||
         path.includes('/pdf-apisunat/') ||
         path.includes('/pdf/') ||
         path.includes('/imprimir/')
@@ -186,9 +184,11 @@ module.exports = function globalRBAC(req, res, next) {
         mod = ['rrhh_asistencia'];
         // Guardar o sincronizar el tareo edita la asistencia ya registrada: pide Editar (como «regularizar técnicos»)
         if (path.startsWith('/rrhh/tareo/') && req.method === 'POST') accion = 'e';
+        // Marcar a mano la asistencia de alguien también edita lo registrado (decisión del dueño)
+        if (path === '/rrhh/marcacion/manual' && req.method === 'POST') accion = 'e';
     }
     // Justificaciones (licencias y vacaciones) viven en la pantalla de Asistencia
-    else if (path.startsWith('/rrhh/licencias')) mod = ['rrhh_asistencia'];
+    else if (path.startsWith('/rrhh/licencias')) { mod = ['rrhh_asistencia']; if (req.method === 'POST') accion = 'e'; /* justificar edita la asistencia */ }
     else if (path.startsWith('/rrhh/nomina')) mod = ['rrhh_nomina'];
     else if (path === '/rrhh/directorio') mod = ['rrhh_personal', 'cond'];
     else if (path.startsWith('/rrhh/')) mod = ['rrhh_personal'];

@@ -2484,8 +2484,6 @@ function verifyTokenBase(req, res, next) {
         req.path.startsWith('/api/tv') ||
         req.path.startsWith('/whatsapp/') ||
         req.path.startsWith('/approvals/') ||
-        req.path.endsWith('/ver') ||
-        (req.path.includes('/archivo/') && req.path.endsWith('/ver')) ||
         req.path.includes('/pdf-apisunat/') ||
         req.path.includes('/pdf/') ||
         req.path.includes('/imprimir/') ||

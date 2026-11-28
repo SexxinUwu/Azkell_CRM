@@ -108,7 +108,7 @@ export function AsistenciaPage() {
           {puedeCrear && <BotonTip tip="Horarios de trabajo" className="btn btn--plain btn--icono asis-ico--ambar" onClick={() => setHorarios(true)}><Clock3 size={18} /></BotonTip>}
           {puedeEditar && <BotonTip tip="Marcar asistencia de hoy" className="btn btn--plain btn--icono asis-ico--azul" onClick={() => setConfirmarHoy(true)}><CheckCheck size={18} /></BotonTip>}
           {puedeEditar && <BotonTip tip="Sincronizar con viajes" className="btn btn--plain btn--icono btn--icono-acento" disabled={ocupado} onClick={sincronizar}><RefreshCw size={18} /></BotonTip>}
-          {puedeCrear && <BotonTip tip="Justificar: licencia o vacaciones" className="btn btn--plain btn--icono asis-ico--morado" onClick={() => setLicencia('nueva')}><CalendarOff size={18} /></BotonTip>}
+          {puedeEditar && <BotonTip tip="Justificar: licencia o vacaciones" className="btn btn--plain btn--icono asis-ico--morado" onClick={() => setLicencia('nueva')}><CalendarOff size={18} /></BotonTip>}
         </div>
       </header>
 
@@ -116,15 +116,15 @@ export function AsistenciaPage() {
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={vista} className="asis-cambio" initial={{ opacity: 0, y: reducir ? 0 : 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={reducir ? { duration: 0.12 } : spring}>
             {vista === 'dia' && (
-              <VistaDia fecha={fecha} onFecha={setFecha} hoy={hoy} area={area} onArea={setArea} puedeEditar={puedeCrear}
+              <VistaDia fecha={fecha} onFecha={setFecha} hoy={hoy} area={area} onArea={setArea} puedeEditar={puedeEditar}
                 onRegistrarHora={setRegistrando} onJustificar={p => setLicencia({ personaId: p.id, fecha })} />
             )}
             {vista === 'area' && (
               <VistaArea fecha={fecha} onFecha={setFecha} hoy={hoy} onAbrirArea={a => { setArea(a); cambiarVista('dia'); }} />
             )}
             {vista === 'periodo' && <VistaPeriodo hoy={hoy} puedeEditar={puedeEditar} />}
-            {vista === 'marcaciones' && <VistaMarcaciones fecha={fecha} onFecha={setFecha} hoy={hoy} puedeMarcar={puedeCrear} />}
-            {vista === 'justificaciones' && <VistaJustificaciones puedeEditar={puedeCrear} puedeEliminar={puedeEliminar} onNueva={() => setLicencia('nueva')} />}
+            {vista === 'marcaciones' && <VistaMarcaciones fecha={fecha} onFecha={setFecha} hoy={hoy} puedeMarcar={puedeEditar} />}
+            {vista === 'justificaciones' && <VistaJustificaciones puedeEditar={puedeEditar} puedeEliminar={puedeEliminar} onNueva={() => setLicencia('nueva')} />}
           </motion.div>
         </AnimatePresence>
       </div>
