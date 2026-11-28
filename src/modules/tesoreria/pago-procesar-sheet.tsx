@@ -18,7 +18,7 @@ import { formatFechaPe, formatMoneda } from '../../core/lib/format';
 import { haptic } from '../../core/lib/haptics';
 import { useBancos } from './api';
 import { AplicarNotasCredito, type AplicacionElegida } from './AplicarNotasCredito';
-import { useCuentasProveedor } from '../almacen/api';
+import { useCuentasProveedor, useDetraccionTipos, useTipoCambioSunat } from '../almacen/api';
 import { etiquetaCuentaProveedor } from '../almacen/entradaReglas';
 import { codigoOC, esUSD, importeOC, montoAPagar, num, redondear2, type OrdenPago } from './pago-datos';
 
@@ -147,6 +147,16 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
   // Detracción: constancia del depósito y cuenta de la empresa desde la que se hace (vacía = la misma de origen)
   const [constanciaDet, setConstanciaDet] = useState('');
   const [cuentaDetSel, setCuentaDetSel] = useState('');
+  // Detracción confirmada con la factura: se agrega si la orden la olvidó, o se corrige el T.C. (el de la fecha de la factura) y el monto
+  const [detEditando, setDetEditando] = useState(false);
+  const [detCodigoE, setDetCodigoE] = useState('');
+  const [detPctE, setDetPctE] = useState('');
+  const [detFechaE, setDetFechaE] = useState('');
+  const [detTcE, setDetTcE] = useState('');
+  const [detMontoE, setDetMontoE] = useState('');
+  const detTipos = useDetraccionTipos();
+  const ordenEnUsd = !!oc && esUSD(oc.moneda);
+  const sunatDet = useTipoCambioSunat(detEditando && ordenEnUsd, detFechaE || undefined);
   // Notas de crédito del proveedor aplicadas a este pago (si las hay)
   const [ncs, setNcs] = useState<AplicacionElegida[]>([]);
   const [netoNc, setNetoNc] = useState<number | null>(null);
@@ -206,7 +216,22 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
   // En pago mixto el importe se calcula en dólares y se convierte; si no, como siempre
   const importe = oc ? (mixto ? importeUsd : montoAPagar(oc, usd)) : 0;
   // Detracción: se retiene del importe y se deposita aparte en soles (al Banco de la Nación)
-  const det = oc?.detraccion ?? null;
+  const detOrden = oc?.detraccion ?? null;
+  const cuentaDetDestino = destinos.find(d => d.detraccion);
+  let det: typeof detOrden = detOrden;
+  if (detEditando && oc) {
+    const totalOrden = ordenEnUsd ? importeUsd : montoAPagar(oc, false);
+    const pctE = num(detPctE);
+    const tcE = num(detTcE) || sunatDet.data?.venta || detOrden?.tc || tc || 1;
+    const basePen = ordenEnUsd ? totalOrden * tcE : totalOrden;
+    const calculado = detCodigoE && pctE > 0 ? Math.round(basePen * pctE / 100) : 0;
+    const montoE = num(detMontoE) > 0 ? Math.round(num(detMontoE)) : calculado;
+    det = {
+      codigo: detCodigoE || '—', pct: pctE, tc: ordenEnUsd ? tcE : null, monto_pen: montoE,
+      monto_origen: ordenEnUsd ? redondear2(totalOrden * pctE / 100) : montoE,
+      constancia: null, pagada_en: null, cuenta_proveedor: detOrden?.cuenta_proveedor ?? cuentaDetDestino?.label ?? null,
+    };
+  }
   const sinCuentaDetraccion = !!det && !det.cuenta_proveedor;
   const detMontoPen = det ? num(det.monto_pen) : 0;
   const detOrigen = det ? num(det.monto_origen) : 0;
@@ -223,6 +248,17 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
 
   const preview = useMemo(() => (voucher && voucher.type.startsWith('image/') ? URL.createObjectURL(voucher) : null), [voucher]);
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+
+  function abrirEdicionDet() {
+    setDetEditando(true);
+    setDetCodigoE(detOrden?.codigo ?? ''); setDetPctE(detOrden ? String(num(detOrden.pct)) : '');
+    setDetFechaE(''); setDetTcE(detOrden?.tc ? String(detOrden.tc) : ''); setDetMontoE('');
+  }
+  function elegirTipoDet(codigo: string) {
+    setDetCodigoE(codigo);
+    const t = (detTipos.data ?? []).find(x => x.codigo === codigo);
+    setDetPctE(t ? String(t.porcentaje) : '');
+  }
 
   function elegirVoucher(f: File | undefined) {
     if (!f) return;
@@ -247,6 +283,8 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
         ? 'La orden no tiene tipo de cambio: no se puede calcular el monto en US$.'
         : 'La orden no tiene total en soles para pagar.';
     }
+    if (detEditando && !detCodigoE) { toast('Elige el tipo de detracción o quita la corrección.', 'error'); haptic('warning'); return; }
+    if (detEditando && !(num(detPctE) > 0)) { toast('Escribe el porcentaje de la detracción.', 'error'); haptic('warning'); return; }
     if (det && !constanciaDet.trim()) e.constanciaDet = 'Ingresa el número de constancia del depósito de la detracción.';
     if (!confirmado) e.confirmado = 'Marca la casilla para confirmar el pago.';
     setErrores(prev => ({ ...prev, ...e }));
@@ -260,6 +298,11 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
     if (destinoSel) fd.append('cuenta_destino', destinoSel);
     fd.append('monto', String(redondear2(monto)));
     if (ncs.length) fd.append('nc_aplicaciones', JSON.stringify(ncs.map(a => ({ nc_id: a.nc_id, monto: a.monto }))));
+    if (detEditando) {
+      fd.append('det_codigo', detCodigoE); fd.append('det_pct', String(num(detPctE)));
+      if (ordenEnUsd) fd.append('det_tc', String(num(detTcE) || sunatDet.data?.venta || detOrden?.tc || tc));
+      if (num(detMontoE) > 0) fd.append('det_monto_pen', String(num(detMontoE)));
+    }
     if (det) {
       fd.append('detraccion_constancia', constanciaDet.trim());
       if (cuentaDetSel) fd.append('cuenta_origen_detraccion', cuentaDetSel);
@@ -279,7 +322,7 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
       const dato = err instanceof ApiError ? err.data : null;
       const codigoErr = dato && typeof dato.error === 'string' ? dato.error : '';
       const mensajeErr = dato && typeof dato.mensaje === 'string' ? dato.mensaje : '';
-      if ((codigoErr === 'sin_constancia_detraccion' || codigoErr === 'sin_cuenta_detraccion') && mensajeErr) toast(mensajeErr, 'error');
+      if ((codigoErr === 'sin_constancia_detraccion' || codigoErr === 'sin_cuenta_detraccion' || codigoErr === 'detraccion_invalida' || codigoErr === 'sin_tipo_detraccion') && mensajeErr) toast(mensajeErr, 'error');
       else toast(errorMessage(err), 'error');
       haptic('warning');
     } finally {
@@ -417,6 +460,16 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
               )}
             </section>
 
+            {!det && (
+              <section className="ga-sec" aria-label="Detracción">
+                <h3 className="ga-sec__titulo">
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Percent size={16} aria-hidden /> Detracción (SUNAT)</span>
+                  <span className="ga-sec__cuenta">Sin detracción</span>
+                </h3>
+                <p className="t-footnote c-secondary" style={{ margin: 0 }}>La orden no lleva detracción. Si la factura la indica, agrégala aquí antes de pagar.</p>
+                <div><Button variant="secondary" size="sm" onClick={abrirEdicionDet}>Agregar detracción</Button></div>
+              </section>
+            )}
             {det && (
               <section className="ga-sec" aria-label="Detracción">
                 <h3 className="ga-sec__titulo">
@@ -432,6 +485,36 @@ export function PagoProcesarSheet({ oc, open, onClose, onPagado }: { oc: OrdenPa
                   </Notice>
                 ) : (
                   <div className="pp-fila"><span className="pp-fila__etq">Depositar a</span><div className="pp-fila__val"><span className="pp-fila__num"><span className="pp-sel">{det.cuenta_proveedor}</span></span></div></div>
+                )}
+                {!detEditando ? (
+                  <div><Button variant="secondary" size="sm" onClick={abrirEdicionDet}>Corregir con la factura</Button></div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+                    <Notice tone="accent">Datos de la factura del proveedor. Solo cambia la detracción; queda en la auditoría con el valor anterior.</Notice>
+                    <Field label="Tipo de detracción">
+                      {p => (
+                        <Combobox {...p} enHoja tituloHoja="Tipo de detracción" value={detCodigoE || null} onChange={v => elegirTipoDet(v ?? '')}
+                          options={(detTipos.data ?? []).map(t => ({ value: t.codigo, label: `${t.codigo} · ${t.descripcion} · ${Number(t.porcentaje)} %`, keywords: `${t.codigo} ${t.descripcion}` }))} placeholder="Elige el tipo" />
+                      )}
+                    </Field>
+                    <Field label="Porcentaje (%)">
+                      {p => <TextInput {...p} inputMode="decimal" value={detPctE} onChange={e => setDetPctE(e.target.value)} />}
+                    </Field>
+                    {ordenEnUsd && (
+                      <>
+                        <Field label="Fecha de la factura" hint={detFechaE ? (sunatDet.data?.venta ? `SUNAT venta del ${sunatDet.data.fecha}: ${sunatDet.data.venta}` : sunatDet.isError ? 'No se pudo consultar esa fecha: escribe el T.C. a mano' : 'Consultando la SUNAT…') : 'Con la fecha de emisión se usa el T.C. SUNAT de ese día'}>
+                          {p => <TextInput {...p} type="date" max={new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' })} value={detFechaE} onChange={e => { setDetFechaE(e.target.value); setDetTcE(''); }} />}
+                        </Field>
+                        <Field label="T.C. de la detracción">
+                          {p => <TextInput {...p} inputMode="decimal" value={detTcE} placeholder={sunatDet.data?.venta ? String(sunatDet.data.venta) : ''} onChange={e => setDetTcE(e.target.value)} />}
+                        </Field>
+                      </>
+                    )}
+                    <Field label="Monto de la detracción en la factura (S/)" hint="Opcional: si lo escribes, se usa ese monto exacto (debe ser cercano al calculado)">
+                      {p => <TextInput {...p} inputMode="numeric" value={detMontoE} placeholder={String(det.monto_pen)} onChange={e => setDetMontoE(e.target.value.replace(/[^\d.]/g, ''))} />}
+                    </Field>
+                    <div><Button variant="plain" size="sm" onClick={() => setDetEditando(false)}>Quitar la corrección</Button></div>
+                  </div>
                 )}
                 <Field label="N° de constancia del depósito de la detracción *" error={errores.constanciaDet}>
                   {p => <TextInput {...p} value={constanciaDet} placeholder="Ej. 00482910"
