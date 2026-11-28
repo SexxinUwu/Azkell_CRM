@@ -61,11 +61,12 @@ function cuentaDeConductor(lista: Conductor[] | undefined, nombre: string): stri
 // Caja de cochera del conductor: se ofrece al crear una orden de servicio y al iniciarla.
 // Mismo contrato que el clásico: caja de Tesorería con concepto "Gastos de Viaje y Ruta" / "Cochera / Parqueo de ruta".
 export function CocheraExpressSheet({ open, datos, onClose }: { open: boolean; datos: CocheraDatos | null; onClose: () => void }) {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
   const bancos = useBancos();
-  const conductores = useConductores();
+  // La cuenta del conductor sale de su ficha (solo con permiso de Conductores); sin él no se autollena
+  const conductores = useConductores(can('cond.ver'));
   const [monto, setMonto] = useState('30.00');
   const [modalidad, setModalidad] = useState(MODALIDADES[0].valor);
   const [cuentaEmpresa, setCuentaEmpresa] = useState('');

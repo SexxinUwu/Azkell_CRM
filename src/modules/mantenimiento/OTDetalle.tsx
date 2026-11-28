@@ -175,7 +175,7 @@ export function OTDetalle({ ot, onVolver, puedeEditar, puedeEliminar, onAccion, 
   // La OT guarda el DNI de quien la inició o cerró, y el número de rampa: aquí se muestran nombre y nombre de rampa
   const { data: conductoresLista } = useQuery({
     queryKey: ['mant', 'conductores-nombres'],
-    queryFn: () => api<unknown>('/conductores').then(r => (Array.isArray(r) ? r : ((r as { data?: unknown[] })?.data ?? [])) as Record<string, unknown>[]),
+    queryFn: () => api<unknown>('/conductores-lista').then(r => (Array.isArray(r) ? r : ((r as { data?: unknown[] })?.data ?? [])) as Record<string, unknown>[]),
     staleTime: 10 * 60_000,
   });
   const { data: catalogoTaller } = useQuery({

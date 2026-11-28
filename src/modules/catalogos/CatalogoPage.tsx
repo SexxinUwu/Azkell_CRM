@@ -26,7 +26,9 @@ function SelectorPersona({ valor, onCambio, ...aria }: {
   valor: string; onCambio: (v: string) => void;
   id?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string;
 }) {
-  const personas = useConductores();
+  const { can } = useAuth();
+  // Sin permiso de Conductores no se llama a la ficha: el nombre se escribe a mano
+  const personas = useConductores(can('cond.ver'));
   const opciones = useMemo(() => {
     const lista: ComboboxOption[] = (personas.data ?? [])
       .filter(c => c.estado.trim().toLowerCase() !== 'inactivo')

@@ -23,9 +23,11 @@ export interface Conductor {
 
 const txt = (v: unknown) => (v == null ? '' : String(v).trim());
 
-export function useConductores() {
+/** habilitado: false cuando el usuario no tiene Conductores (el servidor respondería 403 a la ficha completa) */
+export function useConductores(habilitado = true) {
   return useQuery({
     queryKey: ['conductores'],
+    enabled: habilitado,
     queryFn: async () => {
       const filas = await api<Array<Record<string, unknown>>>('/conductores');
       return filas.map(f => ({

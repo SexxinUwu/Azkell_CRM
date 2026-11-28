@@ -75,9 +75,11 @@ export function useInspecciones() {
   });
 }
 
-export function useInspeccionesNeumaticos() {
+/** habilitado: false cuando el usuario no puede leer inspecciones de neumáticos (el servidor respondería 403) */
+export function useInspeccionesNeumaticos(habilitado = true) {
   return useQuery({
     queryKey: ['inspecciones', 'neumaticos'],
+    enabled: habilitado,
     queryFn: async () => {
       const r = await api<{ ok?: boolean; data?: Array<Record<string, unknown>> }>('/neumaticos/inspecciones', { query: { limit: 1000 } }).catch(() => ({ data: [] }));
       return (r.data ?? []).map<InspeccionNeumaticos>(n => ({

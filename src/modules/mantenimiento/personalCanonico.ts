@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { useConductores } from '../conductores/api';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../../core/api/client';
 import { claveNombre, distancia, nombrePropio } from '../../core/lib/texto';
 
 /**
@@ -8,9 +9,17 @@ import { claveNombre, distancia, nombrePropio } from '../../core/lib/texto';
  * parecida, para los errores de tecleo. Si no hay ninguna, se muestra con mayúscula inicial.
  */
 export function usePersonalCanonico(): (registrado: string | null | undefined) => string {
-  const { data } = useConductores();
+  // Solo se necesitan los nombres: la lista corta (id, nombre, DNI) la lee también quien trabaja con OT
+  const { data } = useQuery({
+    queryKey: ['conductores-lista-nombres'],
+    queryFn: async () => {
+      const r = await api<unknown>('/conductores-lista');
+      return (Array.isArray(r) ? r : []) as Array<{ nombre?: string }>;
+    },
+    staleTime: 10 * 60_000,
+  });
   return useMemo(() => {
-    const directorio = (data ?? []).map(c => ({ clave: claveNombre(c.nombre), nombre: nombrePropio(c.nombre) }));
+    const directorio = (data ?? []).filter(c => c.nombre).map(c => ({ clave: claveNombre(String(c.nombre)), nombre: nombrePropio(String(c.nombre)) }));
     const exactos = new Map(directorio.map(d => [d.clave, d.nombre]));
     const cache = new Map<string, string>();
 
