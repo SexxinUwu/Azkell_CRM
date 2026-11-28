@@ -370,3 +370,9 @@ table[aria-label="Órdenes de compra"] tbody tr:hover td { background: color-mix
 .oc-ot-switches { display: flex; align-items: flex-start; gap: var(--s-8, 32px); padding: 4px 2px; }
 .oc-ot-switch { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
 .oc-ot-switch > span { font-size: 0.8125rem; font-weight: 600; color: var(--label); }
+
+/* Detracción (SUNAT) en la orden */
+.oc-det-switch { flex-direction: row; align-items: center; gap: 10px; }
+.oc-det-prev { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 20px; padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--accent) 10%, transparent); font-size: 0.875rem; }
+.oc-det-prev strong { font-variant-numeric: tabular-nums; }
+.oc-det-prev--no { background: color-mix(in srgb, var(--amber-ink) 12%, transparent); }

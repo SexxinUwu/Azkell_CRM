@@ -673,6 +673,7 @@ function TarjetaOrden({ orden: o, acciones }: { orden: EntradaInv; acciones: Acc
       <div className="oc-chips">
         <RecepcionBadge orden={o} />
         <span className="oc-chip">{tipo}</span>
+        {o.detraccion_codigo && <span className="oc-chip">Detracción</span>}
         <span className="oc-chip oc-chip--mono">{o.centro_costo || 'CC-100'}</span>
         {o.placa && <span className="oc-chip oc-chip--mono">{o.placa}</span>}
       </div>

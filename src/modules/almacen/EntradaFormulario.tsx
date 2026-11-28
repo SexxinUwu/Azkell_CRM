@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArticuloSelector } from './SelectoresSalida';
 import { useQueryClient } from '@tanstack/react-query';
-import { CreditCard, FileText, Truck, Landmark, Package, Paperclip, Plus, ScanLine, Users, X } from 'lucide-react';
+import { CreditCard, FileText, Truck, Landmark, Package, Paperclip, Percent, Plus, ScanLine, Users, X } from 'lucide-react';
 import { Sheet } from '../../core/ui/Sheet';
 import { Button } from '../../core/ui/Button';
 import { Field, TextInput } from '../../core/ui/Field';
@@ -18,7 +18,7 @@ import { usePistola } from './usePistola';
 import { pitido } from './pitido';
 import { formatMoneda } from '../../core/lib/format';
 import {
-  esVigente, guardarEntrada, subirCotizacion, useConfiguracionAlmacen, useCuentasProveedor, useEmpresaCuentas, useInventario,
+  esVigente, guardarEntrada, subirCotizacion, useConfiguracionAlmacen, useCuentasProveedor, useDetraccionTipos, useEmpresaCuentas, useInventario,
   useOrdenesTrabajoLista, usePlacasLista, useProveedores, useProximoCodigoEntrada, useTipoCambioSunat,
   type ArticuloInv, type EntradaInv, type PayloadEntrada,
 } from './api';
@@ -158,6 +158,13 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
   const [subiendoCotizacion, setSubiendoCotizacion] = useState(false);
   const [modoIgv, setModoIgv] = useState<ModoIgv>('incluido');
   const [lineas, setLineas] = useState<LineaOC[]>([nuevaLinea()]);
+  // Detracción (SPOT de SUNAT)
+  const detTiposQ = useDetraccionTipos();
+  const detTipos = detTiposQ.data ?? [];
+  const [detActiva, setDetActiva] = useState(false);
+  const [detTipo, setDetTipo] = useState('');
+  const [detPct, setDetPct] = useState('');
+  const [detTc, setDetTc] = useState('');
 
   // Altas rápidas (proveedor o artículo que no está en la lista) y escáner
   const [altaProveedor, setAltaProveedor] = useState<{ nombre?: string; ruc?: string } | null>(null);
@@ -214,6 +221,10 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       setUrlCotizacion(e.url_cotizacion ?? '');
       setNombreCotizacion(e.url_cotizacion ? 'Cotización guardada' : '');
       setModoIgv(modo);
+      setDetActiva(!!e.detraccion_codigo);
+      setDetTipo(e.detraccion_codigo ?? '');
+      setDetPct(e.detraccion_pct != null && e.detraccion_pct !== '' ? String(Number(e.detraccion_pct)) : '');
+      setDetTc(e.detraccion_tc != null && Number(e.detraccion_tc) > 0 && e.moneda === 'USD' ? String(Number(e.detraccion_tc)) : '');
       // Mismo cálculo que al cargar la orden en el clásico: el precio guardado va como PU
       setLineas(e.items?.length
         ? e.items.map(it => {
@@ -237,6 +248,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       setCondicion('Al contado'); setDiasCredito('30'); setPrioridad('Normal');
       setUrlCotizacion(''); setNombreCotizacion('');
       setModoIgv('incluido');
+      setDetActiva(false); setDetTipo(''); setDetPct(''); setDetTc('');
       setLineas([nuevaLinea()]);
     }
   }, [open, e, otPreset]);
@@ -324,6 +336,28 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
     const ot = (otsQ.data ?? []).find(o => o.id_ot === id);
     setOtPlaca(ot?.placa ?? '');
     setPlaca(ot?.placa ?? '');
+  }
+
+  function elegirTipoDetraccion(codigo: string | null) {
+    const t = detTipos.find(x => x.codigo === codigo);
+    setDetTipo(codigo ?? '');
+    if (t) setDetPct(String(Number(t.porcentaje)));
+  }
+
+  function activarDetraccion(on: boolean) {
+    setDetActiva(on);
+    if (on && !detTipo && detTipos.length) elegirTipoDetraccion(detTipos.find(x => x.codigo === '020')?.codigo ?? detTipos[0].codigo);
+  }
+
+  /** Reencauche de llantas: se sugiere la detracción 020 al 12 % (solo si está apagada; se puede cambiar o apagar) */
+  function cambiarSubMotivo(v: string) {
+    setSubMotivo(v);
+    if (detActiva || !/reencauche de llantas/i.test(v)) return;
+    const t = detTipos.find(x => x.codigo === '020');
+    if (!t) return;
+    setDetActiva(true);
+    setDetTipo(t.codigo);
+    setDetPct('12');
   }
 
   function cambiarTipo(t: string) {
@@ -482,6 +516,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
     tc: moneda === 'USD' && !(tc > 0) ? 'Indica el tipo de cambio del día.' : undefined,
     dias: condicion === 'A crédito' && !(num(diasCredito) > 0) ? 'Indica los días de crédito.' : undefined,
     ot: servicio && conOt && !otId ? 'Debes registrar la OT asociada a este servicio. Si es un pago a un tercero que no tiene relación con una placa, cambia a «Sin OT».' : undefined,
+    detraccion: detActiva && !detTipo ? 'Elige el tipo de detracción.' : undefined,
     articulos: usados.length === 0 ? (servicio ? 'Agrega al menos un servicio o artículo.' : 'Agrega al menos un artículo o servicio.') : undefined,
   };
   const hayErrores = Object.values(errorCab).some(Boolean) || lineas.some(l => errorLinea(l) !== null);
@@ -565,6 +600,8 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       observaciones: observaciones || null,
       creado_por: user?.name ?? null,
       url_cotizacion: urlCotizacion || null,
+      detraccion_codigo: detActiva ? detTipo : '',
+      ...(detActiva ? { detraccion_pct: num(detPct), ...(moneda === 'USD' ? { detraccion_tc: num(detTc) || tc } : {}) } : {}),
       items: usados.map(l => ({
         inventario_id: l.inventario_id,
         descripcion: l.descripcion,
@@ -590,6 +627,15 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
 
   const { total, igv, gravado } = totalesLineas(lineas);
   const conIgv = modoIgv !== 'sin_igv';
+  // Vista previa de la detracción (el servidor es quien la calcula al guardar)
+  const detTipoSel = detTipos.find(x => x.codigo === detTipo) ?? null;
+  const detTcEfectivo = moneda === 'USD' ? (num(detTc) || tc) : 1;
+  const detBase = total * detTcEfectivo;
+  const detPctNum = num(detPct);
+  const detMontoPen = Math.round(detBase * detPctNum / 100);
+  const detMontoOrigen = moneda === 'USD' ? Math.round(total * detPctNum) / 100 : detMontoPen;
+  const detMinimo = Number(detTipoSel?.monto_minimo) || 0;
+  const detAplica = !!detTipoSel && detBase > detMinimo;
   const dinero = (n: number) => formatMoneda(n, moneda);
   const tituloSheet = `${e ? 'Editar' : 'Nueva'} ${servicio ? 'orden de servicio' : 'orden de compra'}`;
   const codigoMostrado = e ? codigoLimpio(e.id) : (correlativoQ.data?.codigo ? codigoLimpio(correlativoQ.data.codigo) : '…');
@@ -765,7 +811,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
               <Field label="Sub motivo (detalle) *">
                 {p => (
                   <Combobox {...p} enHoja tituloHoja="Sub motivo (detalle)" options={subOpciones} value={subMotivo || null} placeholder="Elige el sub motivo"
-                    onChange={v => setSubMotivo(v ?? '')} />
+                    onChange={v => cambiarSubMotivo(v ?? '')} />
                 )}
               </Field>
             </div>
@@ -859,6 +905,50 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
                   </div>
                 )}
               </Field>
+            </div>
+          </Seccion>
+
+          <Seccion tono="ambar" icono={<Percent size={15} />} titulo="Detracción (SUNAT)" badge={detActiva && detTipo ? detTipo : undefined}>
+            <div className="oc-grid">
+              <Field label="Sujeta a detracción" wide hint="Si el proveedor debe recibir menos, porque parte se deposita en su cuenta del Banco de la Nación.">
+                {() => (
+                  <label className="oc-ot-switch oc-det-switch">
+                    <Switch label="Sujeta a detracción" checked={detActiva} onChange={activarDetraccion} />
+                    <span>{detActiva ? 'Sí, lleva detracción' : 'No lleva detracción'}</span>
+                  </label>
+                )}
+              </Field>
+              {detActiva && (
+                <>
+                  <Field label="Tipo de detracción *" error={mostrar(errorCab.detraccion)} wide>
+                    {p => (
+                      <Combobox {...p} enHoja tituloHoja="Tipo de detracción" value={detTipo || null} onChange={elegirTipoDetraccion}
+                        options={detTipos.map(t => ({ value: t.codigo, label: `${t.codigo} · ${t.descripcion} · ${Number(t.porcentaje)} %`, keywords: `${t.codigo} ${t.descripcion}` }))}
+                        loading={detTiposQ.isLoading} placeholder="Elige el tipo de detracción" />
+                    )}
+                  </Field>
+                  <Field label="Porcentaje (%)" hint="Por defecto el del tipo; puedes cambiarlo">
+                    {p => <TextInput {...p} type="number" min={0} max={100} step="0.01" value={detPct} onChange={ev => setDetPct(ev.target.value)} />}
+                  </Field>
+                  {moneda === 'USD' && (
+                    <Field label="T.C. de la detracción" hint={tc > 0 ? `Si lo dejas vacío se usa el de la orden (${tc})` : 'Si lo dejas vacío se usa el de la orden'}>
+                      {p => <TextInput {...p} type="number" min={0} step="0.0001" value={detTc} placeholder={tc > 0 ? String(tc) : ''} onChange={ev => setDetTc(ev.target.value)} />}
+                    </Field>
+                  )}
+                  {detTipoSel && total > 0 && (
+                    <div className={`oc-det-prev${detAplica ? '' : ' oc-det-prev--no'}`} role="status">
+                      {detAplica ? (
+                        <>
+                          <span>Detracción <strong>{formatMoneda(detMontoPen, 'PEN')}</strong> ({detPctNum} %)</span>
+                          <span>Neto al proveedor <strong>{formatMoneda(Math.max(0, r2(total - detMontoOrigen)), moneda)}</strong></span>
+                        </>
+                      ) : (
+                        <span>El total ({formatMoneda(detBase, 'PEN')}) no supera el monto mínimo de {formatMoneda(detMinimo, 'PEN')}: no lleva detracción.</span>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </Seccion>
 

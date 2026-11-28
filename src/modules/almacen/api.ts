@@ -205,6 +205,33 @@ export interface EntradaInv {
   /** Avance de recepción: lo pedido de artículos a recibir y lo ya recibido (servicios aparte) */
   recepcion_pedido?: number | null;
   recepcion_recibido?: number | null;
+  /** Detracción (SPOT de SUNAT): la calcula el servidor al guardar */
+  detraccion_codigo?: string | null;
+  detraccion_pct?: number | string | null;
+  detraccion_tc?: number | string | null;
+  detraccion_monto_pen?: number | string | null;
+  detraccion_constancia?: string | null;
+  detraccion_pagada_en?: string | null;
+}
+
+/** Tipo de detracción del catálogo de SUNAT */
+export interface DetraccionTipo {
+  id: number | string;
+  codigo: string;
+  descripcion: string;
+  porcentaje: number;
+  monto_minimo: number;
+}
+
+export function useDetraccionTipos() {
+  return useQuery<DetraccionTipo[]>({
+    queryKey: ['almacen', 'detraccion-tipos'],
+    queryFn: async () => {
+      const r = await api<{ ok?: boolean; data?: DetraccionTipo[] } | DetraccionTipo[]>('/almacen/detraccion-tipos');
+      return Array.isArray(r) ? r : (r.data ?? []);
+    },
+    staleTime: 60 * 60 * 1000,
+  });
 }
 
 /** Ítem tal como se envía al servidor */
@@ -249,6 +276,10 @@ export interface PayloadEntrada {
   url_cotizacion?: string | null;
   /** Ids de las notas de crédito que se piden descontar al pagar (opcional) */
   nc_sugeridas?: number[];
+  /** Detracción: código del tipo ('' la quita; undefined no toca lo guardado) */
+  detraccion_codigo?: string;
+  detraccion_pct?: number;
+  detraccion_tc?: number;
   items: ItemEnvio[];
 }
 

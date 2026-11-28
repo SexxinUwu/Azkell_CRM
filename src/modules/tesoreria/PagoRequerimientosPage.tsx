@@ -74,6 +74,11 @@ export function TipoPago({ oc }: { oc: OrdenPago }) {
   return <Badge tone="amber">{servicio ? 'ORDEN DE SERVICIO' : 'ORDEN DE COMPRA'}</Badge>;
 }
 
+function DetraccionPastilla({ oc }: { oc: OrdenPago }) {
+  if (!oc.detraccion) return null;
+  return <Badge tone="amber">Detracción {formatMoneda(Number(oc.detraccion.monto_pen) || 0, 'PEN')}</Badge>;
+}
+
 function VencimientoCelda({ oc }: { oc: OrdenPago }) {
   if (!esCredito(oc)) return <span className="t-footnote c-secondary">Al contado</span>;
   if (esPagada(oc)) return <Badge>Liquidado</Badge>;
@@ -254,6 +259,7 @@ export function PagoRequerimientosPage() {
                     <span className="pago-lista__sub">{oc.solicitante || '—'} · {formatFechaPe(oc.fecha)}</span>
                     <span className="pago-lista__fila-badges">
                       {estadoBadge(oc)}
+                      <DetraccionPastilla oc={oc} />
                       <VencimientoCelda oc={oc} />
                     </span>
                   </div>
@@ -308,6 +314,7 @@ export function PagoRequerimientosPage() {
                 <Celda>
                   <span className="pago-estado">
                     {estadoBadge(oc)}
+                    <DetraccionPastilla oc={oc} />
                     {esPagada(oc) && (
                       <span className="t-footnote c-secondary">
                         {formatFechaPe(oc.fecha_pago)}{oc.numero_operacion ? ` · ${oc.numero_operacion}` : ''}
