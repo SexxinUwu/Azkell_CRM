@@ -2013,7 +2013,7 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
     // ── Orden de servicio de reencauche: una orden de compra con una línea SERV por medida para las llantas "Enviar para reforma" ──
     // Body: { codigos: [...], proveedor_nombre, proveedor_id?, proveedor_ruc?, precios: { '295/80R22.5': 120 }, condicion_pago?, dias_credito?, observaciones? }
     // Sigue la aprobación normal (misma copia en ordenes_compra y aviso a Gerencia que POST /entradas).
-    router.post('/entradas/generar-oc-reencauche', async (req, res) => {
+    router.post('/entradas/generar-oc-reencauche', tcSunatSiFalta, async (req, res) => {
         const tdb = getDb(req);
         let conn = null;
         try {
@@ -2033,6 +2033,12 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
             const precios = b.precios && typeof b.precios === 'object' ? b.precios : {};
             const usuario = u.nombre || u.correo || b.solicitante || 'Neumáticos';
             const cond = normalizarCondicion(b);
+            // Moneda, tipo de cambio e IGV de la cotización: el precio se escribe tal cual viene en ella y la orden guarda siempre los importes con IGV
+            const monedaOc = String(b.moneda || 'PEN').toUpperCase() === 'USD' ? 'USD' : 'PEN';
+            const tcOc = monedaOc === 'USD' ? (parseFloat(b.tipo_cambio) || 0) : 1;
+            if (monedaOc === 'USD' && !(tcOc > 0)) return res.status(400).json({ error: 'Indica el tipo de cambio de la orden en dólares' });
+            const modoIgv = ['sin_igv', 'incluido', 'mas_igv'].includes(b.tipo_igv) ? b.tipo_igv : 'sin_igv';
+            const r2 = n => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
             // En entradas_inv el crédito se guarda como "A crédito" (así lo reconoce Recepción); la copia en ordenes_compra usa "Crédito"
             const condEntrada = cond.condicion_pago === 'Crédito' ? 'A crédito' : 'Al contado';
             const anio = new Date().getFullYear();
@@ -2063,42 +2069,52 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
                 }
                 const precio = Number(precios[medida]);
                 if (!Number.isFinite(precio) || precio < 0) throw avisoReenc(400, `Indica el precio por llanta de la medida ${medida}`);
-                lineas.push({ medida, llantas: ls, servicio: svc[0], precio });
+                // «+ IGV 18 %»: el precio de la cotización no lleva IGV; la orden guarda el importe con IGV (117.00 → 138.06)
+                lineas.push({ medida, llantas: ls, servicio: svc[0], precio: modoIgv === 'mas_igv' ? r2(precio * 1.18) : precio });
             }
-            const total = lineas.reduce((acc, L) => acc + L.llantas.length * L.precio, 0);
+            const total = r2(lineas.reduce((acc, L) => acc + L.llantas.length * L.precio, 0));
+            const totalPen = monedaOc === 'USD' ? r2(total * tcOc) : total;
+            const simbolo = monedaOc === 'USD' ? 'US$' : 'S/';
             const motivo = String(b.observaciones || '').trim() || `Reencauche de ${llantas.length} llanta${llantas.length === 1 ? '' : 's'}`;
 
             await conn.query(
-                `INSERT INTO entradas_inv (id, fecha, proveedor_id, proveedor_nombre, moneda, tipo_cambio, total_pen, observaciones, tipo_igv,
-                    creado_por, motivo_entrada, tipo_orden, condicion_pago, dias_credito, estado, serie, numero_correlativo, dias_pagar,
+                `INSERT INTO entradas_inv (id, fecha, proveedor_id, proveedor_nombre, documento_referencia, moneda, tipo_cambio, total_pen, observaciones, tipo_igv,
+                    creado_por, motivo_entrada, sub_motivo, tipo_orden, condicion_pago, dias_credito, estado, serie, numero_correlativo, dias_pagar,
                     prioridad, solicitante, estado_factura, centro_costo)
-                 VALUES (?, ?, ?, ?, 'PEN', 1, ?, ?, ?, ?, 'Reencauche de llantas', 'Orden de compra', ?, ?, 'Registrado', ?, ?, ?, 'Normal', ?, 'Pendiente', 'CC-100')`,
-                [id, hoyLima(), b.proveedor_id || null, proveedorNombre, total, motivo, b.tipo_igv || 'sin_igv',
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Reencauche de llantas', 'Reencauche de llantas', 'Orden de compra', ?, ?, 'Registrado', ?, ?, ?, 'Normal', ?, 'Pendiente', 'CC-400')`,
+                [id, hoyLima(), b.proveedor_id || null, proveedorNombre, String(b.documento_referencia || '').trim().slice(0, 100) || null, monedaOc, tcOc, totalPen, motivo, modoIgv,
                  usuario, condEntrada, cond.dias_credito, String(anio), id, condEntrada === 'A crédito' ? cond.dias_credito : 0, usuario]);
             for (const L of lineas) {
                 await conn.query(
                     'INSERT INTO detalle_entradas_inv (entrada_id, inventario_id, descripcion, cantidad, costo_unitario, moneda, importe) VALUES (?,?,?,?,?,?,?)',
-                    [id, L.servicio.id, L.servicio.descripcion, L.llantas.length, L.precio, 'PEN', L.llantas.length * L.precio]);
+                    [id, L.servicio.id, L.servicio.descripcion, L.llantas.length, L.precio, monedaOc, r2(L.llantas.length * L.precio)]);
                 for (const ll of L.llantas) {
                     await conn.query(
                         "INSERT INTO neumaticos_reencauche_oc (oc_id, inventario_id, id_neumatico, estado, costo, usuario) VALUES (?, ?, ?, 'pendiente', ?, ?)",
                         [id, L.servicio.id, ll.id_neumatico, L.precio, usuario]);
                 }
             }
+            // Detracción (SPOT): tipo y % de la cotización; el servidor calcula el monto en soles
+            if (b.detraccion_codigo) {
+                let det;
+                try { det = await detraccionOc.camposDeOrden(conn, b, { moneda: monedaOc, totalPen, tipoCambioOrden: tcOc }); }
+                catch (eDet) { throw avisoReenc(eDet.status || 400, eDet.message); }
+                await conn.query('UPDATE entradas_inv SET detraccion_codigo = ?, detraccion_pct = ?, detraccion_tc = ?, detraccion_monto_pen = ? WHERE id = ?', [det.detraccion_codigo, det.detraccion_pct, det.detraccion_tc, det.detraccion_monto_pen, id]);
+            }
             await conn.commit();
 
             auditar(tdb, actorDe(req), {
                 action: 'CREATE', entity: 'warehouse-entry', entityId: id,
-                summary: `Generó la orden de reencauche ${id} de ${proveedorNombre} por S/ ${total.toFixed(2)} (${llantas.length} llantas)`,
-                changes: diff({}, { proveedor: proveedorNombre, monto_pen: total, llantas: llantas.length, estado: 'Registrado' }, ['proveedor', 'monto_pen', 'llantas', 'estado']),
+                summary: `Generó la orden de reencauche ${id} de ${proveedorNombre} por ${simbolo} ${total.toFixed(2)} (${llantas.length} llantas)`,
+                changes: diff({}, { proveedor: proveedorNombre, monto_pen: totalPen, moneda: monedaOc, llantas: llantas.length, estado: 'Registrado' }, ['proveedor', 'monto_pen', 'moneda', 'llantas', 'estado']),
             });
             despacharAprobacionWhatsAppAlmacen(req, tdb, id, {
-                proveedor_nombre: proveedorNombre, proveedor_ruc: b.proveedor_ruc || null, moneda: 'PEN', total_pen: total,
+                proveedor_nombre: proveedorNombre, proveedor_ruc: b.proveedor_ruc || null, moneda: monedaOc, total_pen: totalPen,
                 motivo_entrada: 'Reencauche de llantas', observaciones: motivo, solicitante: usuario, creado_por: usuario,
                 condicion_pago: cond.condicion_pago, dias_credito: cond.dias_credito,
-                items: lineas.map(L => ({ inventario_id: L.servicio.id, descripcion: L.servicio.descripcion, cantidad: L.llantas.length, costo_unitario: L.precio, importe: L.llantas.length * L.precio })),
+                items: lineas.map(L => ({ inventario_id: L.servicio.id, descripcion: L.servicio.descripcion, cantidad: L.llantas.length, costo_unitario: L.precio, importe: r2(L.llantas.length * L.precio) })),
             }).catch(e => console.error('[WhatsApp OC] Background error:', e));
-            res.json({ ok: true, id, total, llantas: llantas.length, lineas: lineas.map(L => ({ medida: L.medida, servicio: L.servicio.id, cantidad: L.llantas.length, precio: L.precio })) });
+            res.json({ ok: true, id, total, moneda: monedaOc, total_pen: totalPen, llantas: llantas.length, lineas: lineas.map(L => ({ medida: L.medida, servicio: L.servicio.id, cantidad: L.llantas.length, precio: L.precio })) });
         } catch (err) {
             if (conn) { try { await conn.rollback(); } catch (e) { /* ya cerrada */ } }
             if (!err.aviso) console.error('Error generando la orden de reencauche:', err);
