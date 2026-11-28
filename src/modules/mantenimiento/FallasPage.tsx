@@ -10,6 +10,7 @@ import { MenuOtros } from '../../core/ui/MenuOtros';
 import { Sheet } from '../../core/ui/Sheet';
 import { api, errorMessage } from '../../core/api/client';
 import './fallas.css';
+import { useAuth } from '../../core/auth/AuthProvider';
 
 interface Falla {
   id: string | number;
@@ -58,6 +59,7 @@ const ETIQUETAS_ESTADO: Record<string, string> = {
 const etiquetaEstado = (e: string) => ETIQUETAS_ESTADO[e.toUpperCase()] ?? e;
 
 export function FallasPage() {
+  const { can } = useAuth();
   const qc = useQueryClient();
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
@@ -160,11 +162,11 @@ export function FallasPage() {
             <div style={{ fontSize: '0.72rem', color: 'var(--label-2)', fontWeight: 600 }}>{k.label}</div>
           </div>
         ))}
-        <button type="button"
+        {can('fallas.crear') && <button type="button"
           onClick={() => { setMostrarForm(true); setMsg(null); }} className="fallas-nueva"
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 8, background: 'var(--ink)', color: '#fff', border: 'none', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>
           <Plus size={16} /> Reportar falla
-        </button>
+        </button>}
       </div>
 
       {isLoading ? <PageLoader /> : (
@@ -216,7 +218,7 @@ export function FallasPage() {
                         </div>
                       ) : null}
                     </div>
-                    {abierta && (
+                    {abierta && can('fallas.editar') && (
                       <div className="fallas-acciones">
                         <button type="button" className="fallas-accion"
                           onClick={() => cambiarEstado(f.id, 'EN_REVISION')}

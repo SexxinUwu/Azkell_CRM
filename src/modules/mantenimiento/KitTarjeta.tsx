@@ -49,12 +49,13 @@ function BadgeStock({ stock, requerido }: { stock: number | null; requerido: num
 }
 
 /** Un kit de mantenimiento: tipo, ítems, costo y cobertura de almacén; se expande para ver cada repuesto */
-export function KitTarjeta({ kit, inventario, abierto, onAlternar, puedeEditar, onEditar, onEliminar }: {
+export function KitTarjeta({ kit, inventario, abierto, onAlternar, puedeEditar, puedeEliminar, onEditar, onEliminar }: {
   kit: KitGrupo;
   inventario: ArticuloKit[];
   abierto: boolean;
   onAlternar: () => void;
   puedeEditar: boolean;
+  puedeEliminar: boolean;
   onEditar: () => void;
   onEliminar: () => void;
 }) {
@@ -79,7 +80,7 @@ export function KitTarjeta({ kit, inventario, abierto, onAlternar, puedeEditar, 
         {puedeEditar && (
           <span className="kt-kit__acciones">
             <BotonTip tip="Editar kit" className="btn btn--plain btn--icono btn-tip btn-tip--azul" aria-label={`Editar kit ${kit.tipo_mp} de ${kit.modelo}`} onClick={onEditar}><Pencil size={16} /></BotonTip>
-            <BotonTip tip="Eliminar kit" className="btn btn--plain btn--icono btn-tip btn-tip--rojo" aria-label={`Eliminar kit ${kit.tipo_mp} de ${kit.modelo}`} onClick={onEliminar}><Trash2 size={16} /></BotonTip>
+            {puedeEliminar && <BotonTip tip="Eliminar kit" className="btn btn--plain btn--icono btn-tip btn-tip--rojo" aria-label={`Eliminar kit ${kit.tipo_mp} de ${kit.modelo}`} onClick={onEliminar}><Trash2 size={16} /></BotonTip>}
           </span>
         )}
       </div>

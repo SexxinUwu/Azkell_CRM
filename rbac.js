@@ -100,6 +100,10 @@ module.exports = function globalRBAC(req, res, next) {
     const methodMap = { GET: 'l', POST: 'c', PUT: 'e', DELETE: 'd' };
     let accion = methodMap[req.method] || 'l';
     let mod = null;
+    // Mantenimiento: cada ruta pide el permiso de su módulo del catálogo (src/modules/sistema/permisosCatalogo.ts).
+    // leer(): en GET, las pantallas del taller también leen los datos de las demás; «Otros» (otros_mant) da lectura a sus ventanas.
+    // Escribir (POST, PUT, PATCH, DELETE) siempre pide el permiso del módulo de la ruta.
+    const leer = (...claves) => (req.method === 'GET' ? [...claves, 'otros_mant'] : []);
 
     // Si es un script legacy, forzar la acción según el nombre de la operación
     if (path.startsWith('/script/obtener') || path.startsWith('/script/buscar')) accion = 'l';
@@ -166,7 +170,7 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path === '/seguridad/entrega-vehiculos/pdf') { mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas', 'docs_flota']; accion = 'l'; }
     else if (path.startsWith('/seguridad/entrega-vehiculos') || path.startsWith('/flota/entrega-vehiculos')) mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas', ...(req.method === 'GET' ? ['docs_flota'] : [])];
     else if (path.startsWith('/seguridad')) mod = ['seguridad_unidades', 'seguridad', 'checklist', 'placas', 'unid'];
-    else if (path.startsWith('/configuracion-flota')) mod = 'cfg_mant';
+    else if (path.startsWith('/configuracion-flota')) mod = ['cfg_mant', ...leer()];
     // RRHH: cada pantalla con su permiso (antes no estaba mapeado y solo entraban administradores)
     else if (path.startsWith('/rrhh/tareo') || path.startsWith('/rrhh/marcacion') || path.startsWith('/rrhh/horarios')) mod = ['rrhh_asistencia'];
     else if (path.startsWith('/rrhh/nomina')) mod = ['rrhh_nomina'];
@@ -246,36 +250,46 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/operaciones') || path.includes('ordenes-viaje') || path.includes('guias-remision') || path.includes('viajes') || path.includes('programacion')) {
         mod = ['op_programacion', 'op_guias_remision', 'op_rutas', 'op_asignacion', 'op_monitoreo', 'combustible_analisis', 'combustible_vales', 'placas', 'fleet'];
     }
-    else if (path.startsWith('/taller-rampas') || path.startsWith('/taller/entradas') || path.startsWith('/taller/status') || path.startsWith('/taller/kanban')) {
-        mod = ['status_rampa', 'ot', 'trabajos_ot', 'fleetrun', 'plan', 'cfg_mant'];
+    else if (path.startsWith('/taller-rampas') || path.startsWith('/taller/entradas') || path.startsWith('/taller/status') || path.startsWith('/taller/kanban') || path === '/taller/ingreso') {
+        mod = ['status_rampa', ...leer('ot', 'trabajos_ot')];
     }
-    else if (path.startsWith('/ordenes') || path.startsWith('/taller/generar_ot')) {
-        mod = (req.method === 'GET') ? ['ot', 'status_rampa', 'trabajos_ot', 'reportes_ot', 'sal_inv'] : ['ot', 'status_rampa', 'trabajos_ot'];
+    else if (path.startsWith('/taller-personal') || path.startsWith('/taller/personal')) mod = ['pers_mant', ...leer()];
+    // Órdenes de trabajo: ingreso y OT, sus servicios y su PDF (el POST solo convierte el documento, no guarda nada)
+    else if (path.startsWith('/ordenes') || path.startsWith('/taller/generar_ot') || path.startsWith('/ot-servicios') || path.startsWith('/taller/ot-servicios')) {
+        mod = ['ot', ...leer('status_rampa', 'trabajos_ot', 'reportes_ot')];
     }
-    else if (path.startsWith('/taller/trabajos') || path.startsWith('/ot-trabajos') || path.startsWith('/ot-horas-tecnicos')) {
-        mod = ['trabajos_ot', 'ot', 'status_rampa'];
-        // Registrar técnicos es una edición del trabajo, no una alta
+    else if (path === '/ot-pdf') { mod = ['ot', 'trabajos_ot', 'reportes_ot']; accion = 'l'; }
+    // Materiales de la OT (y los repuestos de un trabajo)
+    else if (path.startsWith('/ot-materiales') || path.startsWith('/taller/ot-materiales') || path.startsWith('/taller/repuestos') || /^\/taller\/trabajos\/[^/]+\/repuestos$/.test(path)) {
+        mod = ['ot', ...leer('trabajos_ot', 'status_rampa')];
+    }
+    // Trabajos de la OT y técnicos; regularizar técnicos es una edición del trabajo
+    else if (path.startsWith('/taller/trabajos') || path.startsWith('/ot-trabajos') || path.startsWith('/ot-horas-tecnicos') || path.startsWith('/ot-tecnicos-disponibles') || path.startsWith('/ot-ultimo-dia')) {
+        mod = ['trabajos_ot', ...leer('ot', 'status_rampa', 'reportes_ot')];
         if (path.startsWith('/ot-trabajos/regularizar-tecnicos')) accion = 'e';
     }
-    else if (path.startsWith('/ot-materiales') || path.startsWith('/taller/ot-materiales') || path.startsWith('/taller/ot-servicios') || path.startsWith('/taller/repuestos')) mod = ['ot', 'trabajos_ot', 'status_rampa', 'sal_inv', 'inv'];
-    else if (path.startsWith('/taller/historial')) mod = ['ot'];
-    // PDF de la OT: el POST solo convierte el documento, no guarda nada; quien ve la OT puede imprimirla
-    else if (path === '/ot-pdf') { mod = ['ot', 'trabajos_ot', 'status_rampa', 'reportes_ot']; accion = 'l'; }
+    else if (path.startsWith('/taller/historial')) mod = ['ot', ...leer('trabajos_ot', 'reportes_ot')];
     else if (path.startsWith('/checklist') || path.startsWith('/mantenimiento/checklist')) {
         if (req.user && req.user.rol && req.user.rol.toLowerCase().includes('conductor')) {
             return next();
         }
-        mod = ['checklist', 'ot', 'insp', 'status_rampa', 'cond', 'conductores', 'op_conductor', 'conductor_portal'];
+        // Generar OT desde el checklist crea órdenes de trabajo: pide el permiso de OT
+        if (/\/generar-ots$/.test(path)) mod = ['ot'];
+        else {
+            mod = ['checklist', ...leer('ot', 'seguridad_unidades')];
+            // Quitar una falla o restaurar la configuración es una edición del checklist
+            if (/\/(quitar-falla|restaurar)$/.test(path)) accion = 'e';
+        }
     }
-    else if (path.startsWith('/fallas')) {
-        mod = ['fallas', 'ot', 'status_rampa', 'reportes_ot', 'placas'];
-    }
+    else if (path.startsWith('/fallas')) mod = ['fallas', ...leer('checklist')];
     else if (path.startsWith('/2fa')) {
         // 2FA es gestión personal de cuenta: cualquier usuario autenticado puede usar estas rutas
         return next();
     }
     else if (path.startsWith('/mantenimiento/incidencias') || path.startsWith('/incidencias-ruta')) {
-        mod = ['incidencias', 'ot', 'status_rampa', 'fleet', 'fleetrun', 'placas'];
+        // Marcar una incidencia como solucionada (PATCH) es una edición
+        if (req.method === 'PATCH') accion = 'e';
+        mod = ['incidencias_ruta', ...leer('ot', 'fleet')];
     }
     else if (path.startsWith('/telemetria')) {
         mod = ['fleet', 'fleetrun', 'gps', 'placas'];
@@ -304,22 +318,35 @@ module.exports = function globalRBAC(req, res, next) {
     // PDF de la inspección: el POST solo convierte el documento, no guarda nada; quien ve las inspecciones puede imprimirlas
     else if (path === '/mantenimiento/inspecciones/pdf') { mod = ['insp']; accion = 'l'; }
     else if (path.startsWith('/inspecciones') || path.startsWith('/mantenimiento/inspecciones')) mod = ['insp'];
-    // Control de siniestros y daños de flota (Mantenimiento › Otros): su propio permiso
-    else if (path.startsWith('/mantenimiento/siniestros')) mod = ['siniestros'];
-    else if (path.startsWith('/planificacion')) mod = ['plan'];
-    else if (path.startsWith('/mantenimiento-kits') || path.startsWith('/tipos-preventivo') || path.startsWith('/tipos-mantenimiento')) mod = ['cfg_mant'];
-    else if (path.startsWith('/config-metrica')) mod = ['cfg_metrica', 'cfg_mant'];
-    else if (path.startsWith('/backlog') || path.startsWith('/ot-backlog')) mod = ['ot', 'status_rampa'];
+    // Siniestros y daños (Mantenimiento › Otros): su propio permiso
+    else if (path.startsWith('/mantenimiento/siniestros')) mod = ['siniestros', ...leer()];
+    // Planificación de mantenimientos, con sus requerimientos, reportes y el envío de alertas
+    else if (path.startsWith('/planificacion') || path.toLowerCase().includes('planificacion') || path.startsWith('/requerimientos')) {
+        mod = ['plan', ...leer()];
+        if (/\/completar$/.test(path)) accion = 'e';   // marcar un mantenimiento como hecho es una edición
+    }
+    // Configuración de mantenimiento: kits, frecuencias, tipos MP, métricas y destinatarios de alertas
+    else if (path.startsWith('/mantenimiento-kits') || path.startsWith('/tipos-preventivo') || path.startsWith('/tipos-mantenimiento') || path.startsWith('/config-metrica') || path.startsWith('/destinatarios-alertas') || path === '/testEmail') {
+        mod = ['cfg_mant', ...leer()];
+        if (/\/(bulk-delete|eliminarGrupo)$/.test(path)) accion = 'd';   // borrar en lote
+        if (path === '/tipos-preventivo/sync-desde-frecuencias') accion = 'e';
+    }
+    else if (path.startsWith('/backlog') || path.startsWith('/ot-backlog')) mod = ['ot', ...leer('status_rampa', 'trabajos_ot', 'reportes_ot')];
     // Legacy & API Endpoints
     else if (path.startsWith('/placas') || path.startsWith('/placa') || path.toLowerCase().includes('placa')) mod = ['placas', 'fleet'];
     else if (path.startsWith('/conductores') || path.startsWith('/conductor') || path.toLowerCase().includes('conductor')) mod = ['cond', 'conductores'];
     else if (path.toLowerCase().includes('usuario')) return res.status(403).json({ error: 'Solo un administrador puede usar esta sección.' });
     else if (path.startsWith('/vehiculos-flota') || path.startsWith('/documentos') || path.startsWith('/documento') || path.toLowerCase().includes('documento')) mod = ['docs_flota', 'placas', 'insp', 'ot'];
     else if (path.startsWith('/inspecciones') || path.toLowerCase().includes('inspeccion')) mod = ['insp'];
-    else if (path.toLowerCase().includes('fleetrun')) mod = ['fleetrun', 'fleet', 'cfg_mant', 'plan'];
-    else if (path.toLowerCase().includes('statusflota')) mod = ['status_rampa', 'fleet', 'fleetrun', 'ot', 'status'];
+    // Mantenimiento preventivo (Fleetrun): su pantalla es «Mantenimiento preventivo» (permiso fleet)
+    else if (path.toLowerCase().includes('fleetrun')) {
+        mod = ['fleet', ...leer('plan', 'cfg_mant')];
+        if (path === '/fleetrun-pdf') accion = 'l';   // el PDF no guarda nada
+        if (/backfill/i.test(path)) accion = 'e';     // corrige códigos ya registrados
+    }
+    else if (path.toLowerCase().includes('statusflota')) mod = ['status_rampa', ...leer('fleet')];
     else if (path.toLowerCase().includes('wialon')) mod = ['gps', 'fleet'];
-    else if (path.toLowerCase().includes('tiposmantenimiento') || path.toLowerCase().includes('tpmp')) mod = ['cfg_mant', 'fleetrun', 'ot', 'plan'];
+    else if (path.toLowerCase().includes('tiposmantenimiento') || path.toLowerCase().includes('tpmp')) mod = ['cfg_mant', ...leer('fleet', 'plan')];
     else if (path.startsWith('/script/')) {
         let col = (req.body.coleccion || '').toLowerCase();
         if (col === 'usuarios') mod = ['usuarios'];
@@ -328,10 +355,10 @@ module.exports = function globalRBAC(req, res, next) {
         else if (col === 'inventario') mod = ['inv'];
         else if (col === 'entradas_almacen') mod = ['ent_inv'];
         else if (col === 'salidas_almacen') mod = ['sal_inv'];
-        else if (col === 'ordenes_trabajo' || col === 'ot_actividades') mod = ['ot', 'status_rampa', 'trabajos_ot'];
-        else if (col === 'mantenimiento_preventivo') mod = ['cfg_mant', 'fleetrun', 'plan'];
+        else if (col === 'ordenes_trabajo' || col === 'ot_actividades') mod = ['ot', ...leer('status_rampa', 'trabajos_ot')];
+        else if (col === 'mantenimiento_preventivo') mod = ['fleet', 'cfg_mant', 'plan'];
         else if (col === 'planificacion_mps') mod = ['plan'];
-        else mod = ['fleetrun', 'ot', 'status_rampa', 'inv', 'placas'];
+        else mod = ['fleet', 'ot', 'status_rampa', 'inv', 'placas'];
     }
 
     if (mod) {

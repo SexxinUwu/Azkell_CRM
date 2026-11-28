@@ -314,8 +314,8 @@ export function OrdenesTrabajoPage() {
     try { localStorage.setItem(CLAVE_COLS_OT, JSON.stringify([...n])); } catch { /* sin almacenamiento */ }
     return n;
   });
-  const puedeEditar  = can('reportes_ot.editar') || can('reportes_ot.editar');
-  const puedeEliminar = can('reportes_ot.eliminar') || can('reportes_ot.eliminar');
+  const puedeEditar  = can('ot.editar');
+  const puedeEliminar = can('ot.eliminar');
   // Se busca la OT en los datos actuales: el detalle refleja pausas y cierres tras cada acción
   const otActual = seleccionada ? (ots.find(o => otId(o) === otId(seleccionada)) ?? seleccionada) : null;
   const soloDetalle  = !!otActual;
@@ -599,6 +599,7 @@ const ESTADOS_BACKLOG = ['Pendiente', 'Realizado'];
 const estadoVista = (e: string) => (e === 'Realizado' || e === 'Completado' ? 'Realizado' : e === 'Cancelado' || e === 'Anulado' ? 'Cancelado' : 'Pendiente');
 
 function BacklogTab({ onCrear }: { onCrear: () => void; qc?: ReturnType<typeof useQueryClient>; toast?: (msg: string, tone?: 'error') => void }) {
+  const { can } = useAuth();
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('Todos');
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
@@ -651,7 +652,7 @@ function BacklogTab({ onCrear }: { onCrear: () => void; qc?: ReturnType<typeof u
       {isLoading ? <PageLoader /> : visibles.length === 0 ? (
         <EmptyState icon={hayFiltros ? <SearchX size={22} /> : <BookOpen size={22} />}
           title={hayFiltros ? 'Sin coincidencias' : 'Backlog vacío'}>
-          {!hayFiltros && <Button variant="primary" size="sm" icon={<Plus size={14} />} onClick={onCrear}>Agregar tarea</Button>}
+          {!hayFiltros && can('ot.crear') && <Button variant="primary" size="sm" icon={<Plus size={14} />} onClick={onCrear}>Agregar tarea</Button>}
         </EmptyState>
       ) : (
         <TablaRedimensionable id="backlog-v2" columnas={COLUMNAS_BACKLOG} ariaLabel="Backlog de mantenimiento" altoMax="68vh" className="tabla-redim--compacta">

@@ -49,20 +49,20 @@ const EDITAN_TERCEROS = ['clientes', 'prov_inv', 'combustible_vales'].flatMap(c 
 
 // Opciones de "Otros" de Mantenimiento: la página /mantenimiento/otros las muestra en casillas
 export const OTROS_MANTENIMIENTO: NavItem[] = [
-        { key: 'planificacion', label: 'Planificación de mantenimientos', to: '/mantenimiento/planificacion', icon: CalendarDays, permissions: ver('otros_mant') },
-        { key: 'backlog', label: 'Backlog pendientes', to: '/mantenimiento/reportes-ot?tab=backlog', icon: Hourglass, permissions: ver('otros_mant') },
-        { key: 'kpis', label: 'Métricas y KPIs', to: '/mantenimiento/kpis-taller', icon: Activity, permissions: ver('otros_mant') },
-        { key: 'productividad', label: 'Productividad personal', to: '/mantenimiento/productividad', icon: HardHat, permissions: ver('otros_mant') },
-        { key: 'finanzas-taller', label: 'Reporte financiero', to: '/mantenimiento/finanzas-taller', icon: Wallet, permissions: ver('otros_mant') },
-        { key: 'frecuencias-mp', label: 'Frecuencias MP', to: '/mantenimiento/configuracion-mp', icon: Settings, permissions: ver('otros_mant') },
-        { key: 'kits-mp', label: 'Kits MP', to: '/mantenimiento/kits-mp', icon: Package, permissions: ver('otros_mant') },
-        { key: 'tipos-mp', label: 'Tipos MP', to: '/mantenimiento/tipos-mp', icon: Wrench, permissions: ver('otros_mant') },
-        { key: 'fleetrun-config', label: 'Umbrales Fleetrun', to: '/mantenimiento/fleetrun-config', icon: Gauge, permissions: ver('otros_mant') },
-        { key: 'config-metrica', label: 'Config. métrica', to: '/mantenimiento/config-metrica', icon: Target, permissions: ver('otros_mant') },
-  { key: 'siniestros', label: 'Siniestros y daños', to: '/mantenimiento/siniestros', icon: TriangleAlert, permissions: ver('otros_mant') },
-  { key: 'siniestros-analisis', label: 'Análisis de siniestros', to: '/mantenimiento/siniestros-analisis', icon: BarChart3, permissions: ver('otros_mant') },
-  { key: 'personal-taller', label: 'Personal Taller', to: '/mantenimiento/personal', icon: UserCog, permissions: ver('otros_mant') },
-  { key: 'situaciones', label: 'Situaciones', to: '/preferencias/situaciones', icon: Tag, permissions: ver('otros_mant') },
+        { key: 'planificacion', label: 'Planificación de mantenimientos', to: '/mantenimiento/planificacion', icon: CalendarDays, permissions: ver('otros_mant', 'plan') },
+        { key: 'backlog', label: 'Backlog pendientes', to: '/mantenimiento/reportes-ot?tab=backlog', icon: Hourglass, permissions: ver('otros_mant', 'mant_dashboard', 'trabajos_ot') },
+        { key: 'kpis', label: 'Métricas y KPIs', to: '/mantenimiento/kpis-taller', icon: Activity, permissions: ver('otros_mant', 'mant_dashboard') },
+        { key: 'productividad', label: 'Productividad personal', to: '/mantenimiento/productividad', icon: HardHat, permissions: ver('otros_mant', 'pers_mant', 'mant_dashboard') },
+        { key: 'finanzas-taller', label: 'Reporte financiero', to: '/mantenimiento/finanzas-taller', icon: Wallet, permissions: ver('otros_mant', 'mant_dashboard') },
+        { key: 'frecuencias-mp', label: 'Frecuencias MP', to: '/mantenimiento/configuracion-mp', icon: Settings, permissions: ver('otros_mant', 'cfg_mant') },
+        { key: 'kits-mp', label: 'Kits MP', to: '/mantenimiento/kits-mp', icon: Package, permissions: ver('otros_mant', 'cfg_mant') },
+        { key: 'tipos-mp', label: 'Tipos MP', to: '/mantenimiento/tipos-mp', icon: Wrench, permissions: ver('otros_mant', 'cfg_mant') },
+        { key: 'fleetrun-config', label: 'Umbrales Fleetrun', to: '/mantenimiento/fleetrun-config', icon: Gauge, permissions: ver('otros_mant', 'cfg_fleetrun') },
+        { key: 'config-metrica', label: 'Config. métrica', to: '/mantenimiento/config-metrica', icon: Target, permissions: ver('otros_mant', 'cfg_mant') },
+  { key: 'siniestros', label: 'Siniestros y daños', to: '/mantenimiento/siniestros', icon: TriangleAlert, permissions: ver('otros_mant', 'siniestros') },
+  { key: 'siniestros-analisis', label: 'Análisis de siniestros', to: '/mantenimiento/siniestros-analisis', icon: BarChart3, permissions: ver('otros_mant', 'siniestros') },
+  { key: 'personal-taller', label: 'Personal Taller', to: '/mantenimiento/personal', icon: UserCog, permissions: ver('otros_mant', 'pers_mant') },
+  { key: 'situaciones', label: 'Situaciones', to: '/preferencias/situaciones', icon: Tag, permissions: ver('otros_mant', 'cfg_situacion') },
 ];
 
 const SECCIONES_BASE: NavSection[] = [

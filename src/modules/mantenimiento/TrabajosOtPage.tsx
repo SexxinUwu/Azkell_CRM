@@ -143,7 +143,7 @@ export function TrabajosOtPage() {
               vista === 'trabajos'
                 ? { label: 'Exportar Excel', detalle: `${visibles.length} trabajos`, icon: <FileSpreadsheet size={17} />, onSelect: exportar }
                 : { label: 'Exportar Excel', detalle: 'Historial y horas por técnico', icon: <FileSpreadsheet size={17} />, onSelect: exportarHoras },
-              { label: 'Importar desde Excel', icon: <FileSpreadsheet size={17} />, separado: true, onSelect: () => setImportando(true) },
+              can('trabajos_ot.crear') && { label: 'Importar desde Excel', icon: <FileSpreadsheet size={17} />, separado: true, onSelect: () => setImportando(true) },
             ]} />
           }
         />
