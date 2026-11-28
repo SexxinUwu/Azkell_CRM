@@ -401,7 +401,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       const base: LineaOC = {
         ...l,
         inventario_id: art.id,
-        descripcion: art.articulo || art.descripcion || '',
+        descripcion: art.descripcion || art.articulo || '',
         unidad: art.unidad ?? null,
         refCosto: ref > 0 ? ref : null,
         cantidad: num(l.cantidad) > 0 ? l.cantidad : '1',
@@ -431,7 +431,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
     if (!art) { pitido(false); haptic('warning'); setAvisoVarios({ ok: false, texto: `El código ${codigo} no es de ningún artículo${servicio ? ' ni servicio' : ''} de esta orden.` }); return; }
     const ref = costoReferencia(art, moneda, tc);
     const conArticulo = (l: LineaOC, cant: number): LineaOC => {
-      const base: LineaOC = { ...l, inventario_id: art.id, descripcion: art.articulo || art.descripcion || '', unidad: art.unidad ?? null, refCosto: ref > 0 ? ref : null, cantidad: String(cant) };
+      const base: LineaOC = { ...l, inventario_id: art.id, descripcion: art.descripcion || art.articulo || '', unidad: art.unidad ?? null, refCosto: ref > 0 ? ref : null, cantidad: String(cant) };
       return modoIgv === 'mas_igv'
         ? calcularLinea({ ...base, vu: (ref / (1 + TASA_IGV)).toFixed(4) }, 'vu', modoIgv)
         : calcularLinea({ ...base, pu: ref.toFixed(2) }, 'pu', modoIgv);
@@ -445,7 +445,7 @@ export function EntradaFormulario({ open, entrada: e, onClose, onGuardado, otPre
       return [...prev, conArticulo(nuevaLinea(), cuantas)];
     });
     pitido(true); haptic('success');
-    setAvisoVarios({ ok: true, texto: `${art.articulo || art.descripcion} · +${cuantas}` });
+    setAvisoVarios({ ok: true, texto: `${art.descripcion || art.articulo} · +${cuantas}` });
   }
 
   /** Resultado del escáner: busca por código (o código de barras) entre los artículos de esta clase */
