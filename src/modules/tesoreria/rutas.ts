@@ -80,4 +80,10 @@ export const RUTAS: RutaModulo[] = [
     Page: lazy(() => import('./FlujoCajaPage').then(m => ({ default: m.FlujoCajaPage }))),
     nav: { key: 'flujo-caja', label: 'Flujo de caja', to: '/tesoreria/flujo-caja', icon: 'BarChart2', permisos: ['tesoreria_caja.ver'] },
   },
+  {
+    path: 'tesoreria/detracciones/*',
+    permisos: ['tesoreria_caja.ver', 'tesoreria_pago_req.ver', 'admin'],
+    Page: lazy(() => import('./DetraccionesPage').then(m => ({ default: m.DetraccionesPage }))),
+    nav: { key: 'detracciones', label: 'Detracciones', to: '/tesoreria/detracciones', icon: 'Percent', permisos: ['tesoreria_caja.ver', 'tesoreria_pago_req.ver'] },
+  },
 ];

@@ -2171,6 +2171,87 @@ const promesa = (d) => (typeof d.promise === 'function' ? d.promise() : d);
         try { res.json({ ok: true, data: await detraccionOc.tiposActivos(promesa(getDb(req))) }); }
         catch (err) { res.status(500).json({ ok: false, error: err.message }); }
     });
+    // ── Catálogo de tipos de detracción: solo administradores (ver, agregar, editar, activar o desactivar). El código no se cambia una vez creado.
+    // Cambiar el porcentaje o el mínimo solo afecta a las órdenes nuevas: cada orden guarda el porcentaje con el que se registró.
+    const soloAdminDetraccion = (req, res) => {
+        if (esAdminDeSesion(req)) return true;
+        res.status(403).json({ ok: false, error: 'Solo un administrador puede editar el catálogo de tipos de detracción.' });
+        return false;
+    };
+    const validarTipoDetraccion = (b, { nuevo }) => {
+        const out = {};
+        if (nuevo) {
+            const codigo = String(b.codigo || '').trim();
+            if (!/^\d{3}$/.test(codigo)) return { error: 'El código SUNAT debe tener 3 dígitos (por ejemplo 020).' };
+            out.codigo = codigo;
+        }
+        if (nuevo || b.descripcion !== undefined) {
+            const d = String(b.descripcion || '').trim().replace(/\s+/g, ' ');
+            if (d.length < 3 || d.length > 150) return { error: 'La descripción debe tener entre 3 y 150 caracteres.' };
+            out.descripcion = d;
+        }
+        if (nuevo || b.porcentaje !== undefined) {
+            const p = detraccionOc.num(b.porcentaje);
+            if (!(p > 0 && p <= 100)) return { error: 'El porcentaje debe ser mayor que 0 y no pasar de 100.' };
+            out.porcentaje = Math.round(p * 100) / 100;
+        }
+        if (nuevo || b.monto_minimo !== undefined) {
+            const raw = b.monto_minimo === '' || b.monto_minimo === null || b.monto_minimo === undefined ? 0 : detraccionOc.num(b.monto_minimo);
+            if (!(raw >= 0 && raw <= 10000000)) return { error: 'El monto mínimo debe ser 0 o mayor (en soles).' };
+            out.monto_minimo = Math.round(raw * 100) / 100;
+        }
+        if (b.activo !== undefined) {
+            if (typeof b.activo !== 'boolean' && b.activo !== 0 && b.activo !== 1) return { error: 'El estado debe ser activo o inactivo.' };
+            out.activo = b.activo ? 1 : 0;
+        }
+        return { campos: out };
+    };
+    const tipoDetraccionComoJson = f => ({ ...f, porcentaje: Number(f.porcentaje), monto_minimo: Number(f.monto_minimo), activo: !!f.activo, usos: Number(f.usos) || 0 });
+    router.get('/detraccion-tipos/todos', async (req, res) => {
+        if (!soloAdminDetraccion(req, res)) return;
+        try {
+            const [filas] = await promesa(getDb(req)).query(`SELECT id, codigo, descripcion, porcentaje, monto_minimo, activo, actualizado_por, DATE_FORMAT(actualizado_en, '%Y-%m-%d %H:%i') AS actualizado_en FROM detraccion_tipos ORDER BY codigo`);
+            // Cuántas órdenes usan cada tipo (aparte: el catálogo y entradas_inv tienen distinta collation)
+            const [usos] = await promesa(getDb(req)).query('SELECT detraccion_codigo AS codigo, COUNT(*) AS n FROM entradas_inv WHERE detraccion_codigo IS NOT NULL GROUP BY detraccion_codigo');
+            const porCodigo = new Map(usos.map(u => [String(u.codigo), Number(u.n)]));
+            res.json({ ok: true, data: filas.map(f => tipoDetraccionComoJson({ ...f, usos: porCodigo.get(String(f.codigo)) || 0 })) });
+        } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+    });
+    router.post('/detraccion-tipos', async (req, res) => {
+        if (!soloAdminDetraccion(req, res)) return;
+        try {
+            const v = validarTipoDetraccion(req.body || {}, { nuevo: true });
+            if (v.error) return res.status(400).json({ ok: false, error: v.error });
+            const c = v.campos; const tdb = getDb(req); const p = promesa(tdb); const actor = actorDe(req);
+            const [ya] = await p.query('SELECT id FROM detraccion_tipos WHERE codigo = ? LIMIT 1', [c.codigo]);
+            if (ya.length) return res.status(409).json({ ok: false, error: `Ya existe el tipo ${c.codigo}. Edítalo en lugar de crearlo de nuevo.` });
+            const [ins] = await p.query('INSERT INTO detraccion_tipos (codigo, descripcion, porcentaje, monto_minimo, activo, actualizado_por, actualizado_en) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+                [c.codigo, c.descripcion, c.porcentaje, c.monto_minimo, c.activo === undefined ? 1 : c.activo, actor.userName]);
+            await auditar(tdb, actor, { action: 'CREATE', entity: 'detraccion-tipo', entityId: c.codigo, summary: `Creó el tipo de detracción ${c.codigo} · ${c.descripcion} (${c.porcentaje} %, mínimo S/ ${c.monto_minimo})`,
+                changes: { porcentaje: { from: null, to: c.porcentaje }, monto_minimo: { from: null, to: c.monto_minimo } } });
+            res.json({ ok: true, id: ins.insertId });
+        } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+    });
+    router.put('/detraccion-tipos/:id', async (req, res) => {
+        if (!soloAdminDetraccion(req, res)) return;
+        try {
+            const id = Number(req.params.id) || 0; const tdb = getDb(req); const p = promesa(tdb); const actor = actorDe(req);
+            const [rows] = await p.query('SELECT id, codigo, descripcion, porcentaje, monto_minimo, activo FROM detraccion_tipos WHERE id = ? LIMIT 1', [id]);
+            if (!rows.length) return res.status(404).json({ ok: false, error: 'No existe ese tipo de detracción.' });
+            const v = validarTipoDetraccion(req.body || {}, { nuevo: false });
+            if (v.error) return res.status(400).json({ ok: false, error: v.error });
+            const antes = { descripcion: rows[0].descripcion, porcentaje: Number(rows[0].porcentaje), monto_minimo: Number(rows[0].monto_minimo), activo: !!rows[0].activo };
+            const despues = { ...antes, ...v.campos, ...(v.campos.activo !== undefined ? { activo: !!v.campos.activo } : {}) };
+            const cambios = diff(antes, despues, ['descripcion', 'porcentaje', 'monto_minimo', 'activo']);
+            if (!Object.keys(cambios).length) return res.json({ ok: true, sin_cambios: true });
+            const [u] = await p.query('UPDATE detraccion_tipos SET descripcion = ?, porcentaje = ?, monto_minimo = ?, activo = ?, actualizado_por = ?, actualizado_en = NOW() WHERE id = ?',
+                [despues.descripcion, despues.porcentaje, despues.monto_minimo, despues.activo ? 1 : 0, actor.userName, id]);
+            if (u.affectedRows !== 1) return res.status(409).json({ ok: false, error: 'No se pudo guardar el cambio. Actualiza la pantalla.' });
+            const lista = Object.keys(cambios).map(k => `${k} ${cambios[k].from} → ${cambios[k].to}`).join(', ');
+            await auditar(tdb, actor, { action: 'UPDATE', entity: 'detraccion-tipo', entityId: rows[0].codigo, summary: `Editó el tipo de detracción ${rows[0].codigo}: ${lista}`, changes: cambios });
+            res.json({ ok: true });
+        } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+    });
     router.put('/entradas/:id', tcSunatSiFalta, ordenEditable, (req, res) => {
         const tdb = getDb(req);
         const { id } = req.params;

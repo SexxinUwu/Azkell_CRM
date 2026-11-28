@@ -1,0 +1,39 @@
+/* Detracciones (det-*). Filtros, tablas del reporte y del cruce con el SIRE, y configuración. */
+
+.det-pestanas { margin-bottom: var(--s-4); }
+.det-cuerpo { display: flex; flex-direction: column; gap: var(--s-4); }
+
+.det-filtros { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-3); align-items: end; }
+.det-filtros--cruce { grid-template-columns: repeat(2, minmax(0, 12rem)) auto; }
+.det-interruptor { display: flex; align-items: center; gap: var(--s-2); min-height: 2.75rem; font-size: 0.875rem; color: var(--label); }
+
+.det-barra { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
+.det-nota { margin: 0; font-size: 0.75rem; line-height: 1.4; color: var(--label-2); }
+.det-total td { font-weight: 700; background: var(--surface-sunken); border-top: 1px solid var(--separator-strong); }
+
+.det-resumen { display: flex; gap: var(--s-4); flex-wrap: wrap; font-size: 0.8125rem; color: var(--label-2); }
+.det-resumen strong { color: var(--label); font-variant-numeric: tabular-nums; }
+
+.det-hallazgos { white-space: normal; }
+.det-hallazgo { display: block; font-size: 0.8125rem; line-height: 1.35; }
+.det-hallazgo + .det-hallazgo { margin-top: 2px; }
+.det-hallazgo--alta { color: var(--red-ink); font-weight: 600; }
+.det-hallazgo--media { color: var(--amber-ink); }
+.det-hallazgo--info { color: var(--label-2); }
+.det-hallazgo-fecha { display: block; font-size: 0.6875rem; color: var(--label-2); margin-top: 2px; }
+
+.det-limites { padding: var(--s-3) var(--s-4); background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-card); }
+.det-limites h3 { margin: 0 0 var(--s-2); display: flex; align-items: center; gap: var(--s-2); font-size: 0.8125rem; font-weight: 700; color: var(--label); }
+.det-limites ul { margin: 0; padding-left: 1.1rem; font-size: 0.75rem; line-height: 1.5; color: var(--label-2); }
+
+.det-tarjeta {
+  display: flex; flex-direction: column; gap: var(--s-3); min-width: 0;
+  padding: var(--s-4); background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-card);
+}
+.det-tarjeta__cabecera { display: flex; justify-content: space-between; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
+.det-tarjeta__titulo { margin: 0; font-size: 0.9375rem; font-weight: 700; color: var(--label); }
+.det-acciones { display: inline-flex; gap: var(--s-1); }
+
+@media (max-width: 760px) {
+  .det-filtros, .det-filtros--cruce { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

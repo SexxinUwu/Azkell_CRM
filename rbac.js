@@ -41,6 +41,7 @@ module.exports = function globalRBAC(req, res, next) {
         '/config-metrica',
         '/km-historico',
         '/almacen/marcas-placas',
+        '/almacen/detraccion-tipos', // catálogo de tipos de detracción (lectura para el formulario de la orden); editarlo es solo de administradores
         '/almacen/familias',
         '/almacen/marcas',
         '/almacen/sistemas',
@@ -267,6 +268,8 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/telemetria')) {
         mod = ['fleet', 'fleetrun', 'gps', 'placas'];
     }
+    // Detracciones (reportes y cruce): quien ve Caja o Pago de requerimientos las consulta; la configuración la guarda solo un administrador (lo valida la ruta)
+    else if (path.startsWith('/tesoreria/detracciones')) mod = req.method === 'GET' ? ['tesoreria_caja', 'tesoreria_pago_req', 'tesoreria'] : ['administracion'];
     else if (path.startsWith('/tesoreria')) mod = ['tesoreria', 'tes_motivos', 'liquidaciones_gastos', 'cond', 'conductores'];
     // PDF de la inspección: el POST solo convierte el documento, no guarda nada; quien ve las inspecciones puede imprimirlas
     else if (path === '/mantenimiento/inspecciones/pdf') { mod = ['insp']; accion = 'l'; }
