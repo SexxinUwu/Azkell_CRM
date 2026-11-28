@@ -1051,6 +1051,12 @@ module.exports = function (db, broadcast, logAudit) {
         try {
             const tdb = getDb(req);
             const b = req.body || {};
+            // Operaciones entra aquí solo para la cochera de conductor (rbac.js deja pasar op_ordenes_viaje): cualquier otro cargo exige Caja > Crear
+            let permisosUsuario = {};
+            try { permisosUsuario = typeof req.user?.permisos === 'string' ? JSON.parse(req.user.permisos || '{}') : (req.user?.permisos || {}); } catch (e) { permisosUsuario = {}; }
+            const cajaCrear = req.user?.rol === 'Fundador' || permisosUsuario.admin === true || permisosUsuario.tesoreria_caja?.c === 1 || permisosUsuario.tesoreria_caja?.c === true;
+            const esCochera = String(b.centro_costo || '').startsWith('CC-300') && String(b.descripcion || '').startsWith('Cochera de Conductor');
+            if (!cajaCrear && !esCochera) return res.status(403).json({ ok: false, error: 'RBAC: Permiso denegado: registrar en Caja exige la acción Crear en Caja' });
 
             let voucherUrl = null;
             if (req.files && req.files.voucher && req.files.voucher[0]) {

@@ -111,6 +111,7 @@ function FondoDetalle({ fondoId, onClose, onGasto, onReponer }: {
   const f = fondo.data;
   const hoy = hoyLocal();
   const puedeGestionar = can('tesoreria_caja.crear');
+  const puedeAprobarGerencia = can('gerencia_aprobaciones_caja.aprobar');
 
   async function accion(clave: string, path: string) {
     setOcupado(clave);
@@ -142,10 +143,10 @@ function FondoDetalle({ fondoId, onClose, onGasto, onReponer }: {
           {f.estado === 'PENDIENTE' && (
             <Notice tone="accent">
               Falta aprobación: Tesorería {f.aprob_tesoreria_por ? '✓' : 'pendiente'} · Gerencia {f.aprob_gerencia_por ? '✓' : 'pendiente'}.
-              {puedeGestionar && (
+              {(puedeGestionar || puedeAprobarGerencia) && (
                 <span className="cc-aprobar">
-                  {!f.aprob_tesoreria_por && <Button size="sm" variant="secondary" loading={ocupado === 'at'} onClick={() => accion('at', `/fondos/${f.id}/aprobar-tesoreria`)}>Aprobar como Tesorería</Button>}
-                  {!f.aprob_gerencia_por && <Button size="sm" variant="secondary" loading={ocupado === 'ag'} onClick={() => accion('ag', `/fondos/${f.id}/aprobar-gerencia`)}>Aprobar como Gerencia</Button>}
+                  {puedeGestionar && !f.aprob_tesoreria_por && <Button size="sm" variant="secondary" loading={ocupado === 'at'} onClick={() => accion('at', `/fondos/${f.id}/aprobar-tesoreria`)}>Aprobar como Tesorería</Button>}
+                  {puedeAprobarGerencia && !f.aprob_gerencia_por && <Button size="sm" variant="secondary" loading={ocupado === 'ag'} onClick={() => accion('ag', `/fondos/${f.id}/aprobar-gerencia`)}>Aprobar como Gerencia</Button>}
                 </span>
               )}
             </Notice>
@@ -175,7 +176,7 @@ function FondoDetalle({ fondoId, onClose, onGasto, onReponer }: {
                       {puedeGestionar && m.concepto === 'GASTO' && m.estado_sustento === 'PENDIENTE' && (
                         <Button size="sm" variant="plain" icon={<FileText size={14} />} onClick={() => setSustentando(m.id)}>Subir sustento</Button>
                       )}
-                      {puedeGestionar && m.concepto === 'GASTO' && m.estado_sustento === 'PENDIENTE' && m.plazo_vence && m.plazo_vence < hoy && (
+                      {(puedeGestionar || puedeAprobarGerencia) && m.concepto === 'GASTO' && m.estado_sustento === 'PENDIENTE' && m.plazo_vence && m.plazo_vence < hoy && (
                         <Button size="sm" variant="secondary" loading={ocupado === `d${m.id}`}
                           onClick={() => accion(`d${m.id}`, `/movimientos/${m.id}/descontar`)}>Descontar al responsable</Button>
                       )}

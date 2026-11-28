@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { CreditCard, RefreshCw, SearchX, Wallet } from 'lucide-react';
 import { FileSpreadsheet } from '../../core/ui/IconosArchivo';
 import { Button, PageLoader } from '../../core/ui/Button';
+import { useAuth } from '../../core/auth/AuthProvider';
 import { Badge, EmptyState, Notice, Page, PageHeader } from '../../core/ui/Display';
 import { SearchField } from '../../core/ui/Field';
 import { BotonTip } from '../../core/ui/BotonTip';
@@ -103,6 +104,8 @@ function CuentaCelda({ texto, usd }: { texto?: string; usd: boolean }) {
 }
 
 export function PagoRequerimientosPage() {
+  const { can } = useAuth();
+  const puedeProcesar = can('tesoreria_pago_req.crear', 'tesoreria_caja.crear');
   const qc = useQueryClient();
   const toast = useToast();
   const movil = useMediaQuery(MOBILE_QUERY);
@@ -267,7 +270,7 @@ export function PagoRequerimientosPage() {
                   </div>
                   <span className="pago-lista__monto">{importe > 0 ? formatMoneda(importe, usd ? 'USD' : 'PEN') : '—'}</span>
                 </div>
-                {pendiente && (
+                {pendiente && puedeProcesar && (
                   <div className="pago-lista__acciones">
                     <Button className="pago-procesar" variant="primary" size="sm" icon={<Wallet size={15} />} onClick={() => abrirProcesar(oc)}>Procesar pago</Button>
                   </div>
@@ -287,7 +290,7 @@ export function PagoRequerimientosPage() {
             return (
               <tr key={String(oc.id)}>
                 <Celda>
-                  {pendiente ? (
+                  {pendiente && puedeProcesar ? (
                     <Button className="pago-procesar" variant="primary" size="sm" onClick={e => { e.stopPropagation(); abrirProcesar(oc); }}>Procesar</Button>
                   ) : oc.url_voucher_presigned ? (
                     <a className="btn btn--secondary btn--sm" href={oc.url_voucher_presigned} target="_blank" rel="noreferrer"

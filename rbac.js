@@ -8,7 +8,7 @@ module.exports = function globalRBAC(req, res, next) {
         '/clientes-placas', '/marcas-placas', '/proxy/documento', '/proxy/sunat', '/proxy/geocode', '/notificaciones', '/push',
         '/script/obtener', '/script/buscar', '/integraciones', '/catalogos_taller',
         '/documentos-flota/presign-read', '/mantenimiento/inspecciones/presign-read', '/mantenimiento/checklist/presign-read', '/mantenimiento/presign-read', '/checklist/presign-read',
-        '/presign-read', '/operaciones/conductor-portal', '/tesoreria/liquidaciones-gastos', '/combustible/vales',
+        '/presign-read', '/operaciones/conductor-portal', '/combustible/vales',
         '/guias-remision/pdf-apisunat', '/guias-remision/pdf',
         '/whatsapp/qr', '/approvals/oc',
         '/herramientas' // Herramientas PDF: las usa cualquier persona con sesión (la ruta exige sesión por su cuenta)
@@ -84,8 +84,6 @@ module.exports = function globalRBAC(req, res, next) {
         '/flota/entrega-vehiculos',
         '/vehiculos-flota',
         '/tesoreria/motivos-gastos',
-        '/tesoreria/movimientos',
-        '/tesoreria/pago-requerimientos',
         '/checklist/config-sistemas'
     ];
     if (req.method === 'GET' && globalReferenceGets.some(p => path === p || path.startsWith(p))) {
@@ -133,8 +131,8 @@ module.exports = function globalRBAC(req, res, next) {
     const descontarChica = req.method === 'POST' && /^\/tesoreria\/caja-chica\/movimientos\/[^/]+\/descontar$/.test(path);
     if (aprobGerenciaChica || aprobTesoreriaChica || descontarChica) {
         const reglasChica = aprobGerenciaChica ? [['gerencia_aprobaciones_caja', ['a']]]
-            : descontarChica ? [['gerencia_aprobaciones_caja', ['a']], ['tesoreria', ['c']]]
-            : [['tesoreria', ['c']]];
+            : descontarChica ? [['gerencia_aprobaciones_caja', ['a']], ['tesoreria_caja', ['c']]]
+            : [['tesoreria_caja', ['c']]];
         const tieneChica = reglasChica.some(([modulo, acciones]) => p[modulo] && acciones.some(a => p[modulo][a] === 1 || p[modulo][a] === true));
         if (!tieneChica) return res.status(403).json({ error: 'RBAC: Permiso denegado para aprobar (caja chica)' });
         return next();
@@ -269,8 +267,26 @@ module.exports = function globalRBAC(req, res, next) {
         mod = ['fleet', 'fleetrun', 'gps', 'placas'];
     }
     // Detracciones (reportes y cruce): quien ve Caja o Pago de requerimientos las consulta; la configuración la guarda solo un administrador (lo valida la ruta)
-    else if (path.startsWith('/tesoreria/detracciones')) mod = req.method === 'GET' ? ['tesoreria_caja', 'tesoreria_pago_req', 'tesoreria'] : ['administracion'];
-    else if (path.startsWith('/tesoreria')) mod = ['tesoreria', 'tes_motivos', 'liquidaciones_gastos', 'cond', 'conductores'];
+    else if (path.startsWith('/tesoreria/detracciones')) mod = req.method === 'GET' ? ['tesoreria_caja', 'tesoreria_pago_req'] : [];
+    // TESORERÍA: cada ruta con su módulo del catálogo. La acción la pone el método (GET l, POST c, PUT e, DELETE d).
+    // Los cruces con otras áreas (Operaciones, Almacén, Gerencia y el portal del conductor) van listados aquí.
+    else if (/^\/tesoreria\/caja\/(siguiente-numero|buscar-ordenes-viaje)$/.test(path)) mod = ['tesoreria_caja', 'op_ordenes_viaje'];
+    else if (path === '/tesoreria/caja' && req.method === 'POST') mod = ['tesoreria_caja', 'op_ordenes_viaje']; // Cochera (Operaciones): la ruta limita a ese cargo
+    else if (path === '/tesoreria/caja' && req.method === 'GET') mod = ['tesoreria_caja', 'gerencia_aprobaciones_caja'];
+    else if (/^\/tesoreria\/caja(\/|$)/.test(path)) mod = ['tesoreria_caja'];
+    else if (path.startsWith('/tesoreria/caja-chica')) mod = req.method === 'GET' ? ['tesoreria_caja', 'gerencia_aprobaciones_caja'] : ['tesoreria_caja'];
+    else if (path.startsWith('/tesoreria/pago-requerimientos')) mod = req.method === 'GET' ? ['tesoreria_pago_req', 'tesoreria_caja', 'gerencia_aprobaciones_oc'] : ['tesoreria_pago_req', 'tesoreria_caja']; // pagar: también Almacén, con el mismo permiso que ve su botón
+    else if (path.startsWith('/tesoreria/cuentas-bancarias')) mod = ['tesoreria_bancos', 'tesoreria_caja']; // Cuentas de proveedores y del personal (misma regla que su pantalla)
+    else if (path.startsWith('/tesoreria/bancos')) mod = req.method === 'GET' ? ['tesoreria_bancos', 'tesoreria_caja', 'tesoreria_pago_req', 'op_ordenes_viaje'] : ['tesoreria_bancos', 'tesoreria_caja'];
+    else if (path.startsWith('/tesoreria/centros-costos')) mod = req.method === 'GET' ? ['tesoreria_centros_costos', 'tesoreria_caja', 'ent_inv', 'tesoreria_pago_req'] : ['tesoreria_centros_costos', 'tesoreria_caja'];
+    else if (path.startsWith('/tesoreria/motivos-gastos')) mod = ['tesoreria_centros_costos', 'tesoreria_caja']; // leer es global (catálogo para órdenes, rendición y portal)
+    else if (path.startsWith('/tesoreria/movimientos')) mod = ['tesoreria_movimientos', 'tesoreria_caja'];
+    else if (path.startsWith('/tesoreria/cuentas')) mod = ['tesoreria_cuentas'];
+    else if (path.startsWith('/tesoreria/liquidaciones-gastos') || path.startsWith('/tesoreria/viaje-servicios')) {
+        // Portal del conductor (su rendición) y Operaciones (gastos del viaje) entran sin ser de Tesorería
+        mod = path.includes('generar-caja-compensacion') ? ['tesoreria_liquidaciones', 'tesoreria_caja'] : ['tesoreria_liquidaciones', 'conductor_portal', 'op_ordenes_viaje'];
+    }
+    else if (path.startsWith('/tesoreria')) mod = []; // ruta de Tesorería sin módulo asignado: solo administrador
     // PDF de la inspección: el POST solo convierte el documento, no guarda nada; quien ve las inspecciones puede imprimirlas
     else if (path === '/mantenimiento/inspecciones/pdf') { mod = ['insp']; accion = 'l'; }
     else if (path.startsWith('/inspecciones') || path.startsWith('/mantenimiento/inspecciones')) mod = ['insp'];
