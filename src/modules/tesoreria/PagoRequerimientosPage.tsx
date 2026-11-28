@@ -61,6 +61,7 @@ function textoBusqueda(o: OrdenPago): string {
 }
 
 function estadoBadge(o: OrdenPago) {
+  if (o.pagos_parciales && esPendiente(o)) return <Badge tone="amber">Pago parcial · saldo {formatMoneda(o.pagos_parciales.saldo, esUSD(o.moneda) ? 'USD' : 'PEN')}</Badge>;
   if (esPendiente(o)) return <Badge tone="amber">Por pagar</Badge>;
   if (esPagada(o)) return <Badge tone="green">Procesado</Badge>;
   return <Badge>{o.estado || '—'}</Badge>;
@@ -125,8 +126,9 @@ export function PagoRequerimientosPage() {
     for (const o of t) {
       if (esPendiente(o)) {
         pendientes++;
-        if (esUSD(o.moneda)) totalUSD += importeOC(o);
-        else totalPEN += importeOC(o);
+        const porPagar = o.pagos_parciales ? o.pagos_parciales.saldo : importeOC(o);
+        if (esUSD(o.moneda)) totalUSD += porPagar;
+        else totalPEN += porPagar;
       } else if (esPagada(o)) {
         pagados++;
       }

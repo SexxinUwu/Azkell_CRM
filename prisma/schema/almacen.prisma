@@ -152,6 +152,29 @@ model EntradaInv {
   @@map("entradas_inv")
 }
 
+// Pagos parciales de una orden de compra (cuotas, entregas con factura parcial o adelantos). Ver migración 57.
+model EntradaInvPago {
+  id                    Int       @id @default(autoincrement())
+  entrada_id            String    @db.VarChar(20)
+  numero                Int
+  tipo                  String    @db.VarChar(10)
+  moneda                String    @default("PEN") @db.VarChar(5)
+  parte                 Decimal   @db.Decimal(14, 2)
+  detraccion_pen        Decimal   @default(0.00) @db.Decimal(14, 2)
+  detraccion_origen     Decimal   @default(0.00) @db.Decimal(14, 2)
+  detraccion_constancia String?   @db.VarChar(60)
+  neto                  Decimal   @db.Decimal(14, 2)
+  numero_operacion      String?   @db.VarChar(100)
+  cuenta_origen         String?   @db.VarChar(250)
+  factura_ref           String?   @db.VarChar(100)
+  voucher_url           String?   @db.Text
+  usuario               String?   @db.VarChar(150)
+  creado_en             DateTime? @default(now()) @db.Timestamp(0)
+
+  @@unique([entrada_id, numero], map: "uq_entradas_inv_pagos_numero")
+  @@map("entradas_inv_pagos")
+}
+
 // Servicios sujetos a detracción (SPOT): código SUNAT, porcentaje y monto mínimo. Editable; los valores iniciales los valida el contador.
 model DetraccionTipo {
   id           Int       @id @default(autoincrement())
