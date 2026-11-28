@@ -5405,6 +5405,8 @@ app.use('/api/docs-externos', require('./routes/docs-externos')(db, logAudit));
 // Contabilidad: copia local del SIRE de SUNAT (ventas y compras)
 app.use('/api/contabilidad', require('./routes/contabilidad')(db, logAudit));
 app.use('/api/tesoreria/caja-chica', require('./routes/caja_chica')(db, broadcast, logAudit));
+// Tesorería › Detracciones: reportes, cruce con el SIRE y configuración (antes de /api/tesoreria)
+app.use('/api/tesoreria/detracciones', require('./routes/detracciones')(db));
 app.use('/api/tesoreria', require('./routes/tesoreria')(db, broadcast, logAudit));
 app.use('/api/rrhh', require('./routes/rrhh')(db, broadcast, logAudit));
 app.use('/api/telemetria', require('./routes/telemetria')(db));

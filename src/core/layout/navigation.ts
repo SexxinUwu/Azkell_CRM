@@ -10,7 +10,7 @@
 //
 // Permisos: 'clave.ver' según la matriz de permisos actual (ver core/auth/permisos.ts). Los administradores ven todo.
 import {
-  Accessibility, Activity, TriangleAlert, Sparkles, TrendingUp, ReceiptText, ArrowLeftRight, Banknote, BarChart3, Boxes, Building2, Cog, Code, Contact, Disc3, Droplet, FileText, Fuel, Gauge, Gavel, HardHat, History, Hourglass, IdCard, Landmark, Layers, LayoutDashboard, List, MapPin, Package, PackageMinus, PackagePlus, Palette, Route, ScrollText, Settings, ShieldCheck, Tag, Target, Truck, UserCog, Users, Wallet, Warehouse, Wrench, CalendarDays, ClipboardCheck, ClipboardList, Clock, type LucideIcon, Bell,
+  Accessibility, Activity, TriangleAlert, Sparkles, TrendingUp, ReceiptText, ArrowLeftRight, Banknote, BarChart3, Boxes, Building2, Cog, Code, Contact, Disc3, Droplet, FileText, Fuel, Gauge, Gavel, HardHat, History, Hourglass, IdCard, Landmark, Layers, LayoutDashboard, List, MapPin, Package, PackageMinus, PackagePlus, Palette, Percent, Route, ScrollText, Settings, ShieldCheck, Tag, Target, Truck, UserCog, Users, Wallet, Warehouse, Wrench, CalendarDays, ClipboardCheck, ClipboardList, Clock, type LucideIcon, Bell,
 } from 'lucide-react';
 import { FileStack } from 'lucide-react';
 import type { RutaModulo } from '../../modules/personal/rutas.tipos';
@@ -219,6 +219,7 @@ const SECCIONES_BASE: NavSection[] = [
       { key: 'cuentas-personal', label: 'Cuentas del personal', to: '/tesoreria/cuentas-personal', icon: IdCard, permissions: ver('tesoreria_bancos', 'tesoreria_caja') },
       { key: 'centros-costos', label: 'Centros de costos', to: '/tesoreria/centros-costos', icon: Boxes, permissions: ver('tesoreria_centros_costos', 'tesoreria_caja') },
       { key: 'flujo-caja', label: 'Flujo de caja', to: '/tesoreria/flujo-caja', icon: BarChart3, permissions: ver('tesoreria_caja') },
+      { key: 'detracciones', label: 'Detracciones', to: '/tesoreria/detracciones', icon: Percent, permissions: ver('tesoreria_caja', 'tesoreria_pago_req') },
     ],
   },
   {
