@@ -879,10 +879,11 @@ export interface RecepcionItemEnvio {
 /** Tipo de cambio oficial de SUNAT del día (venta). Lo sirve el servidor con caché diaria. */
 export interface TipoCambioSunat { ok: boolean; venta: number; compra: number | null; fecha: string; origen: string }
 
-export function useTipoCambioSunat(enabled: boolean) {
+/** Tipo de cambio de venta de la SUNAT; con `fecha` (YYYY-MM-DD) el de ese día, que es el de la factura */
+export function useTipoCambioSunat(enabled: boolean, fecha?: string) {
   return useQuery<TipoCambioSunat>({
-    queryKey: ['almacen', 'tipo-cambio-sunat'],
-    queryFn: () => api<TipoCambioSunat>('/tipo-cambio/sunat'),
+    queryKey: ['almacen', 'tipo-cambio-sunat', fecha ?? 'hoy'],
+    queryFn: () => api<TipoCambioSunat>('/tipo-cambio/sunat', fecha ? { query: { fecha } } : undefined),
     enabled,
     staleTime: 60 * 60_000,
     retry: false,
