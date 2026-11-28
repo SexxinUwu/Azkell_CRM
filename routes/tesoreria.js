@@ -2558,6 +2558,40 @@ module.exports = function (db, broadcast, logAudit) {
             if (pagoMixto && tcPagoEnviado > 0 && (tcPagoEnviado < 1 || tcPagoEnviado > 20)) return res.status(400).json({ error: 'El tipo de cambio del pago no parece válido (soles por dólar).' });
             const importeUsdOc = Math.round((totalOc / (tcOc || 1)) * 100) / 100;
             const importeAPagar = pagoMixto ? importeUsdOc : (pendienteCajaChica ?? importeOrigen);
+            // Detracción confirmada al pagar: Tesorería tiene la factura en la mano. Puede agregarla si la orden la olvidó o corregir el T.C. (el de la fecha de
+            // la factura) y el monto exacto que figura en la factura. Solo cambian los campos de detracción, y queda en la auditoría con el valor anterior.
+            const numDet = v => parseFloat(String(v ?? '').replace(',', '.')) || 0;
+            const ovCodigo = String(b.det_codigo || '').trim();
+            const ovPct = numDet(b.det_pct), ovTc = numDet(b.det_tc), ovMonto = numDet(b.det_monto_pen);
+            if (pendienteCajaChica == null && (ovCodigo || ovPct > 0 || ovTc > 0 || ovMonto > 0)) {
+                const codigoDet = ovCodigo || oc.detraccion_codigo;
+                if (!codigoDet) return res.status(400).json({ error: 'sin_tipo_detraccion', mensaje: 'Elige el tipo de detracción.' });
+                const cambiaTipo = !!ovCodigo && ovCodigo !== oc.detraccion_codigo;
+                let campos;
+                try {
+                    campos = await detraccionOc.camposDeOrden(tdb,
+                        { detraccion_codigo: codigoDet, detraccion_pct: ovPct > 0 ? ovPct : (cambiaTipo ? undefined : oc.detraccion_pct), detraccion_tc: ovTc > 0 ? ovTc : oc.detraccion_tc },
+                        { moneda: oc.moneda, totalPen: totalOc, tipoCambioOrden: tcOc });
+                } catch (eDet) { return res.status(eDet.status || 400).json({ error: 'detraccion_invalida', mensaje: eDet.message }); }
+                let montoDet = Number(campos.detraccion_monto_pen) || 0;
+                if (ovMonto > 0) {
+                    if (!(montoDet > 0)) return res.status(400).json({ error: 'detraccion_invalida', mensaje: 'La detracción no aplica: el total no supera el monto mínimo del tipo.' });
+                    if (Math.abs(ovMonto - montoDet) > Math.max(3, montoDet * 0.05)) return res.status(400).json({ error: 'detraccion_invalida', mensaje: `El monto de la factura (S/ ${ovMonto}) difiere demasiado del calculado (S/ ${montoDet}). Revisa el T.C. y el porcentaje.` });
+                    montoDet = Math.round(ovMonto);
+                }
+                const antesDet = { tipo: oc.detraccion_codigo || null, pct: oc.detraccion_pct != null ? Number(oc.detraccion_pct) : null, tc: oc.detraccion_tc != null ? Number(oc.detraccion_tc) : null, monto_pen: oc.detraccion_monto_pen != null ? Number(oc.detraccion_monto_pen) : null };
+                const despuesDet = { tipo: campos.detraccion_codigo, pct: campos.detraccion_pct, tc: campos.detraccion_tc, monto_pen: montoDet };
+                if (JSON.stringify(antesDet) !== JSON.stringify(despuesDet)) {
+                    const [uDet] = await tdb.query('UPDATE entradas_inv SET detraccion_codigo = ?, detraccion_pct = ?, detraccion_tc = ?, detraccion_monto_pen = ? WHERE id = ? AND detraccion_constancia IS NULL', [campos.detraccion_codigo, campos.detraccion_pct, campos.detraccion_tc, montoDet, id]);
+                    if (uDet.affectedRows !== 1) return res.status(409).json({ error: 'detraccion_invalida', mensaje: 'La detracción de esta orden ya se pagó y no se puede cambiar.' });
+                    oc.detraccion_codigo = campos.detraccion_codigo; oc.detraccion_pct = campos.detraccion_pct; oc.detraccion_tc = campos.detraccion_tc; oc.detraccion_monto_pen = montoDet;
+                    auditar(tdb, actorDe(req), {
+                        action: 'UPDATE', entity: 'warehouse-entry', entityId: id,
+                        summary: `Confirmó la detracción de la orden ${id} al pagar: ${antesDet.monto_pen != null ? `S/ ${antesDet.monto_pen} → ` : ''}S/ ${montoDet} (T.C. ${campos.detraccion_tc ?? 1}, ${campos.detraccion_pct} %)`,
+                        changes: diff(antesDet, despuesDet, ['tipo', 'pct', 'tc', 'monto_pen']),
+                    });
+                }
+            }
             // Detracción (SPOT): se deposita un % del total en la cuenta del proveedor en el Banco de la Nación y al proveedor le llega el neto.
             // El monto lo calculó el servidor al registrar la orden; en el pago con caja chica no aplica.
             const detOc = pendienteCajaChica == null && oc.detraccion_codigo && Number(oc.detraccion_monto_pen) > 0
