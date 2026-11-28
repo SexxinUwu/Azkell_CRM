@@ -674,7 +674,7 @@ export function AnalisisViajes({ producto }: { producto: 'combustible' | 'urea' 
 
   const t = trips.find(x => claveFila(x) === abierto) ?? null;
   const Icono = urea ? Droplets : Fuel;
-  const puedeAuditar = can('combustible_analisis.editar', 'combustible.editar', 'urea_analisis.editar', 'combustible_analisis.crear');
+  const puedeAuditar = can('combustible_analisis.editar', 'urea_analisis.editar');
   // Un viaje CONFORME queda bloqueado para todos menos el administrador (el servidor también lo valida)
   const { permissions } = useAuth();
   const esAdmin = permissions.has(ADMIN);

@@ -211,7 +211,7 @@ export function MarsisaOrdenesViajePage() {
                 <FileSpreadsheet size={17} />
               </button>
             </div>
-            {can('op_ordenes_viaje.editar', 'op_ordenes_viaje.crear', 'op_programacion.editar') && (
+            {can('op_ordenes_viaje.editar', 'op_programacion.editar') && (
               <Button variant="primary" icon={<RefreshCw size={16} />} onClick={sincronizar} loading={sync}>Sincronizar</Button>
             )}
           </>

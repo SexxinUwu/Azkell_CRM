@@ -52,8 +52,8 @@ export function EstacionesProveedoresPage({ eyebrow = 'Terceros', selector, solo
     placeholderData: prev => prev,
     staleTime: 20_000,
   });
-  const puedeEditar = !soloLectura && can('combustible_vales.editar', 'combustible_vales.crear', 'combustible.editar', 'combustible.crear');
-  const puedeEliminar = !soloLectura && can('combustible_vales.eliminar', 'combustible.eliminar');
+  const puedeEditar = !soloLectura && can('combustible_vales.editar', 'combustible_vales.crear');
+  const puedeEliminar = !soloLectura && can('combustible_vales.eliminar');
   const datos = lista.data?.data ?? [];
   const refrescar = () => qc.invalidateQueries({ queryKey: ['operaciones', 'estaciones'] });
 

@@ -205,8 +205,8 @@ export function OrdenesServicioPage() {
   const filtrosActivos = [estado, tipo, sentido, conViaje, cliente, desde, hasta].filter(Boolean).length;
   const limpiarFiltros = () => { setEstado(''); setTipo(''); setSentido(''); setConViaje(''); setCliente(''); setDesde(''); setHasta(''); };
   const conteo = useMemo(() => Object.fromEntries(ESTADOS.map(e => [e, datos.filter(o => estadoDe(o) === e).length])), [datos]);
-  const puedeEditar = can('op_ordenes_servicio.editar', 'op_ordenes_servicio.crear', 'op_ordenes_viaje.editar');
-  const puedeCrear = can('op_ordenes_servicio.crear', 'op_ordenes_servicio.editar', 'op_ordenes_viaje.editar');
+  const puedeEditar = can('op_ordenes_servicio.editar', 'op_ordenes_viaje.editar');
+  const puedeCrear = can('op_ordenes_servicio.crear', 'op_ordenes_viaje.crear');
   const abierta = datos.find(o => o.id === abiertoId) ?? null;
   const o = det.data ?? abierta;
   const refrescar = () => qc.invalidateQueries({ queryKey: ['operaciones'] });
