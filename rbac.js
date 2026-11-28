@@ -108,6 +108,8 @@ module.exports = function globalRBAC(req, res, next) {
     if (path.startsWith('/script/obtener') || path.startsWith('/script/buscar')) accion = 'l';
     else if (path.startsWith('/script/actualizar') || path.startsWith('/script/editar')) accion = 'e';
     else if (path.startsWith('/script/eliminar')) accion = 'd';
+    // Guardar un conductor existente (con idConductor) es una edición; darlo de alta sigue siendo crear
+    if (path === '/script/guardarConductor' && req.body && Array.isArray(req.body.args) && req.body.args[0] && req.body.args[0].idConductor) accion = 'e';
 
     // Asistente: cada reporte y cada consulta del chat verifica sus propios permisos (routes/asistente-*.js).
     // Sin esta regla, cualquier usuario que no fuera admin recibía "Ruta no mapeada" al escribir en el chat.
@@ -156,10 +158,18 @@ module.exports = function globalRBAC(req, res, next) {
         return next();
     }
 
+    // Subir documentos de una persona: el catálogo dice «Crear o Editar»; borrar pide Eliminar (ruta DELETE)
+    if (req.method === 'POST' && /^\/rrhh\/personal\/[^/]+\/documentos$/.test(path)) {
+        const legajo = p.rrhh_personal || {};
+        if (legajo.c === 1 || legajo.c === true || legajo.e === 1 || legajo.e === true) return next();
+        return res.status(403).json({ error: 'RBAC: Permiso denegado para subir documentos (pide Crear o Editar en Legajos y contratos)' });
+    }
+
     // FLOTA Y MÓDULOS
     if (path.startsWith('/disponibilidad-flota') || path.toLowerCase().includes('disponibilidad')) { mod = ['disponibilidad']; if (path === '/disponibilidad-flota/pdf') accion = 'l'; /* el PDF no guarda nada */ }
     else if (path.startsWith('/contabilidad')) mod = ['contabilidad_sire'];
-    else if (path.startsWith('/seguridad/asistencia')) mod = ['asist', 'seguridad'];
+    // Asistencia de RRHH (no hay ruta propia de /seguridad/asistencia; la clave es rrhh_asistencia)
+    else if (path.startsWith('/seguridad/asistencia')) mod = ['rrhh_asistencia'];
     // Papeletas (Flota): su propio permiso; Tesorería también las ve y registra sus pagos
     // Notas de crédito de proveedores: su propio permiso; quien paga órdenes (Tesorería o Almacén) también las consulta para aplicarlas
     // Consultarlas: también quien paga órdenes. Registrar o enlazar: solo con el permiso de Notas de crédito (Tesorería o Almacén)
@@ -172,7 +182,13 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/seguridad')) mod = ['seguridad_unidades', 'seguridad', 'checklist', 'placas', 'unid'];
     else if (path.startsWith('/configuracion-flota')) mod = ['cfg_mant', ...leer()];
     // RRHH: cada pantalla con su permiso (antes no estaba mapeado y solo entraban administradores)
-    else if (path.startsWith('/rrhh/tareo') || path.startsWith('/rrhh/marcacion') || path.startsWith('/rrhh/horarios')) mod = ['rrhh_asistencia'];
+    else if (path.startsWith('/rrhh/tareo') || path.startsWith('/rrhh/marcacion') || path.startsWith('/rrhh/horarios')) {
+        mod = ['rrhh_asistencia'];
+        // Guardar o sincronizar el tareo edita la asistencia ya registrada: pide Editar (como «regularizar técnicos»)
+        if (path.startsWith('/rrhh/tareo/') && req.method === 'POST') accion = 'e';
+    }
+    // Justificaciones (licencias y vacaciones) viven en la pantalla de Asistencia
+    else if (path.startsWith('/rrhh/licencias')) mod = ['rrhh_asistencia'];
     else if (path.startsWith('/rrhh/nomina')) mod = ['rrhh_nomina'];
     else if (path === '/rrhh/directorio') mod = ['rrhh_personal', 'cond'];
     else if (path.startsWith('/rrhh/')) mod = ['rrhh_personal'];
@@ -387,7 +403,8 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/backlog') || path.startsWith('/ot-backlog')) mod = ['ot', ...leer('status_rampa', 'trabajos_ot', 'reportes_ot')];
     // Legacy & API Endpoints
     else if (path.startsWith('/placas') || path.startsWith('/placa') || path.toLowerCase().includes('placa')) mod = ['placas', 'fleet'];
-    else if (path.startsWith('/conductores') || path.startsWith('/conductor') || path.toLowerCase().includes('conductor')) mod = ['cond', 'conductores'];
+    // «conductores» no existe en el catálogo de permisos: la clave es cond
+    else if (path.startsWith('/conductores') || path.startsWith('/conductor') || path.toLowerCase().includes('conductor')) mod = ['cond'];
     else if (path.toLowerCase().includes('usuario')) return res.status(403).json({ error: 'Solo un administrador puede usar esta sección.' });
     else if (path.startsWith('/vehiculos-flota') || path.startsWith('/documentos') || path.startsWith('/documento') || path.toLowerCase().includes('documento')) mod = ['docs_flota', 'placas', 'insp', 'ot'];
     else if (path.startsWith('/inspecciones') || path.toLowerCase().includes('inspeccion')) mod = ['insp'];

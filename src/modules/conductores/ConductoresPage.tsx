@@ -85,7 +85,7 @@ export function ConductoresPage({ soloLectura = false, eyebrow = 'Directorio', t
   const [eliminando, setEliminando] = useState(false);
 
   const puedeCrear = !soloLectura && can('cond.crear');
-  const puedeEditar = !soloLectura && can('cond.editar', 'cond.crear'); // la versión actual exige "crear" para guardar
+  const puedeEditar = !soloLectura && can('cond.editar'); // guardar cambios de un conductor existente pide Editar
   const puedeEliminar = !soloLectura && can('cond.eliminar');
 
   const conductores = data ?? [];

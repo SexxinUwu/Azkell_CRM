@@ -108,7 +108,7 @@ export function NominaPage() {
             <MenuOtros opciones={[
               { label: 'Exportar Excel', icon: <FileSpreadsheet size={17} />, onSelect: exportar },
             ]} />
-            {vista === 'sst' && can('rrhh_nomina.crear', 'rrhh_personal.crear') && (
+            {vista === 'sst' && can('rrhh_personal.crear') && (
               <Button variant="primary" icon={<Plus size={16} />} onClick={() => setNuevaSst(true)}>Constancia SST</Button>
             )}
           </>
