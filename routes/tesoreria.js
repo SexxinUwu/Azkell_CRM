@@ -1047,11 +1047,20 @@ module.exports = function (db, broadcast, logAudit) {
     });
 
     // Guardar nuevo registro de Caja con archivos adjuntos
-    router.post('/caja', upload.fields([{ name: 'voucher', maxCount: 1 }, { name: 'sustento', maxCount: 1 }]), async (req, res) => {
+    const guardarCaja = (soloCochera) => async (req, res) => {
         try {
             const tdb = getDb(req);
             const b = req.body || {};
-
+            if (soloCochera) {
+                // Endpoint estrecho de Operaciones: solo el cargo de cochera del conductor, con los datos fijos del cargo
+                b.centro_costo = 'CC-300: Operaciones de Ruta (Costo Servicio)';
+                b.descripcion = 'Cochera de Conductor por Orden de Servicio';
+                b.motivo = 'Gastos de Viaje y Ruta';
+                b.sub_motivo = 'Cochera / Parqueo de ruta';
+                b.tipo_movimiento = 'EGRESO';
+                b.tipo_persona = 'CONDUCTOR';
+                if (!String(b.orden_viaje || '').trim()) return res.status(400).json({ ok: false, error: 'La cochera exige el N° de viaje.' });
+            }
             let voucherUrl = null;
             if (req.files && req.files.voucher && req.files.voucher[0]) {
                 const f = req.files.voucher[0];
@@ -1144,7 +1153,10 @@ module.exports = function (db, broadcast, logAudit) {
             console.error('Error al guardar registro de caja:', err);
             res.status(500).json({ error: err.message });
         }
-    });
+    };
+    const subidaCaja = upload.fields([{ name: 'voucher', maxCount: 1 }, { name: 'sustento', maxCount: 1 }]);
+    router.post('/caja', subidaCaja, guardarCaja(false));
+    router.post('/caja/cochera', subidaCaja, guardarCaja(true));
 
     // Editar registro de caja (Solo si estado es REGISTRADO o PENDIENTE)
     router.put('/caja/:id', upload.fields([{ name: 'voucher', maxCount: 1 }, { name: 'sustento', maxCount: 1 }]), async (req, res) => {

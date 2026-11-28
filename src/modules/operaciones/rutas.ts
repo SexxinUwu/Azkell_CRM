@@ -6,25 +6,25 @@ export const RUTAS: RutaModulo[] = [
     path: 'operaciones/programacion/*',
     permisos: ['op_programacion.ver', 'op_guias_remision.ver', 'admin'],
     Page: lazy(() => import('./ProgramacionPage').then(m => ({ default: m.ProgramacionPage }))),
-    nav: { key: 'programacion', label: 'Programación', to: '/operaciones/programacion', icon: 'CalendarDays', permisos: ['operaciones.ver', 'admin'] },
+    nav: { key: 'programacion', label: 'Programación', to: '/operaciones/programacion', icon: 'CalendarDays', permisos: ['op_programacion.ver', 'op_guias_remision.ver', 'admin'] },
   },
   {
     path: 'operaciones/ordenes-viaje/*',
     permisos: ['op_ordenes_viaje.ver', 'op_programacion.ver', 'op_guias_remision.ver', 'admin'],
     Page: lazy(() => import('./OrdenesViajePage').then(m => ({ default: m.OrdenesViajePage }))),
-    nav: { key: 'ordenes-viaje', label: 'Órdenes de viaje', to: '/operaciones/ordenes-viaje', icon: 'Truck', permisos: ['operaciones.ver', 'admin'] },
+    nav: { key: 'ordenes-viaje', label: 'Órdenes de viaje', to: '/operaciones/ordenes-viaje', icon: 'Truck', permisos: ['op_ordenes_viaje.ver', 'op_programacion.ver', 'op_guias_remision.ver', 'admin'] },
   },
   {
     path: 'operaciones/marsisa-ordenes-viaje/*',
     permisos: ['op_ordenes_viaje.ver', 'op_programacion.ver', 'op_guias_remision.ver', 'admin'],
     Page: lazy(() => import('./MarsisaOrdenesViajePage').then(m => ({ default: m.MarsisaOrdenesViajePage }))),
-    nav: { key: 'marsisa-ordenes-viaje', label: 'Órdenes de viaje Marsisa', to: '/operaciones/marsisa-ordenes-viaje', icon: 'Truck', permisos: ['operaciones.ver', 'admin'] },
+    nav: { key: 'marsisa-ordenes-viaje', label: 'Órdenes de viaje Marsisa', to: '/operaciones/marsisa-ordenes-viaje', icon: 'Truck', permisos: ['op_ordenes_viaje.ver', 'op_programacion.ver', 'op_guias_remision.ver', 'admin'] },
   },
   {
     path: 'operaciones/ordenes-servicio/*',
     permisos: ['op_ordenes_servicio.ver', 'op_ordenes_viaje.ver', 'op_programacion.ver', 'op_guias_remision.ver', 'admin'],
     Page: lazy(() => import('./OrdenesServicioPage').then(m => ({ default: m.OrdenesServicioPage }))),
-    nav: { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: 'ClipboardList', permisos: ['operaciones.ver', 'admin'] },
+    nav: { key: 'ordenes-servicio', label: 'Órdenes de servicio', to: '/operaciones/ordenes-servicio', icon: 'ClipboardList', permisos: ['op_ordenes_servicio.ver', 'op_ordenes_viaje.ver', 'op_programacion.ver', 'op_guias_remision.ver', 'admin'] },
   },
   {
     path: 'operaciones/facturacion/*',
@@ -54,7 +54,7 @@ export const RUTAS: RutaModulo[] = [
     path: 'operaciones/ubigeos/*',
     permisos: ['op_ordenes_servicio.ver', 'op_ordenes_viaje.ver', 'op_programacion.ver', 'op_guias_remision.ver', 'admin'],
     Page: lazy(() => import('./UbigeosPage').then(m => ({ default: m.UbigeosPage }))),
-    nav: { key: 'ubigeos', label: 'Ubigeos', to: '/operaciones/ubigeos', icon: 'MapPin', permisos: ['operaciones.ver', 'admin'] },
+    nav: { key: 'ubigeos', label: 'Ubigeos', to: '/operaciones/ubigeos', icon: 'MapPin', permisos: ['op_ordenes_servicio.ver', 'op_ordenes_viaje.ver', 'op_programacion.ver', 'op_guias_remision.ver', 'admin'] },
   },
   {
     path: 'operaciones/reporte-viajes/*',
@@ -65,13 +65,13 @@ export const RUTAS: RutaModulo[] = [
     path: 'operaciones/vales/*',
     permisos: ['combustible_vales.ver', 'admin'],
     Page: lazy(() => import('./ValesPage').then(m => ({ default: m.ValesPage }))),
-    nav: { key: 'vales', label: 'Vales de combustible', to: '/operaciones/vales', icon: 'Fuel', permisos: ['operaciones.ver', 'admin'] },
+    nav: { key: 'vales', label: 'Vales de combustible', to: '/operaciones/vales', icon: 'Fuel', permisos: ['combustible_vales.ver', 'admin'] },
   },
   {
     path: 'operaciones/marsisa-vales/*',
     permisos: ['combustible_vales.ver', 'admin'],
     Page: lazy(() => import('./MarsisaValesPage').then(m => ({ default: m.MarsisaValesPage }))),
-    nav: { key: 'marsisa-vales', label: 'Vales de combustible Marsisa', to: '/operaciones/marsisa-vales', icon: 'Fuel', permisos: ['operaciones.ver', 'admin'] },
+    nav: { key: 'marsisa-vales', label: 'Vales de combustible Marsisa', to: '/operaciones/marsisa-vales', icon: 'Fuel', permisos: ['combustible_vales.ver', 'admin'] },
   },
   {
     path: 'operaciones/hojas-ruta/*',
@@ -89,7 +89,7 @@ export const RUTAS: RutaModulo[] = [
     path: 'operaciones/analisis-combustible/*',
     permisos: ['combustible_analisis.ver', 'admin'],
     Page: lazy(() => import('./AnalisisCombustiblePage').then(m => ({ default: m.AnalisisCombustiblePage }))),
-    nav: { key: 'analisis-combustible', label: 'Análisis de combustible', to: '/operaciones/analisis-combustible', icon: 'BarChart2', permisos: ['operaciones.ver', 'admin'] },
+    nav: { key: 'analisis-combustible', label: 'Análisis de combustible', to: '/operaciones/analisis-combustible', icon: 'BarChart2', permisos: ['combustible_analisis.ver', 'admin'] },
   },
   {
     path: 'operaciones/conduccion-rpm/*',
@@ -112,7 +112,7 @@ export const RUTAS: RutaModulo[] = [
     path: 'operaciones/urea/*',
     permisos: ['urea_analisis.ver', 'combustible_analisis.ver', 'admin'],
     Page: lazy(() => import('./UreaPage').then(m => ({ default: m.UreaPage }))),
-    nav: { key: 'urea', label: 'Análisis de urea', to: '/operaciones/urea', icon: 'Droplets', permisos: ['operaciones.ver', 'admin'] },
+    nav: { key: 'urea', label: 'Análisis de urea', to: '/operaciones/urea', icon: 'Droplets', permisos: ['urea_analisis.ver', 'combustible_analisis.ver', 'admin'] },
   },
   {
     path: 'operaciones/guias/*',

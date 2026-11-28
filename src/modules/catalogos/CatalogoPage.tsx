@@ -26,7 +26,9 @@ function SelectorPersona({ valor, onCambio, ...aria }: {
   valor: string; onCambio: (v: string) => void;
   id?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string;
 }) {
-  const personas = useConductores();
+  const { can } = useAuth();
+  // Sin permiso de Conductores no se llama a la ficha: el nombre se escribe a mano
+  const personas = useConductores(can('cond.ver'));
   const opciones = useMemo(() => {
     const lista: ComboboxOption[] = (personas.data ?? [])
       .filter(c => c.estado.trim().toLowerCase() !== 'inactivo')
@@ -56,10 +58,11 @@ export function CatalogoPage({ config }: { config: ConfigCatalogo }) {
   const [porEliminar, setPorEliminar] = useState<Registro | null>(null);
   const [ocupado, setOcupado] = useState(false);
 
-  const p = config.permiso;
-  const puedeCrear = can(`${p}.crear`);
-  const puedeEditar = can(`${p}.editar`, `${p}.crear`);
-  const puedeEliminar = !!config.eliminar && can(`${p}.eliminar`);
+  const claves = [config.permiso, ...(config.hub ? [config.hub] : [])];
+  const de = (a: string) => claves.map(k => `${k}.${a}`);
+  const puedeCrear = can(...de('crear'));
+  const puedeEditar = can(...de('editar'));
+  const puedeEliminar = !!config.eliminar && can(...de('eliminar'));
   const tieneActivo = config.campos.some(c => c.tipo === 'activo');
 
   const lista = datos.data ?? [];

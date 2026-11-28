@@ -90,6 +90,8 @@ const PERMISO_BAJA = 'neumaticos.baja.crear';
 const PERMISO_REENCAUCHE = 'neumaticos.reencauche.crear';
 const AVISO_BAJA = 'No tienes permiso para enviar llantas a descarte (neumaticos.baja).';
 const AVISO_REFORMA = 'No tienes permiso para enviar llantas a reforma (neumaticos.reencauche).';
+const PERMISO_MOVER = 'neumaticos.mover.crear';
+const AVISO_MOVER = 'No tienes permiso para instalar ni retirar llantas (neumaticos.mover).';
 
 const numero = (v: unknown) => Number(String(v ?? '').replace(',', '.')) || 0;
 
@@ -139,6 +141,7 @@ export const AlmacenesNeumaticos = forwardRef<AlmacenesHandle, AlmacenesProps>(f
   const { can } = useAuth();
   const puedeBaja = can(PERMISO_BAJA);
   const puedeReforma = can(PERMISO_REENCAUCHE);
+  const puedeMover = can(PERMISO_MOVER);
   const papeleraRef = useRef<HTMLDivElement>(null);
   const reencaucheRef = useRef<HTMLDivElement>(null);
   // Las funciones del handle leen siempre las props actuales (llantas, km) sin volver a crearlo
@@ -177,6 +180,7 @@ export const AlmacenesNeumaticos = forwardRef<AlmacenesHandle, AlmacenesProps>(f
       const enPapelera = dentro(papeleraRef.current, x, y);
       // Cayó en el aire: la llanta vuelve a su eje y no pasa nada
       if (!enPapelera && !dentro(reencaucheRef.current, x, y)) return;
+      if (!puedeMover) { toast(AVISO_MOVER, 'error'); return; }
       const l = vivo.current.llantas.find(item => item.posicion === posicion);
       if (!l || posicionVacia(l)) { toast(`La posición #${posicion} está vacía.`, 'error'); return; }
       if (!l.codigo.trim()) { toast(`La llanta #${posicion} no tiene código. Escríbelo en el editor antes de retirarla.`, 'error'); return; }
@@ -188,9 +192,10 @@ export const AlmacenesNeumaticos = forwardRef<AlmacenesHandle, AlmacenesProps>(f
       if (dentro(reencaucheRef.current, x, y)) return 'reencauche';
       return null;
     },
-  }), [toast]);
+  }), [toast, puedeMover]);
 
   function montarEn(posicion: string, llanta: LlantaDisponible) {
+    if (!puedeMover) { toast(AVISO_MOVER, 'error'); return; }
     const l = vivo.current.llantas.find(item => item.posicion === posicion);
     if (!l) return;
     if (!posicionVacia(l)) { toast(`La posición #${posicion} ya tiene una llanta. Retírala antes de montar otra.`, 'error'); return; }
@@ -232,6 +237,7 @@ export const AlmacenesNeumaticos = forwardRef<AlmacenesHandle, AlmacenesProps>(f
 
   async function confirmar() {
     if (!dialogo || enviando) return;
+    if (!puedeMover) { setError(AVISO_MOVER); toast(AVISO_MOVER, 'error'); return; }
     if (!String(km).trim()) { setError('Indica el kilometraje de la unidad antes de continuar.'); return; }
     if (dialogo.tipo === 'retiro') {
       if (!dialogo.destino) { setError('Elige a dónde va la llanta: Retén, reforma o descarte.'); return; }

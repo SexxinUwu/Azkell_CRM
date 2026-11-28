@@ -88,7 +88,7 @@ export function PlanificacionPage() {
             <>
               <MenuOtros opciones={[
                 { label: 'Exportar Excel', detalle: `${visibles.length} planes`, icon: <FileSpreadsheet size={17} />, onSelect: exportar },
-                { label: 'Importar desde Excel', icon: <FileSpreadsheet size={17} />, separado: true, onSelect: () => setImportando(true) },
+                can('plan.crear') && { label: 'Importar desde Excel', icon: <FileSpreadsheet size={17} />, separado: true, onSelect: () => setImportando(true) },
                 { label: 'Tipos de MP y alertas', icon: <Wrench size={17} />, onSelect: () => navigate('/mantenimiento/tipos-mp') },
               ]} />
               {puedeCrear && <Button variant="primary" icon={<Plus size={16} />} onClick={() => setFormulario({ plan: null })}>Programar</Button>}

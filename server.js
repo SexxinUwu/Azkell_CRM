@@ -685,6 +685,14 @@ app.get('/api/configuracion', async (req, res) => {
 app.post('/api/configuracion', verifyToken, async (req, res) => {
     try {
         const payload = req.body;
+        // Datos de la empresa: solo administrador. El único dato que no es de empresa son los umbrales de Fleetrun,
+        // que guarda Mantenimiento con su permiso de configuración (cfg_fleetrun, acción editar).
+        if (!esAdminPeticion(req)) {
+            const soloUmbrales = Object.keys(payload || {}).every(c => c === 'fleetrun_uts_umbrales');
+            let pu = {}; try { pu = JSON.parse(req.user.permisos || '{}'); } catch { pu = {}; }
+            const puedeUmbrales = soloUmbrales && ['cfg_fleetrun', 'otros_mant'].some(k => pu[k] && (pu[k].e === 1 || pu[k].e === true));
+            if (!puedeUmbrales) return res.status(403).json({ error: 'Solo un administrador puede cambiar los datos de la empresa.' });
+        }
         const [previos] = await tdbDe(req).query("SELECT clave, valor FROM configuracion_erp");
         const antesCfg = {};
         for (const r of previos) antesCfg[r.clave] = r.valor;
@@ -2476,8 +2484,6 @@ function verifyTokenBase(req, res, next) {
         req.path.startsWith('/api/tv') ||
         req.path.startsWith('/whatsapp/') ||
         req.path.startsWith('/approvals/') ||
-        req.path.endsWith('/ver') ||
-        (req.path.includes('/archivo/') && req.path.endsWith('/ver')) ||
         req.path.includes('/pdf-apisunat/') ||
         req.path.includes('/pdf/') ||
         req.path.includes('/imprimir/') ||

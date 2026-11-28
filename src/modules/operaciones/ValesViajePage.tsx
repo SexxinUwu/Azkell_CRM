@@ -110,7 +110,7 @@ export function ValesViajePage() {
   const [nuevo, setNuevo] = useState(false);
   const [anulando, setAnulando] = useState<number | null>(null);
   const [detalle, setDetalle] = useState<Vale | null>(null);
-  const puedeCrear = can('combustible_vales.crear', 'op_guias_remision.crear', 'operaciones.crear');
+  const puedeCrear = can('combustible_vales.crear');
   const lista = vales.data ?? [];
 
   const visibles = useMemo(() => {
@@ -173,7 +173,7 @@ export function ValesViajePage() {
         )}
       </div>
       <NuevoValeSheet open={nuevo} onClose={() => setNuevo(false)} />
-      <ValeDetalleSheet vale={detalle} onClose={() => setDetalle(null)} puedeAnular={puedeCrear} anulando={anulando === detalle?.id} onAnular={v => { void anular(v).then(() => setDetalle(null)); }} />
+      <ValeDetalleSheet vale={detalle} onClose={() => setDetalle(null)} puedeAnular={can('combustible_vales.eliminar')} anulando={anulando === detalle?.id} onAnular={v => { void anular(v).then(() => setDetalle(null)); }} />
     </Page>
   );
 }

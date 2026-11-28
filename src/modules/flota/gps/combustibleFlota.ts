@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../core/api/client';
+import { useAuth } from '../../../core/auth/AuthProvider';
 import { factorCombustible } from './unidadCombustible';
 import { RESERVA_COMBUSTIBLE_PCT } from './mapaConfig';
 import type { Alerta } from './motor';
@@ -24,8 +25,11 @@ export function useCombustibleFlota() {
 
 /** Kilómetros por galón reales de cada unidad (de sus vales de los últimos 120 días), por placa sin guiones */
 export function useRendimientoFlota() {
+  // El servidor pide Análisis de combustible (o Urea): sin ese permiso no se llama y la ficha no muestra el rendimiento
+  const { can } = useAuth();
   return useQuery({
     queryKey: ['flota', 'rendimiento-flota'],
+    enabled: can('combustible_analisis.ver', 'urea_analisis.ver'),
     staleTime: 30 * 60_000,
     queryFn: async (): Promise<Map<string, number>> => {
       const r = await api<Array<{ placa: string; rendimiento: number }>>('/combustible/rendimiento-flota');

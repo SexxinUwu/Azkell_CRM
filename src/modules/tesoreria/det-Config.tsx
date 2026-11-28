@@ -77,6 +77,7 @@ export function DetConfig() {
   }
 
   const c = config.data;
+  const puedeEditarTipos = c?.puede_editar === true;
   return (
     <div className="det-cuerpo">
       <section className="det-tarjeta">
@@ -92,7 +93,7 @@ export function DetConfig() {
       <section className="det-tarjeta">
         <div className="det-tarjeta__cabecera">
           <h2 className="det-tarjeta__titulo">Tipos de detracción</h2>
-          <Button variant="primary" size="sm" icon={<Plus size={16} />} onClick={() => { setError(null); setForm(NUEVO); }}>Agregar tipo</Button>
+          {puedeEditarTipos && <Button variant="primary" size="sm" icon={<Plus size={16} />} onClick={() => { setError(null); setForm(NUEVO); }}>Agregar tipo</Button>}
         </div>
         <p className="det-nota">Cambiar el porcentaje o el mínimo solo afecta a las órdenes nuevas: cada orden conserva el porcentaje con el que se registró. Los valores deben validarse con el contador.</p>
         {tipos.isLoading ? <PageLoader variante="circulo" /> : tipos.isError ? <Notice tone="error">{errorMessage(tipos.error)}</Notice> : (
@@ -107,10 +108,10 @@ export function DetConfig() {
                 <Celda alinear="right" mono>{t.usos}</Celda>
                 <Celda>{t.actualizado_por ? `${t.actualizado_por} · ${t.actualizado_en ?? ''}` : '—'}</Celda>
                 <Celda alinear="right">
-                  <span className="det-acciones">
+                  <span className="det-acciones">{puedeEditarTipos && (<>
                     <Button size="sm" variant="plain" iconOnly aria-label={`Editar ${t.codigo}`} icon={<Pencil size={16} />}
                       onClick={() => { setError(null); setForm({ id: t.id, codigo: t.codigo, descripcion: t.descripcion, porcentaje: String(t.porcentaje), monto_minimo: String(t.monto_minimo) }); }} />
-                    <Button size="sm" variant="plain" iconOnly aria-label={t.activo ? `Desactivar ${t.codigo}` : `Activar ${t.codigo}`} icon={<Power size={16} />} onClick={() => alternar(t)} />
+                    <Button size="sm" variant="plain" iconOnly aria-label={t.activo ? `Desactivar ${t.codigo}` : `Activar ${t.codigo}`} icon={<Power size={16} />} onClick={() => alternar(t)} /></>)}
                   </span>
                 </Celda>
               </tr>

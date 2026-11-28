@@ -16,7 +16,7 @@ interface Props {
   entrada: EntradaInv;
   onVolver: () => void;
   onEditar?: () => void;
-  onAdjuntos: () => void;
+  onAdjuntos?: () => void;
   /** Confirma el pago (Tesorería). Solo se ofrece si la orden está aprobada y el usuario puede pagar. */
   onConfirmarPago?: () => void;
   onAnular?: () => void;
@@ -148,7 +148,7 @@ export function EntradaDetalle({
       {/* Acciones principales */}
       <div className="oc-acciones oc-acciones--sinfondo">
         {onEditar && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Editar orden" aria-label="Editar orden" onClick={onEditar}><Pencil size={17} /></button>}
-        <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Adjuntos y sustentos" aria-label="Adjuntos y sustentos" onClick={onAdjuntos}><Paperclip size={17} /></button>
+        {onAdjuntos && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Adjuntos y sustentos" aria-label="Adjuntos y sustentos" onClick={onAdjuntos}><Paperclip size={17} /></button>}
         {onConfirmarPago && pagable && <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Confirmar pago" aria-label="Confirmar pago" onClick={onConfirmarPago}><CreditCard size={17} /></button>}
         <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Descargar PDF" aria-label="Descargar PDF" disabled={generandoPdf} onClick={onPdf}><FilePdf size={17} /></button>
         <button type="button" className="btn btn--secondary btn--icon oc-acciones__boton" data-tip="Vista previa" aria-label="Vista previa" onClick={onVistaPrevia}><Eye size={17} /></button>

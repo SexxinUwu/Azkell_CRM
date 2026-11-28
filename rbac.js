@@ -4,11 +4,11 @@ module.exports = function globalRBAC(req, res, next) {
     // Rutas públicas o helpers que no requieren permisos de módulo
     const ignoredPaths = [
         '/login', '/ping', '/version', '/eventos', 
-        '/cambiar-password', '/conductores', '/conductores-lista', '/placas-lista', '/config-metrica', 
-        '/clientes-placas', '/marcas-placas', '/proxy/documento', '/proxy/sunat', '/proxy/geocode', '/notificaciones', '/push',
-        '/script/obtener', '/script/buscar', '/integraciones', '/catalogos_taller',
+        '/cambiar-password', '/placas-lista', '/config-metrica', 
+        '/clientes-placas', '/marcas-placas', '/proxy/documento', '/proxy/sunat', '/proxy/geocode', '/push',
+        '/script/obtener', '/script/buscar', '/catalogos_taller',
         '/documentos-flota/presign-read', '/mantenimiento/inspecciones/presign-read', '/mantenimiento/checklist/presign-read', '/mantenimiento/presign-read', '/checklist/presign-read',
-        '/presign-read', '/operaciones/conductor-portal', '/tesoreria/liquidaciones-gastos', '/combustible/vales',
+        '/presign-read', '/operaciones/conductor-portal',
         '/guias-remision/pdf-apisunat', '/guias-remision/pdf',
         '/whatsapp/qr', '/approvals/oc',
         '/herramientas' // Herramientas PDF: las usa cualquier persona con sesión (la ruta exige sesión por su cuenta)
@@ -16,37 +16,36 @@ module.exports = function globalRBAC(req, res, next) {
     // Listas de consulta: exentas solo para leer. Borrar, importar o modificar exige el permiso del módulo
     // (antes, DELETE /conductores/:id o PUT /config-metrica/:placa pasaban sin permiso).
     const soloLectura = new Set(['/conductores', '/conductores-lista', '/placas-lista', '/config-metrica', '/clientes-placas', '/marcas-placas', '/catalogos_taller']);
+    // La lectura legacy de usuarios devolvía contraseñas y permisos de todos a cualquier sesión: solo administrador (ver SOLO_ADMIN)
+    const lecturaUsuarios = path === '/script/obtenerDatosUsuarios';
     if (
-        ignoredPaths.some(ip => (path === ip || path.startsWith(ip)) && (!soloLectura.has(ip) || req.method === 'GET')) || 
+        !lecturaUsuarios && (ignoredPaths.some(ip => (path === ip || path.startsWith(ip)) && (!soloLectura.has(ip) || req.method === 'GET')) || 
         path.startsWith('/whatsapp/') ||
         path.startsWith('/approvals/') ||
         path.endsWith('/presign-read') || 
         path.endsWith('/presigned') || 
-        path.endsWith('/ver') || 
-        (path.includes('/archivo/') && path.endsWith('/ver')) ||
         path.includes('/pdf-apisunat/') ||
         path.includes('/pdf/') ||
-        path.includes('/imprimir/')
+        path.includes('/imprimir/'))
     ) return next();
 
     if (!req.user) return res.status(401).json({ error: 'No autenticado' });
 
     // Desactivar bypass global: activar validación estricta de permisos RBAC
 
-    // Datos de referencia globales ampliados: Listas desplegables permitidas para cualquier usuario autenticado
+    // Datos de referencia globales: SOLO catálogos neutros para listas desplegables, abiertos a cualquier usuario autenticado.
+    // Las lecturas de datos de negocio (conductores, vales, matriz y rendimiento de combustible, disponibilidad, rampas, OT, neumáticos,
+    // actas, vehículos de flota, km histórico) ya NO están aquí: piden el permiso de su módulo (ver más abajo).
     const globalReferenceGets = [
         '/configuracion-clave',
         '/nav/indicadores', // cifras del menú (solo lectura, sin datos sensibles)
-        '/disponibilidad-flota',
         '/config-metrica',
-        '/km-historico',
         '/almacen/marcas-placas',
         '/almacen/detraccion-tipos', // catálogo de tipos de detracción (lectura para el formulario de la orden); editarlo es solo de administradores
         '/almacen/familias',
         '/almacen/marcas',
         '/almacen/sistemas',
         '/almacen/unidades',
-        '/almacen/proveedores',
         '/almacen/placas',
         '/catalogos_taller',
         '/almacen/notificaciones/resumen',
@@ -55,37 +54,9 @@ module.exports = function globalRBAC(req, res, next) {
         '/mantenimiento-kits',
         '/cat-rampas',
         '/taller/rampas',
-        '/taller-rampas',
         '/taller-personal',
         '/taller/personal',
-        '/conductores',
-        '/conductores-lista',
-        '/roles',
-        '/usuarios-v2',
-        '/almacen/entradas',
-        '/almacen/salidas',
-        '/almacen/inventario',
-        '/ot-trabajos',
-        '/ot-materiales',
-        '/ot-backlog',
-        '/inspecciones-por-ot',
-        '/neumaticos/catalogos',
-        '/neumaticos/analisis',
-        '/neumaticos/medida-detalle',
-        '/combustible/catalogos',
-        '/combustible/rendimiento-teorico',
-        '/combustible/rendimiento-flota',
-        '/combustible/matriz',
-        '/combustible/vales',
-        '/operaciones/reporte-viajes',
-        '/seguridad/recursos',
-        '/seguridad/template',
-        '/seguridad/entrega-vehiculos',
-        '/flota/entrega-vehiculos',
-        '/vehiculos-flota',
         '/tesoreria/motivos-gastos',
-        '/tesoreria/movimientos',
-        '/tesoreria/pago-requerimientos',
         '/checklist/config-sistemas'
     ];
     if (req.method === 'GET' && globalReferenceGets.some(p => path === p || path.startsWith(p))) {
@@ -100,14 +71,27 @@ module.exports = function globalRBAC(req, res, next) {
     } catch(e) {}
     if (p.admin === true) return next();
 
+    // SOLO ADMINISTRADOR (no se asignan en los roles): usuarios, roles, auditoría, API y desarrolladores, empresa,
+    // notificaciones e integraciones. Quien no es administrador recibe 403 aunque su rol tenga el resto de permisos.
+    const SOLO_ADMIN = ['/usuario', '/roles', '/audit', '/log-auditoria', '/notificaciones', '/integraciones', '/sire', '/docs-externos', '/empresa', '/sistema/empresa', '/sistema/api-keys', '/sistema/webhooks', '/script/obtenerDatosUsuarios'];
+    if (SOLO_ADMIN.some(ip => path.startsWith(ip))) return res.status(403).json({ error: 'Solo un administrador puede usar esta sección.' });
+
     const methodMap = { GET: 'l', POST: 'c', PUT: 'e', DELETE: 'd' };
     let accion = methodMap[req.method] || 'l';
     let mod = null;
+    // Mantenimiento: cada ruta pide el permiso de su módulo del catálogo (src/modules/sistema/permisosCatalogo.ts).
+    // leer(): en GET, las pantallas del taller también leen los datos de las demás; «Otros» (otros_mant) da lectura a sus ventanas.
+    // Escribir (POST, PUT, PATCH, DELETE) siempre pide el permiso del módulo de la ruta.
+    const leer = (...claves) => (req.method === 'GET' ? [...claves, 'otros_mant'] : []);
+    // Ventanas del hub «Otros» de Mantenimiento: el permiso del hub (con sus acciones ver, crear, editar y eliminar) gobierna TODAS sus ventanas, también al escribir
+    const otros = (...claves) => [...claves, 'otros_mant'];
 
     // Si es un script legacy, forzar la acción según el nombre de la operación
     if (path.startsWith('/script/obtener') || path.startsWith('/script/buscar')) accion = 'l';
     else if (path.startsWith('/script/actualizar') || path.startsWith('/script/editar')) accion = 'e';
     else if (path.startsWith('/script/eliminar')) accion = 'd';
+    // Guardar un conductor existente (con idConductor) es una edición; darlo de alta sigue siendo crear
+    if (path === '/script/guardarConductor' && req.body && Array.isArray(req.body.args) && req.body.args[0] && req.body.args[0].idConductor) accion = 'e';
 
     // Asistente: cada reporte y cada consulta del chat verifica sus propios permisos (routes/asistente-*.js).
     // Sin esta regla, cualquier usuario que no fuera admin recibía "Ruta no mapeada" al escribir en el chat.
@@ -133,8 +117,8 @@ module.exports = function globalRBAC(req, res, next) {
     const descontarChica = req.method === 'POST' && /^\/tesoreria\/caja-chica\/movimientos\/[^/]+\/descontar$/.test(path);
     if (aprobGerenciaChica || aprobTesoreriaChica || descontarChica) {
         const reglasChica = aprobGerenciaChica ? [['gerencia_aprobaciones_caja', ['a']]]
-            : descontarChica ? [['gerencia_aprobaciones_caja', ['a']], ['tesoreria', ['c']]]
-            : [['tesoreria', ['c']]];
+            : descontarChica ? [['gerencia_aprobaciones_caja', ['a']], ['tesoreria_caja', ['c']]]
+            : [['tesoreria_caja', ['c']]];
         const tieneChica = reglasChica.some(([modulo, acciones]) => p[modulo] && acciones.some(a => p[modulo][a] === 1 || p[modulo][a] === true));
         if (!tieneChica) return res.status(403).json({ error: 'RBAC: Permiso denegado para aprobar (caja chica)' });
         return next();
@@ -150,25 +134,28 @@ module.exports = function globalRBAC(req, res, next) {
     if (esAprobacionOc || esAprobacionCaja) {
         const reglas = esAprobacionOc
             ? [['gerencia_aprobaciones_oc', ['a']]]
-            : [['gerencia_aprobaciones_caja', ['a']], ...['tesoreria', 'tes_motivos', 'liquidaciones_gastos', 'cond', 'conductores'].map(m => [m, ['c']])];
+            : [['gerencia_aprobaciones_caja', ['a']], ['tesoreria_caja', ['c']]];
         const tiene = reglas.some(([modulo, acciones]) => p[modulo] && acciones.some(a => p[modulo][a] === 1 || p[modulo][a] === true));
         if (!tiene) return res.status(403).json({ error: 'RBAC: Permiso denegado para aprobar o anular (Gerencia)' });
         return next();
     }
 
+    // Subir documentos de una persona: el catálogo dice «Crear o Editar»; borrar pide Eliminar (ruta DELETE)
+    if (req.method === 'POST' && /^\/rrhh\/personal\/[^/]+\/documentos$/.test(path)) {
+        const legajo = p.rrhh_personal || {};
+        if (legajo.c === 1 || legajo.c === true || legajo.e === 1 || legajo.e === true) return next();
+        return res.status(403).json({ error: 'RBAC: Permiso denegado para subir documentos (pide Crear o Editar en Legajos y contratos)' });
+    }
+
     // FLOTA Y MÓDULOS
-    if (path.startsWith('/disponibilidad-flota') || path.toLowerCase().includes('disponibilidad')) mod = ['disponibilidad', 'fleet', 'placas'];
-    else if (path.startsWith('/roles')) mod = 'roles';
-    else if (path.startsWith('/usuarios-v2')) mod = 'usuarios';
-    else if (path.startsWith('/integraciones')) mod = 'integraciones';
-    else if (path.startsWith('/sire')) mod = ['integraciones', 'administracion'];
-    else if (path.startsWith('/docs-externos')) mod = ['integraciones', 'administracion'];
+    if (path.startsWith('/disponibilidad-flota') || path.toLowerCase().includes('disponibilidad')) {
+        // Leer la disponibilidad: también GPS (ubicación), Inspecciones y OT (marcar la unidad «En base» al cerrar la OT)
+        mod = req.method === 'GET' ? ['disponibilidad', 'gps', 'insp', 'ot'] : ['disponibilidad'];
+        if (path === '/disponibilidad-flota/pdf') accion = 'l'; /* el PDF no guarda nada */
+    }
     else if (path.startsWith('/contabilidad')) mod = ['contabilidad_sire'];
-    else if (path.startsWith('/auditoria') || path.startsWith('/audit')) mod = 'mod_auditoria';
-    else if (path.startsWith('/notificaciones')) mod = ['administracion', 'cfg_empresa'];
-    // Sistema › API y desarrolladores: llaves de API y webhooks (antes sin mapeo; ahora exigen administración)
-    else if (path.startsWith('/sistema/api-keys') || path.startsWith('/sistema/webhooks')) mod = ['administracion'];
-    else if (path.startsWith('/seguridad/asistencia')) mod = ['asist', 'seguridad'];
+    // Asistencia de RRHH (no hay ruta propia de /seguridad/asistencia; la clave es rrhh_asistencia)
+    else if (path.startsWith('/seguridad/asistencia')) mod = ['rrhh_asistencia'];
     // Papeletas (Flota): su propio permiso; Tesorería también las ve y registra sus pagos
     // Notas de crédito de proveedores: su propio permiso; quien paga órdenes (Tesorería o Almacén) también las consulta para aplicarlas
     // Consultarlas: también quien paga órdenes. Registrar o enlazar: solo con el permiso de Notas de crédito (Tesorería o Almacén)
@@ -176,11 +163,20 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/papeletas')) { mod = ['papeletas', 'tesoreria_papeletas', 'tesoreria_caja']; if (path === '/papeletas/pdf') accion = 'l'; }
     // PDF del acta: el POST solo convierte el documento, no guarda nada; quien ve las actas puede imprimirlas
     else if (path === '/seguridad/entrega-vehiculos/pdf') { mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas', 'docs_flota']; accion = 'l'; }
-    else if (path.startsWith('/seguridad/entrega-vehiculos') || path.startsWith('/flota/entrega-vehiculos')) mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas', ...(req.method === 'GET' ? ['docs_flota'] : [])];
-    else if (path.startsWith('/seguridad')) mod = ['seguridad_unidades', 'seguridad', 'checklist', 'placas', 'unid'];
-    else if (path.startsWith('/configuracion-flota')) mod = 'cfg_mant';
+    else if (path.startsWith('/flota/entrega-vehiculos')) mod = ['entrega_vehiculos', 'seguridad_unidades', 'placas', ...(req.method === 'GET' ? ['docs_flota'] : [])];
+    else if (path.startsWith('/seguridad/entrega-vehiculos')) mod = ['entrega_vehiculos', 'seguridad_unidades', 'flota', 'placas', ...(req.method === 'GET' ? ['docs_flota'] : [])];
+    else if (path.startsWith('/seguridad')) mod = ['seguridad_unidades', 'seguridad', 'checklist', 'placas', 'unid', ...(path === '/seguridad/recursos' ? ['entrega_vehiculos'] : [])]; // recursos (placas y conductores) también alimenta el acta de entrega
+    else if (path.startsWith('/configuracion-flota')) mod = otros('cfg_mant');
     // RRHH: cada pantalla con su permiso (antes no estaba mapeado y solo entraban administradores)
-    else if (path.startsWith('/rrhh/tareo') || path.startsWith('/rrhh/marcacion') || path.startsWith('/rrhh/horarios')) mod = ['rrhh_asistencia'];
+    else if (path.startsWith('/rrhh/tareo') || path.startsWith('/rrhh/marcacion') || path.startsWith('/rrhh/horarios')) {
+        mod = ['rrhh_asistencia'];
+        // Guardar o sincronizar el tareo edita la asistencia ya registrada: pide Editar (como «regularizar técnicos»)
+        if (path.startsWith('/rrhh/tareo/') && req.method === 'POST') accion = 'e';
+        // Marcar a mano la asistencia de alguien también edita lo registrado (decisión del dueño)
+        if (path === '/rrhh/marcacion/manual' && req.method === 'POST') accion = 'e';
+    }
+    // Justificaciones (licencias y vacaciones) viven en la pantalla de Asistencia
+    else if (path.startsWith('/rrhh/licencias')) { mod = ['rrhh_asistencia']; if (req.method === 'POST') accion = 'e'; /* justificar edita la asistencia */ }
     else if (path.startsWith('/rrhh/nomina')) mod = ['rrhh_nomina'];
     else if (path === '/rrhh/directorio') mod = ['rrhh_personal', 'cond'];
     else if (path.startsWith('/rrhh/')) mod = ['rrhh_personal'];
@@ -188,108 +184,264 @@ module.exports = function globalRBAC(req, res, next) {
     // ALMACEN & CONFIGURACION
     else if (path.startsWith('/perfil')) return next();
     else if (path === '/auth/logout') return next(); // cerrar la propia sesión: cualquier usuario con sesión
-    else if (path.startsWith('/almacen/almacenes-lista') || path.startsWith('/almacen/almacenes')) {
-        mod = (req.method === 'GET') ? ['inv', 'ent_inv', 'sal_inv', 'kardex', 'cfg_almacen', 'almacenes'] : ['cfg_almacen', 'almacenes', 'inv'];
+    // ALMACÉN (routes/almacen.js): cada ruta exige el módulo de su pantalla y la acción del método (GET l, POST c, PUT e, DELETE d).
+    // Las listas que leen otras pantallas (OC, Recepción, Tesorería, Gerencia, Flota, Dashboard) se leen con sus propios permisos.
+    // Las ventanas de «Otros» (almacenes, familias, marcas, sistemas, unidades, configuración) las rige almacen_otros; inv es respaldo.
+    else if (path.startsWith('/almacen/')) {
+        const en = (...bases) => bases.some(b => path === b || path.startsWith(b + '/'));
+        const esGet = req.method === 'GET';
+        const LEE_OC = ['ent_inv', 'rec_compras', 'gerencia_aprobaciones_oc', 'tesoreria_pago_req', 'tesoreria_caja', 'tesoreria_nc', 'dash_alm'];
+        if (en('/almacen/detraccion-tipos')) {
+            // Tipos de detracción: solo administradores (la lectura es libre, ver globalReferenceGets)
+            return res.status(403).json({ error: 'RBAC: Solo un administrador configura los tipos de detracción' });
+        }
+        else if (en('/almacen/reset-recepciones')) { mod = ['rec_compras']; accion = 'd'; }
+        else if (en('/almacen/configuracion')) mod = esGet ? ['almacen_otros', 'inv', 'ent_inv', 'sal_inv'] : ['almacen_otros', 'inv'];
+        else if (en('/almacen/almacenes', '/almacen/almacenes-lista', '/almacen/familias', '/almacen/marcas', '/almacen/sistemas', '/almacen/unidades')) {
+            mod = esGet ? ['almacen_otros', 'inv', 'ent_inv', 'sal_inv'] : ['almacen_otros', 'inv'];
+        }
+        else if (en('/almacen/marcas-placas')) mod = ['placas', 'inv'];
+        else if (en('/almacen/notificaciones')) mod = ['inv', 'ent_inv', 'sal_inv', 'kardex'];
+        else if (en('/almacen/empresa-cuentas', '/almacen/empresa-documentos')) mod = ['ent_inv', 'inv', 'sal_inv', 'tesoreria', 'tesoreria_pago_req', 'tesoreria_caja'];
+        // «Otros» de Almacén (almacen_otros): su permiso, con sus acciones, gobierna también estas ventanas del hub
+        else if (en('/almacen/recepciones-oc')) mod = ['rec_compras', 'ent_inv', 'inv', 'almacen_otros'];
+        else if (en('/almacen/inventario')) {
+            if (esGet) mod = ['inv', 'ent_inv', 'sal_inv', 'kardex', 'rec_compras', 'dash_alm', 'gerencia_aprobaciones_oc', 'almacen_otros'];
+            else {
+                mod = ['inv', 'almacen_otros'];
+                if (req.method === 'POST' && /\/(bulk-delete)$/.test(path)) accion = 'd';
+                else if (req.method === 'POST' && /\/(bulk-estado|bulk-ubicacion|regularizar-todo-cero|regularizar|lotes\/sincronizar|imagen)$/.test(path)) accion = 'e';
+            }
+        }
+        else if (en('/almacen/llantas-disponibles')) mod = ['inv', 'sal_inv', 'neumaticos.mover', 'neumaticos.reencauche', 'neumaticos.baja'];
+        else if (en('/almacen/neumaticos-articulo')) mod = esGet ? ['inv', 'ent_inv', 'sal_inv'] : ['inv'];
+        else if (en('/almacen/clientes-placas')) mod = ['inv', 'ent_inv', 'sal_inv', 'clientes', 'placas', 'cond'];
+        else if (en('/almacen/entradas')) {
+            if (en('/almacen/entradas/generar-oc-reencauche')) { mod = ['ent_inv', 'neumaticos.reencauche']; accion = 'c'; }
+            else if (esGet) mod = LEE_OC;
+            else {
+                mod = ['ent_inv'];
+                // Adjuntar o reenviar sobre una O/C existente es editarla; quitar un adjunto es eliminar (DELETE)
+                if (req.method === 'POST' && (/\/reenviar-whatsapp$/.test(path) || /^\/almacen\/entradas\/[^/]+\/archivos?(\/|$)/.test(path))) accion = 'e';
+            }
+        }
+        else if (en('/almacen/salidas')) mod = esGet ? ['sal_inv', 'dash_alm', 'kardex', 'ent_inv'] : ['sal_inv'];
+        else if (en('/almacen/proveedores', '/almacen/importarProveedoresMasivo')) {
+            mod = esGet ? ['prov_inv', 'ent_inv', 'sal_inv', 'tesoreria_pago_req', 'tesoreria_caja', 'tesoreria_nc', 'almacen_otros'] : ['prov_inv', 'almacen_otros'];
+            if (req.method === 'POST' && /\/bulk-delete$/.test(path)) accion = 'd';
+        }
+        else if (en('/almacen/kardex')) mod = ['kardex', 'inv', 'almacen_otros'];
+        // Cualquier otra ruta de almacén no tiene mapa: queda sin mod y la regla estricta la rechaza
     }
-    else if (path.startsWith('/almacen/recepciones-oc') || path.startsWith('/almacen/reset-recepciones')) {
-        mod = ['rec_compras', 'ent_inv', 'inv', 'cfg_almacen'];
-    }
-    else if (path.startsWith('/almacen/empresa-cuentas')) {
-        mod = ['ent_inv', 'inv', 'sal_inv', 'cfg_almacen', 'tesoreria'];
-    }
-    else if (path.startsWith('/almacen/inventario')) mod = ['inv'];
     else if (path.startsWith('/clientes')) mod = ['clientes', 'placas'];
-    else if (path.startsWith('/almacen/entradas')) mod = ['ent_inv'];
-    else if (path.startsWith('/almacen/salidas')) mod = ['sal_inv'];
-    else if (path.startsWith('/almacen/proveedores')) {
-        mod = (req.method === 'GET') ? ['prov_inv', 'ent_inv', 'sal_inv'] : ['prov_inv'];
-    }
-    else if (path.startsWith('/almacen/placas') || path.startsWith('/almacen/marcas-placas')) mod = ['placas'];
-    else if (path.startsWith('/almacen/kardex')) mod = ['kardex'];
-    else if (path.startsWith('/almacen/costos')) mod = ['costos_inv'];
-    else if (path.startsWith('/almacen/familias')) mod = ['cfg_familias', 'cfg_almacen', 'inv'];
-    else if (path.startsWith('/almacen/marcas')) mod = ['cfg_marcas', 'cfg_almacen', 'inv'];
-    else if (path.startsWith('/almacen/sistemas')) mod = ['cfg_sistemas', 'cfg_almacen', 'inv'];
-    else if (path.startsWith('/almacen/unidades')) mod = ['cfg_unidades', 'inv', 'ent_inv', 'sal_inv'];
-    else if (path.startsWith('/almacen/notificaciones')) mod = ['inv', 'ent_inv', 'sal_inv', 'kardex', 'cfg_almacen'];
-    else if (path.startsWith('/almacen/configuracion')) mod = ['inv', 'ent_inv', 'sal_inv', 'cfg_almacen'];
+    // CONDUCTORES (lecturas cerradas): la ficha completa (licencia, contacto) pide solo Conductores (cond).
+    // La lista corta (id, nombre y DNI) también la usan las pantallas que asignan conductor: Flota, Mantenimiento, Almacén (salidas), Operaciones y Tesorería.
+    else if (req.method === 'GET' && (path === '/conductores' || path.startsWith('/conductores/'))) mod = ['cond'];
+    else if (req.method === 'GET' && path === '/conductores-lista') mod = ['cond', 'disponibilidad', 'ot', 'trabajos_ot', 'fleet', 'sal_inv', 'op_programacion', 'op_ordenes_viaje', 'op_ordenes_servicio', 'tesoreria_caja', 'tesoreria_liquidaciones'];
 
     // MANTENIMIENTO Y OPERACIONES
-    // Movimientos de llantas: la regla global pide cualquiera de sus permisos; cada endpoint exige el suyo exacto
-    else if (path.startsWith('/neumaticos') && /\/(instalar|retirar|retorno-reencauche)$/.test(path)) {
-        mod = ['neumaticos.mover', 'neumaticos.reencauche', 'neumaticos.baja'];
+    // Neumáticos: cada endpoint exige su permiso (GET = neumaticos l, y además insp/ot/fleetrun para las consultas que usan otros módulos).
+    // Alta, instalar, retirar, rotar y código de fuego = neumaticos.mover; reencauche = neumaticos.reencauche; baja/descarte = neumaticos.baja.
+    // Inspecciones: crear = insp c; eliminar = neumaticos d. Las rutas de routes/neumaticos-ciclo.js vuelven a validar con tienePermiso.
+    else if (path.startsWith('/neumaticos')) {
+        const sub = path.slice('/neumaticos'.length);
+        if (req.method === 'GET') {
+            // LECTURAS DE NEUMÁTICOS: solo el permiso «neumaticos», salvo estos endpoints que consumen otros módulos (lista explícita):
+            //   /inspecciones y /inspecciones/:id  -> insp (Inspecciones) y mant_dashboard (Dashboard de mantenimiento)
+            //   /km-gps/:placa                     -> insp (registrar inspección) y op_ordenes_viaje / op_programacion (orden de viaje)
+            //   /historial-placa/:placa            -> placas (ficha de la placa) e insp
+            //   /mapa-pdf/:placa                   -> placas (ficha de la placa)
+            //   /llantas y /almacenes              -> insp (pantalla de almacenes de neumáticos dentro de Inspecciones)
+            const OTROS_MODULOS = {
+                '/inspecciones': ['insp', 'mant_dashboard'],
+                '/km-gps': ['insp', 'op_ordenes_viaje', 'op_programacion'],
+                '/historial-placa': ['placas', 'insp'],
+                '/mapa-pdf': ['placas'],
+                '/llantas': ['insp'],
+                '/almacenes': ['insp']
+            };
+            const base = Object.keys(OTROS_MODULOS).find(b => sub === b || sub.startsWith(b + '/'));
+            mod = ['neumaticos', ...(base ? OTROS_MODULOS[base] : [])];
+        }
+        else if (sub.startsWith('/inspecciones')) mod = req.method === 'DELETE' ? ['neumaticos'] : ['insp'];
+        else if (/^\/(instalar|retirar|rotar|alta-unidad-nueva|rotaciones|devolver-reten|codigo-fuego\/generar|corregir-envio)$/.test(sub)) mod = ['neumaticos.mover'];
+        else if (/^\/(marcar-reforma|despachar-reformadora|retorno-reencauche)$/.test(sub)) mod = ['neumaticos.reencauche'];
+        else if (/^\/(marcar-descarte|desactivar)$/.test(sub)) mod = ['neumaticos.baja'];
+        else mod = ['neumaticos']; // catálogos, importar y letra del código de fuego (PUT = editar)
     }
-    else if (path.startsWith('/neumaticos') || path.includes('neumaticos')) {
+    else if (path.includes('neumaticos')) {
         mod = ['neumaticos', 'insp', 'ot', 'fleetrun'];
     }
     else if (path.startsWith('/combustible') || path.includes('combustible')) {
         if (req.user && req.user.rol && req.user.rol.toLowerCase().includes('conductor')) {
             return next();
         }
-        mod = ['combustible', 'combustible_vales', 'combustible_analisis', 'urea_analisis', 'combustible_matriz', 'fleet', 'fleetrun'];
+        // Claves del catálogo: vales y estaciones = combustible_vales; análisis, auditoría y matriz = combustible_analisis (urea también en el análisis)
+        if (req.method === 'PATCH') accion = 'e'; // PATCH no está en methodMap: un cambio de estado es una edición
+        if (path === '/combustible/auditar-viaje') { mod = ['combustible_analisis', 'urea_analisis']; accion = 'e'; }
+        else if (path === '/combustible/wialon-telemetria-batch') { mod = ['combustible_analisis', 'urea_analisis']; accion = 'l'; } // consulta, no guarda
+        else if (path.startsWith('/combustible/matriz')) mod = ['combustible_analisis'];
+        // Catálogos del formulario de vales (estaciones, choferes, etc.): los lee quien trabaja vales o análisis
+        else if (path === '/combustible/catalogos') mod = ['combustible_vales', 'combustible_analisis', 'urea_analisis'];
+        else if (path.startsWith('/combustible/vales') || path.startsWith('/combustible/estaciones-proveedores') || path === '/combustible/sincronizar-remoto' || path === '/combustible/resumen-vales' || path === '/combustible/compras-externas') {
+            mod = ['combustible_vales'];
+            // Leer vales: también Operaciones (viajes) y el portal del conductor (sus vales del viaje)
+            if (req.method === 'GET' && path.startsWith('/combustible/vales')) mod = ['combustible_vales', 'op_ordenes_viaje', 'conductor_portal'];
+            if (path === '/combustible/vales/eliminar-masivo') accion = 'd'; // POST que borra: exige eliminar
+        }
+        else mod = ['combustible_analisis', 'urea_analisis'];
     }
     else if (path.startsWith('/operaciones/docs-marsisa')) mod = ['docs_flota'];
-    else if (path.startsWith('/operaciones/conduccion-rpm')) mod = ['combustible_analisis'];
-    else if (path.startsWith('/operaciones/hojas-ruta')) mod = ['op_ordenes_viaje', 'op_programacion'];
-    else if (path.startsWith('/operaciones') || path.includes('ordenes-viaje') || path.includes('guias-remision') || path.includes('viajes') || path.includes('programacion')) {
-        mod = ['op_programacion', 'op_guias_remision', 'op_rutas', 'op_asignacion', 'op_monitoreo', 'combustible_analisis', 'combustible_vales', 'placas', 'fleet'];
+    else if (path.startsWith('/operaciones/conduccion-rpm')) {
+        mod = ['combustible_analisis'];
+        if (/\/(analizar|viaje)$/.test(path)) accion = 'l'; // POST de cálculo: no guarda nada
+        if (path === '/operaciones/conduccion-rpm/precalcular') accion = 'e'; // recalcula el resultado guardado
     }
-    else if (path.startsWith('/taller-rampas') || path.startsWith('/taller/entradas') || path.startsWith('/taller/status') || path.startsWith('/taller/kanban')) {
-        mod = ['status_rampa', 'ot', 'trabajos_ot', 'fleetrun', 'plan', 'cfg_mant'];
+    else if (path.startsWith('/operaciones/hojas-ruta')) {
+        mod = ['op_ordenes_viaje', 'op_programacion'];
+        if (path === '/operaciones/hojas-ruta/pdf') accion = 'l'; // convierte el documento, no guarda nada
     }
-    else if (path.startsWith('/ordenes') || path.startsWith('/taller/generar_ot')) {
-        mod = (req.method === 'GET') ? ['ot', 'status_rampa', 'trabajos_ot', 'reportes_ot', 'sal_inv'] : ['ot', 'status_rampa', 'trabajos_ot'];
+    else if (path.startsWith('/operaciones/vales')) {
+        // Vales de viaje: ver con combustible_vales u op_ordenes_viaje; crear, anular y editar exigen combustible_vales
+        mod = (req.method === 'GET' || path.endsWith('/leer')) ? ['combustible_vales', 'op_ordenes_viaje'] : ['combustible_vales'];
+        if (path.endsWith('/leer')) accion = 'l'; // lee la foto con IA, no guarda nada
+        if (/\/anular$/.test(path)) accion = 'd';
     }
-    else if (path.startsWith('/taller/trabajos') || path.startsWith('/ot-trabajos') || path.startsWith('/ot-horas-tecnicos')) {
-        mod = ['trabajos_ot', 'ot', 'status_rampa'];
-        // Registrar técnicos es una edición del trabajo, no una alta
+    else if (path.startsWith('/operaciones/rentabilidad')) { mod = ['op_rentabilidad']; accion = 'l'; } // información sensible: solo quien tenga Rentabilidad
+    else if (path.startsWith('/operaciones/reporte-viajes')) { mod = ['op_reporte_viajes']; accion = 'l'; }
+    else if (path.startsWith('/operaciones/documentos-vencidos')) { mod = ['docs_flota', 'op_ordenes_viaje', 'op_programacion']; accion = 'l'; }
+    else if (path.startsWith('/operaciones/puntos')) mod = ['op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion'];
+    else if (path.startsWith('/operaciones/ordenes-servicio')) {
+        const lectura = req.method === 'GET';
+        mod = lectura ? ['op_ordenes_servicio', 'op_ordenes_viaje', 'op_programacion', 'op_guias_remision'] : ['op_ordenes_servicio', 'op_ordenes_viaje'];
+        if (/\/asignar-viaje$/.test(path)) accion = 'e'; // asigna un viaje a una orden existente
+    }
+    else if (path.startsWith('/operaciones/ordenes-viaje') || path.startsWith('/operaciones/marsisa-ordenes-viaje') || path.startsWith('/operaciones/rutas-matriz')) {
+        if (req.method === 'PATCH') accion = 'e'; // PATCH de la asignación: edita el viaje, no lo lee
+        mod = req.method === 'GET' ? ['op_ordenes_viaje', 'op_programacion', 'op_guias_remision', 'op_ordenes_servicio'] : ['op_ordenes_viaje', 'op_programacion'];
+    }
+    else if (path.startsWith('/operaciones/gre') || path.startsWith('/guias-remision') || path.startsWith('/guia-transportista') || path.startsWith('/guia-remitente')) {
+        // Credenciales y pruebas de SUNAT: solo administrador (no se asignan en la matriz de roles)
+        if (/credenciales|\/config\/|\/test-token-sunat$|\/apisunat\/probar$/.test(path)) return res.status(403).json({ error: 'RBAC: Solo el administrador puede ver o cambiar las credenciales de SUNAT' });
+        mod = ['op_guias_remision'];
+        if (req.method === 'POST' && /\/(leer|parse-xml)$/.test(path)) accion = 'l'; // leen el XML o la foto, no guardan
+        if (req.method === 'POST' && /\/(vincular|desvincular|upload-evidencia|sincronizar)$/.test(path)) accion = 'e'; // cambian una guía existente
+        if (req.method === 'POST' && /\/anular$/.test(path)) accion = 'd';
+    }
+    else if (path.startsWith('/operaciones')) mod = ['op_programacion', 'op_guias_remision', 'op_ordenes_viaje'];
+    // Rutas fuera de /operaciones que mencionan viajes (p. ej. tesorería): se mantiene su mapeo anterior, sin las claves que no existen
+    else if (path.includes('ordenes-viaje') || path.includes('guias-remision') || path.includes('viajes') || path.includes('programacion')) {
+        mod = ['op_programacion', 'op_guias_remision', 'op_ordenes_viaje', 'combustible_analisis', 'combustible_vales', 'placas', 'fleet'];
+    }
+    else if (path.startsWith('/taller-rampas') || path.startsWith('/taller/entradas') || path.startsWith('/taller/status') || path.startsWith('/taller/kanban') || path === '/taller/ingreso') {
+        mod = ['status_rampa', ...leer('ot', 'trabajos_ot')];
+    }
+    else if (path.startsWith('/taller-personal') || path.startsWith('/taller/personal')) mod = otros('pers_mant');
+    // Órdenes de trabajo: ingreso y OT, sus servicios y su PDF (el POST solo convierte el documento, no guarda nada)
+    else if (path.startsWith('/ordenes') || path.startsWith('/taller/generar_ot') || path.startsWith('/ot-servicios') || path.startsWith('/taller/ot-servicios')) {
+        mod = ['ot', ...leer('status_rampa', 'trabajos_ot', 'reportes_ot')];
+    }
+    else if (path === '/ot-pdf') { mod = ['ot', 'trabajos_ot', 'reportes_ot']; accion = 'l'; }
+    // Materiales de la OT (y los repuestos de un trabajo)
+    else if (path.startsWith('/ot-materiales') || path.startsWith('/taller/ot-materiales') || path.startsWith('/taller/repuestos') || /^\/taller\/trabajos\/[^/]+\/repuestos$/.test(path)) {
+        mod = ['ot', ...leer('trabajos_ot', 'status_rampa')];
+    }
+    // Trabajos de la OT y técnicos; regularizar técnicos es una edición del trabajo
+    else if (path.startsWith('/taller/trabajos') || path.startsWith('/ot-trabajos') || path.startsWith('/ot-horas-tecnicos') || path.startsWith('/ot-tecnicos-disponibles') || path.startsWith('/ot-ultimo-dia')) {
+        mod = ['trabajos_ot', ...leer('ot', 'status_rampa', 'reportes_ot')];
         if (path.startsWith('/ot-trabajos/regularizar-tecnicos')) accion = 'e';
     }
-    else if (path.startsWith('/ot-materiales') || path.startsWith('/taller/ot-materiales') || path.startsWith('/taller/ot-servicios') || path.startsWith('/taller/repuestos')) mod = ['ot', 'trabajos_ot', 'status_rampa', 'sal_inv', 'inv'];
-    else if (path.startsWith('/taller/historial')) mod = ['ot'];
-    // PDF de la OT: el POST solo convierte el documento, no guarda nada; quien ve la OT puede imprimirla
-    else if (path === '/ot-pdf') { mod = ['ot', 'trabajos_ot', 'status_rampa', 'reportes_ot']; accion = 'l'; }
+    else if (path.startsWith('/taller/historial')) mod = ['ot', ...leer('trabajos_ot', 'reportes_ot')];
     else if (path.startsWith('/checklist') || path.startsWith('/mantenimiento/checklist')) {
         if (req.user && req.user.rol && req.user.rol.toLowerCase().includes('conductor')) {
             return next();
         }
-        mod = ['checklist', 'ot', 'insp', 'status_rampa', 'cond', 'conductores', 'op_conductor', 'conductor_portal'];
+        // Generar OT desde el checklist crea órdenes de trabajo: pide el permiso de OT
+        if (/\/generar-ots$/.test(path)) mod = ['ot'];
+        else {
+            mod = ['checklist', ...leer('ot', 'seguridad_unidades')];
+            // Quitar una falla o restaurar la configuración es una edición del checklist
+            if (/\/(quitar-falla|restaurar)$/.test(path)) accion = 'e';
+        }
     }
-    else if (path.startsWith('/fallas')) {
-        mod = ['fallas', 'ot', 'status_rampa', 'reportes_ot', 'placas'];
-    }
+    else if (path.startsWith('/fallas')) mod = ['fallas', ...leer('checklist')];
     else if (path.startsWith('/2fa')) {
         // 2FA es gestión personal de cuenta: cualquier usuario autenticado puede usar estas rutas
         return next();
     }
     else if (path.startsWith('/mantenimiento/incidencias') || path.startsWith('/incidencias-ruta')) {
-        mod = ['incidencias', 'ot', 'status_rampa', 'fleet', 'fleetrun', 'placas'];
+        // Marcar una incidencia como solucionada (PATCH) es una edición
+        if (req.method === 'PATCH') accion = 'e';
+        mod = ['incidencias_ruta', ...leer('ot', 'fleet')];
     }
     else if (path.startsWith('/telemetria')) {
-        mod = ['fleet', 'fleetrun', 'gps', 'placas'];
+        mod = ['gps'];
     }
     // Detracciones (reportes y cruce): quien ve Caja o Pago de requerimientos las consulta; la configuración la guarda solo un administrador (lo valida la ruta)
-    else if (path.startsWith('/tesoreria/detracciones')) mod = req.method === 'GET' ? ['tesoreria_caja', 'tesoreria_pago_req', 'tesoreria'] : ['administracion'];
-    else if (path.startsWith('/tesoreria')) mod = ['tesoreria', 'tes_motivos', 'liquidaciones_gastos', 'cond', 'conductores'];
+    else if (path.startsWith('/tesoreria/detracciones')) mod = req.method === 'GET' ? ['tesoreria_caja', 'tesoreria_pago_req'] : [];
+    // TESORERÍA: cada ruta con su módulo del catálogo. La acción la pone el método (GET l, POST c, PUT e, DELETE d).
+    // Los cruces con otras áreas (Operaciones, Almacén, Gerencia y el portal del conductor) van listados aquí.
+    else if (/^\/tesoreria\/caja\/(siguiente-numero|buscar-ordenes-viaje)$/.test(path)) mod = ['tesoreria_caja', 'op_ordenes_viaje'];
+    // Cargo de la cochera del conductor: endpoint propio y estrecho para Operaciones (la ruta solo admite ese cargo). El POST /tesoreria/caja general exige Caja > Crear.
+    else if (path === '/tesoreria/caja/cochera' && req.method === 'POST') mod = ['op_ordenes_viaje'];
+    else if (path === '/tesoreria/caja' && req.method === 'GET') mod = ['tesoreria_caja', 'gerencia_aprobaciones_caja'];
+    else if (/^\/tesoreria\/caja(\/|$)/.test(path)) mod = ['tesoreria_caja'];
+    else if (path.startsWith('/tesoreria/caja-chica')) mod = req.method === 'GET' ? ['tesoreria_caja', 'gerencia_aprobaciones_caja'] : ['tesoreria_caja'];
+    else if (path.startsWith('/tesoreria/pago-requerimientos')) mod = req.method === 'GET' ? ['tesoreria_pago_req', 'tesoreria_caja', 'gerencia_aprobaciones_oc'] : ['tesoreria_pago_req', 'tesoreria_caja']; // pagar: también Almacén, con el mismo permiso que ve su botón
+    else if (path.startsWith('/tesoreria/cuentas-bancarias')) mod = ['tesoreria_bancos', 'tesoreria_caja']; // Cuentas de proveedores y del personal (misma regla que su pantalla)
+    else if (path.startsWith('/tesoreria/bancos')) mod = req.method === 'GET' ? ['tesoreria_bancos', 'tesoreria_caja', 'tesoreria_pago_req', 'op_ordenes_viaje'] : ['tesoreria_bancos', 'tesoreria_caja'];
+    else if (path.startsWith('/tesoreria/centros-costos')) mod = req.method === 'GET' ? ['tesoreria_centros_costos', 'tesoreria_caja', 'ent_inv', 'tesoreria_pago_req'] : ['tesoreria_centros_costos', 'tesoreria_caja'];
+    else if (path.startsWith('/tesoreria/motivos-gastos')) mod = ['tesoreria_centros_costos', 'tesoreria_caja']; // leer es global (catálogo para órdenes, rendición y portal)
+    else if (path.startsWith('/tesoreria/movimientos')) mod = ['tesoreria_movimientos', 'tesoreria_caja'];
+    else if (path.startsWith('/tesoreria/cuentas')) mod = ['tesoreria_cuentas'];
+    else if (path.startsWith('/tesoreria/liquidaciones-gastos') || path.startsWith('/tesoreria/viaje-servicios')) {
+        // Portal del conductor (su rendición) y Operaciones (gastos del viaje) entran sin ser de Tesorería
+        mod = path.includes('generar-caja-compensacion') ? ['tesoreria_liquidaciones', 'tesoreria_caja'] : ['tesoreria_liquidaciones', 'conductor_portal', 'op_ordenes_viaje'];
+    }
+    else if (path.startsWith('/tesoreria')) mod = []; // ruta de Tesorería sin módulo asignado: solo administrador
     // PDF de la inspección: el POST solo convierte el documento, no guarda nada; quien ve las inspecciones puede imprimirlas
     else if (path === '/mantenimiento/inspecciones/pdf') { mod = ['insp']; accion = 'l'; }
+    // Inspecciones de una OT: las lee Inspecciones y también el detalle de la OT
+    else if (path.startsWith('/inspecciones-por-ot')) mod = ['insp', ...(req.method === 'GET' ? ['ot', 'trabajos_ot'] : [])];
     else if (path.startsWith('/inspecciones') || path.startsWith('/mantenimiento/inspecciones')) mod = ['insp'];
-    // Control de siniestros y daños de flota (Mantenimiento › Otros): su propio permiso
-    else if (path.startsWith('/mantenimiento/siniestros')) mod = ['siniestros'];
-    else if (path.startsWith('/planificacion')) mod = ['plan'];
-    else if (path.startsWith('/mantenimiento-kits') || path.startsWith('/tipos-preventivo') || path.startsWith('/tipos-mantenimiento')) mod = ['cfg_mant'];
-    else if (path.startsWith('/config-metrica')) mod = ['cfg_metrica', 'cfg_mant'];
-    else if (path.startsWith('/backlog') || path.startsWith('/ot-backlog')) mod = ['ot', 'status_rampa'];
+    // Kilometraje histórico diario de las unidades (Mantenimiento preventivo): antes lo leía cualquier sesión
+    else if (path === '/km-historico') mod = ['fleet', 'plan', 'cfg_fleetrun', 'gps'];
+    // Siniestros y daños (Mantenimiento › Otros): su propio permiso
+    // Situaciones del taller (Mantenimiento › Otros): antes sin regla y solo las creaba el administrador
+    else if (path.startsWith('/cat-situaciones')) mod = otros('cfg_situacion');
+    else if (path.startsWith('/mantenimiento/siniestros')) mod = otros('siniestros');
+    // Planificación de mantenimientos, con sus requerimientos, reportes y el envío de alertas
+    else if (path.startsWith('/planificacion') || path.toLowerCase().includes('planificacion') || path.startsWith('/requerimientos')) {
+        mod = otros('plan');
+        if (/\/completar$/.test(path)) accion = 'e';   // marcar un mantenimiento como hecho es una edición
+    }
+    // Configuración de mantenimiento: kits, frecuencias, tipos MP, métricas y destinatarios de alertas
+    else if (path.startsWith('/mantenimiento-kits') || path.startsWith('/tipos-preventivo') || path.startsWith('/tipos-mantenimiento') || path.startsWith('/config-metrica') || path.startsWith('/destinatarios-alertas') || path === '/testEmail') {
+        mod = otros('cfg_mant');
+        if (/\/(bulk-delete|eliminarGrupo)$/.test(path)) accion = 'd';   // borrar en lote
+        if (path === '/tipos-preventivo/sync-desde-frecuencias') accion = 'e';
+    }
+    else if (path.startsWith('/backlog') || path.startsWith('/ot-backlog')) mod = ['ot', ...leer('status_rampa', 'trabajos_ot', 'reportes_ot')];
     // Legacy & API Endpoints
     else if (path.startsWith('/placas') || path.startsWith('/placa') || path.toLowerCase().includes('placa')) mod = ['placas', 'fleet'];
-    else if (path.startsWith('/conductores') || path.startsWith('/conductor') || path.toLowerCase().includes('conductor')) mod = ['cond', 'conductores'];
-    else if (path.startsWith('/usuarios') || path.startsWith('/usuario') || path.toLowerCase().includes('usuario')) mod = ['usuarios'];
-    else if (path.startsWith('/vehiculos-flota') || path.startsWith('/documentos') || path.startsWith('/documento') || path.toLowerCase().includes('documento')) mod = ['docs_flota', 'placas', 'insp', 'ot'];
+    // «conductores» no existe en el catálogo de permisos: la clave es cond
+    else if (path.startsWith('/conductores') || path.startsWith('/conductor') || path.toLowerCase().includes('conductor')) mod = ['cond'];
+    else if (path.toLowerCase().includes('usuario')) return res.status(403).json({ error: 'Solo un administrador puede usar esta sección.' });
+    else if (path.startsWith('/vehiculos-flota') || path.startsWith('/documentos') || path.startsWith('/documento') || path.toLowerCase().includes('documento')) {
+        mod = ['docs_flota', 'placas', 'insp', 'ot'];
+        // Leer vehículos de flota: también Garita, el acta de entrega y el reporte de fallas
+        if (req.method === 'GET' && path.startsWith('/vehiculos-flota')) mod.push('seguridad_unidades', 'entrega_vehiculos', 'fallas', 'incidencias_ruta');
+    }
     else if (path.startsWith('/inspecciones') || path.toLowerCase().includes('inspeccion')) mod = ['insp'];
-    else if (path.toLowerCase().includes('fleetrun')) mod = ['fleetrun', 'fleet', 'cfg_mant', 'plan'];
-    else if (path.toLowerCase().includes('statusflota')) mod = ['status_rampa', 'fleet', 'fleetrun', 'ot', 'status'];
+    // Mantenimiento preventivo (Fleetrun): su pantalla es «Mantenimiento preventivo» (permiso fleet)
+    else if (path.toLowerCase().includes('fleetrun')) {
+        mod = ['fleet', ...leer('plan', 'cfg_mant')];
+        if (path === '/fleetrun-pdf') accion = 'l';   // el PDF no guarda nada
+        if (/backfill/i.test(path)) accion = 'e';     // corrige códigos ya registrados
+    }
+    else if (path.toLowerCase().includes('statusflota')) mod = ['status_rampa', ...leer('fleet')];
     else if (path.toLowerCase().includes('wialon')) mod = ['gps', 'fleet'];
-    else if (path.toLowerCase().includes('tiposmantenimiento') || path.toLowerCase().includes('tpmp')) mod = ['cfg_mant', 'fleetrun', 'ot', 'plan'];
+    else if (path.toLowerCase().includes('tiposmantenimiento') || path.toLowerCase().includes('tpmp')) mod = ['cfg_mant', ...leer('fleet', 'plan')];
     else if (path.startsWith('/script/')) {
         let col = (req.body.coleccion || '').toLowerCase();
         if (col === 'usuarios') mod = ['usuarios'];
@@ -298,10 +450,10 @@ module.exports = function globalRBAC(req, res, next) {
         else if (col === 'inventario') mod = ['inv'];
         else if (col === 'entradas_almacen') mod = ['ent_inv'];
         else if (col === 'salidas_almacen') mod = ['sal_inv'];
-        else if (col === 'ordenes_trabajo' || col === 'ot_actividades') mod = ['ot', 'status_rampa', 'trabajos_ot'];
-        else if (col === 'mantenimiento_preventivo') mod = ['cfg_mant', 'fleetrun', 'plan'];
+        else if (col === 'ordenes_trabajo' || col === 'ot_actividades') mod = ['ot', ...leer('status_rampa', 'trabajos_ot')];
+        else if (col === 'mantenimiento_preventivo') mod = ['fleet', 'cfg_mant', 'plan'];
         else if (col === 'planificacion_mps') mod = ['plan'];
-        else mod = ['fleetrun', 'ot', 'status_rampa', 'inv', 'placas'];
+        else mod = ['fleet', 'ot', 'status_rampa', 'inv', 'placas'];
     }
 
     if (mod) {

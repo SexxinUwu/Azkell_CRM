@@ -10,43 +10,43 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'mantenimiento/finanzas-taller/*',
-    permisos: ['mant_dashboard.ver', 'admin'],
+    permisos: ['otros_mant.ver', 'mant_dashboard.ver', 'admin'],
     Page: lazy(() => import('./FinanzasTallerPage').then(m => ({ default: m.FinanzasTallerPage }))),
     nav: { key: 'finanzas-taller', label: 'Reporte financiero', to: '/mantenimiento/finanzas-taller', icon: 'Wallet', permisos: ['mant_dashboard.ver', 'admin'] },
   },
   {
     path: 'mantenimiento/config-metrica/*',
-    permisos: ['cfg_mant.ver', 'admin'],
+    permisos: ['otros_mant.ver', 'cfg_mant.ver', 'admin'],
     Page: lazy(() => import('./ConfigMetricaPage').then(m => ({ default: m.ConfigMetricaPage }))),
     nav: { key: 'config-metrica', label: 'Config. métrica', to: '/mantenimiento/config-metrica', icon: 'Target', permisos: ['cfg_mant.ver', 'admin'] },
   },
   {
     path: 'mantenimiento/configuracion-mp/*',
-    permisos: ['cfg_mant.ver', 'admin'],
+    permisos: ['otros_mant.ver', 'cfg_mant.ver', 'admin'],
     Page: lazy(() => import('./FrecuenciasMpPage').then(m => ({ default: m.FrecuenciasMpPage }))),
     nav: { key: 'frecuencias-mp', label: 'Frecuencias MP', to: '/mantenimiento/configuracion-mp', icon: 'Settings', permisos: ['cfg_mant.ver', 'admin'] },
   },
   {
     path: 'mantenimiento/kpis-taller/*',
-    permisos: ['mant_dashboard.ver', 'admin'],
+    permisos: ['otros_mant.ver', 'mant_dashboard.ver', 'admin'],
     Page: lazy(() => import('./KpisTallerPage').then(m => ({ default: m.KpisTallerPage }))),
     nav: { key: 'kpis', label: 'Métricas y KPIs', to: '/mantenimiento/kpis-taller', icon: 'Activity', permisos: ['mant_dashboard.ver', 'admin'] },
   },
   {
     path: 'mantenimiento/productividad/*',
-    permisos: ['pers_mant.ver', 'mant_dashboard.ver', 'admin'],
+    permisos: ['otros_mant.ver', 'pers_mant.ver', 'mant_dashboard.ver', 'admin'],
     Page: lazy(() => import('./ProductividadPage').then(m => ({ default: m.ProductividadPage }))),
     nav: { key: 'productividad', label: 'Productividad personal', to: '/mantenimiento/productividad', icon: 'HardHat', permisos: ['pers_mant.ver', 'mant_dashboard.ver', 'admin'] },
   },
   {
     path: 'mantenimiento/reportes-ot/*',
-    permisos: ['reportes_ot.ver', 'admin'],
+    permisos: ['otros_mant.ver', 'reportes_ot.ver', 'admin'],
     Page: lazy(() => import('./OrdenesTrabajoPage').then(m => ({ default: m.OrdenesTrabajoPage }))),
     nav: { key: 'reportes-ot', label: 'Órdenes de trabajo', to: '/mantenimiento/reportes-ot', icon: 'ScrollText', permisos: ['reportes_ot.ver', 'reportes_ot.ver'] },
   },
   {
     path: 'mantenimiento/trabajos-ot/*',
-    permisos: ['trabajos_ot.ver', 'admin'],
+    permisos: ['otros_mant.ver', 'trabajos_ot.ver', 'admin'],
     Page: lazy(() => import('./TrabajosOtPage').then(m => ({ default: m.TrabajosOtPage }))),
     nav: { key: 'trabajos-ot', label: 'Trabajos de OT', to: '/mantenimiento/trabajos-ot', icon: 'Wrench', permisos: ['trabajos_ot.ver'] },
   },
@@ -64,7 +64,7 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'mantenimiento/fleetrun-config/*',
-    permisos: ['cfg_fleetrun.ver', 'admin'],
+    permisos: ['otros_mant.ver', 'cfg_fleetrun.ver', 'admin'],
     Page: lazy(() => import('./FleetrunConfigPage').then(m => ({ default: m.FleetrunConfigPage }))),
   },
   {
@@ -111,18 +111,18 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'mantenimiento/planificacion/*',
-    permisos: ['plan.ver', 'admin'],
+    permisos: ['otros_mant.ver', 'plan.ver', 'admin'],
     Page: lazy(() => import('./PlanificacionPage').then(m => ({ default: m.PlanificacionPage }))),
     nav: { key: 'planificacion', label: 'Planificación', to: '/mantenimiento/planificacion', icon: 'History', permisos: ['plan.ver'] },
   },
   {
     path: 'mantenimiento/siniestros/*',
-    permisos: ['siniestros.ver', 'admin'],
+    permisos: ['otros_mant.ver', 'siniestros.ver', 'admin'],
     Page: lazy(() => import('./SiniestrosPage').then(m => ({ default: m.SiniestrosPage }))),
   },
   {
     path: 'mantenimiento/siniestros-analisis/*',
-    permisos: ['siniestros.ver', 'admin'],
+    permisos: ['otros_mant.ver', 'siniestros.ver', 'admin'],
     Page: lazy(() => import('./SiniestrosAnalisisPage').then(m => ({ default: m.SiniestrosAnalisisPage }))),
   },
   {
@@ -132,7 +132,7 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'mantenimiento/tipos-mp/*',
-    permisos: ['cfg_mant.ver', 'admin'],
+    permisos: ['otros_mant.ver', 'cfg_mant.ver', 'admin'],
     Page: lazy(() => import('./TiposAlertasPage').then(m => ({ default: m.TiposAlertasPage }))),
   },
   {
@@ -143,13 +143,13 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'mantenimiento/fallas/*',
-    permisos: ['checklist.ver', 'admin'],
+    permisos: ['fallas.ver', 'checklist.ver', 'admin'],
     Page: lazy(() => import('./FallasPage').then(m => ({ default: m.FallasPage }))),
-    nav: { key: 'fallas', label: 'Fallas en ruta', to: '/mantenimiento/fallas', icon: 'AlertTriangle', permisos: ['checklist.ver', 'admin'] },
+    nav: { key: 'fallas', label: 'Fallas en ruta', to: '/mantenimiento/fallas', icon: 'AlertTriangle', permisos: ['fallas.ver', 'checklist.ver', 'admin'] },
   },
   {
     path: 'mantenimiento/kits-mp/*',
-    permisos: ['cfg_mant.ver', 'admin'],
+    permisos: ['otros_mant.ver', 'cfg_mant.ver', 'admin'],
     Page: lazy(() => import('./KitsMpPage').then(m => ({ default: m.KitsMpPage }))),
     nav: { key: 'kits-mp', label: 'Kits de mantenimiento', to: '/mantenimiento/kits-mp', icon: 'PackageCheck', permisos: ['plan.ver', 'admin'] },
   },

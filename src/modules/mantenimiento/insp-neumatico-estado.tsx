@@ -187,6 +187,9 @@ export function InspeccionCabecera({ e }: { e: EstadoInspeccion; placa: string }
 }
 
 export function InspeccionResumen({ e, montadas }: { e: EstadoInspeccion; montadas: Montada[] }) {
+  // Guardar la inspección exige el permiso de crear inspecciones (insp)
+  const { can } = useAuth();
+  const puedeCrearInspeccion = can('insp.crear');
   const modificadas = montadas.filter(m => e.vigentes[m.posicion]).length;
   return (
     <>
@@ -228,7 +231,7 @@ export function InspeccionResumen({ e, montadas }: { e: EstadoInspeccion; montad
       </section>
       <div className="ninsp-pie">
         <span className="t-footnote c-secondary">Toca una llanta (en el plano o en la tabla) para cambiar sus medidas, Psi, observación o fotos. Al guardar se registran todas las llantas como estén en ese momento.</span>
-        <Button variant="primary" size="lg" onClick={() => { void e.guardar(); }} loading={e.guardando} disabled={montadas.length === 0 || (e.conGps && !e.km)}>Guardar</Button>
+        <Button variant="primary" size="lg" onClick={() => { void e.guardar(); }} loading={e.guardando} disabled={!puedeCrearInspeccion || montadas.length === 0 || (e.conGps && !e.km)}>Guardar</Button>
       </div>
     </>
   );

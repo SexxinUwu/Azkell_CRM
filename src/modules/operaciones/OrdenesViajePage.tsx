@@ -169,8 +169,8 @@ export function OrdenesViajePage() {
   const abierto = lista.find(v => v.viaje === abiertoId) ?? null;
   const visibles = useMemo(() => lista.filter(v => !estado || v.estado === estado), [lista, estado]);
   const puedeCrear = can('op_ordenes_viaje.crear', 'op_programacion.crear');
-  const puedeEditar = can('op_ordenes_viaje.editar', 'op_ordenes_viaje.crear', 'op_programacion.editar');
-  const puedeEliminar = can('op_ordenes_viaje.eliminar');
+  const puedeEditar = can('op_ordenes_viaje.editar', 'op_programacion.editar');
+  const puedeEliminar = can('op_ordenes_viaje.eliminar', 'op_programacion.eliminar');
 
   const conteo = useMemo(() => Object.fromEntries(ESTADOS.map(e => [e, lista.filter(v => v.estado === e).length])), [lista]);
   const refrescar = () => qc.invalidateQueries({ queryKey: ['operaciones'] });

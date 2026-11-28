@@ -108,9 +108,9 @@ export function ValesCombustible({ marsisa = false }: { marsisa?: boolean }) {
 
   const lista = q.data?.data ?? [];
   const k = q.data?.kpis;
-  const puedeCrear = can('combustible_vales.crear', 'combustible.crear');
-  const puedeEditar = can('combustible_vales.editar', 'combustible_vales.crear', 'combustible.editar');
-  const puedeEliminar = can('combustible_vales.eliminar', 'combustible.eliminar');
+  const puedeCrear = can('combustible_vales.crear');
+  const puedeEditar = can('combustible_vales.editar');
+  const puedeEliminar = can('combustible_vales.eliminar');
   const refrescar = () => qc.invalidateQueries({ queryKey: ['operaciones'] });
 
   // Selección múltiple: se marcan vales de la página; la selección se conserva al cambiar de página

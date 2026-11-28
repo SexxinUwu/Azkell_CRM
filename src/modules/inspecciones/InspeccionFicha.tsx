@@ -174,7 +174,7 @@ export function InspeccionFicha({ inspeccion, onClose }: { inspeccion: Inspeccio
                   <small>{neuAsociada.fecha ? neuAsociada.fecha.toLocaleDateString('es-PE') : 'Sin fecha'} · Llantas críticas: {neuAsociada.llantasCriticas}</small>
                 </div>
                 <Button variant="secondary" icon={<Disc3 size={16} />} onClick={() => setNeuDetalle(neuAsociada.id)}>Ver detalle de neumáticos</Button>
-                {can('insp.eliminar') && (
+                {can('neumaticos.eliminar') && (
                   <Button variant="danger" icon={<Trash2 size={16} />} onClick={() => setConfirmar('neumaticos')}>Eliminar neumáticos</Button>
                 )}
               </div>

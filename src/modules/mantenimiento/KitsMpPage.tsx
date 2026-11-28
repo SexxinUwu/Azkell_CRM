@@ -18,6 +18,7 @@ import { KitFormulario } from './KitFormulario';
 import { KitsArbol, type NodoMarca, type SeleccionKits } from './KitsArbol';
 import { KitTarjeta } from './KitTarjeta';
 import { mapearAlmacen, type KitGrupo, type KitItem } from './kitsFormulario';
+import { useAuth } from '../../core/auth/AuthProvider';
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
@@ -62,6 +63,7 @@ function agruparKits(items: KitItem[]): KitGrupo[] {
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export function KitsMpPage() {
+  const { can } = useAuth();
   const qc    = useQueryClient();
   const toast = useToast();
 
@@ -180,7 +182,7 @@ export function KitsMpPage() {
           <BotonTip tip="Descargar plantilla Excel" className="btn btn--secondary btn--icon btn-tip btn-tip--verde" onClick={() => { void descargarPlantillaKits(); }}><FileSpreadsheet size={17} /></BotonTip>
           <BotonTip tip="Subir Excel" className="btn btn--secondary btn--icon btn-tip btn-tip--celeste" onClick={() => inputExcel.current?.click()}><Upload size={17} /></BotonTip>
           <BotonTip tip="Exportar Excel" className="btn btn--secondary btn--icon btn-tip btn-tip--violeta" onClick={() => { void exportar(); }}><FileSpreadsheet size={17} /></BotonTip>
-          <Button variant="primary" icon={<Plus size={16} />} onClick={() => { setKitEditando(null); setFormAbierto(true); }}>Nuevo kit</Button>
+          {can('cfg_mant.crear') && <Button variant="primary" icon={<Plus size={16} />} onClick={() => { setKitEditando(null); setFormAbierto(true); }}>Nuevo kit</Button>}
         </div>
       </header>
 
@@ -223,7 +225,7 @@ export function KitsMpPage() {
                   <h3 className="kt-grupo__tit">{!seleccion.marca && <span>{kits[0].marca}</span>}{kits[0].modelo}<em>{kits.length} {kits.length === 1 ? 'kit' : 'kits'}</em></h3>
                 )}
                 {kits.map(g => (
-                  <KitTarjeta key={g.key} kit={g} inventario={inventario} abierto={abiertos.has(g.key)} onAlternar={() => alternarKit(g.key)} puedeEditar
+                  <KitTarjeta key={g.key} kit={g} inventario={inventario} abierto={abiertos.has(g.key)} onAlternar={() => alternarKit(g.key)} puedeEditar={can('cfg_mant.editar')} puedeEliminar={can('cfg_mant.eliminar')}
                     onEditar={() => { setKitEditando(g); setFormAbierto(true); }} onEliminar={() => setConfirmEliminar(g)} />
                 ))}
               </div>
@@ -240,6 +242,7 @@ export function KitsMpPage() {
         open={formAbierto}
         onClose={() => setFormAbierto(false)}
         onPedirEliminar={g => { setFormAbierto(false); setConfirmEliminar(g); }}
+        puedeEliminar={can('cfg_mant.eliminar')}
       />
 
       <ConfirmSheet

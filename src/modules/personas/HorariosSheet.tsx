@@ -7,6 +7,7 @@ import { Field, SelectInput, TextInput } from '../../core/ui/Field';
 import { SegmentedControl } from '../../core/ui/SegmentedControl';
 import { Sheet } from '../../core/ui/Sheet';
 import { useToast } from '../../core/ui/Toast';
+import { useAuth } from '../../core/auth/AuthProvider';
 import { api, errorMessage } from '../../core/api/client';
 import { haptic } from '../../core/lib/haptics';
 
@@ -31,6 +32,7 @@ function duracionEntre(ini: string, fin: string) {
 export function HorariosSheet({ open, personal, onClose }: { open: boolean; personal: PersonaH[]; onClose: () => void }) {
   const qc = useQueryClient();
   const toast = useToast();
+  const { can } = useAuth();
   const [ambito, setAmbito] = useState<'CARGO' | 'PERSONA'>('CARGO');
   const [cargo, setCargo] = useState('');
   const [persona, setPersona] = useState('');
@@ -83,7 +85,7 @@ export function HorariosSheet({ open, personal, onClose }: { open: boolean; pers
   return (
     <Sheet open={open} onClose={() => !enviando && onClose()} title="Horarios de trabajo" ancho
       footer={<><Button variant="secondary" onClick={onClose} disabled={enviando}>Cerrar</Button>
-        <Button variant="primary" icon={<Clock3 size={16} />} onClick={guardar} loading={enviando}>Guardar horario</Button></>}>
+        {can('rrhh_asistencia.crear') && <Button variant="primary" icon={<Clock3 size={16} />} onClick={guardar} loading={enviando}>Guardar horario</Button>}</>}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
         <p className="field__hint" style={{ margin: 0 }}>
           El horario de una persona reemplaza al de su cargo. Define la tardanza y las horas extra. En turnos de 12 o 24 horas indica la duración real.
@@ -119,7 +121,7 @@ export function HorariosSheet({ open, personal, onClose }: { open: boolean; pers
                   <span className="hor-fila__quien"><strong>{h.ambito === 'CARGO' ? h.cargo : `${h.apellidos ?? ''}, ${h.nombres ?? ''}`}</strong><small>{h.ambito === 'CARGO' ? 'Cargo' : 'Persona'}</small></span>
                   <span className="t-numeric">{h.hora_ingreso} – {h.hora_salida}</span>
                   <span className="t-numeric">{Number(h.duracion_horas)} h · tol. {h.tolerancia_min} min</span>
-                  <button type="button" className="btn btn--plain btn--icono" aria-label="Quitar horario" onClick={() => quitar(h)}><Trash2 size={16} /></button>
+                  {can('rrhh_asistencia.eliminar') && <button type="button" className="btn btn--plain btn--icono" aria-label="Quitar horario" onClick={() => quitar(h)}><Trash2 size={16} /></button>}
                 </div>
               ))}
             </div>

@@ -19,6 +19,10 @@ module.exports = function () {
             (req.user.correo || '').toLowerCase() === 'admin@azkell.com' ||
             req.user.rol === 'Fundador' || req.user.rol === 'SuperAdmin');
 
+        // Solo desde el panel del SaaS (admin.azkell.com / sin empresa). Dentro de una empresa el panel NO existe: ni siquiera un usuario
+        // cuyo rol se llame «Fundador» (los roles los crea cada empresa) lo alcanza. Responde 404 para no revelar que la ruta existe.
+        if (req.tenantSlug !== 'master') return res.status(404).json({ error: 'No encontrado' });
+
         if (esFundador) return next();
 
         // Si se llama desde la API local o para crear empresa durante onboarding inicial

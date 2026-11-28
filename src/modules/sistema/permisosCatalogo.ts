@@ -29,6 +29,8 @@ export const MODULOS_PERMISO: ModuloPermiso[] = [
   { grupo: 'FLOTA', key: 'papeletas', nombre: 'Papeletas', desc: 'Papeletas, multas y actas de control de las unidades', lcad: true },
   { grupo: 'FLOTA', key: 'entrega_vehiculos', nombre: 'Entrega de Vehículos', desc: 'Actas de entrega y recepción de flota', lcad: true },
   { grupo: 'FLOTA', key: 'checklist', nombre: 'Reporte de Fallas', desc: 'Checklist y reportes de falla de unidades', lcad: true },
+  { grupo: 'MANTENIMIENTO', key: 'ot', nombre: 'Órdenes de trabajo', desc: 'Órdenes de trabajo del taller: ingreso, servicios y materiales de cada OT', lcad: true },
+  { grupo: 'MANTENIMIENTO', key: 'fallas', nombre: 'Fallas en ruta', desc: 'Fallas reportadas en ruta y su atención', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'plan', nombre: 'Planificación de Mantenimientos', desc: 'Programación de mantenimientos preventivos', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'cfg_mant', nombre: 'Configuración de Mantenimiento', desc: 'Frecuencias, kits MP, tipos MP y configuración de métricas', lcad: true },
   { grupo: 'MANTENIMIENTO', key: 'pers_mant', nombre: 'Personal de Taller', desc: 'Técnicos y personal del taller', lcad: true },
@@ -72,14 +74,10 @@ export const MODULOS_PERMISO: ModuloPermiso[] = [
   { grupo: 'TESORERÍA', key: 'tesoreria_centros_costos', nombre: 'Centros de Costos', desc: 'Distribución y centros analíticos', lcad: true },
   { grupo: 'TERCEROS', key: 'prov_inv', nombre: 'Proveedores', desc: 'Ver = consultar y llamar desde el Directorio. Crear y Editar = dar de alta y modificar en Terceros (también los usan Almacén y Tesorería)', lcad: true },
   { grupo: 'TERCEROS', key: 'clientes', nombre: 'Clientes', desc: 'Ver = consultar y llamar desde el Directorio. Crear y Editar = dar de alta y modificar en Terceros (los usa Operaciones para facturar)', lcad: true },
-  { grupo: 'CONTABILIDAD', key: 'contabilidad_sire', nombre: 'SIRE de SUNAT', desc: 'Contabilidad › SIRE: ve los comprobantes de ventas y compras de SUNAT, cruza compras con el sistema y exporta a Excel. Cargar las credenciales de SUNAT pide además «Integraciones»', lcad: true },
+  { grupo: 'CONTABILIDAD', key: 'contabilidad_sire', nombre: 'SIRE de SUNAT', desc: 'Contabilidad › SIRE: ve los comprobantes de ventas y compras de SUNAT, cruza compras con el sistema y exporta a Excel. Cargar las credenciales de SUNAT lo hace solo un administrador', lcad: true },
   { grupo: 'CONDUCTOR', key: 'conductor_portal', nombre: 'Portal del Conductor', desc: 'Mi Viaje, ruta activa y rendición de gastos', lcad: true },
   { grupo: 'SEGURIDAD', key: 'seguridad_unidades', nombre: 'CheckList Unidades', desc: 'Fichas y control de ingreso/salida', lcad: true },
-  { grupo: 'CONFIGURACIÓN', key: 'usuarios', nombre: 'Usuarios y Roles', desc: 'Gestión de accesos y seguridad', lcad: true },
   { grupo: 'CONFIGURACIÓN', key: 'cfg_situacion', nombre: 'Situaciones', desc: 'Catálogo de situaciones de unidades y rampa', lcad: true },
-  { grupo: 'CONFIGURACIÓN', key: 'administracion', nombre: 'Administración de empresa', desc: 'Datos de empresa, notificaciones y API para desarrolladores', lcad: true },
-  { grupo: 'CONFIGURACIÓN', key: 'mod_auditoria', nombre: 'Auditoría', desc: 'Bitácora de actividad global', lcad: true },
-  { grupo: 'CONFIGURACIÓN', key: 'integraciones', nombre: 'Integraciones', desc: 'Wialon, Fleetrun, WhatsApp, Webhooks, Facturación electrónica (APISUNAT, prueba o producción) y SUNAT · API (SIRE)', lcad: true },
 ];
 
 /** Colores que ofrece la versión actual para el rol */

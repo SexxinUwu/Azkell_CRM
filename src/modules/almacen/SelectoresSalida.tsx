@@ -72,7 +72,7 @@ export function usePersonalSolicitante() {
       const lista = (r: unknown) => (Array.isArray(r) ? r : ((r as { data?: unknown[] })?.data ?? [])) as Record<string, unknown>[];
       const [taller, conductores] = await Promise.all([
         api<unknown>('/taller-personal').catch(() => []),
-        api<unknown>('/conductores').catch(() => []),
+        api<unknown>('/conductores-lista').catch(() => []),
       ]);
       const nombres = new Map<string, string>();
       for (const p of lista(taller)) { const n = String(p.nombre ?? '').trim(); if (n) nombres.set(n.toUpperCase(), n); }

@@ -256,9 +256,9 @@ export function CuentasPage() {
         cuenta={abierta}
         onClose={() => setAbiertoId(null)}
         onEditar={puedeEditar && abierta && estadoDe(abierta) !== 'PAGADO' ? () => setFormulario({ cuenta: abierta }) : undefined}
-        onPagar={puedeEditar && abierta && estadoDe(abierta) !== 'ANULADO' ? () => { setPagando(abierta); setAbiertoId(null); } : undefined}
+        onPagar={puedeCrear && abierta && estadoDe(abierta) !== 'ANULADO' ? () => { setPagando(abierta); setAbiertoId(null); } : undefined}
         onRevertir={puedeEditar && abierta && estadoDe(abierta) === 'PAGADO' ? () => volverAPendiente(abierta) : undefined}
-        onNotaCredito={puedeEditar && abierta && abierta.serie && abierta.factura ? () => { setNotaCredito(abierta); setAbiertoId(null); } : undefined}
+        onNotaCredito={puedeCrear && abierta && abierta.serie && abierta.factura ? () => { setNotaCredito(abierta); setAbiertoId(null); } : undefined}
         onEliminar={puedeEliminar && abierta && estadoDe(abierta) !== 'PAGADO' ? () => setPorEliminar(abierta) : undefined}
         onHistorial={() => { if (abierta) setHistorialDe(abierta); }}
       />

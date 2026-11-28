@@ -99,7 +99,7 @@ export function InventarioFicha({ articulo: a, onEditar, onEliminar, onActualiza
             onClick={() => setEtiquetando(true)}>
             Imprimir
           </Button>
-          <Button variant="secondary" size="sm" icon={<RefreshCw size={15} />} onClick={() => setRegularizando(true)}>Regularizar</Button>
+          {onEditar && <Button variant="secondary" size="sm" icon={<RefreshCw size={15} />} onClick={() => setRegularizando(true)}>Regularizar</Button>}
           {onEditar && <Button variant="primary" size="sm" icon={<Pencil size={15} />} onClick={onEditar}>Editar</Button>}
           <MenuOtros opciones={[
             onEliminar && { label: 'Eliminar artículo', icon: <Trash2 size={17} />, destructiva: true, onSelect: onEliminar },

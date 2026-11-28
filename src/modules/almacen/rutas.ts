@@ -4,7 +4,7 @@ import type { RutaModulo } from '../personal/rutas.tipos';
 export const RUTAS: RutaModulo[] = [
   {
     path: 'almacen/inventario/*',
-    permisos: ['inv.ver', 'admin'],
+    permisos: ['inv.ver', 'almacen_otros.ver', 'admin'],
     Page: lazy(() => import('./InventarioPage').then(m => ({ default: m.InventarioPage }))),
     nav: { key: 'inventario', label: 'Inventario', to: '/almacen/inventario', icon: 'Boxes', permisos: ['inv.ver'] },
   },
@@ -22,13 +22,13 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'almacen/kardex/*',
-    permisos: ['kardex.ver', 'admin'],
+    permisos: ['kardex.ver', 'almacen_otros.ver', 'admin'],
     Page: lazy(() => import('./KardexPage').then(m => ({ default: m.KardexPage }))),
     nav: { key: 'kardex', label: 'Kardex', to: '/almacen/kardex', icon: 'History', permisos: ['kardex.ver'] },
   },
   {
     path: 'almacen/proveedores/*',
-    permisos: ['prov_inv.ver', 'admin'],
+    permisos: ['prov_inv.ver', 'almacen_otros.ver', 'admin'],
     // Almacén › Proveedores pasó a Terceros: el enlace anterior sigue funcionando
     Page: lazy(() => import('../terceros/TercerosPaginas').then(m => ({ default: m.RedirigirProveedores }))),
   },
@@ -40,7 +40,7 @@ export const RUTAS: RutaModulo[] = [
   },
   {
     path: 'almacen/recepcion-compras/*',
-    permisos: ['rec_compras.ver', 'ent_inv.ver', 'inv.ver', 'admin'],
+    permisos: ['rec_compras.ver', 'ent_inv.ver', 'inv.ver', 'almacen_otros.ver', 'admin'],
     Page: lazy(() => import('./RecepcionComprasPage').then(m => ({ default: m.RecepcionComprasPage }))),
     nav: { key: 'recepcion', label: 'Recepción de compras', to: '/almacen/recepcion-compras', icon: 'PackagePlus', permisos: ['rec_compras.ver', 'ent_inv.ver'] },
   },

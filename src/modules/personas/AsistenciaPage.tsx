@@ -56,7 +56,9 @@ export function AsistenciaPage() {
   const [horarios, setHorarios] = useState(false);
   const [licencia, setLicencia] = useState<{ personaId: number; fecha: string } | 'nueva' | null>(null);
   const [registrando, setRegistrando] = useState<Persona | null>(null);
-  const puedeEditar = can('rrhh_asistencia.editar', 'rrhh_asistencia.crear');
+  // Editar: tareo (estados, marcar hoy, sincronizar). Crear: marcar a mano, justificar, horarios y marcación QR
+  const puedeEditar = can('rrhh_asistencia.editar');
+  const puedeCrear = can('rrhh_asistencia.crear');
   const puedeEliminar = can('rrhh_asistencia.eliminar');
 
   const mes = useTareoMes(Number(hoy.slice(0, 4)), Number(hoy.slice(5, 7)));
@@ -102,8 +104,8 @@ export function AsistenciaPage() {
         </div>
         <Pestanas pestanas={VISTAS} activa={vista} onChange={cambiarVista} etiqueta="Vistas de asistencia" />
         <div className="doc-cab__acciones">
-          {puedeEditar && <BotonTip tip="Marcación por QR" className="btn btn--plain btn--icono btn--icono-acento" onClick={() => navigate('/personas/marcacion')}><QrCode size={18} /></BotonTip>}
-          {puedeEditar && <BotonTip tip="Horarios de trabajo" className="btn btn--plain btn--icono asis-ico--ambar" onClick={() => setHorarios(true)}><Clock3 size={18} /></BotonTip>}
+          {puedeCrear && <BotonTip tip="Marcación por QR" className="btn btn--plain btn--icono btn--icono-acento" onClick={() => navigate('/personas/marcacion')}><QrCode size={18} /></BotonTip>}
+          {puedeCrear && <BotonTip tip="Horarios de trabajo" className="btn btn--plain btn--icono asis-ico--ambar" onClick={() => setHorarios(true)}><Clock3 size={18} /></BotonTip>}
           {puedeEditar && <BotonTip tip="Marcar asistencia de hoy" className="btn btn--plain btn--icono asis-ico--azul" onClick={() => setConfirmarHoy(true)}><CheckCheck size={18} /></BotonTip>}
           {puedeEditar && <BotonTip tip="Sincronizar con viajes" className="btn btn--plain btn--icono btn--icono-acento" disabled={ocupado} onClick={sincronizar}><RefreshCw size={18} /></BotonTip>}
           {puedeEditar && <BotonTip tip="Justificar: licencia o vacaciones" className="btn btn--plain btn--icono asis-ico--morado" onClick={() => setLicencia('nueva')}><CalendarOff size={18} /></BotonTip>}

@@ -8,7 +8,7 @@ export function CatalogoRuta({ clave }: { clave: string }) {
   const config = CATALOGOS.find(c => c.clave === clave);
   if (!config) return <Navigate to="/" replace />;
   return (
-    <RequirePermission any={[`${config.permiso}.ver`]}>
+    <RequirePermission any={[`${config.permiso}.ver`, ...(config.hub ? [`${config.hub}.ver`] : [])]}>
       <CatalogoPage key={config.clave} config={config} />
     </RequirePermission>
   );
