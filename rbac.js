@@ -231,11 +231,19 @@ module.exports = function globalRBAC(req, res, next) {
     else if (path.startsWith('/clientes')) mod = ['clientes', 'placas'];
 
     // MANTENIMIENTO Y OPERACIONES
-    // Movimientos de llantas: la regla global pide cualquiera de sus permisos; cada endpoint exige el suyo exacto
-    else if (path.startsWith('/neumaticos') && /\/(instalar|retirar|retorno-reencauche)$/.test(path)) {
-        mod = ['neumaticos.mover', 'neumaticos.reencauche', 'neumaticos.baja'];
+    // Neumáticos: cada endpoint exige su permiso (GET = neumaticos l, y además insp/ot/fleetrun para las consultas que usan otros módulos).
+    // Alta, instalar, retirar, rotar y código de fuego = neumaticos.mover; reencauche = neumaticos.reencauche; baja/descarte = neumaticos.baja.
+    // Inspecciones: crear = insp c; eliminar = neumaticos d. Las rutas de routes/neumaticos-ciclo.js vuelven a validar con tienePermiso.
+    else if (path.startsWith('/neumaticos')) {
+        const sub = path.slice('/neumaticos'.length);
+        if (req.method === 'GET') mod = ['neumaticos', 'insp', 'ot', 'fleetrun'];
+        else if (sub.startsWith('/inspecciones')) mod = req.method === 'DELETE' ? ['neumaticos'] : ['insp'];
+        else if (/^\/(instalar|retirar|rotar|alta-unidad-nueva|rotaciones|devolver-reten|codigo-fuego\/generar|corregir-envio)$/.test(sub)) mod = ['neumaticos.mover'];
+        else if (/^\/(marcar-reforma|despachar-reformadora|retorno-reencauche)$/.test(sub)) mod = ['neumaticos.reencauche'];
+        else if (/^\/(marcar-descarte|desactivar)$/.test(sub)) mod = ['neumaticos.baja'];
+        else mod = ['neumaticos']; // catálogos, importar y letra del código de fuego (PUT = editar)
     }
-    else if (path.startsWith('/neumaticos') || path.includes('neumaticos')) {
+    else if (path.includes('neumaticos')) {
         mod = ['neumaticos', 'insp', 'ot', 'fleetrun'];
     }
     else if (path.startsWith('/combustible') || path.includes('combustible')) {
