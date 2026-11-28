@@ -46,7 +46,6 @@ module.exports = function globalRBAC(req, res, next) {
         '/almacen/marcas',
         '/almacen/sistemas',
         '/almacen/unidades',
-        '/almacen/proveedores',
         '/almacen/placas',
         '/catalogos_taller',
         '/almacen/notificaciones/resumen',
@@ -60,9 +59,6 @@ module.exports = function globalRBAC(req, res, next) {
         '/taller/personal',
         '/conductores',
         '/conductores-lista',
-        '/almacen/entradas',
-        '/almacen/salidas',
-        '/almacen/inventario',
         '/ot-trabajos',
         '/ot-materiales',
         '/ot-backlog',
@@ -180,31 +176,55 @@ module.exports = function globalRBAC(req, res, next) {
     // ALMACEN & CONFIGURACION
     else if (path.startsWith('/perfil')) return next();
     else if (path === '/auth/logout') return next(); // cerrar la propia sesión: cualquier usuario con sesión
-    else if (path.startsWith('/almacen/almacenes-lista') || path.startsWith('/almacen/almacenes')) {
-        mod = (req.method === 'GET') ? ['inv', 'ent_inv', 'sal_inv', 'kardex', 'cfg_almacen', 'almacenes'] : ['cfg_almacen', 'almacenes', 'inv'];
+    // ALMACÉN (routes/almacen.js): cada ruta exige el módulo de su pantalla y la acción del método (GET l, POST c, PUT e, DELETE d).
+    // Las listas que leen otras pantallas (OC, Recepción, Tesorería, Gerencia, Flota, Dashboard) se leen con sus propios permisos.
+    // Las ventanas de «Otros» (almacenes, familias, marcas, sistemas, unidades, configuración) las rige almacen_otros; inv es respaldo.
+    else if (path.startsWith('/almacen/')) {
+        const en = (...bases) => bases.some(b => path === b || path.startsWith(b + '/'));
+        const esGet = req.method === 'GET';
+        const LEE_OC = ['ent_inv', 'rec_compras', 'gerencia_aprobaciones_oc', 'tesoreria_pago_req', 'tesoreria_caja', 'tesoreria_nc', 'dash_alm'];
+        if (en('/almacen/detraccion-tipos')) {
+            // Tipos de detracción: solo administradores (la lectura es libre, ver globalReferenceGets)
+            return res.status(403).json({ error: 'RBAC: Solo un administrador configura los tipos de detracción' });
+        }
+        else if (en('/almacen/reset-recepciones')) { mod = ['rec_compras']; accion = 'd'; }
+        else if (en('/almacen/configuracion')) mod = esGet ? ['almacen_otros', 'inv', 'ent_inv', 'sal_inv'] : ['almacen_otros', 'inv'];
+        else if (en('/almacen/almacenes', '/almacen/almacenes-lista', '/almacen/familias', '/almacen/marcas', '/almacen/sistemas', '/almacen/unidades')) {
+            mod = esGet ? ['almacen_otros', 'inv', 'ent_inv', 'sal_inv'] : ['almacen_otros', 'inv'];
+        }
+        else if (en('/almacen/marcas-placas')) mod = ['placas', 'inv'];
+        else if (en('/almacen/notificaciones')) mod = ['inv', 'ent_inv', 'sal_inv', 'kardex'];
+        else if (en('/almacen/empresa-cuentas', '/almacen/empresa-documentos')) mod = ['ent_inv', 'inv', 'sal_inv', 'tesoreria', 'tesoreria_pago_req', 'tesoreria_caja'];
+        else if (en('/almacen/recepciones-oc')) mod = ['rec_compras', 'ent_inv', 'inv'];
+        else if (en('/almacen/inventario')) {
+            if (esGet) mod = ['inv', 'ent_inv', 'sal_inv', 'kardex', 'rec_compras', 'dash_alm', 'gerencia_aprobaciones_oc'];
+            else {
+                mod = ['inv'];
+                if (req.method === 'POST' && /\/(bulk-delete)$/.test(path)) accion = 'd';
+                else if (req.method === 'POST' && /\/(bulk-estado|bulk-ubicacion|regularizar-todo-cero|regularizar|lotes\/sincronizar|imagen)$/.test(path)) accion = 'e';
+            }
+        }
+        else if (en('/almacen/llantas-disponibles')) mod = ['inv', 'sal_inv', 'neumaticos.mover', 'neumaticos.reencauche', 'neumaticos.baja'];
+        else if (en('/almacen/neumaticos-articulo')) mod = esGet ? ['inv', 'ent_inv', 'sal_inv'] : ['inv'];
+        else if (en('/almacen/clientes-placas')) mod = ['inv', 'ent_inv', 'sal_inv', 'clientes', 'placas', 'cond'];
+        else if (en('/almacen/entradas')) {
+            if (en('/almacen/entradas/generar-oc-reencauche')) { mod = ['ent_inv', 'neumaticos.reencauche']; accion = 'c'; }
+            else if (esGet) mod = LEE_OC;
+            else {
+                mod = ['ent_inv'];
+                // Adjuntar o reenviar sobre una O/C existente es editarla; quitar un adjunto es eliminar (DELETE)
+                if (req.method === 'POST' && (/\/reenviar-whatsapp$/.test(path) || /^\/almacen\/entradas\/[^/]+\/archivos?(\/|$)/.test(path))) accion = 'e';
+            }
+        }
+        else if (en('/almacen/salidas')) mod = esGet ? ['sal_inv', 'dash_alm', 'kardex', 'ent_inv'] : ['sal_inv'];
+        else if (en('/almacen/proveedores', '/almacen/importarProveedoresMasivo')) {
+            mod = esGet ? ['prov_inv', 'ent_inv', 'sal_inv', 'tesoreria_pago_req', 'tesoreria_caja', 'tesoreria_nc'] : ['prov_inv'];
+            if (req.method === 'POST' && /\/bulk-delete$/.test(path)) accion = 'd';
+        }
+        else if (en('/almacen/kardex')) mod = ['kardex', 'inv'];
+        // Cualquier otra ruta de almacén no tiene mapa: queda sin mod y la regla estricta la rechaza
     }
-    else if (path.startsWith('/almacen/recepciones-oc') || path.startsWith('/almacen/reset-recepciones')) {
-        mod = ['rec_compras', 'ent_inv', 'inv', 'cfg_almacen'];
-    }
-    else if (path.startsWith('/almacen/empresa-cuentas')) {
-        mod = ['ent_inv', 'inv', 'sal_inv', 'cfg_almacen', 'tesoreria'];
-    }
-    else if (path.startsWith('/almacen/inventario')) mod = ['inv'];
     else if (path.startsWith('/clientes')) mod = ['clientes', 'placas'];
-    else if (path.startsWith('/almacen/entradas')) mod = ['ent_inv'];
-    else if (path.startsWith('/almacen/salidas')) mod = ['sal_inv'];
-    else if (path.startsWith('/almacen/proveedores')) {
-        mod = (req.method === 'GET') ? ['prov_inv', 'ent_inv', 'sal_inv'] : ['prov_inv'];
-    }
-    else if (path.startsWith('/almacen/placas') || path.startsWith('/almacen/marcas-placas')) mod = ['placas'];
-    else if (path.startsWith('/almacen/kardex')) mod = ['kardex'];
-    else if (path.startsWith('/almacen/costos')) mod = ['costos_inv'];
-    else if (path.startsWith('/almacen/familias')) mod = ['cfg_familias', 'cfg_almacen', 'inv'];
-    else if (path.startsWith('/almacen/marcas')) mod = ['cfg_marcas', 'cfg_almacen', 'inv'];
-    else if (path.startsWith('/almacen/sistemas')) mod = ['cfg_sistemas', 'cfg_almacen', 'inv'];
-    else if (path.startsWith('/almacen/unidades')) mod = ['cfg_unidades', 'inv', 'ent_inv', 'sal_inv'];
-    else if (path.startsWith('/almacen/notificaciones')) mod = ['inv', 'ent_inv', 'sal_inv', 'kardex', 'cfg_almacen'];
-    else if (path.startsWith('/almacen/configuracion')) mod = ['inv', 'ent_inv', 'sal_inv', 'cfg_almacen'];
 
     // MANTENIMIENTO Y OPERACIONES
     // Movimientos de llantas: la regla global pide cualquiera de sus permisos; cada endpoint exige el suyo exacto

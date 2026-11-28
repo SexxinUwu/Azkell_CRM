@@ -6,6 +6,7 @@ import { Button } from '../../core/ui/Button';
 import { Field, TextInput } from '../../core/ui/Field';
 import { useToast } from '../../core/ui/Toast';
 import { errorMessage } from '../../core/api/client';
+import { useAuth } from '../../core/auth/AuthProvider';
 import { codigoLimpio } from './entradaReglas';
 import { eliminarAdjunto, guardarAdjuntos, type AdjuntoNuevo, type EntradaInv, type TipoAdjunto } from './api';
 import './entradas.css';
@@ -33,6 +34,7 @@ export function AdjuntosEntradaSheet({ open, entrada, onClose, onGuardado }: Pro
   const [intento, setIntento] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [aQuitar, setAQuitar] = useState<TipoAdjunto | null>(null);
+  const puedeQuitar = useAuth().can('ent_inv.eliminar');
   const [quitando, setQuitando] = useState(false);
 
   const id = entrada?.id ?? null;
@@ -129,10 +131,10 @@ export function AdjuntosEntradaSheet({ open, entrada, onClose, onGuardado }: Pro
         {url ? (
           <div className="oc-adjunto__actual">
             <a href={url} target="_blank" rel="noreferrer" className="oc-doc oc-doc--ok">Ver {ETIQUETAS[tipo].toLowerCase()} actual</a>
-            <button type="button" className="oc-cotizacion__quitar" aria-label={`Quitar ${ETIQUETAS[tipo].toLowerCase()}`}
+            {puedeQuitar && <button type="button" className="oc-cotizacion__quitar" aria-label={`Quitar ${ETIQUETAS[tipo].toLowerCase()}`}
               onClick={() => setAQuitar(tipo)}>
               ×
-            </button>
+            </button>}
           </div>
         ) : (
           <span className="oc-doc oc-doc--falta">Sin archivo adjunto</span>

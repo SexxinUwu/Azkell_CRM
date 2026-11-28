@@ -32,7 +32,7 @@ export function AlmacenConfiguracionPage() {
   const toast = useToast();
   const qc = useQueryClient();
   const { can } = useAuth();
-  const puedeEditar = can('cfg_almacen', 'inv');
+  const puedeEditar = can('almacen_otros.editar', 'inv.editar');
   const [tc, setTc] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);

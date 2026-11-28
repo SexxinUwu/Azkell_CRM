@@ -171,15 +171,15 @@ const ESPEC_COLUMNA: Record<string, { mono?: boolean; bold?: boolean; px?: numbe
 };
 
 /** Adjunto: enlace si existe; si no, "Subir" abre la hoja de adjuntos */
-function CeldaAdjunto({ url, texto, tono, onSubir }: { url?: string | null; texto: string; tono: 'rojo' | 'azul' | 'verde'; onSubir: () => void }) {
+function CeldaAdjunto({ url, texto, tono, onSubir }: { url?: string | null; texto: string; tono: 'rojo' | 'azul' | 'verde'; onSubir?: () => void }) {
   return url
     ? <a href={url} target="_blank" rel="noreferrer" className={`oc-adj oc-adj--${tono}`}>{texto}</a>
-    : <button type="button" className="oc-adj oc-adj--subir" onClick={onSubir}>Subir</button>;
+    : onSubir ? <button type="button" className="oc-adj oc-adj--subir" onClick={onSubir}>Subir</button> : <span className="oc-adj">Sin archivo</span>;
 }
 
 interface AccionesFila {
   onVer: (o: EntradaInv) => void;
-  onAdjuntos: (o: EntradaInv) => void;
+  onAdjuntos?: (o: EntradaInv) => void;
   onPdf: (o: EntradaInv) => void;
   onEditar?: (o: EntradaInv) => void;
   onEliminar?: (o: EntradaInv) => void;
@@ -189,7 +189,7 @@ interface AccionesFila {
 function menuDe(o: EntradaInv, a: AccionesFila): Array<OpcionOtros | false | null | undefined> {
   return [
     { label: 'Ver detalle', icon: <Eye size={17} />, onSelect: () => a.onVer(o) },
-    { label: 'Adjuntos y sustentos', icon: <Paperclip size={17} />, onSelect: () => a.onAdjuntos(o) },
+    a.onAdjuntos && { label: 'Adjuntos y sustentos', icon: <Paperclip size={17} />, onSelect: () => a.onAdjuntos?.(o) },
     a.onPagar && estadoPagable(o.estado) && !esCredito(o.condicion_pago) && { label: 'Confirmar pago', icon: <CreditCard size={17} />, onSelect: () => a.onPagar?.(o) },
     { label: 'Imprimir PDF', icon: <FilePdf size={17} />, onSelect: () => a.onPdf(o) },
     a.onEditar && estadoEditable(o.estado) && { label: 'Editar orden', icon: <Pencil size={17} />, onSelect: () => a.onEditar?.(o) },
@@ -228,9 +228,9 @@ function FilaOC({ orden: o, item, vista, ...acciones }: FilaProps) {
   ];
   const cola = [
     <Celda key="cc"><span className="oc-chip oc-chip--mono">{o.centro_costo || 'CC-100'}</span></Celda>,
-    <Celda key="voucher" alinear="center"><CeldaAdjunto url={o.url_voucher_presigned || o.url_voucher} texto="Ver voucher" tono="rojo" onSubir={() => acciones.onAdjuntos(o)} /></Celda>,
-    <Celda key="cot" alinear="center"><CeldaAdjunto url={o.url_cotizacion_presigned || o.url_cotizacion} texto="Ver cotización" tono="azul" onSubir={() => acciones.onAdjuntos(o)} /></Celda>,
-    <Celda key="fac" alinear="center"><CeldaAdjunto url={o.url_factura_presigned || o.url_factura} texto="Ver factura" tono="verde" onSubir={() => acciones.onAdjuntos(o)} /></Celda>,
+    <Celda key="voucher" alinear="center"><CeldaAdjunto url={o.url_voucher_presigned || o.url_voucher} texto="Ver voucher" tono="rojo" onSubir={acciones.onAdjuntos ? () => acciones.onAdjuntos?.(o) : undefined} /></Celda>,
+    <Celda key="cot" alinear="center"><CeldaAdjunto url={o.url_cotizacion_presigned || o.url_cotizacion} texto="Ver cotización" tono="azul" onSubir={acciones.onAdjuntos ? () => acciones.onAdjuntos?.(o) : undefined} /></Celda>,
+    <Celda key="fac" alinear="center"><CeldaAdjunto url={o.url_factura_presigned || o.url_factura} texto="Ver factura" tono="verde" onSubir={acciones.onAdjuntos ? () => acciones.onAdjuntos?.(o) : undefined} /></Celda>,
   ];
   const totales = [
     <Celda key="toc" alinear="right"><strong className="oc-importe">{formatMoneda(toc, moneda)}</strong></Celda>,
@@ -379,7 +379,7 @@ export function EntradasPage() {
 
   const acciones: AccionesFila = {
     onVer: o => { setSeleccionadaId(o.id); },
-    onAdjuntos: o => setAdjuntosId(o.id),
+    onAdjuntos: puedeEditar ? o => setAdjuntosId(o.id) : undefined,
     onPdf: o => { void verPdf(o, false); },
     onEditar: puedeEditar ? o => setFormulario({ entrada: o }) : undefined,
     onEliminar: puedeEliminar ? o => (estadoEditable(o.estado) ? setPorEliminar(o) : undefined) : undefined,
@@ -599,7 +599,7 @@ export function EntradasPage() {
           entrada={seleccionada}
           onVolver={() => setSeleccionadaId(null)}
           onEditar={puedeEditar && estadoEditable(seleccionada.estado) ? () => setFormulario({ entrada: seleccionada }) : undefined}
-          onAdjuntos={() => setAdjuntosId(seleccionada.id)}
+          onAdjuntos={puedeEditar ? () => setAdjuntosId(seleccionada.id) : undefined}
           onConfirmarPago={puedePagar ? () => setPagar(p => ({ entrada: seleccionada, abierto: true, sesion: p.sesion + 1 })) : undefined}
           onAnular={puedeAnular && !String(seleccionada.estado ?? '').toLowerCase().includes('anul') ? () => setAnulando(seleccionada) : undefined}
           onEliminar={puedeEliminar && estadoEditable(seleccionada.estado) ? () => setPorEliminar(seleccionada) : undefined}
